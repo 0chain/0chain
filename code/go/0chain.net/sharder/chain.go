@@ -16,8 +16,9 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	. "0chain.net/core/logging"
 )
 
 var sharderChain = &Chain{}

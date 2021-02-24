@@ -1,7 +1,9 @@
 package blockstore
 
 import (
+	"0chain.net/core/logging"
 	"errors"
+	"go.uber.org/zap"
 	"os"
 	"reflect"
 	"testing"
@@ -14,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 )
 
@@ -28,7 +29,7 @@ func init() {
 
 	block.SetupBlockSummaryEntity(ememorystore.GetStorageProvider())
 
-	logging.InitLogging("testing")
+	logging.Logger = zap.NewNop()
 }
 
 type (
@@ -87,6 +88,13 @@ func checkFile(fileName string) bool {
 	return true
 }
 
+func cleanDirectories() error {
+	if err := os.RemoveAll("tmp"); err != nil {
+		return err
+	}
+	return nil
+}
+
 func TestFSBlockStore_Delete(t *testing.T) {
 	t.Parallel()
 
@@ -127,8 +135,6 @@ func TestFSBlockStore_Delete(t *testing.T) {
 }
 
 func TestFSBlockStore_DeleteBlock(t *testing.T) {
-	t.Parallel()
-
 	var (
 		bs = makeTestFSBlockStore("tmp/test/fsblockstore")
 
@@ -183,10 +189,7 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -209,11 +212,11 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 			}
 		})
 	}
+
+	_ = cleanDirectories()
 }
 
 func TestFSBlockStore_Read(t *testing.T) {
-	t.Parallel()
-
 	var (
 		bs = makeTestFSBlockStore("tmp/test/fsblockstore/Read")
 
@@ -268,10 +271,7 @@ func TestFSBlockStore_Read(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -292,6 +292,8 @@ func TestFSBlockStore_Read(t *testing.T) {
 			}
 		})
 	}
+
+	_ = cleanDirectories()
 }
 
 func TestFSBlockStore_getFileName(t *testing.T) {
@@ -397,8 +399,6 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 }
 
 func TestFSBlockStore_read(t *testing.T) {
-	t.Parallel()
-
 	var (
 		bs = makeTestFSBlockStore("tmp/test/fsblockstore/read")
 
@@ -472,8 +472,6 @@ func TestFSBlockStore_read(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -497,6 +495,8 @@ func TestFSBlockStore_read(t *testing.T) {
 			}
 		})
 	}
+
+	_ = cleanDirectories()
 }
 
 func TestFSBlockStore_UploadToCloud(t *testing.T) {

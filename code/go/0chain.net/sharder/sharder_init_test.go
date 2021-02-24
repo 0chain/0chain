@@ -1,8 +1,8 @@
 package sharder_test
 
 import (
+	"context"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -17,10 +17,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/persistencestore"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
@@ -33,6 +30,9 @@ func init() {
 	)
 	config.Configuration.DeploymentMode = deploymentMode
 	config.SetupDefaultConfig()
+	config.DevConfiguration.ViewChange = true
+	viper.Set("minio.enabled", true)
+	viper.Set("minio.worker_frequency", 1)
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
@@ -41,8 +41,13 @@ func init() {
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities()
+	viper.Set("server_chain.block.max_block_size", 100)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
+	err := signatureScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
 
 	node.Self.SetSignatureScheme(signatureScheme)
 
@@ -71,9 +76,12 @@ func init() {
 		return
 	}
 
-	//startBlocksInfoLogs(sc)
+	// startBlocksInfoLogs(sc)
+	sc.SetupHealthyRound()
 
+	// initWorkers(ctx)
 	common.ConfigRateLimits()
+	initN2NHandlers()
 
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <
 		serverChain.GetLatestMagicBlock().MagicBlockNumber {
@@ -91,6 +99,24 @@ func init() {
 	logging.InitLogging("development")
 }
 
+func initWorkers(ctx context.Context) {
+	serverChain := chain.GetServerChain()
+	serverChain.SetupWorkers(ctx)
+	sharder.SetupWorkers(ctx)
+}
+
+func initN2NHandlers() {
+	node.SetupN2NHandlers()
+	sharder.SetupM2SReceivers()
+	sharder.SetupM2SResponders()
+	chain.SetupX2XResponders()
+	chain.SetupX2MRequestors()
+	chain.SetupX2SRequestors()
+	sharder.SetupS2SRequestors()
+	sharder.SetupS2SResponders()
+	sharder.SetupX2SResponders()
+}
+
 func done() {
 	sc := sharder.GetSharderChain()
 	sc.Stop()
@@ -101,7 +127,7 @@ func initEntities() {
 		panic(err)
 	}
 
-	memoryStorage := memorystore.GetStorageProvider()
+	memoryStorage := storeMock{}
 
 	chain.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
@@ -109,7 +135,7 @@ func initEntities() {
 	round.SetupRoundSummaryDB()
 	block.SetupBlockSummaryDB()
 
-	ememoryStorage := ememorystore.GetStorageProvider()
+	ememoryStorage := storeMock{}
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
@@ -118,8 +144,7 @@ func initEntities() {
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
-	//persistencestore.InitSession()
-	persistenceStorage := persistencestore.GetStorageProvider()
+	persistenceStorage := storeMock{}
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
 	block.SetupMagicBlockMapEntity(persistenceStorage)
@@ -130,22 +155,5 @@ func initEntities() {
 }
 
 func setupBlockStorageProvider() {
-	fsbs := blockstore.NewFSBlockStore("data/blocks", nil)
-	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
-	switch blockStorageProvider {
-	case "", "blockstore.FSBlockStore":
-		blockstore.SetupStore(fsbs)
-	case "blockstore.BlockDBStore":
-		blockstore.SetupStore(blockstore.NewBlockDBStore(fsbs))
-	case "blockstore.MultiBlockstore":
-		var bs = []blockstore.BlockStore{
-			fsbs,
-			blockstore.NewBlockDBStore(
-				blockstore.NewFSBlockStore("data/blocksdb", nil),
-			),
-		}
-		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
-	default:
-		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
-	}
+	blockstore.SetupStore(blockStoreMock{cloud: make(map[string]struct{}), blocks: make(map[string]*block.Block)})
 }

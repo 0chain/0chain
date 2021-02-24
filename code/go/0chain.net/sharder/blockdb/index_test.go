@@ -162,3 +162,71 @@ func Test_mapIndex_GetKeys(t *testing.T) {
 		})
 	}
 }
+
+func Test_fixedKeyArrayIndex_SetOffset(t *testing.T) {
+	type fields struct {
+		buffer []byte
+		keylen int8
+	}
+	type args struct {
+		key    Key
+		offset int64
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "Test_fixedKeyArrayIndex_SetOffset_ERR", // not supported method
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fkai := &fixedKeyArrayIndex{
+				buffer: tt.fields.buffer,
+				keylen: tt.fields.keylen,
+			}
+			if err := fkai.SetOffset(tt.args.key, tt.args.offset); (err != nil) != tt.wantErr {
+				t.Errorf("SetOffset() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_fixedKeyArrayIndex_Encode(t *testing.T) {
+	type fields struct {
+		buffer []byte
+		keylen int8
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		wantWriter string
+		wantErr    bool
+	}{
+		{
+			name:    "Test_fixedKeyArrayIndex_Encode_OK", // not implemented
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fkai := &fixedKeyArrayIndex{
+				buffer: tt.fields.buffer,
+				keylen: tt.fields.keylen,
+			}
+			writer := &bytes.Buffer{}
+			err := fkai.Encode(writer)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Encode() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotWriter := writer.String(); gotWriter != tt.wantWriter {
+				t.Errorf("Encode() gotWriter = %v, want %v", gotWriter, tt.wantWriter)
+			}
+		})
+	}
+}

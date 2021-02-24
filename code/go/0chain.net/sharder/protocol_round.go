@@ -3,11 +3,12 @@ package sharder
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 func shouldNotFinalize(r round.RoundI) bool {

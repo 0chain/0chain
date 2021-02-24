@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/sharder"
 )
 
@@ -24,15 +24,14 @@ func makeTestURL(url url.URL, values map[string]string) string {
 }
 
 func TestBlockHandler(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/v1/block/get"
 
-	b := block.NewBlock("", 1)
-	b.HashBlock()
+	b := block.NewBlock("", 10)
+	b.Hash = encryption.Hash("data")
 
-	chain.ServerChain = chain.Provider().(*chain.Chain)
-	chain.ServerChain.AddBlock(b)
+	sc := sharder.GetSharderChain()
+	sc.AddBlock(b)
+	sc.LatestFinalizedBlock = b
 
 	type test struct {
 		name       string
@@ -41,6 +40,26 @@ func TestBlockHandler(t *testing.T) {
 	}
 
 	tests := []test{
+		{
+			name: "Test_BlockHandler_Empty_Round_OK",
+			request: func() *http.Request {
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"block": b.Hash[:62],
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
 		{
 			name: "Test_BlockHandler_OK",
 			request: func() *http.Request {
@@ -62,6 +81,69 @@ func TestBlockHandler(t *testing.T) {
 			wantStatus: http.StatusOK,
 		},
 		{
+			name: "Test_BlockHandler_Invalid_Round_ERR",
+			request: func() *http.Request {
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"block": b.Hash,
+					"round": "-1",
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Test_BlockHandler_Round_Non_Existing_Block_ERR",
+			request: func() *http.Request {
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"block": b.Hash[:62],
+					"round": "9",
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Test_BlockHandler_ERR", // test covers error when latest finalized block round lower than round in request
+			request: func() *http.Request {
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"block": b.Hash,
+					"round": "11",
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
 			name: "Test_BlockHandler_Empty_Block_ERR",
 			request: func() *http.Request {
 				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
@@ -73,13 +155,31 @@ func TestBlockHandler(t *testing.T) {
 			}(),
 			wantStatus: http.StatusBadRequest,
 		},
+		{
+			name: "Test_BlockHandler_Invalid_Round_ERR",
+			request: func() *http.Request {
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"block": b.Hash,
+					"round": "qwe",
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockHandler)))
 
@@ -172,6 +272,61 @@ func TestSharderStatsHandler(t *testing.T) {
 			// setting lfb because return handler function is panic with nil lfb
 			b := block.NewBlock("", 132)
 			sharder.GetSharderChain().SetLatestFinalizedBlock(b)
+
+			handler.ServeHTTP(rr, tt.request)
+
+			if status := rr.Code; status != tt.wantStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestSetupHandlers(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "Test_SetupHandlers_OK",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sharder.SetupHandlers()
+		})
+	}
+}
+
+func TestChainStatsHandler(t *testing.T) {
+	t.Parallel()
+
+	const baseUrl = "/v1/chain/get/stats"
+
+	type test struct {
+		name       string
+		request    *http.Request
+		wantStatus int
+	}
+
+	tests := []test{
+		{
+			name: "Test_ChainStatsHandler_OK",
+			request: func() *http.Request {
+				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.ChainStatsHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 

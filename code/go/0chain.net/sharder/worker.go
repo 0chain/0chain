@@ -21,8 +21,9 @@ import (
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/spf13/viper"
 
-	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	. "0chain.net/core/logging"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"

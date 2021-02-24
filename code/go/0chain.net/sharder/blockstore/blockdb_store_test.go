@@ -340,8 +340,6 @@ func Test_txnRecord_Decode(t *testing.T) {
 }
 
 func TestBlockDBStore_DeleteBlock(t *testing.T) {
-	t.Parallel()
-
 	var (
 		db = makeTestBlockDBStore()
 		b  = makeTestBlock()
@@ -372,10 +370,7 @@ func TestBlockDBStore_DeleteBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			bdbs := &BlockDBStore{
 				FSBlockStore:        tt.fields.FSBlockStore,
 				txnMetadataProvider: tt.fields.txnMetadataProvider,
@@ -398,6 +393,8 @@ func TestBlockDBStore_DeleteBlock(t *testing.T) {
 			}
 		})
 	}
+
+	_ = cleanDirectories()
 }
 
 func TestBlockDBStore_UploadToCloud(t *testing.T) {
@@ -554,8 +551,6 @@ func Test_txnRecordProvider_NewRecord(t *testing.T) {
 }
 
 func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
-	t.Parallel()
-
 	bs := makeTestBlockDBStore()
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
@@ -603,10 +598,7 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			bdbs := &BlockDBStore{
 				FSBlockStore:        tt.fields.FSBlockStore,
 				txnMetadataProvider: tt.fields.txnMetadataProvider,
@@ -627,4 +619,6 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 			}
 		})
 	}
+
+	_ = cleanDirectories()
 }

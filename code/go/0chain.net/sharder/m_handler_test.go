@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/cache"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/sharder"
@@ -132,91 +131,133 @@ func TestChain_AcceptMessage(t *testing.T) {
 	}
 }
 
-func TestNotarizedBlockHandler(t *testing.T) {
-	t.Parallel()
+func TestFinalizedBlockHandler(t *testing.T) {
+	b := block.NewBlock("", 1)
+	b.Hash = encryption.Hash("data")
+	b2 := block.NewBlock("", 3)
+	b2.Hash = encryption.Hash("data")[:62]
+	b3 := block.NewBlock("", 4)
+	b3.Hash = encryption.Hash("another data")
 
-	var (
-		ctx = common.GetRootContext()
-		b   = block.NewBlock("", 1)
-	)
+	lfb := block.NewBlock("", 2)
+	sc := sharder.GetSharderChain()
+	sc.LatestFinalizedBlock = lfb
+
+	sc.AddBlock(b3)
 
 	type args struct {
 		ctx    context.Context
 		entity datastore.Entity
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		setLFB  bool
-		wantErr bool
+		name          string
+		args          args
+		want          interface{}
+		wantErr       bool
+		wantChSending bool
 	}{
 		{
-			name:    "Test_NotarizedBlockHandler_From_Latest_Finalized_Block_TRUE",
-			args:    args{ctx: ctx, entity: b},
+			name:    "Test_FinalizedBlockHandler_OK",
+			args:    args{ctx: nil, entity: b},
 			want:    true,
-			setLFB:  true,
+			wantErr: false,
+		},
+		{
+			name:    "Test_FinalizedBlockHandler_Not_A_Block_Entity_ERR",
+			args:    args{ctx: nil, entity: round.NewRound(1)},
+			wantErr: true,
+		},
+		{
+			name:          "Test_FinalizedBlockHandler_New_Block_OK",
+			args:          args{ctx: nil, entity: b2},
+			want:          true,
+			wantChSending: true,
+			wantErr:       false,
+		},
+		{
+			name:    "Test_FinalizedBlockHandler_Existing_Block_OK",
+			args:    args{ctx: nil, entity: b3},
+			want:    true,
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			if tt.wantChSending {
+				bCh := sharder.GetSharderChain().GetBlockChannel()
 
-			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				go func() {
+					<-bCh
+				}()
 			}
 
-			got, err := sharder.NotarizedBlockHandler(tt.args.ctx, tt.args.entity)
+			got, err := sharder.FinalizedBlockHandler(tt.args.ctx, tt.args.entity)
+
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NotarizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("FinalizedBlockHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NotarizedBlockHandler() got = %v, want %v", got, tt.want)
+				t.Errorf("FinalizedBlockHandler() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
 func TestNotarizedBlockKickHandler(t *testing.T) {
-	t.Parallel()
+	b := block.NewBlock("", 1)
+	b.Hash = encryption.Hash("data")
+	b2 := block.NewBlock("", 3)
+	b2.Hash = encryption.Hash("data")[:62]
+	b3 := block.NewBlock("", 3)
+	b3.Hash = encryption.Hash("another data")
 
-	var (
-		ctx = common.GetRootContext()
-		b   = block.NewBlock("", 1)
-	)
+	lfb := block.NewBlock("", 2)
+	sc := sharder.GetSharderChain()
+	sc.LatestFinalizedBlock = lfb
 
 	type args struct {
 		ctx    context.Context
 		entity datastore.Entity
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    interface{}
-		setLFB  bool
-		wantErr bool
+		name          string
+		args          args
+		want          interface{}
+		wantErr       bool
+		wantChSending bool
 	}{
 		{
-			name:    "Test_NotarizedBlockKickHandler_From_Latest_Finalized_Block_TRUE",
-			args:    args{ctx: ctx, entity: b},
+			name:    "Test_NotarizedBlockKickHandler_OK",
+			args:    args{ctx: nil, entity: b},
 			want:    true,
-			setLFB:  true,
 			wantErr: false,
+		},
+		{
+			name:    "Test_NotarizedBlockKickHandler_Not_A_Block_Entity_ERR",
+			args:    args{ctx: nil, entity: round.NewRound(1)},
+			wantErr: true,
+		},
+		{
+			name:          "Test_NotarizedBlockKickHandler_New_Block_OK",
+			args:          args{ctx: nil, entity: b2},
+			want:          true,
+			wantChSending: true,
+			wantErr:       false,
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			if tt.wantChSending {
+				bCh := sharder.GetSharderChain().GetBlockChannel()
 
-			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				go func() {
+					<-bCh
+				}()
 			}
 
 			got, err := sharder.NotarizedBlockKickHandler(tt.args.ctx, tt.args.entity)
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NotarizedBlockKickHandler() error = %v, wantErr %v", err, tt.wantErr)
 				return
