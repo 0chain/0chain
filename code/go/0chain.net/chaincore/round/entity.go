@@ -230,10 +230,6 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 }
 
 func (r *Round) setRandomSeed(seed int64) {
-	if seed == 0 {
-		Logger.Error("setRandSeed as 0")
-	}
-
 	atomic.StoreInt64(&r.RandomSeed, seed)
 }
 

@@ -156,7 +156,8 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 
 	if pr.GetRandomSeed() == 0 && pr.GetRoundNumber() > 0 {
 		Logger.Error("BLS sign VRF share: error in getting prev. random seed",
-			zap.Int64("prev_round", pr.Number))
+			zap.Int64("prev_round", pr.Number),
+			zap.Bool("prev_round_has_seed", pr.HasRandomSeed()))
 		return "", common.NewErrorf("prev_round_rrs_zero",
 			"prev. round %d random seed is 0", pr.GetRoundNumber())
 	}
