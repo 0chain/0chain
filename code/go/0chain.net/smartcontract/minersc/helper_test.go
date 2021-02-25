@@ -108,15 +108,15 @@ func newClientWithDelegate(isMiner bool, t *testing.T, msc *MinerSmartContract, 
 }
 
 // create and add miner/sharder, create stake holders, don't stake
-func newClientWithStakers(isMiner bool, t *testing.T,
-	msc *MinerSmartContract, now, stakersAmount int64,
-	val state.Balance, balances cstate.StateContextI) (
-	client *TestClient) {
+func newClientWithStakers(isMiner bool, t *testing.T, msc *MinerSmartContract,
+	now, stakersAmount int64, stakeValue state.Balance,
+	balances cstate.StateContextI) (
+		client *TestClient) {
 
 	client = new(TestClient)
 	client.client, client.delegate = newClientWithDelegate(true, t, msc, now, balances)
 	for i := int64(0); i < stakersAmount; i++ {
-		client.stakers = append(client.stakers, newClient(val, balances))
+		client.stakers = append(client.stakers, newClient(stakeValue, balances))
 	}
 	return
 }
@@ -146,7 +146,7 @@ func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
 func (c *Client) callAddMinerOrSharder(isMiner bool, t *testing.T,
 	msc *MinerSmartContract, now int64, delegateWallet string,
 	balances cstate.StateContextI) (
-	resp string, err error) {
+		resp string, err error) {
 
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).txn = tx
@@ -177,7 +177,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	node.DelegateWallet = delegateWallet
 	node.ServiceCharge = 0.5
 	node.NumberOfDelegates = 10
-	node.MinStake = 1e10
+	node.MinStake = 1
 	node.MaxStake = 100e10
 
 	return mustEncode(t, node)
@@ -215,7 +215,7 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (gn *GlobalNode) {
 	gn.MinN = 3
 	gn.MaxS = 30
 	gn.MinS = 1
-	gn.MaxDelegates = 10 // for tests
+	gn.MaxDelegates = 100 // for tests
 	gn.TPercent = 0.51   // %
 	gn.KPercent = 0.75   // %
 	gn.LastRound = 0
