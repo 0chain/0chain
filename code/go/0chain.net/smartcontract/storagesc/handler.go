@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"0chain.net/core/logging"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -210,7 +212,12 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	return &blobberChallengeObj, err
 }
 
-func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
+	defer func() {
+		if retErr != nil {
+			logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())
+		}
+	}()
 	blobberID := params.Get("blobber")
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = blobberID
