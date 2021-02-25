@@ -74,25 +74,28 @@ func Test_payFees(t *testing.T) {
 
 		miners   []*TestClient
 		sharders []*TestClient
-		generator  *TestClient
 	)
 
 	setConfig(t, balances)
 
-	//t.Run("add miners", func(t *testing.T) {
-	generator = newClientWithStakers(true, t, msc, now,
-		generatorStakersAmount, generatorStakeValue, balances)
+	{
+		var generator *TestClient
 
-	for idx := 0; idx < minersAmount; idx++ {
-		if idx == generatorIdx {
-			miners = append(miners, generator)
-		} else {
-			miners = append(miners, newClientWithStakers(true, t, msc, now,
-				minerStakersAmount, minerStakeValue, balances))
+		//t.Run("add miners", func(t *testing.T) {
+		generator = newClientWithStakers(true, t, msc, now,
+			generatorStakersAmount, generatorStakeValue, balances)
+
+		for idx := 0; idx < minersAmount; idx++ {
+			if idx == generatorIdx {
+				miners = append(miners, generator)
+			} else {
+				miners = append(miners, newClientWithStakers(true, t, msc, now,
+					minerStakersAmount, minerStakeValue, balances))
+			}
+			now += timeDelta
 		}
-		now += timeDelta
+		//})
 	}
-	//})
 
 	//t.Run("add sharders", func(t *testing.T) {
 	for idx := 0; idx < shardersAmount; idx++ {
@@ -101,6 +104,10 @@ func Test_payFees(t *testing.T) {
 		now += timeDelta
 	}
 	//})
+
+	//todo: advanced test case: create pool of N stakers and assign them to different nodes randomly,
+	//      this way 1 staker might be stake holder of several different miners/sharders at the same time
+	//      and more complicated computation is required in order to test such case
 
 	msc.setDKGMiners(t, miners, balances)
 	balances.setLFMB(createLFMB(miners, sharders))
@@ -148,70 +155,59 @@ func Test_payFees(t *testing.T) {
 
 	msc.setDKGMiners(t, miners, balances)
 
-	//t.Run("pay fees -> view change", func(t *testing.T) {
-	//	for id, bal := range balances.balances {
-	//		if id == ADDRESS {
-	//			continue
-	//		}
-	//		assert.Zerof(t, bal, "unexpected balance: %s", id)
-	//	}
-	//
-	//	setRounds(t, msc, 250, 251, balances)
-	//	setMagicBlock(t, unwrapClients(miners), unwrapClients(sharders),
-	//		balances)
-	//
-	//	var generator, blck = prepareGeneratorAndBlock(miners, 0, 251)
-	//
-	//	// payFees transaction
-	//	now += timeDelta
-	//	var tx = newTransaction(generator.miner.id, ADDRESS, 0, now)
-	//	balances.txn = tx
-	//	balances.block = blck
-	//	balances.blockSharders = selectRandom(sharders, 3)
-	//
-	//	var global, err = msc.getGlobalNode(balances)
-	//	require.NoError(t, err, "getting global node")
-	//
-	//	_, err = msc.payFees(tx, nil, gn, balances)
-	//	require.NoError(t, err, "pay_fees error")
-	//
-	//	// pools becomes active, nothing should be payed
-	//
-	//	for _, mn := range miners {
-	//		assert.Zero(t, balances.balances[mn.miner.id],
-	//			"miner balance")
-	//		assert.Zero(t, balances.balances[mn.delegate.id],
-	//			"miner delegate balance?")
-	//		for _, st := range mn.stakers {
-	//			assert.Zero(t, balances.balances[st.id], "stake balance?")
-	//		}
-	//	}
-	//	for _, sh := range sharders {
-	//		assert.Zero(t, balances.balances[sh.sharder.id],
-	//			"sharder balance")
-	//		assert.Zero(t, balances.balances[sh.delegate.id],
-	//			"sharder delegate balance?")
-	//		for _, st := range sh.stakers {
-	//			assert.Zero(t, balances.balances[st.id], "stake balance?")
-	//		}
-	//	}
-	//
-	//	global, err = msc.getGlobalNode(balances)
-	//	require.NoError(t, err, "can't get global node")
-	//	assert.EqualValues(t, 251, global.LastRound)
-	//	assert.EqualValues(t, 0, global.Minted)
-	//})
+	t.Run("pay fees -> view change", func(t *testing.T) {
+		assertBalancesAreZeros(t, balances)
+		setRounds(t, msc, 250, 251, balances)
+
+		setMagicBlock(t, unwrapClients(miners), unwrapClients(sharders),
+			balances)
+
+		var generator, blck = prepareGeneratorAndBlock(miners, 0, 251)
+
+		// payFees transaction
+		now += timeDelta
+		var tx = newTransaction(generator.client.id, ADDRESS, 0, now)
+		balances.txn = tx
+		balances.block = blck
+		balances.blockSharders = selectRandom(sharders, 3)
+
+		var global, err = msc.getGlobalNode(balances)
+		require.NoError(t, err, "getting global node")
+
+		_, err = msc.payFees(tx, nil, global, balances)
+		require.NoError(t, err, "pay_fees error")
+
+		// pools become active, nothing should be paid
+
+		for _, miner := range miners {
+			assert.Zero(t, balances.balances[miner.client.id],
+				"miner balance")
+			assert.Zero(t, balances.balances[miner.delegate.id],
+				"miner delegate balance?")
+			for _, staker := range miner.stakers {
+				assert.Zero(t, balances.balances[staker.id], "stake balance?")
+			}
+		}
+		for _, sharder := range sharders {
+			assert.Zero(t, balances.balances[sharder.client.id],
+				"sharder balance")
+			assert.Zero(t, balances.balances[sharder.delegate.id],
+				"sharder delegate balance?")
+			for _, staker := range sharder.stakers {
+				assert.Zero(t, balances.balances[staker.id], "stake balance?")
+			}
+		}
+
+		global, err = msc.getGlobalNode(balances)
+		require.NoError(t, err, "can't get global node")
+		assert.EqualValues(t, 251, global.LastRound)
+		assert.EqualValues(t, 0, global.Minted)
+	})
 
 	msc.setDKGMiners(t, miners, balances)
 
 	t.Run("pay fees -> no fees", func(t *testing.T) {
-		for id, bal := range balances.balances {
-			if id == ADDRESS {
-				continue
-			}
-			assert.Zerof(t, bal, "unexpected balance: %s", id)
-		}
-
+		assertBalancesAreZeros(t, balances)
 		setRounds(t, msc, 251, 501, balances)
 
 		var generator, blck = prepareGeneratorAndBlock(miners, 0, 252)
@@ -234,44 +230,47 @@ func Test_payFees(t *testing.T) {
 
 		var (
 			expected = make(map[string]state.Balance)
-			got      = make(map[string]state.Balance)
+			actual   = make(map[string]state.Balance)
 		)
 
-		for _, miner := range miners {
+		for idx, miner := range miners {
 			assert.Zero(t, balances.balances[miner.client.id])
 			assert.Zero(t, balances.balances[miner.delegate.id])
 
-			var val state.Balance = 0;
-			if miner == generator {
-				val = 77e7;
+			var stakeValue state.Balance = 0;
+			if idx == generatorIdx {
+				stakeValue = generatorStakeValue;
+			} else {
+				stakeValue = minerStakeValue;
 			}
 
 			for _, staker := range miner.stakers {
-				expected[staker.id] += val;
-				got[staker.id] = balances.balances[staker.id]
+				expected[staker.id] = stakeValue;
+				actual[staker.id] = balances.balances[staker.id]
 			}
 		}
 
-		assert.Equal(t, len(expected), len(got), "sizes of balance maps")
-		assert.Equal(t, expected, got, "balances")
+		assert.Equal(t, len(expected), len(actual), "sizes of balance maps")
+		assert.Equal(t, expected, actual, "balances")
 
 		for _, sharder := range sharders {
 			assert.Zero(t, balances.balances[sharder.client.id])
 			assert.Zero(t, balances.balances[sharder.delegate.id])
-			for _, st := range sharder.stakers {
-				expected[st.id] += 0
-				got[st.id] = balances.balances[st.id]
+
+			for _, staker := range sharder.stakers {
+				expected[staker.id] = 0 //only block sharders get paid
+				actual[staker.id] = balances.balances[staker.id]
 			}
 		}
 
 		for _, sharder := range filterClientsById(sharders, balances.blockSharders) {
 			for _, staker := range sharder.stakers {
-				expected[staker.id] += 21e7
+				expected[staker.id] += sharderStakeValue
 			}
 		}
 
-		assert.Equal(t, len(expected), len(got), "sizes of balance maps")
-		assert.Equal(t, expected, got, "balances")
+		assert.Equal(t, len(expected), len(actual), "sizes of balance maps")
+		assert.Equal(t, expected, actual, "balances")
 	})
 
 	// don't set DKG miners list, because no VC is expected
@@ -305,39 +304,39 @@ func Test_payFees(t *testing.T) {
 	//
 	//	var (
 	//		expected = make(map[string]state.Balance)
-	//		got      = make(map[string]state.Balance)
+	//		actual      = make(map[string]state.Balance)
 	//	)
 	//
-	//	for _, mn := range miners {
-	//		assert.Zero(t, balances.balances[mn.miner.id])
-	//		assert.Zero(t, balances.balances[mn.delegate.id])
-	//		for _, st := range mn.stakers {
-	//			if mn == generator {
-	//				expected[st.id] += 77e7 + 11e10 // + generator fees
+	//	for _, miner := range miners {
+	//		assert.Zero(t, balances.balances[miner.client.id])
+	//		assert.Zero(t, balances.balances[miner.delegate.id])
+	//		for _, staker:= range miner.stakers {
+	//			if miner == generator {
+	//				expected[staker.id] += 77e7 + 11e10 // + generator fees
 	//			} else {
-	//				expected[st.id] += 0
+	//				expected[staker.id] += 0
 	//			}
-	//			got[st.id] = balances.balances[st.id]
+	//			actual[staker.id] = balances.balances[staker.id]
 	//		}
 	//	}
 	//
-	//	for _, sh := range sharders {
+	//	for _, sharder := range sharders {
 	//		assert.Zero(t, balances.balances[sh.sharder.id])
 	//		assert.Zero(t, balances.balances[sh.delegate.id])
-	//		for _, st := range sh.stakers {
-	//			expected[st.id] += 0
-	//			got[st.id] = balances.balances[st.id]
+	//		for _, staker := range sharder.stakers {
+	//			expected[staker.id] += 0
+	//			actual[staker.id] = balances.balances[staker.id]
 	//		}
 	//	}
 	//
-	//	for _, sh := range filterClientsById(sharders, balances.blockSharders) {
-	//		for _, st := range sh.stakers {
-	//			expected[st.id] += 21e7 + 3e10 // + block sharders fees
+	//	for _, sharder := range filterClientsById(sharders, balances.blockSharders) {
+	//		for _, staker := range sharder.stakers {
+	//			expected[staker.id] += 21e7 + 3e10 // + block sharders fees
 	//		}
 	//	}
 	//
-	//	assert.Equal(t, len(expected), len(got), "sizes of balance maps")
-	//	assert.Equal(t, expected, got, "balances")
+	//	assert.Equal(t, len(expected), len(actual), "sizes of balance maps")
+	//	assert.Equal(t, expected, actual, "balances")
 	//})
 
 	// don't set DKG miners list, because no VC is expected
@@ -368,39 +367,39 @@ func Test_payFees(t *testing.T) {
 	//
 	//	var (
 	//		expected = make(map[string]state.Balance)
-	//		got      = make(map[string]state.Balance)
+	//		actual      = make(map[string]state.Balance)
 	//	)
 	//
-	//	for _, mn := range miners {
-	//		assert.Zero(t, balances.balances[mn.miner.id])
-	//		assert.Zero(t, balances.balances[mn.delegate.id])
-	//		for _, st := range mn.stakers {
-	//			if mn == generator {
-	//				expected[st.id] += 77e7 + 1e10
+	//	for _, miner := range miners {
+	//		assert.Zero(t, balances.balances[miner.miner.id])
+	//		assert.Zero(t, balances.balances[miner.delegate.id])
+	//		for _, staker := range miner.stakers {
+	//			if miner == generator {
+	//				expected[staker.id] += 77e7 + 1e10
 	//			} else {
-	//				expected[st.id] += 1e10
+	//				expected[staker.id] += 1e10
 	//			}
-	//			got[st.id] = balances.balances[st.id]
+	//			actual[staker.id] = balances.balances[staker.id]
 	//		}
 	//	}
 	//
-	//	for _, sh := range sharders {
-	//		assert.Zero(t, balances.balances[sh.sharder.id])
-	//		assert.Zero(t, balances.balances[sh.delegate.id])
-	//		for _, st := range sh.stakers {
-	//			expected[st.id] += 1e10
-	//			got[st.id] = balances.balances[st.id]
+	//	for _, sharder := range sharders {
+	//		assert.Zero(t, balances.balances[sharder.sharder.id])
+	//		assert.Zero(t, balances.balances[sharder.delegate.id])
+	//		for _, staker := range sharder.stakers {
+	//			expected[staker.id] += 1e10
+	//			actual[staker.id] = balances.balances[staker.id]
 	//		}
 	//	}
 	//
-	//	for _, sh := range filterClientsById(sharders, balances.blockSharders) {
-	//		for _, st := range sh.stakers {
-	//			expected[st.id] += 21e7
+	//	for _, sharder := range filterClientsById(sharders, balances.blockSharders) {
+	//		for _, staker := range sharder.stakers {
+	//			expected[staker.id] += 21e7
 	//		}
 	//	}
 	//
-	//	assert.Equal(t, len(expected), len(got), "sizes of balance maps")
-	//	assert.Equal(t, expected, got, "balances")
+	//	assert.Equal(t, len(expected), len(actual), "sizes of balance maps")
+	//	assert.Equal(t, expected, actual, "balances")
 	//})
 
 	t.Run("epoch", func(t *testing.T) {
@@ -431,8 +430,8 @@ func prepareGeneratorAndBlock(miners []*TestClient, idx int, round int64) (
 
 func unwrapClients(clients []*TestClient) (list []*Client) {
 	list = make([]*Client, 0, len(clients))
-	for _, mn := range clients {
-		list = append(list, mn.client)
+	for _, miner := range clients {
+		list = append(list, miner.client)
 	}
 	return
 }
@@ -464,4 +463,13 @@ func filterClientsById(clients []*TestClient, ids []string) (
 		}
 	}
 	return
+}
+
+func assertBalancesAreZeros(t *testing.T, balances *testBalances) {
+	for id, value := range balances.balances {
+		if id == ADDRESS {
+			continue
+		}
+		assert.Zerof(t, value, "unexpected balance: %s", id)
+	}
 }
