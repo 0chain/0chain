@@ -5,6 +5,7 @@
 - [Initial Setup](#initial-setup) - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders) - [Setup Network](#setup-network)
 - [Building and Starting the Nodes](#building-and-starting-the-nodes)
 - [Generating Test Transactions](#generating-test-transactions)
+- [Compiling](#compiling)
 - [Troubleshooting](#troubleshooting)
 - [Debugging](#debugging)
 - [Unit tests](#unittests)
@@ -192,6 +193,22 @@ $ ../bin/run.miner.sh redis_txns redis-cli
 
 ```
 $ ../bin/run.sharder.sh cassandra cqlsh
+```
+
+## Dependencies for local compilation
+
+You need to install `rocksdb` and `herumi/bls`, refer to `docker.local/build.base/Dockerfile.build_base` for necessary steps.
+
+For local compilation it should be enough of `go build` from a submodule folder, e.g.
+```
+cd code/go/0chain.net/miner
+go build
+```
+
+You can pass tag `development` if you want to simulate n2n delays.
+And you also need tag `bn256` to build the same code as in production:
+```
+go build -tags "bn256 development"
 ```
 
 ## Debugging

@@ -383,10 +383,10 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
 
-	Logger.Debug("LevelNodeDB delete node",
-		zap.String("key", ToHex(key)),
-		zap.Int64("version", lndb.version),
-		zap.Int64s("db versions", lndb.versions))
+	//Logger.Debug("LevelNodeDB delete node",
+	//	zap.String("key", ToHex(key)),
+	//	zap.Int64("version", lndb.version),
+	//	zap.Int64s("db versions", lndb.versions))
 
 	c := lndb.current
 	p := lndb.prev

@@ -7,19 +7,6 @@ import (
 	"0chain.net/core/datastore"
 )
 
-/*VerificationTicket - verification ticket for the block */
-type VerificationTicket struct {
-	VerifierID datastore.Key `json:"verifier_id" msgpack:"v_id"`
-	Signature  string        `json:"signature" msgpack:"sig"`
-}
-
-// Copy the VerificationTicket.
-func (vt *VerificationTicket) Copy() (cp *VerificationTicket) {
-	cp = new(VerificationTicket)
-	cp.VerifierID, cp.Signature = vt.VerifierID, vt.Signature
-	return
-}
-
 /*BlockVerificationTicket - verification ticket with the block id.
 * As VerificationTickets are contained in a block, it doesn't need to have a reference to a block
 * However, when the verifiers verify and send the tickets, they need to indicate what block the
@@ -33,6 +20,19 @@ type BlockVerificationTicket struct {
 }
 
 var bvtEntityMetadata *datastore.EntityMetadataImpl
+
+/*VerificationTicket - verification ticket for the block */
+type VerificationTicket struct {
+	VerifierID datastore.Key `json:"verifier_id" msgpack:"v_id"`
+	Signature  string        `json:"signature" msgpack:"sig"`
+}
+
+// Copy the VerificationTicket.
+func (vt *VerificationTicket) Copy() (cp *VerificationTicket) {
+	cp = new(VerificationTicket)
+	cp.VerifierID, cp.Signature = vt.VerifierID, vt.Signature
+	return
+}
 
 /*GetEntityMetadata - implementing the interface */
 func (bvt *BlockVerificationTicket) GetEntityMetadata() datastore.EntityMetadata {
@@ -52,10 +52,18 @@ func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
 	return nil
 }
 
+/*GetBlockVerificationTicket - Get Block Verification Ticket */
+func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerificationTicket {
+	bvt := BVTProvider().(*BlockVerificationTicket)
+	bvt.VerifierID = vt.VerifierID
+	bvt.Signature = vt.Signature
+	bvt.BlockID = b.Hash
+	return bvt
+}
+
 /*BVTProvider - entity provider for block_verification_ticket object */
 func BVTProvider() datastore.Entity {
-	bvt := &BlockVerificationTicket{}
-	return bvt
+	return &BlockVerificationTicket{}
 }
 
 /*SetupBVTEntity - setup the entity */
@@ -65,13 +73,4 @@ func SetupBVTEntity() {
 	bvtEntityMetadata.Provider = BVTProvider
 	bvtEntityMetadata.IDColumnName = "block_id"
 	datastore.RegisterEntityMetadata("block_verification_ticket", bvtEntityMetadata)
-}
-
-/*GetBlockVerificationTicket - Get Block Verification Ticket */
-func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerificationTicket {
-	bvt := BVTProvider().(*BlockVerificationTicket)
-	bvt.VerifierID = vt.VerifierID
-	bvt.Signature = vt.Signature
-	bvt.BlockID = b.Hash
-	return bvt
 }

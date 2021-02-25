@@ -301,12 +301,13 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
+	Logger.Info("Starting a new round",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Int64("random seed", r.GetRandomSeed()))
 	mc.startNewRound(ctx, r)
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
-
 	var rn = mr.GetRoundNumber()
 
 	if rn < mc.GetCurrentRound() {
@@ -404,7 +405,6 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 
 // GenerateRoundBlock - given a round number generates a block.
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
-
 	var ts = time.Now()
 	defer func() { rbgTimer.UpdateSince(ts) }()
 
@@ -454,6 +454,16 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
 	b.MinerID = node.Self.Underlying().GetKey()
+
+	// set block round random seed
+	roundSeed := r.GetRandomSeed()
+	if roundSeed == 0 {
+		Logger.Error("Round seed reset to zero", zap.Int64("round", rn))
+		return nil, common.NewError("gen_block", "round seed reset to zero")
+	}
+
+	b.SetRoundRandomSeed(roundSeed)
+
 	mc.SetPreviousBlock(r, b, pb)
 
 	var (

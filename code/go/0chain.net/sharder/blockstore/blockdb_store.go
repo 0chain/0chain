@@ -24,12 +24,12 @@ var (
 )
 
 // NewBlockDBStore - create a new blockdb store
-func NewBlockDBStore(rootDir string) BlockStore {
-	store := &BlockDBStore{}
-	store.compress = true
-	store.FSBlockStore = NewFSBlockStore(rootDir)
-	store.txnMetadataProvider = datastore.GetEntityMetadata("txn")
-	return store
+func NewBlockDBStore(fsbs *FSBlockStore) BlockStore {
+	return &BlockDBStore{
+		FSBlockStore:        fsbs,
+		txnMetadataProvider: datastore.GetEntityMetadata("txn"),
+		compress:            true,
+	}
 }
 
 type blockHeader struct {

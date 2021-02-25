@@ -28,6 +28,19 @@ type BlockSummary struct {
 	*MagicBlock           `json:"maigc_block,omitempty"`
 }
 
+var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
+
+/*SetupBlockSummaryEntity - setup the block summary entity */
+func SetupBlockSummaryEntity(store datastore.Store) {
+	blockSummaryEntityMetadata = datastore.MetadataProvider()
+	blockSummaryEntityMetadata.Name = "block_summary"
+	blockSummaryEntityMetadata.DB = "blocksummarydb"
+	blockSummaryEntityMetadata.Provider = BlockSummaryProvider
+	blockSummaryEntityMetadata.Store = store
+	blockSummaryEntityMetadata.IDColumnName = "hash"
+	datastore.RegisterEntityMetadata("block_summary", blockSummaryEntityMetadata)
+}
+
 /*SetupBlockSummaryDB - sets up the block summary database */
 func SetupBlockSummaryDB() {
 	db, err := ememorystore.CreateDB("data/rocksdb/blocksummary")
@@ -36,8 +49,6 @@ func SetupBlockSummaryDB() {
 	}
 	ememorystore.AddPool("blocksummarydb", db)
 }
-
-var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
 
 /*BlockSummaryProvider - a block summary instance provider */
 func BlockSummaryProvider() datastore.Entity {
@@ -96,15 +107,4 @@ func (b *BlockSummary) GetMagicBlockMap() *MagicBlockMap {
 		return mbm
 	}
 	return nil
-}
-
-/*SetupBlockSummaryEntity - setup the block summary entity */
-func SetupBlockSummaryEntity(store datastore.Store) {
-	blockSummaryEntityMetadata = datastore.MetadataProvider()
-	blockSummaryEntityMetadata.Name = "block_summary"
-	blockSummaryEntityMetadata.DB = "blocksummarydb"
-	blockSummaryEntityMetadata.Provider = BlockSummaryProvider
-	blockSummaryEntityMetadata.Store = store
-	blockSummaryEntityMetadata.IDColumnName = "hash"
-	datastore.RegisterEntityMetadata("block_summary", blockSummaryEntityMetadata)
 }

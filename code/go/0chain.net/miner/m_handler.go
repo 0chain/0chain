@@ -4,6 +4,7 @@ package miner
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -387,34 +388,43 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 		mc = GetMinerChain()
 	)
 
-	if round != "" {
-		roundN, err := strconv.ParseInt(round, 10, 63)
-		if err != nil {
-			return nil, err
-		}
-		var r = mc.GetRound(roundN)
-		if r != nil {
-			b := r.GetHeaviestNotarizedBlock()
-			if b != nil {
-				return b, nil
-			}
-		}
-	} else if hash != "" {
+	errBlockNotAvailable := common.NewError("block_not_available",
+		fmt.Sprintf("Requested block is not available, "+
+			"current round: %d, "+
+			"request round: %d, "+
+			"request hash: %s", mc.GetCurrentRound(), round, hash))
+
+	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
 		if err != nil {
 			return nil, err
 		}
+
 		if b.IsBlockNotarized() {
 			return b, nil
 		}
+		return nil, errBlockNotAvailable
 	}
-	// else {
-	//	for r := mc.GetRound(mc.GetCurrentRound()); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
-	//		b := r.GetHeaviestNotarizedBlock()
-	//		if b != nil {
-	//			return b, nil
-	//		}
-	//	}
-	// }
-	return nil, common.NewError("block_not_available", "Requested block is not available")
+
+	if round == "" {
+		return nil, common.NewError("none_round_or_hash_provided",
+			"no block hash or round number is provided")
+	}
+
+	roundN, err := strconv.ParseInt(round, 10, 63)
+	if err != nil {
+		return nil, err
+	}
+
+	rd := mc.GetRound(roundN)
+	if rd == nil {
+		return nil, errBlockNotAvailable
+	}
+
+	b := rd.GetHeaviestNotarizedBlock()
+	if b == nil {
+		return nil, errBlockNotAvailable
+	}
+
+	return b, nil
 }
