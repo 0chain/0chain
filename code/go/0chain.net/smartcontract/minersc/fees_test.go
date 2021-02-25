@@ -59,7 +59,12 @@ func (msc *MinerSmartContract) setDKGMiners(t *testing.T,
 }
 
 func Test_payFees(t *testing.T) {
-	const stakeVal, stakeHoldersAmount = 10e10, 5
+	const sharderStakeValue, minerStakeValue, generatorStakeValue = 5, 3, 2
+	const sharderStakersAmount, minerStakersAmount, generatorStakersAmount = 13, 11, 7
+    const minersAmount, shardersAmount = 17, 19
+	const generatorIdx = 0
+
+    const timeDelta = 10
 
 	var (
 		balances = newTestBalances()
@@ -69,68 +74,78 @@ func Test_payFees(t *testing.T) {
 
 		miners   []*TestClient
 		sharders []*TestClient
+		generator  *TestClient
 	)
 
 	setConfig(t, balances)
 
-	t.Run("add miners", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			miners = append(miners, newClientWithStakers(true, t, msc, now,
-				stakeHoldersAmount, stakeVal, balances))
-			now += 10
-		}
-	})
+	//t.Run("add miners", func(t *testing.T) {
+	generator = newClientWithStakers(true, t, msc, now,
+		generatorStakersAmount, generatorStakeValue, balances)
 
-	t.Run("add sharders", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			sharders = append(sharders, newClientWithStakers(false, t, msc, now,
-				stakeHoldersAmount, stakeVal, balances))
-			now += 10
+	for idx := 0; idx < minersAmount; idx++ {
+		if idx == generatorIdx {
+			miners = append(miners, generator)
+		} else {
+			miners = append(miners, newClientWithStakers(true, t, msc, now,
+				minerStakersAmount, minerStakeValue, balances))
 		}
-	})
+		now += timeDelta
+	}
+	//})
+
+	//t.Run("add sharders", func(t *testing.T) {
+	for idx := 0; idx < shardersAmount; idx++ {
+		sharders = append(sharders, newClientWithStakers(false, t, msc, now,
+			sharderStakersAmount, sharderStakeValue, balances))
+		now += timeDelta
+	}
+	//})
 
 	msc.setDKGMiners(t, miners, balances)
 	balances.setLFMB(createLFMB(miners, sharders))
 
-	t.Run("stake miners", func(t *testing.T) {
-		for _, miner := range miners {
-			for _, staker := range miner.stakers {
-				_, err = staker.callAddToDelegatePool(t, msc, now,
-					stakeVal, miner.client.id, balances)
-				require.NoError(t, err, "staking miner")
-				now += 10
-			}
-		}
+	//t.Run("stake miners", func(t *testing.T) {
+    for idx, miner := range miners {
+        var stakeValue int64
+        if idx == generatorIdx {
+            stakeValue = generatorStakeValue
+        } else {
+            stakeValue = minerStakeValue
+        }
 
-		for _, miner := range miners {
-			assert.Zero(t, balances.balances[miner.client.id], "balance?")
-			assert.Zero(t, balances.balances[miner.delegate.id], "balance?")
-			for _, st := range miner.stakers {
-				assert.Zero(t, balances.balances[st.id], "balance?")
-			}
-		}
-	})
+        for _, staker := range miner.stakers {
+            _, err = staker.callAddToDelegatePool(t, msc, now,
+                stakeValue, miner.client.id, balances)
 
-	t.Run("stake sharders", func(t *testing.T) {
-		for _, sharder := range sharders {
-			for _, staker := range sharder.stakers {
-				_, err = staker.callAddToDelegatePool(t, msc, now,
-					stakeVal, sharder.client.id, balances)
-				require.NoError(t, err, "staking sharder")
-				now += 10
-			}
-		}
+            require.NoError(t, err, "staking miner")
+            assert.Zero(t, balances.balances[staker.id], "stakers' balances should be updated later")
 
-		for _, sharder := range sharders {
-			assert.Zero(t, balances.balances[sharder.client.id], "balance?")
-			assert.Zero(t, balances.balances[sharder.delegate.id], "balance?")
-			for _, st := range sharder.stakers {
-				assert.Zero(t, balances.balances[st.id], "balance?")
-			}
-		}
-	})
+            now += timeDelta
+        }
 
-	// add all the miners to DKG miners list
+        assert.Zero(t, balances.balances[miner.client.id], "miner's balance shouldn't be changed yet")
+        assert.Zero(t, balances.balances[miner.delegate.id], "miner's delegate balance shouldn't be changed yet")
+    }
+    //})
+
+	//t.Run("stake sharders", func(t *testing.T) {
+    for _, sharder := range sharders {
+        for _, staker := range sharder.stakers {
+            _, err = staker.callAddToDelegatePool(t, msc, now,
+                sharderStakeValue, sharder.client.id, balances)
+
+            require.NoError(t, err, "staking sharder")
+            assert.Zero(t, balances.balances[staker.id], "stakers' balance should be updated later")
+
+            now += timeDelta
+        }
+
+        assert.Zero(t, balances.balances[sharder.client.id], "sharder's balance shouldn't be changed yet")
+        assert.Zero(t, balances.balances[sharder.delegate.id], "sharder's balance shouldn't be changed yet")
+    }
+    //})
+
 	msc.setDKGMiners(t, miners, balances)
 
 	//t.Run("pay fees -> view change", func(t *testing.T) {
@@ -148,11 +163,11 @@ func Test_payFees(t *testing.T) {
 	//	var generator, blck = prepareGeneratorAndBlock(miners, 0, 251)
 	//
 	//	// payFees transaction
-	//	now += 10
+	//	now += timeDelta
 	//	var tx = newTransaction(generator.miner.id, ADDRESS, 0, now)
 	//	balances.txn = tx
 	//	balances.block = blck
-	//	balances.blockSharders = selectRandomN(sharders, 3)
+	//	balances.blockSharders = selectRandom(sharders, 3)
 	//
 	//	var global, err = msc.getGlobalNode(balances)
 	//	require.NoError(t, err, "getting global node")
@@ -187,7 +202,6 @@ func Test_payFees(t *testing.T) {
 	//	assert.EqualValues(t, 0, global.Minted)
 	//})
 
-	// add all the miners to DKG miners list
 	msc.setDKGMiners(t, miners, balances)
 
 	t.Run("pay fees -> no fees", func(t *testing.T) {
@@ -200,19 +214,19 @@ func Test_payFees(t *testing.T) {
 
 		setRounds(t, msc, 251, 501, balances)
 
-		var generator, blck = prepareGeneratorAndBlock(miners, 1, 252)
+		var generator, blck = prepareGeneratorAndBlock(miners, 0, 252)
 
 		// payFees transaction
-		now += 10
+		now += timeDelta
 		var tx = newTransaction(generator.client.id, ADDRESS, 0, now)
 		balances.txn = tx
 		balances.block = blck
-		balances.blockSharders = selectRandomN(sharders, 3)
+		balances.blockSharders = selectRandom(sharders, 3)
 
-		var gn, err = msc.getGlobalNode(balances)
+		var global, err = msc.getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
 
-		_, err = msc.payFees(tx, nil, gn, balances)
+		_, err = msc.payFees(tx, nil, global, balances)
 		require.NoError(t, err, "pay_fees error")
 
 		// pools active, no fees, rewards should be payed for
@@ -268,14 +282,14 @@ func Test_payFees(t *testing.T) {
 	//t.Run("pay fees -> with fees", func(t *testing.T) {
 	//	setRounds(t, msc, 252, 501, balances)
 	//
-	//	var generator, blck = prepareGeneratorAndBlock(miners, 1, 253)
+	//	var generator, blck = prepareGeneratorAndBlock(miners, 0, 253)
 	//
 	//	// payFees transaction
-	//	now += 10
+	//	now += timeDelta
 	//	var tx = newTransaction(generator.miner.id, ADDRESS, 0, now)
 	//	balances.txn = tx
 	//	balances.block = blck
-	//	balances.blockSharders = selectRandomN(sharders, 3)
+	//	balances.blockSharders = selectRandom(sharders, 3)
 	//
 	//	// add fees
 	//	tx.Fee = 100e10
@@ -334,14 +348,14 @@ func Test_payFees(t *testing.T) {
 	//t.Run("pay fees -> view change interests", func(t *testing.T) {
 	//	setRounds(t, msc, 500, 501, balances)
 	//
-	//	var generator, blck = prepareGeneratorAndBlock(miners, 1, 501)
+	//	var generator, blck = prepareGeneratorAndBlock(miners, 0, 501)
 	//
 	//	// payFees transaction
-	//	now += 10
+	//	now += timeDelta
 	//	var tx = newTransaction(generator.miner.id, ADDRESS, 0, now)
 	//	balances.txn = tx
 	//	balances.block = blck
-	//	balances.blockSharders = selectRandomN(sharders, 3)
+	//	balances.blockSharders = selectRandom(sharders, 3)
 	//
 	//	// add fees
 	//	var gn, err = msc.getGlobalNode(balances)
@@ -405,7 +419,7 @@ func Test_payFees(t *testing.T) {
 func prepareGeneratorAndBlock(miners []*TestClient, idx int, round int64) (
 	generator *TestClient, blck *block.Block) {
 
-	generator = miners[0]
+	generator = miners[idx]
 
 	blck = block.Provider().(*block.Block)
 	blck.Round = round                                // VC round
@@ -423,7 +437,7 @@ func unwrapClients(clients []*TestClient) (list []*Client) {
 	return
 }
 
-func selectRandomN(clients []*TestClient, n int) (selection []string) {
+func selectRandom(clients []*TestClient, n int) (selection []string) {
 	if n > len(clients) {
 		panic("too many elements requested")
 	}
