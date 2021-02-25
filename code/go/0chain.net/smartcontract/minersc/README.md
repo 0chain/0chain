@@ -170,11 +170,11 @@ min/max_stake out of this SC boundary.
 #### Interest rate.
 
 Interest rate is % (value in [0; 1) range) that used to calculate interests of
-stake holders. The interests payed every view change.
+stake holders. The interests are paid every view change.
 
 The formula
 ```
-interest_rewrds (mint) = stake_capacity * interest_rate
+interest_rewards (mint) = stake_capacity * interest_rate
 ```
 
 The interest_rate decreased by `interest_decline_rate` every epoch (see _epoch_
@@ -183,7 +183,7 @@ below).
 #### Max charge
 
 Max charge is max possible service_charge can be set by a node. E.g. if a node
-provide service_charge greater then this, than it can't be registered.
+provide service_charge greater than this, then it can't be registered.
 
 #### Epoch, Reward decline rate, Interest decline rate.
 
@@ -216,8 +216,8 @@ of tokens minted by Miner SC for current time.
 
 # Stake pools lifecycle.
 
-When a stake pool created it becomes PENDING. Next View Change it becomes
-ACTIVE and starts collecting interests. When user deletes his stake the
+When a stake pool created, it becomes PENDING. Next View Change it becomes
+ACTIVE and starts collecting interests. When a user deletes his stake the
 stake pool becomes DELETING and waits next View Change. The next View Change
 the pool will be unlocked.
 
@@ -226,9 +226,9 @@ A PENDING pool can be unlocked immediately.
 If a node leaves blockchain (leaves Magic Block) then Miner SC unlocks all
 stakes of the node returning tokens to owners.
 
-All interests and rewards payed directly to stake holders' wallets.
+All interests and rewards are paid directly to stake holders' wallets.
 
-It's impossible to make a stake for a offline node (any node doesn't
+It's impossible to make a stake for an offline node (any node which doesn't
 participate blockchain, e.g. any node not from current magic block). Since,
 this nodes treated as offline and their tokens unlocked. Thus, (1) a node can't
 join blockchain, (2) still not join (a just started node) (3) leaves blockchain
