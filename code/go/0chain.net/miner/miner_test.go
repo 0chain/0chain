@@ -62,10 +62,16 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r round.Ro
 	mc.BlockSize = int32(numOfTransactions)
 	usr, err := user.Current()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	mClient, err := makeTestMinioClient()
+	if err != nil {
+		return nil, err
+	}
+
 	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
-		usr.HomeDir, string(os.PathSeparator))))
+		usr.HomeDir, string(os.PathSeparator)), mClient))
 
 	var rd *Round
 	switch rr := r.(type) {
@@ -132,10 +138,13 @@ func (suite *MinerTestSuite) TestBlockGeneration() {
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
+	suite.Require().NoError(err)
+
+	mClient, err := makeTestMinioClient()
+	suite.Require().NoError(err)
+
+	blockstore.SetupStore(blockstore.NewFSBlockStore(
+		fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)), mClient))
 
 	r := CreateRound(1)
 
@@ -448,4 +457,19 @@ func setupSelf() func() {
 		clean()
 		s.Close()
 	}
+}
+
+func makeTestMinioClient() (blockstore.MinioClient, error) {
+	//todo: replace play.min.io with local service
+	mConf := blockstore.MinioConfiguration{
+		StorageServiceURL: "play.min.io",
+		AccessKeyID:       "Q3AM3UQ867SPQQA43P2F",
+		SecretAccessKey:   "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+		BucketName:        "mytestbucket",
+		BucketLocation:    "us-east-1",
+		DeleteLocal:       false,
+		Secure:            false,
+	}
+
+	return blockstore.CreateMinioClientFromConfig(mConf)
 }
