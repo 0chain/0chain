@@ -417,6 +417,10 @@ func (mn *MinerNode) numDelegates() int {
 	return len(mn.Pending) + len(mn.Active)
 }
 
+func (mn *MinerNode) numActiveDelegates() int {
+	return len(mn.Active)
+}
+
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
