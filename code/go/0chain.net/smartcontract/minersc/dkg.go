@@ -781,6 +781,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
+		n.Path = v.Path
 		n.PublicKey = v.PublicKey
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
@@ -796,6 +797,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
+		n.Path = v.Path
 		n.PublicKey = v.PublicKey
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeSharder
