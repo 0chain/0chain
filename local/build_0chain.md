@@ -4,6 +4,9 @@
 
 - [Introduction](#introduction)
 - [Install rocksdb](#install-rocksdb)
+- [Install Herumi's cryptography](#install-herumis-cryptography)
+- [Build libzstd](#build-libzstd)
+- [Build miner](#build-miner)
 
 ### Introduction
 
@@ -88,7 +91,7 @@ make OPT=-g0 USE_RTTI=1
 sudo make install
 ```
 
-### Install Herumi's cryptography
+### Install Herumis cryptography
 
 Ad before we need to install some libraries first.
 ```shell
@@ -123,3 +126,29 @@ cd $HOME/go/pkg/mod/github.com/valyala/gozstd*
 chmod -R +w . && 
 make clean libzstd.a
 ```
+
+### Build miner
+
+Now the big test. Run
+```shell
+cd 0chain/code/go/0chain.net/miner/miner
+go build -tags "bn256 development"
+```
+If all is well `go build` should work, and you will have a new `miner` executable.
+Alternately the result of errors or shortcuts are likely to turn up here as errors. 
+```shell
+/usr/bin/ld: /usr/local/lib/librocksdb.a(env_posix.o): in function `rocksdb::(anonymous namespace)::PosixDynamicLibrary::~PosixDynamicLibrary()':
+env_posix.cc:(.text+0xf0): undefined reference to `dlclose'
+
+```
+Suggests a linker error, probably a problem with your RocksDB and gcc versions.
+```shell
+/usr/bin/ld: /usr/local/lib/librocksdb.a(format.o): in function `rocksdb::LZ4_Uncompress(rocksdb::UncompressionContext const&, char const*, unsigned long, int*, unsigned int, rocksdb::MemoryAllocator*)':
+format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0xd5): undefined reference to `LZ4_createStreamDecode'
+/usr/bin/ld: format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0x135): undefined reference to `LZ4_setStreamDecode'
+```
+Still working on this.
+```shell
+/usr/bin/ld: warning: libgflags.so.2.2, needed by /usr/local/lib/librocksdb.so, not found (try using -rpath or -rpath-link)
+```
+Still working at this but `gflags` seems to be built with shared libs off by default.
