@@ -24,12 +24,13 @@ adapt for the IDE of your choice.
 ## custom build tags
 
 In goland these are set up in the settings panel.  
-![miner edit configuration](goland settings.png)
+![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20settins.png?raw=true)
+
 
 ## miner
 
-![miner edit configuration](goland miner.png)
+![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20miner.png?raw=true)
 
 ## sharder
 
-![miner edit configuration](goland sharder.png)
+![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20sharder.png?raw=true)
