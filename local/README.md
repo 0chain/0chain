@@ -20,7 +20,7 @@ to be run over at least three machines.
 ### One time machine configuration
 
 Each machine needs to be configured so that 0chain executables can be built, outlined in 
-[uild_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/build_environment.md)
+[build_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/build_environment.md)
 and the database 0Chain uses installed as in
 [instal_dbs.md](https://github.com/0chain/0chain/blob/debug_builds/local/install_dbs.md)
 
