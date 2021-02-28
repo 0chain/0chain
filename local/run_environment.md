@@ -3,7 +3,7 @@
 ## Table of contents
 
 - [Introduction](#introduction)
-- [configure files](#configure-files)
+- [Configure files](#configure-files)
   - [Node keys](#node-keys)
   - [Magic block](#magic-block)  
   - [0chain.yaml](#0chain-yaml)
@@ -22,7 +22,7 @@ A working 0Chain network ideally needs at least three or four machines.
 Some work could be done on less, but not if it requires fully functioning
 blockchains. 
 
-## configure files
+## Configure files
 
 The structure of the network is determined by the configuration. Each machine
 
