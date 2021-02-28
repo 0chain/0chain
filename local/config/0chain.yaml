@@ -109,7 +109,7 @@ server_chain:
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_2_miners_1_sharder.json
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
   dns_url: '' # http://198.18.0.98:9091
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40

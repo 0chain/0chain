@@ -3,8 +3,12 @@
 ## Table of contents
 
 - [Introduction](#introduction)
-- [redis](#redis)
-- [cassandra](#cassandra)
+- [configure files](#configure-files)
+  - [Node keys](#node-keys)
+  - [Magic block](#magic-block)   
+- [Reset databases](#reset-databases)  
+  - [Redis](#redis)
+  - [Cassandra](#cassandra)
 
 ## Introduction
 
@@ -17,7 +21,107 @@ A working 0Chain network ideally needs at least three or four machines.
 Some work could be done on less, but not if it requires fully functioning
 blockchains. 
 
-## redis
+## configure files
+
+The structure of the network is determined by the configuration. Each machine
+
+### Node keys
+
+The node keys gives each node its identification. There are examples of node
+key files in `0chain\docker.local\config\b0*node*_keys.txt`. One of these files
+is linked to each node by the node's runtime command option `--keys_file`.
+
+For example
+```shell
+miner --keys_file config/b0mnode2_keys.txt
+sharder --keys_file config/b0snode1_keys.txt
+```
+
+The other configuration files will refer to a node by the is as defined 
+by its keys_file. For information purposes links between each id, public key
+and private key triplet is given in `docker.local\config\magicBlock_5_miners_1_sharder.yaml` 
+and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
+
+### Magic Block
+
+To start the chain off we need a genesis magic block file. There are two 
+templates set up as examples `b0magicBlock_4_miners_1_sharder.tmp.json` and
+`b0magicBlock_3_miners_1_sharder.tmp.json. Fill in the details of the 0chain
+setup and drop a copy in each miner and sharder's config directory. Each node
+should have a json-identical magic block file.
+
+Each node object needs the `n2n_host` field filled in with the ip address of the 
+machine. When each miner and sharder is run, the --keys_file option must match
+the `id` field of the corresponding node, as indicated by the 
+`magicBlock_3_miners_3_sharder.yaml` file.
+
+The `t` and `n` fields must also much the number of nodes in the 0chain. In particular
+* `n` is the number of nodes in the dkg.
+* `t` actual node threshold for signatures 
+
+Simplified example
+```json
+{
+  "miners": {
+    "nodes": {
+       "1": {
+         "id" : 1,
+         "n2n_host" : "127.0.0.77"
+       },
+      "2": {
+        "id" : 2,
+        "n2n_host" : "127.0.0.85"
+      },
+      "3": {
+        "id" : 3,
+        "n2n_host" : "127.0.0.92"
+      }
+    }
+  },
+  "sharders": {
+    "nodes": {
+      "1": {
+        "id": 1,
+        "n2n_host": "127.0.0.77"
+      }
+    }
+  },
+  "t": 2,
+  "n": 3
+}
+```
+On machine `127.0.0.77` run
+```shell
+miner --keys_file config/b0mnode1_keys.txt
+sharder --keys_file config/b0snode1_keys.txt
+```
+on machine `127.0.0.85` run
+```shell
+miner --keys_file config/b0mnode2_keys.txt
+```
+and on machine `127.0.0.92` run
+```shell
+miner --keys_file config/b0mnode3_keys.txt
+```
+
+### 0chain.yaml
+
+0chain.yaml contains many configuration details for the chain. Each
+machine should have identical copies available for each miner and sharder
+in its config directory.
+
+The only field we consider here is the `magic_block_file` entry, this should
+match the name of the magic file [discussed above](#magic-block)
+
+For example
+```yaml
+network:
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
+```
+
+## Reset databases
+
+### Redis
 
 If you intend to run an 0Chain minor you will need two redis databases instances.
 Assuming redis has been installed as in  
@@ -30,7 +134,7 @@ sudo 0chain/local/bin/reset_redis.sh
 ```
 This should start two terminals running on port 6478 and 6479.
 
-## cassandra
+### Cassandra
 
 If you intend to run an 0Chain sharder you will need a Cassandra database. 
 
@@ -44,5 +148,3 @@ Now reset the cassandra cluster.
 sudo 0chain/local/bin/reset_cassandra.sh
 cqlsh -f 0chain/docker.local/config/cassandra/init.cql
 ```
-
-### Configfile
