@@ -3,10 +3,10 @@
 ## Table of contents
 
 - [Introduction](#introduction)
-- [Custom build tags](#custom_build_tags)
+- [Custom build tags](#custom-build-tags)
 - [Miner](#miner)     
 - [Sharder](#Sharder)
-- [Debug config files](#debug_config_files)
+- [Debug config files](#debug-config-files)
 
 ## Introduction
 
