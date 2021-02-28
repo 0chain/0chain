@@ -6,7 +6,7 @@
 - [configure files](#configure-files)
   - [Node keys](#node-keys)
   - [Magic block](#magic-block)  
-  - [0chain.yaml](#0chain.yaml)
+  - [0chain.yaml](#0chain-yaml)
 - [Reset databases](#reset-databases)  
   - [Redis](#redis)
   - [Cassandra](#cassandra)
@@ -105,7 +105,7 @@ and on machine `127.0.0.92` run
 miner --keys_file config/b0mnode3_keys.txt
 ```
 
-### 0chain.yaml
+### 0chain yaml
 
 0chain.yaml contains many configuration details for the chain. Each
 machine should have identical copies available for each miner and sharder
