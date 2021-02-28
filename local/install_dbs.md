@@ -33,12 +33,18 @@ both redis instances run with custom configure files. Just using
 
 If you intend to run a sharder you need to install cassandra. 
 
-Cassandra requires java, so if you don't have java installed yet
+Cassandra requires java-8, so if you don't have java 8 set up. 
 ```shell
 sudo apt update
-sudo apt install -y openjdk-14-jdk
+sudo apt install -y openjdk-8-jdk
 ```
-`java -verion` should now sho 14.0.2. Now to install cassandra
+`java -verion` should now sho 14.0.2. 
+You will probably want to update your `.profile` file with
+```shell
+export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
+export PATH=$PATH:$JAVA_HOME/bin
+```
+Now to install cassandra
 ```shell
 wget -q -O - https://www.apache.org/dist/cassandra/KEYS | sudo apt-key add --
 sudo sh -c 'echo "deb http://www.apache.org/dist/cassandra/debian 311x main" \
@@ -46,4 +52,10 @@ sudo sh -c 'echo "deb http://www.apache.org/dist/cassandra/debian 311x main" \
 sudo apt update
 sudo apt install -y cassandra
 ```
-
+Use the cassandra.yaml file provided by 0chain.
+```shell
+sudo mv /etc/cassandra/cassandra.yaml /etc/cassandra/cassandra.yaml.backup
+sudo cp 0chain/docker.local/config/cassandra/cassandra.yaml /etc/cassandra/cassandra.yaml
+```
+cassandra tools require python2 to run, however recent versions of Ubuntu have only python3 
+installed by default. https://linuxconfig.org/ubuntu-20-04-python-version-switch-manager
