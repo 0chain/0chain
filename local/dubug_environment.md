@@ -18,11 +18,18 @@ I will assume that you have set up your 0Chian as in the
 document and now you want to debug the chain on one of the machine.
 
 I will be explaining this from the perspective of 
-![Goland](edit_config_miner.png),
+[Goland](https://www.jetbrains.com/go/promo/?gclid=CjwKCAiAm-2BBhANEiwAe7eyFHLK4O3pHcNb0Vi_q4l5pOkSoeLN4XTYNFXJYeJbFBWQ0NzEeTEixBoCAEoQAvD_BwE),
 adapt for the IDE of your choice.
 
-## 
+## custom build tags
+
+In goland these are set up in the settings panel.  
+![miner edit configuration](goland settings.png)
 
 ## miner
 
-[miner edit configuration](https://github.com/0chain/0chain/blob/debug_builds/local/edit_config_miner.png)
+![miner edit configuration](goland miner.png)
+
+## sharder
+
+![miner edit configuration](goland sharder.png)
