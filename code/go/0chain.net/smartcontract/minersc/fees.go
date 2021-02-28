@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -381,28 +382,39 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		blockReward = state.Balance(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
-		charger, restr   = mn.splitByServiceCharge(blockReward)
-		minerr, sharderr = gn.splitByShareRatio(restr)
+		minerr, sharderr = gn.splitByShareRatio(blockReward)
+		charger, restr   = mn.splitByServiceCharge(minerr)
 		// fees         -- total fees for the block
 		fees             = msc.sumFee(block, true)
-		chargef, restf   = mn.splitByServiceCharge(fees)
-		minerf, sharderf = gn.splitByShareRatio(restf)
+		minerf, sharderf = gn.splitByShareRatio(fees)
+		chargef, restf   = mn.splitByServiceCharge(minerf)
 		// intermediate response
 		iresp string
 	)
 
-	// pay for the generator (charge + share ratio)
-	iresp, err = msc.mintStakeHolders(minerr+charger, mn, gn, false, balances)
-	if err != nil {
-		return "", err
+	if mn.numActiveDelegates() == 0 {
+		iresp, err = msc.payMiner(charger+restr, chargef+restf, mn, block, gn, balances)
+		if err != nil {
+			return "", err
+		}
+		resp += iresp
+	} else {
+		iresp, err = msc.payMiner(charger, chargef, mn, block, gn, balances)
+		if err != nil {
+			return "", err
+		}
+		resp += iresp
+		iresp, err = msc.mintStakeHolders(restr, mn, gn, false, balances)
+		if err != nil {
+			return "", err
+		}
+		resp += iresp
+		iresp, err = msc.payStakeHolders(restf, mn, false, balances)
+		if err != nil {
+			return "", err
+		}
+		resp += iresp
 	}
-	resp += iresp
-	// mint for the generator (charge + share ratio)
-	iresp, err = msc.payStakeHolders(minerf+chargef, mn, false, balances)
-	if err != nil {
-		return "", err
-	}
-	resp += iresp
 	// pay and mint rest for block sharders
 	iresp, err = msc.paySharders(sharderf, sharderr, block, gn, balances)
 	if err != nil {
@@ -416,12 +428,22 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	// view change stuff
-	if block.Round == gn.ViewChange {
-		var mb = balances.GetBlock().MagicBlock
-		err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
-		if err != nil {
-			return "", err
+	// view change stuff, Either run on view change or round reward frequency
+	if config.DevConfiguration.ViewChange {
+		if block.Round == gn.ViewChange {
+			var mb = balances.GetBlock().MagicBlock
+			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
+			if err != nil {
+				return "", err
+			}
+		}
+	} else if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
+		var mb = balances.GetLastestFinalizedMagicBlock().MagicBlock
+		if mb != nil {
+			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
@@ -610,4 +632,38 @@ func (msc *MinerSmartContract) paySharders(fee, mint state.Balance,
 	}
 
 	return
+}
+
+// pay miner's charge
+func (msc *MinerSmartContract) payMiner(reward, fee state.Balance, mn *MinerNode,
+	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	if reward != 0 {
+		Logger.Info("pay miner service charge",
+			zap.Any("delegate_wallet", mn.DelegateWallet),
+			zap.Any("service_charge_reward", reward))
+
+		mn.Stat.GeneratorRewards += reward
+		var mint = state.NewMint(ADDRESS, mn.DelegateWallet, reward)
+		if err = balances.AddMint(mint); err != nil {
+			resp += fmt.Sprintf("pay_fee/minting - adding mint: %v", err)
+		}
+		msc.addMint(gn, mint.Amount)
+		resp += string(mint.Encode())
+	}
+	if fee != 0 {
+		Logger.Info("pay miner service charge",
+			zap.Any("delegate_wallet", mn.DelegateWallet),
+			zap.Any("service_charge_fee", fee))
+
+		mn.Stat.GeneratorFees += fee
+		var transfer = state.NewTransfer(ADDRESS, mn.DelegateWallet, fee)
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", fmt.Errorf("adding transfer: %v", err)
+		}
+		resp += string(transfer.Encode())
+	}
+
+	return resp, nil
 }
