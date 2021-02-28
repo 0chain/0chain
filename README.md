@@ -245,7 +245,7 @@ This gives the start timestamps that can be used to correlate the events and the
 Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
 
 ```
-$ cd code/go/src/0chain.net/my-pkg
+$ cd code/go/0chain.net/my-pkg
 $ go test
 ```
 
