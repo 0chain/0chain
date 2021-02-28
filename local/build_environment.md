@@ -1,4 +1,4 @@
-# Build 0Chain go executables
+# Build environment for 0Chain go executables
 
 ## Table of contents
 
@@ -148,8 +148,8 @@ Suggests a linker error, probably a problem with your RocksDB and gcc versions.
 format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0xd5): undefined reference to `LZ4_createStreamDecode'
 /usr/bin/ld: format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0x135): undefined reference to `LZ4_setStreamDecode'
 ```
-Still working on this.
+TODO: Still working on this.
 ```shell
 /usr/bin/ld: warning: libgflags.so.2.2, needed by /usr/local/lib/librocksdb.so, not found (try using -rpath or -rpath-link)
 ```
-Still working on this but `gflags` seems to be built with shared libs off by default.
+TODO: Still working on this but `gflags` seems to be built with shared libs off by default.

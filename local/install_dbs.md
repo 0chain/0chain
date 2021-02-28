@@ -25,6 +25,9 @@ If you are going to be running miners on the machine you need to install redis.
 sudo apt update
 sudo apt install -y redis-server
 ```
+todo: need to set up `/etc/systemd/system/redis.service` so that
+both redis instances run with custom configure files. Just using
+` redis-server "path/to/redis.conf"` fails.
 
 ## cassandra
 
