@@ -8,7 +8,7 @@
 - [Build libzstd](#build-libzstd)
 - [Build miner](#build-miner)
 
-### Introduction
+## Introduction
 
 Assume that you have just run
 ```shell
@@ -40,10 +40,11 @@ You can also work it our for yourself, all the details are in the docker files
 [build_base](https://github.com/0chain/0chain/blob/master/docker.local/build.base/Dockerfile.build_base)
 and [build miner](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile).
 
-### Install rocksdb
+## Install rocksdb
 
 You probably already have make and g++ installed, but if not you want
 ```shell
+sudo apt update
 sudo apt install -y make
 sudo apt install -y build-essential
 ```
@@ -91,7 +92,7 @@ make OPT=-g0 USE_RTTI=1
 sudo make install
 ```
 
-### Install Herumis cryptography
+## Install Herumis cryptography
 
 Ad before we need to install some libraries first.
 ```shell
@@ -117,7 +118,7 @@ cd ../bls
 make 
 sudo make install
 ```
-### Build libzstd
+## Build libzstd
 
 From [docker file](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile);
 As https://github.com/valyala/gozstd/issues/6 is still open we have to build libzstd as follows.
@@ -127,7 +128,7 @@ chmod -R +w . &&
 make clean libzstd.a
 ```
 
-### Build miner
+## Build miner
 
 Now the big test. Run
 ```shell
@@ -151,4 +152,4 @@ Still working on this.
 ```shell
 /usr/bin/ld: warning: libgflags.so.2.2, needed by /usr/local/lib/librocksdb.so, not found (try using -rpath or -rpath-link)
 ```
-Still working at this but `gflags` seems to be built with shared libs off by default.
+Still working on this but `gflags` seems to be built with shared libs off by default.
