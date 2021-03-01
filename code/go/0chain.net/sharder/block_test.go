@@ -64,8 +64,6 @@ func TestBlockSummariesProvider(t *testing.T) {
 }
 
 func TestChain_GetBlockBySummary(t *testing.T) {
-	t.Parallel()
-
 	sc := sharder.GetSharderChain()
 
 	b := block.NewBlock("", 1)
@@ -131,6 +129,28 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "Test_Chain_Block_Not_Available_ERR",
+			fields: func() fields {
+				sCh := *sc.Chain
+				conf := *sCh.Config
+				conf.NumReplicators = 1
+				sCh.Config = &conf
+
+				return fields{
+					Chain:          &sCh,
+					BlockChannel:   sc.BlockChannel,
+					RoundChannel:   sc.RoundChannel,
+					BlockCache:     sc.BlockCache,
+					BlockTxnCache:  sc.BlockTxnCache,
+					SharderStats:   sc.SharderStats,
+					BlockSyncStats: sc.BlockSyncStats,
+					TieringStats:   sc.TieringStats,
+				}
+			}(),
+			args:    args{bs: &block.BlockSummary{Hash: b.Hash[:62]}},
+			wantErr: true,
+		},
+		{
 			name: "Test_Chain_Block_From_Cache_OK",
 			fields: fields{
 				Chain:          sc.Chain,
@@ -148,10 +168,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
@@ -167,7 +184,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 				t.Errorf("GetBlockBySummary() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != nil && !reflect.DeepEqual(got.Hash, tt.want.Hash) {
+			if !tt.wantErr && got != nil && !reflect.DeepEqual(got.Hash, tt.want.Hash) {
 				t.Errorf("GetBlockBySummary() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -403,7 +420,12 @@ func TestBlockSummaries_GetEntityMetadata(t *testing.T) {
 }
 
 func TestChain_GetBlockSummary(t *testing.T) {
-	t.Parallel()
+	b := block.NewBlock("", 1)
+	b.Hash = encryption.Hash("data")
+	bs := b.GetSummary()
+	if err := bs.GetEntityMetadata().GetStore().Write(common.GetRootContext(), bs); err != nil {
+		t.Fatal()
+	}
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -442,10 +464,7 @@ func TestChain_GetBlockSummary(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
@@ -459,6 +478,134 @@ func TestChain_GetBlockSummary(t *testing.T) {
 			_, err := sc.GetBlockSummary(tt.args.ctx, tt.args.hash)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestChain_StoreMagicBlockMapFromBlock(t *testing.T) {
+	sc := sharder.GetSharderChain()
+	mbm := block.MagicBlockMapProvider().(*block.MagicBlockMap)
+	mbm.SetKey("1")
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
+	}
+	type args struct {
+		ctx context.Context
+		mbm *block.MagicBlockMap
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test_Chain_StoreMagicBlockMapFromBlock_OK",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{
+				ctx: common.GetRootContext(),
+				mbm: mbm,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &sharder.Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+			if err := sc.StoreMagicBlockMapFromBlock(tt.args.ctx, tt.args.mbm); (err != nil) != tt.wantErr {
+				t.Errorf("StoreMagicBlockMapFromBlock() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestChain_GetMagicBlockMap(t *testing.T) {
+	mbm := &block.MagicBlockMap{}
+	mbm.Hash = encryption.Hash("mbm data")
+	mbm.ID = "1"
+	if err := mbm.GetEntityMetadata().GetStore().Write(common.GetRootContext(), mbm); err != nil {
+		t.Fatal(err)
+	}
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
+	}
+	type args struct {
+		ctx              context.Context
+		magicBlockNumber string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *block.MagicBlockMap
+		wantErr bool
+	}{
+		{
+			name:    "Test_Chain_GetMagicBlockMap_OK",
+			args:    args{ctx: common.GetRootContext(), magicBlockNumber: mbm.ID},
+			want:    mbm,
+			wantErr: false,
+		},
+		{
+			name:    "Test_Chain_GetMagicBlockMap_ERR",
+			args:    args{ctx: common.GetRootContext(), magicBlockNumber: "!"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &sharder.Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+			got, err := sc.GetMagicBlockMap(tt.args.ctx, tt.args.magicBlockNumber)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetMagicBlockMap() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetMagicBlockMap() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

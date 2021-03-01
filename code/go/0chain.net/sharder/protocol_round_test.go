@@ -62,7 +62,7 @@ func (r roundMock) GetHeaviestNotarizedBlock() *block.Block { panic("implement m
 
 func (r roundMock) GetBestRankedNotarizedBlock() *block.Block { panic("implement me") }
 
-func (r roundMock) Finalize(b *block.Block) { panic("implement me") }
+func (r roundMock) Finalize(b *block.Block) {}
 
 func (r roundMock) IsFinalizing() bool {
 	return true

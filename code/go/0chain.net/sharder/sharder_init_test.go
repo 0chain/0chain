@@ -1,7 +1,7 @@
 package sharder_test
 
 import (
-	"context"
+	"0chain.net/core/persistencestore"
 	"flag"
 	"os"
 	"time"
@@ -40,6 +40,7 @@ func init() {
 	config.SetServerChainID(config.Configuration.ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
+	viper.Set("mode", "testing")
 	initEntities()
 	viper.Set("server_chain.block.max_block_size", 100)
 	serverChain := chain.NewChainFromConfig()
@@ -99,12 +100,6 @@ func init() {
 	logging.InitLogging("development")
 }
 
-func initWorkers(ctx context.Context) {
-	serverChain := chain.GetServerChain()
-	serverChain.SetupWorkers(ctx)
-	sharder.SetupWorkers(ctx)
-}
-
 func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
@@ -127,15 +122,14 @@ func initEntities() {
 		panic(err)
 	}
 
-	memoryStorage := storeMock{}
-
+	memoryStorage := NewStoreMock()
 	chain.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 
 	round.SetupRoundSummaryDB()
 	block.SetupBlockSummaryDB()
 
-	ememoryStorage := storeMock{}
+	ememoryStorage := NewStoreMock()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
@@ -144,7 +138,8 @@ func initEntities() {
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
-	persistenceStorage := storeMock{}
+	persistencestore.InitSession()
+	persistenceStorage := NewStoreMock()
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
 	block.SetupMagicBlockMapEntity(persistenceStorage)

@@ -105,7 +105,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 			fields: fields{
 				Chain: sharder.GetSharderChain().Chain,
 			},
-			args: args{entityName: "block"},
+			args: args{entityName: "block", entityID: encryption.Hash("Test_Chain_AcceptMessage_Not_Existing_Block_TRUE")},
 			want: true,
 		},
 	}

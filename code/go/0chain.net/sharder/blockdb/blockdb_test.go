@@ -49,17 +49,14 @@ func (sp *StudentProvider) NewRecord() Record {
 
 func TestDBWrite(t *testing.T) {
 	compress := true
-	db, err := NewBlockDB("/tmp/blockdb", 4, compress)
-	if err != nil {
-		panic(err)
-	}
-	err = db.Create()
+	db := NewBlockDB("/tmp/blockdb", 4, compress)
+	err := db.Create()
 	if err != nil {
 		panic(err)
 	}
 	cls := &Class{Grade: 4, Description: "Most pouplar open source projects and technologies"}
 	db.SetDBHeader(cls)
-	students := make([]*Student, 3, 3)
+	students := make([]*Student, 3)
 	students[0] = &Student{Name: "Bitcoin - the first cryptocurrency", ID: "2009"}
 	students[1] = &Student{Name: "Linux - the most popular open source operating system", ID: "1991"}
 	students[2] = &Student{Name: "Apache - the first open source web server", ID: "1995"}
@@ -74,10 +71,7 @@ func TestDBWrite(t *testing.T) {
 		panic(err)
 	}
 	cls2 := &Class{}
-	db, err = NewBlockDB("/tmp/blockdb", 4, compress)
-	if err != nil {
-		panic(err)
-	}
+	db = NewBlockDB("/tmp/blockdb", 4, compress)
 	db.SetDBHeader(cls2)
 	err = db.Open()
 	if err != nil {
@@ -95,10 +89,7 @@ func TestDBWrite(t *testing.T) {
 	}
 	db.Close()
 
-	db, err = NewBlockDB("/tmp/blockdb", 4, compress)
-	if err != nil {
-		panic(err)
-	}
+	db = NewBlockDB("/tmp/blockdb", 4, compress)
 	db.SetDBHeader(cls2)
 	err = db.Open()
 	if err != nil {

@@ -5,7 +5,9 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
+	"0chain.net/core/ememorystore"
 	"context"
+	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -290,6 +292,19 @@ func TestChain_StoreRound(t *testing.T) {
 }
 
 func TestChain_GetMostRecentRoundFromDB(t *testing.T) {
+	r := round.NewRound(1000)
+
+	remd := datastore.GetEntityMetadata("round")
+	con := ememorystore.GetEntityCon(ememorystore.WithEntityConnection(common.GetRootContext(), remd), remd)
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, 1000)
+	if err := con.Conn.Put(key, datastore.ToJSON(r).Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	if err := con.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
 	type fields struct {
 		Chain          *chain.Chain
 		BlockChannel   chan *block.Block
@@ -311,9 +326,9 @@ func TestChain_GetMostRecentRoundFromDB(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "TestChain_GetMostRecentRoundFromDB_OK",
+			name:    "Test_Chain_GetMostRecentRoundFromDB_OK",
 			args:    args{ctx: common.GetRootContext()},
-			want:    datastore.GetEntityMetadata("round").Instance().(*round.Round),
+			want:    r,
 			wantErr: false,
 		},
 	}
@@ -339,6 +354,8 @@ func TestChain_GetMostRecentRoundFromDB(t *testing.T) {
 			}
 		})
 	}
+
+	sharder.GetSharderChain().DeleteRound(common.GetRootContext(), r)
 }
 
 func TestChain_ReadHealthyRound(t *testing.T) {

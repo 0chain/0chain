@@ -622,3 +622,53 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 
 	_ = cleanDirectories()
 }
+
+func TestBlockDBStore_Write(t *testing.T) {
+	bdb := makeTestBlockDBStore()
+	b := block.NewBlock("", 1)
+	b.Hash = encryption.Hash("")
+	b.Txns = append(b.Txns, &transaction.Transaction{})
+
+	type fields struct {
+		FSBlockStore        *FSBlockStore
+		txnMetadataProvider datastore.EntityMetadata
+		compress            bool
+	}
+	type args struct {
+		b *block.Block
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test_BlockDBStore_Write_OK",
+			fields: fields{
+				FSBlockStore:        bdb.FSBlockStore,
+				txnMetadataProvider: bdb.txnMetadataProvider,
+				compress:            bdb.compress,
+			},
+			args: args{
+				b: b,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bdbs := &BlockDBStore{
+				FSBlockStore:        tt.fields.FSBlockStore,
+				txnMetadataProvider: tt.fields.txnMetadataProvider,
+				compress:            tt.fields.compress,
+			}
+			if err := bdbs.Write(tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	if err := cleanDirectories(); err != nil {
+		t.Logf("error occuring while removing temp directories: %v", err)
+	}
+}

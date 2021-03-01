@@ -209,7 +209,9 @@ func TestRoundBlockRequestHandler(t *testing.T) {
 
 				b := block.NewBlock("", 1)
 				b.Hash = encryption.Hash("Test_RoundBlockRequestHandler_OK") // uniq hash
-				blockstore.GetStore().Write(b)
+				if err := blockstore.GetStore().Write(b); err != nil {
+					t.Fatal(err)
+				}
 
 				v := map[string]string{
 					"hash":  b.Hash,

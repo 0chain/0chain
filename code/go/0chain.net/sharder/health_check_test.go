@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/core/encryption"
 	"context"
 	"reflect"
 	"testing"
@@ -66,6 +67,7 @@ func TestChain_HealthCheckWorker(t *testing.T) {
 	cc := sc.BlockSyncStats.getCycleControl(ProximityScan)
 	cc.bounds.highRound = 2
 	cc.bounds.lowRound = 1
+	sc.BlockSyncStats.getCycleControl(ProximityScan).counters.current.ElapsedSeconds = 1
 
 	sc.AddRound(roundMock{number: 1})
 
@@ -253,6 +255,221 @@ func TestGetRangeBounds(t *testing.T) {
 			if got := GetRangeBounds(tt.args.roundEdge, tt.args.roundRange); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetRangeBounds() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestChain_healthCheck(t *testing.T) {
+	sc := GetSharderChain()
+
+	// case 1
+	r2 := round.NewRound(2)
+	r2.BlockHash = encryption.Hash("data round 2")
+	b2 := block.NewBlock("", 3)
+	b2.Hash = r2.BlockHash
+	bs2 := b2.GetSummary()
+	if err := sc.StoreRound(common.GetRootContext(), r2); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs2.GetEntityMetadata().GetStore().Write(common.GetRootContext(), bs2); err != nil {
+		t.Fatal(err)
+	}
+
+	// case 2
+	r3 := round.NewRound(3)
+	r3.BlockHash = encryption.Hash("data round 3")
+	b3 := block.NewBlock("", 3)
+	b3.Hash = r3.BlockHash
+	bs3 := b3.GetSummary()
+	if err := sc.StoreRound(common.GetRootContext(), r3); err != nil {
+		t.Fatal(err)
+	}
+	if err := sc.storeBlock(common.GetRootContext(), b3); err != nil {
+		t.Fatal(err)
+	}
+	if err := bs3.GetEntityMetadata().GetStore().Write(common.GetRootContext(), bs3); err != nil {
+		t.Fatal(err)
+	}
+
+	// case 3
+	r4 := round.NewRound(4)
+	r4.BlockHash = encryption.Hash("data round 4")
+	b4 := block.NewBlock("", 4)
+	b4.Hash = r3.BlockHash
+	if err := sc.StoreRound(common.GetRootContext(), r4); err != nil {
+		t.Fatal(err)
+	}
+	if err := sc.storeBlock(common.GetRootContext(), b4); err != nil {
+		t.Fatal(err)
+	}
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
+	}
+	type args struct {
+		ctx      context.Context
+		rNum     int64
+		scanMode HealthCheckScan
+	}
+	tests := []struct {
+		name            string
+		fields          fields
+		args            args
+		wantBlockStatus BlockHealthCheckStatus
+	}{
+		{
+			name: "TestChain_healthCheck_HealthCheck_Success",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args:            args{ctx: common.GetRootContext(), rNum: 3, scanMode: ProximityScan},
+			wantBlockStatus: HealthCheckSuccess,
+		},
+		{
+			name: "TestChain_healthCheck_Health_Check_Failure",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args:            args{ctx: common.GetRootContext(), rNum: 1, scanMode: ProximityScan},
+			wantBlockStatus: HealthCheckFailure,
+		},
+		{
+			name: "TestChain_healthCheck_HealthCheck_No_Block_Failure",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args:            args{ctx: common.GetRootContext(), rNum: 2, scanMode: ProximityScan},
+			wantBlockStatus: HealthCheckFailure,
+		},
+		{
+			name: "TestChain_healthCheck_HealthCheck_No_Block_Summary_Failure",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args:            args{ctx: common.GetRootContext(), rNum: 4, scanMode: ProximityScan},
+			wantBlockStatus: HealthCheckFailure,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+
+			cc := &sc.BlockSyncStats.getCycleControl(ProximityScan).counters.current
+			fail := cc.HealthCheckFailure
+			succ := cc.HealthCheckSuccess
+
+			sc.healthCheck(tt.args.ctx, tt.args.rNum, tt.args.scanMode)
+
+			if fail == cc.HealthCheckFailure && tt.wantBlockStatus == HealthCheckFailure {
+				t.Error("expected failure, but got success")
+			}
+			if succ == cc.HealthCheckSuccess && tt.wantBlockStatus == HealthCheckSuccess {
+				t.Error("expected success, but got failure")
+			}
+		})
+	}
+}
+
+func TestChain_setCycleBounds(t *testing.T) {
+	sc := GetSharderChain()
+	sc.LatestFinalizedBlock = block.NewBlock("", 0)
+	sc.HCCycleScan[ProximityScan].Window = 1
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
+	}
+	type args struct {
+		in0      context.Context
+		scanMode HealthCheckScan
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "Test_Chain_setCycleBounds_OK",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{
+				in0:      common.GetRootContext(),
+				scanMode: ProximityScan,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+
+			sc.setCycleBounds(tt.args.in0, tt.args.scanMode)
 		})
 	}
 }

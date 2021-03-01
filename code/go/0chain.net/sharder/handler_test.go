@@ -41,26 +41,6 @@ func TestBlockHandler(t *testing.T) {
 
 	tests := []test{
 		{
-			name: "Test_BlockHandler_Empty_Round_OK",
-			request: func() *http.Request {
-				u, err := url.Parse(baseUrl)
-				if err != nil {
-					t.Fatal(err)
-				}
-				v := map[string]string{
-					"block": b.Hash[:62],
-				}
-
-				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				return req
-			}(),
-			wantStatus: http.StatusBadRequest,
-		},
-		{
 			name: "Test_BlockHandler_OK",
 			request: func() *http.Request {
 				u, err := url.Parse(baseUrl)
@@ -298,8 +278,6 @@ func TestSetupHandlers(t *testing.T) {
 }
 
 func TestChainStatsHandler(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/v1/chain/get/stats"
 
 	type test struct {
@@ -327,6 +305,107 @@ func TestChainStatsHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.ChainStatsHandler)))
+
+			handler.ServeHTTP(rr, tt.request)
+
+			if status := rr.Code; status != tt.wantStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestMagicBlockHandler(t *testing.T) {
+	sharder.GetSharderChain().LatestFinalizedBlock = block.NewBlock("", 1)
+
+	const baseUrl = "/v1/block/magic/get"
+
+	type test struct {
+		name       string
+		request    *http.Request
+		wantStatus int
+	}
+
+	tests := []test{
+		{
+			name: "Test_MagicBlockHandler_Empty_Magic_Block_Num_ERR",
+			request: func() *http.Request {
+				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Test_MagicBlockHandler_OK",
+			request: func() *http.Request {
+				mbm := &block.MagicBlockMap{}
+				mbm.Hash = encryption.Hash("mbm data")
+				mbm.ID = "1"
+				if err := mbm.GetEntityMetadata().GetStore().Write(common.GetRootContext(), mbm); err != nil {
+					t.Fatal(err)
+				}
+
+				b := block.NewBlock("", 1)
+				b.Hash = mbm.Hash
+				sharder.GetSharderChain().AddBlock(b)
+
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"magic_block_number": mbm.ID,
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "Test_MagicBlockHandler_Unknown_Block_For_MBM_ERR",
+			request: func() *http.Request {
+				mbm := &block.MagicBlockMap{}
+				mbm.Hash = encryption.Hash("mbm data")[:62]
+				mbm.ID = "2"
+				if err := mbm.GetEntityMetadata().GetStore().Write(common.GetRootContext(), mbm); err != nil {
+					t.Fatal(err)
+				}
+
+				u, err := url.Parse(baseUrl)
+				if err != nil {
+					t.Fatal(err)
+				}
+				v := map[string]string{
+					"magic_block_number": mbm.ID,
+				}
+
+				req, err := http.NewRequest(http.MethodGet, makeTestURL(*u, v), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.MagicBlockHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 

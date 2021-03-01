@@ -1,6 +1,7 @@
 package sharder_test
 
 import (
+	"0chain.net/chaincore/round"
 	"context"
 	"errors"
 	"strconv"
@@ -28,8 +29,12 @@ func (b2 blockStoreMock) Write(b *block.Block) error {
 	return nil
 }
 
-func (b2 blockStoreMock) Read(_ string, _ int64) (*block.Block, error) {
-	return nil, nil
+func (b2 blockStoreMock) Read(hash string, _ int64) (*block.Block, error) {
+	v, ok := b2.blocks[hash]
+	if !ok {
+		return nil, errors.New("unknown block")
+	}
+	return v, nil
 }
 
 func (b2 blockStoreMock) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
@@ -78,12 +83,22 @@ func (b2 blockStoreMock) CloudObjectExists(hash string) bool {
 }
 
 type storeMock struct {
-	blockSummaries map[string]block.BlockSummary
+	blockSummaries map[string]*block.BlockSummary
+	magicBlockMaps map[string]*block.MagicBlockMap
+	rounds         map[string]*round.Round
 }
 
 var (
 	_ datastore.Store = (*storeMock)(nil)
 )
+
+func NewStoreMock() storeMock {
+	return storeMock{
+		blockSummaries: make(map[string]*block.BlockSummary),
+		magicBlockMaps: make(map[string]*block.MagicBlockMap),
+		rounds:         make(map[string]*round.Round),
+	}
+}
 
 func (s storeMock) Read(_ context.Context, key datastore.Key, entity datastore.Entity) error {
 	if strings.Contains(key, "!") {
@@ -92,18 +107,45 @@ func (s storeMock) Read(_ context.Context, key datastore.Key, entity datastore.E
 
 	name := entity.GetEntityMetadata().GetName()
 
-	if name == "block_summary" && len(key) != 64 {
-		return errors.New("block summaries hash length must be 64")
+	if (name == "block_summary" || name == "txn_summary") && len(key) != 64 {
+		return errors.New("key length must be 64")
 	}
 
-	if name == "round" {
+	if name == "round" || name == "magic_block_map" {
 		n, err := strconv.ParseInt(key, 10, 64)
 		if err != nil {
 			return err
 		}
 		if n < 0 {
-			return errors.New("round key can not be negative")
+			return errors.New("key can not be negative")
 		}
+	}
+
+	switch name {
+	case "block_summary":
+		v, ok := s.blockSummaries[key]
+		if !ok {
+			return errors.New("unknown block summary")
+		}
+
+		bs := entity.(*block.BlockSummary)
+		*bs = *v
+	case "round":
+		v, ok := s.rounds[key]
+		if !ok {
+			return errors.New("unknown round")
+		}
+
+		r := entity.(*round.Round)
+		*r = *v
+	case "magic_block_map":
+		v, ok := s.magicBlockMaps[key]
+		if !ok {
+			return errors.New("unknown magic block map")
+		}
+		mb := entity.(*block.MagicBlockMap)
+		*mb = *v
+
 	}
 
 	return nil
@@ -111,19 +153,31 @@ func (s storeMock) Read(_ context.Context, key datastore.Key, entity datastore.E
 
 func (s storeMock) Write(ctx context.Context, entity datastore.Entity) error {
 	name := entity.GetEntityMetadata().GetName()
-	if len(entity.GetKey()) != 64 && (name == "block" || name == "block_summary") {
+
+	if (name == "block" || name == "block_summary") && len(entity.GetKey()) != 64 {
 		return errors.New("key must be 64 size")
 	}
 
-	if name == "round" {
-		num, err := strconv.Atoi(entity.GetKey())
+	if name == "magic_block_map" || name == "round" {
+		n, err := strconv.Atoi(entity.GetKey())
 		if err != nil {
 			return err
 		}
-
-		if num < 0 {
-			return errors.New("round num must be positive")
+		if n < 0 {
+			return errors.New("key can not be negative")
 		}
+	}
+
+	switch name {
+	case "block_summary":
+		bs := entity.(*block.BlockSummary)
+		s.blockSummaries[entity.GetKey()] = bs
+	case "magic_block_map":
+		mb := entity.(*block.MagicBlockMap)
+		s.magicBlockMaps[entity.GetKey()] = mb
+	case "round":
+		r := entity.(*round.Round)
+		s.rounds[entity.GetKey()] = r
 	}
 
 	return nil

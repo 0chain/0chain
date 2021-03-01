@@ -5,12 +5,15 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"context"
 	"encoding/hex"
+	"go.uber.org/zap"
 	"net/url"
 	"reflect"
 	"testing"
@@ -222,8 +225,82 @@ func TestChain_AfterFetch(t *testing.T) {
 
 func TestChain_processBlock(t *testing.T) {
 	sc := GetSharderChain()
+
 	sc.LatestFinalizedBlock = block.NewBlock("", 0)
+
+	// case 1
 	b := block.NewBlock("", 1)
+
+	// case 2
+	var (
+		r2 = round.NewRound(2)
+		h2 = encryption.Hash("data")
+		b2 = block.NewBlock("", r2.Number)
+	)
+	pbK, prK, err := encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mb, err := makeTestMagicBlock(pbK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sc.MagicBlockStorage.Put(mb, r2.Number); err != nil {
+		t.Fatal(err)
+	}
+
+	sign, err := encryption.Sign(prK, h2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b2.VerificationTickets = []*block.VerificationTicket{
+		&block.VerificationTicket{
+			VerifierID: encryption.Hash(pbK),
+			Signature:  sign,
+		},
+	}
+
+	b2.Hash = h2
+
+	// case 3
+	var (
+		r3 = round.NewRound(3)
+		b3 = block.NewBlock("", r3.Number)
+	)
+	pbK, prK, err = encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mb3, err := makeTestMagicBlock(pbK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sc.MagicBlockStorage.Put(mb3, r3.Number); err != nil {
+		t.Fatal(err)
+	}
+
+	b3.MagicBlock = mb
+	mn := mb3.Miners.NodesMap[encryption.Hash(pbK)]
+	node.RegisterNode(mn)
+	b3.MinerID = mn.ID
+
+	b3.VerificationTickets = []*block.VerificationTicket{
+		&block.VerificationTicket{
+			VerifierID: encryption.Hash(pbK),
+		},
+	}
+	b3.PrevBlock = b2
+	b3.Hash = b3.ComputeHash()
+	sign, err = encryption.Sign(prK, b3.Hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b3.VerificationTickets[0].Signature = sign
+
+	b3.Signature, err = encryption.Sign(prK, b3.Hash)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -279,6 +356,34 @@ func TestChain_processBlock(t *testing.T) {
 				return args{ctx: common.GetRootContext(), b: b}
 			}(),
 		},
+		{
+			name: "Test_Chain_processBlock_Err_Block_Validation",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{ctx: common.GetRootContext(), b: b2},
+		},
+		{
+			name: "Test_Chain_processBlock_No_Err",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{ctx: common.GetRootContext(), b: b3},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -300,6 +405,8 @@ func TestChain_processBlock(t *testing.T) {
 
 func TestChain_syncBlockSummary(t *testing.T) {
 	sc := GetSharderChain()
+	r := round.NewRound(2000)
+	r.BlockHash = encryption.Hash("some data")
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -337,8 +444,8 @@ func TestChain_syncBlockSummary(t *testing.T) {
 			},
 			args: args{
 				ctx:        common.GetRootContext(),
-				r:          round.NewRound(1),
-				roundRange: 1,
+				r:          r,
+				roundRange: 2000,
 				scan:       ProximityScan,
 			},
 			want: nil,
@@ -491,7 +598,7 @@ func TestChain_storeRoundSummaries(t *testing.T) {
 	sc := GetSharderChain()
 	rs := &RoundSummaries{
 		RSummaryList: []*round.Round{
-			round.NewRound(1),
+			round.NewRound(8000),
 			nil,
 		},
 	}
@@ -789,12 +896,12 @@ func TestChain_storeBlock(t *testing.T) {
 				TieringStats:   sc.TieringStats,
 			},
 			args: func() args {
-				b := block.NewBlock("", 1)
+				b := block.NewBlock("", 3000)
 				b.Hash = encryption.Hash("data")[:62]
 
 				return args{
 					ctx: common.GetRootContext(),
-					b:   block.NewBlock("", 1),
+					b:   b,
 				}
 			}(),
 			wantErr: true,
@@ -1021,6 +1128,236 @@ func TestChain_NotarizedBlockFetched(t *testing.T) {
 			}
 
 			sc.NotarizedBlockFetched(tt.args.ctx, tt.args.b)
+		})
+	}
+}
+
+func TestChain_UpdateFinalizedBlock(t *testing.T) {
+	sc := GetSharderChain()
+
+	var (
+		b = block.NewBlock("", -1)
+		h = encryption.Hash("data")
+
+		lfb = b
+	)
+
+	b.Hash = h[:62]
+	b.Txns = append(b.Txns, &transaction.Transaction{})
+	debugTxn := &transaction.Transaction{}
+	debugTxn.TransactionData = "debug"
+	b.Txns = append(b.Txns, debugTxn)
+
+	pbK, _, err := encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mb, err := makeTestMagicBlock(pbK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.MagicBlock = mb
+
+	// sc.AddRound(r)
+	sc.LatestFinalizedBlock = lfb
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
+	}
+	type args struct {
+		ctx context.Context
+		b   *block.Block
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "Test_Chain_UpdateFinalizedBlock_OK",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{
+				ctx: common.GetRootContext(),
+				b:   b,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+			sc.UpdateFinalizedBlock(tt.args.ctx, tt.args.b)
+		})
+	}
+}
+
+func TestChain_pullRelatedMagicBlock_ERR(t *testing.T) {
+	sc := GetSharderChain()
+	logging.Logger = zap.NewNop()
+
+	b := block.NewBlock("", 1)
+	b.LatestFinalizedMagicBlockRound = 1
+	pbK, _, err := encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mb, err := makeTestMagicBlock(pbK)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mb.Sharders.AddNode(node.Self.Underlying())
+
+	b.MagicBlock = mb
+
+	if err := sc.MagicBlockStorage.Put(mb, 1); err != nil {
+		t.Fatal(err)
+	}
+	sc.LatestFinalizedMagicBlock = b
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
+	}
+	type args struct {
+		ctx context.Context
+		b   *block.Block
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "TestChain_pullRelatedMagicBlock_ERR",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{
+				ctx: common.GetRootContext(),
+				b:   b,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+			if err := sc.pullRelatedMagicBlock(tt.args.ctx, tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("pullRelatedMagicBlock() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestChain_storeBlockTransactions(t *testing.T) {
+	sc := GetSharderChain()
+
+	b := block.NewBlock("", 1)
+	b.Txns = []*transaction.Transaction{
+		&transaction.Transaction{},
+	}
+
+	type fields struct {
+		Chain          *chain.Chain
+		BlockChannel   chan *block.Block
+		RoundChannel   chan *round.Round
+		BlockCache     cache.Cache
+		BlockTxnCache  cache.Cache
+		SharderStats   Stats
+		BlockSyncStats *SyncStats
+		TieringStats   *MinioStats
+	}
+	type args struct {
+		ctx context.Context
+		b   *block.Block
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test_Chain_storeBlockTransactions_OK",
+			fields: fields{
+				Chain:          sc.Chain,
+				BlockChannel:   sc.BlockChannel,
+				RoundChannel:   sc.RoundChannel,
+				BlockCache:     sc.BlockCache,
+				BlockTxnCache:  sc.BlockTxnCache,
+				SharderStats:   sc.SharderStats,
+				BlockSyncStats: sc.BlockSyncStats,
+				TieringStats:   sc.TieringStats,
+			},
+			args: args{
+				ctx: common.GetRootContext(),
+				b:   b,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sc := &Chain{
+				Chain:          tt.fields.Chain,
+				BlockChannel:   tt.fields.BlockChannel,
+				RoundChannel:   tt.fields.RoundChannel,
+				BlockCache:     tt.fields.BlockCache,
+				BlockTxnCache:  tt.fields.BlockTxnCache,
+				SharderStats:   tt.fields.SharderStats,
+				BlockSyncStats: tt.fields.BlockSyncStats,
+				TieringStats:   tt.fields.TieringStats,
+			}
+			if err := sc.storeBlockTransactions(tt.args.ctx, tt.args.b); (err != nil) != tt.wantErr {
+				t.Errorf("storeBlockTransactions() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }
