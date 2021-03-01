@@ -88,15 +88,12 @@ func (trp *txnRecordProvider) NewRecord() blockdb.Record {
 }
 
 func (bdbs *BlockDBStore) Write(b *block.Block) error {
-	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(b.Hash, b.Round), 64, bdbs.compress)
-	if err != nil {
-		return err
-	}
+	db := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(b.Hash, b.Round), 64, bdbs.compress)
 	var headerBlock = *b
 	headerBlock.Txns = nil
 	bh := &blockHeader{Block: &headerBlock}
 	db.SetDBHeader(bh)
-	err = db.Create()
+	err := db.Create()
 	if err != nil {
 		return err
 	}
@@ -113,11 +110,11 @@ func (bdbs *BlockDBStore) Write(b *block.Block) error {
 
 // ReadWithBlockSummary - implement interface
 func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
-	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(bs.Hash, bs.Round), 64, bdbs.compress)
+	db := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(bs.Hash, bs.Round), 64, bdbs.compress)
 	block := bdbs.blockMetadataProvider.Instance().(*block.Block)
 	bh := &blockHeader{Block: block}
 	db.SetDBHeader(bh)
-	err = db.Open()
+	err := db.Open()
 	if err != nil {
 		return nil, err
 	}
@@ -137,10 +134,7 @@ func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 
 // DeleteBlock - implement interface
 func (bdbs *BlockDBStore) DeleteBlock(b *block.Block) error {
-	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(b.Hash, b.Round), 64, false)
-	if err != nil {
-		return err
-	}
+	db := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(b.Hash, b.Round), 64, false)
 	return db.Delete()
 }
 

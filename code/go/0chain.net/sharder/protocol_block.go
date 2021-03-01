@@ -298,8 +298,7 @@ func (sc *Chain) requestBlock(ctx context.Context, r *round.Round) *block.Block 
 	params.Add("round", strconv.FormatInt(r.Number, 10))
 	params.Add("hash", r.BlockHash)
 
-	var b *block.Block
-	b = sc.requestForBlock(ctx, params, r)
+	b := sc.requestForBlock(ctx, params, r)
 	return b
 }
 
@@ -340,8 +339,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(r.Number, 10))
 	params.Add("hash", r.BlockHash)
-	var b *block.Block
-	b = sc.requestForBlock(ctx, params, r)
+	b := sc.requestForBlock(ctx, params, r)
 	if b == nil {
 		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
@@ -496,7 +494,7 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 		if roundS != nil {
 			_, present := sc.hasRoundSummary(ctx, roundS.Number)
 			// Store only rounds that are not present.
-			if present == false {
+			if !present {
 				Logger.Debug("HC-StoreRoundSummaries",
 					zap.String("object", "RoundSummary"),
 					zap.Int64("round", roundS.Number),
@@ -528,7 +526,7 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 	for _, blockS := range bs.BSummaryList {
 		if blockS != nil {
 			_, present := sc.hasBlockSummary(ctx, blockS.Hash)
-			if present == false {
+			if !present {
 				Logger.Debug("HC-StoreBlockSummaries",
 					zap.String("object", "BlockSummary"),
 					zap.Int64("block", blockS.Round),
@@ -568,7 +566,7 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 
 func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) {
 	var err error
-	for true {
+	for {
 		err = sc.StoreRound(ctx, r)
 		if err != nil {
 			Logger.Error("db error (save round summary)", zap.Int64("round", r.Number), zap.Error(err))
@@ -581,7 +579,7 @@ func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) {
 
 func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) {
 	var err error
-	for true {
+	for {
 		err = sc.StoreBlockSummary(ctx, bs)
 		if err == nil {
 			return

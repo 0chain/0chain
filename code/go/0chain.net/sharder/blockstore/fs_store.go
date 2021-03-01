@@ -240,8 +240,5 @@ func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) CloudObjectExists(hash string) bool {
 	_, err := fbs.Minio.StatObject(fbs.Minio.BucketName(), hash, minio.StatObjectOptions{})
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }

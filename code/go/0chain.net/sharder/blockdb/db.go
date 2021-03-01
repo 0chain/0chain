@@ -39,9 +39,9 @@ type BlockDB struct {
 -- create - create a new one or only try to open an existing one
 -- compress - compress the records being saved
 */
-func NewBlockDB(file string, keyLength int8, compress bool) (*BlockDB, error) {
+func NewBlockDB(file string, keyLength int8, compress bool) *BlockDB {
 	db := &BlockDB{file: file, keyLength: keyLength, compress: compress}
-	return db, nil
+	return db
 }
 
 //SetDBHeader - set the db header
@@ -58,6 +58,9 @@ func (bdb *BlockDB) SetIndex(index Index) {
 func (bdb *BlockDB) Create() error {
 	dir := filepath.Dir(bdb.file)
 	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return err
+	}
 	if bdb.index == nil {
 		bdb.SetIndex(newMapIndex())
 	}
@@ -147,7 +150,9 @@ func (bdb *BlockDB) WriteData(record Record) error {
 	if err != nil {
 		return err
 	}
-	bdb.index.SetOffset(record.GetKey(), offset)
+	if err := bdb.index.SetOffset(record.GetKey(), offset); err != nil {
+		return err
+	}
 	buffer := bytes.NewBuffer(nil)
 	err = record.Encode(buffer)
 	if err != nil {
@@ -190,7 +195,9 @@ func (bdb *BlockDB) Iterate(ctx context.Context, handler DBIteratorHandler, rp R
 
 //Save - implement interface
 func (bdb *BlockDB) Save() error {
-	bdb.saveHeader()
+	if err := bdb.saveHeader(); err != nil {
+		return err
+	}
 	return bdb.Close()
 }
 

@@ -214,11 +214,11 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 
 	cc.inception = time.Now()
 
-	if config.Enabled == false {
+	if !config.Enabled {
 
 		// Scan is disabled. Print event periodically.
 		wakeToReport := config.ReportStatus
-		for true {
+		for {
 			Logger.Info("HC-CycleHistory",
 				zap.String("scan", scanMode.String()),
 				zap.Bool("enabled", config.Enabled))
@@ -250,7 +250,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	// Initialize the health check statistics
 	sc.initSyncStats(ctx, scanMode)
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -330,65 +330,62 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 	// Bounds for the round.
 	bounds := cc.bounds
 
-	for true {
-		// Log end of the current cycle
-		bc.CycleEnd = time.Now().Truncate(time.Second)
-		bc.CycleDuration = time.Since(bc.CycleStart).Truncate(time.Second)
-		bc.ElapsedSeconds = int64(bc.CycleDuration.Seconds())
+	// Log end of the current cycle
+	bc.CycleEnd = time.Now().Truncate(time.Second)
+	bc.CycleDuration = time.Since(bc.CycleStart).Truncate(time.Second)
+	bc.ElapsedSeconds = int64(bc.CycleDuration.Seconds())
 
-		// Mark as cycle is in hiatus
-		cc.Status = SyncHiatus
+	// Mark as cycle is in hiatus
+	cc.Status = SyncHiatus
 
-		Logger.Info("HC-CycleHistory",
-			zap.String("mode", cc.ScanMode.String()),
-			zap.Int64("cycle", cc.CycleCount),
-			zap.String("event", "end"),
-			zap.String("bounds",
-				fmt.Sprintf("[%v-%v]", bounds.highRound, bounds.lowRound)),
-			zap.Time("start", bc.CycleStart.Truncate(time.Second)),
-			zap.Time("end", bc.CycleEnd.Truncate(time.Second)),
-			zap.Duration("duration", bc.CycleDuration))
+	Logger.Info("HC-CycleHistory",
+		zap.String("mode", cc.ScanMode.String()),
+		zap.Int64("cycle", cc.CycleCount),
+		zap.String("event", "end"),
+		zap.String("bounds",
+			fmt.Sprintf("[%v-%v]", bounds.highRound, bounds.lowRound)),
+		zap.Time("start", bc.CycleStart.Truncate(time.Second)),
+		zap.Time("end", bc.CycleEnd.Truncate(time.Second)),
+		zap.Duration("duration", bc.CycleDuration))
 
-		// Calculate the sweep rate
-		bc.SweepCount = bounds.highRound - bounds.lowRound + 1
+	// Calculate the sweep rate
+	bc.SweepCount = bounds.highRound - bounds.lowRound + 1
 
-		if bc.ElapsedSeconds > 0 {
-			bc.SweepRate = bc.SweepCount / bc.ElapsedSeconds
-		}
-
-		Logger.Info("HC-CycleHistory",
-			zap.String("mode", cc.ScanMode.String()),
-			zap.Int64("cycle", cc.CycleCount),
-			zap.String("event", "sweep-rate"),
-			zap.Int64("BlocksSweeped", bc.SweepCount),
-			zap.Int64("ElapsedSeconds", bc.ElapsedSeconds),
-			zap.Int64("SweepRate", bc.SweepRate))
-
-		// End of the cycle. Sleep between cycles.
-		config := &sc.HCCycleScan[scanMode]
-
-		sleepTime := config.RepeatInterval
-		wakeToReport := config.ReportStatus
-		if wakeToReport > sleepTime {
-			wakeToReport = sleepTime
-		}
-
-		// Add time to sleep before waking up
-		restartCycle := time.Now().Add(sleepTime)
-		for ok := true; ok; ok = restartCycle.After(time.Now()) {
-			Logger.Info("HC-CycleHistory",
-				zap.String("mode", cc.ScanMode.String()),
-				zap.Int64("cycle", cc.CycleCount),
-				zap.String("event", "hiatus"),
-				zap.Time("restart", restartCycle.Truncate(time.Second)))
-			time.Sleep(wakeToReport)
-		}
-
-		// Time to start a new cycle
-		sc.setCycleBounds(ctx, scanMode)
-		sc.initSyncStats(ctx, scanMode)
-		break
+	if bc.ElapsedSeconds > 0 {
+		bc.SweepRate = bc.SweepCount / bc.ElapsedSeconds
 	}
+
+	Logger.Info("HC-CycleHistory",
+		zap.String("mode", cc.ScanMode.String()),
+		zap.Int64("cycle", cc.CycleCount),
+		zap.String("event", "sweep-rate"),
+		zap.Int64("BlocksSweeped", bc.SweepCount),
+		zap.Int64("ElapsedSeconds", bc.ElapsedSeconds),
+		zap.Int64("SweepRate", bc.SweepRate))
+
+	// End of the cycle. Sleep between cycles.
+	config := &sc.HCCycleScan[scanMode]
+
+	sleepTime := config.RepeatInterval
+	wakeToReport := config.ReportStatus
+	if wakeToReport > sleepTime {
+		wakeToReport = sleepTime
+	}
+
+	// Add time to sleep before waking up
+	restartCycle := time.Now().Add(sleepTime)
+	for ok := true; ok; ok = restartCycle.After(time.Now()) {
+		Logger.Info("HC-CycleHistory",
+			zap.String("mode", cc.ScanMode.String()),
+			zap.Int64("cycle", cc.CycleCount),
+			zap.String("event", "hiatus"),
+			zap.Time("restart", restartCycle.Truncate(time.Second)))
+		time.Sleep(wakeToReport)
+	}
+
+	// Time to start a new cycle
+	sc.setCycleBounds(ctx, scanMode)
+	sc.initSyncStats(ctx, scanMode)
 }
 
 func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHealthCheckStatus) {
@@ -429,7 +426,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	self := node.GetSelfNode(ctx)
 
 	r, foundRoundSummary := sc.hasRoundSummary(ctx, rNum)
-	if foundRoundSummary == false || sc.isValidRound(r) == false {
+	if !foundRoundSummary || !sc.isValidRound(r) {
 		// Update missing round summary
 		current.roundSummary.Missing++
 
@@ -442,7 +439,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		}
 	}
 
-	if sc.isValidRound(r) == false {
+	if !sc.isValidRound(r) {
 		// Unable to get the round summary information.
 		hcStatus = HealthCheckFailure
 		return
@@ -450,7 +447,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// Obtained valid round. Retrieve blocks.
 	bs, foundBlockSummary := sc.hasBlockSummary(ctx, r.BlockHash)
-	if foundBlockSummary == false {
+	if !foundBlockSummary {
 		current.blockSummary.Missing++
 
 		// Missing block summary. Sync the blocks
@@ -486,7 +483,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
-	if foundBlock == false {
+	if !foundBlock {
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
 			// It needs a block either to fix txnsummary or missing block
@@ -554,5 +551,4 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			return
 		}
 	}
-	return
 }

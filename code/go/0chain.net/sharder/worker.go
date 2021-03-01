@@ -53,7 +53,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -65,7 +65,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
 	r, err := sc.GetRoundFromStore(ctx, rNum)
-	if err == nil && sc.isValidRound(r) == true {
+	if err == nil && sc.isValidRound(r) {
 		return r, true
 	}
 	return nil, false
@@ -200,7 +200,7 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
 	var numWorkers = viper.GetInt("minio.num_workers")
 	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return

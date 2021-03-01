@@ -135,15 +135,18 @@ func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity
 	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 }
 
-var txnTableIndexed = false
-var txnSummaryMV = false
-var roundToHashMVTable = "round_to_hash"
+var (
+	txnTableIndexed    = false
+	txnSummaryMV       = false
+	roundToHashMVTable = "round_to_hash"
+)
 
 func txnSummaryCreateMV(targetTable string, srcTable string) string {
 	return fmt.Sprintf(
 		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
 		targetTable, srcTable)
 }
+
 func getCreateIndex(table string, column string) string {
 	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS ON %v(%v)", table, column)
 }
@@ -155,12 +158,13 @@ func getSelectCountTxn(table string, column string) string {
 func getSelectTxn(table string, column string) string {
 	return fmt.Sprintf("SELECT round FROM %v where %v=?", table, column)
 }
+
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
 	defer persistencestore.Close(tctx)
 	c := persistencestore.GetCon(tctx)
-	if txnSummaryMV == false {
+	if !txnSummaryMV {
 		err := c.Query(txnSummaryCreateMV(roundToHashMVTable, txnSummaryEntityMetadata.GetName())).Exec()
 		if err == nil {
 			txnSummaryMV = true
@@ -184,6 +188,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 	}
 	return count, nil
 }
+
 func (sc *Chain) getTxnAndCountForRound(ctx context.Context, r int64) (int, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)

@@ -387,7 +387,6 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 	bl.nlfmb, err = sc.loadHighestMagicBlock(ctx, bl.lfb)
 	if err != nil {
 		Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
-		err = nil // reset this error and exit
 	}
 
 	return // got them all (or excluding the nlfmb)
