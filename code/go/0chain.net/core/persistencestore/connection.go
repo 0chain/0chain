@@ -30,17 +30,28 @@ func init() {
 var mutex = &sync.Mutex{}
 
 // Session holds our connection to Cassandra
-var Session *gocql.Session
+var Session SessionI
 
 /*InitSession - initialize a storage session */
 func InitSession() {
 	cassandraDelay := viper.GetInt("cassandra.connection.delay")
 	cassandraRetries := viper.GetInt("cassandra.connection.retries")
 	delay := time.Duration(cassandraDelay) * time.Second
-	err := initSession(delay, cassandraRetries)
+
+	var err error
+	if viper.GetString("mode") == "testing" {
+		initTestSession()
+	} else {
+		err = initSession(delay, cassandraRetries)
+	}
+
 	if Session == nil {
 		panic(err)
 	}
+}
+
+func initTestSession() {
+	Session = SessionMock{}
 }
 
 func initSession(delay time.Duration, maxTries int) error {
@@ -82,7 +93,7 @@ func initSession(delay time.Duration, maxTries int) error {
 * Should always use right after getting the connection to avoid leaks
  * defer c.Close()
 */
-func GetConnection() *gocql.Session {
+func GetConnection() SessionI {
 	if Session == nil {
 		InitSession()
 	}
@@ -98,11 +109,11 @@ func WithConnection(ctx context.Context) context.Context {
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
-func GetCon(ctx context.Context) *gocql.Session {
+func GetCon(ctx context.Context) SessionI {
 	if ctx == nil {
 		return GetConnection()
 	}
-	return ctx.Value(CONNECTION).(*gocql.Session)
+	return ctx.Value(CONNECTION).(SessionI)
 }
 
 /*WithEntityConnection takes a context and adds a connection value to it */
