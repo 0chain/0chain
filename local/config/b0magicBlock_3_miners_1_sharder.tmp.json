@@ -11,12 +11,7 @@
         "version": "",
         "creation_date": 0,
         "public_key": "255452b9f49ebb8c8b8fcec9f0bd8a4284e540be1286bd562578e7e59765e41a7aada04c9e2ad3e28f79aacb0f1be66715535a87983843fea81f23d8011e728b",
-        "n2n_host": <Enter
-        ip
-        address
-        of
-        first
-        machine>,
+        "n2n_host": "192.168.1.99",
         "host": "localhost",
         "port": 7071,
         "type": 0,
@@ -35,12 +30,7 @@
         "version": "",
         "creation_date": 0,
         "public_key": "17dd0eb10c2567899e34f368e1da2744c9cd3beb2e3babaa4e3350d950bad91dd4ed03d751d49e1f6c1b25c6ec8d1cc8db4ca2da72683d2958fb23843cc6a480",
-        "n2n_host": <Enter
-        ip
-        address
-        of
-        second
-        machine>
+        "n2n_host": "192.168.1.76",
         "host": "localhost",
         "port": 7072,
         "type": 0,
@@ -59,12 +49,7 @@
         "version": "",
         "creation_date": 0,
         "public_key": "6059d12b7796b101e61c38bb994ebb830280870af2e4ee6d7d7810d110b8e50a61ede17bb5bf31b7208c19f3b9ca6f525ba8e17c14b9f7c8347e84c8375b8d1f",
-        "n2n_host": <Enter
-        ip
-        address
-        of
-        third
-        machine>,
+        "n2n_host": "192.168.1.95",
         "host": "localhost",
         "port": 7074,
         "type": 0,
@@ -88,7 +73,7 @@
         "version": "",
         "creation_date": 0,
         "public_key": "b9b236311a623be9d1999fb6dd30eb223cbe16639a9d5502e28879c67aa41915a0b100ce8248360ec73dd2d822087d1c19a8aabc5262a475d8553a35c90dd217",
-        "n2n_host": <Enter ip address of first machine>,
+        "n2n_host": "192.168.1.99",
         "host": "localhost",
         "port": 7171,
         "type": 1,

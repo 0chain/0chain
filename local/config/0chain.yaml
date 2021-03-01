@@ -105,11 +105,11 @@ server_chain:
     ahead: 5                    # should be >= 5
     fb_fetching_lifetime: "10s" #
   async_blocks_fetching:
-    max_simultaneous_from_miners: 100
+    max_simultaneous_from_miners: 100S
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
+  magic_block_file: config/b0magicBlock_3_miners_1_sharder.json
   dns_url: '' # http://198.18.0.98:9091
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
