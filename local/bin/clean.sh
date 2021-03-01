@@ -1,23 +1,4 @@
 #!/bin/sh
 
-for i in $(seq 1 8)
-do
-  echo "deleting miner$i logs"
-  rm -rf docker.local/miner$i/log/*
-  echo "deleting miner$i rocksdb db"
-  rm -rf docker.local/miner$i/data/rocksdb/*
-done
-
-for i in $(seq 1 3)
-do
-  echo "deleting sharder$i logs"
-  rm -rf docker.local/sharder$i/log/*
-  echo "deleting sharder$i rocksdb db"
-  rm -rf docker.local/sharder$i/data/rocksdb/*
-done
-
-for i in $(seq 1 3)
-do
-  echo "deleting sharder$i blocks on the file system"
-  rm -rf docker.local/sharder$i/data/blocks/*
-done
+rm -r "$(dirname "$0")"/../miner
+rm -r "$(dirname "$0")"/../sharder

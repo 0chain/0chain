@@ -1,12 +1,14 @@
 #!/bin/sh
 
-mkdir -p ../miner/data/rocksdb
-mkdir -p ../miner/log
-mkdir -p ../miner/config
-cp ../../docker.local/config/sc.yaml ../miner/config/sc.yaml
+mkdir -p "$(dirname "$0")"/../miner/data/rocksdb
+mkdir -p "$(dirname "$0")"/../miner/log
+mkdir -p "$(dirname "$0")"/../miner/config
+cp "$(dirname "$0")"/../../docker.local/config/sc.yaml "$(dirname "$0")"/../miner/config/sc.yaml
+cp "$(dirname "$0")"/../../docker.local/config/n2n_delay.yaml "$(dirname "$0")"/../miner/config/n2n_delay.yaml
 
-mkdir -p ../sharder/data/blocks
-mkdir -p ../sharder/data/rocksdb
-mkdir -p ../sharder/log
-mkdir -p ../sharder/config
-cp ../../docker.local/config/sc.yaml ../sharder/config/sc.yaml
+mkdir -p "$(dirname "$0")"/../sharder/data/blocks
+mkdir -p "$(dirname "$0")"/../sharder/data/rocksdb
+mkdir -p "$(dirname "$0")"/../sharder/log
+mkdir -p "$(dirname "$0")"/../sharder/config
+cp "$(dirname "$0")"/../../docker.local/config/sc.yaml "$(dirname "$0")"/../sharder/config/sc.yaml
+cp "$(dirname "$0")"/../../docker.local/config/minio_config.txt "$(dirname "$0")"/../sharder/config/minio_config.txt

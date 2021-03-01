@@ -34,7 +34,7 @@ Possible way of populating the panel for building and running the miner would be
 * Working directory: `/home/piers/GolandProjects/0chain/local/miner`  
 * Environment: `REDIS_HOST=redis;REDIS_TXNS=redis_txns`
 * Use custom build tags: ticked
-* Program arguments: `--development_mode 0 --keys_file ../config/b0snode1_keys.txt -mino_file ../config/mino_config.txt` 
+* Program arguments: `--deployment_mode 0 --keys_file config/b0snode1_keys.txt -mino_file config/mino_config.txt` 
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20miner.png?raw=true)
 
 ## Sharder
@@ -47,15 +47,15 @@ Possible way of populating the panel for building and running the sharder would 
 * Working directory: `/home/piers/GolandProjects/0chain/local/sharder`
 * Environment: `CASSANDRA_CLUSTER=cassandra`
 * Use custom build tags: ticked
-* Program arguments: `--development_mode 0 --keys_file ../config/b0snode1_keys.txt --mino_file ../config/mino_config.txt`
+* Program arguments: `--deployment_mode 0 --keys_file config/b0snode1_keys.txt --minio_file config/minio_config.txt`
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20sharder.png?raw=true)
   
 ## Debug config files
 
 Each time we debug a new chain we need to set up the miner and sharder working directories.
 ```shell
-0chain\local\bin\clean.sh
-0chain\local\bin\init.setup.sh
+0chain/local/bin/clean.sh
+0chain/local/bin/init.setup.sh
 ```
 Now edit the [magic block file](https://github.com/0chain/0chain/blob/debug_builds/local/run_environment.md#magic-block) and 
 [`0chain.yaml`](https://github.com/0chain/0chain/blob/debug_builds/local/run_environment.md#0chain-yaml) file. Copy them 

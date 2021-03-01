@@ -1,5 +1,11 @@
 # Debug TestNet Setup
 
+> Warning!
+This is intended for developers to construct debug builds. Other users
+are advised to use the docker files as outlined in the main 
+[readme.mn](https://github.com/0chain/0chain/tree/debug_builds#initial-setup)
+
+
 ## Table of contents
 
 - [Introduction](#introduction)
