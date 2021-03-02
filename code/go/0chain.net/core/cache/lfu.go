@@ -15,9 +15,9 @@ type LFU struct {
 
 //NewLFUCache - create a new LFU cache object
 func NewLFUCache(size int) *LFU {
-	c := &LFU{}
-	c.Cache = cache.NewLFU(size)
-	return c
+	return &LFU{
+		Cache: cache.NewLFU(size),
+	}
 }
 
 //Add - add a given key and value
