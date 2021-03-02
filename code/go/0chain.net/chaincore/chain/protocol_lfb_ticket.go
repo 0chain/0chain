@@ -343,7 +343,6 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:
-
 			subs[sub] = struct{}{}
 		case unsub := <-c.unsubLFBTicket:
 			delete(subs, unsub)
