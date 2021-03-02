@@ -29,7 +29,7 @@ The structure of the network is determined by the configuration. Each machine
 ### Node keys
 
 The node keys gives each node its identification. There are examples of node
-key files in `0chain\docker.local\config\b0*node*_keys.txt`. One of these files
+key files in `0chain/docker.local/config/b0*node*_keys.txt`. One of these files
 is linked to each node by the node's runtime command option `--keys_file`.
 
 For example
@@ -38,7 +38,7 @@ miner --keys_file config/b0mnode2_keys.txt
 sharder --keys_file config/b0snode1_keys.txt
 ```
 
-The other configuration files will refer to a node by the is as defined 
+The other configuration files will refer to a node by the `id` is as defined 
 by its keys_file. For information purposes links between each id, public key
 and private key triplet is given in `docker.local\config\magicBlock_5_miners_1_sharder.yaml` 
 and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
@@ -47,17 +47,18 @@ and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
 
 To start the chain off we need a genesis magic block file. There are two 
 templates set up as examples `b0magicBlock_4_miners_1_sharder.tmp.json` and
-`b0magicBlock_3_miners_1_sharder.tmp.json. Fill in the details of the 0chain
-setup and drop a copy in each miner and sharder's config directory. Each node
-should have a json-identical magic block file.
+`b0magicBlock_3_miners_1_sharder.tmp.json`. Fill in the missing details of the 
+ip address of each machine in the 0chain in the `n2n_host` fields.
+Each node should have a json-identical magic block file.
 
 Each node object needs the `n2n_host` field filled in with the ip address of the 
 machine. When each miner and sharder is run, the --keys_file option must match
 the `id` field of the corresponding node, as indicated by the 
 `magicBlock_3_miners_3_sharder.yaml` file.
 
-The `t` and `n` fields must also much the number of nodes in the 0chain. In particular
-* `n` is the number of nodes in the dkg.
+The `t` and `n` fields must also be consistant the number of nodes in the 0chain. 
+In particular
+* `n` is the number of nodes in the dkg
 * `t` actual node threshold for signatures 
 
 Simplified example
@@ -130,7 +131,7 @@ Assuming redis has been installed as in
 then two redis severs can be started on separate terminals. 
 0Chain's miner hardcodes them to be on port 6479 and 6479. 
 Make sure any terminals running redis are shut down.
-You  might have to force the 6379 and 6479 ports to shut down.
+You might have to force the 6379 and 6479 ports to shut down.
 ```shell
 sudo 0chain/local/bin/reset_redis.sh
 ```
@@ -151,6 +152,14 @@ service cassandra stop
 rm -rf /var/lib/cassandra/*
 service cassandra start
 ```
-Run, in order, the cqlsh scripts `0chian\docker.local\config\cassandra\init.cql`,
+You might have to wait for cqlsh to come up.
+```shell
+cqlsh
+Connected to Test Cluster at 127.0.0.1:9042.
+[cqlsh 5.0.1 | Cassandra 3.11.10 | CQL spec 3.4.4 | Native protocol v4]
+Use HELP for help.
+cqlsh>
+```
+Now run, in order, the cqlsh scripts `0chian\docker.local\config\cassandra\init.cql`,
 `0chain\sql\zerochain_keyspace.sql`, `magic_block_map.sql` and `txn_summary.sql`
-respectively. You might have to wait for cqlsh to come up.
+respectively. 

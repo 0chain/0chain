@@ -14,7 +14,7 @@ Assume that you have just run
 ```shell
 git clone https://github.com/0chain
 ```
-check to see if you can compile a 0Chain miner
+check to see if you can compile an 0Chain miner
 ```shell
 cd 0chain/code/go/0chain.net/miner/miner
 go build -tags "bn256 development"
@@ -48,7 +48,7 @@ sudo apt update
 sudo apt install -y make
 sudo apt install -y build-essential
 ```
-Now install the required libraries.
+Now install the libraries for RocksDB.
 ```shell
 sudo apt-get update -y
 sudo apt-get install -y coreutils
@@ -64,7 +64,7 @@ sudo apt-get install -y zstd
 sudo apt-get install -y libbz2-dev
 
 ```
-That is the prelimaries out the way. Now install RocksDB. The well
+That is the preliminaries out the way. Now install RocksDB. The well
 tested docker file wants to install an old version of RocksDB, 
 so we will do that.
 ```shell
@@ -94,7 +94,7 @@ sudo make install
 
 ## Install Herumis cryptography
 
-Ad before we need to install some libraries first.
+As before we need to install some libraries first.
 ```shell
 sudo apt-get update -y
 sudo apt-get install -y libgmp-dev
@@ -121,7 +121,8 @@ sudo make install
 ## Build libzstd
 
 From [docker file](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile);
-As https://github.com/valyala/gozstd/issues/6 is still open we have to build libzstd as follows.
+As https://github.com/valyala/gozstd/issues/6 is still open we have to build libzstd as follows. 
+Do this even if you already have `libzstd` installed.
 ```shell
 cd $HOME/go/pkg/mod/github.com/valyala/gozstd* 
 chmod -R +w . && 
@@ -136,13 +137,14 @@ cd 0chain/code/go/0chain.net/miner/miner
 go build -tags "bn256 development"
 ```
 If all is well `go build` should work, and you will have a new `miner` executable.
-Alternately the result of errors or shortcuts are likely to turn up here as errors. 
+Alternately the result of mistakes or shortcuts are likely to turn up here as errors. 
 ```shell
 /usr/bin/ld: /usr/local/lib/librocksdb.a(env_posix.o): in function `rocksdb::(anonymous namespace)::PosixDynamicLibrary::~PosixDynamicLibrary()':
 env_posix.cc:(.text+0xf0): undefined reference to `dlclose'
 
 ```
-Suggests a linker error, probably a problem with your RocksDB and gcc versions.
+Suggests a linker error, probably a problem with your RocksDB and gcc versions. Check you installed
+`RocksDB 5.18.3`.
 ```shell
 /usr/bin/ld: /usr/local/lib/librocksdb.a(format.o): in function `rocksdb::LZ4_Uncompress(rocksdb::UncompressionContext const&, char const*, unsigned long, int*, unsigned int, rocksdb::MemoryAllocator*)':
 format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0xd5): undefined reference to `LZ4_createStreamDecode'
@@ -150,6 +152,3 @@ format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPij
 ```
 TODO: Still working on this.
 ```shell
-/usr/bin/ld: warning: libgflags.so.2.2, needed by /usr/local/lib/librocksdb.so, not found (try using -rpath or -rpath-link)
-```
-TODO: Still working on this but `gflags` seems to be built with shared libs off by default.

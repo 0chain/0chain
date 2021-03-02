@@ -52,7 +52,7 @@ Possible way of populating the panel for building and running the sharder would 
   
 ## Debug config files
 
-Each time we debug a new chain we need to set up the miner and sharder working directories.
+Each time we debug a new chain we can set up the miner and sharder working directories as follows
 ```shell
 0chain/local/bin/clean.sh
 0chain/local/bin/init.setup.sh
@@ -61,4 +61,5 @@ Now edit the [magic block file](https://github.com/0chain/0chain/blob/debug_buil
 [`0chain.yaml`](https://github.com/0chain/0chain/blob/debug_builds/local/run_environment.md#0chain-yaml) file. Copy them 
 into the respective `0chain/local/miner/config` or `0chain/local/sharder/config` directory along with the 
 [node keys](https://github.com/0chain/0chain/blob/debug_builds/local/run_environment.md#node-keys)
-file that identifies the miner or sharder that is being debuged.
+file that identifies the miner or sharder that is being debugged. If necessary update
+0chain.yaml with the correct magic block file.

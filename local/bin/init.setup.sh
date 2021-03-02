@@ -1,15 +1,16 @@
 #!/bin/sh
 
-mkdir -p "$(dirname "$0")"/../miner/data/rocksdb
-mkdir -p "$(dirname "$0")"/../miner/log
-mkdir -p "$(dirname "$0")"/../miner/config
-cp "$(dirname "$0")"/../../docker.local/config/sc.yaml "$(dirname "$0")"/../miner/config/sc.yaml
-cp "$(dirname "$0")"/../../docker.local/config/n2n_delay.yaml "$(dirname "$0")"/../miner/config/n2n_delay.yaml
-cp "$(dirname "$0")"/../../docker.local/config/b0owner_keys.txt "$(dirname "$0")"/../miner/config/b0owner_keys.txt
+RepoRoot=$(git rev-parse --show-toplevel)
+mkdir -p $RepoRoot/local/miner/data/rocksdb
+mkdir -p $RepoRoot/local/miner/log
+mkdir -p $RepoRoot/local/miner/config
+cp $RepoRoot/docker.local/config/sc.yaml $RepoRoot/local/miner/config/sc.yaml
+cp $RepoRoot/docker.local/config/n2n_delay.yaml $RepoRoot/local/miner/config/n2n_delay.yaml
+cp $RepoRoot/docker.local/config/b0owner_keys.txt $RepoRoot/local/miner/config/b0owner_keys.txt
 
-mkdir -p "$(dirname "$0")"/../sharder/data/blocks
-mkdir -p "$(dirname "$0")"/../sharder/data/rocksdb
-mkdir -p "$(dirname "$0")"/../sharder/log
-mkdir -p "$(dirname "$0")"/../sharder/config
-cp "$(dirname "$0")"/../../docker.local/config/sc.yaml "$(dirname "$0")"/../sharder/config/sc.yaml
-cp "$(dirname "$0")"/../../docker.local/config/minio_config.txt "$(dirname "$0")"/../sharder/config/minio_config.txt
+mkdir -p $RepoRoot/local/sharder/data/blocks
+mkdir -p $RepoRoot/local/sharder/data/rocksdb
+mkdir -p $RepoRoot/local/sharder/log
+mkdir -p $RepoRoot/local/sharder/config
+cp $RepoRoot/docker.local/config/sc.yaml $RepoRoot/local/sharder/config/sc.yaml
+cp $RepoRoot/docker.local/config/minio_config.txt $RepoRoot/local/sharder/config/minio_config.txt

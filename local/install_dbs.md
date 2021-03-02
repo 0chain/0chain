@@ -25,7 +25,7 @@ If you are going to be running miners on the machine you need to install redis.
 sudo apt update
 sudo apt install -y redis-server
 ```
-todo: need to set up `/etc/systemd/system/redis.service` so that
+TODO: need to set up `/etc/systemd/system/redis.service` so that
 both redis instances run with custom configure files. Just using
 ` redis-server "path/to/redis.conf"` fails.
 
@@ -38,7 +38,10 @@ Cassandra requires java-8, so if you don't have java 8 set up.
 sudo apt update
 sudo apt install -y openjdk-8-jdk
 ```
-`java -verion` should now sho 14.0.2. 
+`java -verion` might not show 8. Not a problem you will need
+to run `sudo update-alternatives --config java` sometime before
+you start running 0Chain.
+
 You will probably want to update your `.profile` file with
 ```shell
 export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
@@ -58,4 +61,8 @@ sudo mv /etc/cassandra/cassandra.yaml /etc/cassandra/cassandra.yaml.backup
 sudo cp 0chain/docker.local/config/cassandra/cassandra.yaml /etc/cassandra/cassandra.yaml
 ```
 cassandra tools require python2 to run, however recent versions of Ubuntu have only python3 
-installed by default. https://linuxconfig.org/ubuntu-20-04-python-version-switch-manager
+installed by default; if this is the case check out
+[how to install python 2](https://linuxconfig.org/install-python-2-on-ubuntu-20-04-focal-fossa-linux),
+in any case you might want to consider using a
+[Python version switch manager](https://linuxconfig.org/ubuntu-20-04-python-version-switch-manager)
+
