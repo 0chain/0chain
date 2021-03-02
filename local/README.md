@@ -3,7 +3,7 @@
 > Warning!
 This is intended for developers to construct debug builds. Other users
 are advised to use the docker files as outlined in the main 
-[readme.mn](https://github.com/0chain/0chain/tree/debug_builds#initial-setup)
+[readme.md](https://github.com/0chain/0chain/tree/debug_builds#initial-setup)
 
 
 ## Table of contents
@@ -64,4 +64,9 @@ cqlsh> --file magic_block_map.sql`
 cqlsh> --file txn_summary.sql
 cqlsh> quit
 ```
-Now you can enter your IDE run your 0chain apps; Remembering to start sharders first.
+Now you can clear and rebuild the runtime directories
+```shell
+0chain/local/bin/clean.sh
+0chain/local/bin/init.setup.sh
+```
+You can enter your IDE run your 0chain apps; Remembering to start sharders first.
