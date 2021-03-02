@@ -129,7 +129,8 @@ Assuming redis has been installed as in
 [install_dbs.md](https://github.com/0chain/0chain/blob/debug_builds/local/install_dbs.md)
 then two redis severs can be started on separate terminals. 
 0Chain's miner hardcodes them to be on port 6479 and 6479. 
-Make sure any terminals running redis are shut down and run
+Make sure any terminals running redis are shut down.
+You  might have to force the 6379 and 6479 ports to shut down.
 ```shell
 sudo 0chain/local/bin/reset_redis.sh
 ```
@@ -144,8 +145,12 @@ installed you will want to select java-8
 ```shell
 sudo update-alternatives --config java
 ```
-Now reset the cassandra cluster.
+To start cassandra
 ```shell
-sudo 0chain/local/bin/reset_cassandra.sh
-cqlsh -f 0chain/docker.local/config/cassandra/init.cql
+service cassandra stop
+rm -rf /var/lib/cassandra/*
+service cassandra start
 ```
+Run, in order, the cqlsh scripts `0chian\docker.local\config\cassandra\init.cql`,
+`0chain\sql\zerochain_keyspace.sql`, `magic_block_map.sql` and `txn_summary.sql`
+respectively. You might have to wait for cqlsh to come up.
