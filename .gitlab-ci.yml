@@ -1,7 +1,6 @@
 stages:
 - prepare
 - check
-- xxxxx
 - build
 - test
 
@@ -28,7 +27,7 @@ build-base:
   script:
   - ./docker.local/bin/build.base.sh
 
-unit-tests:
+run-unit-tests:
   <<: *env-info
   stage: check
   allow_failure: true
@@ -36,6 +35,21 @@ unit-tests:
   - normal
   script:
   - ./docker.local/bin/unit_test.sh --ci
+
+measure-copy-paste:
+  <<: *env-info
+  stage: check
+  tags:
+  - normal
+  script:
+  - go get -u github.com/mibk/dupl
+  - cd code/go/0chain.net
+  - dupl -t 30
+  - dupl -t 30 -html > ../../../dupl.html
+  artifacts:
+    paths:
+    - dupl.html
+    expire_in: 1 month
 
 build-magic-block:
   <<: *env-info
