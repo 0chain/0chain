@@ -53,7 +53,7 @@ func initSession(delay time.Duration, maxTries int) error {
 	} else {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
-	cluster.DisableInitialHostLookup = true
+
 	// Setting the following for now because of https://github.com/gocql/gocql/issues/1200
 	cluster.WriteCoalesceWaitTime = 0
 
