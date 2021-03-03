@@ -258,7 +258,9 @@ func main() {
 	initHandlers()
 
 	go sc.RegisterClient()
-	go sc.InitSetupSC()
+	if config.DevConfiguration.IsFeeEnabled {
+		go sc.InitSetupSC()
+	}
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
