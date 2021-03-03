@@ -6,7 +6,8 @@ ENV GO111MODULE=on
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
 RUN cd $SRC_DIR/go/0chain.net && \
-    go mod download
+    go mod vendor
+
 
 # Build libzstd:
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.

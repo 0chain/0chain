@@ -7,7 +7,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	mocks "0chain.net/mocks/core/datastore"
 	"context"
 	"github.com/stretchr/testify/suite"
 	"net/http"
@@ -38,6 +40,8 @@ func (s *ChainTestSuite) TestChainStarted() {
 func (s *ChainTestSuite) TestCreateRound() {
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
+
+	round.SetupEntity(&mocks.Store{})
 
 	mc := GetMinerChain()
 	r := round.NewRound(5)
@@ -77,7 +81,9 @@ func (s *ChainTestSuite) TestRequestStartChain() {
 	SetupMinerChain(c)
 
 	mc := GetMinerChain()
-	n, _ := node.NewNode(map[interface{}]interface{}{})
+
+	n := node.Provider()
+
 	s1 := 5
 	s2 := 8
 
@@ -90,7 +96,12 @@ func (s *ChainTestSuite) TestSaveClients() {
 
 	mc := GetMinerChain()
 
-	mc.SaveClients(context.Background(), []*client.Client{})
+	common.SetupRootContext(context.Background())
+	client.SetupEntity(&mocks.Store{})
+	//memorystore.AddPool("", nil)
+
+	err := mc.SaveClients(context.Background(), []*client.Client{})
+	s.Require().NoError(err)
 }
 
 func (s *ChainTestSuite) TestSaveMagicBlock() {
