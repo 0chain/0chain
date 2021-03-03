@@ -251,10 +251,11 @@ func main() {
 		go TransactionGenerator(mc.Chain)
 	}
 
-	go mc.InitSetupSC()
-
-	if config.DevConfiguration.ViewChange {
-		go mc.DKGProcess(ctx)
+	if config.DevConfiguration.IsFeeEnabled {
+		go mc.InitSetupSC()
+		if config.DevConfiguration.ViewChange {
+			go mc.DKGProcess(ctx)
+		}
 	}
 
 	defer done(ctx)
