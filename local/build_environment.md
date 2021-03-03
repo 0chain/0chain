@@ -150,5 +150,8 @@ Suggests a linker error, probably a problem with your RocksDB and gcc versions. 
 format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0xd5): undefined reference to `LZ4_createStreamDecode'
 /usr/bin/ld: format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE[_ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPijPNS_15MemoryAllocatorE]+0x135): undefined reference to `LZ4_setStreamDecode'
 ```
-TODO: Still working on this.
+If you get stuck there is always the option of copying the librocksdb libraries from 
+another computer where the 0chain builds are know to work.
+The libraries can be put in `usr/local/lib`. you will probably want to make sym links so you 
+have a `librocksdb.so.5.18.3`, `librockssdb.5.18`, `librocksdb.so.5` and `librocksdb.so`.
 ```shell
