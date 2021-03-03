@@ -47,19 +47,19 @@ might skip resetting the databases.
 
 If you are running a miner
 ```shell
-sudo 0chain/local/bin/reset_redis.sh
+sudo local/bin/reset_redis.sh
 ```
 If you are running a sharder
 ```shell
-sudo 0chain/local/bin/reset_cassandra.sh
+sudo local/bin/reset_cassandra.sh
 ```
 Wait for `cqlish` to come up then 
 ```shell
-0chain/local/bin/cqlsh_setup.sh
+local/bin/cqlsh_setup.sh
 ```
 Now clear and rebuild the runtime directories
 ```shell
-0chain/local/bin/clean.sh
-0chain/local/bin/init.setup.sh
+local/bin/clean.sh
+local/bin/init.setup.sh
 ```
 You can enter your IDE run your 0chain apps; Remembering to start sharders first.
