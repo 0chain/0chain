@@ -121,7 +121,7 @@ sudo make install
 ## Build libzstd
 
 From [docker file](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile);
-As https://github.com/valyala/gozstd/issues/6 is still open we have to build libzstd as follows. 
+As https://github.com/valyala/gozstd/issues/6 is still open we have to build `libzstd` as follows. 
 Do this even if you already have `libzstd` installed.
 ```shell
 cd $HOME/go/pkg/mod/github.com/valyala/gozstd* 
@@ -152,6 +152,6 @@ format.cc:(.text._ZN7rocksdb14LZ4_UncompressERKNS_20UncompressionContextEPKcmPij
 ```
 If you get stuck there is always the option of copying the librocksdb libraries from 
 another computer where the 0chain builds are know to work.
-The libraries can be put in `usr/local/lib`. you will probably want to make sym links so you 
+The libraries can be put in `usr/local/lib`. You will probably want to make sym links so you 
 have a `librocksdb.so.5.18.3`, `librockssdb.5.18`, `librocksdb.so.5` and `librocksdb.so`.
 ```shell

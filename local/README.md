@@ -41,7 +41,9 @@ files across the 0chian network's machines are correctly setup, as outlined in
 
 ## New debug session setup
 
-Each time you start a debug session you will want to do something similar to:
+Each time you start a debug session you will want to do something similar to the 
+following. If you don't mind a slightly dirty environment you 
+might skip resetting the databases.
 
 If you are running a miner
 ```shell
