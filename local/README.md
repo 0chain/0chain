@@ -47,24 +47,15 @@ If you are running a miner
 ```shell
 sudo 0chain/local/bin/reset_redis.sh
 ```
-
 If you are running a sharder
 ```shell
-reset_cassandra.sh
+sudo 0chain/local/bin/reset_cassandra.sh
 ```
-Wait for `cqlish` to come up then
+Wait for `cqlish` to come up then 
 ```shell
-cqlsh
-Connected to Test Cluster at 127.0.0.1:9042.
-[cqlsh 5.0.1 | Cassandra 3.11.10 | CQL spec 3.4.4 | Native protocol v4]
-Use HELP for help.
-cqlsh> --file 0chian\docker.local\config\cassandra\init.cql
-cqlsh> --file 0chain\sql\zerochain_keyspace.sql
-cqlsh> --file magic_block_map.sql`
-cqlsh> --file txn_summary.sql
-cqlsh> quit
+0chain/local/bin/cqlsh_setup.sh
 ```
-Now you can clear and rebuild the runtime directories
+Now clear and rebuild the runtime directories
 ```shell
 0chain/local/bin/clean.sh
 0chain/local/bin/init.setup.sh
