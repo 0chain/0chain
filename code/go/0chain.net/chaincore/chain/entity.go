@@ -1408,6 +1408,11 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
+// GetLatestDeterministicBlock returns the latest determinisitic block
+func (c *Chain) GetLatestDeterministicBlock() *block.Block {
+	return c.LatestDeterministicBlock
+}
+
 func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 	err error) {
 
