@@ -176,15 +176,16 @@ func main() {
 
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
-		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
+		hostName, n2nHost, portNum, path, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
-		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
+		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum), zap.String("path", path))
 		selfNode.Host = hostName
 		selfNode.N2NHost = n2nHost
 		selfNode.Port = portNum
 		selfNode.Type = node.NodeTypeSharder
+		selfNode.Path = path
 	}
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
@@ -257,7 +258,9 @@ func main() {
 	initHandlers()
 
 	go sc.RegisterClient()
-	go sc.InitSetupSC()
+	if config.DevConfiguration.IsFeeEnabled {
+		go sc.InitSetupSC()
+	}
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
@@ -302,7 +305,7 @@ func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
 }
 
-func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, error) {
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
@@ -313,7 +316,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, errors.New("error reading Host")
+		return "", "", 0, "", errors.New("error reading Host")
 	}
 
 	h := scanner.Text()
@@ -321,7 +324,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, errors.New("error reading n2n host")
+		return "", "", 0, "", errors.New("error reading n2n host")
 	}
 
 	n2nh := scanner.Text()
@@ -331,10 +334,17 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
 	p := int(po)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", 0, "", err
 	}
-	return h, n2nh, p, nil
 
+	result = scanner.Scan()
+	if result == false {
+		return h, n2nh, p, "", nil
+	}
+
+	path := scanner.Text()
+	Logger.Info("Path inside", zap.String("path", path))
+	return h, n2nh, p, path, nil
 }
 
 func initHandlers() {

@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+    web: 
+        image: nginx:latest
+        restart: always
+        volumes:
+            - ./public:/var/www/html
+            - ./conf.d:/etc/nginx/conf.d
+            - ./certbot/conf:/etc/nginx/ssl
+            - ./certbot/data:/var/www/certbot
+        ports:
+            - 80:80
+            - 443:443
+        networks:
+            - default
+            - testnet0
+    certbot:
+        image: certbot/certbot:latest
+        command: certonly --webroot --webroot-path=/var/www/certbot --email <your_email> --agree-tos --no-eff-email -d <your_domain>
+        volumes:
+            - ./certbot/conf:/etc/letsencrypt
+            - ./certbot/logs:/var/log/letsencrypt
+            - ./certbot/data:/var/www/certbot
+        networks:
+            - default
+            - testnet0
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true

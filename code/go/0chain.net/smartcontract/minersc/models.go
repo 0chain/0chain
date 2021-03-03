@@ -417,6 +417,10 @@ func (mn *MinerNode) numDelegates() int {
 	return len(mn.Pending) + len(mn.Active)
 }
 
+func (mn *MinerNode) numActiveDelegates() int {
+	return len(mn.Active)
+}
+
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
@@ -567,6 +571,7 @@ type SimpleNode struct {
 	N2NHost     string `json:"n2n_host"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
+	Path        string `json:"path"`
 	PublicKey   string `json:"public_key"`
 	ShortName   string `json:"short_name"`
 	BuildTag    string `json:"build_tag"`

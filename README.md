@@ -12,6 +12,7 @@
 - [Creating The Magic Block](#creating-the-magic-block)
 - [Miscellaneous](#miscellaneous) - [Cleanup](#cleanup) - [View Change](docs/viewchange.md) - [Minio Setup](#minio)
 - [Run 0chain on ec2 instance](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
+- [Run 0chain on ec2 instance over https](https://github.com/0chain/0chain/blob/https_changes/https/README.md)
 
 ## Initial Setup
 
@@ -76,6 +77,8 @@ $ ./docker.local/bin/sync_clock.sh
 1.3) If you want to change the block size, set the value of `server_chain.block.size`
 
 1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
+
+**_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
 
 ## Starting the nodes
 
@@ -242,7 +245,7 @@ This gives the start timestamps that can be used to correlate the events and the
 Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
 
 ```
-$ cd code/go/src/0chain.net/my-pkg
+$ cd code/go/0chain.net/my-pkg
 $ go test
 ```
 
