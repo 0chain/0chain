@@ -30,7 +30,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 	var ups = newUserPools()
 	for nodeID, poolIDs := range un.Pools {
 		var mn *ConsensusNode
-		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
+		if mn, err = msc.getConsensusNode(nodeID, balances); err != nil {
 			return nil, fmt.Errorf("can't get node %s: %v", nodeID, err)
 		}
 		if ups.Pools[mn.NodeType.String()] == nil {
@@ -55,7 +55,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 //GetNodepoolHandler API to provide nodepool information for registered miners
 func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params url.Values, statectx cstate.StateContextI) (interface{}, error) {
 
-	regMiner := NewMinerNode()
+	regMiner := NewConsensusNode()
 	err := regMiner.decodeFromValues(params)
 	if err != nil {
 		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
@@ -165,7 +165,7 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 		sn *ConsensusNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = msc.getConsensusNode(id, balances); err != nil {
 		return
 	}
 
@@ -182,7 +182,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 		sn     *ConsensusNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = msc.getConsensusNode(id, balances); err != nil {
 		return
 	}
 

@@ -16,7 +16,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	var existingMiner *ConsensusNode
-	if existingMiner, err = msc.getMinerNode(t.ClientID, balances); err != nil {
+	if existingMiner, err = msc.getConsensusNode(t.ClientID, balances); err != nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
 	}

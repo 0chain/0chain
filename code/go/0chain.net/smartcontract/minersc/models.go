@@ -384,7 +384,7 @@ type ConsensusNode struct {
 	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
 }
 
-func NewMinerNode() *ConsensusNode {
+func NewConsensusNode() *ConsensusNode {
 	mn := &ConsensusNode{SimpleNode: &SimpleNode{}}
 	mn.Pending = make(map[string]*sci.DelegatePool)
 	mn.Active = make(map[string]*sci.DelegatePool)
@@ -413,7 +413,7 @@ func (mn *ConsensusNode) splitByServiceCharge(fees state.Balance) (
 	return
 }
 
-func (mn *ConsensusNode) numDelegates() int {
+func (mn *ConsensusNode) delegatesAmount() int {
 	return len(mn.Pending) + len(mn.Active)
 }
 
@@ -764,8 +764,8 @@ func (un *UserNode) GetHashBytes() []byte {
 }
 
 type delegatePool struct {
-	MinerID string `json:"id"`
-	PoolID  string `json:"pool_id"`
+	ConsensusNodeID string `json:"id"`
+	PoolID          string `json:"pool_id"`
 }
 
 func (dp *delegatePool) Encode() []byte {

@@ -30,7 +30,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	msc.verifySharderState(balances, AllShardersKey,
 		"Checking all sharders list in the beginning")
 
-	var newSharder = NewMinerNode()
+	var newSharder = NewConsensusNode()
 	if err = newSharder.Decode(input); err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
@@ -163,7 +163,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 		return // unexpected error
 	}
 
-	sn = NewMinerNode()
+	sn = NewConsensusNode()
 	sn.ID = sid
 
 	if err == util.ErrValueNotPresent {
@@ -198,7 +198,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	}
 	msc.verifySharderState(balances, ShardersKeepKey, "Checking sharderKeepList in the beginning")
 
-	newSharder := NewMinerNode()
+	newSharder := NewConsensusNode()
 	err = newSharder.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
