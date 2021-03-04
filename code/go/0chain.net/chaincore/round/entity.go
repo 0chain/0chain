@@ -93,8 +93,6 @@ func (tc *timeoutCounter) checkCap() {
 	if tc.count > timeoutCap {
 		tc.count = timeoutCap
 	}
-	Logger.Info("IncrementTimeoutCount",
-		zap.Any("timeout count", tc.count))
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
