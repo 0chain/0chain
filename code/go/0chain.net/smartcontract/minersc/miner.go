@@ -33,7 +33,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 		resp string, err error) {
 
-	var newMiner = NewMinerNode()
+	var newMiner = NewConsensusNode()
 	if err = newMiner.Decode(inputData); err != nil {
 		return "", common.NewErrorf("add_miner_failed",
 			"decoding request: %v", err)
@@ -143,7 +143,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 		resp string, err error) {
 
-	var update = NewMinerNode()
+	var update = NewConsensusNode()
 	if err = update.Decode(inputData); err != nil {
 		return "", common.NewErrorf("update_settings",
 			"decoding request: %v", err)
@@ -184,7 +184,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	var mn *ConsensusNode
-	mn, err = msc.getMinerNode(update.ID, balances)
+	mn, err = msc.getConsensusNode(update.ID, balances)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
@@ -203,30 +203,6 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	return string(mn.Encode()), nil
-}
-
-//------------- local functions ---------------------
-func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
-	msg string) {
-
-	allMinersList, err := msc.getMinersList(balances)
-	if err != nil {
-		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
-			"Failed to retrieve existing miners list: " + err.Error())
-		return
-	}
-	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
-		Logger.Info(msg + " allminerslist is empty")
-		return
-	}
-
-	Logger.Info(msg)
-	for _, miner := range allMinersList.Nodes {
-		Logger.Info("allminerslist",
-			zap.String("url", miner.N2NHost),
-			zap.String("ID", miner.ID))
-	}
-
 }
 
 func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
@@ -253,20 +229,42 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 	return all, nil
 }
 
-func (msc *MinerSmartContract) getMinerNode(id string,
+func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
+	msg string) {
+
+	allMinersList, err := msc.getMinersList(balances)
+	if err != nil {
+		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
+			"Failed to retrieve existing miners list: " + err.Error())
+		return
+	}
+	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
+		Logger.Info(msg + " allminerslist is empty")
+		return
+	}
+
+	Logger.Info(msg)
+	for _, miner := range allMinersList.Nodes {
+		Logger.Info("allminerslist",
+			zap.String("url", miner.N2NHost),
+			zap.String("ID", miner.ID))
+	}
+}
+
+func (msc *MinerSmartContract) getConsensusNode(id string,
 	balances cstate.StateContextI) (*ConsensusNode, error) {
 
-	mn := NewMinerNode()
-	mn.ID = id
-	ms, err := balances.GetTrieNode(mn.getKey())
+	node := NewConsensusNode()
+	node.ID = id
+	ms, err := balances.GetTrieNode(node.getKey())
 	if err == util.ErrValueNotPresent {
-		return mn, err
+		return node, err
 	} else if err != nil {
 		return nil, err
 	}
 
-	if err := mn.Decode(ms.Encode()); err != nil {
+	if err := node.Decode(ms.Encode()); err != nil {
 		return nil, err
 	}
-	return mn, nil
+	return node, nil
 }

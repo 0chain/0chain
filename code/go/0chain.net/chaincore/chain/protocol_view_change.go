@@ -229,7 +229,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
 		mc.ID, selfNode.PublicKey)
 
-	mn := minersc.NewMinerNode()
+	mn := minersc.NewConsensusNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
 	mn.Host = selfNode.Host
@@ -271,7 +271,7 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
 		mc.ID, selfNode.PublicKey)
 
-	mn := minersc.NewMinerNode()
+	mn := minersc.NewConsensusNode()
 	mn.ID = selfNode.GetKey()
 	mn.N2NHost = selfNode.N2NHost
 	mn.Host = selfNode.Host
