@@ -31,6 +31,8 @@ const (
 	RoundStateFinalized
 )
 
+const timeoutCap = 10 // todo: add to 0chainl.yaml later
+
 type timeoutCounter struct {
 	mutex sync.RWMutex // async safe
 
@@ -81,7 +83,6 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 
 // IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
-
 	if prrs == 0 {
 		return // no PRRS, no timeout incrementation
 	}
@@ -92,6 +93,11 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 		tc.count++
+		if tc.count > timeoutCap {
+			tc.count = timeoutCap
+		}
+		Logger.Info("IncrementTimeoutCount",
+			zap.Any("timeout count", tc.count))
 		return
 	}
 
@@ -124,6 +130,11 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.count == from {
 		tc.count++
 	}
+	if tc.count > timeoutCap {
+		tc.count = timeoutCap
+	}
+	Logger.Info("IncrementTimeoutCount",
+		zap.Any("timeout count", tc.count))
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
