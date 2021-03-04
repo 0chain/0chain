@@ -15,7 +15,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 			"Failed to get miner list: "+err.Error())
 	}
 
-	var existingMiner *MinerNode
+	var existingMiner *ConsensusNode
 	if existingMiner, err = msc.getMinerNode(t.ClientID, balances); err != nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
@@ -53,7 +53,7 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 			"Failed to get sharder list: "+err.Error())
 	}
 
-	var existingSharder *MinerNode
+	var existingSharder *ConsensusNode
 	if existingSharder, err = msc.getSharderNode(t.ClientID, balances); err != nil {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't get the sharder "+t.ClientID+": "+err.Error())

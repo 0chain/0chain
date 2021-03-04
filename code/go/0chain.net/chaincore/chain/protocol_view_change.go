@@ -134,7 +134,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
 
 	var (
-		allNodesList = &minersc.MinerNodes{}
+		allNodesList = &minersc.ConsensusNodes{}
 		selfNode     = node.Self.Underlying()
 		selfNodeKey  = selfNode.GetKey()
 	)

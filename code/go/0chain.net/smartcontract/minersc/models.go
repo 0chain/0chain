@@ -171,7 +171,7 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
 }
 
 // has previous miner in all miners list
-func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
+func (gn *GlobalNode) hasPrevMiner(miners *ConsensusNodes,
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -263,7 +263,7 @@ func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
 }
 
 //
-func (gn *GlobalNode) hasPrevSharderInList(list []*MinerNode,
+func (gn *GlobalNode) hasPrevSharderInList(list []*ConsensusNode,
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -279,11 +279,11 @@ func (gn *GlobalNode) hasPrevSharderInList(list []*MinerNode,
 
 // Receive list of ranked sharders and extract sharder of previous MB preserving
 // order. The given list not modified.
-func (gn *GlobalNode) rankedPrevSharders(list []*MinerNode,
-	balances cstate.StateContextI) (prev []*MinerNode) {
+func (gn *GlobalNode) rankedPrevSharders(list []*ConsensusNode,
+	balances cstate.StateContextI) (prev []*ConsensusNode) {
 
 	var pmb = gn.prevMagicBlock(balances)
-	prev = make([]*MinerNode, 0, len(list))
+	prev = make([]*ConsensusNode, 0, len(list))
 
 	for _, node := range list {
 		if pmb.Sharders.HasNode(node.ID) {
@@ -295,7 +295,7 @@ func (gn *GlobalNode) rankedPrevSharders(list []*MinerNode,
 }
 
 // has previous sharder in sharders keep list
-func (gn *GlobalNode) hasPrevShader(sharders *MinerNodes,
+func (gn *GlobalNode) hasPrevShader(sharders *ConsensusNodes,
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
@@ -376,16 +376,16 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 // miner / sharder
 //
 
-// MinerNode struct that holds information about the registering miner.
-type MinerNode struct {
+// ConsensusNode struct that holds information about the registering miner.
+type ConsensusNode struct {
 	*SimpleNode `json:"simple_miner"`
 	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
 	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
 	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
 }
 
-func NewMinerNode() *MinerNode {
-	mn := &MinerNode{SimpleNode: &SimpleNode{}}
+func NewMinerNode() *ConsensusNode {
+	mn := &ConsensusNode{SimpleNode: &SimpleNode{}}
 	mn.Pending = make(map[string]*sci.DelegatePool)
 	mn.Active = make(map[string]*sci.DelegatePool)
 	mn.Deleting = make(map[string]*sci.DelegatePool)
@@ -400,12 +400,12 @@ func getSharderKey(sid string) datastore.Key {
 	return datastore.Key(ADDRESS + sid)
 }
 
-func (mn *MinerNode) getKey() datastore.Key {
+func (mn *ConsensusNode) getKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
 }
 
 // calculate service charge from fees
-func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
+func (mn *ConsensusNode) splitByServiceCharge(fees state.Balance) (
 	charge, rest state.Balance) {
 
 	charge = state.Balance(float64(fees) * mn.ServiceCharge)
@@ -413,33 +413,24 @@ func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
 	return
 }
 
-func (mn *MinerNode) numDelegates() int {
+func (mn *ConsensusNode) numDelegates() int {
 	return len(mn.Pending) + len(mn.Active)
 }
 
-func (mn *MinerNode) numActiveDelegates() int {
-	return len(mn.Active)
-}
-
-func (mn *MinerNode) save(balances cstate.StateContextI) error {
-	//var key datastore.Key
-	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+func (mn *ConsensusNode) save(balances cstate.StateContextI) (err error) {
 	if _, err := balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 
-	//Logger.Debug("MinerNode save successfully",
-	//	zap.String("path", encryption.Hash(mn.getKey())),
-	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return nil
 }
 
-func (mn *MinerNode) Encode() []byte {
+func (mn *ConsensusNode) Encode() []byte {
 	buff, _ := json.Marshal(mn)
 	return buff
 }
 
-func (mn *MinerNode) decodeFromValues(params url.Values) error {
+func (mn *ConsensusNode) decodeFromValues(params url.Values) error {
 	mn.N2NHost = params.Get("n2n_host")
 	mn.ID = params.Get("id")
 
@@ -450,7 +441,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 
 }
 
-func (mn *MinerNode) Decode(input []byte) error {
+func (mn *ConsensusNode) Decode(input []byte) error {
 	var objMap map[string]json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -487,15 +478,15 @@ func (mn *MinerNode) Decode(input []byte) error {
 	return nil
 }
 
-func (mn *MinerNode) GetHash() string {
+func (mn *ConsensusNode) GetHash() string {
 	return util.ToHex(mn.GetHashBytes())
 }
 
-func (mn *MinerNode) GetHashBytes() []byte {
+func (mn *ConsensusNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
-func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
+func (mn *ConsensusNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	var keys []string
 	for k := range mn.Active {
 		keys = append(keys, k)
@@ -611,16 +602,16 @@ func (smn *SimpleNode) Decode(input []byte) error {
 	return json.Unmarshal(input, smn)
 }
 
-type MinerNodes struct {
-	Nodes []*MinerNode
+type ConsensusNodes struct {
+	Nodes []*ConsensusNode
 }
 
-func (mn *MinerNodes) Encode() []byte {
+func (mn *ConsensusNodes) Encode() []byte {
 	buff, _ := json.Marshal(mn)
 	return buff
 }
 
-func (mn *MinerNodes) Decode(input []byte) error {
+func (mn *ConsensusNodes) Decode(input []byte) error {
 	err := json.Unmarshal(input, mn)
 	if err != nil {
 		return err
@@ -628,15 +619,15 @@ func (mn *MinerNodes) Decode(input []byte) error {
 	return nil
 }
 
-func (mn *MinerNodes) GetHash() string {
+func (mn *ConsensusNodes) GetHash() string {
 	return util.ToHex(mn.GetHashBytes())
 }
 
-func (mn *MinerNodes) GetHashBytes() []byte {
+func (mn *ConsensusNodes) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
-func (mn *MinerNodes) FindNodeById(id string) *MinerNode {
+func (mn *ConsensusNodes) FindNodeById(id string) *ConsensusNode {
 	for _, minerNode := range mn.Nodes {
 		if minerNode.ID == id {
 			return minerNode

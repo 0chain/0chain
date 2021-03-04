@@ -31,7 +31,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	var (
 		pool = sci.NewDelegatePool()
 
-		mn       *MinerNode
+		mn       *ConsensusNode
 		transfer *state.Transfer
 	)
 	mn, err = msc.getMinerNode(dp.MinerID, balances)
@@ -113,7 +113,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			"error decoding request: %v", err)
 	}
 
-	var mn *MinerNode
+	var mn *ConsensusNode
 	if mn, err = msc.getMinerNode(dp.MinerID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error getting miner node: %v", err)
