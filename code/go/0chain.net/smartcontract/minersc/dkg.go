@@ -32,10 +32,10 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode) (ok bool) {
 
 	var (
-		allMinersList *MinerNodes
+		allMinersList *ConsensusNodes
 		dkgMinersList *DKGMinerNodes
 
-		allShardersList *MinerNodes
+		allShardersList *ConsensusNodes
 
 		err error
 	)
@@ -309,7 +309,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	//sharders
-	allSharderKeepList := new(MinerNodes)
+	allSharderKeepList := new(ConsensusNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allSharderKeepList)
 	if err != nil {
 		return err
@@ -360,16 +360,16 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	return nil
 }
 
-func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
+func (msc *MinerSmartContract) reduceShardersList(keep, all *ConsensusNodes,
 	gn *GlobalNode, balances cstate.StateContextI) (
-	list []*MinerNode, err error) {
+	list []*ConsensusNode, err error) {
 
 	var (
 		pmb  = gn.prevMagicBlock(balances)
 		hasp bool // TODO (sfxdx): remove the temporary debug code
 	)
 
-	list = make([]*MinerNode, 0, len(keep.Nodes))
+	list = make([]*ConsensusNode, 0, len(keep.Nodes))
 	for _, ksh := range keep.Nodes {
 		var ash = all.FindNodeById(ksh.ID)
 		if ash == nil {
@@ -522,7 +522,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// if err != nil {
 	// 	return err
 	// }
-	allMinersList := new(MinerNodes)
+	allMinersList := new(ConsensusNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		return err
@@ -763,7 +763,7 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
-	sharderList *MinerNodes, dkgMinersList *DKGMinerNodes,
+	sharderList *ConsensusNodes, dkgMinersList *DKGMinerNodes,
 	gsos *block.GroupSharesOrSigns, mpks *block.Mpks, pn *PhaseNode) (
 	*block.MagicBlock, error) {
 
@@ -834,7 +834,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 
-	allMinersList := new(MinerNodes)
+	allMinersList := new(ConsensusNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))

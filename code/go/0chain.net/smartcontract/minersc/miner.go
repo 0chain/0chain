@@ -44,7 +44,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
-	var all *MinerNodes
+	var all *ConsensusNodes
 	if all, err = msc.getMinersList(balances); err != nil {
 		Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
@@ -71,7 +71,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Int64("min_stake", int64(newMiner.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.MaxStake)),
 	)
-	Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
+	Logger.Info("add_miner: ConsensusNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		Logger.Error("add_miner: public key or ID is empty")
@@ -183,7 +183,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 			update.MaxStake, gn.MaxStake)
 	}
 
-	var mn *MinerNode
+	var mn *ConsensusNode
 	mn, err = msc.getMinerNode(update.ID, balances)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
@@ -230,7 +230,7 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
-	all *MinerNodes, err error) {
+	all *ConsensusNodes, err error) {
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
@@ -238,9 +238,9 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
-	all *MinerNodes, err error) {
+	all *ConsensusNodes, err error) {
 
-	all = new(MinerNodes)
+	all = new(ConsensusNodes)
 	allMinersBytes, err := balances.GetTrieNode(AllMinersKey)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, errors.New("get_miners_list_failed - " +
@@ -254,7 +254,7 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) getMinerNode(id string,
-	balances cstate.StateContextI) (*MinerNode, error) {
+	balances cstate.StateContextI) (*ConsensusNode, error) {
 
 	mn := NewMinerNode()
 	mn.ID = id
