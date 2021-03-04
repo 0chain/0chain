@@ -10,7 +10,7 @@
 
 ## Introduction
 
-I will assume that you have set up your 0Chian as in the
+I will assume that you have set up your 0Chain as in the
 [run_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/run_environment.md)
 document and now you want to debug the chain on one of the machine.
 
@@ -20,15 +20,15 @@ adapt for the IDE of your choice.
 
 ## Custom build tags
 
-0Chain uses bn256 as a build tag, you want to add this to all your builds. In goland 
+0Chain uses `bn256` and `development` as build tags, you want to add this to all your builds. In GoLand 
 these are set up in the settings panel.  
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20settings.png?raw=true)
 
 ## Miner
-The builds in goland are set up in the `Run\Debug Configurations` panel accessed from the
-`Run\Cnfigurations..` menu item. 
+The builds in GoLand are set up in the `Run\Debug Configurations` panel accessed from the
+`Run\Configurations..` menu item. 
 Possible way of populating the panel for building and running the miner would be:
-* Run kind: Directory
+* Run kind: `Directory`
 * Directory: `/home/piers/GolandProjects/0chain/code/go/0chain.net/miner/miner`
 * Output directory: `/home/piers/GolandProjects/0chain/local/miner`
 * Working directory: `/home/piers/GolandProjects/0chain/local/miner`  
@@ -38,10 +38,10 @@ Possible way of populating the panel for building and running the miner would be
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20miner.png?raw=true)
 
 ## Sharder
-The builds in goland are set up in the `Run\Debug Configurations` panel accessed from the
-`Run\Cnfigurations..` menu item.
+The builds in GoLand are set up in the `Run\Debug Configurations` panel accessed from the
+`Run\Configurations..` menu item.\
 Possible way of populating the panel for building and running the sharder would be:
-* Run kind: Directory
+* Run kind: `Directory`
 * Directory: `/home/piers/GolandProjects/0chain/code/go/0chain.net/sharder/sharder`
 * Output directory: `/home/piers/GolandProjects/0chain/local/sharder`
 * Working directory: `/home/piers/GolandProjects/0chain/local/sharder`

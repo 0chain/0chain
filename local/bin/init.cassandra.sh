@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 RepoRoot=$(git rev-parse --show-toplevel)
 cqlsh --file $RepoRoot/docker.local/config/cassandra/init.cql
 

@@ -1,8 +1,8 @@
 # Debug TestNet Setup
 
 > Warning!
-This is intended for developers to construct debug builds. Other users
-are advised to use the docker files as outlined in the main 
+This is intended for developers to construct debug builds.
+> Other users are advised to use the docker files as outlined in the main 
 [readme.md](https://github.com/0chain/0chain/tree/debug_builds#initial-setup)
 
 
@@ -28,16 +28,16 @@ to be run over at least three machines.
 Each machine needs to be configured so that 0chain executables can be built, outlined in 
 [build_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/build_environment.md)
 and the database 0Chain uses installed as in
-[instal_dbs.md](https://github.com/0chain/0chain/blob/debug_builds/local/install_dbs.md)
+[install_dbs.md](https://github.com/0chain/0chain/blob/debug_builds/local/install_dbs.md)
 
 If you are using an IDE such as
 [Goland](https://www.jetbrains.com/go/promo/?gclid=CjwKCAiAm-2BBhANEiwAe7eyFHLK4O3pHcNb0Vi_q4l5pOkSoeLN4XTYNFXJYeJbFBWQ0NzEeTEixBoCAEoQAvD_BwE),
 you will want to set up you debug environments as outline in 
-[debug_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/dubug_environment.md)
+[debug_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/debug_environment.md)
 
-Each time you start a new chain you will to ensure all the various configuration 
+Each time you start a new chain you will have to ensure all the various configuration 
 files across the 0chian network's machines are correctly setup, as outlined in
-[debug_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/dubug_environment.md#debug-config-files)
+[debug_environment.md](https://github.com/0chain/0chain/blob/debug_builds/local/debug_environment.md#debug-config-files)
 
 ## New debug session setup
 
@@ -47,15 +47,15 @@ might skip resetting the databases.
 
 If you are running a miner
 ```shell
-sudo local/bin/reset_redis.sh
+sudo local/bin/reset.redis.sh
 ```
 If you are running a sharder
 ```shell
-sudo local/bin/reset_cassandra.sh
+sudo local/bin/reset.cassandra.sh
 ```
-Wait for `cqlish` to come up then 
+Wait for `cqlsh` to come up then 
 ```shell
-local/bin/cqlsh_setup.sh
+local/bin/init.cassandra.sh
 ```
 Now clear and rebuild the runtime directories
 ```shell
