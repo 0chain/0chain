@@ -35,101 +35,61 @@ const timeoutCap = 10 // todo: add to 0chainl.yaml later
 
 type timeoutCounter struct {
 	mutex sync.RWMutex // async safe
+	count int          // current round timeout
 
-	prrs int64    // previous round random seed
-	perm []string // miners of this (not previous) round sorted by the seed
-
-	count int // current round timeout
-
-	votes map[string]int // voted miner_id -> timeout
-}
-
-// The rankTimeoutCounters computes ranks of miners to choose timeout counter.
-// Should be called under lock.
-func (tc *timeoutCounter) rankTimeoutCounters(prrs int64, miners *node.Pool) {
-
-	var nodes = miners.CopyNodes()
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].ID < nodes[j].ID
-	})
-
-	var (
-		permi = rand.New(rand.NewSource(prrs)).Perm(len(nodes))
-		perms = make([]string, 0, len(nodes))
-	)
-
-	for _, ri := range permi {
-		perms = append(perms, nodes[ri].ID)
-	}
-
-	tc.prrs = prrs
-	tc.perm = perms
+	voted map[string]struct{}
+	votes map[int]int
 }
 
 func (tc *timeoutCounter) resetVotes() {
-	tc.votes = make(map[string]int)
+	tc.voted = make(map[string]struct{})
+	tc.votes = make(map[int]int)
 }
 
-func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
+func (tc *timeoutCounter) isVoted(id string) (ok bool) {
+	_, ok = tc.voted[id]
+	return
+}
+
+func (tc *timeoutCounter) AddTimeoutVote(vote int, id string) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	if tc.votes == nil {
-		tc.resetVotes() // it creates the map
+	if tc.isVoted(id) {
+		return
 	}
-	tc.votes[id] = num
+
+	tc.voted[id] = struct{}{}
+	tc.votes[vote]++
+	return
 }
 
 // IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
-	if prrs == 0 {
-		return // no PRRS, no timeout incrementation
-	}
-
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	if tc.votes == nil {
-		tc.resetVotes() // it creates the map
-		tc.count++
-		if tc.count > timeoutCap {
-			tc.count = timeoutCap
+	var mostVotes, mostTimeout int = 0, tc.count
+	for k, v := range tc.votes {
+		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
+			mostVotes = v
+			mostTimeout = k
 		}
-		Logger.Info("IncrementTimeoutCount",
-			zap.Any("timeout count", tc.count))
+	}
+
+	tc.resetVotes() // for next voting
+
+	if mostTimeout > tc.count {
+		tc.count = mostTimeout + 1 // increase by an external vote
+		tc.checkCap()
 		return
 	}
 
-	if len(tc.perm) == 0 {
-		tc.rankTimeoutCounters(prrs, miners)
-	}
+	tc.count++ // increment own
+	tc.checkCap()
+}
 
-	// initial count
-	var (
-		from = tc.count
-		snk  = node.Self.Underlying().GetKey()
-	)
-
-	// from most ranked to the lowest ranked one
-	for _, minerID := range tc.perm {
-		if snk == minerID {
-			continue
-		}
-		if vote, ok := tc.votes[minerID]; ok {
-			if tc.count < vote {
-				tc.count = vote
-				break
-			}
-		}
-	}
-
-	tc.resetVotes()
-
-	// increase if has not increased
-	if tc.count == from {
-		tc.count++
-	}
+func (tc *timeoutCounter) checkCap() {
 	if tc.count > timeoutCap {
 		tc.count = timeoutCap
 	}
