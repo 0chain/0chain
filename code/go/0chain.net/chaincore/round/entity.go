@@ -93,11 +93,7 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 		tc.count++
-		if tc.count > timeoutCap {
-			tc.count = timeoutCap
-		}
-		Logger.Info("IncrementTimeoutCount",
-			zap.Any("timeout count", tc.count))
+		tc.checkCap()
 		return
 	}
 
@@ -130,11 +126,13 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.count == from {
 		tc.count++
 	}
+	tc.checkCap()
+}
+
+func (tc *timeoutCounter) checkCap() {
 	if tc.count > timeoutCap {
 		tc.count = timeoutCap
 	}
-	Logger.Info("IncrementTimeoutCount",
-		zap.Any("timeout count", tc.count))
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
