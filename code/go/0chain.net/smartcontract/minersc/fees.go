@@ -339,6 +339,11 @@ func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.
 				payment.toGenerator,
 				global, balances)
 
+			if len(results) == 0 {
+				Logger.Info("No pools to pay detected, the whole payment goes to the node")
+				charge += rest
+			}
+
 			var result = msc.payToNode(true, charge, payment.receiver.DelegateWallet, balances)
 			if result != nil {
 				results = append(results, result)
