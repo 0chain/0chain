@@ -3,6 +3,7 @@ package round
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/rand"
 	"os"
 	"runtime/pprof"
@@ -30,8 +31,6 @@ const (
 	RoundStateFinalizing
 	RoundStateFinalized
 )
-
-const timeoutCap = 10 // todo: add to 0chainl.yaml later
 
 type timeoutCounter struct {
 	mutex sync.RWMutex // async safe
@@ -130,12 +129,14 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 }
 
 func (tc *timeoutCounter) checkCap() {
-	if tc.count > timeoutCap {
+	timeoutCap := viper.GetInt("server_chain.round_timeouts.timeout_cap")
+	if timeoutCap > 0 && tc.count > timeoutCap {
 		tc.count = timeoutCap
 	}
 }
 
-// SetTimeoutCount - sets the timeout count to given number if it is greater
+// SetTimeoutCount - sets the timeout count to given nu
+//mber if it is greater
 // than existing and returns true. Else false.
 func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	tc.mutex.Lock()
