@@ -249,9 +249,9 @@ func (msc *MinerSmartContract) readPools(list *ConsensusNodes,
 	for _, simple := range list.Nodes {
 		var node *ConsensusNode
 		if node, err = msc.getConsensusNode(simple.ID, state); err == nil {
-			return nil, err
-		} else {
 			result = append(result, node)
+		} else {
+			return nil, err
 		}
 	}
 	return result, nil
