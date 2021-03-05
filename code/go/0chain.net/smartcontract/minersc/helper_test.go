@@ -114,7 +114,7 @@ func newClientWithStakers(isMiner bool, t *testing.T, msc *MinerSmartContract,
 		client *TestClient) {
 
 	client = new(TestClient)
-	client.client, client.delegate = newClientWithDelegate(true, t, msc, now, balances)
+	client.client, client.delegate = newClientWithDelegate(isMiner, t, msc, now, balances)
 	for i := int64(0); i < stakersAmount; i++ {
 		client.stakers = append(client.stakers, newClient(stakeValue, balances))
 	}
@@ -269,7 +269,6 @@ func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
 	gn.LastRound = last
 	gn.ViewChange = vc
 	require.NoError(t, gn.save(balances), "saving global node")
-
 }
 
 func newTestMinerSC() (msc *MinerSmartContract) {
