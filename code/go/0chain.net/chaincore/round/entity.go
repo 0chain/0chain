@@ -135,8 +135,7 @@ func (tc *timeoutCounter) checkCap() {
 	}
 }
 
-// SetTimeoutCount - sets the timeout count to given nu
-//mber if it is greater
+// SetTimeoutCount - sets the timeout count to given number if it is greater
 // than existing and returns true. Else false.
 func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	tc.mutex.Lock()
