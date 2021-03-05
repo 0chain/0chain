@@ -3,6 +3,7 @@ package round
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/rand"
 	"os"
 	"runtime/pprof"
@@ -90,7 +91,8 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 }
 
 func (tc *timeoutCounter) checkCap() {
-	if tc.count > timeoutCap {
+	timeoutCap := viper.GetInt("server_chain.round_timeouts.timeout_cap")
+	if timeoutCap > 0 && tc.count > timeoutCap {
 		tc.count = timeoutCap
 	}
 }
