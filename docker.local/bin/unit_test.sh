@@ -5,7 +5,7 @@ set -e
 INTERACTIVE="-it"
 PACKAGE=""
 
-if [[ "$1" == "--ci" ]]
+if [ "$1" = "--ci" ]
 then
     # But we need non-interactive mode for CI
     INTERACTIVE=""
@@ -15,7 +15,7 @@ fi
 
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
-if [[ -n "$PACKAGE" ]]; then
+if [ -n "$PACKAGE" ]; then
     # Run tests from a single package.
     # Assume that $PACKAGE looks something like: 0chain.net/chaincore/threshold/bls
     docker run $INTERACTIVE zchain_unit_test sh -c "cd $PACKAGE; go test -tags bn256"

@@ -12,7 +12,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	metrics "github.com/rcrowley/go-metrics"
+
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -84,11 +85,13 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		pool.TokensEarned = state.Balance(
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
 		)
-		balances.AddMint(&state.Mint{
+		if err := balances.AddMint(&state.Mint{
 			Minter:     ip.ID,
 			ToClientID: transfer.ClientID,
 			Amount:     pool.TokensEarned,
-		})
+		}); err != nil {
+			return "", err
+		}
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned
 		balances.InsertTrieNode(gn.getKey(), gn)
