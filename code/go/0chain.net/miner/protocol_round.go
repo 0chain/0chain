@@ -1384,8 +1384,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		// (previous round random seed required for it)
 		if xrhnb == nil {
 			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1),
-				mc.GetMiners(i))
+			xr.IncrementTimeoutCount()
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}

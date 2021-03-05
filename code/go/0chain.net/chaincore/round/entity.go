@@ -66,7 +66,7 @@ func (tc *timeoutCounter) AddTimeoutVote(vote int, id string) {
 }
 
 // IncrementTimeoutCount - increments timeout count.
-func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
+func (tc *timeoutCounter) IncrementTimeoutCount() {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
