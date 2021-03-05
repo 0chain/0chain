@@ -242,3 +242,17 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	un.Decode(us.Encode())
 	return un, err
 }
+
+func (msc *MinerSmartContract) readPools(list *ConsensusNodes,
+	state cstate.StateContextI) (result []*ConsensusNode, err error) {
+
+	for _, simple := range list.Nodes {
+		var node *ConsensusNode
+		if node, err = msc.getConsensusNode(simple.ID, state); err == nil {
+			return nil, err
+		} else {
+			result = append(result, node)
+		}
+	}
+	return result, nil
+}

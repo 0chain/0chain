@@ -192,8 +192,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// miners
-	for _, miner := range miners.Nodes {
-		if miner, err = msc.getConsensusNode(miner.ID, balances); err != nil {
+	for _, simple := range miners.Nodes {
+		var miner *ConsensusNode
+		if miner, err = msc.getConsensusNode(simple.ID, balances); err != nil {
 			return fmt.Errorf("missing miner node: %v", err)
 		}
 		if err = msc.payInterests(miner, gn, balances); err != nil {
@@ -214,8 +215,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// sharders
-	for _, sharder := range sharders.Nodes {
-		if sharder, err = msc.getSharderNode(sharder.ID, balances); err != nil {
+	for _, simple := range sharders.Nodes {
+		var sharder *ConsensusNode
+		if sharder, err = msc.getSharderNode(simple.ID, balances); err != nil {
 			return fmt.Errorf("missing sharder node: %v", err)
 		}
 		if err = msc.payInterests(sharder, gn, balances); err != nil {
