@@ -98,7 +98,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	newSharder.NodeType = NodeTypeSharder // set node type
 
 	// add to all
-	all.Nodes = append(all.Nodes, newSharder)
+	all.Nodes = append(all.Nodes, newSharder.SimpleNode)
 	// save the added sharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
@@ -231,7 +231,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		return "", common.NewErrorf("failed to add sharder", "sharder already exists: %v", newSharder.ID)
 	}
 
-	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder)
+	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder.SimpleNode)
 	if _, err := balances.InsertTrieNode(ShardersKeepKey, sharderKeepList); err != nil {
 		return "", err
 	}

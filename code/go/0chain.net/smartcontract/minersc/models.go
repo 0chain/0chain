@@ -262,13 +262,12 @@ func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
 	return // false, hasn't
 }
 
-//
-func (gn *GlobalNode) hasPrevSharderInList(list []*ConsensusNode,
+func (gn *GlobalNode) hasPrevSharderInList(nodes []*SimpleNode,
 	balances cstate.StateContextI) (has bool) {
 
 	var pmb = gn.prevMagicBlock(balances)
 
-	for _, node := range list {
+	for _, node := range nodes {
 		if pmb.Sharders.HasNode(node.ID) {
 			return true
 		}
@@ -279,11 +278,11 @@ func (gn *GlobalNode) hasPrevSharderInList(list []*ConsensusNode,
 
 // Receive list of ranked sharders and extract sharder of previous MB preserving
 // order. The given list not modified.
-func (gn *GlobalNode) rankedPrevSharders(list []*ConsensusNode,
-	balances cstate.StateContextI) (prev []*ConsensusNode) {
+func (gn *GlobalNode) rankedPrevSharders(list []*SimpleNode,
+	balances cstate.StateContextI) (prev []*SimpleNode) {
 
 	var pmb = gn.prevMagicBlock(balances)
-	prev = make([]*ConsensusNode, 0, len(list))
+	prev = make([]*SimpleNode, 0, len(list))
 
 	for _, node := range list {
 		if pmb.Sharders.HasNode(node.ID) {
@@ -603,7 +602,7 @@ func (smn *SimpleNode) Decode(input []byte) error {
 }
 
 type ConsensusNodes struct {
-	Nodes []*ConsensusNode
+	Nodes []*SimpleNode
 }
 
 func (mn *ConsensusNodes) Encode() []byte {
@@ -627,7 +626,7 @@ func (mn *ConsensusNodes) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
-func (mn *ConsensusNodes) FindNodeById(id string) *ConsensusNode {
+func (mn *ConsensusNodes) FindNodeById(id string) *SimpleNode {
 	for _, minerNode := range mn.Nodes {
 		if minerNode.ID == id {
 			return minerNode
