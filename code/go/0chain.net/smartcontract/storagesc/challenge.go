@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -24,21 +25,30 @@ import (
 	"go.uber.org/zap"
 )
 
+func doesChallengeExist(bc *BlobberChallenge, challenge *StorageChallenge) bool {
+	for _, chal := range bc.Challenges {
+		if challenge.ID == chal.ID {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (sc *StorageSmartContract) completeChallengeForBlobber(
 	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
 	challengeResponse *ChallengeResponse) bool {
 
 	found := false
-	idx := -1
 	if len(blobberChallengeObj.Challenges) > 0 {
 		latestOpenChallenge := blobberChallengeObj.Challenges[0]
 		if latestOpenChallenge.ID == challengeCompleted.ID {
 			found = true
 		}
 	}
-	idx = 0
-	if found && idx >= 0 && idx < len(blobberChallengeObj.Challenges) {
-		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
+
+	if found && len(blobberChallengeObj.Challenges) > 0 {
+		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:0], blobberChallengeObj.Challenges[0+1:]...)
 		challengeCompleted.Response = challengeResponse
 		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
 	}
@@ -340,8 +350,89 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	return
 }
 
+var challengeMu = &sync.Mutex{}
+
+func (sc *StorageSmartContract) clearExpiredChallenges(t *transaction.Transaction, balances c_state.StateContextI) error {
+
+	challengeMu.Lock()
+	defer challengeMu.Unlock()
+
+	blobbers, err := sc.getBlobbersList(balances)
+	if err != nil {
+		return err
+	}
+
+	for _, blobber := range blobbers.Nodes.copy() {
+		blobberChallengeObj, err := sc.getBlobberChallenge(blobber.ID, balances)
+		if err != nil {
+			return err
+		}
+		var freshChallenges []*StorageChallenge
+		for _, challenge := range blobberChallengeObj.Challenges {
+
+			var alloc *StorageAllocation
+			alloc, err = sc.getAllocation(challenge.AllocationID, balances)
+			if err != nil {
+				return err
+			}
+
+			details, ok := alloc.BlobberMap[t.ClientID]
+			if !ok {
+				return common.NewError("clear_expired_challenges",
+					"Blobber is not part of the allocation")
+			}
+
+			cct := toSeconds(details.Terms.ChallengeCompletionTime)
+			fresh := challenge.Created+cct >= t.CreationDate
+
+			if !fresh {
+				// time of previous complete challenge (not the current one)
+				// or allocation start time if no challenges
+				var prev = alloc.StartTime
+				if last := blobberChallengeObj.LatestCompletedChallenge; last != nil {
+					prev = last.Created
+				}
+
+				blobberChallengeObj.LatestCompletedChallenge = challenge
+
+				alloc.Stats.LastestClosedChallengeTxn = challenge.ID
+				alloc.Stats.FailedChallenges++
+				alloc.Stats.OpenChallenges--
+
+				details.Stats.LastestClosedChallengeTxn = challenge.ID
+				details.Stats.FailedChallenges++
+				details.Stats.OpenChallenges--
+
+				sc.challengeResolved(balances, false)
+
+				err := sc.blobberPenalty(t, alloc, prev, blobberChallengeObj, details,
+					nil, balances)
+				if err != nil {
+					return err
+				}
+
+				// save allocation object
+				_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+				if err != nil {
+					return err
+				}
+			} else {
+				freshChallenges = append(freshChallenges, challenge)
+			}
+		}
+
+		blobberChallengeObj.Challenges = freshChallenges
+		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	}
+
+	return nil
+}
+
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (resp string, err error) {
+
+	challengeMu.Lock()
+	defer challengeMu.Unlock()
 
 	var challResp ChallengeResponse
 	if err = json.Unmarshal(input, &challResp); err != nil {
@@ -481,6 +572,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 	if enoughFails || (pass && !fresh) {
 
+		// challenge can be completed from time out, check challengeTriggers
+		if !doesChallengeExist(blobberChall, challReq) {
+			return "challenge is already completed or never existed", nil
+		}
+
 		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
 			&challResp)
 		if !completed {
@@ -540,6 +636,22 @@ func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
 	if timer, ok := tm.(metrics.Timer); ok {
 		timer.Update(time.Since(tp))
 	}
+}
+
+func (sc *StorageSmartContract) challengeTriggers(t *transaction.Transaction,
+	b *block.Block, input []byte, balances c_state.StateContextI) error {
+
+	err := sc.generateChallenges(t, b, input, balances)
+	if err != nil {
+		return err
+	}
+
+	err = sc.clearExpiredChallenges(t, balances)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
