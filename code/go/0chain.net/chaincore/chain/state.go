@@ -97,39 +97,39 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 
 	blocks := make([]*block.Block, 0, 50)
 	blocks = append(blocks, b)
-	ldb := c.GetLatestDeterministicBlock()
+	lfr := c.GetLatestFinalizedBlock().Round
 
 	round := b.Round
-	if ldb.Round == round {
+	if lfr == round {
 		Logger.Error("Finalized block is not computed")
 		return errors.New("finalized block is not computed")
 	}
 
-	if ldb.Round-round >= 50 {
-		Logger.Error("Latest deterministic block is far behind current round",
-			zap.Int64("round", round),
-			zap.Int64("latest deterministic round", ldb.Round))
-		return errors.New("latest determinisitc round is far behind current round")
-	}
+	for r := round - 1; r >= lfr; r-- {
+		rd := c.GetRound(r)
+		if rd == nil {
+			Logger.Error("Round does not exist",
+				zap.Int64("round", r),
+				zap.Int64("current_round", round),
+				zap.Int64("latest_finalized_round", lfr))
+			return fmt.Errorf("round does not exist, round: %d, current_round: %d, latest_determinisitc_round: %d", r, round, lfr)
+		}
 
-	for r := round; r >= ldb.Round; r-- {
-		pb := c.GetRound(r).GetHeaviestNotarizedBlock()
+		pb := rd.GetHeaviestNotarizedBlock()
 		if pb == nil {
 			Logger.Error("Found no block on previous round", zap.Int64("round", r))
 			return errors.New("no previous round block")
 		}
 
 		blocks = append(blocks, pb)
-		if r == ldb.Round {
-			Logger.Debug("Reached the latest deterministic block round", zap.Int64("round", pb.Round))
+		if r == lfr {
+			Logger.Debug("Reached the latest finalized block round",
+				zap.Int64("round", pb.Round),
+				zap.Int64("current_round", round),
+				zap.Int64("round_gap", round-pb.Round))
 			break
 		}
 	}
-
-	Logger.Debug("fetchMissingStates",
-		zap.Int("num", len(blocks)-1),
-		zap.Int64("start_round", ldb.Round),
-		zap.Int64("to_round", round))
 
 	lastBlock := blocks[len(blocks)-1]
 	if !lastBlock.IsStateComputed() {
@@ -143,6 +143,11 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 		blocks[i].SetPreviousBlock(blocks[i+1])
 		lastBlock = blocks[i]
 	}
+
+	Logger.Debug("updateStateFromNetwork",
+		zap.Int("num", len(blocks)-1),
+		zap.Int64("start_round", lfr),
+		zap.Int64("to_round", round))
 
 	return nil
 }
