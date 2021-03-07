@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -662,6 +663,12 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 }
 
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		Logger.Error("iterate - get node error", zap.Error(err))
