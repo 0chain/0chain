@@ -10,6 +10,8 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
+	bState "0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 )
 
@@ -153,7 +155,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				t:         makeTestTx1Ok(0),
 				un:        newEmptyUserNode(),
 				gn:        newTestGlobalNode(20, 100),
-				inputData: newTestPoolRequestWrong(),
+				inputData: newWrongInput(),
 				balances:  newTestEmptyBalances(),
 			},
 			wantErr: true,
@@ -284,8 +286,143 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 				t.Errorf("lock() got = %v, want %v", got, tt.want)
 			}
 			if tt.shouldBeOk {
+				amount := float64(bState.Balance(tt.args.t.Value))
+				apr := tt.args.gn.APR
+				dur := float64(3 * time.Second)
+				balance := bState.Balance(tt.args.t.Value) + bState.Balance(amount*apr*dur/float64(YEAR))
+				stateBalance, err := tt.args.balances.GetClientBalance(tt.args.t.ToClientID)
+				if err != nil {
+					t.Errorf("can not fetch balance for %v", tt.args.t.ToClientID)
+				}
+				if stateBalance != balance {
+					t.Errorf("wrong balance for %v: now %v : should %v", tt.args.t.ToClientID, stateBalance, balance)
+				}
 
+				savedGNode, err := tt.args.balances.GetTrieNode(tt.args.gn.getKey())
+				if err != nil {
+					t.Errorf("can not fetch already saved global node")
+				}
+				if !reflect.DeepEqual(savedGNode, tt.args.gn) {
+					t.Errorf("wrong saved node")
+				}
+
+				savedUNode, err := tt.args.balances.GetTrieNode(tt.args.un.getKey(tt.args.gn.ID))
+				if err != nil {
+					t.Errorf("can not fetch already saved user node")
+				}
+
+				if !reflect.DeepEqual(savedUNode, tt.args.un) {
+					t.Errorf("wrong saved node")
+				}
 			}
+		})
+	}
+}
+
+func TestInterestPoolSmartContract_unlock(t *testing.T) {
+	type fields struct {
+		SmartContract *smartcontractinterface.SmartContract
+	}
+	type args struct {
+		t         *transaction.Transaction
+		un        *UserNode
+		gn        *GlobalNode
+		inputData []byte
+		balances  state.StateContextI
+	}
+	tests := []struct {
+		name       string
+		fields     fields
+		args       args
+		want       string
+		wantErr    bool
+		shouldBeOk bool
+	}{
+		{
+			name: "input not formatted correctly",
+			args: args{
+				t:         nil,
+				un:        nil,
+				gn:        nil,
+				inputData: newWrongInput(),
+				balances:  nil,
+			},
+			wantErr: true,
+			want:    "",
+		},
+		{
+			name: "pool doesn't exist",
+			args: args{
+				t:         nil,
+				un:        newEmptyUserNode(),
+				gn:        newTestGlobalNodeWithMint(10*time.Second, 100),
+				inputData: newTestPoolState().encode(),
+				balances:  nil,
+			},
+			wantErr: true,
+			want:    "",
+		},
+		{
+			name: "error emptying pool",
+			args: args{
+				t:         makeTestTx1Ok(10),
+				un:        newUserNodeWithPool5(),
+				gn:        newTestGlobalNodeWithMint(10*time.Second, 100),
+				inputData: testPool.encode(),
+				balances:  newTestBalanceForClient1Ok(10),
+			},
+			wantErr: true,
+			want:    "",
+		},
+		{
+			name: "pool already empty",
+			args: args{
+				t:         makeTestTx1Ok(10),
+				un:        newUserNodeWithPool0(),
+				gn:        newTestGlobalNodeWithMint(10*time.Second, 100),
+				inputData: testPool.encode(),
+				balances:  newTestBalanceForClient1Ok(10),
+			},
+			wantErr: true,
+			want:    "",
+		},
+		{
+			name: "ok",
+			args: args{
+				t:         makeTestTx1Ok(10),
+				un:        newUserNodeWithPool0WithBalance(),
+				gn:        newTestGlobalNodeWithMint(10*time.Second, 100),
+				inputData: testPool.encode(),
+				balances:  newTestBalanceForClient1Ok(10),
+			},
+			wantErr:    false,
+			want:       "",
+			shouldBeOk: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ip := &InterestPoolSmartContract{
+				SmartContract: tt.fields.SmartContract,
+			}
+			sc := &smartcontractinterface.SmartContract{
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}
+			ip.SetSC(sc, nil)
+			got, err := ip.unlock(tt.args.t, tt.args.un, tt.args.gn, tt.args.inputData, tt.args.balances)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("unlock() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.shouldBeOk {
+				tpr := &tokenpool.TokenPoolTransferResponse{ToClient: clientID1, Value: okInterestPoolBalance, FromPool: poolStateId}
+				tt.want = string(tpr.Encode())
+			}
+			if got != tt.want {
+				t.Errorf("unlock() got = %v, want %v", got, tt.want)
+			}
+
 		})
 	}
 }

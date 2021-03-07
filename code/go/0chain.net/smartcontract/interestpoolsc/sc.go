@@ -96,7 +96,9 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		gn.TotalMinted += pool.TokensEarned
 		balances.InsertTrieNode(gn.getKey(), gn)
 		// add to user pools
-		un.addPool(pool)
+		if err := un.addPool(pool); err != nil {
+			return "", err
+		}
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
 		return resp, nil
 	}
@@ -104,16 +106,15 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 }
 
 func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
-	var response string
-	var transfer *state.Transfer
 	ps := &poolStat{}
 	err := ps.decode(inputData)
 	if err != nil {
-		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("input not formatted correctly: %v\n", err.Error()))
+		return "", common.NewError("failed to unlock tokens",
+			fmt.Sprintf("input not formatted correctly: %v\n", err.Error()))
 	}
 	pool, ok := un.Pools[ps.ID]
 	if ok {
-		transfer, response, err = pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
+		transfer, response, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
 		if err != nil {
 			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error emptying pool %v", err.Error()))
 		}
@@ -123,10 +124,9 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 		}
 		balances.AddTransfer(transfer)
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
-	} else {
-		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
+		return response, nil
 	}
-	return response, nil
+	return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 }
 
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
