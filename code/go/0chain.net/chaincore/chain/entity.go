@@ -157,13 +157,13 @@ type Chain struct {
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
 	// LFB tickets channels
-	getLFBTicket          chan *LFBTicket      // check out (any time)
-	updateLFBTicket       chan *LFBTicket      // receive
-	broadcastLFBTicket    chan *block.Block    // broadcast (update by LFB)
-	subLFBTicket          chan chan *LFBTicket // } wait for a received LFBTicket
-	unsubLFBTicket        chan chan *LFBTicket // }
-	lfbTickerWorkerIsDone chan struct{}        // get rid out of context misuse
-
+	getLFBTicket          chan *LFBTicket          // check out (any time)
+	updateLFBTicket       chan *LFBTicket          // receive
+	broadcastLFBTicket    chan *block.Block        // broadcast (update by LFB)
+	subLFBTicket          chan chan *LFBTicket     // } wait for a received LFBTicket
+	unsubLFBTicket        chan chan *LFBTicket     // }
+	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
+	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
 }
@@ -411,6 +411,7 @@ func Provider() datastore.Entity {
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
+	c.syncLFBStateC = make(chan *block.BlockSummary)
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
@@ -1176,8 +1177,10 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 
 	c.LatestFinalizedBlock = b
 	if b != nil {
-		c.lfbSummary = b.GetSummary()
+		bs := b.GetSummary()
+		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
+		c.notifyToSyncFinalizedRoundState(bs)
 	}
 }
 
@@ -1432,6 +1435,14 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 
 	// this work is different for miners and sharders
 	return c.viewChanger.ViewChange(ctx, lfb)
+}
+
+func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
+	select {
+	case c.syncLFBStateC <- bs:
+	case <-time.NewTimer(3 * time.Second).C:
+		Logger.Error("Send sync state for finalized round timeout")
+	}
 }
 
 // The ViewChanger represents node makes view change where a block with new
