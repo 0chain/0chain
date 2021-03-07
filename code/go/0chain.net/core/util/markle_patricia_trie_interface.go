@@ -50,6 +50,7 @@ type MerklePatriciaTrieI interface {
 	// useful for pruning the state below a certain origin number
 	UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error // mark
 
+	FindMissingNodes(ctx context.Context) ([]Path, []Key, error)
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
 

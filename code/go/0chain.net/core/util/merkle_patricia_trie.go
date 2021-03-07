@@ -880,6 +880,29 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	return err
 }
 
+// GetMissingNodes returns the paths and keys of missing nodes
+func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []Key, error) {
+	paths := make([]Path, 0, BatchSize)
+	keys := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			paths = append(paths, path)
+			keys = append(keys, key)
+		}
+		return nil
+	}
+
+	st := time.Now()
+	// TODO: may have dead lock for the iterate
+	if err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode); err != nil {
+		return nil, nil, err
+	}
+
+	Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+
+	return paths, keys, nil
+}
+
 /*IsMPTValid - checks if the merkle tree is in valid state or not */
 func IsMPTValid(mpt MerklePatriciaTrieI) error {
 	return mpt.Iterate(context.TODO(), func(ctxt context.Context, path Path, key Key, node Node) error { return nil }, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
