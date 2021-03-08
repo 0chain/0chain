@@ -45,10 +45,19 @@ Each time you start a debug session you will want to do something similar to the
 following. If you don't mind a slightly dirty environment you 
 might skip resetting the databases.
 
-If you are running a miner
+### redis
+
+If you are running a miner use docker
+```shell
+sudo local/bin/docker.run.redis.sh
+```
+or if not using docker
 ```shell
 sudo local/bin/reset.redis.sh
 ```
+
+### casandra
+
 If you are running a sharder
 ```shell
 sudo local/bin/reset.cassandra.sh
@@ -57,6 +66,8 @@ Wait for `cqlsh` to come up then
 ```shell
 local/bin/init.cassandra.sh
 ```
+
+### run 0chain
 Now clear and rebuild the runtime directories
 ```shell
 local/bin/clean.sh
