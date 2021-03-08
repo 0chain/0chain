@@ -238,6 +238,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	// BC stuck timeout
 	bcStuckTimeout := 100 * time.Second
 	var isSynching bool
+	synchingStopC := make(chan struct{})
 
 	for {
 		select {
@@ -294,7 +295,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			isSynching = true
 			go func() {
 				c.syncRoundState(cctx, r, stateHash)
+				synchingStopC <- struct{}{}
 			}()
+		case <-synchingStopC:
+			isSynching = false
 		case <-ctx.Done():
 			Logger.Info("Context done, stop SyncLFBStateWorker")
 			return
