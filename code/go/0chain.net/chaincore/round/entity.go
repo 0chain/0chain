@@ -3,6 +3,7 @@ package round
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/rand"
 	"os"
 	"runtime/pprof"
@@ -81,7 +82,6 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 
 // IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
-
 	if prrs == 0 {
 		return // no PRRS, no timeout incrementation
 	}
@@ -92,6 +92,7 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 		tc.count++
+		tc.checkCap()
 		return
 	}
 
@@ -123,6 +124,14 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	// increase if has not increased
 	if tc.count == from {
 		tc.count++
+	}
+	tc.checkCap()
+}
+
+func (tc *timeoutCounter) checkCap() {
+	timeoutCap := viper.GetInt("server_chain.round_timeouts.timeout_cap")
+	if timeoutCap > 0 && tc.count > timeoutCap {
+		tc.count = timeoutCap
 	}
 }
 
