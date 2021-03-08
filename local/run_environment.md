@@ -15,7 +15,7 @@
 
 This document explains how to run 0Chain a sharder and miner on a machine, 
 either Mac or Linux, outside a docker file. 
-As the names of key items , such as database locations, 
+As the names of key items, such as database locations, 
 are hardcoded, a maximum of only one sharder and one miner can run on one machine.
 
 A working 0Chain network ideally needs at least three or four machines.
@@ -39,7 +39,7 @@ sharder --keys_file config/b0snode1_keys.txt
 ```
 
 The other configuration files will refer to a node by the `id` is as defined 
-by its keys_file. For information purposes links between each id, public key
+by its `keys_file`. For information purposes links between each id, public key
 and private key triplet is given in `docker.local\config\magicBlock_5_miners_1_sharder.yaml` 
 and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
 
@@ -48,11 +48,11 @@ and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
 To start the chain off we need a genesis magic block file. There are two 
 templates set up as examples `b0magicBlock_4_miners_1_sharder.tmp.json` and
 `b0magicBlock_3_miners_1_sharder.tmp.json`. Fill in the missing details of the 
-ip address of each machine in the 0chain in the `n2n_host` fields.
+IP address of each machine in the 0chain in the `n2n_host` fields.
 Each node should have a json-identical magic block file.
 
-Each node object needs the `n2n_host` field filled in with the ip address of the 
-machine. When each miner and sharder is run, the --keys_file option must match
+Each node object needs the `n2n_host` field filled in with the IP address of the 
+machine. When each miner and sharder is run, the `--keys_file` option must match
 the `id` field of the corresponding node, as indicated by the 
 `magicBlock_3_miners_3_sharder.yaml` file.
 
@@ -125,15 +125,15 @@ network:
 
 ### Redis
 
-If you intend to run an 0Chain minor you will need two redis databases instances.
-Assuming redis has been installed as in  
+If you intend to run a 0Chain miner you will need two Redis databases instances.
+Assuming Redis has been installed as in  
 [install_dbs.md](https://github.com/0chain/0chain/blob/debug_builds/local/install_dbs.md)
-then two redis severs can be started on separate terminals. 
+then two Redis severs can be started on separate terminals. 
 0Chain's miner hardcodes them to be on port 6479 and 6479. 
-Make sure any terminals running redis are shut down.
+Make sure any terminals running Redis are shut down.
 You might have to force the 6379 and 6479 ports to shut down.
 ```shell
-sudo 0chain/local/bin/reset_redis.sh
+sudo 0chain/local/bin/reset.redis.sh
 ```
 This should start two terminals running on port 6478 and 6479.
 
@@ -141,12 +141,12 @@ This should start two terminals running on port 6478 and 6479.
 
 If you intend to run an 0Chain sharder you will need a Cassandra database. 
 
-Firstly cassandra 3 requires java-8, if you have other java implementations 
+Firstly Cassandra 3 requires java-8, if you have other java implementations 
 installed you will want to select java-8
 ```shell
 sudo update-alternatives --config java
 ```
-To start cassandra
+To start Cassandra
 ```shell
 service cassandra stop
 rm -rf /var/lib/cassandra/*

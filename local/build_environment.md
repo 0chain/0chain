@@ -34,7 +34,7 @@ cgo: exec gcc: exec: "gcc": executable file not found in $PATH
 cgo: exec gcc: exec: "gcc": executable file not found in $PATH
 ````
 No problem we will go through building herumi, valyala and gorocksdb. I will 
-be assuming your using `ubuntu` but Mac works much the same replacing `apt-get` with `brew`.  
+be assuming your using Ubuntu but Mac works much the same replacing `apt-get` with `brew`.  
 
 You can also work it our for yourself, all the details are in the docker files
 [build_base](https://github.com/0chain/0chain/blob/master/docker.local/build.base/Dockerfile.build_base)
@@ -42,7 +42,7 @@ and [build miner](https://github.com/0chain/0chain/blob/master/docker.local/buil
 
 ## Install rocksdb
 
-You probably already have make and g++ installed, but if not you want
+You probably already have `make` and `g++` installed, but if not you want
 ```shell
 sudo apt update
 sudo apt install -y make
@@ -83,7 +83,13 @@ If the `make OPT=-g0 USE_RTTI=1` command fails with
 cc1plus: all warnings being treated as errors
 make: *** [Makefile:1958: db/builder.o] Error 1
 ```
-then your gcc version is too high. Probably the best thing to do here is to downgrade your gcc.
+then your gcc version is too high. You can try this instead:
+```shell
+DISABLE_WARNING_AS_ERROR='yes' make OPT=-g0 USE_RTTI=1
+# or this
+EXTRA_CXXFLAGS='-w' make OPT=-g0 USE_RTTI=1
+```
+But if this fails on stage of linking, it is only left to downgrade your gcc.
 ```shell
 sudo apt install g++-7 gcc-7
 export CC=/usr/bin/gcc-7
@@ -120,7 +126,7 @@ sudo make install
 ```
 ## Build libzstd
 
-From [docker file](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile);
+From [Dockerfile](https://github.com/0chain/0chain/blob/master/docker.local/build.miner/Dockerfile);
 As https://github.com/valyala/gozstd/issues/6 is still open we have to build `libzstd` as follows. 
 Do this even if you already have `libzstd` installed.
 ```shell
@@ -133,7 +139,7 @@ make clean libzstd.a
 
 Now the big test. Run
 ```shell
-cd 0chain/code/go/0chain.net/miner/miner
+cd code/go/0chain.net/miner/miner
 go build -tags "bn256 development"
 ```
 If all is well `go build` should work, and you will have a new `miner` executable.
