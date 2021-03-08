@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +27,7 @@ func init() {
 func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
+	go c.SyncLFBStateWorker(ctx)
 	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
 	go node.Self.Underlying().MemoryUsage()
@@ -199,6 +201,150 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// SyncLFBStateWorker is a worker for syncing state of latest finalized round block.
+// The worker would not sync state for every LFB as it will cause performance issue,
+// only when it detects BC stuck will the synch process start.
+func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
+	Logger.Debug("SyncLFBStateWorker start")
+	defer func() {
+		Logger.Debug("SyncLFBStateWorker stopped")
+	}()
+
+	lfb := c.GetLatestFinalizedBlock()
+
+	// lastRound records the last latest finalized round info, which will be
+	// updated once a new LFB is found. If its timestamp is not updated for specific
+	// time duration (100s currently), we can say the BC is stuck, and the process for
+	// syncing state will be triggered.
+	var lastRound = struct {
+		round     int64
+		stateHash util.Key
+		tm        time.Time
+	}{
+		round:     lfb.Round,
+		stateHash: lfb.ClientStateHash,
+		tm:        time.Now(),
+	}
+
+	// context and cancel function will be used to cancel a running state syncing process when
+	// the BC starts to move again.
+	var cctx context.Context
+	var cancel context.CancelFunc
+
+	// ticker to check if the BC is stuck
+	tk := time.NewTicker(10 * time.Second)
+	// BC stuck timeout
+	bcStuckTimeout := 100 * time.Second
+	var isSynching bool
+	synchingStopC := make(chan struct{})
+
+	for {
+		select {
+		case bs := <-c.syncLFBStateC:
+			// got a new finalized block summary
+			if bs.Round > lastRound.round && lastRound.round > 0 {
+				Logger.Debug("BC is moving",
+					zap.Int64("current_lfb_round", bs.Round),
+					zap.Int64("last_round", lastRound.round))
+				// call cancel to stop state syncing process in case it was started
+				if cancel != nil && isSynching {
+					cancel()
+					cancel = nil
+				}
+
+				// update to latest finalized round
+				lastRound.round = bs.Round
+				lastRound.stateHash = bs.ClientStateHash
+				lastRound.tm = time.Now()
+				continue
+			}
+		case <-tk.C:
+			// last round could be 0 when miners or sharders start
+			if lastRound.round == 0 {
+				lfb := c.GetLatestFinalizedBlock()
+				lastRound.round = lfb.Round
+				lastRound.stateHash = lfb.ClientStateHash
+				lastRound.tm = time.Now()
+				continue
+			}
+
+			// time since the last finalized round arrived
+			ts := time.Since(lastRound.tm)
+			if ts <= bcStuckTimeout {
+				// reset synching state and continue as the BC is not stuck
+				isSynching = false
+				continue
+			}
+
+			// continue if state is syncing
+			if isSynching {
+				continue
+			}
+
+			Logger.Debug("BC may get stuck",
+				zap.Int64("lastRound", lastRound.round),
+				zap.String("state_hash", util.ToHex(lastRound.stateHash)),
+				zap.Any("stuck time", ts))
+
+			r := lastRound.round
+			stateHash := lastRound.stateHash
+			cctx, cancel = context.WithCancel(ctx)
+
+			isSynching = true
+			go func() {
+				c.syncRoundState(cctx, r, stateHash)
+				synchingStopC <- struct{}{}
+			}()
+		case <-synchingStopC:
+			isSynching = false
+		case <-ctx.Done():
+			Logger.Info("Context done, stop SyncLFBStateWorker")
+			return
+		}
+	}
+}
+
+func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash util.Key) {
+	Logger.Info("Sync round state from network...")
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
+	mpt.SetRoot(stateRootHash)
+
+	Logger.Info("Finding missing nodes")
+	cctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer cancel()
+
+	_, keys, err := mpt.FindMissingNodes(cctx)
+	if err != nil {
+		switch err {
+		case context.Canceled:
+			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
+			return
+		case context.DeadlineExceeded:
+			Logger.Error("Sync round state abort, context timed out for checking missing nodes")
+			return
+		default:
+			Logger.Error("Sync round state abort, failed to get missing nodes",
+				zap.Int64("round", round),
+				zap.String("client state hash", util.ToHex(stateRootHash)),
+				zap.Error(err))
+			return
+		}
+	}
+
+	if len(keys) == 0 {
+		Logger.Debug("Found no missing node",
+			zap.Int64("round", round),
+			zap.String("state hash", util.ToHex(stateRootHash)))
+		return
+	}
+
+	Logger.Info("Sync round state, found missing nodes",
+		zap.Int64("round", round),
+		zap.Int("missing_node_num", len(keys)))
+
+	c.GetStateNodesFromSharders(ctx, keys)
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error

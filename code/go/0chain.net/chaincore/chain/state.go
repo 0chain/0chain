@@ -95,68 +95,59 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 		return nil
 	}
 
-	var blocks []*block.Block
+	blocks := make([]*block.Block, 0, 50)
 	blocks = append(blocks, b)
-	cb := b
-	fbr := c.GetLatestFinalizedBlock().Round
+	lfr := c.GetLatestFinalizedBlock().Round
 
-	if fbr == b.Round {
+	round := b.Round
+	if lfr == round {
 		Logger.Error("Finalized block is not computed")
 		return errors.New("finalized block is not computed")
 	}
 
-	for i := 0; i < 10; i++ {
-		pb := c.GetLocalPreviousBlock(ctx, cb)
+	for r := round - 1; r >= lfr; r-- {
+		rd := c.GetRound(r)
+		if rd == nil {
+			Logger.Error("Round does not exist",
+				zap.Int64("round", r),
+				zap.Int64("current_round", round),
+				zap.Int64("latest_finalized_round", lfr))
+			return fmt.Errorf("round does not exist, round: %d, current_round: %d, latest_determinisitc_round: %d", r, round, lfr)
+		}
+
+		pb := rd.GetHeaviestNotarizedBlock()
 		if pb == nil {
-			Logger.Error("Found no local previous block",
-				zap.String("hash", cb.Hash),
-				zap.Int64("round", cb.Round))
-			return errors.New("no local previous block")
+			Logger.Error("Found no block on previous round", zap.Int64("round", r))
+			return errors.New("no previous round block")
 		}
 
 		blocks = append(blocks, pb)
-		if pb.IsStateComputed() {
-			switch ndb := pb.ClientState.GetNodeDB().(type) {
-			case *util.LevelNodeDB:
-				prevDB := ndb.GetPrev()
-				// break if the previous block's db is either level node db or pnode db
-				if _, ok := prevDB.(*util.MemoryNodeDB); !ok {
-					break
-				}
-			case *util.PNodeDB:
-				break
-			}
-		}
-
-		if pb.Round <= fbr {
-			// reached out to the last finalized block
-			if !pb.IsStateComputed() {
-				Logger.Error("Finalized block is not computed")
-				return errors.New("finalized block is not computed")
-			}
+		if r == lfr {
+			Logger.Debug("Reached the latest finalized block round",
+				zap.Int64("round", pb.Round),
+				zap.Int64("current_round", round),
+				zap.Int64("round_gap", round-pb.Round))
 			break
 		}
-
-		cb = pb
 	}
-
-	Logger.Debug("fetchMissingStates, blocks behind",
-		zap.Int("num", len(blocks)-1),
-		zap.Int64("round", b.Round),
-		zap.Int64("lfb round", fbr))
 
 	lastBlock := blocks[len(blocks)-1]
 	if !lastBlock.IsStateComputed() {
 		return errors.New("could not find block with computed state")
 	}
-
-	// calculate the state changes from the block of computed state
+	// calculate the state changes from the latest deterministic block
 	for i := len(blocks) - 2; i >= 0; i-- {
 		// get state change of the block
 		blocks[i].CreateState(lastBlock.ClientState.GetNodeDB())
 		c.GetBlockStateChange(blocks[i])
+		blocks[i].SetPreviousBlock(blocks[i+1])
 		lastBlock = blocks[i]
 	}
+
+	Logger.Debug("updateStateFromNetwork",
+		zap.Int("num", len(blocks)-1),
+		zap.Int64("start_round", lfr),
+		zap.Int64("to_round", round))
 
 	return nil
 }
