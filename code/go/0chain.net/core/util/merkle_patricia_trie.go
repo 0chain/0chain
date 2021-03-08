@@ -894,8 +894,15 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 
 	st := time.Now()
 	// TODO: may have dead lock for the iterate
-	if err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode); err != nil {
-		return nil, nil, err
+	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	if err != nil {
+		switch err {
+		case ErrNodeNotFound, ErrIteratingChildNodes:
+			Logger.Debug("Find missing nodes err", zap.Error(err))
+		default:
+			Logger.Error("Find missing node with unexpected err", zap.Error(err))
+			return nil, nil, err
+		}
 	}
 
 	Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
