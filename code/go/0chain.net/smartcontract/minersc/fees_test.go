@@ -14,60 +14,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type TestClient struct {
-	client   *Client
-	delegate *Client
-	stakers  []*Client
-}
+const GeneratorStakeValue, MinerStakeValue, SharderStakeValue = 2, 3, 5
+const GeneratorStakersAmount, MinerStakersAmount, SharderStakersAmount = 11, 13, 17
+const MinersAmount, ShardersAmount = 19, 23
+const BlockReward, TransactionFee = 29, 31
+const BlockShardersAmount = 7
 
-func createLFMB(miners []*TestClient, sharders []*TestClient) (
-	b *block.Block) {
-
-	b = new(block.Block)
-
-	b.MagicBlock = block.NewMagicBlock()
-	b.MagicBlock.Miners = node.NewPool(node.NodeTypeMiner)
-	b.MagicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
-
-	for _, miner := range miners {
-		b.MagicBlock.Miners.NodesMap[miner.client.id] = new(node.Node)
-	}
-	for _, sharder := range sharders {
-		b.MagicBlock.Sharders.NodesMap[sharder.client.id] = new(node.Node)
-	}
-	return
-}
-
-func (msc *MinerSmartContract) setDKGMiners(t *testing.T,
-	miners []*TestClient, balances *testBalances) {
-
-	t.Helper()
-
-	var global, err = msc.getGlobalNode(balances)
-	require.NoError(t, err)
-
-	var nodes *DKGMinerNodes
-	nodes, err = msc.getMinersDKGList(balances)
-	require.NoError(t, err)
-
-	nodes.setConfigs(global)
-	for _, miner := range miners {
-		nodes.SimpleNodes[miner.client.id] = &SimpleNode{ID: miner.client.id}
-		nodes.Waited[miner.client.id] = true
-	}
-
-	_, err = balances.InsertTrieNode(DKGMinersKey, nodes)
-	require.NoError(t, err)
-}
+const timeDelta = 10
 
 func Test_payFees(t *testing.T) {
-	const SharderStakeValue, MinerStakeValue, GeneratorStakeValue = 5, 3, 2
-	const SharderStakersAmount, MinerStakersAmount, GeneratorStakersAmount = 13, 11, 7
-    const MinersAmount, ShardersAmount = 17, 19
-    const BlockReward, TransactionFee = 29, 23
-
-    const timeDelta = 10
-
 	var (
 		balances = newTestBalances()
 		msc      = newTestMinerSC()
@@ -76,34 +31,36 @@ func Test_payFees(t *testing.T) {
 		miners   []*TestClient
 		sharders []*TestClient
 		generator  *TestClient
-
-		global     GlobalNode
 	)
 
-	global.ViewChange = 0
-	global.MaxN = 100
-	global.MinN = 3
-	global.MaxS = 30
-	global.MinS = 1
-	global.MaxDelegates = 100
-	global.TPercent = 0.51
-	global.KPercent = 0.75
-	global.LastRound = 0
-	global.MaxStake = state.Balance(100.0e10)
-	global.MinStake = state.Balance(1)
-	global.InterestRate = 0.1
-	global.RewardRate = 1.0
-	global.ShareRatio = 0.10
-	global.BlockReward = BlockReward
-	global.MaxCharge = 0.5   // %
-	global.Epoch = 15e6      // 15M
-	global.RewardDeclineRate = 0.1
-	global.RewardRoundPeriod = 250
-	global.InterestDeclineRate = 0.1
-	global.MaxMint = state.Balance(4e6 * 1e10)
-	global.Minted = 0
+	{
+		var global GlobalNode
 
-	mustSave(t, GlobalNodeKey, &global, balances)
+		global.ViewChange = 0
+		global.MaxN = 100
+		global.MinN = 3
+		global.MaxS = 30
+		global.MinS = 1
+		global.MaxDelegates = 100
+		global.TPercent = 0.51
+		global.KPercent = 0.75
+		global.LastRound = 0
+		global.MaxStake = state.Balance(100.0e10)
+		global.MinStake = state.Balance(1)
+		global.InterestRate = 0.1
+		global.RewardRate = 1.0
+		global.ShareRatio = 0.10
+		global.BlockReward = BlockReward
+		global.MaxCharge = 0.5 // %
+		global.Epoch = 15e6    // 15M
+		global.RewardDeclineRate = 0.1
+		global.RewardRoundPeriod = 250
+		global.InterestDeclineRate = 0.1
+		global.MaxMint = state.Balance(4e6 * 1e10)
+		global.Minted = 0
+
+		mustSave(t, GlobalNodeKey, &global, balances)
+	}
 
 	config.DevConfiguration.ViewChange = true
 	config.DevConfiguration.IsDkgEnabled = true
@@ -184,7 +141,7 @@ func Test_payFees(t *testing.T) {
 	msc.setDKGMiners(t, miners, balances)
 
 
-	t.Run("pay fees -> view change", func(t *testing.T) {
+	t.Run("pay fees [vc, no fees]", func(t *testing.T) {
 		balances.requireAllBeZeros(t)
 		msc.setRounds(t, 250, 251, balances)
 
@@ -213,12 +170,25 @@ func Test_payFees(t *testing.T) {
 
 		require.NoError(t, err, "can't get global node")
 		require.EqualValues(t, 251, global.LastRound)
-		require.EqualValues(t, 0, global.Minted)
+
+		// no fees, so only block reward is generated
+		require.EqualValues(t, BlockReward, global.Minted)
+
+		var generatorShare, shardersShare = global.splitByShareRatio(BlockReward)
+		generatorShare += shardersShare % BlockShardersAmount
+
+		require.EqualValues(t, generatorShare,
+			balances.balances[generator.delegate.id])
+
+		balances.requireSpecifiedBeEqual(t,
+			unwrapDelegates(filterClientsByIds(sharders, balances.blockSharders)),
+			state.Balance(int(shardersShare) / BlockShardersAmount),
+			"all sharders must receive the same value")
 	})
 
 	msc.setDKGMiners(t, miners, balances)
 
-	t.Run("pay fees -> no fees", func(t *testing.T) {
+	t.Run("pay fees [no vc, no fees]", func(t *testing.T) {
 		msc.setRounds(t, 251, 501, balances)
 
 		msc.requirePendingPoolsBeEmpty(t, balances)
@@ -276,7 +246,7 @@ func Test_payFees(t *testing.T) {
 
 	// don't set DKG miners list, because no VC is expected
 
-	t.Run("pay fees -> with fees", func(t *testing.T) {
+	t.Run("pay fees [no vc, fees]", func(t *testing.T) {
 		msc.setRounds(t, 252, 501, balances)
 
 		now += timeDelta
@@ -322,7 +292,7 @@ func Test_payFees(t *testing.T) {
 
 	// don't set DKG miners list, because no VC is expected
 
-	t.Run("pay fees -> view change interests", func(t *testing.T) {
+	t.Run("pay fees [vc, interests]", func(t *testing.T) {
 		msc.setRounds(t, 500, 501, balances)
 
 		now += timeDelta
@@ -378,6 +348,52 @@ func Test_payFees(t *testing.T) {
 	})
 }
 
+type TestClient struct {
+	client   *Client
+	delegate *Client
+	stakers  []*Client
+}
+
+func createLFMB(miners []*TestClient, sharders []*TestClient) (
+	b *block.Block) {
+
+	b = new(block.Block)
+
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Miners = node.NewPool(node.NodeTypeMiner)
+	b.MagicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
+
+	for _, miner := range miners {
+		b.MagicBlock.Miners.NodesMap[miner.client.id] = new(node.Node)
+	}
+	for _, sharder := range sharders {
+		b.MagicBlock.Sharders.NodesMap[sharder.client.id] = new(node.Node)
+	}
+	return
+}
+
+func (msc *MinerSmartContract) setDKGMiners(t *testing.T,
+	miners []*TestClient, balances *testBalances) {
+
+	t.Helper()
+
+	var global, err = msc.getGlobalNode(balances)
+	require.NoError(t, err)
+
+	var nodes *DKGMinerNodes
+	nodes, err = msc.getMinersDKGList(balances)
+	require.NoError(t, err)
+
+	nodes.setConfigs(global)
+	for _, miner := range miners {
+		nodes.SimpleNodes[miner.client.id] = &SimpleNode{ID: miner.client.id}
+		nodes.Waited[miner.client.id] = true
+	}
+
+	_, err = balances.InsertTrieNode(DKGMinersKey, nodes)
+	require.NoError(t, err)
+}
+
 func (msc *MinerSmartContract) callPayFees(t *testing.T,
 	balances    *testBalances,
 	miners      []*TestClient,
@@ -402,7 +418,7 @@ func (msc *MinerSmartContract) callPayFees(t *testing.T,
 	//todo: initially tx.Fee and blck.Txns setting were after this:
 	balances.txn = tx
 	balances.block = blck
-	balances.blockSharders = selectRandom(sharders, 3)
+	balances.blockSharders = selectRandom(sharders, BlockShardersAmount)
 
 	var global, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "getting global node")
@@ -472,24 +488,24 @@ func (msc *MinerSmartContract) requirePools(t *testing.T,
 func (tb *testBalances) requireNodesHaveZeros(t *testing.T,
 	nodes []*TestClient, message string) {
 
-	tb.requireSpecifiedBeZeros(t, unwrapClients(nodes), message + " (client wallets)")
-	tb.requireSpecifiedBeZeros(t, unwrapDelegates(nodes), message + " (delegate wallets)")
+	tb.requireSpecifiedBeEqual(t, unwrapClients(nodes), 0, message + " (client wallets)")
+	tb.requireSpecifiedBeEqual(t, unwrapDelegates(nodes), 0, message + " (delegate wallets)")
 }
 
 func (tb *testBalances) requireStakersHaveZeros(t *testing.T,
 	nodes []*TestClient, message string) {
 
 	for _, node := range nodes {
-		tb.requireSpecifiedBeZeros(t, node.stakers, message)
+		tb.requireSpecifiedBeEqual(t, node.stakers, 0, message)
 	}
 }
 
-func selectRandom(clients []*TestClient, n int) (selection []string) {
+func selectRandom(clients []*TestClient, n int) (selection []datastore.Key) {
 	if n > len(clients) {
 		panic("too many elements requested")
 	}
 
-	selection = make([]string, 0, n)
+	selection = make([]datastore.Key, 0, n)
 
 	var permutations = rand.Perm(len(clients))
 	for i := 0; i < n; i++ {
@@ -498,7 +514,7 @@ func selectRandom(clients []*TestClient, n int) (selection []string) {
 	return
 }
 
-func filterClientsByIds(clients []*TestClient, ids []string) (
+func filterClientsByIds(clients []*TestClient, ids []datastore.Key) (
 	selection []*TestClient) {
 
 	selection = make([]*TestClient, 0, len(ids))
