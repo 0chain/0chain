@@ -207,36 +207,6 @@ func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 	require.NoError(t, err)
 }
 
-func setConfig(t *testing.T, balances cstate.StateContextI) (gn *GlobalNode) {
-	gn = new(GlobalNode)
-
-	gn.ViewChange = 0
-	gn.MaxN = 100
-	gn.MinN = 3
-	gn.MaxS = 30
-	gn.MinS = 1
-	gn.MaxDelegates = 100 // for tests
-	gn.TPercent = 0.51   // %
-	gn.KPercent = 0.75   // %
-	gn.LastRound = 0
-	gn.MaxStake = state.Balance(100.0e10)
-	gn.MinStake = state.Balance(1)
-	gn.InterestRate = 0.1
-	gn.RewardRate = 1.0
-	gn.ShareRatio = 0.10
-	gn.BlockReward = state.Balance(0.7e10)
-	gn.MaxCharge = 0.5 // %
-	gn.Epoch = 15e6    // 15M
-	gn.RewardDeclineRate = 0.1
-	gn.RewardRoundPeriod = 250
-	gn.InterestDeclineRate = 0.1
-	gn.MaxMint = state.Balance(4e6 * 1e10)
-	gn.Minted = 0
-
-	mustSave(t, GlobalNodeKey, gn, balances)
-	return
-}
-
 func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	balances cstate.StateContextI) {
 
@@ -259,16 +229,6 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	var err error
 	_, err = balances.InsertTrieNode(MagicBlockKey, mb)
 	require.NoError(t, err, "setting magic block")
-}
-
-func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
-	balances cstate.StateContextI) {
-
-	var gn, err = msc.getGlobalNode(balances)
-	require.NoError(t, err, "getting global node")
-	gn.LastRound = last
-	gn.ViewChange = vc
-	require.NoError(t, gn.save(balances), "saving global node")
 }
 
 func newTestMinerSC() (msc *MinerSmartContract) {

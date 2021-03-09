@@ -8,6 +8,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 //
@@ -37,6 +39,23 @@ func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 
 func (tb *testBalances) setLFMB(lfmb *block.Block) {
 	tb.lfmb = lfmb
+}
+
+func (tb *testBalances) requireAllBeZeros(t *testing.T) {
+	for id, value := range tb.balances {
+		if id == ADDRESS {
+			continue
+		}
+		require.Zerof(t, value, "%s has non-zero balance: %d", id, value)
+	}
+}
+
+func (tb *testBalances) requireSpecifiedBeZeros(t *testing.T,
+	clients []*Client, message string) {
+
+	for _, client := range clients {
+		require.Zero(t, tb.balances[client.id], message)
+	}
 }
 
 func (tb *testBalances) GetBlock() *block.Block {
