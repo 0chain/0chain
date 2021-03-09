@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
@@ -74,8 +75,8 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock)
+func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, is *state.InitStates) *block.Block {
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, is)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can not be null")
 	}

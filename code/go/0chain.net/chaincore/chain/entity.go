@@ -478,33 +478,30 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState() util.Serializable {
-	tokens := viper.GetInt64("server_chain.tokens")
+func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 	balance := &state.State{}
 	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	var cents int64 = 1
-	for i := int8(0); i < c.Decimals; i++ {
-		cents *= 10
-	}
-	balance.Balance = state.Balance(tokens * cents)
+	balance.Balance = state.Balance(tokens)
 	return balance
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(is *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0))
-	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
+	for _, v := range is.States {
+		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
+	}
 	pmt.SaveChanges(c.stateDB, false)
 	Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock) (round.RoundI, *block.Block) {
+func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, is *state.InitStates) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState()
+	gb.ClientState = c.setupInitialState(is)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()

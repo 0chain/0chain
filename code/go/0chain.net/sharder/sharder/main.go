@@ -87,6 +87,7 @@ func main() {
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	minioFile := flag.String("minio_file", "", "minio_file")
+	initialStates := flag.String("initial_states", "", "initial_states")
 	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -139,6 +140,16 @@ func main() {
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
+	if *initialStates == "" {
+		*initialStates = viper.GetString("network.initial_states")
+	}
+
+	is := state.NewInitStates()
+	err = is.Read(*initialStates)
+	if err != nil {
+		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
+	}
+
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
 		*magicBlockFile = viper.GetString("network.magic_block_file")
@@ -166,7 +177,7 @@ func main() {
 
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock)
+		magicBlock, is)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
