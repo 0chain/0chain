@@ -4,6 +4,8 @@ go 1.14
 
 replace 0chain.net/core => ../core
 
+replace 0chain.net/mocks => ../mocks
+
 replace 0chain.net/chaincore => ../chaincore
 
 replace 0chain.net/smartcontract => ../smartcontract
