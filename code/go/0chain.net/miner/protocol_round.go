@@ -1139,11 +1139,7 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 }
 
 // HandleRoundTimeout handle timeouts appropriately.
-func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-
-	var (
-		rn = mc.GetCurrentRound()
-	)
+func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	// 	mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
 	// 	cmb = mc.GetMagicBlock(rn)
 
@@ -1158,23 +1154,23 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	// 	return
 	// }
 
-	var r = mc.GetMinerRound(rn)
+	var r = mc.GetMinerRound(round)
 
 	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound",
 			zap.Int64("round", r.GetRoundNumber()))
-		mc.restartRound(ctx)
+		mc.restartRound(ctx, round)
 		return
 	}
 
 	Logger.Info("triggering handleNoProgress",
 		zap.Int64("round", r.GetRoundNumber()))
-	mc.handleNoProgress(ctx)
+	mc.handleNoProgress(ctx, round)
 	r.IncSoftTimeoutCount()
 }
 
-func (mc *Chain) handleNoProgress(ctx context.Context) {
-	r := mc.GetMinerRound(mc.GetCurrentRound())
+func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
+	r := mc.GetMinerRound(round)
 	proposals := r.GetProposedBlocks()
 	if len(proposals) > 0 { // send the best block to the network
 		b := r.Block
@@ -1316,25 +1312,23 @@ func (mc *Chain) startNextRoundInRestartRound(ctx context.Context, i int64) {
 	mc.StartNextRound(ctx, pr)
 }
 
-func (mc *Chain) restartRound(ctx context.Context) {
+func (mc *Chain) restartRound(ctx context.Context, round int64) {
 
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
-	var crn = mc.GetCurrentRound()
-
 	mc.IncrementRoundTimeoutCount()
-	var r = mc.GetMinerRound(crn)
+	var r = mc.GetMinerRound(round)
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		Logger.Error("restartRound - round timeout occurred",
-			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("round", round), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 	case crt == 10:
 		Logger.Error("restartRound - round timeout occurred (no further"+
 			" timeout messages will be displayed)",
-			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("round", round), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 		// TODO: should have a means to send an email/SMS to someone or
@@ -1349,16 +1343,16 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 
 	var (
-		isAhead = mc.isAheadOfSharders(ctx, crn)
+		isAhead = mc.isAheadOfSharders(ctx, round)
 		lfb     = mc.GetLatestFinalizedBlock()
 	)
 
 	// kick new round from the new LFB from sharders, if it's newer
 	// then the current one
 	if updated {
-		if lfb.Round > crn {
+		if lfb.Round > round {
 			mc.kickRoundByLFB(ctx, lfb) // and continue
-			crn = mc.GetCurrentRound()
+			//round = mc.GetCurrentRound()
 		}
 	} else if isAhead {
 		mc.kickSharders(ctx) // not updated, kick sharders finalization
