@@ -53,9 +53,9 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		if err != nil {
 			return err
 		}
-		data, err1 := con.Receive()
-		if err1 != nil {
-			return err1
+		data, err := con.Receive()
+		if err != nil {
+			return err
 		}
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
