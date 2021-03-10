@@ -73,8 +73,7 @@ func (ps *Store) Write(ctx context.Context, entity datastore.Entity) error {
 	c := GetCon(ctx)
 	emd := entity.GetEntityMetadata()
 	json := datastore.ToJSON(entity).String()
-	err := c.Query(getJSONInsert(emd.GetName()), json).Exec()
-	return err
+	return c.Query(getJSONInsert(emd.GetName()), json).Exec()
 }
 
 /*InsertIfNE - insert an entity to the store if it doesn't exist */
@@ -82,16 +81,14 @@ func (ps *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error 
 	c := GetCon(ctx)
 	emd := entity.GetEntityMetadata()
 	json := datastore.ToJSON(entity).String()
-	err := c.Query(getJSONInsertIfNE(emd.GetName()), json).Exec()
-	return err
+	return c.Query(getJSONInsertIfNE(emd.GetName()), json).Exec()
 }
 
 /*Delete - Delete an entity from the store */
 func (ps *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 	c := GetCon(ctx)
 	emd := entity.GetEntityMetadata()
-	err := c.Query(getDeleteStmt(emd.GetName(), emd.GetIDColumnName()), entity.GetKey()).Exec()
-	return err
+	return c.Query(getDeleteStmt(emd.GetName(), emd.GetIDColumnName()), entity.GetKey()).Exec()
 }
 
 /*MultiRead - read multiple entities from the store */

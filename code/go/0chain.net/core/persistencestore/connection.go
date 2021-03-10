@@ -6,12 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"github.com/gocql/gocql"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 )
 
 //KeySpace - the keyspace usef for the 0chain data
@@ -30,7 +31,7 @@ func init() {
 var mutex = &sync.Mutex{}
 
 // Session holds our connection to Cassandra
-var Session *gocql.Session
+var Session SessionI
 
 /*InitSession - initialize a storage session */
 func InitSession() {
@@ -66,11 +67,12 @@ func initSession(delay time.Duration, maxTries int) error {
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
 	for tries := 0; tries < maxTries; tries++ {
 		start := time.Now()
-		Session, err = cluster.CreateSession()
+		s, err := cluster.CreateSession()
 		if err != nil {
 			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
+			Session = &session{Session: s}
 			Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Any("try_duration", time.Since(start)))
 			return nil
 		}
@@ -82,7 +84,7 @@ func initSession(delay time.Duration, maxTries int) error {
 * Should always use right after getting the connection to avoid leaks
  * defer c.Close()
 */
-func GetConnection() *gocql.Session {
+func GetConnection() SessionI {
 	if Session == nil {
 		InitSession()
 	}
@@ -98,15 +100,15 @@ func WithConnection(ctx context.Context) context.Context {
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
-func GetCon(ctx context.Context) *gocql.Session {
+func GetCon(ctx context.Context) SessionI {
 	if ctx == nil {
 		return GetConnection()
 	}
-	return ctx.Value(CONNECTION).(*gocql.Session)
+	return ctx.Value(CONNECTION).(SessionI)
 }
 
 /*WithEntityConnection takes a context and adds a connection value to it */
-func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
+func WithEntityConnection(ctx context.Context, _ datastore.EntityMetadata) context.Context {
 	return WithConnection(ctx)
 }
 
