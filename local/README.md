@@ -58,6 +58,8 @@ sudo local/bin/reset.redis.sh
 
 ### casandra
 
+TODO: Add docker setup for cassandra
+
 If you are running a sharder
 ```shell
 sudo local/bin/reset.cassandra.sh
@@ -66,6 +68,7 @@ Wait for `cqlsh` to come up then
 ```shell
 local/bin/init.cassandra.sh
 ```
+
 
 ### run 0chain
 Now clear and rebuild the runtime directories
