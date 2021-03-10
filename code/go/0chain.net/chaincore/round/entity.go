@@ -217,8 +217,6 @@ func (r *Round) GetRoundNumber() int64 {
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 	r.setRandomSeed(seed)
-	//r.setState(RoundVRFComplete) RoundStateFinalizing??
-	r.setHasRandomSeed(true)
 	r.mutex.Lock()
 	r.computeMinerRanks(minersNum)
 	r.mutex.Unlock()
@@ -231,7 +229,6 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	}
 	r.setRandomSeed(seed)
 	r.setState(RoundVRFComplete)
-	r.setHasRandomSeed(true)
 
 	r.mutex.Lock()
 	r.computeMinerRanks(minersNum)
@@ -239,15 +236,16 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 }
 
 func (r *Round) setRandomSeed(seed int64) {
+	value := uint32(0)
+	if seed != 0 {
+		value = 1
+	}
+
+	atomic.StoreUint32(&r.hasRandomSeed, value)
 	atomic.StoreInt64(&r.RandomSeed, seed)
 }
 
 func (r *Round) setHasRandomSeed(b bool) {
-	value := uint32(0)
-	if b {
-		value = 1
-	}
-	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
 // GetRandomSeed - returns the random seed of the round.
@@ -430,8 +428,7 @@ func (r *Round) initialize() {
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
-	//when we restart a round we call this. So, explicitly, set them to default
-	r.setHasRandomSeed(false)
+	// when we restart a round we call this. So, explicitly, set them to default
 	r.setRandomSeed(0)
 }
 
