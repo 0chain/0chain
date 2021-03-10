@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 
 	"0chain.net/core/common"
@@ -52,7 +53,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 /*PrintEntityHandler - handler that prints the received entity */
 func PrintEntityHandler(ctx context.Context, entity Entity) (interface{}, error) {
 	emd := entity.GetEntityMetadata()
-	if emd == nil {
+	if emd == nil || reflect.ValueOf(emd).IsNil() {
 		return nil, common.NewError("unknown_entity", "Entity with nil entity metadata")
 	}
 	fmt.Printf("%v: %v\n", emd.GetName(), ToJSON(entity))

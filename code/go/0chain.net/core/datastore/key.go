@@ -100,7 +100,7 @@ func (nif *NOIDField) Validate(ctx context.Context) error {
 
 /*ToString - return string representation of the key */
 func ToString(key Key) string {
-	return string(key)
+	return key
 }
 
 func IsEmpty(key Key) bool {
