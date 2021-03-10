@@ -15,7 +15,7 @@
 
 rocksDB's usage will all be handled by the application, and
 its installation was outlined in the 
-[bulding 0chain document](https://github.com/0chain/0chain/blob/debug_builds/local/build_0chain.md#install-rocksdb)
+[bulding 0chain document](https://github.com/0chain/0chain/blob/debug_builds/local/build_environment.md#install-rocksdb)
 We will outline installing Redis and Cassandra here.
 
 ## Redis
