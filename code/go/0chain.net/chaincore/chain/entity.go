@@ -957,6 +957,9 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
+	if randomSeed == 0 {
+		Logger.Error("SetRandomSeed -- seed is 0")
+	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
