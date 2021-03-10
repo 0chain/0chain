@@ -898,7 +898,14 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return true
 	}
-	mc.SetRandomSeed(r, b.GetRoundRandomSeed())
+
+	seed := b.GetRoundRandomSeed()
+	if seed == 0 {
+		Logger.Error("checkBlockNotarization -- block random seed is 0", zap.Int64("round", b.Round))
+		return false
+	}
+
+	mc.SetRandomSeed(r, seed)
 	go mc.SendNotarization(ctx, b)
 
 	Logger.Debug("check block notarization - block notarized",
