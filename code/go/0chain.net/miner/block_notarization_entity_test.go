@@ -1,152 +1,43 @@
 package miner
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
-	"reflect"
+	"github.com/stretchr/testify/suite"
 	"testing"
 )
 
-func TestNotarizationProvider(t *testing.T) {
-	tests := []struct {
-		name string
-		want datastore.Entity
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NotarizationProvider(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NotarizationProvider() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+
+type BlockNotarizationEntityTestSuite struct {
+	suite.Suite
 }
 
-func TestNotarization_DoReadLock(t *testing.T) {
-	type fields struct {
-		NOIDField           datastore.NOIDField
-		VerificationTickets []*block.VerificationTicket
-		BlockID             datastore.Key
-		Round               int64
-		Block               *block.Block
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notarization := &Notarization{
-				NOIDField:           tt.fields.NOIDField,
-				VerificationTickets: tt.fields.VerificationTickets,
-				BlockID:             tt.fields.BlockID,
-				Round:               tt.fields.Round,
-				Block:               tt.fields.Block,
-			}
-		})
-	}
+func TestBlockNotarizationEntityTestSuiteSuite(t *testing.T) {
+	suite.Run(t, &BlockNotarizationEntityTestSuite{})
 }
 
-func TestNotarization_DoReadUnlock(t *testing.T) {
-	type fields struct {
-		NOIDField           datastore.NOIDField
-		VerificationTickets []*block.VerificationTicket
-		BlockID             datastore.Key
-		Round               int64
-		Block               *block.Block
-	}
-	tests := []struct {
-		name   string
-		fields fields
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notarization := &Notarization{
-				NOIDField:           tt.fields.NOIDField,
-				VerificationTickets: tt.fields.VerificationTickets,
-				BlockID:             tt.fields.BlockID,
-				Round:               tt.fields.Round,
-				Block:               tt.fields.Block,
-			}
-		})
-	}
+func (s *BlockNotarizationEntityTestSuite) TestNotarizationProvider() {
+	NotarizationProvider()
 }
 
-func TestNotarization_GetEntityMetadata(t *testing.T) {
-	type fields struct {
-		NOIDField           datastore.NOIDField
-		VerificationTickets []*block.VerificationTicket
-		BlockID             datastore.Key
-		Round               int64
-		Block               *block.Block
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   datastore.EntityMetadata
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notarization := &Notarization{
-				NOIDField:           tt.fields.NOIDField,
-				VerificationTickets: tt.fields.VerificationTickets,
-				BlockID:             tt.fields.BlockID,
-				Round:               tt.fields.Round,
-				Block:               tt.fields.Block,
-			}
-			if got := notarization.GetEntityMetadata(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetEntityMetadata() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func (s *BlockNotarizationEntityTestSuite) TestNotarizationDoReadLock() {
+	n := NotarizationProvider().(*Notarization)
+	n.DoReadLock()
 }
 
-func TestNotarization_GetKey(t *testing.T) {
-	type fields struct {
-		NOIDField           datastore.NOIDField
-		VerificationTickets []*block.VerificationTicket
-		BlockID             datastore.Key
-		Round               int64
-		Block               *block.Block
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   datastore.Key
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			notarization := &Notarization{
-				NOIDField:           tt.fields.NOIDField,
-				VerificationTickets: tt.fields.VerificationTickets,
-				BlockID:             tt.fields.BlockID,
-				Round:               tt.fields.Round,
-				Block:               tt.fields.Block,
-			}
-			if got := notarization.GetKey(); got != tt.want {
-				t.Errorf("GetKey() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+func (s *BlockNotarizationEntityTestSuite) TestNotarizationDoReadUnlock() {
+	n := NotarizationProvider().(*Notarization)
+	n.DoReadUnlock()
 }
 
-func TestSetupNotarizationEntity(t *testing.T) {
-	tests := []struct {
-		name string
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-		})
-	}
+func (s *BlockNotarizationEntityTestSuite) TestNotarizationGetEntityMetadata() {
+	n := NotarizationProvider().(*Notarization)
+	n.GetEntityMetadata()
+}
+
+func (s *BlockNotarizationEntityTestSuite) TestNotarizationGetKey() {
+	n := NotarizationProvider().(*Notarization)
+	n.GetKey()
+}
+
+func (s *BlockNotarizationEntityTestSuite) TestSetupNotarizationEntity() {
+	SetupNotarizationEntity()
 }
