@@ -35,6 +35,10 @@ import (
 // block of a given block is not available.
 const PreviousBlockUnavailable = "previous_block_unavailable"
 
+// notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
+// to a channel for syncing the latest finalized round state.
+const notifySyncLFRStateTimeout = 3 * time.Second
+
 var (
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
 	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
@@ -1460,7 +1464,7 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
 	select {
 	case c.syncLFBStateC <- bs:
-	case <-time.NewTimer(3 * time.Second).C:
+	case <-time.NewTimer(notifySyncLFRStateTimeout).C:
 		Logger.Error("Send sync state for finalized round timeout")
 	}
 }
