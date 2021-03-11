@@ -107,6 +107,30 @@ func newClientWithDelegate(isMiner bool, t *testing.T, msc *MinerSmartContract, 
 	return
 }
 
+type TestClient struct {
+	client   *Client
+	delegate *Client
+	stakers  []*Client
+}
+
+func createLFMB(miners []*TestClient, sharders []*TestClient) (
+	b *block.Block) {
+
+	b = new(block.Block)
+
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Miners = node.NewPool(node.NodeTypeMiner)
+	b.MagicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
+
+	for _, miner := range miners {
+		b.MagicBlock.Miners.NodesMap[miner.client.id] = new(node.Node)
+	}
+	for _, sharder := range sharders {
+		b.MagicBlock.Sharders.NodesMap[sharder.client.id] = new(node.Node)
+	}
+	return
+}
+
 // create and add miner/sharder, create stake holders, don't stake
 func newClientWithStakers(isMiner bool, t *testing.T, msc *MinerSmartContract,
 	now, stakersAmount int64, stakeValue state.Balance,
@@ -213,15 +237,18 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	var mb = block.NewMagicBlock()
 	mb.Miners = node.NewPool(node.NodeTypeMiner)
 	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+
 	for _, miner := range miners {
 		var n = node.Provider()
 		n.SetID(miner.id)
+
 		n.Type = node.NodeTypeMiner
 		mb.Miners.AddNode(n)
 	}
 	for _, sharder := range sharders {
 		var n = node.Provider()
 		n.SetID(sharder.id)
+
 		n.Type = node.NodeTypeSharder
 		mb.Sharders.AddNode(n)
 	}
