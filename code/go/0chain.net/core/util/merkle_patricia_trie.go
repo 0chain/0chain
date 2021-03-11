@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -662,6 +663,12 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 }
 
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		Logger.Error("iterate - get node error", zap.Error(err))
@@ -871,6 +878,36 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		}
 	}
 	return err
+}
+
+// GetMissingNodes returns the paths and keys of missing nodes
+func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []Key, error) {
+	paths := make([]Path, 0, BatchSize)
+	keys := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			paths = append(paths, path)
+			keys = append(keys, key)
+		}
+		return nil
+	}
+
+	st := time.Now()
+	// TODO: may have dead lock for the iterate
+	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	if err != nil {
+		switch err {
+		case ErrNodeNotFound, ErrIteratingChildNodes:
+			Logger.Debug("Find missing nodes err", zap.Error(err))
+		default:
+			Logger.Error("Find missing node with unexpected err", zap.Error(err))
+			return nil, nil, err
+		}
+	}
+
+	Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+
+	return paths, keys, nil
 }
 
 /*IsMPTValid - checks if the merkle tree is in valid state or not */

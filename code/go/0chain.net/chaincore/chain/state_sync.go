@@ -86,6 +86,37 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	return
 }
 
+//GetStateNodesSharders - get a bunch of state nodes from the network
+func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) {
+	ns, err := c.getStateNodesFromSharders(ctx, keys)
+	if err != nil {
+		skeys := make([]string, len(keys))
+		for idx, key := range keys {
+			skeys[idx] = util.ToHex(key)
+		}
+		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
+			zap.Any("keys", skeys), zap.Error(err))
+		return
+	}
+	keysStr := make([]string, len(keys))
+	for i := range keys {
+		keysStr[i] = util.ToHex(keys[i])
+	}
+	err = c.SaveStateNodes(ctx, ns)
+	if err != nil {
+		Logger.Error("get state nodes - error saving",
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
+			zap.Error(err))
+	} else {
+		Logger.Info("get state nodes - saving",
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
+			zap.Int("nodes", len(ns.Nodes)))
+	}
+	return
+}
+
 //GetStateFrom - get the state from a given node
 func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialState, error) {
 	var partialState = state.NewPartialState(key)
@@ -208,6 +239,35 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	if ns == nil {
 		mb.Sharders.RequestEntity(ctx, nsRequestor, params, handler)
 	}
+	if ns == nil {
+		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
+	}
+	return ns, nil
+}
+
+func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
+	nsRequestor := StateNodesRequestor
+	params := &url.Values{}
+	for _, key := range keys {
+		params.Add("nodes", util.ToHex(key))
+	}
+	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	var ns *state.Nodes
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		rns, ok := entity.(*state.Nodes)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		if len(rns.Nodes) == 0 {
+			return nil, util.ErrNodeNotFound
+		}
+		Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
+		cancelf()
+		ns = rns
+		return rns, nil
+	}
+	mb := c.GetCurrentMagicBlock()
+	mb.Sharders.RequestEntity(ctx, nsRequestor, params, handler)
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}
