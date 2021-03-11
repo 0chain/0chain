@@ -86,7 +86,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if newMiner.ServiceCharge > gn.MaxCharge {
 		return "", common.NewErrorf("add_miner_failed",
-			"max_charge is greater then allowed by SC: %v > %v",
+			"max_charge is greater than allowed by SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxCharge)
 	}
 
@@ -97,19 +97,19 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if newMiner.NumberOfDelegates > gn.MaxDelegates {
 		return "", common.NewErrorf("add_miner_failed",
-			"number_of_delegates greater then max_delegates of SC: %v > %v",
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if newMiner.MinStake < gn.MinStake {
 		return "", common.NewErrorf("add_miner_failed",
-			"min_stake is less then allowed by SC: %v > %v",
+			"min_stake is less than allowed by SC: %v > %v",
 			newMiner.MinStake, gn.MinStake)
 	}
 
 	if newMiner.MaxStake < gn.MaxStake {
 		return "", common.NewErrorf("add_miner_failed",
-			"max_stake is greater then allowed by SC: %v > %v",
+			"max_stake is greater than allowed by SC: %v > %v",
 			newMiner.MaxStake, gn.MaxStake)
 	}
 
@@ -156,7 +156,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 
 	if update.ServiceCharge > gn.MaxCharge {
 		return "", common.NewErrorf("update_settings",
-			"max_charge is greater then allowed by SC: %v > %v",
+			"max_charge is greater than allowed by SC: %v > %v",
 			update.ServiceCharge, gn.MaxCharge)
 	}
 
@@ -167,19 +167,19 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 
 	if update.NumberOfDelegates > gn.MaxDelegates {
 		return "", common.NewErrorf("add_miner_failed",
-			"number_of_delegates greater then max_delegates of SC: %v > %v",
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			update.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if update.MinStake < gn.MinStake {
 		return "", common.NewErrorf("update_settings",
-			"min_stake is less then allowed by SC: %v > %v",
+			"min_stake is less than allowed by SC: %v > %v",
 			update.MinStake, gn.MinStake)
 	}
 
 	if update.MaxStake < gn.MaxStake {
 		return "", common.NewErrorf("update_settings",
-			"max_stake is greater then allowed by SC: %v > %v",
+			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
 	}
 

@@ -123,7 +123,7 @@ type scConfig struct {
 
 func (sc *scConfig) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less then 1s: %s", sc.TimeUnit)
+		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",

@@ -377,7 +377,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 		return nil // the nil is 'use genesis'
 	}
 
-	// but the lfmb can be less then real latest finalized magic block,
+	// but the lfmb can be less than real latest finalized magic block,
 	// the lfmb is just magic block related to the lfb, for example for
 	// 502 round lfmb is 251, but lfmb of 501 round we already have and
 	// it is the latest magic block, we have to load it and setup
