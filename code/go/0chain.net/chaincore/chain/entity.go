@@ -135,6 +135,13 @@ type Chain struct {
 	GenerateTimeout int `json:"-"`
 	genTimeoutMutex *sync.Mutex
 
+	// syncStateTimeout is the timeout for syncing a MPT state from network
+	syncStateTimeout time.Duration
+	// bcStuckCheckInterval represents the BC stuck checking period
+	bcStuckCheckInterval time.Duration
+	// bcStuckTimeThreshold is the threshold time for checking if a BC is stuck
+	bcStuckTimeThreshold time.Duration
+
 	retry_wait_time  int
 	retry_wait_mutex *sync.Mutex
 
@@ -166,6 +173,21 @@ type Chain struct {
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
+}
+
+// SetBCStuckTimeThreshold sets the BC stuck time threshold
+func (c *Chain) SetBCStuckTimeThreshold(threshold time.Duration) {
+	c.bcStuckTimeThreshold = threshold
+}
+
+// SetBCStuckCheckInterval sets the time interval for checking BC stuck
+func (c *Chain) SetBCStuckCheckInterval(interval time.Duration) {
+	c.bcStuckCheckInterval = interval
+}
+
+// SetSyncStateTimeout sets the state sync timeout
+func (c *Chain) SetSyncStateTimeout(syncStateTimeout time.Duration) {
+	c.syncStateTimeout = syncStateTimeout
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
