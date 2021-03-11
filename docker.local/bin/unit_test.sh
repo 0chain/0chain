@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set +e
 
 # Allocate interactive TTY to allow Ctrl-C.
 INTERACTIVE="-it"
@@ -13,6 +13,9 @@ else
     PACKAGE="$1"
 fi
 
+mkdir -p tmp
+chmod +w -R tmp/*
+
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
 if [ -n "$PACKAGE" ]; then
@@ -23,3 +26,7 @@ else
     # Run all tests.
     docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
 fi
+
+docker container create --name extract zchain_unit_test
+docker container cp extract:/go/pkg/mod ./tmp
+docker container rm -f extract
