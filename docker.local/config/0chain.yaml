@@ -83,6 +83,11 @@ server_chain:
     verification_tickets_to: all_miners # generator or all_miners
   state:
     prune_below_count: 100 # rounds
+    sync:
+      timeout: 10 # seconds
+  stuck:
+    check_interval: 10 # seconds
+    time_threshold: 60 #seconds
   smart_contract:
     timeout: 8000 # milliseconds
   health_check:

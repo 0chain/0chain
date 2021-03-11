@@ -234,9 +234,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	var cancel context.CancelFunc
 
 	// ticker to check if the BC is stuck
-	tk := time.NewTicker(10 * time.Second)
-	// BC stuck timeout
-	bcStuckTimeout := 100 * time.Second
+	tk := time.NewTicker(c.bcStuckCheckInterval)
 	var isSynching bool
 	synchingStopC := make(chan struct{})
 
@@ -272,7 +270,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 			// time since the last finalized round arrived
 			ts := time.Since(lastRound.tm)
-			if ts <= bcStuckTimeout {
+			if ts <= c.bcStuckTimeThreshold {
 				// reset synching state and continue as the BC is not stuck
 				isSynching = false
 				continue
@@ -312,7 +310,7 @@ func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash u
 	mpt.SetRoot(stateRootHash)
 
 	Logger.Info("Finding missing nodes")
-	cctx, cancel := context.WithTimeout(ctx, 1*time.Minute)
+	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
 	defer cancel()
 
 	_, keys, err := mpt.FindMissingNodes(cctx)
