@@ -6,7 +6,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/0chain/gorocksdb"
 	"os"
+	"reflect"
 	"sync"
 	"testing"
 
@@ -1023,4 +1025,367 @@ func TestRaceLevelNodeDB_Full(t *testing.T) {
 		// should be 100 if deletes is not propagated
 		require.Len(t, lndb.DeletedNodes, 0)
 	})
+}
+
+func TestMemoryNodeDB_reachable(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+
+	fn := NewFullNode(nil)
+	bi := fn.indexToByte(0)
+	fn.Children[fn.index(bi)] = []byte("children")
+
+	type fields struct {
+		Nodes map[StrKey]Node
+		mutex *sync.RWMutex
+	}
+	type args struct {
+		node  Node
+		node2 Node
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name: "Test_MemoryNodeDB_reachable_Node_Not_Found_OK",
+			fields: fields{
+				Nodes: mndb.Nodes,
+				mutex: &sync.RWMutex{},
+			},
+			args: args{node: NewExtensionNode([]byte("path"), []byte("key"))},
+			want: false,
+		},
+		{
+			name: "Test_MemoryNodeDB_reachable_Node_Not_Found_OK",
+			fields: fields{
+				Nodes: mndb.Nodes,
+				mutex: &sync.RWMutex{},
+			},
+			args: args{node: fn},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mndb := &MemoryNodeDB{
+				Nodes: tt.fields.Nodes,
+				mutex: tt.fields.mutex,
+			}
+			if got := mndb.reachable(tt.args.node, tt.args.node2); got != tt.want {
+				t.Errorf("reachable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewLevelNodeDB(t *testing.T) {
+	mndb, err := NewPNodeDB(dataDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mndb.versions = make([]int64, 41)
+	v := levelNodeVersion.Load() + 1
+	vs := mndb.versions
+	vs = append(vs, v)
+	if len(vs) > 40 {
+		vs = vs[len(vs)-40:]
+	}
+
+	type args struct {
+		curNDB           NodeDB
+		prevNDB          NodeDB
+		propagateDeletes bool
+	}
+	tests := []struct {
+		name string
+		args args
+		want *LevelNodeDB
+	}{
+		{
+			name: "Test_NewLevelNodeDB_OK",
+			args: args{prevNDB: mndb},
+			want: &LevelNodeDB{
+				prev:         mndb,
+				mu:           &sync.RWMutex{},
+				version:      v,
+				versions:     vs,
+				DeletedNodes: make(map[StrKey]bool),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewLevelNodeDB(tt.args.curNDB, tt.args.prevNDB, tt.args.propagateDeletes); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewLevelNodeDB() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	mndb.Close()
+	if err := cleanUp(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestLevelNodeDB_GetDBVersion(t *testing.T) {
+	type fields struct {
+		mu               *sync.RWMutex
+		current          NodeDB
+		prev             NodeDB
+		PropagateDeletes bool
+		DeletedNodes     map[StrKey]bool
+		version          int64
+		versions         []int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   int64
+	}{
+		{
+			name:   "Test_LevelNodeDB_GetDBVersion_OK",
+			fields: fields{version: 1, mu: &sync.RWMutex{}},
+			want:   1,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lndb := &LevelNodeDB{
+				mu:               tt.fields.mu,
+				current:          tt.fields.current,
+				prev:             tt.fields.prev,
+				PropagateDeletes: tt.fields.PropagateDeletes,
+				DeletedNodes:     tt.fields.DeletedNodes,
+				version:          tt.fields.version,
+				versions:         tt.fields.versions,
+			}
+			if got := lndb.GetDBVersion(); got != tt.want {
+				t.Errorf("GetDBVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLevelNodeDB_GetNode(t *testing.T) {
+	ndb := NewMemoryNodeDB()
+
+	type fields struct {
+		mu               *sync.RWMutex
+		current          NodeDB
+		prev             NodeDB
+		PropagateDeletes bool
+		DeletedNodes     map[StrKey]bool
+		version          int64
+		versions         []int64
+	}
+	type args struct {
+		key Key
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    Node
+		wantErr bool
+	}{
+		{
+			name: "Test_LevelNodeDB_GetNode_ERR",
+			fields: fields{
+				mu:      &sync.RWMutex{},
+				prev:    ndb,
+				current: ndb,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lndb := &LevelNodeDB{
+				mu:               tt.fields.mu,
+				current:          tt.fields.current,
+				prev:             tt.fields.prev,
+				PropagateDeletes: tt.fields.PropagateDeletes,
+				DeletedNodes:     tt.fields.DeletedNodes,
+				version:          tt.fields.version,
+				versions:         tt.fields.versions,
+			}
+			got, err := lndb.GetNode(tt.args.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetNode() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetNode() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLevelNodeDB_MultiPutNode(t *testing.T) {
+	current, err := NewPNodeDB(dataDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	current.wo = gorocksdb.NewDefaultWriteOptions()
+	current.wo.DisableWAL(true)
+	current.wo.SetSync(true)
+
+	type fields struct {
+		mu               *sync.RWMutex
+		current          NodeDB
+		prev             NodeDB
+		PropagateDeletes bool
+		DeletedNodes     map[StrKey]bool
+		version          int64
+		versions         []int64
+	}
+	type args struct {
+		keys  []Key
+		nodes []Node
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:   "Test_LevelNodeDB_MultiPutNode_ERR",
+			fields: fields{current: current, mu: &sync.RWMutex{}},
+			args: args{
+				keys:  []Key{Key("key")},
+				nodes: []Node{NewFullNode(nil)},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lndb := &LevelNodeDB{
+				mu:               tt.fields.mu,
+				current:          tt.fields.current,
+				prev:             tt.fields.prev,
+				PropagateDeletes: tt.fields.PropagateDeletes,
+				DeletedNodes:     tt.fields.DeletedNodes,
+				version:          tt.fields.version,
+				versions:         tt.fields.versions,
+			}
+			if err := lndb.MultiPutNode(tt.args.keys, tt.args.nodes); (err != nil) != tt.wantErr {
+				t.Errorf("MultiPutNode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+
+	current.Close()
+	if err := cleanUp(); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestLevelNodeDB_Iterate(t *testing.T) {
+	ndm := NewMemoryNodeDB()
+
+	type fields struct {
+		mu               *sync.RWMutex
+		current          NodeDB
+		prev             NodeDB
+		PropagateDeletes bool
+		DeletedNodes     map[StrKey]bool
+		version          int64
+		versions         []int64
+	}
+	type args struct {
+		ctx     context.Context
+		handler NodeDBIteratorHandler
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name:    "Test_LevelNodeDB_Iterate_OK",
+			fields:  fields{current: ndm, prev: ndm, mu: &sync.RWMutex{}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lndb := &LevelNodeDB{
+				mu:               tt.fields.mu,
+				current:          tt.fields.current,
+				prev:             tt.fields.prev,
+				PropagateDeletes: tt.fields.PropagateDeletes,
+				DeletedNodes:     tt.fields.DeletedNodes,
+				version:          tt.fields.version,
+				versions:         tt.fields.versions,
+			}
+			if err := lndb.Iterate(tt.args.ctx, tt.args.handler); (err != nil) != tt.wantErr {
+				t.Errorf("Iterate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestMemoryNodeDB_Validate(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+
+	n1 := NewFullNode(&AState{balance: 1})
+
+	type fields struct {
+		Nodes map[StrKey]Node
+		mutex *sync.RWMutex
+	}
+	type args struct {
+		root Node
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "TestMemoryNodeDB_Validate_OK",
+			fields: fields{
+				Nodes: mndb.Nodes,
+				mutex: &sync.RWMutex{},
+			},
+			args:    args{root: n1},
+			wantErr: false,
+		},
+		{
+			name: "TestMemoryNodeDB_Validate_ERR",
+			fields: func() fields {
+				mndb := NewMemoryNodeDB()
+				mpt := NewMerklePatriciaTrie(mndb, 1)
+
+				n := NewFullNode(&AState{balance: 2})
+				mpt.Insert(n.GetHashBytes(), n)
+
+				return fields{
+					Nodes: mndb.Nodes,
+					mutex: &sync.RWMutex{},
+				}
+			}(),
+			args:    args{root: NewExtensionNode([]byte("path"), []byte("path"))},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mndb := &MemoryNodeDB{
+				Nodes: tt.fields.Nodes,
+				mutex: tt.fields.mutex,
+			}
+			if err := mndb.Validate(tt.args.root); (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

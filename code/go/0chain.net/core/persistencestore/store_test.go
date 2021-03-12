@@ -1,17 +1,22 @@
 package persistencestore_test
 
+//go:generate mockery --name=SessionI  --output=../../mocks/core/persistencestore
+//go:generate mockery --name=QueryI --output=../../mocks/core/persistencestore
+//go:generate mockery --name=BatchI --output=../../mocks/core/persistencestore
+//go:generate mockery --name=IteratorI --output=../../mocks/core/persistencestore
+
 import (
 	"context"
 	"errors"
 	"testing"
 
+	mocks "0chain.net/mocks/core/persistencestore"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
-	mocks "0chain.net/mocks/persistencestore"
 )
 
 func init() {
@@ -427,7 +432,7 @@ func TestStore_MultiWrite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ps := &persistencestore.Store{}
-			sm.On("ExecuteBatch", mock.AnythingOfType("*persistencestore.BatchI")).Return(
+			sm.On("ExecuteBatch", mock.AnythingOfType("*mocks.BatchI")).Return(
 				func(_ persistencestore.BatchI) error {
 					if tt.simpleBatchErr {
 						return errors.New("")
