@@ -84,7 +84,7 @@ $ ./docker.local/bin/sync_clock.sh
 
 1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
 
-On the sharder terminal, use
+Start sharder first because miners need the genesis magic block. On the sharder terminal, use
 
 ```
 $ ../bin/start.b0sharder.sh
@@ -98,6 +98,25 @@ On the respective miner terminal, use
 $ ../bin/start.b0miner.sh
 ```
 
+## Re-starting the nodes
+
+To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build.
+```
+git pull
+docker.local/bin/build.base.sh && docker.local/bin/build.sharders.sh && docker.local/bin/build.miners.sh
+```
+For existing code and if you have tried running once, make sure there are no previous files and processes.
+```
+docker stop $(docker ps -a -q)
+docker.local/bin/clean.sh
+docker.local/bin/init.setup.sh
+docker.local/bin/sync_clock.sh
+```
+Then go to individual miner/sharder:
+```
+../bin/start.b0sharder.sh (start sharders first!)
+../bin/start.b0miner.sh
+```
 ### Running on systems with SELinux enabled
 
 Library by `herumi` for working with BLS threshold signatures requires this flag turned on:
@@ -216,6 +235,16 @@ go build -tags "bn256 development"
 
 ## Debugging
 
+### Debug builds of 0chain
+
+If you want to run a debug 0chain build you can follow the details contained in the 
+[`0chain/local` folder](https://github.com/0chain/0chain/blob/debug_builds/local/README.md).
+
+Only one miner and one sharder can be run on any single machine, so you will need at least
+three machines to for a working 0chain.
+
+### Log files
+
 The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
 Find arrors in all the miner nodes (from git/0chain)
@@ -245,7 +274,7 @@ This gives the start timestamps that can be used to correlate the events and the
 Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
 
 ```
-$ cd code/go/src/0chain.net/my-pkg
+$ cd code/go/0chain.net/my-pkg
 $ go test
 ```
 

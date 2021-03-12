@@ -135,6 +135,9 @@ func main() {
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB()
+	sc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
+	sc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
+	sc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
@@ -258,7 +261,9 @@ func main() {
 	initHandlers()
 
 	go sc.RegisterClient()
-	go sc.InitSetupSC()
+	if config.DevConfiguration.IsFeeEnabled {
+		go sc.InitSetupSC()
+	}
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
