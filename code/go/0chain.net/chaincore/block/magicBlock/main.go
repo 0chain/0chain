@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/common"
 )
 
 type cmdMagicBlock struct {
@@ -27,9 +28,9 @@ func new() *cmdMagicBlock {
 
 // setupYaml method initalizes a configuration file based on yaml
 func (cmd *cmdMagicBlock) setupYaml(config string) error {
-	c := newYaml()
+	cmd.yml = newYaml()
 	fPath := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/%v.yaml", config)
-	if err := c.readYaml(fPath); err != nil {
+	if err := cmd.yml.readYaml(fPath); err != nil {
 		return err
 	}
 	return nil
@@ -48,6 +49,21 @@ func (cmd *cmdMagicBlock) setupBlock() {
 	mb.T = int(float64(mb.N) * (float64(cmd.yml.TPercent) / 100.0))
 	mb.K = int(float64(mb.N) * (float64(cmd.yml.KPercent) / 100.0))
 	cmd.block = mb
+}
+
+func (cmd *cmdMagicBlock) setupNodes() {
+	for _, v := range cmd.yml.Miners {
+		cmd.yml.MinersMap[v.ID] = v
+		v.CreationDate = common.Now()
+		v.Type = cmd.block.Miners.Type
+		cmd.block.Miners.AddNode(&v.Node)
+	}
+	for _, v := range cmd.yml.Sharders {
+		cmd.yml.ShardersMap[v.ID] = v
+		v.CreationDate = common.Now()
+		v.Type = cmd.block.Sharders.Type
+		cmd.block.Sharders.AddNode(&v.Node)
+	}
 }
 
 // setupMPKS setups
@@ -117,6 +133,7 @@ func main() {
 	}
 
 	cmd.setupBlock()
+	cmd.setupNodes()
 	cmd.setupMPKS()
 	cmd.createShareOrSigns()
 
