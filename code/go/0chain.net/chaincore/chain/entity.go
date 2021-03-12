@@ -35,6 +35,10 @@ import (
 // block of a given block is not available.
 const PreviousBlockUnavailable = "previous_block_unavailable"
 
+// notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
+// to a channel for syncing the latest finalized round state.
+const notifySyncLFRStateTimeout = 3 * time.Second
+
 var (
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
 	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
@@ -135,6 +139,13 @@ type Chain struct {
 	GenerateTimeout int `json:"-"`
 	genTimeoutMutex *sync.Mutex
 
+	// syncStateTimeout is the timeout for syncing a MPT state from network
+	syncStateTimeout time.Duration
+	// bcStuckCheckInterval represents the BC stuck checking period
+	bcStuckCheckInterval time.Duration
+	// bcStuckTimeThreshold is the threshold time for checking if a BC is stuck
+	bcStuckTimeThreshold time.Duration
+
 	retry_wait_time  int
 	retry_wait_mutex *sync.Mutex
 
@@ -157,15 +168,30 @@ type Chain struct {
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
 	// LFB tickets channels
-	getLFBTicket          chan *LFBTicket      // check out (any time)
-	updateLFBTicket       chan *LFBTicket      // receive
-	broadcastLFBTicket    chan *block.Block    // broadcast (update by LFB)
-	subLFBTicket          chan chan *LFBTicket // } wait for a received LFBTicket
-	unsubLFBTicket        chan chan *LFBTicket // }
-	lfbTickerWorkerIsDone chan struct{}        // get rid out of context misuse
-
+	getLFBTicket          chan *LFBTicket          // check out (any time)
+	updateLFBTicket       chan *LFBTicket          // receive
+	broadcastLFBTicket    chan *block.Block        // broadcast (update by LFB)
+	subLFBTicket          chan chan *LFBTicket     // } wait for a received LFBTicket
+	unsubLFBTicket        chan chan *LFBTicket     // }
+	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
+	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
+}
+
+// SetBCStuckTimeThreshold sets the BC stuck time threshold
+func (c *Chain) SetBCStuckTimeThreshold(threshold time.Duration) {
+	c.bcStuckTimeThreshold = threshold
+}
+
+// SetBCStuckCheckInterval sets the time interval for checking BC stuck
+func (c *Chain) SetBCStuckCheckInterval(interval time.Duration) {
+	c.bcStuckCheckInterval = interval
+}
+
+// SetSyncStateTimeout sets the state sync timeout
+func (c *Chain) SetSyncStateTimeout(syncStateTimeout time.Duration) {
+	c.syncStateTimeout = syncStateTimeout
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -411,6 +437,7 @@ func Provider() datastore.Entity {
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
+	c.syncLFBStateC = make(chan *block.BlockSummary)
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
@@ -956,6 +983,9 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
+	if randomSeed == 0 {
+		Logger.Error("SetRandomSeed -- seed is 0")
+	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
@@ -1176,8 +1206,10 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 
 	c.LatestFinalizedBlock = b
 	if b != nil {
-		c.lfbSummary = b.GetSummary()
+		bs := b.GetSummary()
+		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
+		go c.notifyToSyncFinalizedRoundState(bs)
 	}
 }
 
@@ -1427,6 +1459,14 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 
 	// this work is different for miners and sharders
 	return c.viewChanger.ViewChange(ctx, lfb)
+}
+
+func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
+	select {
+	case c.syncLFBStateC <- bs:
+	case <-time.NewTimer(notifySyncLFRStateTimeout).C:
+		Logger.Error("Send sync state for finalized round timeout")
+	}
 }
 
 // The ViewChanger represents node makes view change where a block with new

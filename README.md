@@ -235,6 +235,16 @@ go build -tags "bn256 development"
 
 ## Debugging
 
+### Debug builds of 0chain
+
+If you want to run a debug 0chain build you can follow the details contained in the 
+[`0chain/local` folder](https://github.com/0chain/0chain/blob/debug_builds/local/README.md).
+
+Only one miner and one sharder can be run on any single machine, so you will need at least
+three machines to for a working 0chain.
+
+### Log files
+
 The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
 Find arrors in all the miner nodes (from git/0chain)

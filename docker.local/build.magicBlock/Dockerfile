@@ -16,7 +16,7 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 # Add the source code:
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
-RUN go build -tags bn256 main.go
+RUN go build -tags bn256 main.go yaml.go
 
 FROM zchain_run_base
 ENV APP_DIR=/0chain
