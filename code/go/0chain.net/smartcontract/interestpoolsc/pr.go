@@ -10,8 +10,13 @@ type newPoolRequest struct {
 }
 
 func (npr *newPoolRequest) encode() []byte {
-	buff, _ := json.Marshal(npr)
-	return buff
+	// encoding duration
+	durJson, _ := json.Marshal(npr.Duration.String())
+	durRW := json.RawMessage(durJson)
+	b, _ := json.Marshal(map[string]*json.RawMessage{
+		"duration": &durRW,
+	})
+	return b
 }
 
 func (npr *newPoolRequest) decode(input []byte) error {

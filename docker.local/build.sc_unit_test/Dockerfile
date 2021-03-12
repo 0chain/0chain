@@ -16,4 +16,6 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
+COPY ./config/sc.yaml $SRC_DIR/go/0chain.net/smartcontract/interestpoolsc/config/
+
 WORKDIR $SRC_DIR/go

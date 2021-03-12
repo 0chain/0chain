@@ -133,7 +133,7 @@ func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction,
 	if t.ClientID != owner {
 		return "", common.NewError("failed to update variables", "unauthorized access - only the owner can update the variables")
 	}
-	newGn := &GlobalNode{}
+	newGn := &GlobalNode{SimpleGlobalNode: &SimpleGlobalNode{}}
 	err := newGn.Decode(inputData)
 	if err != nil {
 		return "", common.NewError("failed to update variables", "request not formatted correctly")
@@ -176,11 +176,14 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn := newGlobalNode()
 	globalBytes, err := balances.GetTrieNode(gn.getKey())
 	if err == nil {
-		err := gn.Decode(globalBytes.Encode())
-		if err == nil {
+		fmt.Println("globalBytes",globalBytes)
+		fmt.Println("getTrieNode",err)
+		if err := gn.Decode(globalBytes.Encode()); err != nil {
+			fmt.Println("decode err",err)
 			return gn
 		}
 	}
+	fmt.Println(err)
 	const pfx = "smart_contracts.interestpoolsc."
 	var conf = config.SmartContractConfig
 	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")

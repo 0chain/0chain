@@ -17,8 +17,10 @@ import (
 )
 
 var scs = []sci.SmartContractInterface{
-	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
-	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
+	&faucetsc.FaucetSmartContract{},
+	&storagesc.StorageSmartContract{},
+	&zrc20sc.ZRC20SmartContract{},
+	&interestpoolsc.InterestPoolSmartContract{},
 	&multisigsc.MultiSigSmartContract{},
 	&minersc.MinerSmartContract{},
 	&vestingsc.VestingSmartContract{},

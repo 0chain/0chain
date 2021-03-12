@@ -16,12 +16,24 @@ type GlobalNode struct {
 }
 
 func newGlobalNode() *GlobalNode {
-	return &GlobalNode{ID: ADDRESS, SimpleGlobalNode: &SimpleGlobalNode{}}
+	return &GlobalNode{
+		ID:               ADDRESS,
+		SimpleGlobalNode: &SimpleGlobalNode{},
+		MinLockPeriod:    0,
+	}
 }
 
 func (gn *GlobalNode) Encode() []byte {
-	buff, _ := json.Marshal(gn)
-	return buff
+	rawMessage := make(map[string]*json.RawMessage)
+	// encoding SimpleGlobalNode to json.RawMessage
+	simpleNodeEnc := json.RawMessage(gn.SimpleGlobalNode.Encode())
+	rawMessage["simple_global_node"] = &simpleNodeEnc
+	// encoding simple_global_node to json.RawMeesage
+	dur, _ := json.Marshal(gn.MinLockPeriod.String())
+	durEnc := json.RawMessage(dur)
+	rawMessage["min_lock_period"] = &durEnc
+	b, _ := json.Marshal(rawMessage)
+	return b
 }
 
 func (gn *GlobalNode) Decode(input []byte) error {

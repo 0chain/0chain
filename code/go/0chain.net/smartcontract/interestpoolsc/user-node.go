@@ -15,14 +15,25 @@ type UserNode struct {
 }
 
 func newUserNode(clientID datastore.Key) *UserNode {
-	un := &UserNode{ClientID: clientID}
-	un.Pools = make(map[datastore.Key]*interestPool)
-	return un
+	return &UserNode{
+		ClientID: clientID1,
+		Pools:    make(map[datastore.Key]*interestPool),
+	}
 }
 
 func (un *UserNode) Encode() []byte {
-	buff, _ := json.Marshal(un)
-	return buff
+	// encoding client id
+	cIdJson, _ := json.Marshal(un.ClientID)
+	cIdRW := json.RawMessage(cIdJson)
+	// encoding pools
+	poolsJson, _ := json.Marshal(un.Pools)
+	poolsRW := json.RawMessage(poolsJson)
+
+	buf, _ := json.Marshal(map[string]*json.RawMessage{
+		"client_id": &cIdRW,
+		"pools":     &poolsRW,
+	})
+	return buf
 }
 
 func (un *UserNode) Decode(input []byte) error {

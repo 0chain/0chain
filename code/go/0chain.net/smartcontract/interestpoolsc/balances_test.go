@@ -79,7 +79,6 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 
 func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
-
 	if encryption.IsHash(key) {
 		return nil, common.NewError("failed to get trie node",
 			"key is too short")
@@ -93,7 +92,11 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
 	node util.Serializable) (_ datastore.Key, _ error) {
-
+	//@TODO add mutex to secure reading and writing into the map
+	if encryption.IsHash(key) {
+		return "", common.NewError("failed to insert trie node",
+			"key is too short")
+	}
 	tb.tree[key] = node
 	return
 }
