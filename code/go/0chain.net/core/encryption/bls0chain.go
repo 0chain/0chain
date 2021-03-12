@@ -13,7 +13,8 @@ import (
 var GenG2 *bls.G2
 
 func init() {
-	err := bls.Init(bls.CurveFp254BNb)
+	var curve int = bls.CurveFp254BNb
+	err := bls.Init(curve)
 	if err != nil {
 		panic(err)
 	}
