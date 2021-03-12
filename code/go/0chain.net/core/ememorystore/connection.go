@@ -47,15 +47,6 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 //DefaultPool - default db pool
 var DefaultPool *gorocksdb.TransactionDB
 
-func init1() {
-	dp, err := CreateDB("data/rocksdb")
-	if err != nil {
-		panicf("creating database: %v", err)
-	}
-	AddPool("", dp)
-	DefaultPool = dp
-}
-
 var pools = make(map[string]*dbpool)
 
 func getConnectionCtxKey(dbid string) common.ContextKey {
