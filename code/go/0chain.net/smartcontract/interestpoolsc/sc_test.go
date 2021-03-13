@@ -593,42 +593,191 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 		before func(test) test
 	}
 
+	notEmptyBlnc := func() *testBalances {
+		b := testBalance("", 0)
+		gn := newGlobalNode()
+		b.InsertTrieNode(gn.getKey(), gn)
+		return b
+	}
+
+	config.SetupDefaultSmartContractConfig()
+
 	tests := []test{
-		//{
-		//	name: "empty_globalNode",
-		//	args: args{
-		//		balances: testBalance("",0,nil),
-		//		funcName: "funcName",
-		//	},
-		//	want: newGlobalNodeWithConfigValues(),
-		//},
-		//{
-		//	name: "existing_globalNode",
-		//	args: args{
-		//		balances: nil,
-		//		funcName: "funcName",
-		//	},
-		//	before: func(tt test) test {
-		//		b := testBalance("",0,nil)
-		//		gn := newGlobalNode()
-		//		b.InsertTrieNode(gn.getKey(), gn)
-		//		tt.args.balances = b
-		//		tt.want = gn
-		//		return tt
-		//	},
-		//	want: nil,
-		//},
+		{
+			name: "empty_globalNode",
+			args: args{
+				balances: testBalance("", 0),
+				funcName: "funcName",
+			},
+			want: testConfiguredGlobalNode(),
+		},
+		{
+			name: "existing_globalNode",
+			args: args{
+				balances: notEmptyBlnc(),
+				funcName: "funcName",
+			},
+			want: testGlobalNode(
+				ADDRESS,
+				0, 0, 0,
+				0, 0,
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.before != nil {
-				tt = tt.before(tt)
-			}
 			ip := &InterestPoolSmartContract{
 				SmartContract: tt.fields.SmartContract,
 			}
 			if got := ip.getGlobalNode(tt.args.balances, tt.args.funcName); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getGlobalNode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestInterestPoolSmartContract_Execute(t *testing.T) {
+	type fields struct {
+		SmartContract *smartcontractinterface.SmartContract
+	}
+	type args struct {
+		t         *transaction.Transaction
+		funcName  string
+		inputData []byte
+		balances  state.StateContextI
+	}
+
+	lockBalancesFunc := func() *testBalances {
+		t := testBalance(clientID1, 20)
+		// inserting user node
+		t.InsertTrieNode(clientID1, &UserNode{
+			ClientID: clientID1,
+			Pools:    map[datastore.Key]*interestPool{},
+		})
+		// inserting global nodeinputData
+		t.InsertTrieNode(
+			datastore.Key(ADDRESS+ADDRESS),
+			testGlobalNode(globalNode1Ok, 100, 10, 5, 1, 2*time.Second))
+		return t
+	}
+	unlockBalanceFunc := func() *testBalances {
+		t := testBalance(clientID1, 10)
+		t.InsertTrieNode(ADDRESS+clientID1,
+			testUserNode(clientID1, testInterestPool(0, 100)))
+		t.InsertTrieNode(
+			datastore.Key(ADDRESS+ADDRESS),
+			testGlobalNode(globalNode1Ok, 100, 1, 100, 0, 10*time.Second))
+		return t
+	}
+
+	updateVariables := func() *testBalances {
+		t := testBalance(clientID1, 10)
+
+		t.InsertTrieNode(ADDRESS+clientID1,
+			testUserNode(clientID1, testInterestPool(0, 100)))
+		t.InsertTrieNode(
+			datastore.Key(ADDRESS+ADDRESS),
+			testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5))
+
+		return t
+	}
+
+	txn := testTxn(clientID1, 10)
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "case: execute lock function",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          ADDRESS,
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				t:         txn,
+				funcName:  "lock",
+				inputData: testPoolRequest(3 * time.Second),
+				balances:  lockBalancesFunc(),
+			},
+			wantErr: false,
+			want: string((&tokenpool.TokenPoolTransferResponse{
+				TxnHash:    txn.Hash,
+				FromClient: txn.ClientID,
+				ToPool:     txn.Hash,
+				ToClient:   txn.ToClientID,
+				Value:      bState.Balance(txn.Value),
+			}).Encode()),
+		},
+		{
+			name: "case: execute unlock function",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          ADDRESS,
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				t:         txn,
+				funcName:  "unlock",
+				inputData: testPoolState().encode(),
+				balances:  unlockBalanceFunc(),
+			},
+			wantErr: false,
+			want: string((&tokenpool.TokenPoolTransferResponse{
+				ToClient:   clientID1,
+				Value:      100,
+				FromClient: ADDRESS,
+				FromPool:   "new_test_pool_state"}).Encode()),
+		},
+		{
+			name: "case: execute updateVariables function",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          ADDRESS,
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				t:         testTxn(owner, 10),
+				funcName:  "updateVariables",
+				inputData: testGlobalNode(globalNode1Ok, 10, 20, 30, 40, 10).Encode(),
+				balances:  updateVariables(),
+			},
+			want:    string(testGlobalNode(globalNode1Ok, 10, 10, 30, 40, 10).Encode()),
+			wantErr: false,
+		},
+		{
+			name: "case: default case",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          ADDRESS,
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				t:         txn,
+				funcName:  "default",
+				inputData: nil,
+				balances:  testBalance(clientID1, 10),
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ip := &InterestPoolSmartContract{
+				SmartContract: tt.fields.SmartContract,
+			}
+			got, err := ip.Execute(tt.args.t, tt.args.funcName, tt.args.inputData, tt.args.balances)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Execute() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

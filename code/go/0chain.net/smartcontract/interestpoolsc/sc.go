@@ -176,14 +176,10 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn := newGlobalNode()
 	globalBytes, err := balances.GetTrieNode(gn.getKey())
 	if err == nil {
-		fmt.Println("globalBytes",globalBytes)
-		fmt.Println("getTrieNode",err)
-		if err := gn.Decode(globalBytes.Encode()); err != nil {
-			fmt.Println("decode err",err)
+		if err := gn.Decode(globalBytes.Encode()); err == nil {
 			return gn
 		}
 	}
-	fmt.Println(err)
 	const pfx = "smart_contracts.interestpoolsc."
 	var conf = config.SmartContractConfig
 	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")

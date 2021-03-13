@@ -19,9 +19,6 @@ const (
 	clientID1 = "client_1"
 	clientID2 = "client_2"
 
-	client1PubKey = "74f8a3642b07b5a13636909531619246e24bdd2697e9d25e59a4f7e001f65b0ebc09c356728216ef0f2b12d80ed29ab536fe8af4b4a3e22f68a7aff2103ff610"
-	client2PubKey = "56cb37686ed110ad2e5e8a3bb2baefb793e553192da0cefb6999e335a71dfc2383f3ceef8640597c948bc3568b0edb1c6c26b2ee2a3c01a806d9bf5cab832d09"
-
 	globalNode1Ok = "global_node1"
 	globalNode2Ok = "global_node2"
 )
@@ -57,13 +54,11 @@ func testSimpleNode(maxInt, totalMinted, minLock state.Balance) *SimpleGlobalNod
 // testGlobalNode function creates global node instance using incoming parameters
 func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr float64, minLockP time.Duration) *GlobalNode {
 	var gn = &GlobalNode{ID: id}
-	if maxMint != 0 || totalMint != 0 || minLock != 0 || apr != 0 {
-		gn.SimpleGlobalNode = &SimpleGlobalNode{
-			MaxMint:     maxMint,
-			TotalMinted: totalMint,
-			MinLock:     minLock,
-			APR:         apr,
-		}
+	gn.SimpleGlobalNode = &SimpleGlobalNode{
+		MaxMint:     maxMint,
+		TotalMinted: totalMint,
+		MinLock:     minLock,
+		APR:         apr,
 	}
 	if minLockP != 0 {
 		gn.MinLockPeriod = minLockP
@@ -75,7 +70,7 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 // testTxn function creates transaction instance using incoming parameters
 func testTxn(owner string, value int64) *transaction.Transaction {
 	t := &transaction.Transaction{
-		ClientID:          datastore.Key(clientID1),
+		ClientID:          datastore.Key(owner),
 		ToClientID:        datastore.Key(clientID2),
 		ChainID:           config.GetMainChainID(),
 		TransactionData:   "testTxnDataOK",
@@ -160,11 +155,24 @@ func testUserNode(client string, ip *interestPool) *UserNode {
 func testTokenPoolTransferResponse(txn *transaction.Transaction) string {
 	tpr := &tokenpool.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
-		FromPool:   "new_test_pool_state",
 		ToPool:     txn.Hash,
 		Value:      state.Balance(txn.Value),
 		FromClient: txn.ClientID,
 		ToClient:   txn.ToClientID,
 	}
 	return string(tpr.Encode())
+}
+
+// TEST FUNCTION
+// testConfiguredGlobalNode function returns an instance of GlobalNode based on
+//  config.SmartContractConfig configuration structure
+func testConfiguredGlobalNode() *GlobalNode {
+	var gn = newGlobalNode()
+	const pfx = "smart_contracts.interestpoolsc."
+	var conf = config.SmartContractConfig
+	gn.MinLockPeriod = conf.GetDuration(pfx + "min_lock_period")
+	gn.APR = conf.GetFloat64(pfx + "apr")
+	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
+	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	return gn
 }

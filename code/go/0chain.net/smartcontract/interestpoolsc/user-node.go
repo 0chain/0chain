@@ -16,7 +16,7 @@ type UserNode struct {
 
 func newUserNode(clientID datastore.Key) *UserNode {
 	return &UserNode{
-		ClientID: clientID1,
+		ClientID: clientID,
 		Pools:    make(map[datastore.Key]*interestPool),
 	}
 }
