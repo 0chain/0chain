@@ -12,6 +12,8 @@ import (
 	"0chain.net/core/util"
 )
 
+// testBalance implements state.StateContextI  intended for using
+// fake test balance structure
 type testBalances struct {
 	balances      map[datastore.Key]state.Balance
 	txn           *transaction.Transaction
