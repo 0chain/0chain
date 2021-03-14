@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/core/common"
 )
 
 func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
@@ -44,7 +45,6 @@ func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
 			wantErr: true,
 			want:    nil,
 		},
-
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,6 +64,8 @@ func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
 }
 
 func TestInterestPoolSmartContract_getPoolStats(t *testing.T) {
+	now := time.Now()
+	sec10 := 10 * time.Second
 	type fields struct {
 		SmartContract *smartcontractinterface.SmartContract
 	}
@@ -78,7 +80,29 @@ func TestInterestPoolSmartContract_getPoolStats(t *testing.T) {
 		want    *poolStat
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "case: ok",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          "",
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				pool: testInterestPool(10, 100),
+				t:    now.Add(sec10),
+			},
+			wantErr: false,
+			want: &poolStat{
+				ID:           "new_test_pool_state",
+				StartTime:    timeNow,
+				Duartion:     sec10,
+				TimeLeft:     (sec10 - now.Add(sec10).Sub(common.ToTime(timeNow))),
+				Locked:       now.Add(sec10).Sub(common.ToTime(timeNow)) < sec10,
+				APR:          0,
+				TokensEarned: 0,
+				Balance:      100,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -106,6 +130,12 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 		params   url.Values
 		balances state.StateContextI
 	}
+	notEmptyBlnc := func() *testBalances {
+		b := testBalance("", 0)
+		gn := newGlobalNode()
+		b.InsertTrieNode(gn.getKey(), gn)
+		return b
+	}
 	tests := []struct {
 		name    string
 		fields  fields
@@ -113,7 +143,25 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 		want    interface{}
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "ok",
+			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
+				ID:                          "",
+				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				SmartContractExecutionStats: map[string]interface{}{},
+			}},
+			args: args{
+				ctx:      context.Background(),
+				params:   url.Values{},
+				balances: notEmptyBlnc(),
+			},
+			wantErr: false,
+			want: testGlobalNode(
+				ADDRESS,
+				0, 0, 0,
+				0, 0,
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
