@@ -93,7 +93,7 @@ func (d *destination) move(now common.Timestamp, moved state.Balance) {
 
 // The unlock returns amount of tokens to vest for current period.
 // The dry argument leave all inside the destination as it was and
-// used to obtain pool statistic. The now must not be later then the
+// used to obtain pool statistic. The now must not be later than the
 // end. Also, the now must be greater or equal to start time of related
 // vesting pool.
 func (d *destination) unlock(now, end common.Timestamp, dry bool) (

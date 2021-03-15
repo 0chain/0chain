@@ -128,7 +128,7 @@ type stakePoolSettings struct {
 	// NumDelegates maximum allowed.
 	NumDelegates int `json:"num_delegates"`
 	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater then max_charge of the SC
+	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
 	// then the blobber can't be registered / updated.
 	ServiceCharge float64 `json:"service_charge"`
 }
@@ -142,7 +142,7 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return errors.New("negative service charge")
 	}
 	if sps.ServiceCharge > conf.MaxCharge {
-		return fmt.Errorf("service_charge (%f) is greater then"+
+		return fmt.Errorf("service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.NumDelegates <= 0 {

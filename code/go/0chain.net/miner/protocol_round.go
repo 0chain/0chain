@@ -758,7 +758,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
-			Logger.Warn("round rank is invalid or greater then num_generators",
+			Logger.Warn("round rank is invalid or greater than num_generators",
 				zap.String("hash", b.Hash), zap.Int64("round", b.Round),
 				zap.Int("round_rank", b.RoundRank),
 				zap.Int("num_generators", mc.NumGenerators))
@@ -1215,7 +1215,7 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 
 	var lfb = mc.GetLatestFinalizedBlock()
 
-	// don't kick more then 5 blocks at once
+	// don't kick more than 5 blocks at once
 	e := mc.GetCurrentRound() // loop variables
 	var count int
 	i := lfb.Round
@@ -1248,7 +1248,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 
 	Logger.Info("restartRound->kickSharders: kick sharders")
 
-	// don't kick more then 5 blocks at once
+	// don't kick more than 5 blocks at once
 	var (
 		s, c, i = tk.Round, mc.GetCurrentRound(), 0 // loop variables
 		ahead   = config.GetLFBTicketAhead()
@@ -1355,7 +1355,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 	)
 
 	// kick new round from the new LFB from sharders, if it's newer
-	// then the current one
+	// than the current one
 	if updated {
 		if lfb.Round > round {
 			mc.kickRoundByLFB(ctx, lfb) // and continue

@@ -1377,8 +1377,8 @@ func Test_blobber_choose_randomization(t *testing.T) {
 	// capacity        [20 GB; 620 GB]
 
 	var terms = avgTerms      // copy
-	terms.ReadPrice = 1       // cheapest greater then zero
-	terms.WritePrice = 1      // cheapest greater then zero
+	terms.ReadPrice = 1       // cheapest greater than zero
+	terms.WritePrice = 1      // cheapest greater than zero
 	terms.MinLockDemand = 0.0 // no min lock demand
 	var bcap int64 = 20 * GB  // capacity, starting from 2 GB
 

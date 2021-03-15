@@ -69,7 +69,6 @@ server_chain:
     softto_min: 3000 #in miliseconds
     softto_mult: 3 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 2 #number of soft timeouts before round is restarted
-    round_timeout_mult: 2 # increase timeout counter by this value
     timeout_cap: 0 # 0 indicates no cap
   transaction:
     payload:
