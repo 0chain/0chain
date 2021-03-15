@@ -36,10 +36,10 @@ type ChangeCollector struct {
 
 /*NewChangeCollector - a constructor to create a change collector */
 func NewChangeCollector() ChangeCollectorI {
-	cc := &ChangeCollector{}
-	cc.Changes = make(map[string]*NodeChange)
-	cc.Deletes = make(map[string]Node)
-	return cc
+	return &ChangeCollector{
+		Changes: make(map[string]*NodeChange),
+		Deletes: make(map[string]Node),
+	}
 }
 
 /*AddChange - implement interface */

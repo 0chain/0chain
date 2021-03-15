@@ -107,6 +107,7 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 		return nil, err
 	}
 	if rootNode == nil {
+
 		return nil, ErrNodeNotFound
 	}
 	v, err := mpt.getNodeValue(path, rootNode)

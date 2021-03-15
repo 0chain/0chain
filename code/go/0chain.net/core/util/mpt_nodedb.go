@@ -299,16 +299,15 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 		vs = vs[len(vs)-40:]
 	}
 
-	lndb := &LevelNodeDB{
+	return &LevelNodeDB{
 		current:          curNDB,
 		prev:             prevNDB,
 		PropagateDeletes: propagateDeletes,
 		mu:               &sync.RWMutex{},
 		version:          v,
 		versions:         vs,
+		DeletedNodes:     make(map[StrKey]bool),
 	}
-	lndb.DeletedNodes = make(map[StrKey]bool)
-	return lndb
 }
 
 // GetDBVersion get the current level node db version
