@@ -31,7 +31,6 @@ RUN cd $SRC_DIR/go/0chain.net/core && \
     cd $SRC_DIR/go/0chain.net/mocks && \
     go mod download
 
-
 # Build libzstd:
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
 # FIXME: Also, is there a way we can move this to zchain_build_base?
@@ -41,5 +40,14 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 
 # Add the source code:
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
+RUN mkdir /tmp/mockery && \
+    cd /tmp/mockery && \
+    wget -O - https://github.com/vektra/mockery/releases/download/v2.5.1/mockery_2.5.1_Linux_x86_64.tar.gz | tar xz && \
+    cp mockery /bin && \
+    rm -r /tmp/mockery
+
+RUN cd $SRC_DIR/go/0chain.net/core && \
+    go generate ./...
 
 WORKDIR $SRC_DIR/go

@@ -34,6 +34,9 @@ docker.local/sharder*
 *.log
 *.sublime-project
 *.sublime-workspace
+**/mocks/
+!code/go/0chain.net/mocks/go.mod
+!code/go/0chain.net/mocks/go.sum
 
 # executables
 

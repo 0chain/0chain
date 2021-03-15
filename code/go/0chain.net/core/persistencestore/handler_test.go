@@ -11,7 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
-	mocks "0chain.net/mocks/persistencestore"
+	mocks "0chain.net/mocks/core/persistencestore"
 )
 
 func TestWithConnectionHandler(t *testing.T) {

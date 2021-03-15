@@ -1,5 +1,8 @@
 package datastore_test
 
+//go:generate mockery --name=Entity --output=../../mocks/core/datastore
+//go:generate mockery --name=EntityMetadata --output=../../mocks/core/datastore
+
 import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
@@ -7,9 +10,12 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	mocks "0chain.net/mocks/core/datastore"
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -198,7 +204,24 @@ func TestPrintEntityHandler(t *testing.T) {
 }
 
 func TestGetEntityHandler(t *testing.T) {
-	t.Parallel()
+	e := mocks.Entity{}
+	e.On("Read", context.TODO(), mock.AnythingOfType("string")).Return(
+		func(ctx context.Context, _ datastore.Key) error {
+			return nil
+		},
+	)
+	e.On("Read", context.Context(nil), mock.AnythingOfType("string")).Return(
+		func(ctx context.Context, _ datastore.Key) error {
+			return errors.New("")
+		},
+	)
+
+	em := mocks.EntityMetadata{}
+	em.On("Instance").Return(
+		func() datastore.Entity {
+			return &e
+		},
+	)
 
 	type args struct {
 		ctx            context.Context
@@ -220,12 +243,45 @@ func TestGetEntityHandler(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Test_GetEntityHandler_Read_ERR",
+			args: func() args {
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				id := "id"
+				q := r.URL.Query()
+				q.Add(id, "param")
+				r.URL.RawQuery = q.Encode()
+
+				return args{
+					r:              r,
+					entityMetadata: &em,
+					idparam:        id,
+				}
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Test_GetEntityHandler_OK",
+			args: func() args {
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				id := "id"
+				q := r.URL.Query()
+				q.Add(id, "param")
+				r.URL.RawQuery = q.Encode()
+
+				return args{
+					ctx:            context.TODO(),
+					r:              r,
+					entityMetadata: &em,
+					idparam:        id,
+				}
+			}(),
+			want:    &e,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			got, err := datastore.GetEntityHandler(tt.args.ctx, tt.args.r, tt.args.entityMetadata, tt.args.idparam)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetEntityHandler() error = %v, wantErr %v", err, tt.wantErr)
@@ -241,6 +297,7 @@ func TestGetEntityHandler(t *testing.T) {
 func TestPutEntityHandler(t *testing.T) {
 	t.Parallel()
 
+	// Test_PutEntityHandler_Sync_Ctx_OK
 	ctx := context.TODO()
 	ch := make(chan datastore.QueuedEntity)
 	ctx = datastore.WithAsyncChannel(ctx, ch)
