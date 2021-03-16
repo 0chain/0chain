@@ -467,7 +467,7 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 		zap.Any("hash", magicBlock.Hash))
 
 	if magicBlock.StartingRound <= cmb.StartingRound {
-		return nil // earlier then the current one
+		return nil // earlier than the current one
 	}
 
 	var saveMagicBlock MagicBlockSaveFunc

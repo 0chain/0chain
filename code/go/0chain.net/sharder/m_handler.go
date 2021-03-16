@@ -135,7 +135,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (
 
 	if rn > lfb.Round {
 		return nil, common.NewErrorf("handle_get_block_state",
-			"requested block is newer then lfb %d, want %d", lfb.Round, rn)
+			"requested block is newer than lfb %d, want %d", lfb.Round, rn)
 	}
 
 	// check hash query parameter

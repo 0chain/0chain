@@ -57,11 +57,11 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 
 	if t.Value < int64(mn.MinStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is less then min allowed: %d < %d", t.Value, mn.MinStake)
+			"stake is less than min allowed: %d < %d", t.Value, mn.MinStake)
 	}
 	if t.Value > int64(mn.MaxStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is greater then max allowed: %d > %d", t.Value, mn.MaxStake)
+			"stake is greater than max allowed: %d > %d", t.Value, mn.MaxStake)
 	}
 
 	pool.TokenLockInterface = &ViewChangeLock{

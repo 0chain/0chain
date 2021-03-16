@@ -200,7 +200,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 		return nil, fmt.Errorf("min_n is too small: %d", gn.MinN)
 	}
 	if gn.MaxN < gn.MinN {
-		return nil, fmt.Errorf("max_n is less then min_n: %d < %d",
+		return nil, fmt.Errorf("max_n is less than min_n: %d < %d",
 			gn.MaxN, gn.MinN)
 	}
 
@@ -208,7 +208,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 		return nil, fmt.Errorf("min_s is too small: %d", gn.MinS)
 	}
 	if gn.MaxS < gn.MinS {
-		return nil, fmt.Errorf("max_s is less then min_s: %d < %d",
+		return nil, fmt.Errorf("max_s is less than min_s: %d < %d",
 			gn.MaxS, gn.MinS)
 	}
 

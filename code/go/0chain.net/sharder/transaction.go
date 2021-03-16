@@ -123,7 +123,7 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	txnSaveTimer.UpdateSince(ts)
 	p95 := txnSaveTimer.Percentile(.95)
 	if txnSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		Logger.Error("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		Logger.Info("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	}
 	return nil
 }
