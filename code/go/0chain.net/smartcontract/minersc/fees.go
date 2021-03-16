@@ -175,75 +175,41 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	var (
-		mbMiners   = make(map[string]struct{}, mb.Miners.Size())
-		mbSharders = make(map[string]struct{}, mb.Miners.Size())
-
-		minersOffline, shardersOffline []*ConsensusNode
+		nodesKeys = make(map[string]struct{}, mb.Miners.Size() + mb.Sharders.Size())
+		nodesOffline []*ConsensusNode
 	)
 
-	for _, key := range mb.Miners.Keys() {
-		mbMiners[key] = struct{}{}
+	for _, key := range append(mb.Miners.Keys(), mb.Sharders.Keys()...) {
+		nodesKeys[key] = struct{}{}
 	}
 
-	for _, key := range mb.Sharders.Keys() {
-		mbSharders[key] = struct{}{}
-	}
+	for _, simple := range append(miners.Nodes, sharders.Nodes...) {
+		var node *ConsensusNode
+		if node, err = msc.getConsensusNode(simple.ID, balances); err != nil {
+			return fmt.Errorf("missing consensus node: %v", err)
+		}
 
-	// miners
-	for _, simple := range miners.Nodes {
-		var miner *ConsensusNode
-		if miner, err = msc.getConsensusNode(simple.ID, balances); err != nil {
-			return fmt.Errorf("missing miner node: %v", err)
-		}
-		if err = msc.payInterests(miner, gn, balances); err != nil {
+		if err = msc.payInterests(node, gn, balances); err != nil {
 			return
 		}
-		if err = msc.unlockDeleted(miner, round, balances); err != nil {
+		if err = msc.unlockDeleted(node, round, balances); err != nil {
 			return
 		}
-		msc.activatePending(miner)
-		if _, ok := mbMiners[miner.ID]; !ok {
-			minersOffline = append(minersOffline, miner)
+		msc.activatePending(node)
+
+		if _, ok := nodesKeys[node.ID]; !ok {
+			nodesOffline = append(nodesOffline, node)
 			continue
 		}
+
 		// save excluding offline nodes
-		if err = miner.save(balances); err != nil {
-			return
-		}
-	}
-//todo: remove duplicates
-	// sharders
-	for _, simple := range sharders.Nodes {
-		var sharder *ConsensusNode
-		if sharder, err = msc.getSharderNode(simple.ID, balances); err != nil {
-			return fmt.Errorf("missing sharder node: %v", err)
-		}
-		if err = msc.payInterests(sharder, gn, balances); err != nil {
-			return
-		}
-		if err = msc.unlockDeleted(sharder, round, balances); err != nil {
-			return
-		}
-		msc.activatePending(sharder)
-		if _, ok := mbSharders[sharder.ID]; !ok {
-			shardersOffline = append(shardersOffline, sharder)
-			continue
-		}
-		// save excluding offline nodes
-		if err = sharder.save(balances); err != nil {
+		if err = node.save(balances); err != nil {
 			return
 		}
 	}
 
-	// unlockOffline
-	for _, mn := range minersOffline {
-		if err = msc.unlockOffline(mn, balances); err != nil {
-			return
-		}
-	}
-
-	for _, mn := range shardersOffline {
-		if err = msc.unlockOffline(mn, balances); err != nil {
+	for _, node := range nodesOffline {
+		if err = msc.unlockOffline(node, balances); err != nil {
 			return
 		}
 	}
