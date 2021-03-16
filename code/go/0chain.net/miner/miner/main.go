@@ -44,7 +44,7 @@ func main() {
 	keysFile := flag.String("keys_file", "", "keys_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
-	initialStates := flag.String("initial_states", "", "initial_states")
+	initialStatesFile := flag.String("initial_states", "", "initial_states")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -93,12 +93,12 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
-	if *initialStates == "" {
-		*initialStates = viper.GetString("network.initial_states")
+	if *initialStatesFile == "" {
+		*initialStatesFile = viper.GetString("network.initial_states")
 	}
 
-	is := state.NewInitStates()
-	err = is.Read(*initialStates)
+	initStates := state.NewInitStates()
+	err = initStates.Read(*initialStatesFile)
 	if err != nil {
 		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
 	}
@@ -128,7 +128,7 @@ func main() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock, is)
+		magicBlock, initStates)
 	mb := mc.GetLatestMagicBlock()
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 

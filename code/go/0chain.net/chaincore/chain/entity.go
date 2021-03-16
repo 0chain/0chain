@@ -497,11 +497,11 @@ func (c *Chain) setupInitialState(is *state.InitStates) util.MerklePatriciaTrieI
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, is *state.InitStates) (round.RoundI, *block.Block) {
+func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState(is)
+	gb.ClientState = c.setupInitialState(initStates)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()

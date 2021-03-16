@@ -75,8 +75,8 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, is *state.InitStates) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, is)
+func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can not be null")
 	}
