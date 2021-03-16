@@ -580,7 +580,7 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 
 // AddUniqueBlockExtension - add unique block extensions.
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
-	//TODO: We need to compare for view change and add the eb.ConsensusNodeID only if he was in the view that b belongs to
+	//TODO: We need to compare for view change and add the eb.ConsensusNodeID only if it was in the view that b belongs to
 	if b.UniqueBlockExtensions == nil {
 		b.UniqueBlockExtensions = make(map[string]bool)
 	}
