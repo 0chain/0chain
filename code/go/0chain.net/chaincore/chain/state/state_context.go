@@ -227,25 +227,34 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	if encryption.IsHash(key) {
+
+	key_hash := encryption.Hash(key)
+
+	if !encryption.IsHash(key_hash) {
 		return nil, common.NewError("failed to get trie node", "key is too short")
 	}
-	return sc.state.GetNodeValue(util.Path(encryption.Hash(key)))
+	return sc.state.GetNodeValue(util.Path(key_hash))
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
-	if encryption.IsHash(key) {
+	
+	key_hash := encryption.Hash(key)
+	
+	if !encryption.IsHash(key_hash) {
 		return "", common.NewError("failed to get trie node", "key is too short")
 	}
-	byteKey, err := sc.state.Insert(util.Path(encryption.Hash(key)), node)
+	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
 	return datastore.Key(byteKey), err
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-	if encryption.IsHash(key) {
+
+	key_hash := encryption.Hash(key)
+
+	if !encryption.IsHash(key_hash) {
 		return "", common.NewError("failed to get trie node", "key is too short")
 	}
-	byteKey, err := sc.state.Delete(util.Path(encryption.Hash(key)))
+	byteKey, err := sc.state.Delete(util.Path(key_hash))
 	return datastore.Key(byteKey), err
 }
 
