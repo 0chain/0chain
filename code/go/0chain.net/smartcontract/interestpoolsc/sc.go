@@ -56,7 +56,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	if err != nil {
 		return "", common.NewError("failed locking tokens", fmt.Sprintf("request not formatted correctly (%v)", err.Error()))
 	}
-	if t.Value < int64(gn.MinLock) {
+	if t.Value < gn.MinLock {
 		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)

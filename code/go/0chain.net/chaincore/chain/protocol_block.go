@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/chaincore/state"
 	"context"
 	"fmt"
 	"time"
@@ -479,11 +480,11 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 }
 
 func (c *Chain) updateFeeStats(fb *block.Block) {
-	var totalFees int64
+	var totalFees state.Balance
 	for _, txn := range fb.Txns {
 		totalFees += txn.Fee
 	}
-	meanFees := totalFees / int64(len(fb.Txns))
+	meanFees := int64(totalFees) / int64(len(fb.Txns))
 	c.FeeStats.MeanFees = meanFees
 	if meanFees > c.FeeStats.MaxFees {
 		c.FeeStats.MaxFees = meanFees

@@ -234,7 +234,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			}
 		}
 
-		value := prng.Int63n(wf.Balance) + 1
+		value := state.Balance(prng.Int63n(int64(wf.Balance)) + 1)
 		if deletePercent > 0 && prng.Intn(100) < int(deletePercent) {
 			value = wf.Balance
 		}
@@ -311,7 +311,7 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 func createWallets(num int) []*Wallet {
 	wallets := make([]*Wallet, num)
 	for i := 0; i < len(wallets); i++ {
-		balance := prng.Int63n(1000)
+		balance := state.Balance(prng.Int63n(1000))
 		wallets[i] = &Wallet{Balance: balance}
 		wallets[i].Initialize(clientSignatureScheme)
 	}
@@ -354,7 +354,7 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 				break
 			}
 		}
-		value := prng.Int63n(wf.Balance) + 1
+		value := state.Balance(prng.Int63n(int64(wf.Balance)) + 1)
 		wf.Balance -= value
 		wt.Balance += value
 		txn := wf.CreateSendTransaction(wt.ClientID, value, "", 0)
