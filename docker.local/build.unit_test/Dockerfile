@@ -12,6 +12,7 @@ COPY ./code/go/0chain.net/miner/miner/go.mod     ./code/go/0chain.net/miner/mine
 COPY ./code/go/0chain.net/sharder/go.mod         ./code/go/0chain.net/sharder/go.sum         $SRC_DIR/go/0chain.net/sharder/
 COPY ./code/go/0chain.net/sharder/sharder/go.mod ./code/go/0chain.net/sharder/sharder/go.sum $SRC_DIR/go/0chain.net/sharder/sharder/
 COPY ./code/go/0chain.net/conductor/go.mod       ./code/go/0chain.net/conductor/go.sum       $SRC_DIR/go/0chain.net/conductor/
+COPY ./code/go/0chain.net/mocks/go.mod           ./code/go/0chain.net/mocks/go.sum           $SRC_DIR/go/0chain.net/mocks/
 
 RUN cd $SRC_DIR/go/0chain.net/core && \
     go mod download && \
@@ -26,6 +27,8 @@ RUN cd $SRC_DIR/go/0chain.net/core && \
     cd $SRC_DIR/go/0chain.net/sharder && \
     go mod download && \
     cd $SRC_DIR/go/0chain.net/sharder/sharder && \
+    go mod download && \
+    cd $SRC_DIR/go/0chain.net/mocks && \
     go mod download
 
 # Build libzstd:
@@ -37,5 +40,14 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 
 # Add the source code:
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
+RUN mkdir /tmp/mockery && \
+    cd /tmp/mockery && \
+    wget -O - https://github.com/vektra/mockery/releases/download/v2.5.1/mockery_2.5.1_Linux_x86_64.tar.gz | tar xz && \
+    cp mockery /bin && \
+    rm -r /tmp/mockery
+
+RUN cd $SRC_DIR/go/0chain.net/core && \
+    go generate ./...
 
 WORKDIR $SRC_DIR/go

@@ -1,5 +1,7 @@
 package datastore
 
+//go:generate mockery --name=Store --output=../../mocks/core/datastore
+
 import (
 	"context"
 )

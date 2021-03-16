@@ -3,7 +3,6 @@
 !.github
 !.gitlab-ci.yml
 !.dockerignore
-!.gitattributes
 *.class
 *.jar
 **/target/
@@ -35,6 +34,7 @@ docker.local/sharder*
 *.log
 *.sublime-project
 *.sublime-workspace
+**/mocks
 
 # executables
 
