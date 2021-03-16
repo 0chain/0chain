@@ -27,11 +27,7 @@ func (mpks *Mpks) Encode() []byte {
 }
 
 func (mpks *Mpks) Decode(input []byte) error {
-	err := json.Unmarshal(input, mpks)
-	if err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(input, mpks)
 }
 
 func (mpks *Mpks) GetHash() string {
@@ -64,9 +60,5 @@ func (mpk *MPK) Encode() []byte {
 }
 
 func (mpk *MPK) Decode(input []byte) error {
-	err := json.Unmarshal(input, mpk)
-	if err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(input, mpk)
 }
