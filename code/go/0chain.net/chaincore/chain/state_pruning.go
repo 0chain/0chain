@@ -151,7 +151,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	ps.Stage = util.PruneStateDelete
 	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
-		Logger.Error("prune client state error", zap.Error(err))
+		Logger.Info("prune client state error", zap.Error(err))
 	}
 	ps.Stage = util.PruneStateCommplete
 

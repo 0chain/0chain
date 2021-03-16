@@ -369,7 +369,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 		sort.SliceStable(pcounts, func(i, j int) bool {
 			return pcounts[i].Proposals > pcounts[j].Proposals
 		})
-		Logger.Error("get block to extend - no notarized block",
+		Logger.Info("get block to extend - no notarized block",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("num_proposals", len(proposals)),
 			zap.Any("verification_tickets", pcounts))
@@ -556,7 +556,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
-			Logger.Error("generate block - multiple tries",
+			Logger.Info("generate block - multiple tries",
 				zap.Int64("round", b.Round), zap.Int("tries", generationTries))
 		}
 		break
@@ -1183,7 +1183,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 		b := r.Block
 		if b != nil {
 			if mc.GetRoundTimeoutCount() <= 10 {
-				Logger.Error("sending the best block to the network",
+				Logger.Info("sending the best block to the network",
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
 			}
@@ -1199,7 +1199,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 	}
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Info("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
 		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		//TODO: should have a means to send an email/SMS to someone or something like that
