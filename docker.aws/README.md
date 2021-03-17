@@ -19,9 +19,9 @@ $ ./docker.local/bin/setup_network.sh
 
 1. Update `network . dns_url` in `./docker.local/config/0chain.yaml` to point to `http://<network_url>/dns`
 
-2. Modify `docker.local/config/b0snode2_keys.txt` and replace `localhost` and `198.18.0.83` with public ip of your instance.
+2. Modify `docker.local/config/b0snode2_keys.txt` and replace `localhost` and `198.18.0.83` with public ip of your instance / vm.
 
-3. Modify `docker.local/config/b0mnode5_keys.txt` and replace `localhost` and `198.18.0.83` with public ip of your instance.
+3. Modify `docker.local/config/b0mnode5_keys.txt` and replace `localhost` and `198.18.0.83` with public ip of your instance / vm.
 
 ## Building the Nodes
 

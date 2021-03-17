@@ -12,7 +12,7 @@
 - [Creating The Magic Block](#creating-the-magic-block)
 - [Miscellaneous](#miscellaneous) - [Cleanup](#cleanup) - [View Change](docs/viewchange.md) - [Minio Setup](#minio)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
-- [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/https_changes/https/README.md)
+- [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
 
 ## Initial Setup
 
