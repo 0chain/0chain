@@ -24,11 +24,11 @@ func NewInitStates() *InitStates {
 }
 
 // Read is use on the InitStates to read the initial states for the genesis block from a yaml file.
-func (is *InitStates) Read(file string) (err error) {
+func (initStates *InitStates) Read(file string) (err error) {
 	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return
 	}
-	err = yaml.Unmarshal(bytes, is)
+	err = yaml.Unmarshal(bytes, initStates)
 	return
 }

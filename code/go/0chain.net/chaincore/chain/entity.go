@@ -486,9 +486,9 @@ func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState(is *state.InitStates) util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0))
-	for _, v := range is.States {
+	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
 	pmt.SaveChanges(c.stateDB, false)
