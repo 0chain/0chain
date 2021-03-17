@@ -128,3 +128,11 @@ smart_contracts:
     max_duration: '2h'
     max_destinations: 3
     max_description_length: 20
+
+  zcnsc:
+    min_mint_amount: 1
+    percent_authorizers: 0.7
+    min_authorizers: 1
+    min_burn_amount: 1
+    min_stake_amount: 0
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000000"

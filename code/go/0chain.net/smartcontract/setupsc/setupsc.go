@@ -13,6 +13,7 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"0chain.net/smartcontract/zrc20sc"
 )
 
@@ -22,6 +23,7 @@ var scs = []sci.SmartContractInterface{
 	&multisigsc.MultiSigSmartContract{},
 	&minersc.MinerSmartContract{},
 	&vestingsc.VestingSmartContract{},
+	&zcnsc.ZCNSmartContract{},
 }
 
 //SetupSmartContracts initialize smartcontract addresses
