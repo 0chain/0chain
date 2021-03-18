@@ -409,30 +409,27 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	)
 
 	switch txn.TransactionType {
-		case transaction.TxnTypeSmartContract:
-			var output string
-			if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
-				Logger.Error("Error executing the SC", zap.Any("txn", txn),
-					zap.Error(err))
-				return
-			}
-			txn.TransactionOutput = output
-			Logger.Info("SC executed with output",
-				zap.Any("txn_output", txn.TransactionOutput),
-				zap.Any("txn_hash", txn.Hash))
-
-		case transaction.TxnTypeData:
-
-		case transaction.TxnTypeSend:
-			err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
-				state.Balance(txn.Value)))
-			if err != nil {
-				return
-			}
-
-		default:
-			Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-			return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+	case transaction.TxnTypeSmartContract:
+		var output string
+		if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
+			Logger.Error("Error executing the SC", zap.Any("txn", txn),
+				zap.Error(err))
+			return
+		}
+		txn.TransactionOutput = output
+		Logger.Info("SC executed with output",
+			zap.Any("txn_output", txn.TransactionOutput),
+			zap.Any("txn_hash", txn.Hash))
+	case transaction.TxnTypeData:
+	case transaction.TxnTypeSend:
+		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
+			state.Balance(txn.Value)))
+		if err != nil {
+			return
+		}
+	default:
+		Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
+		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
