@@ -123,9 +123,9 @@ func (t testWallet) groupTransaction(value int64, data interface{}) httpclientut
 
 func (t testWallet) newProposal(proposalID string, toClientID string, value int64) testProposal {
 	transfer := state.Transfer{
-		ClientID:   t.groupClientID,
-		ToClientID: toClientID,
-		Amount:     state.Balance(value),
+		Sender:   t.groupClientID,
+		Receiver: toClientID,
+		Amount:   state.Balance(value),
 	}
 
 	votes := make(map[string]multisigsc.Vote)

@@ -29,6 +29,13 @@ const (
 	//TxnTypeLockIn A transaction to lock tokens, state is maintained on the account and the parent lock in transaction
 	TxnTypeLockIn = 2
 
+	//TxnTypeData A transaction to just store a piece of data on the block chain
+	TxnTypeData = 10
+
+	//TxnTypeSmartContract A smart contract transaction type
+	TxnTypeSmartContract = 1000
+
+
 	// Any txn type that refers to a parent txn should have an odd value
 
 	//TxnTypeStorageWrite A transaction to write data to the blobber
@@ -36,11 +43,6 @@ const (
 
 	//TxnTypeStorageRead A transaction to read data from the blobber
 	TxnTypeStorageRead = 103
-	//TxnTypeData A transaction to just store a piece of data on the block chain
-	TxnTypeData = 10
-
-	//TxnTypeSmartContract A smart contract transaction type
-	TxnTypeSmartContract = 1000
 )
 
 //SmartContractTxnData Smart Contract Txn Data

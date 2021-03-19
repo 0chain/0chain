@@ -56,7 +56,7 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	if err != nil {
 		return
 	}
-	var mn = NewMinerNode()
+	var mn = NewConsensusNode()
 	mn.Decode(inputData)
 
 	var (
@@ -80,7 +80,7 @@ func (msc *MinerSmartContract) AddSharderIntegrationTests(
 	if err != nil {
 		return
 	}
-	var sn = NewMinerNode()
+	var sn = NewConsensusNode()
 	sn.Decode(inputData)
 	var (
 		client = crpc.Client()
@@ -232,7 +232,7 @@ func (msc *MinerSmartContract) sharderKeepIntegrationTests(
 		return // error
 	}
 
-	var mn = NewMinerNode()
+	var mn = NewConsensusNode()
 	if err = mn.Decode(input); err != nil {
 		panic(err) // must not happen, because of the successful call above
 	}

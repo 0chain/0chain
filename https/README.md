@@ -1,9 +1,9 @@
-# 0chain on EC2 instance over https
+# 0chain on ec2 / vm / bare metal over https
 
 
 ## Prerequisite
 
-- Ec2 instance with docker installed
+- ec2 / vm / bare metal with docker installed
 
 ## Initial Setup
 
@@ -83,12 +83,15 @@ $ ../bin/start.b0miner.sh
 
 ## Configuring Https
 
+Note: You can skip this step if you have nginx/haproxy already setup with ssl in place. Just add paths in the config file and restart the service. 
+
 1. Go to https directory in 0chain repo.
 ```
 cd /0chain/https
 ```
 
-2. Edit docker-compose.yml and replace <your_email>, <your_domain> with your email and domain. Make sure to add route53 A type record for your domain and ip address
+2. Edit docker-compose.yml and replace <your_email>, <your_domain> with your email and domain. 
+Make sure to add 'A' type record for your domain and ip address with your domain provider.
 
 
 3. Deploy nginx and certbot using the following command
