@@ -9,9 +9,15 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"0chain.net/core/memorystore"
+	round_mocks "0chain.net/mocks/chaincore/round"
 	mocks "0chain.net/mocks/core/datastore"
 	"context"
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
+	"go.uber.org/zap"
 	"net/http"
 	"testing"
 )
@@ -21,6 +27,7 @@ type ChainTestSuite struct {
 }
 
 func TestChainTestSuite(t *testing.T) {
+	logging.Logger = zap.NewNop()
 
 	//round.SetupEntity()
 
@@ -61,6 +68,7 @@ func (s *ChainTestSuite) TestGetBlockMessageChannel() {
 func (s *ChainTestSuite) TestGetDKG() {
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
+	logging.Logger = zap.NewNop()
 
 	mc := GetMinerChain()
 
@@ -91,17 +99,35 @@ func (s *ChainTestSuite) TestRequestStartChain() {
 }
 
 func (s *ChainTestSuite) TestSaveClients() {
+
+	mStore := &mocks.Store{}
+	mEmd := &mocks.EntityMetadata{}
+
+	mStore.On("MultiRead",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	mStore.On("Get",
+		mock.Anything).Maybe().Return(round.NewRoundStartingStorage())
+
+	mEmd.On("GetDB").Maybe().Return("client")
+	mEmd.On("GetStore").Return(mStore)
+
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
 
 	mc := GetMinerChain()
 
 	common.SetupRootContext(context.Background())
-	client.SetupEntity(&mocks.Store{})
-	//memorystore.AddPool("", nil)
+	client.SetupEntity(mStore)
+	memorystore.AddPool("client", &redis.Pool{})
+
+	datastore.RegisterEntityMetadata("client", mEmd)
 
 	err := mc.SaveClients(context.Background(), []*client.Client{})
 	s.Require().NoError(err)
+
+	mEmd.AssertExpectations(s.T())
+	mStore.AssertExpectations(s.T())
 }
 
 func (s *ChainTestSuite) TestSaveMagicBlock() {
@@ -134,13 +160,34 @@ func (s *ChainTestSuite) TestSetDiscoverClients() {
 }
 
 func (s *ChainTestSuite) TestSetLatestFinalizedBlock() {
+
+	mb := block.NewMagicBlock()
+	mb.Miners = node.NewPool(0)
+
+	mRound := &round_mocks.RoundStorage{}
+	mRound.On("Get",
+		mock.Anything).Maybe().Return(mb)
+	mRound.On("Put",
+		mock.Anything, mock.Anything).Maybe().Return(nil)
+
+	mEmd := &mocks.EntityMetadata{}
+	mEmd.On("Instance").Maybe().Return(round.NewRound(1))
+
+	datastore.RegisterEntityMetadata("round", mEmd)
+
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
 
 	mc := GetMinerChain()
-	b := block.Provider().(*block.Block)
+	mc.MagicBlockStorage = mRound
+	mc.SetMagicBlock(mb)
+
+	b := block.NewBlock("1", 1)
 
 	mc.SetLatestFinalizedBlock(context.Background(), b)
+
+	mRound.AssertExpectations(s.T())
+	mEmd.AssertExpectations(s.T())
 }
 
 func (s *ChainTestSuite) TestSetPreviousBlock() {
@@ -148,8 +195,8 @@ func (s *ChainTestSuite) TestSetPreviousBlock() {
 	SetupMinerChain(c)
 
 	mc := GetMinerChain()
-	b := block.Provider().(*block.Block)
-	b1 := block.Provider().(*block.Block)
+	b := block.NewBlock("1", 1)
+	b1 := block.NewBlock("1", 2)
 	r := round.NewRound(5)
 
 	mc.SetPreviousBlock(r, b, b1)
@@ -165,8 +212,12 @@ func (s *ChainTestSuite) TestSetStarted() {
 }
 
 func (s *ChainTestSuite) TestSetupGenesisBlock() {
+	chain.SetupEntity(&mocks.Store{})
+
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
+
+	c.MagicBlockStorage = &round_mocks.RoundStorage{}
 
 	mc := GetMinerChain()
 	b := block.NewMagicBlock()
@@ -185,6 +236,8 @@ func (s *ChainTestSuite) TestViewChange() {
 }
 
 func (s *ChainTestSuite) TestdeleteTxns() {
+	chain.SetupEntity(&mocks.Store{})
+
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
 

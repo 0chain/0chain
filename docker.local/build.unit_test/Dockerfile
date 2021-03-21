@@ -4,7 +4,6 @@ ENV GO111MODULE=on
 
 # Add the source code:
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
-COPY ./tmp $GOPATH/pkg/mod
 
 RUN cd $SRC_DIR/go/0chain.net && \
     go mod download
@@ -15,8 +14,5 @@ RUN cd $SRC_DIR/go/0chain.net && \
 RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
     chmod -R +w . && \
     make clean libzstd.a
-
-RUN cd $GOPATH/pkg/mod* && \
-    chmod -R +w .
 
 WORKDIR $SRC_DIR/go

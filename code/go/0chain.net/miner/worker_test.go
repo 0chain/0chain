@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"context"
-	"reflect"
 	"sync"
 	"testing"
 )
@@ -36,20 +35,20 @@ func TestChain_BlockWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &Chain{
-				Chain:                                tt.fields.Chain,
-				blockMessageChannel:                  tt.fields.blockMessageChannel,
-				muDKG:                                tt.fields.muDKG,
-				roundDkg:                             tt.fields.roundDkg,
-				discoverClients:                      tt.fields.discoverClients,
-				started:                              tt.fields.started,
-				viewChangeProcess:                    tt.fields.viewChangeProcess,
-				pullingPin:                           tt.fields.pullingPin,
-				subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
-				unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
-				restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
-				restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
-			}
+			//mc := &Chain{
+			//	Chain:                                tt.fields.Chain,
+			//	blockMessageChannel:                  tt.fields.blockMessageChannel,
+			//	muDKG:                                tt.fields.muDKG,
+			//	roundDkg:                             tt.fields.roundDkg,
+			//	discoverClients:                      tt.fields.discoverClients,
+			//	started:                              tt.fields.started,
+			//	viewChangeProcess:                    tt.fields.viewChangeProcess,
+			//	pullingPin:                           tt.fields.pullingPin,
+			//	subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
+			//	unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
+			//	restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
+			//	restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
+			//}
 		})
 	}
 }
@@ -81,20 +80,20 @@ func TestChain_MinerHealthCheck(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &Chain{
-				Chain:                                tt.fields.Chain,
-				blockMessageChannel:                  tt.fields.blockMessageChannel,
-				muDKG:                                tt.fields.muDKG,
-				roundDkg:                             tt.fields.roundDkg,
-				discoverClients:                      tt.fields.discoverClients,
-				started:                              tt.fields.started,
-				viewChangeProcess:                    tt.fields.viewChangeProcess,
-				pullingPin:                           tt.fields.pullingPin,
-				subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
-				unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
-				restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
-				restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
-			}
+			//mc := &Chain{
+			//	Chain:                                tt.fields.Chain,
+			//	blockMessageChannel:                  tt.fields.blockMessageChannel,
+			//	muDKG:                                tt.fields.muDKG,
+			//	roundDkg:                             tt.fields.roundDkg,
+			//	discoverClients:                      tt.fields.discoverClients,
+			//	started:                              tt.fields.started,
+			//	viewChangeProcess:                    tt.fields.viewChangeProcess,
+			//	pullingPin:                           tt.fields.pullingPin,
+			//	subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
+			//	unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
+			//	restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
+			//	restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
+			//}
 		})
 	}
 }
@@ -126,20 +125,20 @@ func TestChain_RestartRoundEventWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &Chain{
-				Chain:                                tt.fields.Chain,
-				blockMessageChannel:                  tt.fields.blockMessageChannel,
-				muDKG:                                tt.fields.muDKG,
-				roundDkg:                             tt.fields.roundDkg,
-				discoverClients:                      tt.fields.discoverClients,
-				started:                              tt.fields.started,
-				viewChangeProcess:                    tt.fields.viewChangeProcess,
-				pullingPin:                           tt.fields.pullingPin,
-				subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
-				unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
-				restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
-				restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
-			}
+			//mc := &Chain{
+			//	Chain:                                tt.fields.Chain,
+			//	blockMessageChannel:                  tt.fields.blockMessageChannel,
+			//	muDKG:                                tt.fields.muDKG,
+			//	roundDkg:                             tt.fields.roundDkg,
+			//	discoverClients:                      tt.fields.discoverClients,
+			//	started:                              tt.fields.started,
+			//	viewChangeProcess:                    tt.fields.viewChangeProcess,
+			//	pullingPin:                           tt.fields.pullingPin,
+			//	subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
+			//	unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
+			//	restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
+			//	restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
+			//}
 		})
 	}
 }
@@ -171,20 +170,20 @@ func TestChain_RoundWorker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &Chain{
-				Chain:                                tt.fields.Chain,
-				blockMessageChannel:                  tt.fields.blockMessageChannel,
-				muDKG:                                tt.fields.muDKG,
-				roundDkg:                             tt.fields.roundDkg,
-				discoverClients:                      tt.fields.discoverClients,
-				started:                              tt.fields.started,
-				viewChangeProcess:                    tt.fields.viewChangeProcess,
-				pullingPin:                           tt.fields.pullingPin,
-				subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
-				unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
-				restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
-				restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
-			}
+			//mc := &Chain{
+			//	Chain:                                tt.fields.Chain,
+			//	blockMessageChannel:                  tt.fields.blockMessageChannel,
+			//	muDKG:                                tt.fields.muDKG,
+			//	roundDkg:                             tt.fields.roundDkg,
+			//	discoverClients:                      tt.fields.discoverClients,
+			//	started:                              tt.fields.started,
+			//	viewChangeProcess:                    tt.fields.viewChangeProcess,
+			//	pullingPin:                           tt.fields.pullingPin,
+			//	subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
+			//	unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
+			//	restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
+			//	restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
+			//}
 		})
 	}
 }
@@ -213,23 +212,6 @@ func TestChain_getPruneCountRoundStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &Chain{
-				Chain:                                tt.fields.Chain,
-				blockMessageChannel:                  tt.fields.blockMessageChannel,
-				muDKG:                                tt.fields.muDKG,
-				roundDkg:                             tt.fields.roundDkg,
-				discoverClients:                      tt.fields.discoverClients,
-				started:                              tt.fields.started,
-				viewChangeProcess:                    tt.fields.viewChangeProcess,
-				pullingPin:                           tt.fields.pullingPin,
-				subRestartRoundEventChannel:          tt.fields.subRestartRoundEventChannel,
-				unsubRestartRoundEventChannel:        tt.fields.unsubRestartRoundEventChannel,
-				restartRoundEventChannel:             tt.fields.restartRoundEventChannel,
-				restartRoundEventWorkerIsDoneChannel: tt.fields.restartRoundEventWorkerIsDoneChannel,
-			}
-			if got := mc.getPruneCountRoundStorage(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getPruneCountRoundStorage() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }

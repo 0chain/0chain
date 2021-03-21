@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -171,14 +172,14 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
-func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
+func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) (*block.Block, error) {
 	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
 	if gr == nil || gb == nil {
-		panic("Genesis round/block can't be null")
+		return nil, errors.New("genesis round/block can't be null")
 	}
 	rr, ok := gr.(*round.Round)
 	if !ok {
-		panic("Genesis round cannot convert to *round.Round")
+		return nil, errors.New("genesis round cannot convert to *round.Round")
 	}
 	mgr := mc.CreateRound(rr)
 	mc.AddRound(mgr)
@@ -186,7 +187,7 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 	for _, sharder := range gb.Sharders.Nodes {
 		sharder.SetStatus(node.NodeStatusInactive)
 	}
-	return gb
+	return gb, nil
 }
 
 // CreateRound - create a round.
@@ -205,8 +206,8 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	mc.AddNotarizedBlock(ctx, mr, b)
-	mc.Chain.SetLatestFinalizedBlock(b)
+	//mc.AddNotarizedBlock(ctx, mr, b)
+	//mc.Chain.SetLatestFinalizedBlock(b)
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
@@ -245,8 +246,8 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	}
 	clientEntityMetadata := datastore.GetEntityMetadata("client")
 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-	defer memorystore.Close(ctx)
+	//ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	//defer memorystore.Close(ctx)
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
 	if err != nil {
 		return err

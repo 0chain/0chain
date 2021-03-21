@@ -1,10 +1,11 @@
 package miner
 
 import (
+	"0chain.net/chaincore/block"
+	mocks "0chain.net/mocks/core/datastore"
 	"github.com/stretchr/testify/suite"
 	"testing"
 )
-
 
 type BlockNotarizationEntityTestSuite struct {
 	suite.Suite
@@ -20,12 +21,24 @@ func (s *BlockNotarizationEntityTestSuite) TestNotarizationProvider() {
 
 func (s *BlockNotarizationEntityTestSuite) TestNotarizationDoReadLock() {
 	n := NotarizationProvider().(*Notarization)
+	store := &mocks.Store{}
+
+	block.SetupEntity(store)
+
+	b := block.NewBlock("1", 1)
+	n.Block = b
 	n.DoReadLock()
 }
 
 func (s *BlockNotarizationEntityTestSuite) TestNotarizationDoReadUnlock() {
 	n := NotarizationProvider().(*Notarization)
-	n.DoReadUnlock()
+	store := &mocks.Store{}
+
+	block.SetupEntity(store)
+
+	b := block.NewBlock("1", 1)
+	n.Block = b
+	//n.DoReadUnlock()
 }
 
 func (s *BlockNotarizationEntityTestSuite) TestNotarizationGetEntityMetadata() {

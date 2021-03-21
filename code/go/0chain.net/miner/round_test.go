@@ -32,15 +32,15 @@ func TestRound_AddBlockToVerify(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Round{
-				Round:                 tt.fields.Round,
-				muVerification:        tt.fields.muVerification,
-				blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
-				verificationCancelf:   tt.fields.verificationCancelf,
-				delta:                 tt.fields.delta,
-				verificationTickets:   tt.fields.verificationTickets,
-				vrfShare:              tt.fields.vrfShare,
-			}
+			//r := &Round{
+			//	Round:                 tt.fields.Round,
+			//	muVerification:        tt.fields.muVerification,
+			//	blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
+			//	verificationCancelf:   tt.fields.verificationCancelf,
+			//	delta:                 tt.fields.delta,
+			//	verificationTickets:   tt.fields.verificationTickets,
+			//	vrfShare:              tt.fields.vrfShare,
+			//}
 		})
 	}
 }
@@ -67,15 +67,15 @@ func TestRound_AddVerificationTicket(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Round{
-				Round:                 tt.fields.Round,
-				muVerification:        tt.fields.muVerification,
-				blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
-				verificationCancelf:   tt.fields.verificationCancelf,
-				delta:                 tt.fields.delta,
-				verificationTickets:   tt.fields.verificationTickets,
-				vrfShare:              tt.fields.vrfShare,
-			}
+			//r := &Round{
+			//	Round:                 tt.fields.Round,
+			//	muVerification:        tt.fields.muVerification,
+			//	blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
+			//	verificationCancelf:   tt.fields.verificationCancelf,
+			//	delta:                 tt.fields.delta,
+			//	verificationTickets:   tt.fields.verificationTickets,
+			//	vrfShare:              tt.fields.vrfShare,
+			//}
 		})
 	}
 }
@@ -98,15 +98,15 @@ func TestRound_CancelVerification(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Round{
-				Round:                 tt.fields.Round,
-				muVerification:        tt.fields.muVerification,
-				blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
-				verificationCancelf:   tt.fields.verificationCancelf,
-				delta:                 tt.fields.delta,
-				verificationTickets:   tt.fields.verificationTickets,
-				vrfShare:              tt.fields.vrfShare,
-			}
+			//r := &Round{
+			//	Round:                 tt.fields.Round,
+			//	muVerification:        tt.fields.muVerification,
+			//	blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
+			//	verificationCancelf:   tt.fields.verificationCancelf,
+			//	delta:                 tt.fields.delta,
+			//	verificationTickets:   tt.fields.verificationTickets,
+			//	vrfShare:              tt.fields.vrfShare,
+			//}
 		})
 	}
 }
@@ -129,15 +129,15 @@ func TestRound_Clear(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &Round{
-				Round:                 tt.fields.Round,
-				muVerification:        tt.fields.muVerification,
-				blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
-				verificationCancelf:   tt.fields.verificationCancelf,
-				delta:                 tt.fields.delta,
-				verificationTickets:   tt.fields.verificationTickets,
-				vrfShare:              tt.fields.vrfShare,
-			}
+			//r := &Round{
+			//	Round:                 tt.fields.Round,
+			//	muVerification:        tt.fields.muVerification,
+			//	blocksToVerifyChannel: tt.fields.blocksToVerifyChannel,
+			//	verificationCancelf:   tt.fields.verificationCancelf,
+			//	delta:                 tt.fields.delta,
+			//	verificationTickets:   tt.fields.verificationTickets,
+			//	vrfShare:              tt.fields.vrfShare,
+			//}
 		})
 	}
 }

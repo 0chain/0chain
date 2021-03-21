@@ -37,6 +37,6 @@ func (s *BlockMessageTestSuite) TestBlockMessageShouldRetry() {
 	bc.ShouldRetry()
 }
 
-func TestGetMessageLookup(t *testing.T) {
+func (s *BlockMessageTestSuite) TestGetMessageLookup() {
 	GetMessageLookup(5)
 }

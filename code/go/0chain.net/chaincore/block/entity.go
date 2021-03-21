@@ -111,20 +111,20 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 }
 
 // GetVerificationTickets of the block async safe.
-func (b *Block) GetVerificationTickets() (vts []*VerificationTicket) {
-	b.ticketsMutex.RLock()
-	defer b.ticketsMutex.RUnlock()
+func (b *Block) GetVerificationTickets() []*VerificationTicket {
+	//b.ticketsMutex.RLock()
+	//defer b.ticketsMutex.RUnlock()
 
 	if len(b.VerificationTickets) == 0 {
-		return // nil
+		return nil
 	}
 
-	vts = make([]*VerificationTicket, 0, len(b.VerificationTickets))
-	for _, tk := range b.VerificationTickets {
-		vts = append(vts, tk.Copy())
+	vts := make([]*VerificationTicket, len(b.VerificationTickets))
+	for i, tk := range b.VerificationTickets {
+		vts[i] = tk.Copy()
 	}
 
-	return
+	return vts
 }
 
 // VerificationTicketsSize returns number verification tickets of the Block.

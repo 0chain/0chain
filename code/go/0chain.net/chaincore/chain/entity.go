@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -219,7 +220,7 @@ func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 
-	round = mbRoundOffset(round)
+	//round = mbRoundOffset(round)
 
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
@@ -448,6 +449,7 @@ var stateDB *util.PNodeDB
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
+	_ = os.MkdirAll("data/rocksdb/state", os.ModePerm)
 	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
 	if err != nil {
 		panic(err)

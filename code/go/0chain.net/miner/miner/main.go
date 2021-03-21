@@ -116,7 +116,8 @@ func main() {
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
-	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+	// @todo handle error
+	gb, _ := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock)
 	mb := mc.GetLatestMagicBlock()
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
