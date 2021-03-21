@@ -288,8 +288,7 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		// check out ctx
-		var sPool *stakePool
-		sPool, err = ssc.getStakePool(testBlobber.id, ctx)
+		sPool, err := ssc.getStakePool(testBlobber.id, ctx)
 		require.NoError(t, err)
 
 		f.readMarker = *readMarker.ReadMarker
@@ -297,8 +296,7 @@ func TestNewAllocation(t *testing.T) {
 		require.EqualValues(t, f.RmRewardsBlobber(), sPool.Rewards.Blobber)
 		require.EqualValues(t, f.RmRewardsValidator(), sPool.Rewards.Validator)
 
-		var rPool *readPool
-		rPool, err = ssc.getReadPool(reader.id, ctx)
+		rPool, err := ssc.getReadPool(reader.id, ctx)
 		require.NoError(t, err)
 
 		require.EqualValues(t, readPoolFund-f.RmValue(),
@@ -330,12 +328,9 @@ func TestNewAllocation(t *testing.T) {
 		}
 		require.NotNil(t, testBlobber2)
 
-		//var err error
-		//var cp *challengePool
 		challengePool, err := ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
 
-		//var wp *writePool
 		writePool, err := ssc.getWritePool(client.id, ctx)
 		require.NoError(t, err)
 
@@ -358,6 +353,7 @@ func TestNewAllocation(t *testing.T) {
 				ClientID:               client.id,
 			},
 		}
+		f.writeMarker = *cc.WriteMarker
 		cc.WriteMarker.Signature, err = client.scheme.Sign(
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
@@ -379,19 +375,14 @@ func TestNewAllocation(t *testing.T) {
 
 		challengePool, err = ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
-
-		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
-			float64(avgTerms.WritePrice) *
-			allocation.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
-
-		require.EqualValues(t, moved, challengePool.Balance)
+		require.EqualValues(t, f.ChallangePoolBalance(), challengePool.Balance)
 
 		writePool, err = ssc.getWritePool(client.id, ctx)
 		require.NoError(t, err)
+		require.EqualValues(t, aValue-int64(f.ChallangePoolBalance()),
+			writePool.Pools.allocTotal(allocationId, now))
 
-		require.EqualValues(t, 15*x10-moved, writePool.Pools.allocTotal(allocationId, now))
-
-		// min lock demand reducing
+		// todo min lock demand reducing
 		allocation, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
 		require.EqualValues(t, 186921297, allocation.restMinLockDemand()) // -read above
