@@ -10,8 +10,7 @@ import (
 )
 
 const (
-	CHUNK_SIZE = 64 * KB // hardcoded in blobber.go
-
+	CHUNK_SIZE                   = 64 * KB // hardcoded in blobber.go
 	numBlobbers                  = 30
 	blobberBalance state.Balance = 50 * x10
 	clientBalance  state.Balance = 100 * x10
@@ -43,28 +42,6 @@ type mock0ChainBlobberYml struct {
 	ServiceCharge           float64
 }
 
-func attachTestBlobbers(t testing.TB, ssc *StorageSmartContract, now int64,
-	terms Terms, capacity int64, ctx *testBalances) (blobbers []*Client) {
-	for i := 0; i < numBlobbers; i++ {
-		var blobber = addBlobber(t, ssc, capacity, now, terms, blobberBalance, ctx)
-		blobbers = append(blobbers, blobber)
-	}
-	return
-}
-
-func newTestAllocation(t testing.TB, client *Client, nar newAllocationRequest, value state.Balance,
-	ssc *StorageSmartContract, now int64, ctx *testBalances,
-) (allocationId string) {
-	nar.Owner = client.id
-	nar.OwnerPublicKey = client.pk
-
-	resp, err := nar.callNewAllocReq(t, client.id, value, ssc, now, ctx)
-	require.NoError(t, err)
-	var decodeResp StorageAllocation
-	require.NoError(t, decodeResp.Decode([]byte(resp)))
-	return decodeResp.ID
-}
-
 func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAllocationRequest, capacity int64,
 ) (ssc *StorageSmartContract, ctx *testBalances,
 	blobbers []*Client, now int64, allocationId string, client *Client, testBlobber *Client,
@@ -74,11 +51,21 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 	_ = *setConfig(t, ctx)
 	client = newClient(clientBalance, ctx)
 	now += 100
-	blobbers = attachTestBlobbers(t, ssc, now, terms, capacity, ctx)
+	for i := 0; i < numBlobbers; i++ {
+		var blobber = addBlobber(t, ssc, capacity, now, terms, blobberBalance, ctx)
+		blobbers = append(blobbers, blobber)
+	}
 
 	now += 100
-	allocationId = newTestAllocation(t, client, aRequest,
-		state.Balance(aValue), ssc, now, ctx)
+
+	aRequest.Owner = client.id
+	aRequest.OwnerPublicKey = client.pk
+
+	resp, err := aRequest.callNewAllocReq(t, client.id, state.Balance(aValue), ssc, now, ctx)
+	require.NoError(t, err)
+	var decodeResp StorageAllocation
+	require.NoError(t, decodeResp.Decode([]byte(resp)))
+	allocationId = decodeResp.ID
 
 	allocation, err := ssc.getAllocation(allocationId, ctx)
 	require.NoError(t, err)
@@ -195,7 +182,7 @@ func TestNewAllocation(t *testing.T) {
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &readMarker), ctx)
 		require.NoError(t, err)
 
-		// check out balances
+		// check out ctx
 		sPool, err := ssc.getStakePool(testBlobber.id, ctx)
 		require.NoError(t, err)
 
@@ -366,10 +353,8 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
-		// check out
 		stakePool, err := ssc.getStakePool(testBlobber1.id, ctx)
 		require.NoError(t, err)
-		//stakePool = stakePool
 		require.EqualValues(t, 0,
 			stakePool.Rewards.Blobber+stakePool.Rewards.Validator+stakePool.Rewards.Charge)
 
@@ -387,7 +372,6 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, 186921297, allocation.restMinLockDemand()) // -read above
 	})
-
 }
 
 // ConvertToValue converts ZCN tokens to value
