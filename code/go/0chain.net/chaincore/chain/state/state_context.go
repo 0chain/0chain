@@ -108,7 +108,7 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 
 //AddTransfer - add the transfer
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
-	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
+	if t.Sender != sc.txn.ClientID && t.Sender != sc.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
@@ -158,12 +158,10 @@ func (sc *StateContext) GetMints() []*state.Mint {
 func (sc *StateContext) Validate() error {
 	var amount state.Balance
 	for _, transfer := range sc.transfers {
-		if transfer.ClientID == sc.txn.ClientID {
+		if transfer.Sender == sc.txn.ClientID {
 			amount += transfer.Amount
-		} else {
-			if transfer.ClientID != sc.txn.ToClientID {
-				return state.ErrInvalidTransfer
-			}
+		} else if transfer.Sender != sc.txn.ToClientID {
+			return state.ErrInvalidTransfer
 		}
 		if transfer.Amount < 0 {
 			return state.ErrInvalidTransfer

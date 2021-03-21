@@ -95,68 +95,59 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 		return nil
 	}
 
-	var blocks []*block.Block
+	blocks := make([]*block.Block, 0, 50)
 	blocks = append(blocks, b)
-	cb := b
-	fbr := c.GetLatestFinalizedBlock().Round
+	lfr := c.GetLatestFinalizedBlock().Round
 
-	if fbr == b.Round {
+	round := b.Round
+	if lfr == round {
 		Logger.Error("Finalized block is not computed")
 		return errors.New("finalized block is not computed")
 	}
 
-	for i := 0; i < 10; i++ {
-		pb := c.GetLocalPreviousBlock(ctx, cb)
+	for r := round - 1; r >= lfr; r-- {
+		rd := c.GetRound(r)
+		if rd == nil {
+			Logger.Error("Round does not exist",
+				zap.Int64("round", r),
+				zap.Int64("current_round", round),
+				zap.Int64("latest_finalized_round", lfr))
+			return fmt.Errorf("round does not exist, round: %d, current_round: %d, latest_determinisitc_round: %d", r, round, lfr)
+		}
+
+		pb := rd.GetHeaviestNotarizedBlock()
 		if pb == nil {
-			Logger.Error("Found no local previous block",
-				zap.String("hash", cb.Hash),
-				zap.Int64("round", cb.Round))
-			return errors.New("no local previous block")
+			Logger.Error("Found no block on previous round", zap.Int64("round", r))
+			return errors.New("no previous round block")
 		}
 
 		blocks = append(blocks, pb)
-		if pb.IsStateComputed() {
-			switch ndb := pb.ClientState.GetNodeDB().(type) {
-			case *util.LevelNodeDB:
-				prevDB := ndb.GetPrev()
-				// break if the previous block's db is either level node db or pnode db
-				if _, ok := prevDB.(*util.MemoryNodeDB); !ok {
-					break
-				}
-			case *util.PNodeDB:
-				break
-			}
-		}
-
-		if pb.Round <= fbr {
-			// reached out to the last finalized block
-			if !pb.IsStateComputed() {
-				Logger.Error("Finalized block is not computed")
-				return errors.New("finalized block is not computed")
-			}
+		if r == lfr {
+			Logger.Debug("Reached the latest finalized block round",
+				zap.Int64("round", pb.Round),
+				zap.Int64("current_round", round),
+				zap.Int64("round_gap", round-pb.Round))
 			break
 		}
-
-		cb = pb
 	}
-
-	Logger.Debug("fetchMissingStates, blocks behind",
-		zap.Int("num", len(blocks)-1),
-		zap.Int64("round", b.Round),
-		zap.Int64("lfb round", fbr))
 
 	lastBlock := blocks[len(blocks)-1]
 	if !lastBlock.IsStateComputed() {
 		return errors.New("could not find block with computed state")
 	}
-
-	// calculate the state changes from the block of computed state
+	// calculate the state changes from the latest deterministic block
 	for i := len(blocks) - 2; i >= 0; i-- {
 		// get state change of the block
 		blocks[i].CreateState(lastBlock.ClientState.GetNodeDB())
 		c.GetBlockStateChange(blocks[i])
+		blocks[i].SetPreviousBlock(blocks[i+1])
 		lastBlock = blocks[i]
 	}
+
+	Logger.Debug("updateStateFromNetwork",
+		zap.Int("num", len(blocks)-1),
+		zap.Int64("start_round", lfr),
+		zap.Int64("to_round", round))
 
 	return nil
 }
@@ -321,12 +312,12 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 		StateChangeSizeMetric.Update(int64(len(changes)))
 	}
 	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		Logger.Error("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		Logger.Info("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	} else {
 		Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
 	}
 	if err != nil {
-		Logger.Error("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
+		Logger.Info("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
 	}
 
 	return err
@@ -418,7 +409,6 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	)
 
 	switch txn.TransactionType {
-
 	case transaction.TxnTypeSmartContract:
 		var output string
 		if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
@@ -430,9 +420,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash))
-
 	case transaction.TxnTypeData:
-
 	case transaction.TxnTypeSend:
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
 			state.Balance(txn.Value)))
@@ -457,7 +445,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	}
 
 	for _, transfer := range sctx.GetTransfers() {
-		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID,
+		err = c.transferAmount(sctx, transfer.Sender, transfer.Receiver,
 			state.Balance(transfer.Amount))
 		if err != nil {
 			return
@@ -465,15 +453,15 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	}
 
 	for _, signedTransfer := range sctx.GetSignedTransfers() {
-		err = c.transferAmount(sctx, signedTransfer.ClientID,
-			signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
+		err = c.transferAmount(sctx, signedTransfer.Sender,
+			signedTransfer.Receiver, state.Balance(signedTransfer.Amount))
 		if err != nil {
 			return
 		}
 	}
 
 	for _, mint := range sctx.GetMints() {
-		err = c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
+		err = c.mintAmount(sctx, mint.Receiver, state.Balance(mint.Amount))
 		if err != nil {
 			Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash))

@@ -44,6 +44,7 @@ func main() {
 	keysFile := flag.String("keys_file", "", "keys_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
+	initialStatesFile := flag.String("initial_states", "", "initial_states")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -58,7 +59,7 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-	transaction.SetTxnFee(viper.GetInt64("server_chain.transaction.min_fee"))
+	transaction.SetTxnFee(state.Balance(viper.GetInt64("server_chain.transaction.min_fee")))
 
 	config.SetServerChainID(config.Configuration.ChainID)
 
@@ -85,12 +86,25 @@ func main() {
 	mc := miner.GetMinerChain()
 	mc.SetDiscoverClients(viper.GetBool("server_chain.client.discover"))
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
+	mc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
+	mc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
+	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	mc.SetupConfigInfoDB()
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
+
+	if *initialStatesFile == "" {
+		*initialStatesFile = viper.GetString("network.initial_states")
+	}
+
+	initStates := state.NewInitStates()
+	err = initStates.Read(*initialStatesFile)
+	if err != nil {
+		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
+	}
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
@@ -118,7 +132,7 @@ func main() {
 	}
 	// @todo handle error
 	gb, _ := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock)
+		magicBlock, initStates)
 	mb := mc.GetLatestMagicBlock()
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 

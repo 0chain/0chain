@@ -128,7 +128,7 @@ type stakePoolSettings struct {
 	// NumDelegates maximum allowed.
 	NumDelegates int `json:"num_delegates"`
 	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater then max_charge of the SC
+	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
 	// then the blobber can't be registered / updated.
 	ServiceCharge float64 `json:"service_charge"`
 }
@@ -142,7 +142,7 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return errors.New("negative service charge")
 	}
 	if sps.ServiceCharge > conf.MaxCharge {
-		return fmt.Errorf("service_charge (%f) is greater then"+
+		return fmt.Errorf("service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.NumDelegates <= 0 {
@@ -453,9 +453,9 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	}
 
 	err = balances.AddMint(&state.Mint{
-		Minter:     sscID,         // storage SC
-		ToClientID: dp.DelegateID, // delegate wallet
-		Amount:     mint,          // move total mints at once
+		Minter:   sscID,         // storage SC
+		Receiver: dp.DelegateID, // delegate wallet
+		Amount:   mint,          // move total mints at once
 	})
 
 	if err != nil {
@@ -915,7 +915,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < int64(conf.StakePool.MinLock) {
+	if t.Value < conf.StakePool.MinLock {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}

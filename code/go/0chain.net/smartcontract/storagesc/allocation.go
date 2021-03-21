@@ -891,7 +891,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 		return sc.closeAllocation(t, alloc, balances)
 	}
 
-	// an allocation can't be shorter then configured in SC
+	// an allocation can't be shorter than configured in SC
 	// (prevent allocation shortening for entire period)
 	if request.Expiration < 0 &&
 		newExpiration-t.CreationDate < toSeconds(conf.MinAllocDuration) {

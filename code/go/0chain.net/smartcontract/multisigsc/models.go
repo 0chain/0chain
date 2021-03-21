@@ -264,8 +264,8 @@ type Vote struct {
 
 func (v Vote) notTooBig() bool {
 	return len(v.ProposalID) <= MaxFieldSize &&
-		len(v.Transfer.ClientID) <= MaxFieldSize &&
-		len(v.Transfer.ToClientID) <= MaxFieldSize &&
+		len(v.Transfer.Sender) <= MaxFieldSize &&
+		len(v.Transfer.Receiver) <= MaxFieldSize &&
 		len(v.Signature) <= MaxFieldSize
 }
 
@@ -279,7 +279,7 @@ func (v Vote) hasSignature() bool {
 
 func (v Vote) getProposalRef() proposalRef {
 	return proposalRef{
-		ClientID:   v.Transfer.ClientID,
+		ClientID:   v.Transfer.Sender,
 		ProposalID: v.ProposalID,
 	}
 }
@@ -338,7 +338,7 @@ func (p *proposal) Decode(input []byte) error {
 }
 
 func (p proposal) isEmpty() bool {
-	return p.Transfer.ClientID == ""
+	return p.Transfer.Sender == ""
 }
 
 func (p proposal) isExpired(now common.Timestamp) bool {
@@ -347,13 +347,13 @@ func (p proposal) isExpired(now common.Timestamp) bool {
 
 func (p proposal) ref() proposalRef {
 	return proposalRef{
-		ClientID:   p.Transfer.ClientID,
+		ClientID:   p.Transfer.Sender,
 		ProposalID: p.ProposalID,
 	}
 }
 
 func (p proposal) getKey() datastore.Key {
-	return getProposalKey(p.Transfer.ClientID, p.ProposalID)
+	return getProposalKey(p.Transfer.Sender, p.ProposalID)
 }
 
 func getProposalKey(clientID, proposalID string) datastore.Key {

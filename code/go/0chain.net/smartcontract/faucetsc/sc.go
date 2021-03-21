@@ -114,7 +114,7 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
-		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
+		if t.Value > 0 && t.Value < gn.MaxPourAmount {
 			pourAmount = state.Balance(t.Value)
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)

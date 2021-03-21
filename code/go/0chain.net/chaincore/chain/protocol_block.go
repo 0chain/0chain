@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/chaincore/state"
 	"context"
 	"fmt"
 	"time"
@@ -217,7 +218,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	if fb.RoundRank >= c.NumGenerators || fb.RoundRank < 0 {
-		Logger.Warn("FB round rank is invalid or greater then num_generators",
+		Logger.Warn("FB round rank is invalid or greater than num_generators",
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", c.NumGenerators))
 	} else {
@@ -479,11 +480,11 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 }
 
 func (c *Chain) updateFeeStats(fb *block.Block) {
-	var totalFees int64
+	var totalFees state.Balance
 	for _, txn := range fb.Txns {
 		totalFees += txn.Fee
 	}
-	meanFees := totalFees / int64(len(fb.Txns))
+	meanFees := int64(totalFees) / int64(len(fb.Txns))
 	c.FeeStats.MeanFees = meanFees
 	if meanFees > c.FeeStats.MaxFees {
 		c.FeeStats.MaxFees = meanFees

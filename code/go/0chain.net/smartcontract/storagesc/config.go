@@ -23,7 +23,7 @@ func scConfigKey(scKey string) datastore.Key {
 // stake pool configs
 
 type stakePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
+	MinLock          state.Balance `json:"min_lock"`
 	// Interest rate of the stake pool
 	InterestRate     float64       `json:"interest_rate"`
 	InterestInterval time.Duration `json:"interest_interval"`
@@ -32,7 +32,7 @@ type stakePoolConfig struct {
 // read pool configs
 
 type readPoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
+	MinLock       state.Balance `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
@@ -40,7 +40,7 @@ type readPoolConfig struct {
 // write pool configurations
 
 type writePoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
+	MinLock       state.Balance `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
@@ -123,7 +123,7 @@ type scConfig struct {
 
 func (sc *scConfig) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less then 1s: %s", sc.TimeUnit)
+		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
@@ -281,21 +281,24 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
+	conf.ReadPool.MinLock = state.Balance(scc.GetFloat64(
+		pfx + "readpool.min_lock")) * 1e10
 	conf.ReadPool.MinLockPeriod = scc.GetDuration(
 		pfx + "readpool.min_lock_period")
 	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
 		pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock = int64(scc.GetFloat64(pfx+"writepool.min_lock") * 1e10)
+	conf.WritePool.MinLock = state.Balance(scc.GetFloat64(
+		pfx + "writepool.min_lock")) * 1e10
 	conf.WritePool.MinLockPeriod = scc.GetDuration(
 		pfx + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = scc.GetDuration(
 		pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
+	conf.StakePool.MinLock = state.Balance(scc.GetFloat64(
+		pfx + "stakepool.min_lock") * 1e10)
 	conf.StakePool.InterestRate = scc.GetFloat64(
 		pfx + "stakepool.interest_rate")
 	conf.StakePool.InterestInterval = scc.GetDuration(

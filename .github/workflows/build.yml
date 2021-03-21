@@ -34,11 +34,12 @@ jobs:
 
     - name: Build miner
       run: |
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner -f docker.local/build.miner/Dockerfile .
-        docker tag miner $MINER_REGISTRY:$TAG
+        sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $MINER_REGISTRY:$TAG -f "$DOCKERFILE_MINER" .
         docker push $MINER_REGISTRY:$TAG
       env:
         TAG: ${{ steps.get_version.outputs.VERSION }}
+        DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
   dockerize_sharder:
     runs-on: ubuntu-20.04

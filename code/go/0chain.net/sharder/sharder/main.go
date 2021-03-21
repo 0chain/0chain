@@ -87,6 +87,7 @@ func main() {
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	minioFile := flag.String("minio_file", "", "minio_file")
+	initialStatesFile := flag.String("initial_states", "", "initial_states")
 	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -135,9 +136,22 @@ func main() {
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB()
+	sc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
+	sc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
+	sc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
+
+	if *initialStatesFile == "" {
+		*initialStatesFile = viper.GetString("network.initial_states")
+	}
+
+	initStates := state.NewInitStates()
+	err = initStates.Read(*initialStatesFile)
+	if err != nil {
+		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
+	}
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
@@ -166,7 +180,7 @@ func main() {
 
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock)
+		magicBlock, initStates)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()

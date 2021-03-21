@@ -193,14 +193,14 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	gn.MaxS = conf.GetInt(pfx + "max_s")
 	gn.MinS = conf.GetInt(pfx + "min_s")
 	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")
-	gn.RewardRoundFrequency = conf.GetInt64(pfx + "reward_round_frequency")
+	gn.RewardRoundPeriod = conf.GetInt64(pfx + "reward_round_period")
 
 	// check bounds
 	if gn.MinN < 1 {
 		return nil, fmt.Errorf("min_n is too small: %d", gn.MinN)
 	}
 	if gn.MaxN < gn.MinN {
-		return nil, fmt.Errorf("max_n is less then min_n: %d < %d",
+		return nil, fmt.Errorf("max_n is less than min_n: %d < %d",
 			gn.MaxN, gn.MinN)
 	}
 
@@ -208,7 +208,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 		return nil, fmt.Errorf("min_s is too small: %d", gn.MinS)
 	}
 	if gn.MaxS < gn.MinS {
-		return nil, fmt.Errorf("max_s is less then min_s: %d < %d",
+		return nil, fmt.Errorf("max_s is less than min_s: %d < %d",
 			gn.MaxS, gn.MinS)
 	}
 
@@ -241,4 +241,18 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	}
 	un.Decode(us.Encode())
 	return un, err
+}
+
+func (msc *MinerSmartContract) readPools(list *ConsensusNodes,
+	state cstate.StateContextI) (result []*ConsensusNode, err error) {
+
+	for _, simple := range list.Nodes {
+		var node *ConsensusNode
+		if node, err = msc.getConsensusNode(simple.ID, state); err == nil {
+			result = append(result, node)
+		} else {
+			return nil, err
+		}
+	}
+	return result, nil
 }

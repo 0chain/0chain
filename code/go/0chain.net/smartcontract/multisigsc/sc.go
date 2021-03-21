@@ -158,7 +158,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	}
 
 	// Check that the multi-sig wallet is registered.
-	w, err := ms.getWallet(v.Transfer.ClientID, balances)
+	w, err := ms.getWallet(v.Transfer.Sender, balances)
 	if err != nil {
 		// I/O error.
 		return "", err

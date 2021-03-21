@@ -16,6 +16,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -172,8 +173,8 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
-func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) (*block.Block, error) {
-	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
+func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) (*block.Block, error) {
+	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	if gr == nil || gb == nil {
 		return nil, errors.New("genesis round/block can't be null")
 	}

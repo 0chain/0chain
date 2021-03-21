@@ -369,7 +369,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 		sort.SliceStable(pcounts, func(i, j int) bool {
 			return pcounts[i].Proposals > pcounts[j].Proposals
 		})
-		Logger.Error("get block to extend - no notarized block",
+		Logger.Info("get block to extend - no notarized block",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("num_proposals", len(proposals)),
 			zap.Any("verification_tickets", pcounts))
@@ -556,7 +556,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
-			Logger.Error("generate block - multiple tries",
+			Logger.Info("generate block - multiple tries",
 				zap.Int64("round", b.Round), zap.Int("tries", generationTries))
 		}
 		break
@@ -758,7 +758,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
-			Logger.Warn("round rank is invalid or greater then num_generators",
+			Logger.Warn("round rank is invalid or greater than num_generators",
 				zap.String("hash", b.Hash), zap.Int64("round", b.Round),
 				zap.Int("round_rank", b.RoundRank),
 				zap.Int("num_generators", mc.NumGenerators))
@@ -1183,7 +1183,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 		b := r.Block
 		if b != nil {
 			if mc.GetRoundTimeoutCount() <= 10 {
-				Logger.Error("sending the best block to the network",
+				Logger.Info("sending the best block to the network",
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
 			}
@@ -1199,7 +1199,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 	}
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Info("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
 		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		//TODO: should have a means to send an email/SMS to someone or something like that
@@ -1215,7 +1215,7 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 
 	var lfb = mc.GetLatestFinalizedBlock()
 
-	// don't kick more then 5 blocks at once
+	// don't kick more than 5 blocks at once
 	e := mc.GetCurrentRound() // loop variables
 	var count int
 	i := lfb.Round
@@ -1248,7 +1248,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 
 	Logger.Info("restartRound->kickSharders: kick sharders")
 
-	// don't kick more then 5 blocks at once
+	// don't kick more than 5 blocks at once
 	var (
 		s, c, i = tk.Round, mc.GetCurrentRound(), 0 // loop variables
 		ahead   = config.GetLFBTicketAhead()
@@ -1355,7 +1355,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 	)
 
 	// kick new round from the new LFB from sharders, if it's newer
-	// then the current one
+	// than the current one
 	if updated {
 		if lfb.Round > round {
 			mc.kickRoundByLFB(ctx, lfb) // and continue
