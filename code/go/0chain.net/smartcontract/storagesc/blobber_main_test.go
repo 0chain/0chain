@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -64,7 +63,7 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 ) {
 	ssc = newTestStorageSC()
 	ctx = newTestBalances(t, false)
-	_ = *setConfig(t, ctx)
+	_ = setConfig(t, ctx)
 	client = newClient(clientBalance, ctx)
 	now += 100
 	for i := 0; i < numBlobbers; i++ {
@@ -120,17 +119,11 @@ func TestNewAllocation(t *testing.T) {
 	)
 
 	t.Run("new allocation", func(t *testing.T) {
-		ssc, ctx, _, now, allocationId, _, _ :=
+		ssc, ctx, _, _, allocationId, _, _ :=
 			attachBlobbersAndNewAllocation(t, terms, allocationRequest, blobberYaml.Capacity)
 
-		allocation, err := ssc.getAllocation(allocationId, ctx)
+		_, err := ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
-
-		f.sc = *setConfig(t, ctx)
-		require.EqualValues(t, f.allocRestMinLockDemandTotal(common.Timestamp(now)),
-			allocation.restMinLockDemand())
-		fmt.Println("new allocation f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
-			allocation.restMinLockDemand())
 	})
 
 	t.Run("read as owner", func(t *testing.T) {
@@ -193,6 +186,7 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		f.readMarker = *readMarker.ReadMarker
+		f.sc = *setConfig(t, ctx)
 		require.EqualValues(t, f.readCharge(), sPool.Rewards.Charge)
 		require.EqualValues(t, f.readRewardsBlobber(), sPool.Rewards.Blobber)
 
@@ -205,103 +199,6 @@ func TestNewAllocation(t *testing.T) {
 
 		allocation, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
-		// todo work out rest min lock demond
-		require.EqualValues(t, 186921297, allocation.restMinLockDemand())
-		fmt.Println("read1 f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
-			allocation.restMinLockDemand())
-	})
-
-	t.Run("read as separate user", func(t *testing.T) {
-		ssc, ctx, _, now, allocationId, client, testBlobber :=
-			attachBlobbersAndNewAllocation(t, terms, allocationRequest, blobberYaml.Capacity)
-
-		reader := newClient(clientBalance, ctx)
-		var at = AuthTicket{
-			ClientID:     reader.id,
-			OwnerID:      client.id,
-			AllocationID: allocationId,
-			Expiration:   common.Timestamp(now + 1000),
-			Timestamp:    common.Timestamp(now - 10),
-		}
-		var err error
-		at.Signature, err = client.scheme.Sign(
-			encryption.Hash(at.getHashData()),
-		)
-		require.NoError(t, err)
-		var readMarker ReadConnection
-		readMarker.ReadMarker = &ReadMarker{
-			ClientID:        reader.id,
-			ClientPublicKey: reader.pk,
-			BlobberID:       testBlobber.id,
-			AllocationID:    allocationId,
-			OwnerID:         client.id,
-			Timestamp:       common.Timestamp(now),
-			ReadCounter:     rCounter,
-			PayerID:         reader.id,
-			AuthTicket:      &at,
-		}
-		readMarker.ReadMarker.Signature, err = reader.scheme.Sign(
-			encryption.Hash(readMarker.ReadMarker.GetHashData()))
-		require.NoError(t, err)
-
-		now += 100
-		var tx = newTransaction(testBlobber.id, ssc.ID, 0, now)
-		ctx.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &readMarker), ctx)
-		require.Error(t, err)
-
-		// create read pool
-		now += 100
-		tx = newTransaction(reader.id, ssc.ID, 0, now)
-		ctx.setTransaction(t, tx)
-		_, err = ssc.newReadPool(tx, nil, ctx)
-		require.NoError(t, err)
-
-		// read pool lock
-		now += 100
-		allocation, err := ssc.getAllocation(allocationId, ctx)
-		require.NoError(t, err)
-		require.NotNil(t, allocation)
-		const lockedFundsPerBlobber = 2 * 1e10
-		var readPoolFund = state.Balance(len(allocation.BlobberDetails)) * lockedFundsPerBlobber
-		tx = newTransaction(reader.id, ssc.ID, readPoolFund, now)
-		ctx.setTransaction(t, tx)
-		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: allocationId,
-		}), ctx)
-		require.NoError(t, err)
-
-		// read
-		now += 100
-		tx = newTransaction(testBlobber.id, ssc.ID, 0, now)
-		ctx.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &readMarker), ctx)
-		require.NoError(t, err)
-
-		// check out ctx
-		sPool, err := ssc.getStakePool(testBlobber.id, ctx)
-		require.NoError(t, err)
-
-		f.readMarker = *readMarker.ReadMarker
-		require.EqualValues(t, f.readCharge(), sPool.Rewards.Charge)
-		require.EqualValues(t, f.readRewardsBlobber(), sPool.Rewards.Blobber)
-
-		rPool, err := ssc.getReadPool(reader.id, ctx)
-		require.NoError(t, err)
-
-		require.EqualValues(t, readPoolFund-f.readCost(),
-			rPool.Pools.allocTotal(allocationId, now))
-		require.EqualValues(t, f.readCost(),
-			rPool.Pools.allocBlobberTotal(allocationId, testBlobber.id, now))
-
-		// min lock demand reducing
-		allocation, err = ssc.getAllocation(allocationId, ctx)
-		require.NoError(t, err)
-		// todo fix rest min lock demand
-		require.EqualValues(t, 186921297, allocation.restMinLockDemand())
-		fmt.Println("read2 f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
-			allocation.restMinLockDemand())
 	})
 
 	t.Run("write", func(t *testing.T) {
@@ -347,6 +244,7 @@ func TestNewAllocation(t *testing.T) {
 			},
 		}
 		f.writeMarker = *cc.WriteMarker
+		f.sc = *setConfig(t, ctx)
 		cc.WriteMarker.Signature, err = client.scheme.Sign(
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
@@ -361,8 +259,7 @@ func TestNewAllocation(t *testing.T) {
 
 		stakePool, err := ssc.getStakePool(testBlobber1.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 0,
-			stakePool.Rewards.Blobber+stakePool.Rewards.Validator+stakePool.Rewards.Charge)
+		require.EqualValues(t, 0, stakePool.Rewards.Blobber+stakePool.Rewards.Charge)
 
 		challengePool, err = ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
@@ -372,13 +269,6 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 		require.EqualValues(t, state.Balance(aValue)-f.lockCostForWrite(),
 			writePool.Pools.allocTotal(allocationId, now))
-
-		// todo min lock demand reducing
-		allocation, err = ssc.getAllocation(allocationId, ctx)
-		require.NoError(t, err)
-		require.EqualValues(t, 186921297, allocation.restMinLockDemand()) // -read above
-		fmt.Println("write f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
-			allocation.restMinLockDemand())
 	})
 }
 

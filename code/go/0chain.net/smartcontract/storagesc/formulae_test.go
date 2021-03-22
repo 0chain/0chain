@@ -22,8 +22,8 @@ func (f formulae) writeChargeRate() state.Balance {
 
 func (f formulae) lockCostForWrite() state.Balance {
 	var writeChargeRate = float64(f.writeChargeRate())
-
-	return state.Balance(writeChargeRate * f.lockTimeLeftTU())
+	var timeLeft = f.lockTimeLeftTU()
+	return state.Balance(writeChargeRate * timeLeft)
 }
 
 func (f formulae) readCharge() state.Balance {
@@ -56,35 +56,23 @@ func (f formulae) readCost() (value state.Balance) {
 	return state.Balance(readSizeGB * readPricePerGB)
 }
 
-// Allocation formulae
-//
-func (f formulae) allocRestMinLockDemandTotal(now common.Timestamp) state.Balance {
-	var lockPerBlobber = f.allocLockDemandPerBlobber(f.allocPerBlobber(), now)
-	return state.Balance(f.ar.DataShards+f.ar.ParityShards) * lockPerBlobber
-}
-
-func (f formulae) allocPerBlobber() float64 {
-	var shards = int64(f.ar.DataShards + f.ar.ParityShards)
-	var bSize = (f.ar.Size + shards - 1) / shards
-	return sizeInGB(bSize)
-}
-
-func (f formulae) allocLockDemandPerBlobber(gbSize float64, now common.Timestamp) state.Balance {
-	var writePrice = float64(zcnToBalance(f.blobber.WritePrice))
-	var remaining = f.remainingTimeTUs(now)
-	return state.Balance(writePrice * gbSize * remaining * f.blobber.MinLockDemand)
-}
-
 // Utility functions
 //
 func (f formulae) remainingTimeTUs(now common.Timestamp) float64 {
-	return f.toTimeUnits(f.ar.Expiration - now)
+	var expiration = f.ar.Expiration
+
+	return f.toTimeUnits(expiration - now)
 }
 
 func (f formulae) toTimeUnits(duration common.Timestamp) float64 {
+	if f.sc.TimeUnit == 0 {
+		panic("must be > 0, make sure you are setting f.sc")
+	}
 	return float64(duration.Duration()) / float64(f.sc.TimeUnit)
 }
 
 func (f formulae) lockTimeLeftTU() float64 {
-	return f.remainingTimeTUs(f.writeMarker.Timestamp)
+	var now = f.writeMarker.Timestamp
+
+	return f.remainingTimeTUs(now)
 }
