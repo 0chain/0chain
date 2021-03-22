@@ -216,7 +216,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 }
 
 // move tokens from challenge pool back to write pool
-func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
+func (sc *StorageSmartContract) blobberPenalty(creationDate common.Timestamp,
 	alloc *StorageAllocation, prev common.Timestamp, bc *BlobberChallenge,
 	details *BlobberAllocation, validators []string,
 	balances c_state.StateContextI) (err error) {
@@ -302,7 +302,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		// make sure all mints not payed yet be payed before the stake
 		// pools will be slashed
 		var info *stakePoolUpdateInfo
-		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		info, err = sp.update(conf, sc.ID, creationDate, balances)
 		if err != nil {
 			return fmt.Errorf("updating stake pool: %v", err)
 		}
@@ -352,7 +352,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 var challengeMu = &sync.Mutex{}
 
-func (sc *StorageSmartContract) clearExpiredChallenges(t *transaction.Transaction, balances c_state.StateContextI) error {
+func (sc *StorageSmartContract) clearExpiredChallenges(creationDate common.Timestamp, balances c_state.StateContextI) error {
 
 	challengeMu.Lock()
 	defer challengeMu.Unlock()
@@ -367,25 +367,28 @@ func (sc *StorageSmartContract) clearExpiredChallenges(t *transaction.Transactio
 		if err != nil {
 			return err
 		}
-		var freshChallenges []*StorageChallenge
+		var isChallengeExpired = make(map[*StorageChallenge]bool)
 		for _, challenge := range blobberChallengeObj.Challenges {
 
 			var alloc *StorageAllocation
 			alloc, err = sc.getAllocation(challenge.AllocationID, balances)
 			if err != nil {
-				return err
+				Logger.Error("challenge has invalid allocation id - "+err.Error(), zap.Any("challenge_id", challenge.ID), zap.Any("allocation_id", challenge.AllocationID))
+				continue
 			}
 
-			details, ok := alloc.BlobberMap[t.ClientID]
+			details, ok := alloc.BlobberMap[blobber.ID]
 			if !ok {
-				return common.NewError("clear_expired_challenges",
-					"Blobber is not part of the allocation")
+				Logger.Error("Blobber is not part of the allocation", zap.Any("challenge_id", challenge.ID), zap.Any("allocation_id", challenge.AllocationID),
+					zap.Any("blobber_id", blobber.ID))
+				continue
 			}
 
 			cct := toSeconds(details.Terms.ChallengeCompletionTime)
-			fresh := challenge.Created+cct >= t.CreationDate
+			fresh := challenge.Created+cct >= creationDate
 
 			if !fresh {
+				isChallengeExpired[challenge] = true
 				// time of previous complete challenge (not the current one)
 				// or allocation start time if no challenges
 				var prev = alloc.StartTime
@@ -405,18 +408,27 @@ func (sc *StorageSmartContract) clearExpiredChallenges(t *transaction.Transactio
 
 				sc.challengeResolved(balances, false)
 
-				err := sc.blobberPenalty(t, alloc, prev, blobberChallengeObj, details,
+				err := sc.blobberPenalty(creationDate, alloc, prev, blobberChallengeObj, details,
 					nil, balances)
 				if err != nil {
-					return err
+					Logger.Error("could not penalize parties for expired challenge", zap.Any("challenge_id", challenge.ID), zap.Any("allocation_id", challenge.AllocationID),
+						zap.Any("blobber_id", blobber.ID))
+					continue
 				}
 
 				// save allocation object
 				_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 				if err != nil {
-					return err
+					Logger.Error("could not update allocation while clearing expired challenges", zap.Any("challenge_id", challenge.ID), zap.Any("allocation_id", challenge.AllocationID),
+						zap.Any("blobber_id", blobber.ID))
+					continue
 				}
-			} else {
+			}
+		}
+
+		var freshChallenges []*StorageChallenge
+		for _, challenge := range blobberChallengeObj.Challenges {
+			if !isChallengeExpired[challenge] {
 				freshChallenges = append(freshChallenges, challenge)
 			}
 		}
@@ -598,7 +610,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
-		err = sc.blobberPenalty(t, alloc, prev, blobberChall, details,
+		err = sc.blobberPenalty(t.CreationDate, alloc, prev, blobberChall, details,
 			validators, balances)
 		if err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
@@ -646,7 +658,7 @@ func (sc *StorageSmartContract) challengeTriggers(t *transaction.Transaction,
 		return err
 	}
 
-	err = sc.clearExpiredChallenges(t, balances)
+	err = sc.clearExpiredChallenges(t.CreationDate, balances)
 	if err != nil {
 		return err
 	}
