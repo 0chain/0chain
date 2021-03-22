@@ -10,12 +10,41 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const CHUNK_SIZE = 64 * KB // hardcoded in blobber.go
+
+type mockBlobberYml struct {
+	ReadPrice               float64 //token / GB for reading
+	WritePrice              float64 //token / GB / time_unit for writing
+	Capacity                int64   // 1 GB bytes total blobber capacity
+	MinLockDemand           float64
+	MaxOfferDuration        time.Duration
+	ChallengeCompletionTime time.Duration
+	MinStake                float64
+	MaxStake                float64
+	NumDelegates            int
+	ServiceCharge           float64
+}
+
+var (
+	blobberYaml = mockBlobberYml{
+		Capacity:                2 * GB,
+		ReadPrice:               1,
+		WritePrice:              5,   // ---- restMinLockDemand -----
+		MinLockDemand:           0.1, // ---- restMinLockDemand -----
+		MaxOfferDuration:        1 * time.Hour,
+		ChallengeCompletionTime: 200 * time.Second,
+		MinStake:                0,
+		MaxStake:                1000 * x10,
+		NumDelegates:            100,
+		ServiceCharge:           0.3,
+	}
 )
 
 func TestStorageSmartContract_addBlobber(t *testing.T) {
@@ -97,544 +126,211 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	require.Error(t, err)
 }
 
-func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
-	allocID, clientID string, toks state.Balance, tp int64, dur time.Duration,
-	balances *testBalances) {
+// Test payments for some simple cases
+// read - Checks service charge, payment to the blobber and increment to read pool
+// write - Checks read lock added to challange pool for later blobber payment and
+//         subtracted from locked allocation amount.
+func TestFeesPayments(t *testing.T) {
+	const (
+		numBlobbers                  = 30
+		blobberBalance state.Balance = 50 * x10
+		clientBalance  state.Balance = 100 * x10
 
-	var tx = transaction.Transaction{
-		Value:        toks,
-		ClientID:     clientID,
-		CreationDate: common.Timestamp(tp),
-	}
+		readSize        = 1 * GB
+		readCount int64 = readSize / CHUNK_SIZE
 
-	var keep = balances.txn // back up
+		// allocation setup constants
+		aValue                state.Balance = 15 * x10
+		aMaxReadPrice                       = 10 * x10
+		aMinReadPrice                       = 1 * x10
+		aMinWritePrice                      = 2 * x10
+		aMaxWritePrice                      = 20 * x10
+		aMaxChallengeCompTime               = 200 * time.Hour
+		aRequestSize                        = 2 * GB
+		aDataShards                         = 10
+		aParityShards                       = 10
 
-	balances.txn = &tx
-	var _, err = ssc.writePoolLock(&tx, mustEncode(t, &lockRequest{
-		AllocationID: allocID,
-		Duration:     dur,
-	}), balances)
-	require.NoError(t, err)
-
-	balances.txn = keep // restore
-
-}
-
-// - create allocation
-// - write
-// - read as owner
-// - read as not an owner
-// - delete
-// - challenge passed
-func Test_flow_reward(t *testing.T) {
-
+		// write
+		allocationRoot        = "root-1"
+		writeSize             = 100 * 1024 * 1024 // 100 MB
+		lockedFundsPerBlobber = 2 * 1e10
+	)
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		client         = newClient(100*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
-
-		// no owner
-		reader = newClient(100*x10, balances)
-		err    error
+		aExpiration int64 = int64(toSeconds(time.Hour))
+		terms             = Terms{
+			ReadPrice:               zcnToBalance(blobberYaml.ReadPrice),
+			WritePrice:              zcnToBalance(blobberYaml.WritePrice),
+			MinLockDemand:           blobberYaml.MinLockDemand,
+			MaxOfferDuration:        blobberYaml.MaxOfferDuration,
+			ChallengeCompletionTime: blobberYaml.ChallengeCompletionTime,
+		}
+		allocationRequest = newAllocationRequest{ // input to ./zbox --newallocation
+			DataShards:                 aDataShards,                                // --data
+			ParityShards:               aParityShards,                              // -parity
+			Expiration:                 common.Timestamp(aExpiration),              // --expire
+			ReadPriceRange:             PriceRange{aMinReadPrice, aMaxReadPrice},   // --lock
+			WritePriceRange:            PriceRange{aMinWritePrice, aMaxWritePrice}, // --lock
+			Size:                       aRequestSize,                               // --size
+			MaxChallengeCompletionTime: aMaxChallengeCompTime,                      // --mcct
+		}
+		f formulae = formulae{
+			blobber: blobberYaml,
+			ar:      allocationRequest,
+		}
 	)
 
-	setConfig(t, balances)
+	t.Run("new allocation", func(t *testing.T) {
+		ssc, ctx, _, _, allocationId, _, _ := attachBlobbersAndNewAllocation(t, terms,
+			allocationRequest, blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
 
-	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
+		_, err := ssc.getAllocation(allocationId, ctx)
+		require.NoError(t, err)
+	})
 
-	// blobbers: stake 10k, balance 40k
-
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	var b1 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
-			b1 = b
-			break
+	t.Run("read", func(t *testing.T) {
+		ssc, ctx, _, now, allocationId, client, testBlobber :=
+			attachBlobbersAndNewAllocation(t, terms, allocationRequest,
+				blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
+		require.NotNil(t, testBlobber)
+		var readMarker = ReadConnection{
+			ReadMarker: &ReadMarker{
+				ClientID:        client.id,
+				ClientPublicKey: client.pk,
+				BlobberID:       testBlobber.id,
+				AllocationID:    allocationId, // --alocation
+				OwnerID:         client.id,
+				Timestamp:       common.Timestamp(now),
+				ReadCounter:     readCount,
+				PayerID:         client.id,
+			},
 		}
-	}
-	require.NotNil(t, b1)
-
-	require.EqualValues(t, 202546280, alloc.restMinLockDemand())
-
-	t.Run("read as owner", func(t *testing.T) {
-		tp += 100
-		var rm ReadConnection
-		rm.ReadMarker = &ReadMarker{
-			ClientID:        client.id,
-			ClientPublicKey: client.pk,
-			BlobberID:       b1.id,
-			AllocationID:    allocID,
-			OwnerID:         client.id,
-			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     (1 * GB) / (64 * KB),
-			PayerID:         client.id,
-		}
-		rm.ReadMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(rm.ReadMarker.GetHashData()))
+		var err error
+		readMarker.ReadMarker.Signature, err = client.scheme.Sign(
+			encryption.Hash(readMarker.ReadMarker.GetHashData()))
 		require.NoError(t, err)
 
-		tp += 100
-		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.Error(t, err)
-
 		// create read pool
-		tp += 100
-		tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.newReadPool(tx, nil, balances)
+		now += 100
+		var tx = newTransaction(client.id, ssc.ID, 0, now)
+		ctx.setTransaction(t, tx)
+		_, err = ssc.newReadPool(tx, nil, ctx)
 		require.NoError(t, err)
 
 		// read pool lock
-		tp += 100
-		var readPoolFund = state.Balance(len(alloc.BlobberDetails)) * 2 * 1e10
-		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
-		balances.setTransaction(t, tx)
+		now += 100
+		_, err = ssc.getAllocation(allocationId, ctx)
+		require.NoError(t, err)
+		var readPoolFund = state.Balance(allocationRequest.DataShards+allocationRequest.ParityShards) *
+			lockedFundsPerBlobber
+
+		tx = newTransaction(client.id, ssc.ID, readPoolFund, now)
+		ctx.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
-			AllocationID: allocID,
-		}), balances)
+			AllocationID: allocationId,
+		}), ctx)
 		require.NoError(t, err)
 
-		var rp *readPool
-		rp, err = ssc.getReadPool(client.id, balances)
+		rPool, err := ssc.getReadPool(client.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, rp.allocBlobberTotal(allocID, b1.id, tp))
+		require.EqualValues(t, lockedFundsPerBlobber,
+			rPool.Pools.allocBlobberTotal(allocationId, testBlobber.id, now))
 
 		// read
-		tp += 100
-		tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
+		now += 100
+		tx = newTransaction(testBlobber.id, ssc.ID, 0, now)
+		ctx.setTransaction(t, tx)
+		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &readMarker), ctx)
 		require.NoError(t, err)
 
-		// check out balances
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
+		// check out ctx
+		sPool, err := ssc.getStakePool(testBlobber.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 1e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
-		rp, err = ssc.getReadPool(client.id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund-1e10, rp.allocTotal(allocID, tp))
-		require.EqualValues(t, 1e10, rp.allocBlobberTotal(allocID, b1.id, tp))
+		f.readMarker = *readMarker.ReadMarker
+		f.sc = *setConfig(t, ctx)
+		require.EqualValues(t, f.readServiceCharge(), sPool.Rewards.Charge)
+		require.EqualValues(t, f.readRewardsBlobber(), sPool.Rewards.Blobber)
 
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
+		rPool, err = ssc.getReadPool(client.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
+		require.EqualValues(t, readPoolFund-f.readCost(),
+			rPool.Pools.allocTotal(allocationId, now))
+		require.EqualValues(t, f.readCost(),
+			rPool.Pools.allocBlobberTotal(allocationId, testBlobber.id, now))
+
+		_, err = ssc.getAllocation(allocationId, ctx)
+		require.NoError(t, err)
 	})
-
-	t.Run("read as separate user", func(t *testing.T) {
-		tp += 100
-		var at = AuthTicket{
-			ClientID:     reader.id,
-			OwnerID:      client.id,
-			AllocationID: alloc.ID,
-			Expiration:   common.Timestamp(tp + 1000),
-			Timestamp:    common.Timestamp(tp - 10),
-		}
-		at.Signature, err = client.scheme.Sign(
-			encryption.Hash(at.getHashData()),
-		)
-		require.NoError(t, err)
-		var rm ReadConnection
-		rm.ReadMarker = &ReadMarker{
-			ClientID:        reader.id,
-			ClientPublicKey: reader.pk,
-			BlobberID:       b1.id,
-			AllocationID:    allocID,
-			OwnerID:         client.id,
-			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     (1 * GB) / (64 * KB),
-			PayerID:         reader.id,
-			AuthTicket:      &at,
-		}
-		rm.ReadMarker.Signature, err = reader.scheme.Sign(
-			encryption.Hash(rm.ReadMarker.GetHashData()))
-		require.NoError(t, err)
-
-		tp += 100
-		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.Error(t, err)
-
-		// create read pool
-		tp += 100
-		tx = newTransaction(reader.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.newReadPool(tx, nil, balances)
-		require.NoError(t, err)
-
-		// read pool lock
-		tp += 100
-		tx = newTransaction(reader.id, ssc.ID,
-			state.Balance(len(alloc.BlobberDetails)) * 2 * x10, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: allocID,
-		}), balances)
-		require.NoError(t, err)
-
-		// read
-		tp += 100
-		tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
-		require.NoError(t, err)
-
-		// check out balances
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
-
-		assert.EqualValues(t, 6e9, sp.Rewards.Charge)
-
-		var rp *readPool
-		rp, err = ssc.getReadPool(reader.id, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, 10000000000,
-			rp.allocBlobberTotal(allocID, b1.id, tp))
-
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 192418966, alloc.restMinLockDemand())
-	})
-
-	var b2 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[1].BlobberID {
-			b2 = b
-			break
-		}
-	}
-	require.NotNil(t, b2)
-
-	var until = int64(alloc.Until())
-
-	// balances.balances[client.id] += 200e10
-	// addTokensToWritePool(t, ssc, allocID, client.id, 200e10, tp,
-	// 	20*time.Minute, balances)
 
 	t.Run("write", func(t *testing.T) {
+		ssc, ctx, blobbers, now, allocationId, client, testBlobber1 :=
+			attachBlobbersAndNewAllocation(t, terms, allocationRequest,
+				blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
 
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(allocID, balances)
+		var allocation, err = ssc.getAllocation(allocationId, ctx)
+		require.NoError(t, err)
+		require.NotNil(t, allocation)
+		var until = int64(allocation.Until())
+		var testBlobber2 *Client
+		for _, b := range blobbers {
+			if b.id == allocation.BlobberDetails[1].BlobberID {
+				testBlobber2 = b
+				break
+			}
+		}
+		require.NotNil(t, testBlobber2)
+
+		challengePool, err := ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
 
-		var wp *writePool
-		wp, err = ssc.getWritePool(client.id, balances)
+		writePool, err := ssc.getWritePool(client.id, ctx)
 		require.NoError(t, err)
 
-		var wpb, cpb = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 15*x10, wpb)
-		require.EqualValues(t, 0, cpb)
+		var writePoolTotal = writePool.Pools.allocTotal(allocationId, until)
+		require.EqualValues(t, aValue, writePoolTotal)
+		require.EqualValues(t, 0, challengePool.Balance)
 
-		tp += 100
 		var cc = &BlobberCloseConnection{
-			AllocationRoot:     "root-1",
+			AllocationRoot:     allocationRoot,
 			PrevAllocationRoot: "",
 			WriteMarker: &WriteMarker{
-				AllocationRoot:         "root-1",
+				AllocationRoot:         allocationRoot,
 				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b2.id,
-				Timestamp:              common.Timestamp(tp),
+				AllocationID:           allocationId,
+				Size:                   writeSize,
+				BlobberID:              testBlobber2.id,
+				Timestamp:              common.Timestamp(now),
 				ClientID:               client.id,
 			},
 		}
+		f.writeMarker = *cc.WriteMarker
+		f.sc = *setConfig(t, ctx)
 		cc.WriteMarker.Signature, err = client.scheme.Sign(
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
 		// write
-		tp += 100
-		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
+		now += 100
+		var tx = newTransaction(testBlobber2.id, ssc.ID, 0, now)
+		ctx.setTransaction(t, tx)
+		resp, err := ssc.commitBlobberConnection(tx, mustEncode(t, &cc), ctx)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
 
-		// check out
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
+		stakePool, err := ssc.getStakePool(testBlobber1.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
+		require.EqualValues(t, 0, stakePool.Rewards.Blobber+stakePool.Rewards.Charge)
 
-		cp, err = ssc.getChallengePool(allocID, balances)
+		challengePool, err = ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
+		require.EqualValues(t, f.lockCostForWrite(), challengePool.Balance)
 
-		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
-			float64(avgTerms.WritePrice) *
-			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
-
-		require.EqualValues(t, moved, cp.Balance)
-
-		wp, err = ssc.getWritePool(client.id, balances)
+		writePool, err = ssc.getWritePool(client.id, ctx)
 		require.NoError(t, err)
-
-		require.EqualValues(t, 15*x10-moved,
-			wp.allocTotal(allocID, tp))
-
-		// min lock demand reducing
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 182291652, alloc.restMinLockDemand()) // -read above
+		require.EqualValues(t, state.Balance(aValue)-f.lockCostForWrite(),
+			writePool.Pools.allocTotal(allocationId, now))
 	})
-
-	t.Run("delete", func(t *testing.T) {
-
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		var wp *writePool
-		wp, err = ssc.getWritePool(client.id, balances)
-		require.NoError(t, err)
-
-		var wpb, cpb = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149932183160, wpb)
-		require.EqualValues(t, 67816840, cpb)
-
-		tp += 100
-		var cc = &BlobberCloseConnection{
-			AllocationRoot:     "root-2",
-			PrevAllocationRoot: "root-1",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         "root-2",
-				PreviousAllocationRoot: "root-1",
-				AllocationID:           allocID,
-				Size:                   -50 * 1024 * 1024, // 50 MB
-				BlobberID:              b2.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
-		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
-		require.NoError(t, err)
-
-		// write
-		tp += 100
-		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
-		require.NoError(t, err)
-		require.NotZero(t, resp)
-
-		// check out
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b1.id, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 2e10,
-			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
-
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, 36734122, cp.Balance)
-
-		wp, err = ssc.getWritePool(client.id, balances)
-		require.NoError(t, err)
-
-		require.EqualValues(t, 149963265878, wp.allocTotal(allocID, tp))
-
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-		require.EqualValues(t, 182291652, alloc.restMinLockDemand()) // -read above
-	})
-
-	var b3 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[2].BlobberID {
-			b3 = b
-			break
-		}
-	}
-	require.NotNil(t, b3)
-
-	// add 10 validators
-	var valids []*Client
-	tp += 100
-	for i := 0; i < 10; i++ {
-		valids = append(valids, addValidator(t, ssc, tp, balances))
-	}
-
-	t.Run("challenge pass", func(t *testing.T) {
-
-		var cp *challengePool
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		var wp *writePool
-		wp, err = ssc.getWritePool(client.id, balances)
-		require.NoError(t, err)
-
-		var blobb1 = balances.balances[b3.id]
-
-		var wpb1, cpb1 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149963265878, wpb1)
-		require.EqualValues(t, 36734122, cpb1)
-		require.EqualValues(t, 40*x10, blobb1)
-
-		const allocRoot = "alloc-root-1"
-
-		// write 100 MB
-		tp += 100
-		var cc = &BlobberCloseConnection{
-			AllocationRoot:     allocRoot,
-			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         allocRoot,
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b3.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
-		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
-		require.NoError(t, err)
-
-		// write
-		tp += 100
-		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
-		balances.setTransaction(t, tx)
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
-		require.NoError(t, err)
-		require.NotZero(t, resp)
-
-		// balances
-		cp, err = ssc.getChallengePool(allocID, balances)
-		require.NoError(t, err)
-
-		wp, err = ssc.getWritePool(client.id, balances)
-		require.NoError(t, err)
-
-		var blobb2 = balances.balances[b3.id]
-
-		var wpb2, cpb2 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 149909577547, wpb2)
-		require.EqualValues(t, 90422453, cpb2)
-		require.EqualValues(t, 40*x10, blobb2)
-
-		// until the end
-		alloc, err = ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-
-		// load validators
-		var validators *ValidatorNodes
-		validators, err = ssc.getValidatorsList(balances)
-		require.NoError(t, err)
-
-		// load blobber
-		var blobber *StorageNode
-		blobber, err = ssc.getBlobber(b3.id, balances)
-		require.NoError(t, err)
-
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b3.id, balances)
-		require.NoError(t, err)
-
-		//
-		var (
-			step            = (int64(alloc.Expiration) - tp) / 10
-			challID, prevID string
-			// last loop balances (previous balance)
-			cpl     = cpb2
-			b3l     = sp.Rewards.Blobber + sp.Rewards.Validator
-			validsl []state.Balance
-		)
-		// validators balances
-		for _, val := range valids {
-			validsl = append(validsl, balances.balances[val.id])
-		}
-		// expire the allocation challenging it (+ last challenge)
-		for i := int64(0); i < 10+1; i++ {
-			if i < 10 {
-				tp += step / 2
-			} else {
-				tp += 10 // last challenge, before challenge_completion expired
-			}
-
-			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b3.id, tp, prevID, challID, i, validators.Nodes,
-				alloc.ID, blobber, allocRoot, balances)
-
-			var chall = new(ChallengeResponse)
-			chall.ID = challID
-
-			for _, val := range valids {
-				chall.ValidationTickets = append(chall.ValidationTickets,
-					val.validTicket(t, chall.ID, b3.id, true, tp))
-			}
-
-			tp += step / 2
-			tx = newTransaction(b3.id, ssc.ID, 0, tp)
-			balances.setTransaction(t, tx)
-			var resp string
-			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
-			require.NoError(t, err)
-			require.NotZero(t, resp)
-
-			// check out pools, blobbers, validators balances
-			wp, err = ssc.getWritePool(client.id, balances)
-			require.NoError(t, err)
-
-			// write pool balance should be the same
-			require.EqualValues(t, wpb2, wp.allocTotal(allocID, 0))
-
-			cp, err = ssc.getChallengePool(allocID, balances)
-			require.NoError(t, err)
-
-			// challenge pool tokens should be moved to blobber and validators
-			assert.True(t, cp.Balance < cpl)
-			cpl = cp.Balance
-
-			// blobber reward
-			sp, err = ssc.getStakePool(b3.id, balances)
-			require.NoError(t, err)
-			assert.True(t, b3l < sp.Rewards.Blobber+sp.Rewards.Validator)
-			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
-
-			// validators reward
-			for i, val := range valids {
-				var vsp *stakePool
-				vsp, err = ssc.getStakePool(val.id, balances)
-				require.NoError(t, err)
-				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
-				validsl[i] = vsp.Rewards.Validator
-			}
-
-			// next stage
-			prevID = challID
-		}
-
-	})
-
 }
 
 func inspectCPIV(t *testing.T, name string, ssc *StorageSmartContract,
@@ -855,6 +551,8 @@ func Test_flow_penalty(t *testing.T) {
 				var vsp *stakePool
 				vsp, err = ssc.getStakePool(val.id, balances)
 				require.NoError(t, err)
+				require.NotNil(t, vsp)
+				require.NotNil(t, vsp.Rewards)
 				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
 				validsl[i] = vsp.Rewards.Validator
 			}
@@ -1469,4 +1167,45 @@ func Test_blobber_choose_randomization(t *testing.T) {
 		require.Equal(t, expected, got)
 	}
 
+}
+
+func zcnToBalance(token float64) state.Balance {
+	return state.Balance(token * float64(x10))
+}
+
+func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAllocationRequest, capacity int64,
+	clientBalance, blobberBalance, value state.Balance, numBlobbers int,
+) (ssc *StorageSmartContract, ctx *testBalances,
+	blobbers []*Client, now int64, allocationId string, client *Client, testBlobber *Client,
+) {
+	ssc = newTestStorageSC()
+	ctx = newTestBalances(t, false)
+	_ = setConfig(t, ctx)
+	client = newClient(clientBalance, ctx)
+	now += 100
+	for i := 0; i < numBlobbers; i++ {
+		var blobber = addBlobber(t, ssc, capacity, now, terms, blobberBalance, ctx)
+		blobbers = append(blobbers, blobber)
+	}
+
+	now += 100
+
+	aRequest.Owner = client.id
+	aRequest.OwnerPublicKey = client.pk
+
+	resp, err := aRequest.callNewAllocReq(t, client.id, value, ssc, now, ctx)
+	require.NoError(t, err)
+	var decodeResp StorageAllocation
+	require.NoError(t, decodeResp.Decode([]byte(resp)))
+	allocationId = decodeResp.ID
+
+	allocation, err := ssc.getAllocation(allocationId, ctx)
+	require.NoError(t, err)
+	for _, b := range blobbers {
+		if b.id == allocation.BlobberDetails[0].BlobberID {
+			testBlobber = b
+			break
+		}
+	}
+	return
 }
