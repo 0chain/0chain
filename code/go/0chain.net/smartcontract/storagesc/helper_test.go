@@ -58,8 +58,9 @@ type Client struct {
 	scheme encryption.SignatureScheme // pk/sk
 
 	// blobber
-	terms Terms
-	cap   int64
+	terms         Terms
+	cap           int64
+	blobberConfig *mockBlobberYml
 
 	// user or blobber
 	balance state.Balance
@@ -95,17 +96,29 @@ func getValidatorURL(id string) string {
 }
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
-	var sn StorageNode
-	sn.ID = c.id
-	sn.BaseURL = getBlobberURL(c.id)
-	sn.Terms = c.terms
-	sn.Capacity = c.cap
-	sn.Used = 0
-	sn.LastHealthCheck = 0
-	sn.StakePoolSettings.NumDelegates = 100
-	sn.StakePoolSettings.MinStake = 0
-	sn.StakePoolSettings.MaxStake = 1000e10
-	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
+	var sn = StorageNode{
+		ID:              c.id,
+		BaseURL:         getBlobberURL(c.id),
+		Terms:           c.terms,
+		Capacity:        c.cap,
+		Used:            0,
+		LastHealthCheck: 0,
+	}
+	if c.blobberConfig != nil {
+		sn.StakePoolSettings = stakePoolSettings{
+			NumDelegates:  c.blobberConfig.NumDelegates,
+			MinStake:      state.Balance(c.blobberConfig.MinStake),
+			MaxStake:      state.Balance(c.blobberConfig.MaxStake),
+			ServiceCharge: c.blobberConfig.ServiceCharge,
+		}
+	} else {
+		sn.StakePoolSettings = stakePoolSettings{
+			NumDelegates:  100,
+			MinStake:      0,
+			MaxStake:      1000e10,
+			ServiceCharge: 0.3,
+		}
+	}
 	return mustEncode(t, &sn)
 }
 
@@ -188,6 +201,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	scheme.GenerateKeys()
 
 	blob = new(Client)
+	blob.blobberConfig = &blobberYaml
 	blob.terms = terms
 	blob.cap = cap
 	blob.balance = balance

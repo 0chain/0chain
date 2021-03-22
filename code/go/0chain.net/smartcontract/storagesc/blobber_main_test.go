@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ const (
 	aParityShards               = 10     // ---- restMinLockDemand -----
 )
 
-type mock0ChainBlobberYml struct {
+type mockBlobberYml struct {
 	ReadPrice               float64 //token / GB for reading
 	WritePrice              float64 //token / GB / time_unit for writing
 	Capacity                int64   // 1 GB bytes total blobber capacity
@@ -41,6 +42,21 @@ type mock0ChainBlobberYml struct {
 	NumDelegates            int
 	ServiceCharge           float64
 }
+
+var (
+	blobberYaml = mockBlobberYml{
+		Capacity:                2 * GB,
+		ReadPrice:               1,
+		WritePrice:              5,   // ---- restMinLockDemand -----
+		MinLockDemand:           0.1, // ---- restMinLockDemand -----
+		MaxOfferDuration:        1 * time.Hour,
+		ChallengeCompletionTime: 200 * time.Second,
+		MinStake:                0,
+		MaxStake:                1000 * x10,
+		NumDelegates:            100,
+		ServiceCharge:           0.3,
+	}
+)
 
 func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAllocationRequest, capacity int64,
 ) (ssc *StorageSmartContract, ctx *testBalances,
@@ -80,22 +96,10 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 
 func TestNewAllocation(t *testing.T) {
 	var (
-		blobberYaml = mock0ChainBlobberYml{
-			Capacity:                2 * GB,
-			ReadPrice:               1,
-			WritePrice:              5,   // ---- restMinLockDemand -----
-			MinLockDemand:           0.1, // ---- restMinLockDemand -----
-			MaxOfferDuration:        1 * time.Hour,
-			ChallengeCompletionTime: 200 * time.Second,
-			MinStake:                0,
-			MaxStake:                1000 * x10,
-			NumDelegates:            100,
-			ServiceCharge:           0.3,
-		}
 		aExpiration int64 = int64(toSeconds(time.Hour))
 		terms             = Terms{
-			ReadPrice:               convertZcnToValue(blobberYaml.ReadPrice),
-			WritePrice:              convertZcnToValue(blobberYaml.WritePrice),
+			ReadPrice:               zcnToBalance(blobberYaml.ReadPrice),
+			WritePrice:              zcnToBalance(blobberYaml.WritePrice),
 			MinLockDemand:           blobberYaml.MinLockDemand,
 			MaxOfferDuration:        blobberYaml.MaxOfferDuration,
 			ChallengeCompletionTime: blobberYaml.ChallengeCompletionTime,
@@ -123,7 +127,9 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		f.sc = *setConfig(t, ctx)
-		require.EqualValues(t, f.AllocRestMinLockDemandTotal(common.Timestamp(now)),
+		require.EqualValues(t, f.allocRestMinLockDemandTotal(common.Timestamp(now)),
+			allocation.restMinLockDemand())
+		fmt.Println("new allocation f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
 			allocation.restMinLockDemand())
 	})
 
@@ -187,23 +193,22 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		f.readMarker = *readMarker.ReadMarker
-		require.EqualValues(t, f.RmRewardsCharge(), sPool.Rewards.Charge)
-		require.EqualValues(t, f.RmRewardsBlobber(), sPool.Rewards.Blobber)
-		require.EqualValues(t, f.RmRewardsValidator(), sPool.Rewards.Validator)
+		require.EqualValues(t, f.readCharge(), sPool.Rewards.Charge)
+		require.EqualValues(t, f.readRewardsBlobber(), sPool.Rewards.Blobber)
 
 		rPool, err = ssc.getReadPool(client.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, readPoolFund-f.RmValue(),
+		require.EqualValues(t, readPoolFund-f.readCost(),
 			rPool.Pools.allocTotal(allocationId, now))
-		require.EqualValues(t, f.RmValue(),
+		require.EqualValues(t, f.readCost(),
 			rPool.Pools.allocBlobberTotal(allocationId, testBlobber.id, now))
 
 		allocation, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
 		// todo work out rest min lock demond
-		// require.EqualValues(t, f.AllocRestMinLockDemandTotal2(f.RmValue(), common.Timestamp(now)),
-		//	allocation.restMinLockDemand())
 		require.EqualValues(t, 186921297, allocation.restMinLockDemand())
+		fmt.Println("read1 f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
+			allocation.restMinLockDemand())
 	})
 
 	t.Run("read as separate user", func(t *testing.T) {
@@ -279,16 +284,15 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		f.readMarker = *readMarker.ReadMarker
-		require.EqualValues(t, f.RmRewardsCharge(), sPool.Rewards.Charge)
-		require.EqualValues(t, f.RmRewardsBlobber(), sPool.Rewards.Blobber)
-		require.EqualValues(t, f.RmRewardsValidator(), sPool.Rewards.Validator)
+		require.EqualValues(t, f.readCharge(), sPool.Rewards.Charge)
+		require.EqualValues(t, f.readRewardsBlobber(), sPool.Rewards.Blobber)
 
 		rPool, err := ssc.getReadPool(reader.id, ctx)
 		require.NoError(t, err)
 
-		require.EqualValues(t, readPoolFund-f.RmValue(),
+		require.EqualValues(t, readPoolFund-f.readCost(),
 			rPool.Pools.allocTotal(allocationId, now))
-		require.EqualValues(t, f.RmValue(),
+		require.EqualValues(t, f.readCost(),
 			rPool.Pools.allocBlobberTotal(allocationId, testBlobber.id, now))
 
 		// min lock demand reducing
@@ -296,6 +300,8 @@ func TestNewAllocation(t *testing.T) {
 		require.NoError(t, err)
 		// todo fix rest min lock demand
 		require.EqualValues(t, 186921297, allocation.restMinLockDemand())
+		fmt.Println("read2 f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
+			allocation.restMinLockDemand())
 	})
 
 	t.Run("write", func(t *testing.T) {
@@ -360,28 +366,23 @@ func TestNewAllocation(t *testing.T) {
 
 		challengePool, err = ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, f.ChallangePoolBalance(), challengePool.Balance)
+		require.EqualValues(t, f.lockCostForWrite(), challengePool.Balance)
 
 		writePool, err = ssc.getWritePool(client.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, aValue-int64(f.ChallangePoolBalance()),
+		require.EqualValues(t, state.Balance(aValue)-f.lockCostForWrite(),
 			writePool.Pools.allocTotal(allocationId, now))
 
 		// todo min lock demand reducing
 		allocation, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
 		require.EqualValues(t, 186921297, allocation.restMinLockDemand()) // -read above
+		fmt.Println("write f", f.allocRestMinLockDemandTotal(common.Timestamp(now)), "actual",
+			allocation.restMinLockDemand())
 	})
 }
 
 // ConvertToValue converts ZCN tokens to value
-func convertZcnToValue(token float64) state.Balance {
+func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }
-
-//
-
-//
-
-//
-//

@@ -6,72 +6,85 @@ import (
 )
 
 type formulae struct {
-	blobber     mock0ChainBlobberYml
+	blobber     mockBlobberYml
 	sc          scConfig
 	ar          newAllocationRequest
 	readMarker  ReadMarker
 	writeMarker WriteMarker
 }
 
-// write formulae
+func (f formulae) writeChargeRate() state.Balance {
+	var writeSizePerGB = sizeInGB(f.writeMarker.Size)
+	var writePriceGB = float64(zcnToBalance(f.blobber.WritePrice))
+
+	return state.Balance(writeSizePerGB * writePriceGB)
+}
+
+func (f formulae) lockCostForWrite() state.Balance {
+	var writeChargeRate = float64(f.writeChargeRate())
+
+	return state.Balance(writeChargeRate * f.lockTimeLeftTU())
+}
+
+func (f formulae) readCharge() state.Balance {
+	var serviceChargeFraction = f.blobber.ServiceCharge
+	var readCost = float64(f.readCost())
+
+	return state.Balance(serviceChargeFraction * readCost)
+}
+
+func (f formulae) readRewardsBlobber() (blobberCharge state.Balance) {
+	var blobberRewardFraction = 1 - f.blobber.ServiceCharge
+	var readCost = float64(f.readCost())
+
+	return state.Balance(blobberRewardFraction * readCost)
+}
+
+// todo add validators
+func (f formulae) readRewardsValidator() state.Balance {
+	panic("validators not implemented")
+	return 0
+}
+
+// In blobber.go StorageSmartContract.commitBlobberRead blobber.go
+// https://github.com/0chain/0chain/blob/master/code/go/0chain.net/smartcontract/storagesc/blobber.go#L462
 //
+func (f formulae) readCost() (value state.Balance) {
+	var readPricePerGB = float64(zcnToBalance(f.blobber.ReadPrice))
+	var readSizeGB = sizeInGB(f.readMarker.ReadCounter * CHUNK_SIZE)
 
-func (f formulae) ChallangePoolBalance() (cpBalance state.Balance) {
-	var size = sizeInGB(f.writeMarker.Size)
-	var price = float64(convertZcnToValue(f.blobber.WritePrice))
-	var duration = f.allocRestOfDurationInTUs(f.writeMarker.Timestamp)
-	return state.Balance(size * price * duration)
-
-}
-
-// read formulae
-//
-
-func (f formulae) RmRewardsCharge() (blobberCharge state.Balance) {
-	return state.Balance(f.blobber.ServiceCharge * float64(f.RmValue()))
-}
-
-func (f formulae) RmRewardsBlobber() (blobberCharge state.Balance) {
-	return state.Balance((1 - f.blobber.ServiceCharge) * float64(f.RmValue()))
-}
-
-func (f formulae) RmRewardsValidator() (validatorCharge state.Balance) {
-	return 0 // todo implement validators
-}
-
-func (f formulae) RmValue() (value state.Balance) {
-	rp := float64(convertZcnToValue(f.blobber.ReadPrice))
-	return state.Balance(sizeInGB(f.readMarker.ReadCounter*CHUNK_SIZE) * rp)
+	return state.Balance(readSizeGB * readPricePerGB)
 }
 
 // Allocation formulae
 //
-
-func (f formulae) AllocRestMinLockDemandTotal2(value state.Balance, now common.Timestamp) state.Balance {
-	return f.AllocRestMinLockDemandTotal(now) - value
-}
-
-func (f formulae) AllocRestMinLockDemandTotal(now common.Timestamp) state.Balance {
+func (f formulae) allocRestMinLockDemandTotal(now common.Timestamp) state.Balance {
 	var lockPerBlobber = f.allocLockDemandPerBlobber(f.allocPerBlobber(), now)
 	return state.Balance(f.ar.DataShards+f.ar.ParityShards) * lockPerBlobber
 }
 
-func (f formulae) allocPerBlobber() (restGB float64) {
+func (f formulae) allocPerBlobber() float64 {
 	var shards = int64(f.ar.DataShards + f.ar.ParityShards)
-	var bsize = (f.ar.Size + shards - 1) / shards
-	return sizeInGB(bsize)
+	var bSize = (f.ar.Size + shards - 1) / shards
+	return sizeInGB(bSize)
 }
 
-func (f formulae) allocLockDemandPerBlobber(gbSize float64, now common.Timestamp) (mdl state.Balance) {
-	var writePrice = float64(convertZcnToValue(f.blobber.WritePrice))
-	var remaining = f.allocRestOfDurationInTUs(now)
+func (f formulae) allocLockDemandPerBlobber(gbSize float64, now common.Timestamp) state.Balance {
+	var writePrice = float64(zcnToBalance(f.blobber.WritePrice))
+	var remaining = f.remainingTimeTUs(now)
 	return state.Balance(writePrice * gbSize * remaining * f.blobber.MinLockDemand)
 }
 
-func (f *formulae) allocRestOfDurationInTUs(now common.Timestamp) (rdtu float64) {
+// Utility functions
+//
+func (f formulae) remainingTimeTUs(now common.Timestamp) float64 {
 	return f.toTimeUnits(f.ar.Expiration - now)
 }
 
-func (f *formulae) toTimeUnits(duration common.Timestamp) (dtu float64) {
+func (f formulae) toTimeUnits(duration common.Timestamp) float64 {
 	return float64(duration.Duration()) / float64(f.sc.TimeUnit)
+}
+
+func (f formulae) lockTimeLeftTU() float64 {
+	return f.remainingTimeTUs(f.writeMarker.Timestamp)
 }
