@@ -9,25 +9,7 @@ import (
 	"time"
 )
 
-const (
-	CHUNK_SIZE                   = 64 * KB // hardcoded in blobber.go
-	numBlobbers                  = 30
-	blobberBalance state.Balance = 50 * x10
-	clientBalance  state.Balance = 100 * x10
-
-	rReadSize       = 1 * GB
-	rCounter  int64 = rReadSize / CHUNK_SIZE
-
-	aValue                int64 = 15 * x10
-	aMaxReadPrice               = 10 * x10
-	aMinReadPrice               = 1 * x10
-	aMinWritePrice              = 2 * x10
-	aMaxWritePrice              = 20 * x10
-	aMaxChallengeCompTime       = 200 * time.Hour
-	aRequestSize                = 2 * GB // ---- restMinLockDemand -----
-	aDataShards                 = 10     // ---- restMinLockDemand -----
-	aParityShards               = 10     // ---- restMinLockDemand -----
-)
+const CHUNK_SIZE = 64 * KB // hardcoded in blobber.go
 
 type mockBlobberYml struct {
 	ReadPrice               float64 //token / GB for reading
@@ -58,6 +40,7 @@ var (
 )
 
 func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAllocationRequest, capacity int64,
+	clientBalance, blobberBalance, value state.Balance, numBlobbers int,
 ) (ssc *StorageSmartContract, ctx *testBalances,
 	blobbers []*Client, now int64, allocationId string, client *Client, testBlobber *Client,
 ) {
@@ -76,7 +59,7 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 	aRequest.Owner = client.id
 	aRequest.OwnerPublicKey = client.pk
 
-	resp, err := aRequest.callNewAllocReq(t, client.id, state.Balance(aValue), ssc, now, ctx)
+	resp, err := aRequest.callNewAllocReq(t, client.id, value, ssc, now, ctx)
 	require.NoError(t, err)
 	var decodeResp StorageAllocation
 	require.NoError(t, decodeResp.Decode([]byte(resp)))
@@ -94,6 +77,24 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 }
 
 func TestNewAllocation(t *testing.T) {
+	const (
+		numBlobbers                  = 30
+		blobberBalance state.Balance = 50 * x10
+		clientBalance  state.Balance = 100 * x10
+
+		rReadSize       = 1 * GB
+		rCounter  int64 = rReadSize / CHUNK_SIZE
+
+		aValue                state.Balance = 15 * x10
+		aMaxReadPrice                       = 10 * x10
+		aMinReadPrice                       = 1 * x10
+		aMinWritePrice                      = 2 * x10
+		aMaxWritePrice                      = 20 * x10
+		aMaxChallengeCompTime               = 200 * time.Hour
+		aRequestSize                        = 2 * GB
+		aDataShards                         = 10
+		aParityShards                       = 10
+	)
 	var (
 		aExpiration int64 = int64(toSeconds(time.Hour))
 		terms             = Terms{
@@ -117,10 +118,10 @@ func TestNewAllocation(t *testing.T) {
 			ar:      allocationRequest,
 		}
 	)
-
+	//	clientBalance, blobberBalance, value state.Balance, numBlobbers int,
 	t.Run("new allocation", func(t *testing.T) {
-		ssc, ctx, _, _, allocationId, _, _ :=
-			attachBlobbersAndNewAllocation(t, terms, allocationRequest, blobberYaml.Capacity)
+		ssc, ctx, _, _, allocationId, _, _ := attachBlobbersAndNewAllocation(t, terms,
+			allocationRequest, blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
 
 		_, err := ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
@@ -128,8 +129,8 @@ func TestNewAllocation(t *testing.T) {
 
 	t.Run("read as owner", func(t *testing.T) {
 		ssc, ctx, _, now, allocationId, client, testBlobber :=
-			attachBlobbersAndNewAllocation(t, terms, allocationRequest, blobberYaml.Capacity)
-
+			attachBlobbersAndNewAllocation(t, terms, allocationRequest,
+				blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
 		require.NotNil(t, testBlobber)
 		var readMarker = ReadConnection{
 			ReadMarker: &ReadMarker{
@@ -203,7 +204,8 @@ func TestNewAllocation(t *testing.T) {
 
 	t.Run("write", func(t *testing.T) {
 		ssc, ctx, blobbers, now, allocationId, client, testBlobber1 :=
-			attachBlobbersAndNewAllocation(t, terms, allocationRequest, blobberYaml.Capacity)
+			attachBlobbersAndNewAllocation(t, terms, allocationRequest,
+				blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
 
 		var allocation, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
@@ -272,7 +274,6 @@ func TestNewAllocation(t *testing.T) {
 	})
 }
 
-// ConvertToValue converts ZCN tokens to value
 func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }
