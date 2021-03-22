@@ -128,7 +128,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 
 // Test payments for some simple cases
 // read - Checks service charge, payment to the blobber and increment to read pool
-// write - Checks read lock added to challange pool for later blobber payment and
+// write - Checks read lock added to challenge pool for later blobber payment and
 //         subtracted from locked allocation amount.
 func TestFeesPayments(t *testing.T) {
 	const (
