@@ -85,7 +85,7 @@ func (f formulae) toTimeUnits(duration common.Timestamp) float64 {
 	return float64(duration.Duration()) / float64(f.sc.TimeUnit)
 }
 
-// time remaining in allocation lock at moment of a write
+// time remaining in allocation lock at the moment of a write
 func (f formulae) lockTimeLeftTU() float64 {
 	var now = f.writeMarker.Timestamp
 
