@@ -10,8 +10,9 @@ import (
 // blobber = 0chain_blobber.yaml
 // sc = sc.yaml
 // ar input to ./zbox newallocation
-// readMarker
-
+// readMarker internal parameter object for reads
+// writeMarker internal parameter object for writes
+//
 type formulae struct {
 	blobber     mockBlobberYml
 	sc          scConfig
