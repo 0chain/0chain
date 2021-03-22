@@ -53,12 +53,6 @@ func (f formulae) readRewardsBlobber() (blobberCharge state.Balance) {
 	return state.Balance(blobberRewardFraction * readCost)
 }
 
-// todo add validators
-func (f formulae) readRewardsValidator() state.Balance {
-	panic("validators not implemented")
-	return 0
-}
-
 // cost of a read as defined in read marker
 //
 func (f formulae) readCost() (value state.Balance) {
