@@ -33,6 +33,7 @@ func (f formulae) writeChargeRate() state.Balance {
 func (f formulae) lockCostForWrite() state.Balance {
 	var writeChargeRate = float64(f.writeChargeRate())
 	var timeLeft = f.lockTimeLeftTU()
+
 	return state.Balance(writeChargeRate * timeLeft)
 }
 
