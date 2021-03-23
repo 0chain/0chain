@@ -120,7 +120,7 @@ func CreateMockRound(number int64) *MockRound {
 }
 
 func makeTestMinioClient() (blockstore.MinioClient, error) {
-    //todo: replace play.min.io with local service
+	//todo: replace play.min.io with local service
 	mConf := blockstore.MinioConfiguration{
 		StorageServiceURL: "play.min.io",
 		AccessKeyID:       "Q3AM3UQ867SPQQA43P2F",
@@ -336,8 +336,7 @@ func SetupGenesisBlock() *block.Block {
 	sp := node.NewPool(node.NodeTypeSharder)
 	mb.Sharders = sp
 	mc.SetMagicBlock(mb)
-
-	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb)
+	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, nil)
 	mr := mc.CreateRound(gr.(*round.Round))
 	mc.AddRoundBlock(gr, gb)
 	mc.AddRound(mr)

@@ -292,7 +292,7 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 		if w.Balance == 0 {
 			zbcount++
 		}
-		s, err := getState(mpt, w.ClientID)
+		_, err := getState(mpt, w.ClientID)
 		if err != nil {
 			if err == util.ErrNodeNotFound {
 				fmt.Printf("Node not found; client - %s\n", w.ClientID)
