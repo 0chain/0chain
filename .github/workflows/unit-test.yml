@@ -16,4 +16,4 @@ jobs:
         run: ./docker.local/bin/build.base.sh
 
       - name: unit tests
-        run: ./docker.local/bin/unit_test.sh
+        run: ./docker.local/bin/unit_test_pr_check.sh
