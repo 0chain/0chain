@@ -20,4 +20,5 @@ docker run $INTERACTIVE zchain_unit_test sh -c '
         mod_dir=$(dirname $mod_file)
         (cd $mod_dir; go test -tags bn256 $mod_dir/...)
     done
+    '
 
