@@ -247,8 +247,8 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	}
 	clientEntityMetadata := datastore.GetEntityMetadata("client")
 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	//ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-	//defer memorystore.Close(ctx)
+	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	defer memorystore.Close(ctx)
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
 	if err != nil {
 		return err

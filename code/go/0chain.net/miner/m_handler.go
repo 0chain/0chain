@@ -389,7 +389,7 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 	)
 
 	errBlockNotAvailable := common.NewError("block_not_available",
-		fmt.Sprintf("Requested block is not available, current round: %d, request round: %d, request hash: %s",
+		fmt.Sprintf("Requested block is not available, current round: %v, request round: %v, request hash: %v",
 			mc.GetCurrentRound(), round, hash))
 
 	if hash != "" {

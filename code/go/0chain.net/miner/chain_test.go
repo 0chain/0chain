@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -168,10 +169,12 @@ func (s *ChainTestSuite) TestSetLatestFinalizedBlock() {
 	mRound.On("Get",
 		mock.Anything).Maybe().Return(mb)
 	mRound.On("Put",
-		mock.Anything, mock.Anything).Maybe().Return(nil)
+		mock.Anything, mock.Anything).
+		Maybe().Return(nil)
 
 	mEmd := &mocks.EntityMetadata{}
-	mEmd.On("Instance").Maybe().Return(round.NewRound(1))
+	mEmd.On("Instance").
+		Maybe().Return(round.NewRound(1))
 
 	datastore.RegisterEntityMetadata("round", mEmd)
 
@@ -222,7 +225,14 @@ func (s *ChainTestSuite) TestSetupGenesisBlock() {
 	mc := GetMinerChain()
 	b := block.NewMagicBlock()
 
-	mc.SetupGenesisBlock("24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509", b)
+	_, err := mc.SetupGenesisBlock(
+		"24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509", b,
+		&state.InitStates{
+			States: []state.InitState{
+				{ID: "", Tokens: state.Balance(10)},
+			},
+		})
+	s.Require().NoError(err)
 }
 
 func (s *ChainTestSuite) TestViewChange() {
