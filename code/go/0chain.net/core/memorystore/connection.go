@@ -75,7 +75,7 @@ func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
 	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+		panic(fmt.Sprintf("Invalid entity metadata setup1, unknown dbpool %v\n", dbid))
 	}
 	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
 }
@@ -84,7 +84,7 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
 	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+		panic(fmt.Sprintf("Invalid entity metadata setup2, unknown dbpool %v\n", dbid))
 	}
 	return dbpool
 }

@@ -76,7 +76,7 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
 	if !ok {
-		panicf("Invalid entity metadata setup, unknown dbpool %v\n", dbid)
+		panicf("Invalid entity metadata setup3, unknown dbpool %v\n", dbid)
 	}
 	return dbpool
 }
