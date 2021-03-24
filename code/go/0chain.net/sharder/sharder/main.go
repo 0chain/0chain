@@ -262,7 +262,7 @@ func main() {
 
 	go sc.RegisterClient()
 	if config.DevConfiguration.IsFeeEnabled {
-		go sc.InitSetupSC()
+		go sc.SetupSC(ctx)
 	}
 
 	// Do a deep scan from finalized block till DeepWindow
