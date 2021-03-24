@@ -16,8 +16,4 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
-RUN apk add curl
-RUN -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.38.0
-RUN golangci-lint --version
-
 WORKDIR $SRC_DIR/go
