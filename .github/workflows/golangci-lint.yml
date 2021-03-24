@@ -1,6 +1,6 @@
 name: golangci-lint
 
-on: #[push]
+on: [push]
 
 jobs:
   lint:
