@@ -320,11 +320,12 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	list = make([]*block.Block, 0, 1)
 
+	var errs []error
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
-
 		var mb, ok = entity.(*block.Block)
 		if !ok || mb == nil {
+			errs = append(errs, datastore.ErrInvalidEntity)
 			return nil, datastore.ErrInvalidEntity
 		}
 
@@ -343,6 +344,10 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
 		handler)
+
+	if len(list) == 0 && len(errs) > 0 {
+		Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
+	}
 
 	// add own LFMB
 	if sharders.HasNode(snk) {
