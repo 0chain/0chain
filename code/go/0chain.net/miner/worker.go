@@ -97,6 +97,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
 					protocol.HandleRoundTimeout(ctx, cround)
+				} else {
+					logging.Logger.Debug("Round timeout, nil miner round", zap.Int64("round", cround))
 				}
 			} else {
 				cround = mc.GetCurrentRound()
