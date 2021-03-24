@@ -35,10 +35,6 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
     chmod -R +w . && \
     make clean libzstd.a
 
-RUN apk add curl
-RUN -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.38.0
-RUN golangci-lint --version
-
 # Add the source code:
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
