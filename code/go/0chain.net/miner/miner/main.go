@@ -267,7 +267,7 @@ func main() {
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
-		go mc.InitSetupSC()
+		go mc.SetupSC(ctx)
 		if config.DevConfiguration.ViewChange {
 			go mc.DKGProcess(ctx)
 		}
