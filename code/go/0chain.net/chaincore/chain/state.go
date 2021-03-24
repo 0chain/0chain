@@ -394,8 +394,11 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction) (balances *bcstate.StateContext) {
 
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer, txn,
-		c.GetBlockSharders, c.GetLatestFinalizedMagicBlock,
+	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
+		txn,
+		c.GetBlockSharders,
+		c.GetLatestFinalizedMagicBlock,
+		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme)
 }
 

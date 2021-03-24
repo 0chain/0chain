@@ -31,6 +31,7 @@ var (
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
+	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetBlock() *block.Block
 	SetMagicBlock(block *block.MagicBlock)
 	GetState() util.MerklePatriciaTrieI
@@ -62,6 +63,7 @@ type StateContext struct {
 	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
+	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 }
 
@@ -72,6 +74,7 @@ func NewStateContext(
 	csd state.DeserializerI, t *transaction.Transaction,
 	getSharderFunc func(*block.Block) []string,
 	getLastestFinalizedMagicBlock func() *block.Block,
+	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
 ) (
 	balances *StateContext,
@@ -83,6 +86,7 @@ func NewStateContext(
 		txn:                           t,
 		getSharders:                   getSharderFunc,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
+		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 	}
 }
@@ -220,6 +224,10 @@ func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
 
 func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.getLastestFinalizedMagicBlock()
+}
+
+func (sc *StateContext) GetChainCurrentMagicBlock() *block.MagicBlock {
+	return sc.getChainCurrentMagicBlock()
 }
 
 func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
