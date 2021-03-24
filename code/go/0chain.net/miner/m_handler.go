@@ -1,6 +1,25 @@
 package miner
 
-/*
+/*This file contains the Miner To Miner send/receive messages */
+import (
+	"context"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/memorystore"
+
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
+)
+
 var (
 	// RoundStartSender - Start a new round.
 	RoundStartSender node.EntitySendHandler
@@ -27,7 +46,7 @@ var (
 	BlockRequestor node.EntityRequestor
 )
 
-//SetupM2MSenders - setup senders for miner to miner communication
+/*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
@@ -45,7 +64,7 @@ func SetupM2MSenders() {
 
 }
 
-//SetupM2MReceivers - setup receivers for miner to miner communication
+/*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
 	http.HandleFunc("/v1/_m2m/round/vrf_share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
 	http.HandleFunc("/v1/_m2m/block/verify", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
@@ -54,7 +73,7 @@ func SetupM2MReceivers() {
 	http.HandleFunc("/v1/_m2m/block/notarized_block", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil)))
 }
 
-//SetupX2MResponders - setup responders
+/*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
 	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
@@ -64,7 +83,7 @@ func SetupX2MResponders() {
 	http.HandleFunc("/v1/_m2m/chain/start", common.N2NRateLimit(node.ToN2NSendEntityHandler(StartChainRequestHandler)))
 }
 
-//SetupM2SRequestors - setup all requests to sharder by miner
+/*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
@@ -215,7 +234,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	return nil, nil
 }
 
-//VerificationTicketReceiptHandler - Add a verification ticket to the block
+/*VerificationTicketReceiptHandler - Add a verification ticket to the block */
 func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	bvt, ok := entity.(*block.BlockVerificationTicket)
 	if !ok {
@@ -407,4 +426,3 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 
 	return b, nil
 }
-*/
