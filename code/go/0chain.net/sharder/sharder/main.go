@@ -148,10 +148,7 @@ func main() {
 	}
 
 	initStates := state.NewInitStates()
-	err = initStates.Read(*initialStatesFile)
-	if err != nil {
-		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
-	}
+	initStateErr := initStates.Read(*initialStatesFile)
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
@@ -200,6 +197,10 @@ func main() {
 		selfNode.Port = portNum
 		selfNode.Type = node.NodeTypeSharder
 		selfNode.Path = path
+	} else {
+		if initStateErr != nil {
+			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
