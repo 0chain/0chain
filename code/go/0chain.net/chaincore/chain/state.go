@@ -95,59 +95,8 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 		return nil
 	}
 
-	blocks := make([]*block.Block, 0, 50)
-	blocks = append(blocks, b)
-	lfr := c.GetLatestFinalizedBlock().Round
-
-	round := b.Round
-	if lfr == round {
-		Logger.Error("Finalized block is not computed")
-		return errors.New("finalized block is not computed")
-	}
-
-	for r := round - 1; r >= lfr; r-- {
-		rd := c.GetRound(r)
-		if rd == nil {
-			Logger.Error("Round does not exist",
-				zap.Int64("round", r),
-				zap.Int64("current_round", round),
-				zap.Int64("latest_finalized_round", lfr))
-			return fmt.Errorf("round does not exist, round: %d, current_round: %d, latest_determinisitc_round: %d", r, round, lfr)
-		}
-
-		pb := rd.GetHeaviestNotarizedBlock()
-		if pb == nil {
-			Logger.Error("Found no block on previous round", zap.Int64("round", r))
-			return errors.New("no previous round block")
-		}
-
-		blocks = append(blocks, pb)
-		if r == lfr {
-			Logger.Debug("Reached the latest finalized block round",
-				zap.Int64("round", pb.Round),
-				zap.Int64("current_round", round),
-				zap.Int64("round_gap", round-pb.Round))
-			break
-		}
-	}
-
-	lastBlock := blocks[len(blocks)-1]
-	if !lastBlock.IsStateComputed() {
-		return errors.New("could not find block with computed state")
-	}
-	// calculate the state changes from the latest deterministic block
-	for i := len(blocks) - 2; i >= 0; i-- {
-		// get state change of the block
-		blocks[i].CreateState(lastBlock.ClientState.GetNodeDB())
-		c.GetBlockStateChange(blocks[i])
-		blocks[i].SetPreviousBlock(blocks[i+1])
-		lastBlock = blocks[i]
-	}
-
-	Logger.Debug("updateStateFromNetwork",
-		zap.Int("num", len(blocks)-1),
-		zap.Int64("start_round", lfr),
-		zap.Int64("to_round", round))
+	// get block state changes from network
+	return c.GetBlockStateChange(b)
 
 	return nil
 }
