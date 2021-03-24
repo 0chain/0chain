@@ -2,7 +2,6 @@
 
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
-RC=0
 docker run zchain_unit_test sh -c '
     for mod_file in $(find * -name go.mod); do
         mod_dir=$(dirname $mod_file)
@@ -10,5 +9,4 @@ docker run zchain_unit_test sh -c '
     done
     '
 
-exit $RC
-echo "finished all unit tests exit " $RC
+echo "finished all unit tests exit " $?
