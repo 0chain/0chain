@@ -25,7 +25,7 @@ func makeTestURL(url url.URL, values map[string]string) string {
 
 func TestBlockHandler(t *testing.T) {
 	t.Parallel()
-
+this is a syntax error
 	const baseUrl = "/v1/block/get"
 
 	b := block.NewBlock("", 1)
