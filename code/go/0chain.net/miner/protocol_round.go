@@ -1740,7 +1740,7 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 			}
 			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts),
 				zap.Any("sharders", waitingSharders))
-			lmb.Sharders.OneTimeStatusMonitor(ctx) // just mark 'em active
+			lmb.Sharders.OneTimeStatusMonitor(ctx, lmb.StartingRound) // just mark 'em active
 		}
 	}
 }
