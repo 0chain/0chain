@@ -1117,6 +1117,12 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
+	Logger.Debug("CanShareBlocks",
+		zap.Int("active sharders", mb.Sharders.GetActiveCount()),
+		zap.Int("sharders size", mb.Sharders.Size()),
+		zap.Int("min active sharders", c.MinActiveSharders),
+		zap.Int("left", mb.Sharders.GetActiveCount()*100),
+		zap.Int("right", mb.Sharders.Size()*c.MinActiveSharders))
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
@@ -1262,7 +1268,13 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 	mb := c.GetCurrentMagicBlock()
 
-	Logger.Info("update magic block", zap.Any("old block", mb), zap.Any("new block", newMagicBlock))
+	pmb := mb.Miners.Size()
+	nmb := newMagicBlock.Miners.Size()
+	Logger.Info("update magic block",
+		zap.Int("old magic block miners num", pmb),
+		zap.Int("new magic block miners num", nmb),
+		zap.Int64("old mb starting round", mb.StartingRound),
+		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
 	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
 		Logger.Info("update magic block -- hashes match ",
