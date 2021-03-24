@@ -35,22 +35,56 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) StatusMonitor(ctx context.Context) {
-	smctx, cancel := context.WithCancel(ctx)
 	mb := c.GetCurrentMagicBlock()
-	go mb.Miners.StatusMonitor(smctx)
-	go mb.Sharders.StatusMonitor(smctx)
-	for true {
+	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
+
+	//var cancel func()
+	startStatusMonitor := func(mb *block.MagicBlock, cctx context.Context) func() {
+		var smctx context.Context
+		smctx, cancelCtx := context.WithCancel(ctx)
+		waitMC := make(chan struct{})
+		waitSC := make(chan struct{})
+		go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
+		go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
+		return func() {
+			N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
+			cancelCtx()
+			<-waitMC
+			<-waitSC
+		}
+	}
+
+	cancel := startStatusMonitor(mb, ctx)
+
+	for {
 		select {
 		case <-ctx.Done():
 			return
 		case nRound := <-UpdateNodes:
+			lfmb := c.GetLatestMagicBlock()
+			mb = c.GetMagicBlock(nRound)
+			if mb.StartingRound < lfmb.StartingRound {
+				continue
+			}
+
 			cancel()
-			Logger.Info("the status monitor is dead, long live the status monitor",
-				zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
-			smctx, cancel = context.WithCancel(ctx)
-			mb := c.GetMagicBlock(nRound)
-			go mb.Miners.StatusMonitor(smctx)
-			go mb.Sharders.StatusMonitor(smctx)
+			Logger.Info("Got MB update, restart status monitor",
+				zap.Int64("update round", nRound),
+				zap.Int64("mb starting round", mb.StartingRound))
+			//zap.Any("miners", mb.Miners),
+			//zap.Any("sharders", mb.Sharders))
+			cancel = startStatusMonitor(mb, ctx)
+		case <-newMagicBlockCheckTk.C:
+			lmb := c.GetLatestMagicBlock()
+			if lmb.StartingRound > mb.StartingRound {
+				Logger.Info("Detected new magic block, restart status monitor",
+					zap.Int64("starting round", lmb.StartingRound),
+					zap.Int64("previous starting round", mb.StartingRound))
+				cancel()
+				mb = lmb
+
+				cancel = startStatusMonitor(mb, ctx)
+			}
 		}
 	}
 }
@@ -342,7 +376,7 @@ func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash u
 		zap.Int64("round", round),
 		zap.Int("missing_node_num", len(keys)))
 
-	c.GetStateNodesFromSharders(ctx, keys)
+	c.GetStateNodes(ctx, keys)
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
@@ -446,8 +480,9 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	var mbs = sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
 	if len(mbs) == 0 {
-		return fmt.Errorf("no finalized magic block from sharders (%s) given",
-			mb.Sharders.N2NURLs())
+		Logger.Warn("no new finalized magic block from sharders given",
+			zap.Strings("URLs", mb.Sharders.N2NURLs()))
+		return nil
 	}
 
 	if len(mbs) > 1 {
