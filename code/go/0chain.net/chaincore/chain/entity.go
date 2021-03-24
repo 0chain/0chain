@@ -446,7 +446,7 @@ func Provider() datastore.Entity {
 
 /*Initialize - intializes internal datastructures to start again */
 func (c *Chain) Initialize() {
-	c.CurrentRound = 0
+	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
@@ -989,7 +989,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
-		c.CurrentRound = roundNumber
+		c.setCurrentRound(roundNumber)
 	}
 	return true
 }
@@ -1005,6 +1005,10 @@ func (c *Chain) GetCurrentRound() int64 {
 func (c *Chain) SetCurrentRound(round int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
+	c.setCurrentRound(round)
+}
+
+func (c *Chain) setCurrentRound(round int64) {
 	c.CurrentRound = round
 }
 
