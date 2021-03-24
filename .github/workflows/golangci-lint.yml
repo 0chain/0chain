@@ -1,23 +1,15 @@
 name: golangci-lint
-on: [push]
+
+on: #[push]
+
 jobs:
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
+  lint:
+    runs-on: ubuntu-20.04
     steps:
+      - uses: actions/checkout@v2
 
-      - name: Set up Go 1.16
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.16
-        id: go
+      - name: Build Base
+        run: ./docker.local/bin/build.base.sh
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
-
-      - name: Install golangci-lint
-        run: curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v1.18.0
-
-      - name: Run golangci-lint
-        run: $(go env GOPATH)/bin/golangci-lint run
+      - name: Run Linter
+        run: ./docker.local/bin/linter.sh
