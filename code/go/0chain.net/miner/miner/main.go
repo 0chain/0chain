@@ -243,7 +243,7 @@ func main() {
 		log.Fatal(server.ListenAndServe())
 	}()
 
-	mc.RegisterClient()
+	go mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 
 	// start restart round event worker before the StartProtocol to be able
