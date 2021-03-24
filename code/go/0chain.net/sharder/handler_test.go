@@ -1,6 +1,7 @@
 package sharder_test
 
 import (
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -25,7 +26,7 @@ func makeTestURL(url url.URL, values map[string]string) string {
 
 func TestBlockHandler(t *testing.T) {
 	t.Parallel()
-this is a syntax error
+	require.EqualValues(t, 1, 2)
 	const baseUrl = "/v1/block/get"
 
 	b := block.NewBlock("", 1)
