@@ -98,10 +98,7 @@ func main() {
 	}
 
 	initStates := state.NewInitStates()
-	err = initStates.Read(*initialStatesFile)
-	if err != nil {
-		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
-	}
+	initStateErr := initStates.Read(*initialStatesFile)
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
@@ -146,6 +143,10 @@ func main() {
 		node.Self.Underlying().N2NHost = n2nHostName
 		node.Self.Underlying().Port = portNum
 		node.Self.Underlying().Path = path
+	} else {
+		if initStateErr != nil {
+			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		}
 	}
 
 	if node.Self.Underlying().GetKey() == "" {
