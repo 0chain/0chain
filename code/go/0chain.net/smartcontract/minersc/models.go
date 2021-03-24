@@ -189,6 +189,11 @@ func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
 func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 	balances cstate.StateContextI) (has bool) {
 
+	if len(mpks.Mpks) == 0 {
+		Logger.Error("empty miners mpks keys")
+		return
+	}
+
 	var pmb = gn.prevMagicBlock(balances)
 
 	for id := range mpks.Mpks {
@@ -197,12 +202,18 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 		}
 	}
 
+	Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
 	return // false, hasn't
 }
 
 // has previous miner in given GSoS
 func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 	balances cstate.StateContextI) (has bool) {
+
+	if len(gsos.Shares) == 0 {
+		Logger.Error("empty sharder or sign keys")
+		return
+	}
 
 	var pmb = gn.prevMagicBlock(balances)
 
@@ -212,6 +223,10 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 		}
 	}
 
+	Logger.Debug("has no prev miner in GSoS",
+		zap.Int64("prev_mb_round", pmb.StartingRound),
+		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
+	)
 	return // false, hasn't
 }
 
