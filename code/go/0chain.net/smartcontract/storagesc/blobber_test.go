@@ -95,6 +95,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
+	require.EqualValues(t, 1, 0)
 }
 
 func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
@@ -277,7 +278,7 @@ func Test_flow_reward(t *testing.T) {
 		// read pool lock
 		tp += 100
 		tx = newTransaction(reader.id, ssc.ID,
-			state.Balance(len(alloc.BlobberDetails)) * 2 * x10, tp)
+			state.Balance(len(alloc.BlobberDetails))*2*x10, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
