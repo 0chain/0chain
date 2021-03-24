@@ -415,7 +415,7 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
 	mb := mc.GetCurrentMagicBlock()
-	mb.Sharders.OneTimeStatusMonitor(ctx)
+	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	if len(lfBlocks) > 0 {
 		Logger.Info("bc-1 latest finalized Block",
