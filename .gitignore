@@ -3,6 +3,7 @@
 !.github
 !.gitlab-ci.yml
 !.dockerignore
+!.gitattributes
 *.class
 *.jar
 **/target/
