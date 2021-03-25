@@ -9,11 +9,15 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
+
+type lockFlags struct {
+	tokens   float64
+	duration time.Duration
+}
 
 type lockResponse struct {
 	Txn_hash    string
@@ -31,8 +35,10 @@ type mockScYml struct {
 }
 
 const (
-	clientId    = "fred"
-	startMinted = 10
+	clientId       = "fred"
+	startMinted    = 10
+	clientStartZCN = 777
+	txHash         = "tx hash"
 )
 
 var (
@@ -50,36 +56,44 @@ var (
 	storageScId = approvedMinters[1]
 )
 
-const clientStartZCN = 777
-
 func TestLock(t *testing.T) {
 	var resp lockResponse
 	var userNode UserNode
 	var err error
 
-	t.Run("lock", func(T *testing.T) {
-		var tokens = 1.0
-		var duration = 1 * time.Hour
-		resp, userNode, err = testLock(t, tokens, duration)
+	t.Run("lock", func(t *testing.T) {
+		var flags = lockFlags{
+			tokens:   1.0,
+			duration: 1 * time.Hour,
+		}
+		resp, userNode, err = testLock(t, flags.tokens, flags.duration)
 		require.NoError(t, err)
-
+		require.EqualValues(t, resp.Txn_hash, txHash)
+		require.EqualValues(t, resp.To_pool, txHash)
+		require.EqualValues(t, resp.Value, zcnToBalance(flags.tokens))
+		require.EqualValues(t, resp.From_client, clientId)
+		require.EqualValues(t, resp.To_client, storageScId)
+		require.Len(t, userNode.Pools, 1)
+		var userPool = userNode.Pools[txHash]
+		var f = formulae{
+			sc:        scYml,
+			lockFlags: flags,
+		}
+		require.EqualValues(t, userPool.TokensEarned, f.tokensEarned())
 	})
-
-	fmt.Println(resp, userNode, err)
 
 }
 
 func testLock(t *testing.T, tokens float64, duration time.Duration) (lockResponse, UserNode, error) {
-
 	var input = lockInput(t, duration)
-
+	var userNode = newUserNode(clientId)
 	var isc = &InterestPoolSmartContract{
 		SmartContract: &smartcontractinterface.SmartContract{
 			ID: storageScId,
 		},
 	}
 	var txn = &transaction.Transaction{
-		HashIDField:  datastore.HashIDField{Hash: "tx hash"},
+		HashIDField:  datastore.HashIDField{Hash: txHash},
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: common.Timestamp(100),
@@ -96,7 +110,6 @@ func testLock(t *testing.T, tokens float64, duration time.Duration) (lockRespons
 			nil,
 		),
 	}
-	var userNode = newUserNode(clientId)
 	var globalNode = &GlobalNode{
 		SimpleGlobalNode: &SimpleGlobalNode{
 			MaxMint:     zcnToBalance(scYml.maxMint),
