@@ -299,7 +299,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	dkgMiners := NewDKGMinerNodes()
 	dkgMiners.calculateTKN(gn, len(allminerslist.Nodes))
 	for _, node := range allminerslist.Nodes {
-		dkgMiners.SimpleNodes[node.ID] = node
+		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
 	}
 
 	dkgMiners.StartRound = gn.LastRound
@@ -362,14 +362,14 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 
 func (msc *MinerSmartContract) reduceShardersList(keep, all *ConsensusNodes,
 	gn *GlobalNode, balances cstate.StateContextI) (
-	list []*SimpleNode, err error) {
+	list []*ConsensusNode, err error) {
 
 	var (
 		pmb  = gn.prevMagicBlock(balances)
 		hasp bool // TODO (sfxdx): remove the temporary debug code
 	)
 
-	list = make([]*SimpleNode, 0, len(keep.Nodes))
+	list = make([]*ConsensusNode, 0, len(keep.Nodes))
 	for _, ksh := range keep.Nodes {
 		var ash = all.FindNodeById(ksh.ID)
 		if ash == nil {

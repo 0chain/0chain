@@ -121,7 +121,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	newMiner.NodeType = NodeTypeMiner // set node type
 
 	// add to all miners list
-	all.Nodes = append(all.Nodes, newMiner.SimpleNode)
+	all.Nodes = append(all.Nodes, newMiner)
 	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
 		return "", common.NewErrorf("add_miner_failed",
 			"saving all miners list: %v", err)
@@ -256,15 +256,14 @@ func (msc *MinerSmartContract) getConsensusNode(id string,
 
 	node := NewConsensusNode()
 	node.ID = id
-
-	trieNode, err := balances.GetTrieNode(node.getKey())
+	ms, err := balances.GetTrieNode(node.getKey())
 	if err == util.ErrValueNotPresent {
 		return node, err
 	} else if err != nil {
 		return nil, err
 	}
 
-	if err := node.Decode(trieNode.Encode()); err != nil {
+	if err := node.Decode(ms.Encode()); err != nil {
 		return nil, err
 	}
 	return node, nil
