@@ -193,7 +193,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	gn.MaxS = conf.GetInt(pfx + "max_s")
 	gn.MinS = conf.GetInt(pfx + "min_s")
 	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")
-	gn.RewardRoundPeriod = conf.GetInt64(pfx + "reward_round_period")
+	gn.RewardRoundFrequency = conf.GetInt64(pfx + "reward_round_frequency")
 
 	// check bounds
 	if gn.MinN < 1 {
