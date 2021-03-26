@@ -5,11 +5,10 @@ import (
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
 )
 
 type PoolStats struct {
-	DelegateID   datastore.Key `json:"delegate_id"`
+	DelegateID   string        `json:"delegate_id"`
 	High         state.Balance `json:"high"` // } interests and rewards
 	Low          state.Balance `json:"low"`  // }
 	InterestPaid state.Balance `json:"interest_paid"`

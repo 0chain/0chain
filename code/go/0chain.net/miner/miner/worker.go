@@ -1,7 +1,6 @@
 package main
 
 import (
-	"0chain.net/chaincore/state"
 	"math/rand"
 	"os"
 	"sync"
@@ -167,8 +166,8 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	fee := state.Balance(prng.Int63n(maxFee-minFee) + minFee)
-	value := state.Balance(prng.Int63n(maxValue-minValue) + minValue)
+	fee := prng.Int63n(maxFee-minFee) + minFee
+	value := prng.Int63n(maxValue-minValue) + minValue
 	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, fee)
 	return txn
 }
@@ -244,21 +243,14 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID,
-			state.Balance(prng.Int63n(100) * 10000000000),
-			"generous air drop! :)",
-			state.Balance(prng.Int63n(10) + 1))
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
 	if config.DevConfiguration.FaucetEnabled {
-		txn := ownerWallet.CreateSCTransaction(
-			faucetsc.ADDRESS,
-			state.Balance(viper.GetInt64("development.faucet.refill_amount")),
-			`{"name":"refill","input":{}}`,
-			0)
+		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			Logger.Info("client generator - faucet refill", zap.Any("error", err))

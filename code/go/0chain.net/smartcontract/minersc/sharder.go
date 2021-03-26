@@ -20,7 +20,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	resp string, err error) {
 
 	Logger.Info("try to add sharder", zap.Any("txn", t))
-	var all *ConsensusNodes
+	var all *MinerNodes
 	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("add_sharder",
@@ -30,7 +30,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	msc.verifySharderState(balances, AllShardersKey,
 		"Checking all sharders list in the beginning")
 
-	var newSharder = NewConsensusNode()
+	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
@@ -69,17 +69,17 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	if newSharder.MinStake < gn.MinStake {
 		return "", common.NewErrorf("add_sharder",
-			"min_stake is less than allowed by SC: %v < %v",
+			"min_stake is less than allowed by SC: %v > %v",
 			newSharder.MinStake, gn.MinStake)
 	}
 
-	if newSharder.MaxStake > gn.MaxStake {
+	if newSharder.MaxStake < gn.MaxStake {
 		return "", common.NewErrorf("add_sharder",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newSharder.MaxStake, gn.MaxStake)
 	}
 
-	var existing *ConsensusNode
+	var existing *MinerNode
 	existing, err = msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("add_sharder", "unexpected error: %v", err)
@@ -98,7 +98,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	newSharder.NodeType = NodeTypeSharder // set node type
 
 	// add to all
-	all.Nodes = append(all.Nodes, newSharder.SimpleNode)
+	all.Nodes = append(all.Nodes, newSharder)
 	// save the added sharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
@@ -136,9 +136,9 @@ func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
-	key datastore.Key) (*ConsensusNodes, error) {
+	key datastore.Key) (*MinerNodes, error) {
 
-	allMinersList := &ConsensusNodes{}
+	allMinersList := &MinerNodes{}
 	allMinersBytes, err := balances.GetTrieNode(key)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("getShardersList_failed",
@@ -155,7 +155,7 @@ func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,
-	balances cstate.StateContextI) (sn *ConsensusNode, err error) {
+	balances cstate.StateContextI) (sn *MinerNode, err error) {
 
 	var ss util.Serializable
 	ss, err = balances.GetTrieNode(getSharderKey(sid))
@@ -163,7 +163,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 		return // unexpected error
 	}
 
-	sn = NewConsensusNode()
+	sn = NewMinerNode()
 	sn.ID = sid
 
 	if err == util.ErrValueNotPresent {
@@ -198,7 +198,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	}
 	msc.verifySharderState(balances, ShardersKeepKey, "Checking sharderKeepList in the beginning")
 
-	newSharder := NewConsensusNode()
+	newSharder := NewMinerNode()
 	err = newSharder.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
@@ -231,7 +231,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		return "", common.NewErrorf("failed to add sharder", "sharder already exists: %v", newSharder.ID)
 	}
 
-	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder.SimpleNode)
+	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder)
 	if _, err := balances.InsertTrieNode(ShardersKeepKey, sharderKeepList); err != nil {
 		return "", err
 	}

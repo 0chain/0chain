@@ -192,7 +192,7 @@ func getOwnerWallet(signatureScheme, ownerKeysFile string) mptwallet.Wallet {
 
 // Register a client on the blockchain's MPT.
 func registerMPTWallet(w mptwallet.Wallet) {
-	Logger.Info("Registering MPT wallet", zap.Any("Sender", w.ClientID))
+	Logger.Info("Registering MPT wallet", zap.Any("ClientID", w.ClientID))
 
 	data, err := json.Marshal(w)
 	if err != nil {
@@ -219,7 +219,7 @@ func executeSCTransaction(from mptwallet.Wallet, scAddress string, value int64, 
 }
 
 func airdrop(owner mptwallet.Wallet, recipientClientID string) {
-	Logger.Info("Requesting airdrop for MPT wallet", zap.String("Sender", recipientClientID))
+	Logger.Info("Requesting airdrop for MPT wallet", zap.String("ClientID", recipientClientID))
 	executeTransaction(owner, recipientClientID, airdropSize, httpclientutil.TxnTypeSend, "Airdrop")
 }
 

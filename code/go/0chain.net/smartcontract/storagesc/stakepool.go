@@ -453,9 +453,9 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	}
 
 	err = balances.AddMint(&state.Mint{
-		Minter:   sscID,         // storage SC
-		Receiver: dp.DelegateID, // delegate wallet
-		Amount:   mint,          // move total mints at once
+		Minter:     sscID,         // storage SC
+		ToClientID: dp.DelegateID, // delegate wallet
+		Amount:     mint,          // move total mints at once
 	})
 
 	if err != nil {
@@ -915,7 +915,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < conf.StakePool.MinLock {
+	if t.Value < int64(conf.StakePool.MinLock) {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}
