@@ -176,7 +176,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	node.BuildTag = "commit"
 	node.DelegateWallet = delegateWallet
 	node.ServiceCharge = 0.5
-	node.NumberOfDelegates = 100
+	node.NumberOfDelegates = 10
 	node.MinStake = 1
 	node.MaxStake = 100e10
 
@@ -220,7 +220,7 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (gn *GlobalNode) {
 	gn.KPercent = 0.75   // %
 	gn.LastRound = 0
 	gn.MaxStake = state.Balance(100.0e10)
-	gn.MinStake = state.Balance(1)
+	gn.MinStake = state.Balance(0.01e10)
 	gn.InterestRate = 0.1
 	gn.RewardRate = 1.0
 	gn.ShareRatio = 0.10
@@ -243,15 +243,15 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	var mb = block.NewMagicBlock()
 	mb.Miners = node.NewPool(node.NodeTypeMiner)
 	mb.Sharders = node.NewPool(node.NodeTypeSharder)
-	for _, miner := range miners {
+	for _, mn := range miners {
 		var n = node.Provider()
-		n.SetID(miner.id)
+		n.SetID(mn.id)
 		n.Type = node.NodeTypeMiner
 		mb.Miners.AddNode(n)
 	}
-	for _, sharder := range sharders {
+	for _, sh := range sharders {
 		var n = node.Provider()
-		n.SetID(sharder.id)
+		n.SetID(sh.id)
 		n.Type = node.NodeTypeSharder
 		mb.Sharders.AddNode(n)
 	}

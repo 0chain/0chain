@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"0chain.net/chaincore/node"
-	"0chain.net/core/datastore"
 	"errors"
 	"fmt"
 	"sort"
@@ -167,7 +166,7 @@ func (msc *MinerSmartContract) unlockOffline(mn *MinerNode,
 
 func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	mb *block.MagicBlock, round int64, balances cstate.StateContextI) (
-		err error) {
+	err error) {
 
 	var miners, sharders *MinerNodes
 	if miners, err = msc.getMinersList(balances); err != nil {
@@ -185,12 +184,12 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		minersOffline, shardersOffline []*MinerNode
 	)
 
-	for _, key := range mb.Miners.Keys() {
-		mbMiners[key] = struct{}{}
+	for _, k := range mb.Miners.Keys() {
+		mbMiners[k] = struct{}{}
 	}
 
-	for _, key := range mb.Sharders.Keys() {
-		mbSharders[key] = struct{}{}
+	for _, k := range mb.Sharders.Keys() {
+		mbSharders[k] = struct{}{}
 	}
 
 	// miners
@@ -256,9 +255,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
-	var blck = balances.GetBlock()
+	var b = balances.GetBlock()
 
-	if blck.Round != gn.ViewChange {
+	if b.Round != gn.ViewChange {
 		return // don't do anything, not a view change
 	}
 
@@ -318,58 +317,39 @@ type Payment struct {
 }
 
 func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.Block,
-	global *GlobalNode, miner *MinerNode, balances cstate.StateContextI) (
-		resp string, err error) {
+	gn *GlobalNode, mn *MinerNode, balances cstate.StateContextI) (
+	resp string, err error) {
 
 	for _, payment := range payments {
-		if payment.toGenerator {
-			payment.receiver.Stat.GeneratorFees += payment.feePart
-		} else {
-			payment.receiver.Stat.SharderFees += payment.feePart
+		var feeCharge, feeRest = mn.splitByServiceCharge(payment.feePart)
+		var mintCharge, mintRest = mn.splitByServiceCharge(payment.mintPart)
+
+		//todo: pay to the node itself (receiver)
+		fmt.Printf(">>> fees.go, processPayments: feeCharge = %d, mintCharge = %d\n", feeCharge, mintCharge)
+
+		var buffer string
+
+		buffer, err = msc.payStakeHolders(feeRest,
+			payment.receiver,
+			payment.toGenerator,
+			balances)
+		if err != nil {
+			return "", common.NewErrorf("pay_fees/pay_sharders",
+				"paying block fees (generator? %v): %v",
+				payment.toGenerator, err)
 		}
+		resp += buffer
 
-		var bothCases []bool = []bool{true, false}
-
-		for _, isMint := range bothCases {
-			var charge, rest state.Balance
-			if isMint {
-				charge, rest = miner.splitByServiceCharge(payment.mintPart)
-			} else {
-				charge, rest = miner.splitByServiceCharge(payment.feePart)
-			}
-
-			var results []*PaymentResult = msc.payToDelegates(true, rest,
-				payment.receiver,
-				payment.toGenerator,
-				global, balances)
-
-			var result = msc.payToNode(true, charge, payment.receiver.DelegateWallet, balances)
-			if result != nil {
-				results = append(results, result)
-			}
-
-			var total state.Balance
-			for _, result := range results {
-				if result.err != nil {
-					if isMint {
-						resp += fmt.Sprintf("pay_fee/mint - failed to mint reward: %v", err)
-					} else {
-						resp += fmt.Sprintf("pay_fee/fee - failed to pay fee: %v", err)
-					}
-				} else {
-					resp += string(result.valuable.Encode())
-					total += result.valuable.Value()
-				}
-			}
-
-			if isMint {
-				msc.addMint(global, total)
-			}
-
-			if total != payment.mintPart {
-				fmt.Println("!!! ERROR !!! PAYMENT INCORRECT                       [debug]")
-			}
+		buffer, err = msc.mintStakeHolders(gn, mintRest,
+			payment.receiver,
+			payment.toGenerator,
+			balances)
+		if err != nil {
+			return "", common.NewErrorf("pay_fees/mint_sharders",
+				"minting block reward (generator? %v): %v",
+				payment.toGenerator, err)
 		}
+		resp += buffer
 
 		if err = payment.receiver.save(balances); err != nil {
 			return "", common.NewErrorf("pay_fees/pay_sharders",
@@ -404,17 +384,15 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 
 	var pn *PhaseNode
 	if pn, err = msc.getPhaseNode(balances); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"error getting phase node: %v", err)
+		return
 	}
 	if err = msc.setPhaseNode(balances, pn, gn); err != nil {
 		return "", common.NewErrorf("pay_fees",
-			"error setting phase node: %v", err)
+			"error inserting phase node: %v", err)
 	}
 
 	if err = msc.adjustViewChange(gn, balances); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"error adjusting view change: %v", err)
+		return // adjusting view change error
 	}
 
 	var block = balances.GetBlock()
@@ -582,95 +560,92 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	return
 }
 
-func (msc *MinerSmartContract) payToDelegates(isMint bool, value state.Balance,
-	node *MinerNode, isGenerator bool, global *GlobalNode,
-	balances cstate.StateContextI) (results []*PaymentResult) {
+func (msc *MinerSmartContract) mintStakeHolders(gn *GlobalNode,
+	value state.Balance, node *MinerNode, isGenerator bool,
+	balances cstate.StateContextI) (resp string, err error) {
 
-	if isMint && !global.canMint() {
+	if !gn.canMint() {
 		return // can't mint anymore
 	}
 
 	if value == 0 {
-		return
+		return // nothing to mint
 	}
 
-	if isMint {
-		if isGenerator {
-			node.Stat.GeneratorRewards += value
-		} else {
-			node.Stat.SharderRewards += value
-		}
+	if isGenerator {
+		node.Stat.GeneratorRewards += value
+	} else {
+		node.Stat.SharderRewards += value
 	}
-
-	return msc.payToPools(isMint, value, node, balances)
-}
-
-type PaymentResult struct {
-	valuable state.Valuable
-	err error
-}
-
-func (msc *MinerSmartContract) payToPools(isMint bool, value state.Balance,
-	node *MinerNode, balances cstate.StateContextI) (
-		results []*PaymentResult) {
 
 	var totalStaked = node.TotalStaked
 
 	for _, pool := range node.orderedActivePools() {
 		var (
-			ratio = float64(pool.Balance) / float64(totalStaked)
-			share = state.Balance(float64(value) * ratio)
+			ratio    = float64(pool.Balance) / float64(totalStaked)
+			userMint = state.Balance(float64(value) * ratio)
 		)
 
-		Logger.Info("pay to delegates",
+		Logger.Info("mintPart delegate",
 			zap.Any("pool", pool),
-			zap.Any("value", share),
-			zap.Bool("mint", isMint))
+			zap.Any("mintPart", userMint))
 
-		if share == 0 {
+		if userMint == 0 {
 			continue // avoid insufficient minting
 		}
 
-		var result PaymentResult
-		if isMint {
-			var mint = state.NewMint(ADDRESS, pool.DelegateID, share)
-			result.err = balances.AddMint(mint)
-			result.valuable = mint
-		} else {
-			var transfer = state.NewTransfer(ADDRESS, pool.DelegateID, share)
-			result.err = balances.AddTransfer(transfer)
-			result.valuable = transfer
+		var mint = state.NewMint(ADDRESS, pool.DelegateID, userMint)
+		if err = balances.AddMint(mint); err != nil {
+			resp += fmt.Sprintf("pay_fee/minting - adding mintPart: %v", err)
+			continue
 		}
-		pool.AddRewards(share)
+		msc.addMint(gn, mint.Amount)
+		pool.AddRewards(userMint)
 
-		results = append(results, &result)
+		resp += string(mint.Encode())
 	}
 
-	return results
+	return resp, nil
 }
 
-func (msc *MinerSmartContract) payToNode(isMint bool, value state.Balance,
-	receiver datastore.Key, balances cstate.StateContextI) *PaymentResult {
-
-	Logger.Info("pay to node",
-		zap.Any("node", receiver),
-		zap.Any("value", value),
-		zap.Bool("mint", isMint))
+func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
+	node *MinerNode, isGenerator bool, balances cstate.StateContextI) (
+		resp string, err error) {
 
 	if value == 0 {
-		return nil
+		return // nothing to pay
 	}
 
-	var result PaymentResult
-	if isMint {
-		var mint = state.NewMint(ADDRESS, receiver, value)
-		result.err = balances.AddMint(mint)
-		result.valuable = mint
+	if isGenerator {
+		node.Stat.GeneratorFees += value
 	} else {
-		var transfer = state.NewTransfer(ADDRESS, receiver, value)
-		result.err = balances.AddTransfer(transfer)
-		result.valuable = transfer
+		node.Stat.SharderFees += value
 	}
 
-	return &result
+	var totalStaked = node.TotalStaked
+
+	for _, pool := range node.orderedActivePools() {
+		var (
+			ratio   = float64(pool.Balance) / float64(totalStaked)
+			userFee = state.Balance(float64(value) * ratio)
+		)
+
+		Logger.Info("pay delegate",
+			zap.Any("pool", pool),
+			zap.Any("fee", userFee))
+
+		if userFee == 0 {
+			continue // avoid insufficient transfer
+		}
+
+		var transfer = state.NewTransfer(ADDRESS, pool.DelegateID, userFee)
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", fmt.Errorf("adding transfer: %v", err)
+		}
+
+		pool.AddRewards(userFee)
+		resp += string(transfer.Encode())
+	}
+
+	return resp, nil
 }
