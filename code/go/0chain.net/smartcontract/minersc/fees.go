@@ -211,7 +211,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 			return
 		}
 	}
-//todo: remove duplicates
+
 	// sharders
 	for _, simple := range sharders.Nodes {
 		var sharder *ConsensusNode
@@ -309,8 +309,8 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 }
 
 type Payment struct {
-	mintPart    state.Balance
 	feePart     state.Balance
+	mintPart    state.Balance
 	receiver    *ConsensusNode
 	toGenerator bool
 }
@@ -331,14 +331,10 @@ func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.
 		for _, isMint := range bothCases {
 			var charge, rest state.Balance
 			if isMint {
-				fmt.Println("PAYING MINT")
 				charge, rest = miner.splitByServiceCharge(payment.mintPart)
 			} else {
-				fmt.Println("PAYING FEES")
 				charge, rest = miner.splitByServiceCharge(payment.feePart)
 			}
-			fmt.Printf("\tcharge: %d\n", charge)
-			fmt.Printf("\trest: %d\n", rest)
 
 			var results []*PaymentResult = msc.payToDelegates(true, rest,
 				payment.receiver,
@@ -347,26 +343,20 @@ func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.
 
 			if len(results) == 0 {
 				Logger.Info("No pools to pay detected, the whole payment goes to the node")
-				fmt.Printf("\t\t(no pools detected, charge += rest)\n")
 				charge += rest
 			}
 
-			{
-				fmt.Printf("\tPAYING CHARGE OF %d TO THE NODE\n", charge)
-				var result = msc.payToNode(true, charge, payment.receiver.DelegateWallet, balances)
-				if result != nil {
-					results = append(results, result)
-				}
+			var result = msc.payToNode(true, charge, payment.receiver.DelegateWallet, balances)
+			if result != nil {
+				results = append(results, result)
 			}
 
 			var total state.Balance
 			for _, result := range results {
 				if result.err != nil {
 					if isMint {
-						fmt.Printf("!!! failed to mint reward: %v\n", err)
 						resp += fmt.Sprintf("pay_fee/mint - failed to mint reward: %v", err)
 					} else {
-						fmt.Printf("!!! failed to pay fee: %v\n", err)
 						resp += fmt.Sprintf("pay_fee/fee - failed to pay fee: %v", err)
 					}
 				} else {
@@ -482,25 +472,13 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 		mFee,    sFee    = global.splitByShareRatio(blockFees)
 	)
 
-	fmt.Println("||| PAYING |||")
-	fmt.Printf("\t block reward: %d\n", blockReward)
-	fmt.Printf("\t\t for miner: %d\n", mReward)
-	fmt.Printf("\t\t for sharders: %d\n", sReward)
-	fmt.Printf("\t block fees: %d\n", blockFees)
-	fmt.Printf("\t\t for miner: %d\n", mFee)
-	fmt.Printf("\t\t for sharders: %d\n", sFee)
-
 	var sharders []*ConsensusNode
 	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
 		return "", err
 	}
-	fmt.Printf("%d sharders\n", len(sharders))
 
-	var payments, mintRem, feeRem = msc.shardersPayments(sharders, sReward, sFee)
-	payments = append(payments,
-		msc.generatorPayment(generator,
-			mReward +mintRem,
-			mFee + feeRem))
+	var payments = msc.shardersPayments(sharders, sFee, sReward)
+	payments = append(payments, msc.generatorPayment(generator, mFee, mReward))
 
 	// save the node first, for the VC pools work
 	// every recipient node is being saved during `processPayments` method
@@ -547,40 +525,36 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) generatorPayment(generator *ConsensusNode,
-	mint, fee state.Balance) Payment {
+	fee, mint state.Balance) Payment {
 
 	return Payment {
-		mintPart:    mint,
 		feePart:     fee,
+		mintPart:    mint,
 		receiver:    generator,
 		toGenerator: false,
 	}
 }
 
 func (msc *MinerSmartContract) shardersPayments(sharders []*ConsensusNode,
-	mint, fee state.Balance) (payments []Payment,
-							  mintRem state.Balance,
-							  feeRem state.Balance) {
+	fee, mint state.Balance) []Payment {
 
 	var (
-		sharesAmount = len(sharders)
-		feeShare     = state.Balance(float64(fee) / float64(sharesAmount))
-		mintShare    = state.Balance(float64(mint) / float64(sharesAmount))
+		sharesAmount = float64(len(sharders))
+		feeShare     = state.Balance(float64(fee) / sharesAmount)
+		mintShare    = state.Balance(float64(mint) / sharesAmount)
+		payments     = make([]Payment, 0, len(sharders))
 	)
 
 	for _, sharder := range sharders {
 		payments = append(payments, Payment {
-			mintPart:    mintShare,
 			feePart:     feeShare,
+			mintPart:    mintShare,
 			receiver:    sharder,
 			toGenerator: false,
 		})
 	}
 
-	mintRem = mint - mintShare * state.Balance(sharesAmount)
-	feeRem = fee - feeShare * state.Balance(sharesAmount)
-
-	return payments, mintRem, feeRem
+	return payments
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
@@ -647,8 +621,6 @@ func (msc *MinerSmartContract) payToPools(isMint bool, value state.Balance,
 		results []*PaymentResult) {
 
 	var totalStaked = node.TotalStaked
-
-	fmt.Printf("\t\t%d pools\n", len(node.orderedActivePools()))
 
 	for _, pool := range node.orderedActivePools() {
 		var (

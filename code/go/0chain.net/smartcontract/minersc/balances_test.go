@@ -12,6 +12,10 @@ import (
 	"testing"
 )
 
+//
+// helper for tests implementing chainState.StateContextI
+//
+
 type testBalances struct {
 	balances      map[datastore.Key]state.Balance
 	txn           *transaction.Transaction
@@ -46,11 +50,11 @@ func (tb *testBalances) requireAllBeZeros(t *testing.T) {
 	}
 }
 
-func (tb *testBalances) requireSpecifiedBeEqual(t *testing.T,
-	clients []*Client, value state.Balance, message string) {
+func (tb *testBalances) requireSpecifiedBeZeros(t *testing.T,
+	clients []*Client, message string) {
 
 	for _, client := range clients {
-		require.EqualValues(t, value, tb.balances[client.id], message)
+		require.Zero(t, tb.balances[client.id], message)
 	}
 }
 
