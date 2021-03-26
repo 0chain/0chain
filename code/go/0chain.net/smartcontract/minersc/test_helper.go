@@ -152,18 +152,18 @@ func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
 
 	t.Helper()
 
+	var tx = newTransaction(c.id, ADDRESS, value, now)
+	balances.(*testBalances).txn = tx
+
+	var pool delegatePool
+	pool.ConsensusNodeID = nodeId
+
 	var (
-		pool delegatePool
+		input  = mustEncode(t, &pool)
 		global *GlobalNode
-		tx = newTransaction(c.id, ADDRESS, value, now)
 	)
 	global, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
-
-	balances.(*testBalances).txn = tx
-
-	pool.ConsensusNodeID = nodeId
-	var input  = mustEncode(t, &pool)
 	return msc.addToDelegatePool(tx, input, global, balances)
 }
 
@@ -172,15 +172,14 @@ func (c *Client) callAddMinerOrSharder(isMiner bool, t *testing.T,
 	balances cstate.StateContextI) (
 		resp string, err error) {
 
+	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	balances.(*testBalances).txn = tx
 	var (
-		global *GlobalNode
-		tx = newTransaction(c.id, ADDRESS, 0, now)
 		input  = c.addNodeRequest(t, delegateWallet)
+		global *GlobalNode
 	)
 	global, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
-
-	balances.(*testBalances).txn = tx
 
 	if isMiner {
 		return msc.AddMiner(tx, input, global, balances)
