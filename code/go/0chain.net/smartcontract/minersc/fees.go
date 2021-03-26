@@ -401,19 +401,19 @@ func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.
 func (msc *MinerSmartContract) sumFee(b *block.Block,
 	updateStats bool) state.Balance {
 
-	var totalFees state.Balance
+	var totalMaxFee int64
 	var feeStats metrics.Counter
 	if stat := msc.SmartContractExecutionStats["feesPaid"]; stat != nil {
 		feeStats = stat.(metrics.Counter)
 	}
 	for _, txn := range b.Txns {
-		totalFees += txn.Fee
+		totalMaxFee += txn.Fee
 	}
 
 	if updateStats && feeStats != nil {
-		feeStats.Inc(int64(totalFees))
+		feeStats.Inc(totalMaxFee)
 	}
-	return state.Balance(totalFees)
+	return state.Balance(totalMaxFee)
 }
 
 func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,

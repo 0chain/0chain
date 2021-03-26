@@ -94,7 +94,7 @@ func newTransaction(f, t datastore.Key, val state.Balance,
 	tx.Hash = randString(32)
 	tx.ClientID = string(f)
 	tx.ToClientID = string(t)
-	tx.Value = val
+	tx.Value = int64(val)
 	tx.CreationDate = now
 	return
 }

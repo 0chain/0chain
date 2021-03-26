@@ -125,7 +125,7 @@ func (c *Client) addValidatorRequest(t testing.TB) []byte {
 	return mustEncode(t, &vn)
 }
 
-func newTransaction(f, t string, val state.Balance, now int64) (tx *transaction.Transaction) {
+func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	tx = new(transaction.Transaction)
 	tx.Hash = randString(32)
 	tx.ClientID = f
@@ -139,7 +139,7 @@ func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 	now int64, balances chainState.StateContextI) (resp string, err error) {
 
 	var tx = newTransaction(c.id, ADDRESS,
-		state.Balance(float64(c.terms.WritePrice)*sizeInGB(c.cap)), now)
+		int64(float64(c.terms.WritePrice)*sizeInGB(c.cap)), now)
 	balances.(*testBalances).setTransaction(t, tx)
 	var input = c.addBlobRequest(t)
 	return ssc.addBlobber(tx, input, balances)
@@ -154,8 +154,8 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	return ssc.addValidator(tx, input, balances)
 }
 
-func updateBlobber(t testing.TB, blob *StorageNode, value state.Balance,
-	now int64, ssc *StorageSmartContract, balances chainState.StateContextI) (
+func updateBlobber(t testing.TB, blob *StorageNode, value, now int64,
+	ssc *StorageSmartContract, balances chainState.StateContextI) (
 	resp string, err error) {
 
 	var (
@@ -203,7 +203,7 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 
 	// add stake for the blobber as blobber owner
 	var tx = newTransaction(blob.id, ADDRESS,
-		state.Balance(float64(terms.WritePrice)*sizeInGB(cap)), now)
+		int64(float64(terms.WritePrice)*sizeInGB(cap)), now)
 	balances.(*testBalances).setTransaction(t, tx)
 	_, err = ssc.stakePoolLock(tx, blob.stakeLockRequest(t), balances)
 	require.NoError(t, err)
@@ -253,7 +253,7 @@ func (c *Client) validTicket(t testing.TB, challID, blobID string, ok bool,
 }
 
 func (nar *newAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
-	value state.Balance, ssc *StorageSmartContract, now int64,
+	value int64, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (resp string, err error) {
 
 	var (
@@ -265,7 +265,7 @@ func (nar *newAllocationRequest) callNewAllocReq(t testing.TB, clientID string,
 }
 
 func (uar *updateAllocationRequest) callUpdateAllocReq(t testing.TB,
-	clientID string, value state.Balance, now int64, ssc *StorageSmartContract,
+	clientID string, value, now int64, ssc *StorageSmartContract,
 	balances chainState.StateContextI) (resp string, err error) {
 
 	var (

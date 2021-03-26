@@ -14,13 +14,9 @@ import (
 )
 
 //prime numbers
-const BlockReward, TransactionFee state.Balance = 7723, 7919
-const GeneratorStakeValue, MinerStakeValue,
-	  SharderStakeValue state.Balance = 2, 3, 5
-
-const GeneratorStakersAmount, MinerStakersAmount,
-	  SharderStakersAmount = 11, 13, 17
-
+const BlockReward, TransactionFee = 7723, 7919
+const GeneratorStakeValue, MinerStakeValue, SharderStakeValue = 2, 3, 5
+const GeneratorStakersAmount, MinerStakersAmount, SharderStakersAmount = 11, 13, 17
 const MinersAmount, ShardersAmount = 19, 23
 const BlockShardersAmount = 7
 
@@ -106,7 +102,7 @@ func Test_payFees(t *testing.T) {
 
 	t.Run("stake miners", func(t *testing.T) {
 		for _, miner := range miners {
-			var stakeValue state.Balance
+			var stakeValue int64
 			if miner == generator {
 				stakeValue = GeneratorStakeValue
 			} else {
@@ -176,7 +172,7 @@ func Test_payFees(t *testing.T) {
 		var global = msc.retrieveGlobalNode(t, balances)
 		require.EqualValues(t, 251, global.LastRound)
 
-		msc.verifyRewards(t, false, false,
+		msc.verifyRewardsWithoutFees(t, false,
 			balances, generator, miners, sharders)
 
 		balances.requireTotalAmountBeEqual(t, BlockReward)
@@ -199,7 +195,7 @@ func Test_payFees(t *testing.T) {
 
 		balances.requireTotalAmountBeEqual(t, BlockReward)
 
-		msc.verifyRewards(t, true, false,
+		msc.verifyRewardsWithoutFees(t, true,
 			balances, generator, miners, sharders)
 	})
 
@@ -209,17 +205,47 @@ func Test_payFees(t *testing.T) {
 		msc.resetBalancesAndRewards(balances)
 		msc.setRounds(t, 252, 501, balances)
 
-		msc.requirePendingPoolsBeEmpty(t, balances)
-		msc.requireActivePoolsBeNotEmpty(t, balances)
-
 		now += timeDelta
 		// pools are active, rewards as above and +fees
 		msc.callPayFees(t, balances, miners, sharders,
 			generator.client.id, TransactionFee, 253, now)
 
-		balances.requireTotalAmountBeEqual(t, BlockReward + TransactionFee)
+		var (
+			expected = make(map[string]state.Balance)
+			actual   = make(map[string]state.Balance)
+		)
 
-		require.Equal(t, 0, 1, "TODO")
+		balances.requireNodesHaveZeros(t, miners, "miners' balances must be zero")
+		balances.requireNodesHaveZeros(t, sharders, "sharders' balances must be zero")
+
+		for _, miner := range miners {
+			for _, staker:= range miner.stakers {
+				if miner == generator {
+					expected[staker.id] += 77e7 + 11e10 // + generator fees
+				} else {
+					expected[staker.id] += 0
+				}
+				actual[staker.id] = balances.balances[staker.id]
+			}
+		}
+
+		for _, sharder := range sharders {
+			for _, staker := range sharder.stakers {
+				expected[staker.id] += 0
+				actual[staker.id] = balances.balances[staker.id]
+			}
+		}
+
+		for _, sharder := range filterClientsByIds(sharders, balances.blockSharders) {
+			for _, staker := range sharder.stakers {
+				expected[staker.id] += 21e7 + 3e10 // + block sharders fees
+			}
+		}
+
+		require.Equal(t, len(expected), len(actual), "sizes of balance maps")
+		require.Equal(t, expected, actual, "balances")
+
+		//balances.requireTotalAmountBeEqual(t, BlockReward)
 	})
 
 	// don't set DKG miners list, because no VC is expected
@@ -233,7 +259,42 @@ func Test_payFees(t *testing.T) {
 		msc.callPayFees(t, balances, miners, sharders,
 			generator.client.id, 0, 501, now)
 
-		require.Equal(t, 0, 1, "TODO")
+		var (
+			expected = make(map[string]state.Balance)
+			actual   = make(map[string]state.Balance)
+		)
+
+		balances.requireNodesHaveZeros(t, miners, "miners' balances must be zero")
+		balances.requireNodesHaveZeros(t, sharders, "sharders' balances must be zero")
+
+		for _, miner := range miners {
+			for _, staker := range miner.stakers {
+				if miner == generator {
+					expected[staker.id] += 77e7 + 1e10
+				} else {
+					expected[staker.id] += 1e10
+				}
+				actual[staker.id] = balances.balances[staker.id]
+			}
+		}
+
+		for _, sharder := range sharders {
+			for _, staker := range sharder.stakers {
+				expected[staker.id] += 1e10
+				actual[staker.id] = balances.balances[staker.id]
+			}
+		}
+
+		for _, sharder := range filterClientsByIds(sharders, balances.blockSharders) {
+			for _, staker := range sharder.stakers {
+				expected[staker.id] += 21e7
+			}
+		}
+
+		require.Equal(t, len(expected), len(actual), "sizes of balance maps")
+		require.Equal(t, expected, actual, "balances")
+
+		//balances.requireTotalAmountBeEqual(t, BlockReward)
 	})
 
 	t.Run("epoch", func(t *testing.T) {
@@ -275,8 +336,7 @@ func (msc *MinerSmartContract) callPayFees(t *testing.T,
 	miners      []*TestClient,
 	sharders    []*TestClient,
 	generatorId datastore.Key,
-	fee         state.Balance,
-	round, now  int64) {
+	fee, round, now int64) {
 
 	var blck = block.Provider().(*block.Block)
 
@@ -306,8 +366,8 @@ func (msc *MinerSmartContract) callPayFees(t *testing.T,
 	balances.requireClientWalletsBeEmpty(t, append(miners,sharders...))
 }
 
-func (msc *MinerSmartContract) verifyRewards(t *testing.T,
-	withStakers bool, withFees bool, balances *testBalances,
+func (msc *MinerSmartContract) verifyRewardsWithoutFees(t *testing.T,
+	withStakers bool, balances *testBalances,
 	generator *TestClient, miners []*TestClient,
 	sharders []*TestClient) {
 
@@ -316,12 +376,7 @@ func (msc *MinerSmartContract) verifyRewards(t *testing.T,
 
 	var blockSharders = filterClientsByIds(sharders, balances.blockSharders)
 
-	var total = BlockReward
-	if withFees {
-		total += TransactionFee
-	}
-
-	var generatorShare, shardersShare = global.splitByShareRatio(total)
+	var generatorShare, shardersShare = global.splitByShareRatio(BlockReward)
 	var singleSharderShare = shardersShare / BlockShardersAmount
 	generatorShare += shardersShare % BlockShardersAmount
 
