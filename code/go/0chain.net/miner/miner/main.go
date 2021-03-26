@@ -59,7 +59,7 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-	transaction.SetTxnFee(state.Balance(viper.GetInt64("server_chain.transaction.min_fee")))
+	transaction.SetTxnFee(viper.GetInt64("server_chain.transaction.min_fee"))
 
 	config.SetServerChainID(config.Configuration.ChainID)
 
