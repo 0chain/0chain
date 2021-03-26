@@ -554,7 +554,7 @@ func Test_txnRecordProvider_NewRecord(t *testing.T) {
 }
 
 func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
-	t.Skip("Fails nees fixing")
+	t.Skip("nees fixing")
 	t.Parallel()
 
 	bs := makeTestBlockDBStore()

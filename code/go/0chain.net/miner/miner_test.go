@@ -183,7 +183,7 @@ func TestBlockGeneration(t *testing.T) {
 }
 
 func TestBlockVerification(t *testing.T) {
-	t.Skip("Fails needs fixing")
+	t.Skip("needs fixing")
 	clean := SetUpSingleSelf()
 	defer clean()
 	mc := GetMinerChain()
@@ -229,7 +229,7 @@ func TestTwoCorrectBlocks(t *testing.T) {
 }
 
 func TestTwoBlocksWrongRound(t *testing.T) {
-	t.Skip("Fails needs fixing")
+	t.Skip("needs fixing")
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()
@@ -252,7 +252,7 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 }
 
 func TestBlockVerificationBadHash(t *testing.T) {
-	t.Skip("Fails needs fixing")
+	t.Skip("needs fixing")
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()

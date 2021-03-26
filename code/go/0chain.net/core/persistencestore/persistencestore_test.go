@@ -49,7 +49,7 @@ func TestRead(t *testing.T) {
 }
 
 func TestInsertIfNE(t *testing.T) {
-	t.Skip("Fails needs fixing")
+	t.Skip("needs fixing")
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	b.Hash = "abc"
 	b.MerkleTreeRoot = "def"
@@ -67,7 +67,7 @@ func TestInsertIfNE(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	t.Skip("Fails needs fixing")
+	t.Skip("needs fixing")
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	b.Hash = "abc"
 	b.MerkleTreeRoot = "def"
