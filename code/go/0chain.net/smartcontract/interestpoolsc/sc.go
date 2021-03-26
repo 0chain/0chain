@@ -16,11 +16,10 @@ import (
 )
 
 const (
-	Seperator = smartcontractinterface.Seperator
-	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
-	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
-	name      = "interest"
-	YEAR      = time.Duration(time.Hour * 8784)
+	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	ADDRESS = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
+	name    = "interest"
+	YEAR    = time.Duration(time.Hour * 8784)
 )
 
 type InterestPoolSmartContract struct {
@@ -57,7 +56,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		return "", common.NewError("failed locking tokens", fmt.Sprintf("request not formatted correctly (%v)", err.Error()))
 	}
 	if t.Value < gn.MinLock {
-		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
+		return "", common.NewError("failed locking tokens", "insufficient amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
 	if err == util.ErrValueNotPresent {
