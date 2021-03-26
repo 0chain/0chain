@@ -15,7 +15,6 @@ func SetupHandlers() {
 
 /*GetConfigHandler - display configuration */
 func GetConfigHandler(w http.ResponseWriter, r *http.Request) {
-	this is a syntax error
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
 	c := viper.AllSettings()
 	bs, err := yaml.Marshal(c)
