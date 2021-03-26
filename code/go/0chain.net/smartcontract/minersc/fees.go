@@ -174,8 +174,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		return fmt.Errorf("getting all sharders list: %v", err)
 	}
 
-	fmt.Printf("=-- viewChangePoolsWork: %d miners, %d sharders\n", len(miners.Nodes), len(sharders.Nodes))
-
 	var (
 		mbMiners   = make(map[string]struct{}, mb.Miners.Size())
 		mbSharders = make(map[string]struct{}, mb.Miners.Size())
@@ -193,7 +191,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 
 	// miners
 	for _, miner := range miners.Nodes {
-		if miner, err = msc.getConsensusNode(miner.ID, balances); err != nil {
+		if miner, err = msc.getMinerNode(miner.ID, balances); err != nil {
 			return fmt.Errorf("missing miner node: %v", err)
 		}
 		if err = msc.payInterests(miner, gn, balances); err != nil {
@@ -437,7 +435,7 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 
 	// the block generator
 	var mn *ConsensusNode
-	if mn, err = msc.getConsensusNode(block.MinerID, balances); err != nil {
+	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)
 	}
@@ -448,7 +446,7 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 		zap.String("hash", block.Hash))
 
 	selfID := node.Self.Underlying().GetKey()
-	if _, err := msc.getConsensusNode(selfID, balances); err != nil {
+	if _, err := msc.getMinerNode(selfID, balances); err != nil {
 		Logger.Error("Pay fees, get self miner id failed",
 			zap.String("id", selfID),
 			zap.Error(err))

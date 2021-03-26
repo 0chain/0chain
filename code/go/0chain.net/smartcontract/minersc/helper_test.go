@@ -123,24 +123,24 @@ func newClientWithStakers(isMiner bool, t *testing.T, msc *MinerSmartContract,
 
 // stake a miner or a sharder
 func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
-	now, value int64, nodeId string, balances cstate.StateContextI) (
+	now, val int64, nodeId string, balances cstate.StateContextI) (
 		resp string, err error) {
 
 	t.Helper()
 
-	var tx = newTransaction(c.id, ADDRESS, value, now)
+	var tx = newTransaction(c.id, ADDRESS, val, now)
 	balances.(*testBalances).txn = tx
 
-	var pool delegatePool
-	pool.ConsensusNodeID = nodeId
+	var dp delegatePool
+	dp.MinerID = nodeId
 
 	var (
-		input  = mustEncode(t, &pool)
-		global *GlobalNode
+		input = mustEncode(t, &dp)
+		gn    *GlobalNode
 	)
-	global, err = msc.getGlobalNode(balances)
+	gn, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
-	return msc.addToDelegatePool(tx, input, global, balances)
+	return msc.addToDelegatePool(tx, input, gn, balances)
 }
 
 func (c *Client) callAddMinerOrSharder(isMiner bool, t *testing.T,
@@ -166,7 +166,7 @@ func (c *Client) callAddMinerOrSharder(isMiner bool, t *testing.T,
 
 // add_miner or add_sharder transaction data
 func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
-	var node = NewConsensusNode()
+	var node = NewMinerNode()
 	node.ID = c.id
 	node.N2NHost = "http://" + c.id + ":9081/api/v1"
 	node.Host = c.id + ".host.miners"
