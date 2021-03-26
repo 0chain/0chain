@@ -12,18 +12,18 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) addToDelegatePool(tx *transaction.Transaction,
-	inputData []byte, global *GlobalNode, balances cstate.StateContextI) (
-		resp string, err error) {
+func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
 
-	var dPool delegatePool
-	if err = dPool.Decode(inputData); err != nil {
+	var dp deletePool
+	if err = dp.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"decoding request: %v", err)
 	}
 
-	var userNode *UserNode
-	if userNode, err = msc.getUserNode(tx.ClientID, balances); err != nil {
+	var un *UserNode
+	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"getting user node: %v", err)
 	}
@@ -31,10 +31,10 @@ func (msc *MinerSmartContract) addToDelegatePool(tx *transaction.Transaction,
 	var (
 		pool = sci.NewDelegatePool()
 
-		node     *ConsensusNode
+		mn       *MinerNode
 		transfer *state.Transfer
 	)
-	node, err = msc.getConsensusNode(dPool.ConsensusNodeID, balances)
+	mn, err = msc.getMinerNode(dp.MinerID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
@@ -42,40 +42,38 @@ func (msc *MinerSmartContract) addToDelegatePool(tx *transaction.Transaction,
 
 	if err == util.ErrValueNotPresent {
 		return "", common.NewErrorf("delegate_pool_add",
-			"nodeconsensus node not found or genesis nodeconsensus node used")
+			"miner not found or genesis miner used")
 	}
 
-	var delegatesAmount = node.delegatesAmount();
-
-	if nodeLimit := node.NumberOfDelegates; delegatesAmount >= nodeLimit {
+	if fnd, lnd := mn.numDelegates(), mn.NumberOfDelegates; fnd >= lnd {
 		return "", common.NewErrorf("delegate_pool_add",
-			"node's delegates limit already reached: %d (%d)", delegatesAmount, nodeLimit)
+			"max delegates already reached: %d (%d)", fnd, lnd)
 	}
 
-	if scLimit := global.MaxDelegates; delegatesAmount >= scLimit {
+	if fnd, scn := mn.numDelegates(), gn.MaxDelegates; fnd >= scn {
 		return "", common.NewErrorf("delegate_pool_add",
-			"SC delegates limit already reached: %d (%d)", delegatesAmount, scLimit)
+			"SC max delegates already reached: %d (%d)", fnd, scn)
 	}
 
-	if tx.Value < node.MinStake {
+	if t.Value < int64(mn.MinStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is less then min allowed: %d < %d", tx.Value, node.MinStake)
+			"stake is less than min allowed: %d < %d", t.Value, mn.MinStake)
 	}
-	if tx.Value > node.MaxStake {
+	if t.Value > int64(mn.MaxStake) {
 		return "", common.NewErrorf("delegate_pool_add",
-			"stake is greater then max allowed: %d > %d", tx.Value, node.MaxStake)
+			"stake is greater than max allowed: %d > %d", t.Value, mn.MaxStake)
 	}
 
 	pool.TokenLockInterface = &ViewChangeLock{
-		Owner:               tx.ClientID,
+		Owner:               t.ClientID,
 		DeleteViewChangeSet: false,
 	}
-	pool.DelegateID = tx.ClientID
+	pool.DelegateID = t.ClientID
 	pool.Status = PENDING
 
 	Logger.Info("add delegate pool", zap.Any("pool", pool))
 
-	if transfer, _, err = pool.DigPool(tx.Hash, tx); err != nil {
+	if transfer, _, err = pool.DigPool(t.Hash, t); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"digging delegate pool: %v", err)
 	}
@@ -86,22 +84,22 @@ func (msc *MinerSmartContract) addToDelegatePool(tx *transaction.Transaction,
 	}
 
 	// user node pool information
-	userNode.Pools[node.ID] = append(userNode.Pools[node.ID], tx.Hash)
+	un.Pools[mn.ID] = append(un.Pools[mn.ID], t.Hash)
 
 	// add to pending making it active next VC
-	node.Pending[tx.Hash] = pool
+	mn.Pending[t.Hash] = pool
 
 	// save user node and the miner/sharder
-	if err = userNode.save(balances); err != nil {
+	if err = un.save(balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"saving user node: %v", err)
 	}
-	if err = node.save(balances); err != nil {
+	if err = mn.save(balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
-			"saving nodeconsensus node: %v", err)
+			"saving miner node: %v", err)
 	}
 
-	resp = string(node.Encode()) + string(transfer.Encode()) + string(userNode.Encode())
+	resp = string(mn.Encode()) + string(transfer.Encode()) + string(un.Encode())
 	return
 }
 
@@ -109,14 +107,14 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var dp delegatePool
+	var dp deletePool
 	if err = dp.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error decoding request: %v", err)
 	}
 
-	var mn *ConsensusNode
-	if mn, err = msc.getConsensusNode(dp.ConsensusNodeID, balances); err != nil {
+	var mn *MinerNode
+	if mn, err = msc.getMinerNode(dp.MinerID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error getting miner node: %v", err)
 	}

@@ -32,10 +32,10 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode) (ok bool) {
 
 	var (
-		allMinersList *ConsensusNodes
+		allMinersList *MinerNodes
 		dkgMinersList *DKGMinerNodes
 
-		allShardersList *ConsensusNodes
+		allShardersList *MinerNodes
 
 		err error
 	)
@@ -229,11 +229,11 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode) error {
+	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
 
 	// move phase condition
 	var movePhase = config.DevConfiguration.ViewChange &&
-			pn.CurrentRound - pn.StartRound >= PhaseRounds[pn.Phase]
+		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
 
 	// move
 	if movePhase {
@@ -257,7 +257,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				}
 			}
 			if err == nil {
-				if Phase(len(PhaseRounds)) - 1 > pn.Phase {
+				if Phase(len(PhaseRounds))-1 > pn.Phase {
 					pn.Phase++
 				} else {
 					pn.Phase = 0
@@ -299,7 +299,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	dkgMiners := NewDKGMinerNodes()
 	dkgMiners.calculateTKN(gn, len(allminerslist.Nodes))
 	for _, node := range allminerslist.Nodes {
-		dkgMiners.SimpleNodes[node.ID] = node
+		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
 	}
 
 	dkgMiners.StartRound = gn.LastRound
@@ -309,7 +309,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	//sharders
-	allSharderKeepList := new(ConsensusNodes)
+	allSharderKeepList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allSharderKeepList)
 	if err != nil {
 		return err
@@ -360,16 +360,16 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	return nil
 }
 
-func (msc *MinerSmartContract) reduceShardersList(keep, all *ConsensusNodes,
+func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 	gn *GlobalNode, balances cstate.StateContextI) (
-	list []*SimpleNode, err error) {
+	list []*MinerNode, err error) {
 
 	var (
 		pmb  = gn.prevMagicBlock(balances)
 		hasp bool // TODO (sfxdx): remove the temporary debug code
 	)
 
-	list = make([]*SimpleNode, 0, len(keep.Nodes))
+	list = make([]*MinerNode, 0, len(keep.Nodes))
 	for _, ksh := range keep.Nodes {
 		var ash = all.FindNodeById(ksh.ID)
 		if ash == nil {
@@ -522,7 +522,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// if err != nil {
 	// 	return err
 	// }
-	allMinersList := new(ConsensusNodes)
+	allMinersList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		return err
@@ -763,7 +763,7 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
-	sharderList *ConsensusNodes, dkgMinersList *DKGMinerNodes,
+	sharderList *MinerNodes, dkgMinersList *DKGMinerNodes,
 	gsos *block.GroupSharesOrSigns, mpks *block.Mpks, pn *PhaseNode) (
 	*block.MagicBlock, error) {
 
@@ -834,7 +834,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 
-	allMinersList := new(ConsensusNodes)
+	allMinersList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))

@@ -1,8 +1,6 @@
 package wallet
 
 import (
-	"0chain.net/chaincore/state"
-	"0chain.net/core/datastore"
 	"encoding/hex"
 
 	"0chain.net/core/encryption"
@@ -11,10 +9,10 @@ import (
 /*Wallet - a struct representing the client's wallet */
 type Wallet struct {
 	SignatureScheme encryption.SignatureScheme
-	PublicKeyBytes  []byte        `json:"-"`
-	PublicKey       datastore.Key `json:"public_key"`
-	ClientID        datastore.Key `json:"id"`
-	Balance         state.Balance `json:"-"`
+	PublicKeyBytes  []byte `json:"-"`
+	PublicKey       string `json:"public_key"`
+	ClientID        string `json:"id"`
+	Balance         int64  `json:"-"`
 }
 
 /*Initialize - initialize a wallet with public/private keys */
