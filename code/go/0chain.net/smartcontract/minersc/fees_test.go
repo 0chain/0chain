@@ -219,8 +219,7 @@ func Test_payFees(t *testing.T) {
 
 		balances.requireTotalAmountBeEqual(t, BlockReward + TransactionFee)
 
-		msc.verifyRewards(t, true, true,
-			balances, generator, miners, sharders)
+		require.Equal(t, 0, 1, "TODO")
 	})
 
 	// don't set DKG miners list, because no VC is expected
@@ -293,6 +292,7 @@ func (msc *MinerSmartContract) callPayFees(t *testing.T,
 	}
 	blck.Txns = append(blck.Txns, tx)
 
+	//todo: check (initially tx.Fee and blck.Txns setting were after this:)
 	balances.txn = tx
 	balances.block = blck
 	balances.blockSharders = selectRandom(sharders, BlockShardersAmount)
