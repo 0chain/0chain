@@ -686,10 +686,10 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 
 type dkgInfo struct {
 	Phase        *minersc.PhaseNode
-	AllMiners    *minersc.ConsensusNodes
-	AllSharders  *minersc.ConsensusNodes
+	AllMiners    *minersc.MinerNodes
+	AllSharders  *minersc.MinerNodes
 	DKGMiners    *minersc.DKGMinerNodes
-	ShardersKeep *minersc.ConsensusNodes
+	ShardersKeep *minersc.MinerNodes
 	MPKs         *block.Mpks
 	GSoS         *block.GroupSharesOrSigns //
 	MB           *block.MagicBlock         // prepared magic block (miner SC MB)
@@ -757,10 +757,10 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 	dkgi = new(dkgInfo)
 
 	dkgi.Phase = new(minersc.PhaseNode)
-	dkgi.AllMiners = new(minersc.ConsensusNodes)
-	dkgi.AllSharders = new(minersc.ConsensusNodes)
+	dkgi.AllMiners = new(minersc.MinerNodes)
+	dkgi.AllSharders = new(minersc.MinerNodes)
 	dkgi.DKGMiners = new(minersc.DKGMinerNodes)
-	dkgi.ShardersKeep = new(minersc.ConsensusNodes)
+	dkgi.ShardersKeep = new(minersc.MinerNodes)
 	dkgi.MPKs = new(block.Mpks)
 	dkgi.GSoS = new(block.GroupSharesOrSigns)
 	dkgi.MB = new(block.MagicBlock)
@@ -881,14 +881,14 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
   <p>
     <h3>All registered miners</h3>
-    {{ if .AllMiners.ConsensusNodes }}
+    {{ if .AllMiners.Nodes }}
       <table>
       <tr>
         <th>ID</th>
         <th>Host</th>
         <th>Total stake</th>
       </tr>
-      {{ range $n := .AllMiners.ConsensusNodes }}
+      {{ range $n := .AllMiners.Nodes }}
         <tr>
           <td>{{ trim $n.ID }}</td>
           <td>{{ $n.N2NHost }}</td>
@@ -903,14 +903,14 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
   <p>
     <h3>All registered sharders</h3>
-    {{ if .AllSharders.ConsensusNodes }}
+    {{ if .AllSharders.Nodes }}
       <table>
       <tr>
         <th>ID</th>
         <th>Host</th>
         <th>Total stake</th>
       </tr>
-      {{ range $n := .AllSharders.ConsensusNodes }}
+      {{ range $n := .AllSharders.Nodes }}
         <tr>
           <td>{{ trim $n.ID }}</td>
           <td>{{ $n.N2NHost }}</td>
@@ -925,7 +925,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
   <p>
     <h3>Sharders keep list</h3>
-    {{ if .ShardersKeep.ConsensusNodes }}
+    {{ if .ShardersKeep.Nodes }}
       {{ $dot := . }}
       <table>
       <tr>
@@ -934,7 +934,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
         <th>Total stake</th>
         <th>Is from previous set</th>
       </tr>
-      {{ range $n := .ShardersKeep.ConsensusNodes }}
+      {{ range $n := .ShardersKeep.Nodes }}
         <tr>
           <td>{{ trim $n.ID }}</td>
           <td>{{ $n.N2NHost }}</td>

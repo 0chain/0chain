@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"errors"
 	"fmt"
@@ -9,7 +10,10 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+<<<<<<< HEAD
 	"0chain.net/chaincore/node"
+=======
+>>>>>>> 3a9632b9... Fees and rewards refactoring
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -25,7 +29,7 @@ var (
 	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
 )
 
-func (msc *MinerSmartContract) activatePending(mn *ConsensusNode) {
+func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for id, pool := range mn.Pending {
 		pool.Status = ACTIVE
 		mn.Active[id] = pool
@@ -35,7 +39,7 @@ func (msc *MinerSmartContract) activatePending(mn *ConsensusNode) {
 }
 
 // pay interests for active pools
-func (msc *MinerSmartContract) payInterests(mn *ConsensusNode, gn *GlobalNode,
+func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	if !gn.canMint() {
@@ -96,7 +100,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 	return
 }
 
-func (msc *MinerSmartContract) emptyPool(mn *ConsensusNode,
+func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 	pool *sci.DelegatePool, round int64, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -117,7 +121,7 @@ func (msc *MinerSmartContract) emptyPool(mn *ConsensusNode,
 }
 
 // unlock deleted pools
-func (msc *MinerSmartContract) unlockDeleted(mn *ConsensusNode, round int64,
+func (msc *MinerSmartContract) unlockDeleted(mn *MinerNode, round int64,
 	balances cstate.StateContextI) (err error) {
 
 	for id := range mn.Deleting {
@@ -133,7 +137,7 @@ func (msc *MinerSmartContract) unlockDeleted(mn *ConsensusNode, round int64,
 }
 
 // unlock all delegate pools of offline node
-func (msc *MinerSmartContract) unlockOffline(mn *ConsensusNode,
+func (msc *MinerSmartContract) unlockOffline(mn *MinerNode,
 	balances cstate.StateContextI) (err error) {
 
 	mn.Deleting = make(map[string]*sci.DelegatePool) // reset
@@ -165,7 +169,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	mb *block.MagicBlock, round int64, balances cstate.StateContextI) (
 		err error) {
 
-	var miners, sharders *ConsensusNodes
+	var miners, sharders *MinerNodes
 	if miners, err = msc.getMinersList(balances); err != nil {
 		return fmt.Errorf("getting all miners list: %v", err)
 	}
@@ -178,7 +182,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		mbMiners   = make(map[string]struct{}, mb.Miners.Size())
 		mbSharders = make(map[string]struct{}, mb.Miners.Size())
 
-		minersOffline, shardersOffline []*ConsensusNode
+		minersOffline, shardersOffline []*MinerNode
 	)
 
 	for _, key := range mb.Miners.Keys() {
@@ -190,45 +194,45 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// miners
-	for _, miner := range miners.Nodes {
-		if miner, err = msc.getMinerNode(miner.ID, balances); err != nil {
+	for _, mn := range miners.Nodes {
+		if mn, err = msc.getMinerNode(mn.ID, balances); err != nil {
 			return fmt.Errorf("missing miner node: %v", err)
 		}
-		if err = msc.payInterests(miner, gn, balances); err != nil {
+		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
 		}
-		if err = msc.unlockDeleted(miner, round, balances); err != nil {
+		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
 		}
-		msc.activatePending(miner)
-		if _, ok := mbMiners[miner.ID]; !ok {
-			minersOffline = append(minersOffline, miner)
+		msc.activatePending(mn)
+		if _, ok := mbMiners[mn.ID]; !ok {
+			minersOffline = append(minersOffline, mn)
 			continue
 		}
 		// save excluding offline nodes
-		if err = miner.save(balances); err != nil {
+		if err = mn.save(balances); err != nil {
 			return
 		}
 	}
 
 	// sharders
-	for _, sharder := range sharders.Nodes {
-		if sharder, err = msc.getSharderNode(sharder.ID, balances); err != nil {
+	for _, mn := range sharders.Nodes {
+		if mn, err = msc.getSharderNode(mn.ID, balances); err != nil {
 			return fmt.Errorf("missing sharder node: %v", err)
 		}
-		if err = msc.payInterests(sharder, gn, balances); err != nil {
+		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
 		}
-		if err = msc.unlockDeleted(sharder, round, balances); err != nil {
+		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
 		}
-		msc.activatePending(sharder)
-		if _, ok := mbSharders[sharder.ID]; !ok {
-			shardersOffline = append(shardersOffline, sharder)
+		msc.activatePending(mn)
+		if _, ok := mbSharders[mn.ID]; !ok {
+			shardersOffline = append(shardersOffline, mn)
 			continue
 		}
 		// save excluding offline nodes
-		if err = sharder.save(balances); err != nil {
+		if err = mn.save(balances); err != nil {
 			return
 		}
 	}
@@ -309,12 +313,12 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 type Payment struct {
 	feePart     state.Balance
 	mintPart    state.Balance
-	receiver    *ConsensusNode
+	receiver    *MinerNode
 	toGenerator bool
 }
 
 func (msc *MinerSmartContract) processPayments(payments []Payment, block *block.Block,
-	global *GlobalNode, miner *ConsensusNode, balances cstate.StateContextI) (
+	global *GlobalNode, miner *MinerNode, balances cstate.StateContextI) (
 		resp string, err error) {
 
 	for _, payment := range payments {
@@ -429,7 +433,7 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 	}
 
 	// the block generator
-	var mn *ConsensusNode
+	var mn *MinerNode
 	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)
@@ -465,7 +469,7 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 		mFee,    sFee    = gn.splitByShareRatio(blockFees)
 	)
 
-	var sharders []*ConsensusNode
+	var sharders []*MinerNode
 	if sharders, err = msc.getBlockSharders(block, balances); err != nil {
 		return "", err
 	}
@@ -514,7 +518,7 @@ func (msc *MinerSmartContract) payFees(tx *transaction.Transaction,
 	return resp, nil
 }
 
-func (msc *MinerSmartContract) generatorPayment(generator *ConsensusNode,
+func (msc *MinerSmartContract) generatorPayment(generator *MinerNode,
 	fee, mint state.Balance) Payment {
 
 	return Payment {
@@ -525,7 +529,7 @@ func (msc *MinerSmartContract) generatorPayment(generator *ConsensusNode,
 	}
 }
 
-func (msc *MinerSmartContract) shardersPayments(sharders []*ConsensusNode,
+func (msc *MinerSmartContract) shardersPayments(sharders []*MinerNode,
 	fee, mint state.Balance) []Payment {
 
 	var (
@@ -548,7 +552,7 @@ func (msc *MinerSmartContract) shardersPayments(sharders []*ConsensusNode,
 }
 
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
-	balances cstate.StateContextI) (sharders []*ConsensusNode, err error) {
+	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
 	if block.PrevBlock == nil {
 		return nil, fmt.Errorf("missing previous block in state context %d, %s",
@@ -558,10 +562,10 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	var sharderIds = balances.GetBlockSharders(block.PrevBlock)
 	sort.Strings(sharderIds)
 
-	sharders = make([]*ConsensusNode, 0, len(sharderIds))
+	sharders = make([]*MinerNode, 0, len(sharderIds))
 
 	for _, sharderId := range sharderIds {
-		var node *ConsensusNode
+		var node *MinerNode
 		node, err = msc.getSharderNode(sharderId, balances)
 		if err != nil {
 			if err != util.ErrValueNotPresent {
@@ -579,7 +583,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 }
 
 func (msc *MinerSmartContract) payToDelegates(isMint bool, value state.Balance,
-	node *ConsensusNode, isGenerator bool, global *GlobalNode,
+	node *MinerNode, isGenerator bool, global *GlobalNode,
 	balances cstate.StateContextI) (results []*PaymentResult) {
 
 	if isMint && !global.canMint() {
@@ -607,7 +611,7 @@ type PaymentResult struct {
 }
 
 func (msc *MinerSmartContract) payToPools(isMint bool, value state.Balance,
-	node *ConsensusNode, balances cstate.StateContextI) (
+	node *MinerNode, balances cstate.StateContextI) (
 		results []*PaymentResult) {
 
 	var totalStaked = node.TotalStaked
