@@ -3,6 +3,8 @@ package miner
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -774,6 +776,30 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 	)
 	defer ememorystore.Close(dctx)
 	err = dkgs.Read(dctx, dkgs.GetKey())
+	return
+}
+
+// ReadDKGSummaryFile obtains dkg summary from JSON file with given path.
+func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
+	dkgs = &bls.DKGSummary{SecretShares: make(map[string]string)}
+	if path == "" {
+		return nil, common.NewError("Error reading dkg file", "path is blank")
+	}
+
+	if ext := filepath.Ext(path); ext != ".json" {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
+	}
+
+	var b []byte
+	if b, err = ioutil.ReadFile(path); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
+	}
+
+	if err = dkgs.Decode(b); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
+	}
+
+	Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
 	return
 }
 
