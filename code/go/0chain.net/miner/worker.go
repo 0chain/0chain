@@ -96,7 +96,26 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int("VRF_shares", len(round.GetVRFShares())),
 						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-					protocol.HandleRoundTimeout(ctx, cround)
+					func(ctx context.Context) {
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+						rc := make(chan struct{})
+						ts := time.Now()
+						go func() {
+							protocol.HandleRoundTimeout(cctx, cround)
+							rc <- struct{}{}
+						}()
+						select {
+						case <-cctx.Done():
+							Logger.Error("protocol.HandleRoundTimeout timeout",
+								zap.Error(cctx.Err()),
+								zap.Int64("round", cround))
+						case <-rc:
+							Logger.Info("protocol.HandleRoundTimeout finished",
+								zap.Int64("round", cround),
+								zap.Any("duration", time.Since(ts)))
+						}
+					}(ctx)
 				} else {
 					logging.Logger.Debug("Round timeout, nil miner round", zap.Int64("round", cround))
 				}
