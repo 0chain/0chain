@@ -56,7 +56,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	if err != nil {
 		return "", common.NewError("failed locking tokens", fmt.Sprintf("request not formatted correctly (%v)", err.Error()))
 	}
-	if t.Value < gn.MinLock {
+	if t.Value < int64(gn.MinLock) {
 		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
@@ -85,9 +85,9 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
 		)
 		balances.AddMint(&state.Mint{
-			Minter:   ip.ID,
-			Receiver: transfer.Sender,
-			Amount:   pool.TokensEarned,
+			Minter:     ip.ID,
+			ToClientID: transfer.ClientID,
+			Amount:     pool.TokensEarned,
 		})
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned

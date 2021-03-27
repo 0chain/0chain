@@ -1,7 +1,6 @@
 package transaction
 
 import (
-	"0chain.net/chaincore/state"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -25,7 +24,7 @@ import (
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 
 var TXN_TIME_TOLERANCE int64
-var TXN_MIN_FEE        state.Balance
+var TXN_MIN_FEE int64
 
 var transactionCount uint64 = 0
 var redis_txns string
@@ -50,10 +49,10 @@ type Transaction struct {
 	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
-	Value           state.Balance    `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
+	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
-	Fee             state.Balance    `json:"transaction_fee" msgpack:"f"`
+	Fee             int64            `json:"transaction_fee" msgpack:"f"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
@@ -191,7 +190,7 @@ func (t *Transaction) Validate(ctx context.Context) error {
 /*GetScore - score for write*/
 func (t *Transaction) GetScore() int64 {
 	if config.DevConfiguration.IsFeeEnabled {
-		return int64(t.Fee)
+		return t.Fee
 	}
 	return 0
 }
@@ -239,11 +238,7 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := common.TimeToString(t.CreationDate) + ":" +
-		t.ClientID + ":" +
-		t.ToClientID + ":" +
-		strconv.FormatInt(int64(t.Value), 10) + ":" +
-		encryption.Hash(t.TransactionData)
+	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
 	return hashdata
 }
 
@@ -378,7 +373,7 @@ func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
 }
 
-func SetTxnFee(min state.Balance) {
+func SetTxnFee(min int64) {
 	TXN_MIN_FEE = min
 }
 

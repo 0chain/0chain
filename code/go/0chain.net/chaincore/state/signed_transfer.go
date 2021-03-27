@@ -68,7 +68,7 @@ func (st SignedTransfer) verifyPublicKey() error {
 		return common.NewError("invalid_public_key", "invalid public key format")
 	}
 
-	if encryption.Hash(publicKeyBytes) != st.Transfer.Sender {
+	if encryption.Hash(publicKeyBytes) != st.Transfer.ClientID {
 		return common.NewError("wrong_public_key", "public key does not match client id")
 	}
 

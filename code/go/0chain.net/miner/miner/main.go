@@ -59,7 +59,7 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
-	transaction.SetTxnFee(state.Balance(viper.GetInt64("server_chain.transaction.min_fee")))
+	transaction.SetTxnFee(viper.GetInt64("server_chain.transaction.min_fee"))
 
 	config.SetServerChainID(config.Configuration.ChainID)
 
@@ -101,10 +101,7 @@ func main() {
 	}
 
 	initStates := state.NewInitStates()
-	err = initStates.Read(*initialStatesFile)
-	if err != nil {
-		Logger.Panic("Failed to read initialStates", zap.Any("Error", err))
-	}
+	initStateErr := initStates.Read(*initialStatesFile)
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
@@ -150,6 +147,10 @@ func main() {
 		node.Self.Underlying().N2NHost = n2nHostName
 		node.Self.Underlying().Port = portNum
 		node.Self.Underlying().Path = path
+	} else {
+		if initStateErr != nil {
+			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		}
 	}
 
 	if node.Self.Underlying().GetKey() == "" {
