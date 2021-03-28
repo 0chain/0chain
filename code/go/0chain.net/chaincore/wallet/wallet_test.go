@@ -280,7 +280,7 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 	if mpt != nil {
 		fmt.Printf("transactions - num changes: %v in %v\n", len(mpt.GetChangeCollector().GetChanges()), time.Since(ts))
 	} else {
-		//fmt.Printf("transactions - time taken: %v\n", time.Since(ts))
+		fmt.Printf("transactions - time taken: %v\n", time.Since(ts))
 	}
 	if mpt == nil {
 		return
@@ -295,7 +295,7 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 		if w.Balance == 0 {
 			zbcount++
 		}
-		_, err := getState(mpt, w.ClientID)
+		s, err := getState(mpt, w.ClientID)
 		if err != nil {
 			if err == util.ErrNodeNotFound {
 				fmt.Printf("Node not found; client - %s\n", w.ClientID)
@@ -303,9 +303,9 @@ func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 				fmt.Printf("Client %s - deleted ; (Balance - %d)\n", w.ClientID, w.Balance)
 			}
 		} else {
-			//if s.Balance != state.Balance(w.Balance) {
-			//	fmt.Printf("balance mismatch (%v): %d; Found : %d\n", w.ClientID, w.Balance, s.Balance)
-			//}
+			if s.Balance != state.Balance(w.Balance) {
+				fmt.Printf("balance mismatch (%v): %d; Found : %d\n", w.ClientID, w.Balance, s.Balance)
+			}
 		}
 	}
 	fmt.Printf("zero balance clients %v\n", zbcount)
