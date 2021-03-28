@@ -41,7 +41,6 @@ func init() {
 var clientSignatureScheme = "bls0chain"
 
 func TestWalletSetup(t *testing.T) {
-	t.Skip("Timeouts should not print output")
 	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
 	err := sigScheme.GenerateKeys()
 	if err != nil {
@@ -55,7 +54,6 @@ func TestWalletSetup(t *testing.T) {
 	fmt.Fprintf(os.Stdout, "%v\n", encryption.Hash(publicKeyBytes))
 }
 func TestMPTWithWalletTxns(t *testing.T) {
-	t.Skip("Timeouts should not print output")
 	var rs = rand.NewSource(randTime)
 	transactions := 100
 	var wallets []*Wallet
@@ -101,7 +99,6 @@ func TestMPTWithWalletTxns(t *testing.T) {
 }
 
 func TestMPTChangeCollector(t *testing.T) {
-	t.Skip("Timeouts should not print output")
 	var rs = rand.NewSource(randTime)
 	transactions := 1000
 	var wallets []*Wallet
@@ -338,7 +335,6 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 
 //TestGenerateCompressionTrainingData - generate the training data for compression
 func TestGenerateCompressionTrainingData(t *testing.T) {
-	t.Skip("Timeouts should not print output")
 	common.SetupRootContext(node.GetNodeContext())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
 	SetupWallet()
