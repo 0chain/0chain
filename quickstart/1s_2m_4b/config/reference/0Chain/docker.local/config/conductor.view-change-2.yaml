@@ -1,0 +1,235 @@
+###
+### Byzantine view change tests
+###
+
+---
+
+# enabled test cases sets
+enable:
+  # comment out to disable
+  # - "MPK"
+  - "Shares"
+  # - "Signatures"
+  # - "Publish"
+
+# sets of test cases
+sets:
+  - name: "MPK"
+    tests:
+      - "Send wrong MPK to blockchain"
+      - "Send no MPK to blockchain"
+      - "Group send no MPK to blockchain"
+  - name: "Shares"
+    tests:
+      - "Send wrong share"
+      - "Only send correct share to the group" # only send correct share to the group
+      - "Send no shares"
+  - name: "Signatures"
+    tests:
+      - "Don't send a signature"
+      - "Only send correct signature to the group"
+      - "Send no signatures"
+  - name: "Publish"
+    tests:
+      - "Publish: Don't send a signature"
+      - "Publish: Only send correct signature to the group"
+      - "Publish: Send no signatures"
+
+# test cases
+tests:
+
+  # MPK
+  - name: "Send wrong MPK to blockchain"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - mpk:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+  - name: "Send no MPK to blockchain"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - mpk:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+  - name: "Group send no MPK to blockchain"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - mpk:
+          by: ["miner-2", "miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+
+  # Shares
+  - name: "Send wrong share"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - share:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+  - name: "Only send correct share to the group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - share:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_view_change:
+          expect_magic_block:
+            number: 2 # round 251
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Send no shares"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - share:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+
+  # Signatures
+  - name: "Don't send a signature"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - signature:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+  - name: "Only send correct signature to the group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - signature:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_view_change:
+          expect_magic_block:
+            number: 2 # round 251
+            miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4'] # miner 4 through revealed
+            sharders: ['sharder-1']
+  - name: "Send no signatures"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - signature:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+
+  # Publish
+  - name: "Publish: Don't send a signature"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          publish: 10 # wait a round to be sure it starts
+      - signature:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300 # 255
+          timeout: '5m'
+  - name: "Publish: Only send correct signature to the group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - publish:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_view_change:
+          expect_magic_block:
+            number: 2 # round 251
+            miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4'] # miner 4 through revealed
+            sharders: ['sharder-1']
+  - name: "Publish: Send no signatures"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - publish:
+          by: ["miner-2", "miner-3"]
+          good: []
+          bad: []
+      - wait_no_view_change:
+          round: 300
+          timeout: '15m'
+
+...

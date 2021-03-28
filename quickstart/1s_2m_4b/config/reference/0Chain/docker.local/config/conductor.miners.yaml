@@ -1,0 +1,340 @@
+###
+### Blockchain miners Byzantine tests
+###
+
+---
+
+# enabled test cases sets
+enable:
+  - "VRF"
+  - "Round timeout"
+  - "Verification tickets"
+  - "Bad block"
+  - "Notarized block"
+  - "Double spend transaction"
+
+# sets of test cases
+sets:
+  - name: "VRF"
+    tests:
+      - "Send bad VRFS to everyone"
+      - "Send VRFS only to group"
+      - "Send only the group the correct VRFS (bad VRFS for everyone else)"
+      - "Send no VRFS"
+  - name: "Round timeout"
+    tests:
+      - "Don't send a round timeout"
+      - "Send timeouts only to group"
+      - "Send wrong timeout to everyone"
+      - "Send correct timeout only to group"
+  - name: "Verification tickets"
+    tests:
+      - "Send no tickets to slow down or stall the chain"
+      - "Group send no tickets to slow down or stall the chain"
+      - "Send bad verification ticket with wrong key"
+      - "Send bad verification ticket with wrong hash"
+  - name: "Bad block"
+    tests:
+      - "Create competing block when not a generator"
+      - "Group only signs the competing blocks"
+      - "Send a transaction from an earlier block to create a double spend"
+      - "Sign a different hash than the block hash"
+      - "Use a different private key to sign the block"
+      - "Hash the block incorrectly"
+  - name: "Double spend transaction"
+    tests:
+      - "Double spend transaction: 1/3"
+      - "Double spend transaction: 2/3"
+      - "Double spend transaction: 3/3"
+
+#
+# test cases
+#
+tests:
+
+  # VRF
+  - name: "Send bad VRFS to everyone"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - vrfs:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_no_progress:
+          timeout: "2m"
+  - name: "Send VRFS only to group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10
+      - vrfs:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_round: # it keeps moving because 1, 2 and 3 still OK (consensus)
+          round: 20
+  - name: "Send only the group the correct VRFS (bad VRFS for everyone else)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10
+      - vrfs:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: ["miner-3"]
+      - wait_round: # it keeps moving because 1, 2 and 3 still OK (consensus)
+          round: 20
+  - name: "Send no vrfs"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - vrfs:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_progress:
+          timeout: "2m"
+
+  # Round timeout
+  - name: "Don't send a round timeout"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - round_timeout:
+          by: ["miner-3"]
+          good: []
+          bad: []
+      - wait_no_progress:
+          timeout: "2m"
+  - name: "Send timeouts only to group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10
+      - round_timeout:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_round: # it keeps moving because 1, 2 and 3 still OK (consensus)
+          round: 20
+  - name: "Send wrong timeout to everyone"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - round_timeout:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_no_progress:
+          timeout: "2m"
+  - name: "Send correct timeout only to group"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10
+      - round_timeout:
+          by: ["miner-4"]
+          good: ["miner-1", "miner-2"]
+          bad: []
+      - wait_round: # it keeps moving because 1, 2 and 3 still OK (consensus)
+          round: 20
+
+  - name: "Send no tickets to slow down or stall the chain"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_verification_ticket_hash:
+          by: ["miner-3"]
+          good: [] # no tickets
+          bad: [] # no bad tickets
+      - wait_round:
+          round: 20 # it keeps going
+  - name: "Group send no tickets to slow down or stall the chain"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          round: 10
+      - wrong_verification_ticket_hash:
+          by: ["miner-2", "miner-3", "miner-4"]
+          good: [] # no tickets
+          bad: [] # no bad tickets
+      - wait_no_progress:
+          timeout: '1m'
+  - name: "Send bad verification ticket with wrong key"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_verification_ticket_key:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_round:
+          round: 20 # it keeps going
+  - name: "Send bad verification ticket with wrong hash"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_verification_ticket_hash:
+          by: ["miner-3"]
+          good: []
+          bad: ["miner-1", "miner-2"]
+      - wait_round:
+          round: 20 # it keeps going
+
+  # Bad block
+  - name: "Create competing block when not a generator"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - competing_block:
+          by: ["miner-3"]
+      - wait_round:
+          round: 20 # it keeps going
+  - name: "Group only signs the competing blocks"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - competing_block:
+          by: ["miner-3"]
+      - sign_only_competing_blocks:
+          by: ["miner-3", "miner-4"]
+      - wait_no_progress:
+          timeout: '2m'
+
+  - name: "Sign a different hash than the block hash"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_block_sign_hash:
+          by: ["miner-3"]
+      - wait_round:
+          round: 20 # it keeps going
+          timeout: '5m'
+  - name: "Use a different private key to sign the block"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_block_sign_key:
+          by: ["miner-3"]
+      - wait_round:
+          round: 20 # it keeps going
+          timeout: '5m'
+  - name: "Hash the block incorrectly"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - wait_round:
+          round: 10
+      - wrong_block_hash:
+          by: ["miner-3"]
+      - wait_round:
+          round: 20 # it keeps going
+          timeout: '5m'
+
+  # Double spend transaction
+
+  - name: 'Double spend transaction: 1/3'
+    flow:
+      - set_monitor: 'sharder-1'
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 100
+          timeout: '5m'
+      - double_spend_transaction:
+          by: ['miner-3']
+      - wait_round:
+          round: 120
+
+  - name: 'Double spend transaction: 2/3'
+    flow:
+      - set_monitor: 'sharder-1'
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 100
+          timeout: '5m'
+      - double_spend_transaction:
+          by: ['miner-2', 'miner-3']
+      - wait_round:
+          round: 110
+          timeout: '5m' # can be very slow, but with progress
+
+  - name: 'Double spend transaction: 3/3'
+    flow:
+      - set_monitor: 'sharder-1'
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 100
+          timeout: '5m'
+      - double_spend_transaction:
+          by: ['miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 110
+          timeout: '5m' # moves very slow, but moves
+
+...
