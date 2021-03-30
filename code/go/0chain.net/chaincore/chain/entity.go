@@ -1204,6 +1204,33 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 		Logger.Error("init block state", zap.Int64("round", b.Round),
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
+
+		if err == util.ErrNodeNotFound {
+			// get state from network
+			Logger.Info("init block state by synching block state from network")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			doneC := make(chan struct{})
+			errC := make(chan error)
+			go func() {
+				defer close(doneC)
+				if err := c.GetBlockStateChange(b); err != nil {
+					errC <- err
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				Logger.Error("init block state failed",
+					zap.Int64("round", b.Round),
+					zap.Error(err))
+			case err := <-errC:
+				Logger.Error("init block state failed", zap.Error(err))
+			case <-doneC:
+				Logger.Info("init block state by synching block state from network successfully",
+					zap.Int64("round", b.Round))
+			}
+		}
 		return
 	}
 	Logger.Info("init block state successful", zap.Int64("round", b.Round),
