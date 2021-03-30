@@ -110,7 +110,7 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound int64 `json:"-"`
+	currentRound int64 `json:"-"`
 
 	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
 
@@ -978,6 +978,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
+		Logger.Debug("SetRandomSeed round already has the seed")
 		return false
 	}
 	if randomSeed == 0 {
@@ -985,7 +986,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
-	if roundNumber > c.CurrentRound {
+	if roundNumber > c.getCurrentRound() {
 		c.setCurrentRound(roundNumber)
 	}
 	return true
@@ -996,7 +997,7 @@ func (c *Chain) GetCurrentRound() int64 {
 	c.roundsMutex.RLock()
 	defer c.roundsMutex.RUnlock()
 
-	return c.CurrentRound
+	return c.getCurrentRound()
 }
 
 func (c *Chain) SetCurrentRound(round int64) {
@@ -1006,7 +1007,11 @@ func (c *Chain) SetCurrentRound(round int64) {
 }
 
 func (c *Chain) setCurrentRound(round int64) {
-	c.CurrentRound = round
+	c.currentRound = round
+}
+
+func (c *Chain) getCurrentRound() int64 {
+	return c.currentRound
 }
 
 func (c *Chain) getBlocks() []*block.Block {
