@@ -4,6 +4,7 @@ package wallet
 
 import (
 	"0chain.net/core/logging"
+	"context"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -82,14 +83,15 @@ func TestMPTWithWalletTxns(t *testing.T) {
 			lmpt := GetMPT(LEVEL, util.Sequence(2010))
 			saveWallets(lmpt, wallets)
 			verifyBalance(lmpt, wallets)
-			lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+			ctx := context.TODO()
+			lmpt.SaveChanges(ctx, pmpt.GetNodeDB(), false)
 			(lmpt.GetNodeDB().(*util.LevelNodeDB)).RebaseCurrentDB(pmpt.GetNodeDB())
 
 			lmpt.ResetChangeCollector(nil)
 			generateTransactions(lmpt, wallets, transactions)
 			verifyBalance(lmpt, wallets)
 			ts := time.Now()
-			lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+			lmpt.SaveChanges(ctx, pmpt.GetNodeDB(), false)
 			fmt.Printf("time taken to persist: %v\n", time.Since(ts))
 		}
 	}
