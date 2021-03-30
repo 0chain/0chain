@@ -518,7 +518,9 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
-	pmt.SaveChanges(c.stateDB, false)
+	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
+		Logger.Error("chain.stateDB save changes failed", zap.Error(err))
+	}
 	Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
