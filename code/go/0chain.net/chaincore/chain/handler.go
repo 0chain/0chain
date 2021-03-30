@@ -626,7 +626,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	if selfNodeType == node.NodeTypeMiner {
 		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f - current MB start round: (%v)</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000., mb.StartingRound)
 	} else {
-		fmt.Fprintf(w, "<div><div>Miners (%v)</div> - current MB starting round", mb.Miners.Size(), mb.StartingRound)
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div> - current MB starting round: (%v)", mb.Miners.Size(), mb.StartingRound)
 	}
 	sc.printNodePool(w, mb.Miners)
 	fmt.Fprintf(w, "</div>")
