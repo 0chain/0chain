@@ -102,6 +102,13 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
+	select {
+	case <-ctx.Done():
+		Logger.Warn("computeState context done", zap.Error(ctx.Err()))
+		return ctx.Err()
+	default:
+	}
+
 	if b.IsStateComputed() {
 		return nil
 	}
@@ -245,7 +252,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	ts := time.Now()
 	switch b.GetStateStatus() {
 	case block.StateSynched, block.StateSuccessful:
-		err = b.ClientState.SaveChanges(c.stateDB, false)
+		err = b.ClientState.SaveChanges(ctx, c.stateDB, false)
 		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
 		if ok {
 			c.stateDB.(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())

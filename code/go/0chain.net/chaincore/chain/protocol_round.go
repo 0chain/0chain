@@ -120,7 +120,12 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	time.Sleep(FINALIZATION_TIME)
 	Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
-	c.finalizedRoundsChannel <- r
+	select {
+	case c.finalizedRoundsChannel <- r:
+	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+		Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
+			zap.Int64("round", r.GetRoundNumber()))
+	}
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
@@ -226,7 +231,16 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
-		c.finalizedBlocksChannel <- fb
+		select {
+		case <-ctx.Done():
+			Logger.Info("finalize round - context done", zap.Error(ctx.Err()))
+			return
+		case c.finalizedBlocksChannel <- fb:
+		case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+			Logger.Error("finalize round - push fb to finalizedBlocksChannel timeout",
+				zap.Int64("round", fb.Round))
+			continue
+		}
 	}
 	// Prune the chain from the oldest finalized block
 	c.PruneChain(ctx, frchain[len(frchain)-1])
