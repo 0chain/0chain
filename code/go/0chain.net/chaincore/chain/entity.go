@@ -451,8 +451,8 @@ func (c *Chain) Initialize() {
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
-	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
-	c.finalizedBlocksChannel = make(chan *block.Block, 128)
+	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
+	c.finalizedBlocksChannel = make(chan *block.Block, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
