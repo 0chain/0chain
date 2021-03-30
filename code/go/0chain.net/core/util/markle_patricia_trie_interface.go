@@ -42,7 +42,7 @@ type MerklePatriciaTrieI interface {
 
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
-	SaveChanges(ndb NodeDB, includeDeletes bool) error
+	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
 
 	// useful for syncing up
 	GetPathNodes(path Path) ([]Node, error)
