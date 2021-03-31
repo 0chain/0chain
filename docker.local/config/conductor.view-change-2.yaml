@@ -114,6 +114,7 @@ tests:
           good: ["miner-1", "miner-2"]
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # round 251
             miners: ['miner-1', 'miner-2', 'miner-3']
@@ -163,6 +164,7 @@ tests:
           good: ["miner-1", "miner-2"]
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # round 251
             miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4'] # miner 4 through revealed
@@ -212,6 +214,7 @@ tests:
           good: ["miner-1", "miner-2"]
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # round 251
             miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4'] # miner 4 through revealed
