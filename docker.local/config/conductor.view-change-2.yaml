@@ -7,10 +7,10 @@
 # enabled test cases sets
 enable:
   # comment out to disable
-  # - "MPK"
+  - "MPK"
   - "Shares"
-  # - "Signatures"
-  # - "Publish"
+  - "Signatures"
+  - "Publish"
 
 # sets of test cases
 sets:
