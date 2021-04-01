@@ -1,0 +1,79 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:11
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ./blobber${BLOBBER}/data/postgresql:/var/lib/postgresql/data
+    networks:
+      default:
+  postgres-post:
+    image: postgres:11
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - ../bin:/blobber/bin
+      - ../sql:/blobber/sql
+    command: bash /blobber/bin/postgres-entrypoint.sh
+    links:
+      - postgres:postgres
+  validator:
+    image: validator
+    environment:
+      - DOCKER= true
+    depends_on:
+      - postgres-post
+    links:
+      - postgres-post:postgres-post
+    volumes:
+      - ../config:/blobber/config
+      - ./blobber${BLOBBER}/data:/blobber/data
+      - ./blobber${BLOBBER}/log:/blobber/log
+      - ./keys_config:/blobber/keysconfig
+    ports:
+      - "506${BLOBBER}:506${BLOBBER}"
+    command: ./bin/validator --port 506${BLOBBER} --hostname 198.18.0.6${BLOBBER} --deployment_mode 0 --keys_file keysconfig/b0bnode${BLOBBER}_keys.txt --log_dir /blobber/log
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.6${BLOBBER}
+
+  blobber:
+    image: blobber
+    environment:
+      - DOCKER= true
+    depends_on:
+      - validator
+    links:
+      - validator:validator
+    volumes:
+      - ../config:/blobber/config
+      - ./blobber${BLOBBER}/files:/blobber/files
+      - ./blobber${BLOBBER}/data:/blobber/data
+      - ./blobber${BLOBBER}/log:/blobber/log
+      - ./keys_config:/blobber/keysconfig
+      - ./blobber${BLOBBER}/data/tmp:/tmp
+    ports:
+      - "505${BLOBBER}:505${BLOBBER}"
+    command: ./bin/blobber --port 505${BLOBBER} --hostname localhost --deployment_mode 0 --keys_file keysconfig/b0bnode${BLOBBER}_keys.txt --files_dir /blobber/files --log_dir /blobber/log --db_dir /blobber/data --minio_file keysconfig/minio_config.txt
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.9${BLOBBER}
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:
+  bin:

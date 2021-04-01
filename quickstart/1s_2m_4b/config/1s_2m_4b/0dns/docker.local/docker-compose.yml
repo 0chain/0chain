@@ -1,0 +1,42 @@
+version: "3"
+services:
+  mongodb:
+    image: mongo
+    volumes:
+      - ./0dns/mongodata:/data/db
+    networks:
+      default:
+      testnet0:
+    ports:
+      - "27017:27017"
+
+  0dns:
+    environment:
+      - DOCKER=true
+    build:
+      context: ../
+      dockerfile: ./docker.local/Dockerfile
+    depends_on:
+      - mongodb
+    links:
+      - mongodb:mongodb
+    volumes:
+      - ./config:/0dns/config
+      - ./0dns/log:/0dns/log
+    ports:
+      - "9091:9091"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.98
+    command: ./bin/zdns --deployment_mode 0 --magic_block /0dns/config/b0magicBlock_2_miners_1_sharder.json
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  config:
+  mongodata:

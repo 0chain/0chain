@@ -1,0 +1,13 @@
+---
+#block_worker: http://one.devnet-0chain.net/dns
+block_worker: http://198.18.0.98:9091
+signature_scheme: bls0chain
+min_submit: 50
+min_confirmation: 50
+confirmation_chain_length: 3
+
+# # OPTIONAL - Uncomment to use/ Add more if you want
+# preferred_blobbers:
+#   - http://one.devnet-0chain.net:31051
+#   - http://one.devnet-0chain.net:31052
+#   - http://one.devnet-0chain.net:31053

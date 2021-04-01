@@ -1,3 +1,5 @@
+// +build has-issues-exclude-from-build
+
 package client
 
 import (
