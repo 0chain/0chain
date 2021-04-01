@@ -212,8 +212,8 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 			"client state is nil, round %d", block.Round)
 	}
 
-	state := CreateTxnMPT(block.ClientState)
-	return state.GetNodeValue(getNodePath(path))
+	s := CreateTxnMPT(block.ClientState)
+	return s.GetNodeValue(getNodePath(path))
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -246,7 +246,7 @@ func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 
-	//round = mbRoundOffset(round)
+	round = mbRoundOffset(round)
 
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
@@ -537,11 +537,11 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.MagicBlock = genesisMagicBlock
 	c.UpdateMagicBlock(gb.MagicBlock)
 	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
-	gr := round.NewRound(0)
-	c.SetRandomSeed(gr, 839695260482366273)
-	gr.Block = gb
-	gr.AddNotarizedBlock(gb)
-	return gr, gb
+	//gr := round.NewRound(0)
+	//c.SetRandomSeed(gr, 839695260482366273)
+	//gr.Block = gb
+	//gr.AddNotarizedBlock(gb)
+	return nil, gb
 }
 
 /*AddGenesisBlock - adds the genesis block to the chain */
@@ -667,6 +667,7 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			b.SetPreviousBlock(pb)
 		}
 	}
+	// @todo dangerous
 	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
 		pb.AddUniqueBlockExtension(b)
 		if c.IsFinalizedDeterministically(pb) {
@@ -1208,7 +1209,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
-		go c.notifyToSyncFinalizedRoundState(bs)
+		//go c.notifyToSyncFinalizedRoundState(bs)
 	}
 }
 
@@ -1274,18 +1275,18 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 
 	var (
 		prev = c.GetMagicBlock(newMagicBlock.StartingRound - 1) //
-		keep = collectNodes(prev, newMagicBlock)                // this and new
+		_ = collectNodes(prev, newMagicBlock)                // this and new
 	)
 
-	c.SetupNodes(newMagicBlock)
-
-	newMagicBlock.Sharders.ComputeProperties()
-	newMagicBlock.Miners.ComputeProperties()
-
-	c.InitializeMinerPool(newMagicBlock)
-	c.GetNodesPreviousInfo(newMagicBlock)
-
-	node.DeregisterNodes(keep)
+	//c.SetupNodes(newMagicBlock)
+	//
+	//newMagicBlock.Sharders.ComputeProperties()
+	//newMagicBlock.Miners.ComputeProperties()
+	//
+	//c.InitializeMinerPool(newMagicBlock)
+	//c.GetNodesPreviousInfo(newMagicBlock)
+	//
+	//node.DeregisterNodes(keep)
 
 	// reset the monitor
 	ResetStatusMonitor(newMagicBlock.StartingRound)

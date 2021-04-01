@@ -178,16 +178,16 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 	if gr == nil || gb == nil {
 		return nil, errors.New("genesis round/block can't be null")
 	}
-	rr, ok := gr.(*round.Round)
-	if !ok {
-		return nil, errors.New("genesis round cannot convert to *round.Round")
-	}
-	mgr := mc.CreateRound(rr)
-	mc.AddRound(mgr)
-	mc.AddGenesisBlock(gb)
-	for _, sharder := range gb.Sharders.Nodes {
-		sharder.SetStatus(node.NodeStatusInactive)
-	}
+	//rr, ok := gr.(*round.Round)
+	//if !ok {
+	//	return nil, errors.New("genesis round cannot convert to *round.Round")
+	//}
+	//mgr := mc.CreateRound(rr)
+	//mc.AddRound(mgr)
+	//mc.AddGenesisBlock(gb)
+	//for _, sharder := range gb.Sharders.Nodes {
+	//	sharder.SetStatus(node.NodeStatusInactive)
+	//}
 	return gb, nil
 }
 
@@ -207,8 +207,8 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
-	//mc.AddNotarizedBlock(ctx, mr, b)
-	//mc.Chain.SetLatestFinalizedBlock(b)
+	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.Chain.SetLatestFinalizedBlock(b)
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {

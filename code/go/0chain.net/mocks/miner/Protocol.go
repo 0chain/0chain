@@ -108,9 +108,9 @@ func (_m *Protocol) HandleNotarizedBlockMessage(ctx context.Context, msg *miner.
 	_m.Called(ctx, msg)
 }
 
-// HandleRoundTimeout provides a mock function with given fields: ctx
-func (_m *Protocol) HandleRoundTimeout(ctx context.Context) {
-	_m.Called(ctx)
+// HandleRoundTimeout provides a mock function with given fields: ctx, _a1
+func (_m *Protocol) HandleRoundTimeout(ctx context.Context, _a1 int64) {
+	_m.Called(ctx, _a1)
 }
 
 // HandleVRFShare provides a mock function with given fields: ctx, msg

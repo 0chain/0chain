@@ -16,6 +16,7 @@ import (
 	mocks "0chain.net/mocks/core/datastore"
 	"context"
 	"github.com/gomodule/redigo/redis"
+	"github.com/rafaeljusto/redigomock"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
@@ -120,7 +121,14 @@ func (s *ChainTestSuite) TestSaveClients() {
 
 	common.SetupRootContext(context.Background())
 	client.SetupEntity(mStore)
-	memorystore.AddPool("client", &redis.Pool{})
+
+	conn := redigomock.NewConn()
+	pool := &redis.Pool{
+		Dial:    func() (redis.Conn, error) { return conn, nil },
+		MaxIdle: 10,
+	}
+
+	memorystore.AddPool("client", pool)
 
 	datastore.RegisterEntityMetadata("client", mEmd)
 
@@ -176,16 +184,23 @@ func (s *ChainTestSuite) TestSetLatestFinalizedBlock() {
 	mEmd.On("Instance").
 		Maybe().Return(round.NewRound(1))
 
+	mBSmd := &mocks.EntityMetadata{}
+	mBSmd.On("Instance").
+		Maybe().Return(block.BlockSummaryProvider())
+
 	datastore.RegisterEntityMetadata("round", mEmd)
+	datastore.RegisterEntityMetadata("block_summary", mBSmd)
+
+	b := block.NewBlock("1", 1)
 
 	c := chain.NewChainFromConfig()
+	c.LatestFinalizedBlock = b
+	c.LatestFinalizedMagicBlock = b
 	SetupMinerChain(c)
 
 	mc := GetMinerChain()
 	mc.MagicBlockStorage = mRound
 	mc.SetMagicBlock(mb)
-
-	b := block.NewBlock("1", 1)
 
 	mc.SetLatestFinalizedBlock(context.Background(), b)
 
@@ -215,12 +230,27 @@ func (s *ChainTestSuite) TestSetStarted() {
 }
 
 func (s *ChainTestSuite) TestSetupGenesisBlock() {
-	chain.SetupEntity(&mocks.Store{})
+
+	ms := &mocks.Store{}
+
+	ms.On("Get", mock.Anything).Maybe().Return(
+		round.NewRoundStartingStorage())
+
+	chain.SetupEntity(ms)
 
 	c := chain.NewChainFromConfig()
 	SetupMinerChain(c)
 
-	c.MagicBlockStorage = &round_mocks.RoundStorage{}
+	mb := block.NewMagicBlock()
+	mb.Miners = node.NewPool(0)
+	mb.Sharders = node.NewPool(1)
+	mb.StartingRound = 1
+
+	mRound := &round_mocks.RoundStorage{}
+	mRound.On("Get",
+		mock.Anything).Maybe().Return(mb)
+
+	c.MagicBlockStorage = mRound
 
 	mc := GetMinerChain()
 	b := block.NewMagicBlock()
@@ -233,6 +263,8 @@ func (s *ChainTestSuite) TestSetupGenesisBlock() {
 			},
 		})
 	s.Require().NoError(err)
+
+	ms.AssertExpectations(s.T())
 }
 
 func (s *ChainTestSuite) TestViewChange() {

@@ -40,9 +40,9 @@ func (_m *ProtocolRound) FinalizeRound(ctx context.Context, r round.RoundI, bsh 
 	_m.Called(ctx, r, bsh)
 }
 
-// HandleRoundTimeout provides a mock function with given fields: ctx
-func (_m *ProtocolRound) HandleRoundTimeout(ctx context.Context) {
-	_m.Called(ctx)
+// HandleRoundTimeout provides a mock function with given fields: ctx, _a1
+func (_m *ProtocolRound) HandleRoundTimeout(ctx context.Context, _a1 int64) {
+	_m.Called(ctx, _a1)
 }
 
 // ProcessVerifiedTicket provides a mock function with given fields: ctx, r, b, vt

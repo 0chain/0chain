@@ -39,6 +39,38 @@ func (_m *MerklePatriciaTrieI) Delete(path util.Path) (util.Key, error) {
 	return r0, r1
 }
 
+// FindMissingNodes provides a mock function with given fields: ctx
+func (_m *MerklePatriciaTrieI) FindMissingNodes(ctx context.Context) ([]util.Path, []util.Key, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []util.Path
+	if rf, ok := ret.Get(0).(func(context.Context) []util.Path); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]util.Path)
+		}
+	}
+
+	var r1 []util.Key
+	if rf, ok := ret.Get(1).(func(context.Context) []util.Key); ok {
+		r1 = rf(ctx)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).([]util.Key)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = rf(ctx)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
 // GetChangeCollector provides a mock function with given fields:
 func (_m *MerklePatriciaTrieI) GetChangeCollector() util.ChangeCollectorI {
 	ret := _m.Called()
