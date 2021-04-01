@@ -27,6 +27,8 @@ tests:
       - start: ['sharder-1']
       - start: ["sharder-2"]
       - start: ["miner-1", "miner-2", "miner-3"]
+      # Temporarily use `wait_round` as `wait_sharder_keep` and `wait_view_change`
+      # require view_change config to be enabled
       - wait_round:
           round: 100
           timeout: '5m'
@@ -58,6 +60,8 @@ tests:
       - start: ['sharder-1']
       - start: ['sharder-2']
       - start: ["miner-1", "miner-2", "miner-3"]
+      # Temporarily use `wait_round` as `wait_sharder_keep` and `wait_view_change`
+      # require view_change config to be enabled
       - wait_round:
           round: 100
           timeout: '5m'

@@ -112,19 +112,6 @@ func (n *Node) Stop() (err error) {
 	if err = n.Kill(); err != nil {
 		return fmt.Errorf("command %v: kill: %v", n.Name, err)
 	}
-	//// SIGINT and wait
-	//if err = n.Interrupt(); err != nil {
-	//	return fmt.Errorf("interrupting: %v", err)
-	//}
-	//// kill it if it is stall
-	//var done = make(chan struct{})
-	//go killAfterTimeout(n.Command, 20*time.Second, done)
-	////
-	//if err = n.Command.Wait(); err != nil {
-	//	err = fmt.Errorf("waiting the command: %v", err) // don't return
-	//}
-	//close(done)
-	// close logs
 	if stdin, ok := n.Command.Stdin.(*os.File); ok {
 		stdin.Close() // ignore error
 	}
@@ -140,9 +127,6 @@ func (n *Node) Stop() (err error) {
 		command string
 	)
 	command = ss[0]
-	//if filepath.Base(command) != command {
-	// 	command = "./" + filepath.Join(n.WorkDir, command)
-	// }
 	var cmd = exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 	if n.Env != "" {
