@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
@@ -17,10 +16,6 @@ import (
 	. "0chain.net/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-)
-
-var (
-	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
 )
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
@@ -95,7 +90,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 }
 
 func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
-	pool *sci.DelegatePool, round int64, balances cstate.StateContextI) (
+	pool *sci.DelegatePool, _ int64, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	mn.TotalStaked -= int64(pool.Balance)
@@ -392,13 +387,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	)
 
 	if mn.numActiveDelegates() == 0 {
-		iresp, err = msc.payMiner(charger+restr, chargef+restf, mn, block, gn, balances)
+		iresp, err = msc.payNode(charger+restr, chargef+restf, mn, gn, balances)
 		if err != nil {
 			return "", err
 		}
 		resp += iresp
 	} else {
-		iresp, err = msc.payMiner(charger, chargef, mn, block, gn, balances)
+		iresp, err = msc.payNode(charger, chargef, mn, gn, balances)
 		if err != nil {
 			return "", err
 		}
@@ -606,7 +601,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 			var sharderBR = state.Balance(float64(partm) * sh.ServiceCharge)
 			var sharderFees = state.Balance(float64(partf) * sh.ServiceCharge)
 
-			sresp, err = msc.payNode(sharderBR, sharderFees, sh, block, gn, "sharder", balances)
+			sresp, err = msc.payNode(sharderBR, sharderFees, sh, gn, balances)
 			if err != nil {
 				return "", err
 			}
@@ -627,7 +622,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 			}
 			resp += sresp
 		} else {
-			sresp, err = msc.payNode(partm, partf, sh, block, gn, "sharder", balances)
+			sresp, err = msc.payNode(partm, partf, sh, gn, balances)
 			if err != nil {
 				return "", err
 			}
@@ -643,30 +638,12 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 	return
 }
 
-func (msc *MinerSmartContract) paySharder(reward, fee state.Balance, mn *MinerNode,
-	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	return msc.payNode(reward, fee, mn, block, gn, "sharder", balances)
-}
-
-// pay miner's charge
-func (msc *MinerSmartContract) payMiner(reward, fee state.Balance, mn *MinerNode,
-	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	return msc.payNode(reward, fee, mn, block, gn, "miner", balances)
-}
-
 func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
-	block *block.Block, gn *GlobalNode, nodeType string, balances cstate.StateContextI) (
+	gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-	if nodeType != "miner" && nodeType != "sharder" {
-		panic("only implemented for miner and sharder")
-	}
 
 	if reward != 0 {
-		Logger.Info("pay "+nodeType+" service charge",
+		Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_reward", reward))
 
@@ -679,7 +656,7 @@ func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
 		resp += string(mint.Encode())
 	}
 	if fee != 0 {
-		Logger.Info("pay "+nodeType+" service charge",
+		Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_fee", fee))
 
