@@ -66,7 +66,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 		return nil
 	}
 	for true {
-		notarizedBlocksWithPrev := make([]*block.Block, 0, 1)
+		prevNotarizedBlocks := make([]*block.Block, 0, 1)
 		for _, b := range notarizedBlocks {
 			if b.PrevBlock == nil {
 				pb := c.GetPreviousBlock(ctx, b)
@@ -78,25 +78,23 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 					return nil
 				}
 			}
-			if isIn(notarizedBlocksWithPrev, b.Hash) {
+			if isIn(prevNotarizedBlocks, b.PrevHash) {
 				continue
 			}
-			notarizedBlocksWithPrev = append(notarizedBlocksWithPrev, b)
+			prevNotarizedBlocks = append(prevNotarizedBlocks, b.PrevBlock)
 		}
-
-		if len(notarizedBlocksWithPrev) >= 1 {
+		notarizedBlocks = prevNotarizedBlocks
+		if len(notarizedBlocks) == 1 {
 			break
 		}
 	}
-
-	if len(notarizedBlocks) == 0 {
+	if len(notarizedBlocks) != 1 {
 		return nil
 	}
-
 	fb := notarizedBlocks[0]
-	Logger.Debug("ComputeFB",
-		zap.Int64("round", roundNumber),
-		zap.Int64("fb_round", fb.Round))
+	if fb.Round == r.GetRoundNumber() {
+		return nil
+	}
 	return fb
 }
 

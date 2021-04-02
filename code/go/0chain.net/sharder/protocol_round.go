@@ -55,18 +55,20 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		}
 	}()
 
+	var ret bool
 	select {
 	case <-doneC:
+		ret = true
 		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Any("duration", time.Since(t)))
-		sc.FinalizeRound(ctx, r, sc)
-		return true
 	case err := <-errC:
 		Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
-		return false
+		ret = false
 	case <-time.NewTimer(3 * time.Second).C:
 		Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
-		return false
+		ret = false
 	}
+	sc.FinalizeRound(ctx, r, sc)
+	return ret
 }
