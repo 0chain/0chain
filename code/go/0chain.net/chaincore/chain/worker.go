@@ -207,6 +207,8 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	// finalize
 	if !fb.IsStateComputed() {
+		Logger.Debug("finalize block state not computed",
+			zap.Int64("round", fb.Round))
 		err := c.ComputeOrSyncState(ctx, fb)
 		if err != nil {
 			Logger.Error("save changes - save state not successful",
@@ -218,6 +220,10 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				Logger.DPanic("save changes - state not successful")
 			}
 		}
+	} else {
+		Logger.Debug("finalize block state computed",
+			zap.Int64("round", fb.Round),
+			zap.Any("state", fb.GetStateStatus()))
 	}
 
 	switch fb.GetStateStatus() {
