@@ -113,7 +113,8 @@ min/max_stake out of this SC boundary.
 #### Interest rate.
 
 Interest rate is % (value in [0; 1) range) that used to calculate interests of
-stake holders. The interests payed every view change.
+stake holders. The interest is payed periodically, on rounds that are a multiple of
+the `sc.yaml minersc.reward_round_frequency` settings.
 
 The formula
 ```
