@@ -38,7 +38,7 @@ type mockScYaml struct {
 	blockReward         float64
 	epoch               int64
 	rewardDeclineRate   float64
-	interestDeclineRAte float64
+	interestDeclineRate float64
 	interestRate        float64
 	shareRatio          float64
 	maxMint             float64
@@ -78,7 +78,7 @@ var (
 		epoch:               15000000,
 		interestRate:        0.000000555, // 0
 		rewardDeclineRate:   0.1,
-		interestDeclineRAte: 0.1,
+		interestDeclineRate: 0.1,
 		shareRatio:          0.8,
 		maxMint:             4000000.0,
 		rewardRoundPeriod:   250,
@@ -197,6 +197,14 @@ func TestPayFees(t *testing.T) {
 }
 
 func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64, runtime runtimeValues) error {
+	var f = formulae{
+		zChain:           zChainYaml,
+		sc:               scYaml,
+		runtime:          runValues,
+		minerDelegates:   minerStakes,
+		sharderDelegates: sharderStakes,
+	}
+
 	var numberOfSharders = len(sharderStakes)
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
@@ -338,13 +346,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		return err
 	}
 
-	var f = formulae{
-		zChain:           zChainYaml,
-		sc:               scYaml,
-		runtime:          runValues,
-		minerDelegates:   minerStakes,
-		sharderDelegates: sharderStakes,
-	}
 	confirmResults(t, *globalNode, runtime, f, ctx)
 
 	return err
