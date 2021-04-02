@@ -1,0 +1,84 @@
+---
+miners:
+- id: 042f152778bd4c8e152a9bbddbdfdff2c142c0f44038218cffb4ae831fbc0c56
+  public_key: 069b085bf863074532e5d0ef6cc16da4387042e61db63b3935db845aac9629f4
+  public_ip: m000.eddyrbo.testnet-0chain.net
+  n2n_ip: m000.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: sydney
+  region_index: 0
+  agent_name: m000
+  description: m000.sydney
+      
+- id: 66f07ae3b31e9ee64c4b36816faf19fdfb1e6b3450ebb469185c800627e648aa
+  public_key: 05f06567299c7ae934bb8a2fc1c755db78fbabffcf482d653b606a48b70b1802
+  public_ip: m001.eddyrbo.testnet-0chain.net
+  n2n_ip: m001.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: oregon
+  region_index: 0
+  agent_name: m001
+  description: m001.oregon
+      
+- id: 733a6df00e79b420783ee66659653116fe633c8b59e7539ad74d277231dd2a86
+  public_key: 68071561ad0eb035b2e784a2dccefd8c1684c74a9edca0ec2a658cf7a66f67ea
+  public_ip: m002.eddyrbo.testnet-0chain.net
+  n2n_ip: m002.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: seoul
+  region_index: 0
+  agent_name: m002
+  description: m002.seoul
+      
+- id: 9fa071f1b30c9e66c71e559c64301163aa69cc28a190a77913e4249c30d72b2c
+  public_key: 420ddc8a997f8dde3f5990e887d1b764513d43f676a1ec1a3353fad3709f8f91
+  public_ip: m003.eddyrbo.testnet-0chain.net
+  n2n_ip: m003.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: singapore
+  region_index: 0
+  agent_name: m003
+  description: m003.singapore
+      
+- id: af48d5215c272e6ab4c0b098ee8621a73e51836ee3a4c336d79e371f4c642813
+  public_key: 894ec06b0fec29ed63d7549d5df69da13993fc2e6f5585cb97b9616ba7041e69
+  public_ip: m004.eddyrbo.testnet-0chain.net
+  n2n_ip: m004.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: ireland
+  region_index: 0
+  agent_name: m004
+  description: m004.ireland
+      
+- id: f0999b6f6b913362f2a4a5efe21eb24aeae36e6b2a860c1443827374a512488f
+  public_key: 2c478f0d67861ab9258abfe4c00cb7cdd761c4e3aa926d5bacdf76302a13c49f
+  public_ip: m005.eddyrbo.testnet-0chain.net
+  n2n_ip: m005.eddyrbo.testnet-0chain.net
+  port: 7071
+  region_name: frankfurt
+  region_index: 0
+  agent_name: m005
+  description: m005.frankfurt
+      
+sharders:
+- id: 9a022f53d80cfb83a79a55c435cb2626ffe2e74668e7d6048d89a255543d6f48
+  public_key: 85c111e939e0aefb7ca8363187700192c03f8968c573b33029d43ed0fd49257c
+  public_ip: s000.eddyrbo.testnet-0chain.net
+  n2n_ip: s000.eddyrbo.testnet-0chain.net
+  port: 7171
+  region_name: sydney
+  region_index: 0
+  agent_name: s000
+  description: s000.sydney
+      
+- id: f6ddf05a37ba64b7b1e2923e0dfd0836701008c23ea510281de8dc524b91f5bb
+  public_key: 2ace78393959353972ea833a0ff5bfc43b5ac129b65f3a9e9dd9bc5f9c49d6be
+  public_ip: s001.eddyrbo.testnet-0chain.net
+  n2n_ip: s001.eddyrbo.testnet-0chain.net
+  port: 7171
+  region_name: oregon
+  region_index: 0
+  agent_name: s001
+  description: s001.oregon
+      
+...

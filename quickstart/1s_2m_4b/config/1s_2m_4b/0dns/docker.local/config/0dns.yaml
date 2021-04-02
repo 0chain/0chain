@@ -1,0 +1,24 @@
+version: 1.0
+
+logging:
+  level: "info"
+  console: false # printing log to console is only supported in development mode
+
+server_chain:
+  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
+  signature_scheme: "bls0chain"
+
+port: 9091
+use_https: false
+use_path: false
+
+handlers:
+  rate_limit: 5 # 5 per second
+
+mongo:
+  url: mongodb://mongodb:27017
+  db_name: block-recorder
+  pool_size: 2
+
+worker:
+  magic_block_worker: 5 # in seconds

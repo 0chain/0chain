@@ -1,0 +1,25 @@
+# docker.local
+FROM golang:1.12.4-alpine3.9
+RUN apk add bash build-base grep git
+
+# Install RocksDB
+RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev && \
+    cd /tmp && \
+    wget -O - https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz | tar xz && \
+    cd /tmp/rocksdb* && \
+    make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
+    rm -R /tmp/rocksdb* && \
+    apk del coreutils linux-headers perl
+
+# Install Herumi's cryptography
+RUN apk add gmp gmp-dev openssl-dev && \
+    cd /tmp && \
+    wget -O - https://github.com/herumi/mcl/archive/v0.98.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz | tar xz && \
+    mv mcl* mcl && \
+    mv bls* bls && \
+    make -C mcl -j $(nproc) lib/libmclbn256.so install && \
+    cp mcl/lib/libmclbn256.so /usr/local/lib && \
+    make -C bls -j $(nproc) install && \
+    rm -R /tmp/mcl && \
+    rm -R /tmp/bls

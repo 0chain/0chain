@@ -180,6 +180,10 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 	}
 
 	for _, miner := range allNodesList.Nodes {
+		if miner == nil {
+			continue
+		}
+
 		if miner.ID == selfNodeKey {
 			return true
 		}
