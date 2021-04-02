@@ -142,6 +142,10 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			if !pb.IsStateComputed() {
 				return ErrPreviousStateUnavailable
 			}
+			Logger.Debug("fetch previous block state from network successfully",
+				zap.Int64("prev_round", pb.Round),
+				zap.Any("hash", pb.Hash),
+				zap.Any("prev_state", util.ToHex(pb.ClientStateHash)))
 		} else {
 			Logger.Info("compute state - previous block state not ready",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
