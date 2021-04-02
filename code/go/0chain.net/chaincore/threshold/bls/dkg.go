@@ -380,6 +380,7 @@ func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 	return dkgSummary.GetEntityMetadata().GetStore().Delete(ctx, dkgSummary)
 }
 
+//Verify is used to verify a dkg summary with the mpks
 func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) error {
 	for k, v := range mpks {
 		var sij Key
