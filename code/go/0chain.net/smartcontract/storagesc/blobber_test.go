@@ -179,7 +179,7 @@ func TestFeesPayments(t *testing.T) {
 			Size:                       aRequestSize,          // --size
 			MaxChallengeCompletionTime: aMaxChallengeCompTime, // --mcct
 		}
-		f formulae = formulae{
+		f formulaeBlobberTest = formulaeBlobberTest{
 			blobber: blobberYaml,
 			ar:      allocationRequest,
 		}
@@ -231,7 +231,7 @@ func TestFeesPayments(t *testing.T) {
 			allocationRequest.DataShards+allocationRequest.ParityShards) *
 			lockedFundsPerBlobber
 
-		tx = newTransaction(client.id, ssc.ID, readPoolFund, now)
+		tx = newTransaction(client.id, ssc.ID, int64(readPoolFund), now)
 		ctx.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
@@ -1202,7 +1202,7 @@ func attachBlobbersAndNewAllocation(t *testing.T, terms Terms, aRequest newAlloc
 	aRequest.Owner = client.id
 	aRequest.OwnerPublicKey = client.pk
 
-	resp, err := aRequest.callNewAllocReq(t, client.id, value, ssc, now, ctx)
+	resp, err := aRequest.callNewAllocReq(t, client.id, int64(value), ssc, now, ctx)
 	require.NoError(t, err)
 	var decodeResp StorageAllocation
 	require.NoError(t, decodeResp.Decode([]byte(resp)))

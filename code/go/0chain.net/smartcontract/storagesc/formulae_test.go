@@ -13,7 +13,7 @@ import (
 // readMarker internal parameter object for reads
 // writeMarker internal parameter object for writes
 //
-type formulae struct {
+type formulaeBlobberTest struct {
 	blobber     mockBlobberYml
 	sc          scConfig
 	ar          newAllocationRequest
@@ -22,7 +22,7 @@ type formulae struct {
 }
 
 // amount to charge a write for each unit of time
-func (f formulae) writeChargeRate() state.Balance {
+func (f formulaeBlobberTest) writeChargeRate() state.Balance {
 	var writeSizePerGB = sizeInGB(f.writeMarker.Size)
 	var writePriceGB = float64(zcnToBalance(f.blobber.WritePrice))
 
@@ -30,7 +30,7 @@ func (f formulae) writeChargeRate() state.Balance {
 }
 
 // amount to charge for a write lock
-func (f formulae) lockCostForWrite() state.Balance {
+func (f formulaeBlobberTest) lockCostForWrite() state.Balance {
 	var writeChargeRate = float64(f.writeChargeRate())
 	var timeLeft = f.lockTimeLeftTU()
 
@@ -38,7 +38,7 @@ func (f formulae) lockCostForWrite() state.Balance {
 }
 
 // service charge for a read
-func (f formulae) readServiceCharge() state.Balance {
+func (f formulaeBlobberTest) readServiceCharge() state.Balance {
 	var serviceChargeFraction = f.blobber.ServiceCharge
 	var readCost = float64(f.readCost())
 
@@ -46,7 +46,7 @@ func (f formulae) readServiceCharge() state.Balance {
 }
 
 // blobber reward for a read
-func (f formulae) readRewardsBlobber() (blobberCharge state.Balance) {
+func (f formulaeBlobberTest) readRewardsBlobber() (blobberCharge state.Balance) {
 	var blobberRewardFraction = 1 - f.blobber.ServiceCharge
 	var readCost = float64(f.readCost())
 
@@ -55,7 +55,7 @@ func (f formulae) readRewardsBlobber() (blobberCharge state.Balance) {
 
 // cost of a read as defined in read marker
 //
-func (f formulae) readCost() (value state.Balance) {
+func (f formulaeBlobberTest) readCost() (value state.Balance) {
 	var readPricePerGB = float64(zcnToBalance(f.blobber.ReadPrice))
 	var readSizeGB = sizeInGB(f.readMarker.ReadCounter * CHUNK_SIZE)
 
@@ -66,14 +66,14 @@ func (f formulae) readCost() (value state.Balance) {
 //
 
 // time remaining in an allocation lock
-func (f formulae) remainingTimeTUs(now common.Timestamp) float64 {
+func (f formulaeBlobberTest) remainingTimeTUs(now common.Timestamp) float64 {
 	var expiration = f.ar.Expiration
 
 	return f.toTimeUnits(expiration - now)
 }
 
 // convert to time units, must be defined in sc.yaml
-func (f formulae) toTimeUnits(duration common.Timestamp) float64 {
+func (f formulaeBlobberTest) toTimeUnits(duration common.Timestamp) float64 {
 	if f.sc.TimeUnit == 0 {
 		panic("must be > 0, make sure you are setting f.sc")
 	}
@@ -81,7 +81,7 @@ func (f formulae) toTimeUnits(duration common.Timestamp) float64 {
 }
 
 // time remaining in allocation lock at the moment of a write
-func (f formulae) lockTimeLeftTU() float64 {
+func (f formulaeBlobberTest) lockTimeLeftTU() float64 {
 	var now = f.writeMarker.Timestamp
 
 	return f.remainingTimeTUs(now)
