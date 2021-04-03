@@ -6,31 +6,24 @@ on a local machine.
 
 Unpack the zworkflows_1s_2m_4b.tar.gz to the arbitrary directory.
 
-WARNING:
 
 Set paths in the base/paths.sh
 
 
 --------------------------------------------------
 
+Then run:
+base/git_pull_all.sh
 
-WARNING:
+It will download master branches, 
+and perform a reset to the commits that these scripts were tested with.
 
-0Chain:     master: 394c1f8c
-0dns:       master: d6e1dbb3
-blobber:    master: ca6a8a3b
-gosdk:      master: 1ce76cf7
-zboxcli:    master: f9802b7d
-zwalletcli: master: 815813a2
-
---------------------------------------------------
-
-WARNING:
-
-The time delays in the reliable/restart_from_scratch.sh
-are very important.
-Try to adjust it for your CPU speed.
-
+0Chain:     ac6c2253
+0dns:       d6e1dbb3
+blobber:    28c31930
+gosdk:      54902b25
+zbox:       25f8af1a
+zwallet:    815813a2
 
 --------------------------------------------------
 
@@ -40,21 +33,24 @@ The /reproduce directory is for instructions to reproduce a bug or something.
 --------------------------------------------------
 Configs management
 
-Check out current master branches: 0Chain, 0dns, blobber
 
-WARNING:
-
-Run config/compare_reference.sh to make sure that all docker.local folders
+Run config/compare_wdirs.sh to make sure that all docker.local folders
 was not changed.
 
 > If they are equal, you can run config/patch.sh
 ! If they are not, you have to figure out what was changed.
 
 
+To see differences between config/reference and config/1s_2m_4b run
+config/compare_patch.sh
+
+
 --------------------------------------------------
 
-run: base/rebuild_zbox.sh
-run: base?rebuild_zwallet.sh
+
+The time delays in the reliable/restart_from_scratch.sh
+are very important.
+Try to adjust it for your CPU speed.
 
 --------------------------------------------------
 
@@ -65,7 +61,6 @@ After patching run
 
 Then if you have a google-chrome installed then
 run the reliable/diagnostics_html.sh to make sure that the network is up
-
 
 
 Then run reliable/create_allocation.sh
