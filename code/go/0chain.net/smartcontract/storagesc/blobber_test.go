@@ -165,13 +165,19 @@ func TestFeesPayments(t *testing.T) {
 			ChallengeCompletionTime: blobberYaml.ChallengeCompletionTime,
 		}
 		allocationRequest = newAllocationRequest{ // input to ./zbox --newallocation
-			DataShards:                 aDataShards,                                // --data
-			ParityShards:               aParityShards,                              // -parity
-			Expiration:                 common.Timestamp(aExpiration),              // --expire
-			ReadPriceRange:             PriceRange{aMinReadPrice, aMaxReadPrice},   // --lock
-			WritePriceRange:            PriceRange{aMinWritePrice, aMaxWritePrice}, // --lock
-			Size:                       aRequestSize,                               // --size
-			MaxChallengeCompletionTime: aMaxChallengeCompTime,                      // --mcct
+			DataShards:   aDataShards,                   // --data
+			ParityShards: aParityShards,                 // -parity
+			Expiration:   common.Timestamp(aExpiration), // --expire
+			ReadPriceRange: PriceRange{
+				aMinReadPrice,
+				aMaxReadPrice,
+			}, // --lock
+			WritePriceRange: PriceRange{
+				aMinWritePrice,
+				aMaxWritePrice,
+			}, // --lock
+			Size:                       aRequestSize,          // --size
+			MaxChallengeCompletionTime: aMaxChallengeCompTime, // --mcct
 		}
 		f formulae = formulae{
 			blobber: blobberYaml,
@@ -180,8 +186,9 @@ func TestFeesPayments(t *testing.T) {
 	)
 
 	t.Run("new allocation", func(t *testing.T) {
-		ssc, ctx, _, _, allocationId, _, _ := attachBlobbersAndNewAllocation(t, terms,
-			allocationRequest, blobberYaml.Capacity, clientBalance, blobberBalance, aValue, numBlobbers)
+		ssc, ctx, _, _, allocationId, _, _ := attachBlobbersAndNewAllocation(
+			t, terms, allocationRequest, blobberYaml.Capacity, clientBalance,
+			blobberBalance, aValue, numBlobbers)
 
 		_, err := ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
@@ -220,7 +227,8 @@ func TestFeesPayments(t *testing.T) {
 		now += 100
 		_, err = ssc.getAllocation(allocationId, ctx)
 		require.NoError(t, err)
-		var readPoolFund = state.Balance(allocationRequest.DataShards+allocationRequest.ParityShards) *
+		var readPoolFund = state.Balance(
+			allocationRequest.DataShards+allocationRequest.ParityShards) *
 			lockedFundsPerBlobber
 
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, now)
@@ -320,7 +328,8 @@ func TestFeesPayments(t *testing.T) {
 
 		stakePool, err := ssc.getStakePool(testBlobber1.id, ctx)
 		require.NoError(t, err)
-		require.EqualValues(t, 0, stakePool.Rewards.Blobber+stakePool.Rewards.Charge)
+		require.EqualValues(t, 0,
+			stakePool.Rewards.Blobber+stakePool.Rewards.Charge)
 
 		challengePool, err = ssc.getChallengePool(allocationId, ctx)
 		require.NoError(t, err)
