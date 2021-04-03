@@ -3,6 +3,7 @@ name: Dockerize
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -21,13 +22,13 @@ jobs:
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
-
-    - name: Get short sha
-      id: get_short_sha
-      run: echo ::set-output name=SHA::$(echo ${GITHUB_SHA::8})
+    - name: Get info
+      id: get_info
+      run: |
+        BRANCH=$(echo $GITHUB_REF | cut -d / -f 3)
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
 
     - name: Login to Docker Hub
       uses: docker/login-action@v1
@@ -40,11 +41,23 @@ jobs:
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $MINER_REGISTRY:$TAG -f "$DOCKERFILE_MINER" .
         docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:latest
-        docker push $MINER_REGISTRY:$TAG
-        docker push $MINER_REGISTRY:latest
       env:
-        TAG: ${{ steps.get_version.outputs.VERSION }}-${{ steps.get_short_sha.outputs.SHA }}
+        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
+
+    - name: Push image
+      run: |
+        docker push $MINER_REGISTRY:$TAG
+        if [ "$GITHUB_REF" == "refs/heads/master" ]; then
+          docker push $MINER_REGISTRY:latest
+        fi
+      env:
+        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
+
+    - name: Push image with latest tag
+      if: github.ref == 'refs/heads/master'
+      run: |
+        docker push $MINER_REGISTRY:latest
 
   dockerize_sharder:
     runs-on: ubuntu-20.04
@@ -56,13 +69,13 @@ jobs:
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
-    - name: Get the version
-      id: get_version
-      run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
-
-    - name: Get short sha
-      id: get_short_sha
-      run: echo ::set-output name=SHA::$(echo ${GITHUB_SHA::8})
+    - name: Get info
+      id: get_info
+      run: |
+        BRANCH=$(echo $GITHUB_REF | cut -d / -f 3)
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
 
     - name: Login to Docker Hub
       uses: docker/login-action@v1
@@ -75,7 +88,16 @@ jobs:
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder -f docker.local/build.sharder/Dockerfile .
         docker tag sharder $SHARDER_REGISTRY:$TAG
         docker tag sharder $SHARDER_REGISTRY:latest
-        docker push $SHARDER_REGISTRY:$TAG
-        docker push $SHARDER_REGISTRY:latest
       env:
-        TAG: ${{ steps.get_version.outputs.VERSION }}-${{ steps.get_short_sha.outputs.SHA }}
+        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
+
+    - name: Push image
+      run: |
+        docker push $SHARDER_REGISTRY:$TAG
+      env:
+        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
+
+    - name: Push image with latest tag
+      if: github.ref == 'refs/heads/master'
+      run: |
+        docker push $SHARDER_REGISTRY:latest
