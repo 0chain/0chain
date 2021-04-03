@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -227,33 +226,18 @@ func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-
 	key_hash := encryption.Hash(key)
-
-	if !encryption.IsHash(key_hash) {
-		return nil, common.NewError("Failed to GetTrieNode", "key must be a hexadecimal hash")
-	}
 	return sc.state.GetNodeValue(util.Path(key_hash))
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
-	
 	key_hash := encryption.Hash(key)
-	
-	if !encryption.IsHash(key_hash) {
-		return "", common.NewError("Failed to InsertTrieNode", "key must be a hexadecimal hash")
-	}
 	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
 	return datastore.Key(byteKey), err
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-
 	key_hash := encryption.Hash(key)
-
-	if !encryption.IsHash(key_hash) {
-		return "", common.NewError("failed to DeleteTrieNode", "key must be a hexadecimal hash")
-	}
 	byteKey, err := sc.state.Delete(util.Path(key_hash))
 	return datastore.Key(byteKey), err
 }
