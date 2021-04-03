@@ -48,7 +48,7 @@ const (
 	clientStartZCN       = 777
 	txHash               = "tx hash"
 	errLock              = "failed locking tokens: "
-	errInsufficientFunds = "insufficient amount to dig an interest pool"
+	errInsufficientFunds = "insufficent amount to dig an interest pool"
 	errNoTokens          = "you have no tokens to your name"
 	errLockGtBalance     = "lock amount is greater than balance"
 	errDurationToLong    = "is longer than max lock period"
@@ -189,8 +189,8 @@ func TestUnlock(t *testing.T) {
 		}, now)
 		require.NoError(t, err)
 		require.Len(t, userNode.Pools, 0)
-		require.EqualValues(t, storageScId, transfer.Sender)
-		require.EqualValues(t, clientId, transfer.Receiver)
+		require.EqualValues(t, storageScId, transfer.ClientID)
+		require.EqualValues(t, clientId, transfer.ToClientID)
 		require.EqualValues(t, zcnToBalance(flags.tokens), transfer.Amount)
 		require.EqualValues(t, resp.From_Pool, txHash)
 		require.EqualValues(t, resp.Value, zcnToBalance(flags.tokens))
@@ -254,7 +254,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 		ClientID:     clientId,
 		ToClientID:   storageScId,
 		CreationDate: startTime,
-		Value:        zcnToBalance(tokens),
+		Value:        int64(zcnToBalance(tokens)),
 	}
 	var ctx = &mockStateContext{
 		ctx: *cstate.NewStateContext(
