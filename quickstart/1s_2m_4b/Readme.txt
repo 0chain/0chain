@@ -1,14 +1,13 @@
-This set of a simple scripts is designed to standardize workflows during the development process 
+This set of a simple scripts is designed to quick run 1 sharder 2 miners 4 blobbers network 
 on a local machine.
+And to perform some basic testing.
 
 
 --------------------------------------------------
 
-Unpack the zworkflows_1s_2m_4b.tar.gz to the arbitrary directory.
-
-
 Set paths in the base/paths.sh
 
+Also You could copy the whole /quickstart directory to the arbitrary folder.
 
 --------------------------------------------------
 
