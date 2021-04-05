@@ -25,7 +25,7 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        BRANCH=$(echo $GITHUB_REF | cut -d / -f 3)
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
         echo ::set-output name=BRANCH::${BRANCH}
         echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
@@ -48,14 +48,11 @@ jobs:
     - name: Push image
       run: |
         docker push $MINER_REGISTRY:$TAG
-        if [ "$GITHUB_REF" == "refs/heads/master" ]; then
-          docker push $MINER_REGISTRY:latest
-        fi
       env:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push image with latest tag
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/release'
       run: |
         docker push $MINER_REGISTRY:latest
 
@@ -98,6 +95,6 @@ jobs:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push image with latest tag
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/release'
       run: |
         docker push $SHARDER_REGISTRY:latest
