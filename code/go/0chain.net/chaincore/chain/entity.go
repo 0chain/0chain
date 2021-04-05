@@ -229,7 +229,6 @@ func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 		return c.GetLatestMagicBlock()
 	}
 
-	rn = mbRoundOffset(rn)
 	return c.GetMagicBlock(rn)
 }
 
