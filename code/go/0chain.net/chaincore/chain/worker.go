@@ -37,42 +37,25 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 func (c *Chain) StatusMonitor(ctx context.Context) {
 	mb := c.GetCurrentMagicBlock()
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
-
-	//var cancel func()
-	startStatusMonitor := func(mb *block.MagicBlock, cctx context.Context) func() {
-		var smctx context.Context
-		smctx, cancelCtx := context.WithCancel(ctx)
-		waitMC := make(chan struct{})
-		waitSC := make(chan struct{})
-		go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
-		go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
-		return func() {
-			N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
-			cancelCtx()
-			<-waitMC
-			<-waitSC
-		}
-	}
-
 	cancel := startStatusMonitor(mb, ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case nRound := <-UpdateNodes:
+		case newRound := <-UpdateNodes:
 			lfmb := c.GetLatestMagicBlock()
-			mb = c.GetMagicBlock(nRound)
-			if mb.StartingRound < lfmb.StartingRound {
+			newMB := c.GetMagicBlock(newRound)
+			if newMB.StartingRound < lfmb.StartingRound {
 				continue
 			}
 
+			mb = newMB
+
 			cancel()
 			Logger.Info("Got MB update, restart status monitor",
-				zap.Int64("update round", nRound),
+				zap.Int64("update round", newRound),
 				zap.Int64("mb starting round", mb.StartingRound))
-			//zap.Any("miners", mb.Miners),
-			//zap.Any("sharders", mb.Sharders))
 			cancel = startStatusMonitor(mb, ctx)
 		case <-newMagicBlockCheckTk.C:
 			lmb := c.GetLatestMagicBlock()
@@ -83,8 +66,30 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 				cancel()
 				mb = lmb
 
-				cancel = startStatusMonitor(mb, ctx)
+				cancel = startStatusMonitor(lmb, ctx)
 			}
+		}
+	}
+}
+
+func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
+	var smctx context.Context
+	smctx, cancelCtx := context.WithCancel(ctx)
+	waitMC := make(chan struct{})
+	waitSC := make(chan struct{})
+	go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
+	go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
+	return func() {
+		N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
+		cancelCtx()
+		select {
+		case <-waitMC:
+		default:
+		}
+
+		select {
+		case <-waitSC:
+		default:
 		}
 	}
 }
