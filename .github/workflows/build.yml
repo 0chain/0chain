@@ -25,7 +25,7 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
         echo ::set-output name=BRANCH::${BRANCH}
         echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
@@ -69,7 +69,7 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        BRANCH=$(echo $GITHUB_REF | cut -d / -f 3)
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
         echo ::set-output name=BRANCH::${BRANCH}
         echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
