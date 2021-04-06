@@ -64,6 +64,10 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		case <-newMagicBlockCheckTk.C:
 			mb := c.GetCurrentMagicBlock()
 			// current magic block may be kicked back, restart if changed.
+			N2n.Debug("new mb status monitor ticker",
+				zap.Int64("current mb starting round", mb.StartingRound),
+				zap.Int64("monitoring round", monitorRound))
+
 			if mb.StartingRound == monitorRound {
 				continue
 			}
