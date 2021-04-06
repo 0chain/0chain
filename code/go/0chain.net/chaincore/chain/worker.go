@@ -36,6 +36,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) StatusMonitor(ctx context.Context) {
 	mb := c.GetCurrentMagicBlock()
+	monitorRound := mb.StartingRound
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
 	cancel := startStatusMonitor(mb, ctx)
 
@@ -44,30 +45,35 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case newRound := <-UpdateNodes:
-			lfmb := c.GetLatestMagicBlock()
-			newMB := c.GetMagicBlock(newRound)
-			if newMB.StartingRound < lfmb.StartingRound {
+			mb := c.GetMagicBlock(newRound)
+			N2n.Debug("update MB",
+				zap.Int64("current round", monitorRound),
+				zap.Int64("new round", newRound),
+				zap.Int64("new mb starting round", mb.StartingRound))
+
+			if mb.StartingRound <= monitorRound {
 				continue
 			}
 
-			mb = newMB
-
-			cancel()
-			Logger.Info("Got MB update, restart status monitor",
+			N2n.Info("Restart status monitor - update nodes",
 				zap.Int64("update round", newRound),
 				zap.Int64("mb starting round", mb.StartingRound))
+			cancel()
+			monitorRound = newRound
 			cancel = startStatusMonitor(mb, ctx)
 		case <-newMagicBlockCheckTk.C:
-			lmb := c.GetLatestMagicBlock()
-			if lmb.StartingRound > mb.StartingRound {
-				Logger.Info("Detected new magic block, restart status monitor",
-					zap.Int64("starting round", lmb.StartingRound),
-					zap.Int64("previous starting round", mb.StartingRound))
-				cancel()
-				mb = lmb
-
-				cancel = startStatusMonitor(lmb, ctx)
+			mb := c.GetCurrentMagicBlock()
+			// current magic block may be kicked back, restart if changed.
+			if mb.StartingRound == monitorRound {
+				continue
 			}
+
+			N2n.Info("Restart status monitor - new mb detected",
+				zap.Int64("starting round", mb.StartingRound),
+				zap.Int64("previous starting round", monitorRound))
+			cancel()
+			monitorRound = mb.StartingRound
+			cancel = startStatusMonitor(mb, ctx)
 		}
 	}
 }
