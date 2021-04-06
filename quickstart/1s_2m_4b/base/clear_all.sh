@@ -25,7 +25,7 @@ sudo docker.local/bin/build.base.sh
 
 cd $zBlober_Root
 
-for i in $(seq 1 6)
+for i in $(seq 1 4)
 do
 
   sudo rm -rf docker.local/blobber$i/*

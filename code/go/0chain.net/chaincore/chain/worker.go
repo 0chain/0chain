@@ -35,22 +35,71 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) StatusMonitor(ctx context.Context) {
-	smctx, cancel := context.WithCancel(ctx)
 	mb := c.GetCurrentMagicBlock()
-	go mb.Miners.StatusMonitor(smctx)
-	go mb.Sharders.StatusMonitor(smctx)
-	for true {
+	monitorRound := mb.StartingRound
+	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
+	cancel := startStatusMonitor(mb, ctx)
+
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case nRound := <-UpdateNodes:
+		case newRound := <-UpdateNodes:
+			mb := c.GetMagicBlock(newRound)
+			N2n.Debug("Got nodes update",
+				zap.Int64("monitoring round", monitorRound),
+				zap.Int64("new round", newRound),
+				zap.Int64("mb starting round", mb.StartingRound))
+
+			if mb.StartingRound <= monitorRound {
+				continue
+			}
+
+			N2n.Info("Restart status monitor - update nodes",
+				zap.Int64("update round", newRound),
+				zap.Int64("mb starting round", mb.StartingRound))
 			cancel()
-			Logger.Info("the status monitor is dead, long live the status monitor",
-				zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
-			smctx, cancel = context.WithCancel(ctx)
-			mb := c.GetMagicBlock(nRound)
-			go mb.Miners.StatusMonitor(smctx)
-			go mb.Sharders.StatusMonitor(smctx)
+			monitorRound = newRound
+			cancel = startStatusMonitor(mb, ctx)
+		case <-newMagicBlockCheckTk.C:
+			mb := c.GetCurrentMagicBlock()
+			// current magic block may be kicked back, restart if changed.
+			N2n.Debug("new mb status monitor ticker",
+				zap.Int64("current mb starting round", mb.StartingRound),
+				zap.Int64("monitoring round", monitorRound))
+
+			if mb.StartingRound == monitorRound {
+				continue
+			}
+
+			N2n.Info("Restart status monitor - new mb detected",
+				zap.Int64("starting round", mb.StartingRound),
+				zap.Int64("previous starting round", monitorRound))
+			cancel()
+			monitorRound = mb.StartingRound
+			cancel = startStatusMonitor(mb, ctx)
+		}
+	}
+}
+
+func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
+	var smctx context.Context
+	smctx, cancelCtx := context.WithCancel(ctx)
+	waitMC := make(chan struct{})
+	waitSC := make(chan struct{})
+	go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
+	go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
+	return func() {
+		N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
+		cancelCtx()
+		select {
+		case <-waitMC:
+		default:
+		}
+
+		select {
+		case <-waitSC:
+		default:
 		}
 	}
 }
@@ -62,8 +111,24 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 		case <-ctx.Done():
 			return
 		case r := <-c.finalizedRoundsChannel:
-			c.finalizeRound(ctx, r, bsh)
-			c.UpdateRoundInfo(r)
+			func() {
+				// TODO: make the timeout configurable
+				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+				doneC := make(chan struct{})
+				go func() {
+					defer close(doneC)
+					c.finalizeRound(cctx, r, bsh)
+					c.UpdateRoundInfo(r)
+				}()
+
+				select {
+				case <-cctx.Done():
+					Logger.Warn("FinalizeRoundWorker finalize round timeout",
+						zap.Int64("round", r.GetRoundNumber()))
+				case <-doneC:
+				}
+			}()
 		}
 	}
 }
@@ -103,74 +168,102 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 }
 
 // FinalizedBlockWorker - a worker that processes finalized blocks.
-func (c *Chain) FinalizedBlockWorker(ctx context.Context,
-	bsh BlockStateHandler) {
-
+func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case fb := <-c.finalizedBlocksChannel:
-			lfb := c.GetLatestFinalizedBlock()
-			if fb.Round < lfb.Round-5 {
-				Logger.Error("slow finalized block processing",
-					zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
-			}
+			func() {
+				// TODO: make the timeout configurable
+				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
 
-			// TODO/TOTHINK: move the repair chain outside the finalized worker?
+				t := time.Now()
+				doneC := make(chan struct{})
+				go func() {
+					defer close(doneC)
+					c.finalizeBlockProcess(cctx, fb, bsh)
+				}()
 
-			// make sure we have valid verified MB chain if the block contains
-			// a magic block; we already have verified and valid MB chain at this
-			// moment, let's keep it updated and verified too
-
-			if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
-				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-				if err != nil {
-					Logger.Error("repairing MB chain", zap.Error(err))
-					return
+				select {
+				case <-doneC:
+					Logger.Debug("finalize block process duration", zap.Any("duration", time.Since(t)))
+				case <-cctx.Done():
+					Logger.Warn("finalize block process context done",
+						zap.Error(cctx.Err()))
 				}
-			}
-
-			// finalize
-			if !fb.IsStateComputed() {
-				err := c.ComputeOrSyncState(ctx, fb)
-				if err != nil {
-					Logger.Error("save changes - save state not successful",
-						zap.Int64("round", fb.Round),
-						zap.String("hash", fb.Hash),
-						zap.Int8("state", fb.GetBlockState()),
-						zap.Error(err))
-					if state.Debug() {
-						Logger.DPanic("save changes - state not successful")
-					}
-				}
-			}
-
-			switch fb.GetStateStatus() {
-			case block.StateSynched, block.StateSuccessful:
-			default:
-				Logger.Error("state_save_without_success, state can't be saved without successful computation")
-				return
-			}
-
-			// Fetch block state changes and apply them would reduce the blocks finalize speed
-			if fb.ClientState == nil {
-				Logger.Error("Finalize block - client state is null, get state changes from network",
-					zap.Int64("round", fb.Round),
-					zap.String("hash", fb.Hash))
-				if err := c.GetBlockStateChange(fb); err != nil {
-					Logger.Error("Finalize block - get block state changes failed",
-						zap.Error(err),
-						zap.Int64("round", fb.Round),
-						zap.String("block hash", fb.Hash))
-					return
-				}
-			}
-
-			c.finalizeBlock(ctx, fb, bsh)
+			}()
 		}
 	}
+}
+
+func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
+	lfb := c.GetLatestFinalizedBlock()
+	if fb.Round < lfb.Round-5 {
+		Logger.Error("slow finalized block processing",
+			zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
+	}
+	Logger.Debug("Get finalized block from channel", zap.Int64("round", fb.Round))
+	// TODO/TOTHINK: move the repair chain outside the finalized worker?
+
+	// make sure we have valid verified MB chain if the block contains
+	// a magic block; we already have verified and valid MB chain at this
+	// moment, let's keep it updated and verified too
+
+	if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
+		var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+		if err != nil {
+			Logger.Error("repairing MB chain", zap.Error(err))
+			return
+		}
+	}
+
+	// finalize
+	if !fb.IsStateComputed() {
+		Logger.Debug("finalize block state not computed",
+			zap.Int64("round", fb.Round))
+		err := c.ComputeOrSyncState(ctx, fb)
+		if err != nil {
+			Logger.Error("save changes - save state not successful",
+				zap.Int64("round", fb.Round),
+				zap.String("hash", fb.Hash),
+				zap.Int8("state", fb.GetBlockState()),
+				zap.Error(err))
+			if state.Debug() {
+				Logger.DPanic("save changes - state not successful")
+			}
+		}
+	} else {
+		Logger.Debug("finalize block state computed",
+			zap.Int64("round", fb.Round),
+			zap.Any("state", fb.GetStateStatus()))
+	}
+
+	switch fb.GetStateStatus() {
+	case block.StateSynched, block.StateSuccessful:
+	default:
+		Logger.Error("state_save_without_success, state can't be saved without successful computation",
+			zap.Int64("round", fb.Round))
+		return
+	}
+
+	// Fetch block state changes and apply them would reduce the blocks finalize speed
+	if fb.ClientState == nil {
+		Logger.Error("Finalize block - client state is null, get state changes from network",
+			zap.Int64("round", fb.Round),
+			zap.String("hash", fb.Hash))
+		if err := c.GetBlockStateChange(fb); err != nil {
+			Logger.Error("Finalize block - get block state changes failed",
+				zap.Error(err),
+				zap.Int64("round", fb.Round),
+				zap.String("block hash", fb.Hash))
+			return
+		}
+	}
+
+	c.finalizeBlock(ctx, fb, bsh)
 }
 
 /*PruneClientStateWorker - a worker that prunes the client state */
@@ -342,7 +435,7 @@ func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash u
 		zap.Int64("round", round),
 		zap.Int("missing_node_num", len(keys)))
 
-	c.GetStateNodesFromSharders(ctx, keys)
+	c.GetStateNodes(ctx, keys)
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
@@ -446,8 +539,9 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	var mbs = sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
 	if len(mbs) == 0 {
-		return fmt.Errorf("no finalized magic block from sharders (%s) given",
-			mb.Sharders.N2NURLs())
+		Logger.Warn("no new finalized magic block from sharders given",
+			zap.Strings("URLs", mb.Sharders.N2NURLs()))
+		return nil
 	}
 
 	if len(mbs) > 1 {

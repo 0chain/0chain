@@ -356,7 +356,6 @@ func SetupDKGSummary(store datastore.Store) {
 }
 
 func SetupDKGDB() {
-	//Clean old files on restart
 	db, err := ememorystore.CreateDB("data/rocksdb/dkg")
 	if err != nil {
 		panic(err)
