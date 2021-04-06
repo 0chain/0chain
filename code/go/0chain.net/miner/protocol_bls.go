@@ -202,6 +202,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 
 	Logger.Debug("get_bls_share", zap.Int64("round", rn),
 		zap.Int("rtc", r.GetTimeoutCount()),
+		zap.String("dkg_pi", dkg.Si.GetPublicKey().GetHexString()),
 		zap.Int64("dkg_sr", dkg.StartingRound),
 		zap.Int64("mb_sr", mb.StartingRound))
 

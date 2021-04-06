@@ -158,12 +158,17 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-
+	Logger.Debug("process notarized block", zap.Int64("round", b.Round))
+	defer func() {
+		Logger.Debug("process notarized block end", zap.Int64("round", b.Round))
+	}()
 	var er = sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
+	} else {
+		Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
 	}
 
 	// pull related magic block if missing

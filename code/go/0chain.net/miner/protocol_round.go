@@ -1199,9 +1199,15 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 	}
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Info("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Info("handleNoProgress",
+			zap.Any("round", mc.GetCurrentRound()),
+			zap.Int64("count_round_timeout", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
-		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Error("handleNoProgress (no further timeout messages will be displayed)",
+			zap.Any("round", mc.GetCurrentRound()),
+			zap.Int64("count_round_timeout", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		//TODO: should have a means to send an email/SMS to someone or something like that
 	}
 
@@ -1223,6 +1229,9 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 	for i < e && count < 5 {
 		var mr = mc.GetMinerRound(i)
 		if mr == nil || mr.IsFinalized() {
+			Logger.Info("restartRound->kickFinalization continued",
+				zap.Any("miner round", mr),
+				zap.Bool("miner is finalized", mr.IsFinalized()))
 			continue // skip finalized blocks, skip nil miner rounds
 		}
 		Logger.Info("restartRound->kickFinalization:",
@@ -1740,7 +1749,7 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 			}
 			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts),
 				zap.Any("sharders", waitingSharders))
-			lmb.Sharders.OneTimeStatusMonitor(ctx) // just mark 'em active
+			lmb.Sharders.OneTimeStatusMonitor(ctx, lmb.StartingRound) // just mark 'em active
 		}
 	}
 }
