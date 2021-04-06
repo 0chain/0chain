@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -655,7 +656,9 @@ func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
 		log.Printf("stop %s", n.Name)
-		n.Stop()
+		if err := n.Stop(); err != nil && !strings.Contains(err.Error(), "not started") {
+			log.Printf("[INF] stop node error %v", err)
+		}
 	}
 }
 
@@ -721,44 +724,44 @@ func okString(t bool) string {
 }
 
 func (r *Runner) processReport() (success bool) {
-    success = true
+	success = true
 
-    var totalDuration time.Duration
+	var totalDuration time.Duration
 
-    fmt.Println("........................ R E P O R T ........................")
+	fmt.Println("........................ R E P O R T ........................")
 
-    for _, testCase := range r.report {
-        fmt.Println("- ", testCase.name)
+	for _, testCase := range r.report {
+		fmt.Println("- ", testCase.name)
 
 		var caseError error = nil
 		var caseSuccess bool = true
-        totalDuration += testCase.e.Sub(testCase.s)
+		totalDuration += testCase.e.Sub(testCase.s)
 
-        for _, flowDirective := range testCase.directives {
-            caseSuccess = caseSuccess && flowDirective.success
+		for _, flowDirective := range testCase.directives {
+			caseSuccess = caseSuccess && flowDirective.success
 
-            if flowDirective.err != nil {
-                caseError = flowDirective.err
-                break
-            }
-        }
+			if flowDirective.err != nil {
+				caseError = flowDirective.err
+				break
+			}
+		}
 
-        fmt.Printf("  %s after %s\n", okString(caseSuccess),
-            testCase.e.Sub(testCase.s).Round(time.Second))
+		fmt.Printf("  %s after %s\n", okString(caseSuccess),
+			testCase.e.Sub(testCase.s).Round(time.Second))
 
-        success = success && caseSuccess
+		success = success && caseSuccess
 
-        if caseError != nil {
-            fmt.Printf("  - [ERR] %v\n", caseError)
-            break
-        }
-    }
+		if caseError != nil {
+			fmt.Printf("  - [ERR] %v\n", caseError)
+			break
+		}
+	}
 
-    fmt.Println("total duration:", totalDuration.Round(time.Second))
-    fmt.Println("overall success:", success)
-    fmt.Println(".............................................................")
+	fmt.Println("total duration:", totalDuration.Round(time.Second))
+	fmt.Println("overall success:", success)
+	fmt.Println(".............................................................")
 
-    return success
+	return success
 }
 
 func (r *Runner) resetWaiters() {
@@ -802,7 +805,7 @@ func (r *Runner) Run() (err error, success bool) {
 		log.Print("start set ", set.Name)
 		log.Print("...........................................................")
 
-		cases:
+	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
 			var report reportTestCase
 			report.name = testCase.Name
