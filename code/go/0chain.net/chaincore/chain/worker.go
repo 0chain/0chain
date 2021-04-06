@@ -46,10 +46,10 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			return
 		case newRound := <-UpdateNodes:
 			mb := c.GetMagicBlock(newRound)
-			N2n.Debug("update MB",
-				zap.Int64("current round", monitorRound),
+			N2n.Debug("Got nodes update",
+				zap.Int64("monitoring round", monitorRound),
 				zap.Int64("new round", newRound),
-				zap.Int64("new mb starting round", mb.StartingRound))
+				zap.Int64("mb starting round", mb.StartingRound))
 
 			if mb.StartingRound <= monitorRound {
 				continue
