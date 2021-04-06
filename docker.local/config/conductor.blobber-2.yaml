@@ -7,12 +7,16 @@
 # enabled test cases sets
 enable:
   - "Blobber"
+  - "Repair"
 
 # sets of test cases
 sets:
-  - name: "Blobber"
+#  - name: "Blobber"
+#    tests:
+#      - "All blobber tests"
+  - name: "Repair"
     tests:
-      - "All blobber tests"
+      - "Repair tests"
 
 # test cases
 tests:
@@ -41,35 +45,39 @@ tests:
       - command:
           name: 'init_pour_allocation'
           timeout: '35m'
-      # upload/download without enough tokens in read/write pools
+      # upload failure without enough tokens in write pool
+      # NOTE: cannot be done as upload allowed at this point due to lock added on new allocation
+#      - command:
+#          name: "upload_no_tokens"
+#          timeout: '5m'
+      # upload failure without metadata (add tokens to write pool)
       - command:
-          name: "upload_no_tokens"
+          name: "upload_no_meta" # this locks token in a write pool
           timeout: '5m'
-      # upload without metadata (add tokens to write pool)
-      - command:
-          name: "upload_no_meta"
-          timeout: '5m'
-      # upload without file
+      # upload failure without file
       - command:
           name: "upload_no_file"
           timeout: '5m'
-      # upload without write_marker
+      # upload failure without write_marker
       - command:
           name: "upload_no_wm"
           timeout: '5m'
-      # download without tokens
+      # upload failure without enough tokens in read pool
       - command:
           name: "download_no_tokens"
           timeout: '5m'
-      # download without read_marker
+      # download failure without read_marker
       - command:
-          name: "download_no_rm"
+          name: "download_no_rm" # this locks token in a read pool
           timeout: '5m'
       # markers out of order
       - command:
           name: "markers_out_of_order"
           timeout: '5m'
-      # simultaneous
+      # simultaneous (new allocation to avoid conflict with markers_out_of_order)
+      - command:
+          name: 'init_pour_allocation'
+          timeout: '35m'
       - command:
           name: 'simultaneous'
           timeout: '5m'
@@ -77,5 +85,50 @@ tests:
       #- command:
       #    name: "sleep_1m"
       #    timeout: '100h'
+
+  - name: "Repair tests"
+    flow:
+      - command:
+          name: 'build_test_blobbers'
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '15m'
+      - start: ['blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-3', 'blobber-4']
+          timeout: '15m'
+      # setup blobbers and create allocation with minimum write pool lock
+      - command:
+          name: 'repair_allocation'
+          timeout: '15m'
+      - stop: ['blobber-4']
+      - wait_round:
+          shift: 30
+      - command:
+          name: 'upload_repair'
+          timeout: '5m'
+      - start: ['blobber-4']
+      - wait_round:
+          shift: 30
+      - command:
+          name: 'list_repair'
+          timeout: '5m'
+      - command:
+          name: 'repair'
+          timeout: '5m'
 
 ...
