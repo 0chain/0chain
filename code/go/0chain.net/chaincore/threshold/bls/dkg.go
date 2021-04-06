@@ -5,6 +5,7 @@ package bls
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 
@@ -356,7 +357,7 @@ func SetupDKGSummary(store datastore.Store) {
 
 func SetupDKGDB() {
 	//Clean old files on restart
-	//os.RemoveAll("data/rocksdb/dkg")
+	os.RemoveAll("data/rocksdb/dkg")
 	db, err := ememorystore.CreateDB("data/rocksdb/dkg")
 	if err != nil {
 		panic(err)

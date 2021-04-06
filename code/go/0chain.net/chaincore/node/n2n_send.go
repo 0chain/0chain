@@ -242,11 +242,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
-
-			receiver.SetStatus(NodeStatusActive)
-			receiver.SetLastActiveTime(time.Now())
-			receiver.SetErrorCount(receiver.SendErrors)
-
 			readAndClose(resp.Body)
 			if push {
 				timer.UpdateSince(ts)
@@ -257,6 +252,9 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
+			receiver.SetStatus(NodeStatusActive)
+			receiver.SetLastActiveTime(time.Now())
+			receiver.SetErrorCount(receiver.SendErrors)
 			return true
 		}
 	}

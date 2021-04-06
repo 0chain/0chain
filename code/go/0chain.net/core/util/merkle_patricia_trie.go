@@ -244,29 +244,13 @@ func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
 }
 
 /*SaveChanges - implement interface */
-func (mpt *MerklePatriciaTrie) SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error {
+func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, includeDeletes bool) error {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
 	cc := mpt.ChangeCollector
-
-	doneC := make(chan struct{})
-	errC := make(chan error)
-	go func() {
-		defer close(doneC)
-		err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
-		if err != nil {
-			errC <- err
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		Logger.Debug("MPT save changes failed", zap.Error(ctx.Err()))
-		return ctx.Err()
-	case err := <-errC:
-		Logger.Debug("MPT save changes failed", zap.Error(err))
+	err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
+	if err != nil {
 		return err
-	case <-doneC:
 	}
 	return nil
 }

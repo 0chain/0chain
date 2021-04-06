@@ -3,7 +3,6 @@ package chain
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -20,15 +19,12 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/metric"
-	"go.uber.org/zap"
 
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-
-	. "0chain.net/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -50,7 +46,6 @@ func SetupHandlers() {
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
-	http.HandleFunc("/_diagnostics/current_mb_nodes", common.UserRateLimit(DiagnosticsNodesHandler))
 	http.HandleFunc("/_diagnostics/dkg_process", common.UserRateLimit(DiagnosticsDKGHandler))
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
 
@@ -60,18 +55,6 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
 
 	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.N2NRateLimit(common.ToJSONResponse(LFBTicketHandler)))
-}
-
-func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
-	sc := GetServerChain()
-	mb := sc.GetCurrentMagicBlock()
-	d, err := json.MarshalIndent(append(mb.Sharders.CopyNodes(), mb.Miners.CopyNodes()...), "", "\t")
-	if err != nil {
-		fmt.Fprintf(w, err.Error())
-		return
-	}
-
-	fmt.Fprintf(w, string(d))
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -624,9 +607,9 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 
 	mb := sc.GetCurrentMagicBlock()
 	if selfNodeType == node.NodeTypeMiner {
-		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f - current MB start round: (%v)</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000., mb.StartingRound)
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000.)
 	} else {
-		fmt.Fprintf(w, "<div><div>Miners (%v)</div> - current MB starting round: (%v)", mb.Miners.Size(), mb.StartingRound)
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", mb.Miners.Size())
 	}
 	sc.printNodePool(w, mb.Miners)
 	fmt.Fprintf(w, "</div>")
@@ -1399,22 +1382,6 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	lfb := c.GetLatestFinalizedBlock()
 	contract := r.FormValue("smart_contract")
 	mpt := lfb.ClientState
-	if mpt == nil {
-		errMsg := struct {
-			Err string `json:"error"`
-		}{
-			Err: fmt.Sprintf("last finalized block with nil state, round: %d", lfb.Round),
-		}
-
-		out, err := json.MarshalIndent(errMsg, "", "    ")
-		if err != nil {
-			Logger.Error("Dump state failed", zap.Error(err))
-			return
-		}
-		fmt.Fprintf(w, string(out))
-		return
-	}
-
 	if contract == "" {
 		contract = "global"
 	} else {

@@ -3,14 +3,11 @@ package sharder
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -55,26 +52,15 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-
 	var lfb = sc.GetLatestFinalizedBlock()
 	if b.Round <= lfb.Round {
-		Logger.Debug("NotarizedBlockHandler block.Round <= lfb.Round",
-			zap.Int64("block round", b.Round),
-			zap.Int64("lfb round", lfb.Round))
 		return true, nil // doesn't need a not. block for the round
 	}
 	_, err := sc.GetBlock(ctx, b.Hash)
 	if err == nil {
-		Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
 		return true, nil
 	}
-	select {
-	case sc.GetBlockChannel() <- b:
-	case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
-		Logger.Error("Push notarized block to channel timeout")
-		return false, nil
-	}
-
+	sc.GetBlockChannel() <- b
 	return true, nil
 }
 

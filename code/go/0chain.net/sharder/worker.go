@@ -55,7 +55,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	for true {
 		select {
 		case <-ctx.Done():
-			Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
 		case b := <-sc.GetBlockChannel():
 			sc.processBlock(ctx, b)
@@ -207,7 +206,7 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 		case <-ticker.C:
 			if !iterInprogress {
 				iterInprogress = true
-				roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
+				roundToProcess := sc.CurrentRound - oldBlockRoundRange
 				fs := blockstore.GetStore()
 				swg := sizedwaitgroup.New(numWorkers)
 				for roundToProcess > 0 {

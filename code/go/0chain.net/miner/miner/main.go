@@ -243,7 +243,7 @@ func main() {
 		log.Fatal(server.ListenAndServe())
 	}()
 
-	go mc.RegisterClient()
+	mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 
 	// start restart round event worker before the StartProtocol to be able
@@ -267,7 +267,7 @@ func main() {
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
-		go mc.SetupSC(ctx)
+		go mc.InitSetupSC()
 		if config.DevConfiguration.ViewChange {
 			go mc.DKGProcess(ctx)
 		}

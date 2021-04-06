@@ -118,14 +118,14 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 
 	var (
-		round = b.Round
-		lfmbr = mc.GetLatestFinalizedMagicBlockRound(round)
+		rn    = b.Round
+		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn)
 
-		offsetRound = mbRoundOffset(round)
-		nextVCRound = mc.NextViewChange()
+		rnoff = mbRoundOffset(rn)
+		nvc   = mc.NextViewChange()
 	)
 
-	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
+	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		return common.NewError("verify_block_mb_reference",
 			"required MB missing or still not finalized")
 	}
@@ -415,7 +415,7 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
 	mb := mc.GetCurrentMagicBlock()
-	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)
+	mb.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	if len(lfBlocks) > 0 {
 		Logger.Info("bc-1 latest finalized Block",

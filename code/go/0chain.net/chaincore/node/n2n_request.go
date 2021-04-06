@@ -170,18 +170,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			duration := time.Since(ts)
 
 			if err != nil {
-				provider.SendErrors++
-				provider.AddErrorCount(1)
 				N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
 					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
-
-			// As long as the node is reachable, it is active.
-			provider.SetStatus(NodeStatusActive)
-			provider.SetLastActiveTime(time.Now())
-			provider.SetErrorCount(provider.SendErrors)
-
 			if resp.StatusCode != http.StatusOK {
 				data := string(getDataAndClose(resp.Body))
 				N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
@@ -202,7 +194,9 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					return false
 				}
 			}
-
+			provider.SetStatus(NodeStatusActive)
+			provider.SetLastActiveTime(time.Now())
+			provider.SetErrorCount(provider.SendErrors)
 			size, entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))

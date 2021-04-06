@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,50 +40,18 @@ const (
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-func (mc *Chain) SetupSC(ctx context.Context) {
-	Logger.Info("SetupSC start...")
-	tm := time.NewTicker(5 * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			Logger.Debug("SetupSC is done")
+func (mc *Chain) InitSetupSC() {
+	registered := mc.isRegistered()
+	for !registered {
+		txn, err := mc.RegisterNode()
+		if err != nil {
+			Logger.Warn("failed to register node in SC -- init_setup_sc",
+				zap.Error(err))
+		} else if txn != nil && mc.ConfirmTransaction(txn) {
 			return
-		case <-tm.C:
-			Logger.Debug("SetupSC - check if node is registered")
-			isRegisteredC := make(chan bool)
-			go func() {
-				if mc.isRegistered() {
-					Logger.Debug("SetupSC - node is already registered")
-					isRegisteredC <- true
-					return
-				}
-				isRegisteredC <- false
-			}()
-
-			select {
-			case reg := <-isRegisteredC:
-				if reg {
-					continue
-				}
-			case <-time.NewTimer(3 * time.Second).C:
-				Logger.Debug("SetupSC - check node registered timeout")
-			}
-
-			Logger.Debug("Request to register node")
-			txn, err := mc.RegisterNode()
-			if err != nil {
-				Logger.Warn("failed to register node in SC -- init_setup_sc",
-					zap.Error(err))
-				continue
-			}
-
-			if txn != nil && mc.ConfirmTransaction(txn) {
-				Logger.Debug("Register node transaction confirmed")
-				continue
-			}
-
-			Logger.Debug("Register node transaction not confirmed yet")
 		}
+		time.Sleep(5 * time.Second)
+		registered = mc.isRegistered()
 	}
 }
 
@@ -131,11 +98,8 @@ func (mc *Chain) RegisterClient() {
 				"", "", nil,
 			)
 			if err != nil {
-				Logger.Error("error in register client",
-					zap.Error(err),
-					zap.Any("body", body),
-					zap.Int("registered", registered),
-					zap.Int("consensus", consensus))
+				Logger.Error("error in register client", zap.Error(err),
+					zap.Any("body", body))
 			} else {
 				delete(miners, key)
 				registered++

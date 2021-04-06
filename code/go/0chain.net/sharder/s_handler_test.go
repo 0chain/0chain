@@ -20,7 +20,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 
 	sc := sharder.GetSharderChain()
 	var num int64 = 1
-	sc.SetCurrentRound(num)
+	sc.CurrentRound = num
 	r := round.NewRound(num)
 	sc.AddRound(r)
 
