@@ -449,29 +449,46 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
-		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
-		sharders          = cmb.Sharders.N2NURLs()
-		magicBlock        *block.Block
+		currentLFMB = c.GetLatestFinalizedMagicBlock()
+		sharders    = cmb.Sharders.N2NURLs()
+		magicBlock  *block.Block
 	)
 
 	// until we have got all MB from our from store to latest given
-	for currentMagicBlock.Hash != latestMagicBlock.Hash {
-		Logger.Debug("verify_chain_history",
-			zap.Int64("get_mb_number", currentMagicBlock.MagicBlockNumber+1))
+	for currentLFMB.Hash != latestMagicBlock.Hash {
+		if currentLFMB.MagicBlockNumber > latestMagicBlock.MagicBlockNumber {
+			err = errors.New("verify chain history failed, latest magic block ")
+			Logger.Debug("current lfmb number is greater than new lfmb number",
+				zap.Int64("current_lfmb_number", currentLFMB.MagicBlockNumber),
+				zap.Int64("new lfmb_number", latestMagicBlock.MagicBlockNumber),
+				zap.Int64("current_lfmb_round", currentLFMB.Round),
+				zap.Int64("new lfmb_round", latestMagicBlock.Round))
+			return
+		}
 
-		magicBlock, err = httpclientutil.GetMagicBlockCall(sharders,
-			currentMagicBlock.MagicBlockNumber+1, 1)
+		if currentLFMB.MagicBlockNumber == latestMagicBlock.MagicBlockNumber {
+			err = errors.New("verify chain history failed, latest magic block does not match")
+			Logger.Error("verify_chain_history failed",
+				zap.Error(err),
+				zap.String("current_lfmb_hash", currentLFMB.Hash),
+				zap.String("latest_mb_hash", latestMagicBlock.Hash),
+				zap.Int64("magic block number", currentLFMB.MagicBlockNumber))
+			return
+		}
+
+		requestMBNum := currentLFMB.MagicBlockNumber + 1
+		Logger.Debug("verify_chain_history", zap.Int64("get_mb_number", requestMBNum))
+
+		magicBlock, err = httpclientutil.GetMagicBlockCall(sharders, requestMBNum, 1)
 
 		if err != nil {
 			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to get %d: %v",
-					currentMagicBlock.MagicBlockNumber+1, err))
+				fmt.Sprintf("failed to get %d: %v", requestMBNum, err))
 		}
 
-		if !currentMagicBlock.VerifyMinersSignatures(magicBlock) {
+		if !currentLFMB.VerifyMinersSignatures(magicBlock) {
 			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to verify magic block %d miners signatures",
-					currentMagicBlock.MagicBlockNumber+1))
+				fmt.Sprintf("failed to verify magic block %d miners signatures", requestMBNum))
 		}
 
 		Logger.Info("verify chain history",
@@ -480,20 +497,19 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to update magic block %d: %v",
-					currentMagicBlock.MagicBlockNumber+1, err))
+				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
 		} else {
 			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		}
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)
-		currentMagicBlock = magicBlock
+		currentLFMB = magicBlock
 
 		if saveHandler != nil {
 			if err = saveHandler(ctx, magicBlock); err != nil {
 				return common.NewError("get_lfmb_from_sharders",
 					fmt.Sprintf("failed to save updated magic block %d: %v",
-						currentMagicBlock.MagicBlockNumber, err))
+						currentLFMB.MagicBlockNumber, err))
 			}
 		}
 
@@ -548,6 +564,10 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
+			if mbs[i].StartingRound == mbs[j].StartingRound {
+				return mbs[i].Round > mbs[j].Round
+			}
+
 			return mbs[i].StartingRound > mbs[j].StartingRound
 		})
 	}
