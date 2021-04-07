@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -156,12 +157,12 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 		zap.Int64("to", newMB.MagicBlockNumber))
 
 	// until the end of the days
-	if err = c.VerifyChainHistory(ctx, newMB, saveFunc); err != nil {
+	if err = c.VerifyChainHistoryAndRepair(ctx, newMB, saveFunc); err != nil {
 		Logger.Error("repair_mb_chain", zap.Error(err))
 		return common.NewErrorf("repair_mb_chain", err.Error())
 	}
 
-	// the VerifyChainHistory doesn't save the newMB
+	// the VerifyChainHistoryAndRepair doesn't save the newMB
 	// finalizeRound will do it next step
 
 	return // ok
@@ -440,10 +441,11 @@ func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash u
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
 
-// VerifyChainHistoryOn repairs and verifies magic blocks chain using given
+// VerifyChainHistoryAndRepairOn repairs and verifies magic blocks chain using given
 // current MagicBlock to request other nodes.
-func (c *Chain) VerifyChainHistoryOn(ctx context.Context,
-	latestMagicBlock *block.Block, cmb *block.MagicBlock,
+func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
+	latestMagicBlock *block.Block,
+	cmb *block.MagicBlock,
 	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
@@ -500,12 +502,12 @@ func (c *Chain) VerifyChainHistoryOn(ctx context.Context,
 	return
 }
 
-// VerifyChainHistory repairs and verifies magic blocks chain. It uses
+// VerifyChainHistoryAndRepair repairs and verifies magic blocks chain. It uses
 // GetCurrnetMagicBlock to get sharders to request data from.
-func (c *Chain) VerifyChainHistory(ctx context.Context,
+func (c *Chain) VerifyChainHistoryAndRepair(ctx context.Context,
 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
 
-	return c.VerifyChainHistoryOn(ctx, latestMagicBlock,
+	return c.VerifyChainHistoryAndRepairOn(ctx, latestMagicBlock,
 		c.GetCurrentMagicBlock(), saveHandler)
 }
 
@@ -569,7 +571,7 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
 	}
 
-	err = sc.VerifyChainHistory(ctx, magicBlock, saveMagicBlock)
+	err = sc.VerifyChainHistoryAndRepair(ctx, magicBlock, saveMagicBlock)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
