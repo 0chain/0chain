@@ -33,15 +33,16 @@ func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                   { return nil }
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI       { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string { return nil }
-func (tb *testBalances) Validate() error                          { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
-func (tb *testBalances) AddMint(*state.Mint) error                { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
+func (tb *testBalances) GetBlock() *block.Block                       { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI           { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction     { return nil }
+func (tb *testBalances) GetBlockSharders(b *block.Block) []string     { return nil }
+func (tb *testBalances) Validate() error                              { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                      { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error           { return nil }
+func (tb *testBalances) AddMint(*state.Mint) error                    { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer              { return nil }
+func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 
 }
