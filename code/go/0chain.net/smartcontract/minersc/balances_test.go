@@ -1,3 +1,5 @@
+// +build removed_from_build_until_syntax_error_fixed
+
 package minersc
 
 import (
