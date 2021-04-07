@@ -40,30 +40,12 @@ if [[ -n "$PACKAGE" ]]; then
 
     # assume that $PACKAGE looks something like: 0chain.net/chaincore/threshold/bls
     echo "Running unit tests from $PACKAGE:"
-    docker run $INTERACTIVE $IMAGE sh -c "cd $PACKAGE; $GO_TEST"
+    docker run $INTERACTIVE $IMAGE sh -c "cd /0chain/go/$PACKAGE; go test -tags bn256 -cover ./..."
 else
     # Run all tests.
 
-    # avoid expanding outside of Docker container
-    cd_mod='cd 0chain.net/$mod'
-    all_in_mod='0chain.net/$mod/...'
-
-    GENERAL_MODS="core \
-        chaincore chaincore/block/magicBlock \
-        conductor conductor/conductor \
-        smartcontract smartcontract/multisigsc/test \
-        miner miner/miner \
-        sharder sharder/sharder \
-    "
-
     echo "Running general unit tests:"
-    docker run $INTERACTIVE $GENERAL_IMAGE sh -c "\
-        for mod in $GENERAL_MODS; do \
-            $cd_mod; \
-            $GO_TEST $all_in_mod; \
-            cd -; \
-        done \
-    "
+    docker run $INTERACTIVE $GENERAL_IMAGE sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
 
     echo "Running smart contract unit tests:"
     docker run $INTERACTIVE $SC_IMAGE sh -c "\
