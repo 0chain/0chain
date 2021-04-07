@@ -108,8 +108,7 @@ func TestCommitBlobberRead(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("possable issue", func(t *testing.T) {
-		t.Skip("fails possible bug with sort.Search in blobberPools.get")
+	t.Run("check blobber sort needed", func(t *testing.T) {
 		var bRPools = rPools
 		bRPools.thisAllocation = []mockAllocationPool{
 			{2.3, now * 3, 19.2, 3},
@@ -228,7 +227,6 @@ func testCommitBlobberRead(
 	lastRead mockReadMarker,
 	read mockReadMarker,
 	allocation mockAllocation,
-	//aPool mockAllocationPool,
 	stakes []mockStakePool,
 	readPools mockReadPools,
 ) error {
@@ -327,7 +325,7 @@ func testCommitBlobberRead(
 	}
 	for i := 0; i < len(readPools.thisAllocation)+readPools.otherAllocations; i++ {
 		var id = strconv.Itoa(i)
-		rPool.Pools = append(rPool.Pools, &allocationPool{
+		rPool.Pools.add(&allocationPool{
 			AllocationID: id,
 		})
 	}
@@ -346,8 +344,7 @@ func testCommitBlobberRead(
 				pool.BlobberID = blobberId
 				pool.Balance = zcnToBalance(aPool.blobberBalance)
 			}
-			rPool.Pools[startBlock+i].Blobbers =
-				append(rPool.Pools[startBlock+i].Blobbers, pool)
+			rPool.Pools[startBlock+i].Blobbers.add(pool)
 		}
 	}
 	require.NoError(t, rPool.save(ssc.ID, payerId, ctx))
