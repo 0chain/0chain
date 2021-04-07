@@ -1523,7 +1523,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		return
 	}
 
-	if err = mc.VerifyChainHistory(ctx, rcvd, nil); err != nil {
+	if err = mc.VerifyChainHistoryAndRepair(ctx, rcvd, nil); err != nil {
 		return false, err
 	}
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {

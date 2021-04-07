@@ -382,7 +382,7 @@ func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
 	case lfmb.StartingRound == cmb.StartingRound:
 		// ok, initialize the magicBlock
 	default: // magicBlock > cmb.StartingRoound, verify chain
-		err = mc.VerifyChainHistory(common.GetRootContext(), lfmb, nil)
+		err = mc.VerifyChainHistoryAndRepair(common.GetRootContext(), lfmb, nil)
 		if err != nil {
 			return
 		}
