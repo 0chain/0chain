@@ -69,6 +69,7 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
+func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 	datastore.Key, error) {
 
