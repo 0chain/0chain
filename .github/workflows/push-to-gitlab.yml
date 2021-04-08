@@ -1,6 +1,6 @@
 name: Push-to-GitLab
 
-on: #[push, delete]
+on: [push, delete]
 
 jobs:
   to_gitlab:
