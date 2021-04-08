@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strconv"
 	"time"
 
@@ -215,7 +214,7 @@ func main() {
 	}
 
 	if err = mc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
-		Logger.Panic("can't update LFMB from sharders", zap.Error(err))
+		Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it
@@ -326,8 +325,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 
 }
 
-func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
-	list []*block.Block, err error) {
+func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (*block.Block, error) {
 
 	const limitAttempts = 10
 
@@ -335,45 +333,37 @@ func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
 		attempt      = 0
 		retryTimeout = time.Second * 5
 	)
+	for {
+		lfmb := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
+		if lfmb != nil {
+			return lfmb, nil
+		}
 
-	for len(list) == 0 {
-		list = mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-		if len(list) == 0 {
-			attempt++
-			if attempt >= limitAttempts {
-				return nil, common.NewErrorf("get_lfmbs_from_sharders",
-					"no lfmb given after %d attempts", attempt)
-			}
-			Logger.Warn("get_current_mb_sharder -- retry",
-				zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
-			select {
-			case <-ctx.Done():
-				return nil, common.NewError("get_lfmbs_from_sharders",
-					"context done: exiting")
-			case <-time.After(retryTimeout):
-			}
+		attempt++
+		if attempt >= limitAttempts {
+			return nil, common.NewErrorf("get_lfmbs_from_sharders",
+				"no lfmb given after %d attempts", attempt)
+		}
+		Logger.Warn("get_current_mb_sharder -- retry",
+			zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
+		select {
+		case <-ctx.Done():
+			return nil, common.NewError("get_lfmbs_from_sharders",
+				"context done: exiting")
+		case <-time.After(retryTimeout):
 		}
 	}
-
-	return
 }
 
 func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
 	err error) {
 
-	var list []*block.Block
-	if list, err = getMagicBlocksFromSharders(ctx, mc); err != nil {
-		return
+	lfmb, err := getMagicBlocksFromSharders(ctx, mc)
+	if err != nil {
+		return err
 	}
 
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].StartingRound > list[j].StartingRound
-	})
-
-	var (
-		lfmb = list[0]
-		cmb  = mc.GetCurrentMagicBlock()
-	)
+	cmb := mc.GetCurrentMagicBlock()
 
 	switch {
 	case lfmb.StartingRound < cmb.StartingRound:
