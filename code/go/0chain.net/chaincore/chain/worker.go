@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -555,27 +554,14 @@ type MagicBlockSaver interface {
 func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	mb *block.MagicBlock) (err error) {
 
-	var mbs = sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
-	if len(mbs) == 0 {
+	magicBlock := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+	if magicBlock == nil {
 		Logger.Warn("no new finalized magic block from sharders given",
 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
 		return nil
 	}
 
-	if len(mbs) > 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			if mbs[i].StartingRound == mbs[j].StartingRound {
-				return mbs[i].Round > mbs[j].Round
-			}
-
-			return mbs[i].StartingRound > mbs[j].StartingRound
-		})
-	}
-
-	var (
-		magicBlock = mbs[0]
-		cmb        = sc.GetCurrentMagicBlock()
-	)
+	cmb := sc.GetCurrentMagicBlock()
 
 	Logger.Info("get current magic block from sharders",
 		zap.Any("number", magicBlock.MagicBlockNumber),
