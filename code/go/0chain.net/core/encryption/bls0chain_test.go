@@ -7,7 +7,20 @@ import (
 	"testing"
 
 	"github.com/herumi/mcl/ffi/go/mcl"
+	"github.com/herumi/bls/ffi/go/bls"
 )
+
+func TestMiraclToHerumiPK(t *testing.T) {
+	miraclpk1 := `0418a02c6bd223ae0dfda1d2f9a3c81726ab436ce5e9d17c531ff0a385a13a0b491bdfed3a85690775ee35c61678957aaba7b1a1899438829f1dc94248d87ed36817f6dfafec19bfa87bf791a4d694f43fec227ae6f5a867490e30328cac05eaff039ac7dfc3364e851ebd2631ea6f1685609fc66d50223cc696cb59ff2fee47ac`
+	pk1 := MiraclToHerumiPK(miraclpk1)
+
+	// Assert DeserializeHexStr works on the output of MiraclToHerumiPK
+	var pk bls.PublicKey
+	err := pk.DeserializeHexStr(pk1)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func TestBLS0ChainGenerateKeys(t *testing.T) {
 	b0scheme := NewBLS0ChainScheme()
