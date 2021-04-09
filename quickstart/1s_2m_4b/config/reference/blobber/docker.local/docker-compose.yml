@@ -35,7 +35,7 @@ services:
       - ./keys_config:/blobber/keysconfig
     ports:
       - "506${BLOBBER}:506${BLOBBER}"
-    command: ./bin/validator --port 506${BLOBBER} --hostname 198.18.0.6${BLOBBER} --deployment_mode 0 --keys_file keysconfig/bnode${BLOBBER}_keys.txt --log_dir /blobber/log
+    command: ./bin/validator --port 506${BLOBBER} --hostname localhost --deployment_mode 0 --keys_file keysconfig/bnode${BLOBBER}_keys.txt --log_dir /blobber/log
     networks:
       default:
       testnet0:

@@ -8,16 +8,16 @@ cd $zWallet_Root
 
 rm ~/.zcn/wallet.json
 
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
-./zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
+$zWallet_Root/zwallet faucet --methodName pour --input "{Pay day}"
 
 
-./zwallet getbalance
+$zWallet_Root/zwallet getbalance
 
 cat ~/.zcn/wallet.json

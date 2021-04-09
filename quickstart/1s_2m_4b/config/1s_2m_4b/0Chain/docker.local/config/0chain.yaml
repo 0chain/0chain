@@ -115,6 +115,7 @@ server_chain:
 
 network:
   magic_block_file: config/b0magicBlock_2_miners_1_sharder.json
+  initial_states: config/initial_state.yaml
   dns_url: 'http://198.18.0.98:9091'
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40

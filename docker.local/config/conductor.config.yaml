@@ -24,18 +24,21 @@ nodes:
     work_dir: "docker.local/sharder1"
     env: SHARDER=1
     start_command: "docker-compose -p sharder1 -f ../build.sharder/b0docker-compose.yml up"
+    stop_command: "docker-compose -p sharder1 -f ../build.sharder/b0docker-compose.yml down"
 
   - name: "sharder-2"
     id: b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b
     work_dir: "docker.local/sharder2"
     env: SHARDER=2
     start_command: "docker-compose -p sharder2 -f ../build.sharder/b0docker-compose.yml up"
+    stop_command: "docker-compose -p sharder2 -f ../build.sharder/b0docker-compose.yml down"
 
   - name: "sharder-3"
     id: d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2
     work_dir: "docker.local/sharder3"
     env: SHARDER=3
     start_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml up"
+    stop_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml down"
 
   # miners
   - name: "miner-1"
@@ -43,30 +46,35 @@ nodes:
     work_dir: "docker.local/miner1"
     env: MINER=1
     start_command: "docker-compose -p miner1 -f ../build.miner/b0docker-compose.yml up"
+    stop_command: "docker-compose -p miner1 -f ../build.miner/b0docker-compose.yml down"
 
   - name: "miner-2"
     id: 585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2
     work_dir: "docker.local/miner2"
     env: MINER=2
     start_command: "docker-compose -p miner2 -f ../build.miner/b0docker-compose.yml up"
+    stop_command: "docker-compose -p miner2 -f ../build.miner/b0docker-compose.yml down"
 
   - name: "miner-3"
     id: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
     work_dir: "docker.local/miner3"
     env: MINER=3
     start_command: "docker-compose -p miner3 -f ../build.miner/b0docker-compose.yml up"
+    stop_command: "docker-compose -p miner3 -f ../build.miner/b0docker-compose.yml down"
 
   - name: "miner-4"
     id: 8877e3da19b4cb51e59b4646ec7c0cf4849bc7b860257d69ddbf753b9a981e1b
     work_dir: "docker.local/miner4"
     env: MINER=4
     start_command: "docker-compose -p miner4 -f ../build.miner/b0docker-compose.yml up"
+    stop_command: "docker-compose -p miner4 -f ../build.miner/b0docker-compose.yml down"
 
   - name: "miner-5"
     id: 53add50ff9501014df2cbd698c673f85e5785281cebba8772a64a6e74057d328
     work_dir: "docker.local/miner5"
     env: MINER=5
     start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
+    stop_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml down"
 
   # blobbers (patched version)
   - name: "blobber-1"
@@ -74,18 +82,28 @@ nodes:
     work_dir: "../blobber/docker.local/blobber1"
     env: BLOBBER=1
     start_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber1 -f ../b0docker-compose.yml down"
 
   - name: "blobber-2"
     id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
-    work_dir: "../blobber/docker.local/blobber1"
+    work_dir: "../blobber/docker.local/blobber2"
     env: BLOBBER=2
     start_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber2 -f ../b0docker-compose.yml down"
 
   - name: "blobber-3"
     id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
-    work_dir: "../blobber/docker.local/blobber1"
+    work_dir: "../blobber/docker.local/blobber3"
     env: BLOBBER=3
     start_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml down"
+
+  - name: "blobber-4"
+    id: 2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
+    work_dir: "../blobber/docker.local/blobber4"
+    env: BLOBBER=4
+    start_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml up"
+    stop_command: "docker-compose -p blobber4 -f ../b0docker-compose.yml down"
 
   # 0dns (patched version, add docker-clean, start-no-daemon.sh)
   - name: "0dns"                                                 #
@@ -93,6 +111,7 @@ nodes:
     work_dir: "../0dns/"                                         #
     env: ""                                                      # no ENV needed
     start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
+    stop_command: "../0dns/docker.local/bin/stop-no-daemon.sh" # not demonized instance
 
 # named system commands
 commands:
@@ -174,3 +193,19 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/simultaneous.sh"
     should_fail: true
+  repair_allocation:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/repair_allocation.sh"
+    should_fail: false
+  upload_repair:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload_repair.sh"
+    should_fail: false
+  repair:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/repair.sh"
+    should_fail: false
+  list_repair:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/list_repair.sh"
+    should_fail: false

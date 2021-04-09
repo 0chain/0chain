@@ -110,7 +110,7 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound int64 `json:"-"`
+	currentRound int64 `json:"-"`
 
 	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
 
@@ -229,7 +229,6 @@ func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 		return c.GetLatestMagicBlock()
 	}
 
-	rn = mbRoundOffset(rn)
 	return c.GetMagicBlock(rn)
 }
 
@@ -446,13 +445,13 @@ func Provider() datastore.Entity {
 
 /*Initialize - intializes internal datastructures to start again */
 func (c *Chain) Initialize() {
-	c.CurrentRound = 0
+	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
-	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
-	c.finalizedBlocksChannel = make(chan *block.Block, 128)
+	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
+	c.finalizedBlocksChannel = make(chan *block.Block, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
@@ -518,7 +517,9 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
-	pmt.SaveChanges(c.stateDB, false)
+	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
+		Logger.Error("chain.stateDB save changes failed", zap.Error(err))
+	}
 	Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
@@ -978,6 +979,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
+		Logger.Debug("SetRandomSeed round already has the seed")
 		return false
 	}
 	if randomSeed == 0 {
@@ -985,8 +987,8 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
-	if roundNumber > c.CurrentRound {
-		c.CurrentRound = roundNumber
+	if roundNumber > c.getCurrentRound() {
+		c.setCurrentRound(roundNumber)
 	}
 	return true
 }
@@ -996,13 +998,21 @@ func (c *Chain) GetCurrentRound() int64 {
 	c.roundsMutex.RLock()
 	defer c.roundsMutex.RUnlock()
 
-	return c.CurrentRound
+	return c.getCurrentRound()
 }
 
 func (c *Chain) SetCurrentRound(round int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	c.CurrentRound = round
+	c.setCurrentRound(round)
+}
+
+func (c *Chain) setCurrentRound(round int64) {
+	c.currentRound = round
+}
+
+func (c *Chain) getCurrentRound() int64 {
+	return c.currentRound
 }
 
 func (c *Chain) getBlocks() []*block.Block {
@@ -1110,6 +1120,12 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
+	Logger.Debug("CanShareBlocks",
+		zap.Int("active sharders", mb.Sharders.GetActiveCount()),
+		zap.Int("sharders size", mb.Sharders.Size()),
+		zap.Int("min active sharders", c.MinActiveSharders),
+		zap.Int("left", mb.Sharders.GetActiveCount()*100),
+		zap.Int("right", mb.Sharders.Size()*c.MinActiveSharders))
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
@@ -1189,6 +1205,33 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 		Logger.Error("init block state", zap.Int64("round", b.Round),
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
+
+		if err == util.ErrNodeNotFound {
+			// get state from network
+			Logger.Info("init block state by synching block state from network")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			doneC := make(chan struct{})
+			errC := make(chan error)
+			go func() {
+				defer close(doneC)
+				if err := c.GetBlockStateChange(b); err != nil {
+					errC <- err
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				Logger.Error("init block state failed",
+					zap.Int64("round", b.Round),
+					zap.Error(err))
+			case err := <-errC:
+				Logger.Error("init block state failed", zap.Error(err))
+			case <-doneC:
+				Logger.Info("init block state by synching block state from network successfully",
+					zap.Int64("round", b.Round))
+			}
+		}
 		return
 	}
 	Logger.Info("init block state successful", zap.Int64("round", b.Round),
@@ -1255,7 +1298,13 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 	mb := c.GetCurrentMagicBlock()
 
-	Logger.Info("update magic block", zap.Any("old block", mb), zap.Any("new block", newMagicBlock))
+	pmb := mb.Miners.Size()
+	nmb := newMagicBlock.Miners.Size()
+	Logger.Info("update magic block",
+		zap.Int("old magic block miners num", pmb),
+		zap.Int("new magic block miners num", nmb),
+		zap.Int64("old mb starting round", mb.StartingRound),
+		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
 	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
 		Logger.Info("update magic block -- hashes match ",
