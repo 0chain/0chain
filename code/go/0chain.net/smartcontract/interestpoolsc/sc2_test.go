@@ -267,6 +267,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
 		store:              make(map[datastore.Key]util.Serializable),
@@ -320,6 +321,7 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.Serializable),
 	}
@@ -360,6 +362,7 @@ func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string           
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             { return }
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
 
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
