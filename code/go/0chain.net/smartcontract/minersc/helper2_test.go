@@ -35,6 +35,7 @@ func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme     
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)               { return }
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
 
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
