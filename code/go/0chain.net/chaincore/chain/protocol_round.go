@@ -327,10 +327,9 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 // GetLatestFinalizedMagicBlockFromShardersOn - request for latest finalized
 // magic blocks from all the sharders. It uses provided MagicBlock to get list
-// of sharders to request data from, and returns the block with highest magic
-// block starting round.
+// of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
-	mb *block.MagicBlock) *block.Block {
+	mb *block.MagicBlock) (list []*block.Block) {
 
 	var (
 		sharders = mb.Sharders
@@ -339,7 +338,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		listMutex sync.Mutex
 	)
 
-	magicBlocks := make([]*block.Block, 0, 1)
+	list = make([]*block.Block, 0, 1)
 
 	var errs []error
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -353,12 +352,12 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		listMutex.Lock()
 		defer listMutex.Unlock()
 
-		for _, b := range magicBlocks {
+		for _, b := range list {
 			if b.Hash == mb.Hash {
 				return mb, nil
 			}
 		}
-		magicBlocks = append(magicBlocks, mb)
+		list = append(list, mb)
 
 		return mb, nil
 	}
@@ -366,36 +365,24 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
 		handler)
 
-	if len(magicBlocks) == 0 && len(errs) > 0 {
+	if len(list) == 0 && len(errs) > 0 {
 		Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
 	}
 
 	// add own LFMB
 	if sharders.HasNode(snk) {
-		magicBlocks = append(magicBlocks, c.GetLatestFinalizedMagicBlock())
+		list = append(list, c.GetLatestFinalizedMagicBlock())
 	}
 
-	if len(magicBlocks) == 0 {
-		return nil
-	}
-
-	if len(magicBlocks) > 1 {
-		sort.Slice(magicBlocks, func(i, j int) bool {
-			if magicBlocks[i].StartingRound == magicBlocks[j].StartingRound {
-				return magicBlocks[i].Round > magicBlocks[j].Round
-			}
-
-			return magicBlocks[i].StartingRound > magicBlocks[j].StartingRound
-		})
-	}
-
-	return magicBlocks[0]
+	return // the list
 }
 
 // GetLatestFinalizedMagicBlockFromSharders - request for latest finalized magic
-// block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
-// finalized magic block of sharders to request data from.
-func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
+// block from all the sharders. It uses GetLatestFinalizedMagicBlock to get list
+// of sharders to request data from.
+func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) (
+	list []*block.Block) {
+
 	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
 		c.GetLatestFinalizedMagicBlock().MagicBlock)
 }
