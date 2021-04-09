@@ -1,6 +1,10 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -8,6 +12,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/require"
 )
 
 type mockStateContext struct {

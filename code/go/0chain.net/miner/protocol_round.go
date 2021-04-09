@@ -1491,8 +1491,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 
 	defer mc.SetupLatestAndPreviousMagicBlocks(ctx)
 
-	// LFB
-
 	if updated, err = mc.ensureLatestFinalizedBlock(ctx); err != nil {
 		return
 	}
@@ -1500,24 +1498,15 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	// LFMB. The LFMB can be already update by LFMD worker (which uses 0DNS)
 	// and here we just set correct DKG.
 
-	var (
-		lfmb = mc.GetLatestFinalizedMagicBlock()
-		list = mc.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-			lfmb.MagicBlock)
+	lfmb := mc.GetLatestFinalizedMagicBlock()
+	rcvd := mc.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
+		lfmb.MagicBlock)
 
-		rcvd *block.Block
-	)
-
-	mc.ensureDKG(ctx, lfmb)
-
-	if len(list) == 0 {
+	if rcvd == nil {
 		return
 	}
 
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].StartingRound > list[j].StartingRound
-	})
-	rcvd = list[0]
+	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
 		return

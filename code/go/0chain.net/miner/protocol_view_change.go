@@ -672,8 +672,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	vcdkg.N = magicBlock.N
 
 	// save DKG and MB
-
-	if err = StoreDKG(ctx, vcdkg); err != nil {
+	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
@@ -738,11 +737,6 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 }
 
 // DKG save / load
-
-// StoreDKG in DB.
-func StoreDKG(ctx context.Context, dkg *bls.DKG) error {
-	return StoreDKGSummary(ctx, dkg.GetDKGSummary())
-}
 
 // StoreDKGSummary in DB.
 func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
