@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -114,6 +115,209 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	msc.verifyMinerState(balances, "checking all sharders list after insert")
 
 	return string(newSharder.Encode()), nil
+}
+
+func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var update = NewMinerNode()
+	if err = update.Decode(inputData); err != nil {
+		return "", common.NewErrorf("update_settings",
+			"decoding request: %v", err)
+	}
+
+	if update.ServiceCharge < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative service charge: %v", update.ServiceCharge)
+	}
+
+	if update.ServiceCharge > gn.MaxCharge {
+		return "", common.NewErrorf("update_settings",
+			"max_charge is greater than allowed by SC: %v > %v",
+			update.ServiceCharge, gn.MaxCharge)
+	}
+
+	if update.NumberOfDelegates < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative number_of_delegates: %v", update.ServiceCharge)
+	}
+
+	if update.NumberOfDelegates > gn.MaxDelegates {
+		return "", common.NewErrorf("add_miner_failed",
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
+			update.ServiceCharge, gn.MaxDelegates)
+	}
+
+	if update.MinStake < gn.MinStake {
+		return "", common.NewErrorf("update_settings",
+			"min_stake is less than allowed by SC: %v > %v",
+			update.MinStake, gn.MinStake)
+	}
+
+	if update.MaxStake < gn.MaxStake {
+		return "", common.NewErrorf("update_settings",
+			"max_stake is greater than allowed by SC: %v > %v",
+			update.MaxStake, gn.MaxStake)
+	}
+
+	var sn *MinerNode
+	sn, err = msc.getSharderNode(update.ID, balances)
+	if err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+	if sn.Delete {
+		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
+	}
+	if sn.DelegateWallet != t.ClientID {
+		return "", common.NewError("update_setings", "access denied")
+	}
+
+	sn.ServiceCharge = update.ServiceCharge
+	sn.NumberOfDelegates = update.NumberOfDelegates
+	sn.MinStake = update.MinStake
+	sn.MaxStake = update.MaxStake
+
+	if err = sn.save(balances); err != nil {
+		return "", common.NewErrorf("update_setings", "saving: %v", err)
+	}
+
+	return string(sn.Encode()), nil
+}
+
+// DeleteSharder Function to handle removing a sharder from the chain
+func (msc *MinerSmartContract) DeleteSharder(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var deleteSharder = NewMinerNode()
+	if err = deleteSharder.Decode(inputData); err != nil {
+		return "", common.NewErrorf("delete_sharder",
+			"decoding request: %v", err)
+	}
+
+	var sn *MinerNode
+	sn, err = msc.getSharderNode(deleteSharder.ID, balances)
+	if err != nil {
+		return "", common.NewError("delete_sharder", err.Error())
+	}
+	sn.Delete = true
+
+	// deleting pending pools
+	for key, pool := range sn.Pending {
+		var un *UserNode
+		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
+			return "", common.NewErrorf("delete_sharder",
+				"getting user node: %v", err)
+		}
+
+		var transfer *state.Transfer
+		transfer, resp, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
+		if err != nil {
+			return "", common.NewErrorf("delete_sharder",
+				"error emptying delegate pool: %v", err)
+		}
+
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("delete_sharder",
+				"adding transfer: %v", err)
+		}
+
+		delete(un.Pools, key)
+		delete(sn.Pending, key)
+
+		if err = un.save(balances); err != nil {
+			return "", common.NewError("delete_sharder", err.Error())
+		}
+	}
+
+	// deleting active pools
+	for key, pool := range sn.Active {
+		if pool.Status == DELETING {
+			continue
+		}
+
+		pool.Status = DELETING // mark as deleting
+		pool.TokenLockInterface = &ViewChangeLock{
+			Owner:               pool.DelegateID,
+			DeleteViewChangeSet: true,
+			DeleteVC:            gn.ViewChange,
+		}
+		sn.Deleting[key] = pool // add to deleting
+	}
+
+	if err = msc.deleteSharderFromViewChange(sn, balances); err != nil {
+		return "", err
+	}
+
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+
+	var all *MinerNodes
+	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
+		Logger.Error("delete_sharder: Error in getting list from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("delete_sharder",
+			"failed to get sharder list: %v", err)
+	}
+	msc.verifySharderState(balances, AllShardersKey,
+		"delete_sharder: checking all sharders list in the beginning")
+
+	for i, v := range all.Nodes {
+		if v.ID == sn.ID {
+			all.Nodes[i] = sn
+			break
+		}
+	}
+
+	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
+		return "", common.NewErrorf("delete_sharder",
+			"saving all sharders list: %v", err)
+	}
+
+	// set node type -- miner
+	if err = sn.save(balances); err != nil {
+		return "", common.NewError("delete_sharder", err.Error())
+	}
+
+	msc.verifySharderState(balances, AllShardersKey,
+		"delete_sharder: Checking all sharders list afterInsert")
+
+	resp = string(sn.Encode())
+	return
+}
+
+func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) (err error) {
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return
+	}
+	if pn.Phase == Unknown {
+		err = common.NewError("failed to delete from view change", "phase is unknown")
+		return
+	}
+	if pn.Phase != Wait {
+		sharders := &MinerNodes{}
+		if sharders, err = msc.getShardersList(balances, ShardersKeepKey); err != nil {
+			Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB",
+				zap.Error(err))
+			return common.NewErrorf("delete_sharder_from_view_change",
+				"failed to get sharders list: %v", err)
+		}
+		for i, v := range sharders.Nodes {
+			if v.ID == sn.ID {
+				sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
+				break
+			}
+		}
+		if _, err = balances.InsertTrieNode(ShardersKeepKey, sharders); err != nil {
+			return
+		}
+	} else {
+		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
+		return
+	}
+	return
 }
 
 //------------- local functions ---------------------

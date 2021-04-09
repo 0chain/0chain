@@ -188,8 +188,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		mbSharders[k] = struct{}{}
 	}
 
-	// miners
-	for _, mn := range miners.Nodes {
+	minerDelete, sharderDelete := false, false
+	for i := 0; i < len(miners.Nodes); i++ {
+		mn := miners.Nodes[i]
 		if mn, err = msc.getMinerNode(mn.ID, balances); err != nil {
 			return fmt.Errorf("missing miner node: %v", err)
 		}
@@ -198,6 +199,15 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
+		}
+		if mn.Delete {
+			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
+			i--
+			if err = mn.save(balances); err != nil {
+				return
+			}
+			minerDelete = true
+			continue
 		}
 		msc.activatePending(mn)
 		if _, ok := mbMiners[mn.ID]; !ok {
@@ -211,23 +221,33 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// sharders
-	for _, mn := range sharders.Nodes {
-		if mn, err = msc.getSharderNode(mn.ID, balances); err != nil {
+	for i := 0; i < len(sharders.Nodes); i++ {
+		sn := sharders.Nodes[i]
+		if sn, err = msc.getSharderNode(sn.ID, balances); err != nil {
 			return fmt.Errorf("missing sharder node: %v", err)
 		}
-		if err = msc.payInterests(mn, gn, balances); err != nil {
+		if err = msc.payInterests(sn, gn, balances); err != nil {
 			return
 		}
-		if err = msc.unlockDeleted(mn, round, balances); err != nil {
+		if err = msc.unlockDeleted(sn, round, balances); err != nil {
 			return
 		}
-		msc.activatePending(mn)
-		if _, ok := mbSharders[mn.ID]; !ok {
-			shardersOffline = append(shardersOffline, mn)
+		if sn.Delete {
+			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
+			i--
+			if err = sn.save(balances); err != nil {
+				return
+			}
+			sharderDelete = true
+			continue
+		}
+		msc.activatePending(sn)
+		if _, ok := mbSharders[sn.ID]; !ok {
+			shardersOffline = append(shardersOffline, sn)
 			continue
 		}
 		// save excluding offline nodes
-		if err = mn.save(balances); err != nil {
+		if err = sn.save(balances); err != nil {
 			return
 		}
 	}
@@ -242,6 +262,20 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	for _, mn := range shardersOffline {
 		if err = msc.unlockOffline(mn, balances); err != nil {
 			return
+		}
+	}
+
+	if minerDelete {
+		if _, err = balances.InsertTrieNode(AllMinersKey, miners); err != nil {
+			return common.NewErrorf("view_change_pools_work",
+				"failed saving all miners list: %v", err)
+		}
+	}
+
+	if sharderDelete {
+		if _, err = balances.InsertTrieNode(AllShardersKey, sharders); err != nil {
+			return common.NewErrorf("view_change_pools_work",
+				"failed saving all sharder list: %v", err)
 		}
 	}
 

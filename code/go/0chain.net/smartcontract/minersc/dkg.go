@@ -299,7 +299,9 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	dkgMiners := NewDKGMinerNodes()
 	dkgMiners.calculateTKN(gn, len(allminerslist.Nodes))
 	for _, node := range allminerslist.Nodes {
-		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
+		if !node.Delete {
+			dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
+		}
 	}
 
 	dkgMiners.StartRound = gn.LastRound

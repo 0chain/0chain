@@ -240,6 +240,88 @@ func (conf *scConfig) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
+func (conf *scConfig) update(newConf *scConfig) {
+	if newConf.TimeUnit > 0 {
+		conf.TimeUnit = newConf.TimeUnit
+	}
+	if newConf.MaxMint > 0 {
+		conf.MaxMint = newConf.MaxMint
+	}
+	if newConf.MinAllocSize > 0 {
+		conf.MinAllocSize = newConf.MinAllocSize
+	}
+	if newConf.MinAllocDuration > 0 {
+		conf.MinAllocDuration = newConf.MinAllocDuration
+	}
+	if newConf.MaxChallengeCompletionTime > 0 {
+		conf.MaxChallengeCompletionTime = newConf.MaxChallengeCompletionTime
+	}
+	if newConf.MinOfferDuration > 0 {
+		conf.MinOfferDuration = newConf.MinOfferDuration
+	}
+	if newConf.MinBlobberCapacity > 0 {
+		conf.MinBlobberCapacity = newConf.MinBlobberCapacity
+	}
+	if newConf.ValidatorReward > 0 {
+		conf.ValidatorReward = newConf.ValidatorReward
+	}
+	if newConf.BlobberSlash > 0 {
+		conf.BlobberSlash = newConf.BlobberSlash
+	}
+	if newConf.MaxReadPrice > 0 {
+		conf.MaxReadPrice = newConf.MaxReadPrice
+	}
+	if newConf.MaxWritePrice > 0 {
+		conf.MaxWritePrice = newConf.MaxWritePrice
+	}
+	conf.ChallengeEnabled = newConf.ChallengeEnabled
+	if newConf.MaxChallengesPerGeneration > 0 {
+		conf.MaxChallengesPerGeneration = newConf.MaxChallengesPerGeneration
+	}
+	if newConf.ChallengeGenerationRate > 0 {
+		conf.ChallengeGenerationRate = newConf.ChallengeGenerationRate
+	}
+	if newConf.MinStake > 0 {
+		conf.MinStake = newConf.MinStake
+	}
+	if newConf.MaxStake > 0 {
+		conf.MaxStake = newConf.MaxStake
+	}
+	if newConf.MaxDelegates > 0 {
+		conf.MaxDelegates = newConf.MaxDelegates
+	}
+	if newConf.MaxCharge > 0 {
+		conf.MaxCharge = newConf.MaxCharge
+	}
+	if newConf.ReadPool.MinLock > 0 {
+		conf.ReadPool.MinLock = newConf.ReadPool.MinLock
+	}
+	if newConf.ReadPool.MinLockPeriod > 0 {
+		conf.ReadPool.MinLockPeriod = newConf.ReadPool.MinLockPeriod
+	}
+	if newConf.ReadPool.MaxLockPeriod > 0 {
+		conf.ReadPool.MaxLockPeriod = newConf.ReadPool.MaxLockPeriod
+	}
+	if newConf.WritePool.MinLock > 0 {
+		conf.WritePool.MinLock = newConf.WritePool.MinLock
+	}
+	if newConf.WritePool.MinLockPeriod > 0 {
+		conf.WritePool.MinLockPeriod = newConf.WritePool.MinLockPeriod
+	}
+	if newConf.WritePool.MaxLockPeriod > 0 {
+		conf.WritePool.MaxLockPeriod = newConf.WritePool.MaxLockPeriod
+	}
+	if newConf.StakePool.MinLock > 0 {
+		conf.StakePool.MinLock = newConf.StakePool.MinLock
+	}
+	if newConf.StakePool.InterestRate > 0 {
+		conf.StakePool.InterestRate = newConf.StakePool.InterestRate
+	}
+	if newConf.StakePool.InterestInterval > 0 {
+		conf.StakePool.InterestInterval = newConf.StakePool.InterestInterval
+	}
+}
+
 //
 // rest handler and update function
 //
@@ -393,18 +475,14 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var update scConfig
+	var update *scConfig
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	if err = update.validate(); err != nil {
-		return
-	}
+	conf.update(update)
 
-	update.Minted = conf.Minted
-
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}

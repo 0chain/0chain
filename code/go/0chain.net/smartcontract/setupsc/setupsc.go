@@ -13,15 +13,12 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 )
 
 var scs = []sci.SmartContractInterface{
 	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
-	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
-	&multisigsc.MultiSigSmartContract{},
-	&minersc.MinerSmartContract{},
-	&vestingsc.VestingSmartContract{},
+	&interestpoolsc.InterestPoolSmartContract{}, &multisigsc.MultiSigSmartContract{},
+	&minersc.MinerSmartContract{}, &vestingsc.VestingSmartContract{},
 }
 
 //SetupSmartContracts initialize smartcontract addresses

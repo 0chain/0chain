@@ -372,6 +372,66 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
 }
 
+func (gn *GlobalNode) update(newGlobalNode *GlobalNode) {
+	if newGlobalNode.MaxN > 0 {
+		gn.MaxN = newGlobalNode.MaxN
+	}
+	if newGlobalNode.MinN > 0 {
+		gn.MinN = newGlobalNode.MinN
+	}
+	if newGlobalNode.MaxS > 0 {
+		gn.MaxS = newGlobalNode.MaxS
+	}
+	if newGlobalNode.MinS > 0 {
+		gn.MinS = newGlobalNode.MinS
+	}
+	if newGlobalNode.MaxDelegates > 0 {
+		gn.MaxDelegates = newGlobalNode.MaxDelegates
+	}
+	if newGlobalNode.TPercent > 0 {
+		gn.TPercent = newGlobalNode.TPercent
+	}
+	if newGlobalNode.KPercent > 0 {
+		gn.KPercent = newGlobalNode.KPercent
+	}
+	if newGlobalNode.MaxStake > 0 {
+		gn.MaxStake = newGlobalNode.MaxStake
+	}
+	if newGlobalNode.MinStake > 0 {
+		gn.MinStake = newGlobalNode.MinStake
+	}
+	if newGlobalNode.InterestRate > 0 {
+		gn.InterestRate = newGlobalNode.InterestRate
+	}
+	if newGlobalNode.RewardRate > 0 {
+		gn.RewardRate = newGlobalNode.RewardRate
+	}
+	if newGlobalNode.ShareRatio > 0 {
+		gn.ShareRatio = newGlobalNode.ShareRatio
+	}
+	if newGlobalNode.BlockReward > 0 {
+		gn.BlockReward = newGlobalNode.BlockReward
+	}
+	if newGlobalNode.MaxCharge > 0 {
+		gn.MaxCharge = newGlobalNode.MaxCharge
+	}
+	if newGlobalNode.Epoch > 0 {
+		gn.Epoch = newGlobalNode.Epoch
+	}
+	if newGlobalNode.RewardDeclineRate > 0 {
+		gn.RewardDeclineRate = newGlobalNode.RewardDeclineRate
+	}
+	if newGlobalNode.InterestDeclineRate > 0 {
+		gn.InterestDeclineRate = newGlobalNode.InterestDeclineRate
+	}
+	if newGlobalNode.MaxMint > 0 {
+		gn.MaxMint = newGlobalNode.MaxMint
+	}
+	if newGlobalNode.RewardRoundFrequency > 0 {
+		gn.RewardRoundFrequency = newGlobalNode.RewardRoundFrequency
+	}
+}
+
 //
 // miner / sharder
 //
@@ -576,6 +636,7 @@ type SimpleNode struct {
 	ShortName   string `json:"short_name"`
 	BuildTag    string `json:"build_tag"`
 	TotalStaked int64  `json:"total_stake"`
+	Delete      bool   `json:"delete"`
 
 	// settings and statistic
 

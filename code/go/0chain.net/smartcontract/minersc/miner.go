@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -139,7 +140,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	return
 }
 
-func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -188,7 +189,9 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
-
+	if mn.Delete {
+		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
+	}
 	if mn.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_setings", "access denied")
 	}
@@ -203,6 +206,133 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	return string(mn.Encode()), nil
+}
+
+// DeleteMiner Function to handle removing a miner from the chain
+func (msc *MinerSmartContract) DeleteMiner(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var deleteMiner = NewMinerNode()
+	if err = deleteMiner.Decode(inputData); err != nil {
+		return "", common.NewErrorf("delete_miner",
+			"decoding request: %v", err)
+	}
+
+	var mn *MinerNode
+	mn, err = msc.getMinerNode(deleteMiner.ID, balances)
+	if err != nil {
+		return "", common.NewError("delete_miner", err.Error())
+	}
+	mn.Delete = true
+
+	// deleting pending pools
+	for key, pool := range mn.Pending {
+		var un *UserNode
+		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
+			return "", common.NewErrorf("delete_miner",
+				"getting user node: %v", err)
+		}
+
+		var transfer *state.Transfer
+		transfer, resp, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
+		if err != nil {
+			return "", common.NewErrorf("delete_miner",
+				"error emptying delegate pool: %v", err)
+		}
+
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("delete_miner",
+				"adding transfer: %v", err)
+		}
+
+		delete(un.Pools, key)
+		delete(mn.Pending, key)
+
+		if err = un.save(balances); err != nil {
+			return "", common.NewError("delete_miner", err.Error())
+		}
+	}
+
+	// deleting active pools
+	for key, pool := range mn.Active {
+		if pool.Status == DELETING {
+			continue
+		}
+
+		pool.Status = DELETING // mark as deleting
+		pool.TokenLockInterface = &ViewChangeLock{
+			Owner:               pool.DelegateID,
+			DeleteViewChangeSet: true,
+			DeleteVC:            gn.ViewChange,
+		}
+		mn.Deleting[key] = pool // add to deleting
+	}
+
+	if err = msc.deleteMinerFromViewChange(mn, balances); err != nil {
+		return "", err
+	}
+
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+
+	var all *MinerNodes
+	if all, err = msc.getMinersList(balances); err != nil {
+		Logger.Error("delete_miner: Error in getting list from the DB",
+			zap.Error(err))
+		return "", common.NewErrorf("delete_miner",
+			"failed to get miner list: %v", err)
+	}
+	msc.verifyMinerState(balances,
+		"delete_miner: checking all miners list in the beginning")
+
+	for i, v := range all.Nodes {
+		if v.ID == mn.ID {
+			all.Nodes[i] = mn
+			break
+		}
+	}
+
+	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
+		return "", common.NewErrorf("delete_miner",
+			"saving all miners list: %v", err)
+	}
+
+	// set node type -- miner
+	if err = mn.save(balances); err != nil {
+		return "", common.NewError("delete_miner", err.Error())
+	}
+
+	msc.verifyMinerState(balances,
+		"delete_miner: Checking all miners list afterInsert")
+
+	resp = string(mn.Encode())
+	return
+}
+
+func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return
+	}
+	if pn.Phase == Unknown {
+		err = common.NewError("failed to delete from view change", "phase is unknown")
+		return
+	}
+	if pn.Phase != Wait {
+		var dkgMiners *DKGMinerNodes
+		if dkgMiners, err = msc.getMinersDKGList(balances); err != nil {
+			return
+		}
+		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
+			delete(dkgMiners.SimpleNodes, mn.ID)
+			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+		}
+	} else {
+		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
+		return
+	}
+	return
 }
 
 //------------- local functions ---------------------

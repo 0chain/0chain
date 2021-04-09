@@ -17,7 +17,7 @@ import (
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner     = "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
 	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
 	name      = "interest"
 	YEAR      = time.Duration(time.Hour * 8784)
@@ -198,7 +198,7 @@ func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcNam
 		return ip.lock(t, un, gn, inputData, balances)
 	case "unlock":
 		return ip.unlock(t, un, gn, inputData, balances)
-	case "updateVariables":
+	case "update_variables":
 		return ip.updateVariables(t, gn, inputData, balances)
 	default:
 		return "", common.NewError("failed execution", "no function with that name")

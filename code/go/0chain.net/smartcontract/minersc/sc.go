@@ -24,7 +24,7 @@ import (
 const (
 	//ADDRESS address of minersc
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
-	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner   = "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
 	name    = "miner"
 )
 
@@ -160,6 +160,20 @@ func getHostnameAndPort(burl string) (string, int, error) {
 
 	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
+}
+
+func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+	if t.ClientID != owner {
+		return "", common.NewError("failed to update smart contract settings", "unauthorized access - only the owner can update the settings")
+	}
+	newGlobalNode := &GlobalNode{}
+	if err = newGlobalNode.Decode(inputData); err != nil {
+		return "", common.NewError("failed to update smart contract settings", fmt.Sprintf("error decoding input data: %v", err.Error()))
+	}
+	gn.update(newGlobalNode)
+	return string(gn.Encode()), gn.save(balances)
 }
 
 func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
