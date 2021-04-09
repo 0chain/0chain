@@ -2,21 +2,26 @@
 
 ## Table of Contents
 
-- [Initial Setup](#initial-setup) - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders) - [Setup Network](#setup-network)
-- [Building and Starting the Nodes](#building-and-starting-the-nodes)
+- [Initial Setup](#initial-setup) 
+  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders) 
+  - [Setup Network](#setup-network)
+- [Building and Starting the Nodes](#building-the-nodes)
+- [Building the Nodes](#building-the-nodes)  
 - [Generating Test Transactions](#generating-test-transactions)
-- [Compiling](#compiling)
 - [Troubleshooting](#troubleshooting)
 - [Debugging](#debugging)
-- [Unit tests](#unittests)
+- [Unit tests](#unit-tests)
 - [Creating The Magic Block](#creating-the-magic-block)
-- [Miscellaneous](#miscellaneous) - [Cleanup](#cleanup) - [View Change](docs/viewchange.md) - [Minio Setup](#minio)
+- [Initial states](#initial-states)
+- [Miscellaneous](#miscellaneous) 
+  - [Cleanup](#cleanup)
+  - [Minio Setup](#minio)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
 
 ## Initial Setup
 
-### Directory Setup for Miners & Sharders
+### Directory Setup for Miners and Sharders
 
 In the git/0chain run the following command
 
@@ -311,6 +316,18 @@ $ ./docker.local/bin/create.magic_block.sh
 ```
 
 The magic block json file will appear in the docker.local/config under the name given in the configuration file.
+
+## Initial states
+
+The balance for the various nodes is setup in a `initial_state.yaml` file. 
+This file is a list of node ids and token amounts.
+
+The initial state yaml file is entered as a command line argument when 
+running a sharder or miner, falling that the `0chain.yaml` 
+`network.inital_states` entry is used to find the initial state file.
+
+An example, that can be used with the preset ids, can be found at 
+[0chian/docker.local/config/inital_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
 
 ## Miscellaneous
 
