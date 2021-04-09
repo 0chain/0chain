@@ -310,7 +310,11 @@ To create the magic block.
 $ ./docker.local/bin/create.magic_block.sh
 ```
 
-The magic block json file will appear in the docker.local/config under the name given in the configuration file.
+The magic block and the dkg summary json files will appear in the docker.local/config under the name given in the configuration file.
+
+The magic_block_file setting in the 0chain.yaml file needs to be updated with the new name of the magic block created. 
+
+Update the miner config file so it is set to the new dkg summaries. To do this edit the docker.local/build.miner/b0docker-compose.yml file. On line 55 is a flag "--dkg_file" set it to the dkg summary files created with the magic block.
 
 ## Miscellaneous
 
