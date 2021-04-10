@@ -205,7 +205,10 @@ internal docker builds and can fail due to this bug.
 
 ## Updating conductor tests
 
-### Changing the tests
+### Updating the tests
+
+To add more test, simply create new test cases and add them to existing or new set. 
+Then be sure to enable the test set if creating a new one.
 
 ### Temporarily disabling tests
 To test a specific test, simply comment out the other tests on `enable` part of the conductor test yaml.
