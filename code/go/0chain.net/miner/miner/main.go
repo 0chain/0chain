@@ -238,8 +238,12 @@ func main() {
 			}
 		} else {
 			oldDKGShare, err = miner.LoadDKGSummary(ctx, strconv.FormatInt(genesisDKG, 10))
-			if err != nil && !config.DevConfiguration.ViewChange {
-				Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+			if err != nil {
+				if config.DevConfiguration.ViewChange {
+					Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+				} else {
+					Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+				}
 			}
 		}
 		dkgShare.SecretShares = oldDKGShare.SecretShares
