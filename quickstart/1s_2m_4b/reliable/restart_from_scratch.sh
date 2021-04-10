@@ -7,6 +7,10 @@ cd ../base
 sleep 1
 
 
+./rebuild_zbox.sh
+./rebuild_zwallet.sh
+
+
 ./0dns_clear_restart.sh
 
 sleep 5

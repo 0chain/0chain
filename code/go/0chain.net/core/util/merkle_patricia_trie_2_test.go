@@ -66,7 +66,7 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 
 	printChanges(t, mpt2.GetChangeCollector())
 
-	var err = mpt2.SaveChanges(pndb, false)
+	var err = mpt2.SaveChanges(context.TODO(), pndb, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -112,7 +112,7 @@ func TestMerkeTreePruning(t *testing.T) {
 		roots = append(roots, mpt2.GetRoot())
 		t.Logf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()),
 			len(mpt2.GetChangeCollector().GetChanges()))
-		var err = mpt2.SaveChanges(pndb, false)
+		var err = mpt2.SaveChanges(context.TODO(), pndb, false)
 		if err != nil {
 			t.Error(err)
 		}
@@ -193,7 +193,7 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 			ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()),
 			len(mndb.Nodes))
 
-		if err := mpt2.SaveChanges(pndb, false); err != nil {
+		if err := mpt2.SaveChanges(context.TODO(), pndb, false); err != nil {
 			panic(err)
 		}
 

@@ -54,7 +54,7 @@ sets:
     tests:
       - "Artificially force 1 miner to send bad share to 1 miners"
       - "Artificially force 1 miner to send bad share to 2 miners"
-      - "Artificially force 1 miner to send bad share to 3 miners"  
+      - "Artificially force 1 miner to send bad share to 3 miners"
       - "Artificially force 2 miner to send bad share to 2 miners"
 
   - name: "Artificially force X miner to send share to Y miners only"
@@ -94,6 +94,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - start_lock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -102,6 +103,7 @@ tests:
           phase: "start"
       - unlock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
@@ -115,6 +117,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - start_lock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -123,11 +126,13 @@ tests:
           phase: "contribute"
       - unlock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ["sharder-1"]
@@ -141,6 +146,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - start_lock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -149,11 +155,13 @@ tests:
           phase: "share"
       - unlock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ["sharder-1"]
@@ -167,6 +175,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - start_lock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -175,11 +184,13 @@ tests:
           phase: "publish"
       - unlock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ["sharder-1"]
@@ -193,6 +204,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - start_lock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -201,11 +213,13 @@ tests:
           phase: "wait"
       - unlock: ["miner-5"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ["sharder-1"]
@@ -221,6 +235,7 @@ tests:
       - start: ['sharder-1']
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -229,6 +244,7 @@ tests:
           phase: "start"
       - stop: ["miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
@@ -242,6 +258,7 @@ tests:
       - start: ['sharder-1']
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -250,6 +267,7 @@ tests:
           phase: "contribute"
       - stop: ["miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
@@ -263,6 +281,7 @@ tests:
       - start: ['sharder-1']
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -285,6 +304,7 @@ tests:
       - start: ['sharder-1']
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -293,6 +313,7 @@ tests:
           phase: "publish"
       - stop: ["miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
@@ -306,6 +327,7 @@ tests:
       - start: ['sharder-1']
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ["sharder-1"]
@@ -315,11 +337,13 @@ tests:
       - stop:
         - "miner-4"
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ["sharder-1"]
@@ -334,6 +358,7 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - start_lock: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -345,6 +370,7 @@ tests:
           shift: 48 # penultimate round of the 'start' phase
       - stop: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ['sharder-1']
@@ -358,6 +384,7 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - start_lock: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -369,6 +396,7 @@ tests:
           shift: 48 # penultimate round of the 'contribute' phase
       - stop: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ['sharder-1']
@@ -382,6 +410,7 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - start_lock: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -395,6 +424,7 @@ tests:
           shift: 48 # penultimate round of the 'share' phase
       - stop: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ['sharder-1']
@@ -408,6 +438,7 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - start_lock: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -421,11 +452,13 @@ tests:
           shift: 48 # penultimate round of the 'publish' phase
       - stop: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ['sharder-1']
             miners: ['miner-1', 'miner-2', 'miner-3', 'miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ['sharder-1']
@@ -439,6 +472,7 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - start_lock: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -447,18 +481,14 @@ tests:
       - wait_add:
           miners: ['miner-5']
       - wait_phase:
-          phase: 'publish'
+          phase: 'wait'
       - wait_round:
           shift: 48 # penultimate round of the 'wait' phase
       - stop: ['miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
-            sharders: ['sharder-1']
-            miners: ['miner-1', 'miner-2', 'miner-3', 'miner-5']
-      - wait_view_change:
-          expect_magic_block:
-            number: 4 # 751 round
             sharders: ['sharder-1']
             miners: ['miner-1', 'miner-2', 'miner-3']
 
@@ -479,6 +509,7 @@ tests:
       #     round: 48
       # - unlock: ['miner-4']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -498,6 +529,7 @@ tests:
           phase: 'contribute'
       - unlock: ['miner-4']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -516,10 +548,12 @@ tests:
           phase: 'share'
       - start: ['miner-4']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             # just check it moves on
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             # just check it moves on
@@ -534,12 +568,13 @@ tests:
           miner: 'miner-4'
       - stop: ['miner-4']
       - wait_view_change:
-          timeout: '2m'
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             # just check it moves on
       - start: ['miner-4']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             # just check it moves on
@@ -557,7 +592,8 @@ tests:
           bad: ['miner-1']
           good: ['miner-2', 'miner-3']
       - wait_view_change:
-          expected_magic_block:
+          timeout: '5m'
+          expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             mienrs: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
@@ -573,7 +609,8 @@ tests:
           bad: ['miner-1', 'miner-2']
           good: ['miner-3']
       - wait_view_change:
-          expected_magic_block:
+          timeout: '5m'
+          expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             mienrs: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
@@ -588,7 +625,8 @@ tests:
           by: ['miner-4']
           bad: ['miner-1', 'miner-2', 'miner-3']
       - wait_view_change:
-          expected_magic_block:
+          timeout: '5m'
+          expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             mienrs: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
@@ -608,7 +646,8 @@ tests:
           bad: ['miner-1', 'miner-2']
           good: ['miner-4']
       - wait_view_change:
-          expected_magic_block:
+          timeout: '5m'
+          expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             mienrs: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
@@ -626,6 +665,7 @@ tests:
           good: ['miner-1', 'miner-2']
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -642,6 +682,7 @@ tests:
           good: ['miner-1']
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -662,12 +703,13 @@ tests:
           good: ['miner-1', 'miner-2']
           bad: []
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
 
-  # between 497 and 500 rounds
+  # between 490 and 500 rounds
 
   - name: "Miner goes down on 497 round, and comes up shortly"
     flow:
@@ -676,6 +718,7 @@ tests:
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3', 'miner-4', 'miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -690,10 +733,11 @@ tests:
       - stop: ['miner-3']
       - start: ['miner-3']
       - wait_view_change:
+          timeout: '10m'
           expect_magic_block:
             # it can be 3 or 4, since 1, 2 and 4 mines can move on
             # and the tests accepts VC no. 3 before miner-3 starts
-            # number: 3 # 501 round
+            #number: 3 # 501 round
             miners: ['miner-1', 'miner-2', 'miner-3', 'miner-4']
             sharders: ['sharder-1']
 
@@ -704,6 +748,7 @@ tests:
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3', 'miner-4', 'miner-5']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
@@ -725,18 +770,21 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - set_revealed: ['miner-1']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder-1']
             miners: ['miner-1', 'miner-2', 'miner-3']
       - set_revealed: ['miner-2']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ['sharder-1']
             miners: ['miner-1', 'miner-2', 'miner-3']
       - set_revealed: ['miner-3']
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 4 # 751 round
             sharders: ['sharder-1']

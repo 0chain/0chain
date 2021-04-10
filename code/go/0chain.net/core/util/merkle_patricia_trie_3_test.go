@@ -108,7 +108,7 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		priorDB = blockState.GetNodeDB()
 		priorHash = blockState.GetRoot()
 
-		require.NoError(t, blockState.SaveChanges(stateDB, false))
+		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt.SetRoot(priorHash)
 
 		// //  5. prune state
