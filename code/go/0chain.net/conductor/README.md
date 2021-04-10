@@ -325,40 +325,154 @@ enable:
   - This is currently UNUSED
 
 5. **Byzantine blockchain**
-- `vrfs`
-- `round_timeout`
-- `competing_block`
-- `sign_only_competing_blocks`
-- `double_spend_transaction`
-- `wrong_block_sign_hash`
-- `wrong_block_sign_key`
-- `wrong_block_hash`
-- `verification_ticket_group`
-- `wrong_verification_ticket_hash`
-- `wrong_verification_ticket_key`
-- `wrong_notarized_block_hash`
-- `wrong_notarized_block_key`
-- `notarize_only_competing_block`
-- `notarized_block`
+- `vrfs` - have list of miners send bad VRFS 
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `round_timeout` - have list of miners send bad round timeout 
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `competing_block` - have one on the list of miners generate its own block
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `sign_only_competing_blocks` - have list of miners sign the competing blocks
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `double_spend_transaction` - have list of miners readd a previous transaction
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `wrong_block_sign_hash` - have list of miners use an invalid signature hash
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `wrong_block_sign_key` - have list of miners use an invalid secret key
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `wrong_block_hash` - have list of miners use a block hash
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    ```  
+- `verification_ticket_group` - unimplemented
+- `wrong_verification_ticket_hash` - have list of miners send invalid verification ticket signature hash
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `wrong_verification_ticket_key` - have list of miners send invalid verification ticket signature hash (wrong key)
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `wrong_notarized_block_hash` - unimplemented
+- `wrong_notarized_block_key` - unimplemented
+- `notarize_only_competing_block` - unimplemented
+- `notarized_block` - unimplemented
 
 6. **Byzantine blockchain sharders**
-- `finalized_block`
-- `magic_block`
-- `verify_transaction`
+- `finalized_block` - have list of sharders returns a different block hash for last finalized block
+  - properties
+    ```yaml
+    # By sharders
+    by: <array of strings>
+    ```  
+- `magic_block` - have list of sharders returns a different block hash for last finalized magic block
+  - properties
+    ```yaml
+    # By sharders
+    by: <array of strings>
+    ```  
+- `verify_transaction` - have list of sharders returns a hash and data on transaction verification
+  - properties
+    ```yaml
+    # By sharders
+    by: <array of strings>
+    ```  
 
 7. **Byzantine view change**
-- `mpk`
-- `share`
-- `signature`
-- `publish`
+- `mpk` - have list of miners send bad MPK
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `share` - have list of miners send bad DKG
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `signature` - have list of miners send bad sign share
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
+- `publish` - have list of miners publish bad sign share
+  - properties
+    ```yaml
+    # By miners
+    by: <array of strings>
+    # Good to miners
+    good: <array of strings>
+    # Bad to miners
+    bad: <array of strings>
+    ```
 
 8. **blobber**
-- `storage_tree` - directive purpose unknown 
-  - This directive does not seem fully implemented.
-- `validator_proof` - directive purpose unknown
-  - This directive does not seem fully implemented.
-- `challenges` - directive purpose unknown
-  - This directive does not seem fully implemented.
+- `storage_tree` - unimplemented 
+- `validator_proof` - unimplemented
+- `challenges` - unimplemented
 
 #### Custom commands
 
