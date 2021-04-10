@@ -9,17 +9,30 @@ The conductor is automated as much as it can be.
 ## How it works
 
 The conductor requires the nodes to be built on a certain way in order to control them during the tests. 
+Particularly, when miners and sharders are built, it uses a tag `integration_tests`. 
+The `go build` will use the go files ending with `_integration_tests.go` instead of `_main.go` files.
+The `_integration_tests.go` copy communicates with the conductor through RPC.
 
-The conductor uses a test suite which defined the tests to run.
+During run time, the conductor loads a yaml file for its config and uses a test suite which defines the tests.
 
-The suite contains multiple sets of tests and each contains multiple test cases.
+### Conductor config
+
+The config file is defined in [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml)
+
+The important details in the config file are the following.
+- details of all nodes used
+- custom commands used in tests
+
+### Conductor test suite
+
+The test suite contains multiple sets of tests and each contains multiple test cases.
 
 The individual test cases cannot be run in parallel which is the reason the tests run for hours.
 
-### Suite sample and explanation
+Below is a sample of test suite.
 
 ```yaml
-# This enumerates the sets that are enabled.
+# Under `enable` is the list of sets that will be run.
 enable: 
   - "Miner down/up"
   - "Blobber tests"
@@ -38,10 +51,10 @@ sets:
 tests: 
   - name: "Miner: 50 (switch to contribute)"
     flow: 
-    # Flow is a series of commands.
-    # The command can either be built-in in the conductor 
-    # or custom defined in `conductor.config.yaml`
-      - set_monitor: "sharder-1" # Most commands refer to nodes, these are defined in `conductor.config.yaml` 
+    # Flow is a series of directives.
+    # The directive can either be built-in in the conductor 
+    # or custom command defined in "conductor.config.yaml"
+      - set_monitor: "sharder-1" # Most directive refer to node by name, these are defined in `conductor.config.yaml` 
       - cleanup_bc: {} # A sample built-in command that triggers stop on all nodes and clean up.
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3']
@@ -67,7 +80,7 @@ tests:
 
 Jump to [Updating conductor tests](#updating-conductor-tests)
 
-## Type of conductor tests
+## Category of conductor tests supported
 
 The conductor test suites are configured on yaml files. These test suites can be categorized into 3. 
 
@@ -83,6 +96,8 @@ The conductor test suites are configured on yaml files. These test suites can be
 - docker.local/config/conductor.blobber-2.yaml
 
 ## Required setup
+
+Below are the basic setup required to run the test suites.
 
 1. Git clone [0chain](https://github.com/0chain/0chain)
 2. Build miner docker image for integration test
@@ -206,14 +221,144 @@ enable:
 #  - "All nodes down/up"
 ```
 
-### Common command settings
-- `timeout` - all command support a timeout out of the box. valid values in time duration format (eg. `1s` for 1 second, `10m` for 10 minutes) 
+### Common directive properties
+- `timeout` - All commands support a timeout out of the box. Valid values in time duration format (eg. `1s` for 1 second, `10m` for 10 minutes). The default is 2 minutes.
+- `must_fail` - Whether the test should fail if the command throw an error. By default, built-in commands have `must_fail` as false. Custom commands however is configurable with`should_fail` when declared.
 
-### Supported commands
+### Supported directives
 
-#### Built-in commands
+#### Built-in directives
+1. **common setups**
+- `set_monitor` - initiate the node from where blockchain events will be accepted
+- `cleanup_bc` - stop all nodes, reset rounds, and clean up data using `cleanup_command` defined on `conductor.config.yaml`
+  
+2. **common nodes control**
+- `start` - starts the list of nodes. The start script used is defined on `conductor.config.yaml`
+- `stop` - stops the list of nodes. The stop script used is defined on `conductor.config.yaml`
+- `start_lock` - starts the list of nodes but lock them such that the nodes do nothing (eg. does not sign, does not generate blocks)
+- `unlock` - update the state of the list of nodes to be no longer locked
+  
+3. **wait for an event of the monitor**
+- `wait_view_change` - wait until a view change occurred
+  - properties
+    ```yaml
+    # name the round of this view change.
+    # UNUSED in any of the tests
+    remember_round: <string> 
+    # expectations on this view change.
+    expect_magic_block: 
+        # Number is expected Magic Block number. 
+        # Use of MB number is more stable for the tests, since miners can vote for restart DKG process from start.
+        number: <int64> 
+        # Round ignored if it's zero. 
+        # If set a positive value, then this round is expected.
+        # UNUSED in any of the tests
+        round: <int64>
+        # RoundNextVCAfter used in combination with "remember_round".
+        # This directive expects next VC round after the remembered one. 
+        # Empty string ignored.
+        # UNUSED in any of the tests
+        round_next_vc_after: <string>
+        # Sharders expected in MB.
+        sharders: <array of strings>
+        # Miners expected in MB.
+        miners: <array of strings>
+    ```
+- `wait_phase` - wait until a phase ocurred
+  - properties
+    ```yaml
+    # Phase can be any of 'start', 'contribute', 'share', 'publish', 'wait'
+    phase: <string>
+    # ViewChangeRound is the name of the view change round.
+    # UNUSED in any of the tests
+    view_change_round: <string>
+    ```
+- `wait_round` - wait until a round
+  - properties
+    ```yaml
+    # Round is the blockchain round.
+    round: <int64>
+    # RoundName is the name of the round.
+    # UNUSED in any of the tests
+    name: <string>
+    # Shift is the number of rounds to wait from current or "name" round if provided.
+    shift: <int64> 
+    ```
+- `wait_contribute_mpk` - wait for a miner's MPK
+  - properties
+    ```yaml
+    # Miner is the name of the node.
+    miner: <string>
+    ```
+- `wait_share_signs_or_shares` - waits for a miner's share signs or shares
+  - properties
+    ```yaml
+    # Miner is the name of the node.
+    miner: <string>
+    ```
+- `wait_add` - waits for the list of nodes to be added to blockchain
+  - properties
+    ```yaml
+    # Miners are the names of the nodes.
+    miners: <array of string>
+    # Sharders are the names of the nodes.
+    sharders: <array of string>
+    # Blobbers are the names of the nodes.
+    blobbers: <array of string>
+    ```
+- `wait_no_progress` - waits to confirm there is no progress on rounds. Anything less than 10 rounds after is acceptable as no progress.
+- `wait_no_view_change`- waits to confirm there is no more view change after the round specified.
+    ```yaml
+    # Round is the blockchain round after which no view change is expected.
+    round: <int64>
+    ```
+- `wait_sharder_keep` - waits for sharder keep on the list of sharders
+  - properties
+    ```yaml
+    # Sharders are the names of the nodes.
+    sharders: <array of string>
+    ```
+  
+4. **control nodes behavior / misbehavior**
+- `set_revealed` - reveal the list of nodes. A revealed node sends it share.
+- `unset_revealed` - hid the list of nodes. A hidden node does not sends it share. 
+  - This is currently UNUSED
 
-TODO 
+5. **Byzantine blockchain**
+- `vrfs`
+- `round_timeout`
+- `competing_block`
+- `sign_only_competing_blocks`
+- `double_spend_transaction`
+- `wrong_block_sign_hash`
+- `wrong_block_sign_key`
+- `wrong_block_hash`
+- `verification_ticket_group`
+- `wrong_verification_ticket_hash`
+- `wrong_verification_ticket_key`
+- `wrong_notarized_block_hash`
+- `wrong_notarized_block_key`
+- `notarize_only_competing_block`
+- `notarized_block`
+
+6. **Byzantine blockchain sharders**
+- `finalized_block`
+- `magic_block`
+- `verify_transaction`
+
+7. **Byzantine view change**
+- `mpk`
+- `share`
+- `signature`
+- `publish`
+
+8. **blobber**
+- `storage_tree` - directive purpose unknown 
+  - This directive does not seem fully implemented.
+- `validator_proof` - directive purpose unknown
+  - This directive does not seem fully implemented.
+- `challenges` - directive purpose unknown
+  - This directive does not seem fully implemented.
 
 #### Custom commands
 
@@ -231,7 +376,7 @@ Add a new command under `commands`
     can_fail: true #
 ```
 
-To use, simply provide the command name on test suite.
+To use, simply provide the `command` directive and the custom command name on test suite.
 
 ```yaml
   - name: "All blobber tests"
