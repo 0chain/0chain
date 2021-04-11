@@ -62,15 +62,14 @@ func Test_stakePool_save(t *testing.T) {
 
 func Test_stakePool_fill(t *testing.T) {
 	const (
-		clienID = "clien_id"
-		txHash  = "tx_hash"
+		clientID = "client_id"
 	)
 
 	var (
 		sp       = newStakePool()
 		balances = newTestBalances(t, false)
 		tx       = transaction.Transaction{
-			ClientID:   clienID,
+			ClientID:   clientID,
 			ToClientID: ADDRESS,
 			Value:      90,
 		}
@@ -78,7 +77,7 @@ func Test_stakePool_fill(t *testing.T) {
 	)
 
 	balances.setTransaction(t, &tx)
-	balances.balances[clienID] = 100e10
+	balances.balances[clientID] = 100e10
 
 	_, _, err = sp.dig(&tx, balances)
 	require.NoError(t, err)
@@ -92,7 +91,7 @@ type mockStakePool struct {
 
 const (
 	blobberId        = "bob"
-	transactionHash  = "my tx hash"
+	transactionHash  = "12345678"
 	clientId         = "sally"
 	errDelta         = 4 // for testing values with rounding errors
 	offerId          = "offer"
@@ -108,15 +107,9 @@ type splResponse struct {
 	To_client   string
 }
 
-var (
-	creationDate    = common.Timestamp(100)
-	approvedMinters = []string{
-		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
-		"cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4", // interest SC
-		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7", // storage SC
-	}
-	storageScId = approvedMinters[2]
-	scYaml      = &scConfig{
+func TestStakePoolLock(t *testing.T) {
+	var err error
+	scYaml = &scConfig{
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
@@ -127,10 +120,6 @@ var (
 			MinLock:          int64(zcnToBalance(0.1)),
 		},
 	}
-)
-
-func TestStakePoolLock(t *testing.T) {
-	var err error
 
 	t.Run("stake pool lock", func(t *testing.T) {
 		var value = 10 * scYaml.StakePool.MinLock

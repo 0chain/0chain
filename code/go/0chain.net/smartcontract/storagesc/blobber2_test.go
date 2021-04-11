@@ -34,11 +34,6 @@ const (
 	errNotEnoughTokens   = "not enough tokens in read pool "
 )
 
-type mockBlobberYaml struct {
-	serviceCharge           float64
-	readPrice               float64
-	challengeCompletionTime time.Duration
-}
 type mockReadMarker struct {
 	readCounter int64
 	timestamp   common.Timestamp
