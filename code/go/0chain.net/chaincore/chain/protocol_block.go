@@ -67,6 +67,8 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		}
 	}
 
+	b.SetBlockNotarized()
+
 	return nil
 }
 
