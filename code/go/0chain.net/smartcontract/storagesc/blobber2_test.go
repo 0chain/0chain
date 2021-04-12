@@ -34,11 +34,6 @@ const (
 	errNotEnoughTokens   = "not enough tokens in read pool "
 )
 
-type mockBlobberYaml struct {
-	serviceCharge           float64
-	readPrice               float64
-	challengeCompletionTime time.Duration
-}
 type mockReadMarker struct {
 	readCounter int64
 	timestamp   common.Timestamp
@@ -371,6 +366,11 @@ func testCommitBlobberRead(
 	}
 	sPool.Pools["pool0"].ZcnPool.TokenPool.ID = blobberId
 	require.NoError(t, sPool.save(ssc.ID, blobberId, ctx))
+
+	ss := &StorageStats{}
+	ss.Stats = &StorageAllocationStats{}
+	_, err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
+	require.NoError(t, err)
 
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
