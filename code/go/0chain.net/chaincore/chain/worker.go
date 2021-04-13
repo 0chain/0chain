@@ -45,7 +45,7 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case newRound := <-UpdateNodes:
-			mb := c.GetMagicBlock(newRound)
+			mb := c.GetMagicBlockNoOffset(newRound)
 			N2n.Debug("Got nodes update",
 				zap.Int64("monitoring round", monitorRound),
 				zap.Int64("new round", newRound),
