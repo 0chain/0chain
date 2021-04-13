@@ -190,38 +190,6 @@ func (cp *challengePool) moveReward(sscKey string, sp *stakePool,
 	return
 }
 
-func (cp *challengePool) moveToValidator(sscKey string, sp *stakePool,
-	value state.Balance, balances cstate.StateContextI) (moved state.Balance,
-	err error) {
-
-	var stake = float64(sp.stake())
-	for _, dp := range sp.orderedPools() {
-		var ratio float64
-		if stake == 0.0 {
-			ratio = 1.0 / float64(len(sp.Pools))
-		} else {
-			ratio = float64(dp.Balance) / stake
-		}
-		var (
-			move     = state.Balance(float64(value) * ratio)
-			transfer *state.Transfer
-		)
-		transfer, _, err = cp.DrainPool(sscKey, dp.DelegateID, move, nil)
-		if err != nil {
-			return 0, fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
-				"stake_pool_holder(%s): %v", cp.ID, dp.DelegateID, err)
-		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return 0, fmt.Errorf("adding transfer: %v", err)
-		}
-		// stat
-		dp.Rewards += move           // add to stake_pool_holder rewards
-		sp.Rewards.Validator += move // add to total blobber rewards
-		moved += move
-	}
-	return
-}
-
 func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 	validatos []datastore.Key, vsps []*stakePool,
 	balances cstate.StateContextI) (moved state.Balance, err error) {
