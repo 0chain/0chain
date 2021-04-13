@@ -1,26 +1,33 @@
 ###
-### Blockchain miners Byzantine tests
+### Blockchain blobber upload/download and repair
 ###
-
 ---
 
 # enabled test cases sets
 enable:
-  - "Blobber"
+  - "Upload/Download"
   - "Repair"
 
 # sets of test cases
 sets:
-#  - name: "Blobber"
-#    tests:
-#      - "All blobber tests"
+  - name: "Upload/Download"
+    tests:
+      - "Error on upload/download"
   - name: "Repair"
     tests:
-      - "Repair tests"
+      - "Repair after blobber comes back online"
 
 # test cases
 tests:
-  - name: "All blobber tests"
+  # This test verifies the expected failures on zbox upload and download such as the following.
+  # - `zbox upload` without meta
+  # - `zbox upload` non-existing file
+  # - `zbox upload` without write marker
+  # - `zbox download` without locked read tokens
+  # - `zbox download` without read marker
+  # - Markers out of order
+  # - Simulatenous `zbox upload`, `zbox download`, and `zbox delete`
+  - name: "Error on upload/download"
     flow:
       - command:
           name: 'build_test_blobbers'
@@ -86,7 +93,9 @@ tests:
       #    name: "sleep_1m"
       #    timeout: '100h'
 
-  - name: "Repair tests"
+  # This test verifies `zbox start-repair` is working.
+  # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
+  - name: "Repair after blobber comes back online"
     flow:
       - command:
           name: 'build_test_blobbers'
@@ -111,7 +120,6 @@ tests:
       - wait_add:
           blobbers: ['blobber-3', 'blobber-4']
           timeout: '15m'
-      # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'repair_allocation'
           timeout: '15m'
