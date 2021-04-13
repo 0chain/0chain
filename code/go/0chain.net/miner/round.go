@@ -36,7 +36,9 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
 		return
 	}
-	logging.Logger.Debug("Adding block to verifyChannel")
+	logging.Logger.Debug("Adding block to verifyChannel",
+		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
+		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
 	r.blocksToVerifyChannel <- b
 }
 
