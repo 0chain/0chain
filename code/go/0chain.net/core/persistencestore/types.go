@@ -18,7 +18,7 @@ type (
 	}
 )
 
-// Make sure that session implements SessionI.
+// Make sure that session implements SessionI
 var _ SessionI = (*session)(nil)
 
 // NewSession instantiates a new session.
