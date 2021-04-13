@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/herumi/bls/ffi/go/bls"
 )
@@ -96,6 +97,31 @@ func MiraclToHerumiPK(pk string) string {
 	return p.SerializeToHexStr()
 }
 
+// Converts signature 'sig' to format that the herumi/bls library likes.
+// zwallets are using MIRACL library which send a MIRACL signature not herumi
+// lib.
+//
+// If the 'sig' was not in MIRACL format, we just return the original sig.
+var miraclExampleSig = `(0d4dbad6d2586d5e01b6b7fbad77e4adfa81212c52b4a0b885e19c58e0944764,110061aa16d5ba36eef0ad4503be346908d3513c0a2aedfd0d2923411b420eca)`
+func MiraclToHerumiSig(sig string) string {
+	if len(sig) <= 2 {
+		return sig
+	}
+	if sig[0] != miraclExampleSig[0] {
+		return sig
+	}
+	withoutParens := sig[1: (len(sig)-1) ]
+	comma := strings.Index(withoutParens, ",")
+	if comma < 0 {
+		return "00"
+	}
+	n1 := withoutParens[0:comma]
+	n2 := withoutParens[ (comma+1) : len(withoutParens)]
+	var sign bls.Sign
+	sign.SetHexString("1 " + n1 + " " + n2)
+	return sign.SerializeToHexStr()
+}
+
 //WriteKeys - implement interface
 func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
 	publicKey := hex.EncodeToString(b0.publicKey)
@@ -159,7 +185,7 @@ func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
 		return nil, errors.New("empty signature")
 	}
 	var sign bls.Sign
-	err := sign.DeserializeHexStr(signature)
+	err := sign.DeserializeHexStr( MiraclToHerumiSig(signature) )
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +258,7 @@ func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, err
 	var aggSign bls.Sign
 	for _, signature := range signatures {
 		var sign bls.Sign
-		sign.DeserializeHexStr(signature)
+		sign.DeserializeHexStr( MiraclToHerumiSig(signature) )
 		aggSign.Add(&sign)
 	}
 	return aggSign.SerializeToHexStr(), nil
