@@ -1,12 +1,12 @@
 #!/bin/bash
 
 
-export zChain_Root="/home/andriy/Documents/0Chain/0Chain/0Chain"
-export zDNS_Root="/home/andriy/Documents/0Chain/0Chain/0dns"
-export zBlober_Root="/home/andriy/Documents/0Chain/0Chain/blobber"
+export zChain_Root="/Users/andigo/Lab/0chain"
+export zDNS_Root="/Users/andigo/Lab/0chain.live/0dns"
+export zBlober_Root="/Users/andigo/Lab/0chain.live/blobber"
 
-export gosdk="/home/andriy/Documents/0Chain/0Chain/gosdk"
-export zCLI_Root="/home/andriy/Documents/0Chain/0Chain/zboxcli"
-export zWallet_Root="/home/andriy/Documents/0Chain/0Chain/zwalletcli"
+export gosdk="/Users/andigo/Lab/0chain.live/gosdk"
+export zCLI_Root="/Users/andigo/Lab/0chain.live/zboxcli"
+export zWallet_Root="/Users/andigo/Lab/0chain.live/zwalletcli"
 
 export zWorkflows_Base=`pwd`
