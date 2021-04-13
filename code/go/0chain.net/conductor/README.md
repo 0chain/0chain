@@ -85,15 +85,15 @@ Jump to [Updating conductor tests](#updating-conductor-tests)
 The conductor test suites are configured on yaml files. These test suites can be categorized into 3. 
 
 1. `standard tests` - confirms chain continue to function properly despite bad miner and sharder participants
-- docker.local/config/conductor.miners.yaml
-- docker.local/config/conductor.sharders.yaml
+- [conductor.miners.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.miners.yaml)
+- [conductor.sharders.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.sharders.yaml)
 2. `view-change tests` - confirms view change (addition and removal of nodes) is working
-- docker.local/config/conductor.view-change-1.yaml
-- docker.local/config/conductor.view-change-2.yaml
-- docker.local/config/conductor.view-change-3.yaml
+- [conductor.view-change-1.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.view-change-1.yaml)
+- [conductor.view-change-2.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.view-change-2.yaml)
+- [conductor.view-change-3.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.view-change-3.yaml)
 3. `blobber tests` - confirms storage functions continue to work despite bad or lost blobber, and confirms expected storage function failures
-- docker.local/config/conductor.blobber-1.yaml
-- docker.local/config/conductor.blobber-2.yaml
+- [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-1.yaml)
+- [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-2.yaml)
 
 ## Required setup
 
@@ -194,7 +194,7 @@ https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
 The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice
 package required by docker-compose and used by docker. A docker process
-(a build, for example) can sometimes fails due to the bug. Some tests have
+(a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
 12. Run blobber tests
@@ -207,7 +207,7 @@ internal docker builds and can fail due to this bug.
 
 ### Updating the tests
 
-To add more test, simply create new test cases and add them to existing or new set. 
+To add more tests, simply create new test cases and add them to existing or new set. 
 Then be sure to enable the test set if creating a new one.
 
 ### Temporarily disabling tests
@@ -245,7 +245,7 @@ enable:
 - `wait_view_change` - wait until a view change occurred
   - properties
     ```yaml
-    # name the round of this view change.
+    # Name the round of this view change.
     # UNUSED in any of the tests
     remember_round: <string> 
     # expectations on this view change.
@@ -259,7 +259,7 @@ enable:
         round: <int64>
         # RoundNextVCAfter used in combination with "remember_round".
         # This directive expects next VC round after the remembered one. 
-        # Empty string ignored.
+        # Empty string is ignored.
         # UNUSED in any of the tests
         round_next_vc_after: <string>
         # Sharders expected in MB.
@@ -378,7 +378,7 @@ enable:
     # By miners
     by: <array of strings>
     ```  
-- `wrong_block_hash` - have list of miners use a block hash
+- `wrong_block_hash` - have list of miners use an invalid block hash
   - properties
     ```yaml
     # By miners
