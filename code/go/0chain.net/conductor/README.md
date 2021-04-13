@@ -95,6 +95,10 @@ The conductor test suites are configured on yaml files. These test suites can be
 - [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-1.yaml)
 - [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-2.yaml)
 
+## Test cases covered
+
+To know about the specific test cases covered by the conductor tests, navigate to the test suite files listed above.
+
 ## Required setup
 
 Below are the basic setup required to run the test suites.
