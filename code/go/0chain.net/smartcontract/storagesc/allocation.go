@@ -1145,7 +1145,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
+			if _, err = cp.moveReward(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("alloc_cacnel_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
@@ -1354,7 +1354,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
+			if _, err = cp.moveReward(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("fini_alloc_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
