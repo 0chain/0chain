@@ -142,15 +142,15 @@ func (cp *challengePool) moveReward(sscKey string, sp *stakePool,
 			cp.ID, cp.Balance, value)
 	}
 
-	var blobberCharge state.Balance
-	blobberCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
+	var serviceCharge state.Balance
+	serviceCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
 
-	err = cp.moveServiceCharge(sscKey, sp, blobberCharge, balances)
+	err = cp.moveServiceCharge(sscKey, sp, serviceCharge, balances)
 	if err != nil {
 		return
 	}
 
-	value = value - blobberCharge
+	value = value - serviceCharge
 
 	if value == 0 {
 		return // nothing to move
@@ -182,8 +182,7 @@ func (cp *challengePool) moveReward(sscKey string, sp *stakePool,
 			return 0, fmt.Errorf("adding transfer: %v", err)
 		}
 		// stat
-		dp.Rewards += move         // add to stake_pool_holder rewards
-		sp.Rewards.Blobber += move // add to total blobber rewards
+		dp.Rewards += move // add to stake_pool_holder rewards
 		moved += move
 	}
 
@@ -207,6 +206,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 		}
 		var oneMove state.Balance
 		oneMove, err = cp.moveReward(sscKey, sp, oneReward, balances)
+		sp.Rewards.Validator += oneMove
 		if err != nil {
 			return 0, fmt.Errorf("moving to validator %s: %v",
 				validatos[i], err)
