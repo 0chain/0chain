@@ -669,7 +669,13 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 }
 
 func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
-	logging.Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	logging.Logger.Info("adding block to verify",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("prev_block", b.PrevHash),
+		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+		zap.Float64("weight", b.Weight()),
+		zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	miner := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
 	if vctx != nil && miner != nil {
@@ -895,8 +901,9 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if !b.IsBlockNotarized() {
-		logging.Logger.Info("checkBlockNotarization -- block is not Notarized. Returning",
-			zap.Int64("round", b.Round))
+		logging.Logger.Error("checkBlockNotarization -- block is not Notarized. Returning",
+			zap.Int64("round", b.Round),
+			zap.Any("block hash", b.Hash))
 		return false
 	}
 	if !mc.AddNotarizedBlock(ctx, r, b) {

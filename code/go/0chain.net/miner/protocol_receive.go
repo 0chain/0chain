@@ -128,8 +128,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		return
 	}
 
-	logging.Logger.Info("Added block to Round", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash))
+	logging.Logger.Info("Added block to Round",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
+		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
 	mc.AddToRoundVerification(ctx, mr, b)
 }
 
@@ -165,6 +168,11 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		mr.AddVerificationTicket(bvt)
 		return
 	}
+
+	logging.Logger.Debug("verification ticket",
+		zap.Int64("round", rn),
+		zap.String("block hash", b.Hash),
+		zap.String("block id", bvt.BlockID))
 
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
