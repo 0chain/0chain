@@ -9,6 +9,6 @@ docker run zchain_unit_test sh -c '
     golangci-lint --version
     for mod_file in $(find * -name go.mod); do
         mod_dir=$(dirname $mod_file)
-        (cd $mod_dir; go mod download; golangci-lint run)
+        (cd $mod_dir; go mod download; golangci-lint run --build-tags bn256 --timeout 10m0s)
     done
 '
