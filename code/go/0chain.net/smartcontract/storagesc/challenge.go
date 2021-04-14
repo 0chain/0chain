@@ -291,23 +291,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
-		// make sure all mints not payed yet be payed before the stake
-		// pools will be slashed
-		var info *stakePoolUpdateInfo
-		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
-		if err != nil {
-			return fmt.Errorf("updating stake pool: %v", err)
-		}
-		conf.Minted += info.minted
-
-		// save configuration (minted tokens)
-		_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
-		if err != nil {
-			return fmt.Errorf("saving configurations: %v", err)
-		}
-
-		// move blobber's stake tokens to allocation's write pool
-
 		var offer = sp.findOffer(alloc.ID)
 		if offer == nil {
 			return errors.New("invalid state, can't find stake pool offer: " +
