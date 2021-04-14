@@ -27,6 +27,7 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
 # Build it:
 ARG GIT_COMMIT
+ARG DEV
 ENV GIT_COMMIT=$GIT_COMMIT
 RUN if [ "$DEV" = "yes" ] ;\
     then echo "Artifacts will be copied from local machine";\
