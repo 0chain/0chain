@@ -26,7 +26,6 @@ const (
 )
 
 func TestBlobberReward(t *testing.T) {
-	//t.Skip()
 	var stakes = []int64{200, 234234, 100000}
 	var challengePoolIntegralValue = state.Balance(73000000)
 	var challengePoolBalance = state.Balance(700000)
@@ -138,7 +137,6 @@ func TestBlobberPenalty(t *testing.T) {
 	}
 
 	t.Run("test blobberPenalty ", func(t *testing.T) {
-		//t.Skip()
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
@@ -146,7 +144,6 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run("test blobberPenalty ", func(t *testing.T) {
-		//t.Skip()
 		var blobberOffer = int64(10000)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
@@ -155,7 +152,6 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errLate, func(t *testing.T) {
-		//t.Skip()
 		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
@@ -165,7 +161,6 @@ func TestBlobberPenalty(t *testing.T) {
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
-		//t.Skip()
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
@@ -591,8 +586,8 @@ func confirmBlobberPenalty(
 ) {
 	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
 
-	require.EqualValues(t, 0, int64(blobber.Rewards.Charge), errDelta)
-	require.EqualValues(t, 0, int64(blobber.Rewards.Blobber), errDelta)
+	require.EqualValues(t, 0, int64(blobber.Rewards.Charge))
+	require.EqualValues(t, 0, int64(blobber.Rewards.Blobber))
 
 	for _, sp := range validatorsSPs {
 		for wallet, pool := range sp.Pools {
@@ -623,7 +618,7 @@ func confirmBlobberPenalty(
 	var validatorDelegates = make(map[string][]bool)
 	for i, v := range f.validators {
 		validatorDelegates[v] = []bool{}
-		for _ = range f.validatorStakes[i] {
+		for range f.validatorStakes[i] {
 			validatorDelegates[v] = append(validatorDelegates[v], false)
 		}
 	}
@@ -694,7 +689,7 @@ func confirmBlobberReward(
 
 	var blobberPaid = false
 	var blobberDelegaresPaid = []bool{}
-	for _ = range f.stakes {
+	for range f.stakes {
 		blobberDelegaresPaid = append(blobberDelegaresPaid, false)
 	}
 	validators := make(map[string]bool)
@@ -704,7 +699,7 @@ func confirmBlobberReward(
 	var validatorDelegates = make(map[string][]bool)
 	for i, v := range f.validators {
 		validatorDelegates[v] = []bool{}
-		for _ = range f.validatorStakes[i] {
+		for range f.validatorStakes[i] {
 			validatorDelegates[v] = append(validatorDelegates[v], false)
 		}
 	}
