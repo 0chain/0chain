@@ -137,7 +137,6 @@ func (mndb *MemoryNodeDB) DeleteNode(key Key) (err error) {
 func (mndb *MemoryNodeDB) MultiGetNode(keys []Key) (nodes []Node, err error) {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
-	nodes = make([]Node, 0, len(keys))
 	for _, key := range keys {
 		node, nerr := mndb.getNode(key)
 		if nerr != nil {
@@ -454,7 +453,6 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 func (lndb *LevelNodeDB) MultiGetNode(keys []Key) (nodes []Node, err error) {
 	lndb.mutex.RLock()
 	defer lndb.mutex.RUnlock()
-	nodes = make([]Node, 0, len(keys))
 	for _, key := range keys {
 		node, nerr := lndb.getNode(key)
 		if nerr != nil {
