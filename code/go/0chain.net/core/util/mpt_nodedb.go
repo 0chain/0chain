@@ -38,7 +38,7 @@ var (
 var levelNodeVersion atomic.Int64
 
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
-type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
+type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) (err error)
 
 /*NodeDB - an interface that gets, puts and deletes nodes by their key */
 type NodeDB interface {
@@ -80,98 +80,132 @@ func (mndb *MemoryNodeDB) GetDBVersions() []int64 {
 	return []int64{}
 }
 
+// unsafe
+func (mndb *MemoryNodeDB) getNode(key Key) (node Node, err error) {
+	node, ok := mndb.Nodes[StrKey(key)]
+	if !ok {
+		err = ErrNodeNotFound
+	}
+	return
+}
+
+// unsafe
+func (mndb *MemoryNodeDB) putNode(key Key, node Node) (err error) {
+	mndb.Nodes[StrKey(key)] = node
+	return
+}
+
+// unsafe
+func (mndb *MemoryNodeDB) deleteNode(key Key) (err error) {
+	delete(mndb.Nodes, StrKey(key))
+	return
+}
+
+// unsafe
+func (mndb *MemoryNodeDB) iterate(ctx context.Context, handler NodeDBIteratorHandler) (err error) {
+	for key, node := range mndb.Nodes {
+		err = handler(ctx, Key(key), node)
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 /*GetNode - implement interface */
-func (mndb *MemoryNodeDB) GetNode(key Key) (Node, error) {
-	skey := StrKey(key)
+func (mndb *MemoryNodeDB) GetNode(key Key) (node Node, err error) {
 	mndb.mutex.RLock()
 	defer mndb.mutex.RUnlock()
-	node, ok := mndb.Nodes[skey]
-	if !ok {
-		return nil, ErrNodeNotFound
-	}
-	return node, nil
+	return mndb.getNode(key)
 }
 
 /*PutNode - implement interface */
-func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
-	skey := StrKey(key)
+func (mndb *MemoryNodeDB) PutNode(key Key, node Node) (err error) {
 	mndb.mutex.Lock()
 	defer mndb.mutex.Unlock()
-	mndb.Nodes[skey] = node
-	return nil
+	return mndb.putNode(key, node)
 }
 
 /*DeleteNode - implement interface */
-func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
-	skey := StrKey(key)
+func (mndb *MemoryNodeDB) DeleteNode(key Key) (err error) {
 	mndb.mutex.Lock()
 	defer mndb.mutex.Unlock()
-	delete(mndb.Nodes, skey)
-	return nil
+	return mndb.deleteNode(key)
 }
 
 /*MultiGetNode - get multiple nodes */
-func (mndb *MemoryNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
-	var nodes []Node
-	var err error
+func (mndb *MemoryNodeDB) MultiGetNode(keys []Key) (nodes []Node, err error) {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+	nodes = make([]Node, 0, len(keys))
 	for _, key := range keys {
-		node, nerr := mndb.GetNode(key)
+		node, nerr := mndb.getNode(key)
 		if nerr != nil {
 			err = nerr
 			continue
 		}
 		nodes = append(nodes, node)
 	}
-	return nodes, err
+	return
 }
 
 /*MultiPutNode - implement interface */
-func (mndb *MemoryNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+func (mndb *MemoryNodeDB) MultiPutNode(keys []Key, nodes []Node) (err error) {
+	mndb.mutex.Lock()
+	defer mndb.mutex.Unlock()
 	for idx, key := range keys {
-		mndb.PutNode(key, nodes[idx])
+		err = mndb.putNode(key, nodes[idx])
+		if err != nil {
+			return
+		}
 	}
-	return nil
+	return
 }
 
 /*MultiDeleteNode - implement interface */
-func (mndb *MemoryNodeDB) MultiDeleteNode(keys []Key) error {
+func (mndb *MemoryNodeDB) MultiDeleteNode(keys []Key) (err error) {
+	mndb.mutex.Lock()
+	defer mndb.mutex.Unlock()
 	for _, key := range keys {
-		mndb.DeleteNode(key)
+		err = mndb.deleteNode(key)
+		if err != nil {
+			return
+		}
 	}
-	return nil
+	return
 }
 
 /*Iterate - implement interface */
-func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	for key, node := range mndb.Nodes {
-		err := handler(ctx, Key(key), node)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) (err error) {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+	return mndb.iterate(ctx, handler)
 }
 
 /*Size - implement interface */
 func (mndb *MemoryNodeDB) Size(ctx context.Context) int64 {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
 	return int64(len(mndb.Nodes))
 }
 
 /*PruneBelowVersion - implement interface */
 func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	for key, node := range mndb.Nodes {
+	mndb.mutex.Lock()
+	defer mndb.mutex.Unlock()
+	return mndb.iterate(ctx, func(ctx context.Context, key Key, node Node) (err error) {
 		if node.GetVersion() < version {
-			delete(mndb.Nodes, key)
+			return mndb.deleteNode(key)
 		}
-	}
-	return nil
+		return
+	})
 }
 
-// is node2 reachable from node using only nodes stored on this db
-func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
+// unsafe
+func (mndb *MemoryNodeDB) reachable(node, node2 Node) (ok bool) {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
-		fn, err := mndb.GetNode(nodeImpl.NodeKey)
+		fn, err := mndb.getNode(nodeImpl.NodeKey)
 		if err != nil && err != ErrNodeNotFound {
 			panic(err)
 		}
@@ -188,15 +222,14 @@ func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
 			if child == nil {
 				continue
 			}
-			childNode, err := mndb.GetNode(child)
+			childNode, err := mndb.getNode(child)
 			if err != nil {
 				continue
 			}
 			if node2 == childNode {
 				return true
 			}
-			ok := mndb.reachable(childNode, node2)
-			if ok {
+			if mndb.reachable(childNode, node2) {
 				return true
 			}
 		}
@@ -204,44 +237,55 @@ func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
 	return false
 }
 
+// Reachable - checks if Node "to" reachable from Node "from" only using
+// nodes stored on this db
+func (mndb *MemoryNodeDB) Reachable(from, to Node) (ok bool) {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+	return mndb.reachable(from, to)
+}
+
 /*ComputeRoot - compute root from partial set of nodes in this db */
-func (mndb *MemoryNodeDB) ComputeRoot() Node {
-	var root Node
-	handler := func(ctx context.Context, key Key, node Node) error {
+func (mndb *MemoryNodeDB) ComputeRoot() (root Node) {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+	mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) (err error) {
 		if root == nil {
 			root = node
-			return nil
+			return
 		}
 		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
-			return nil
+			return
 		}
 		if mndb.reachable(root, node) {
-			return nil
+			return
 		}
 		if mndb.reachable(node, root) {
 			root = node
 		}
-		return nil
-	}
-	mndb.Iterate(nil, handler)
-	return root
+		return
+	})
+	return
 }
 
 /*Validate - validate this MemoryNodeDB w.r.t the given root
   It should not contain any node that can't be reachable from the root.
   Note: The root itself can reach nodes not present in this db
 */
-func (mndb *MemoryNodeDB) Validate(root Node) error {
-	var (
-		nodes   = make(map[StrKey]Node)
-		iterate func(node Node)
-	)
+func (mndb *MemoryNodeDB) Validate(root Node) (err error) {
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
+
+	nodes := map[StrKey]Node{
+		StrKey(root.GetHashBytes()): root,
+	}
+	var iterate func(node Node)
 	iterate = func(node Node) {
 		switch nodeImpl := node.(type) {
 		case *FullNode:
 			for _, ckey := range nodeImpl.Children {
 				if ckey != nil {
-					cnode, err := mndb.GetNode(ckey)
+					cnode, err := mndb.getNode(ckey)
 					if err == nil {
 						nodes[StrKey(ckey)] = cnode
 						iterate(cnode)
@@ -250,30 +294,29 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 			}
 		case *ExtensionNode:
 			ckey := nodeImpl.NodeKey
-			cnode, err := mndb.GetNode(ckey)
+			cnode, err := mndb.getNode(ckey)
 			if err == nil {
 				nodes[StrKey(ckey)] = cnode
 				iterate(cnode)
 			}
 		}
 	}
-	nodes[StrKey(root.GetHashBytes())] = root
 	iterate(root)
-	for _, nd := range mndb.Nodes {
-		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
+	return mndb.iterate(context.TODO(), func(ctx context.Context, key Key, node Node) (err error) {
+		if _, ok := nodes[StrKey(node.GetHashBytes())]; !ok {
 			Logger.Error("mndb validate",
-				zap.String("node_type", fmt.Sprintf("%T", nd)),
-				zap.String("node_key", nd.GetHash()))
+				zap.String("node_type", fmt.Sprintf("%T", node)),
+				zap.String("node_key", node.GetHash()))
 			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
 		}
-	}
-	return nil
+		return
+	})
 }
 
 // LevelNodeDB - a multi-level node db. It has a current node db and a previous
 // node db. This is useful to update without changing the previous db.
 type LevelNodeDB struct {
-	mu               *sync.RWMutex
+	mutex            *sync.RWMutex
 	current          NodeDB
 	prev             NodeDB
 	PropagateDeletes bool // Setting this to false (default) will not propagate delete to lower level db
@@ -303,7 +346,7 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 		current:          curNDB,
 		prev:             prevNDB,
 		PropagateDeletes: propagateDeletes,
-		mu:               &sync.RWMutex{},
+		mutex:            &sync.RWMutex{},
 		version:          v,
 		versions:         vs,
 	}
@@ -313,84 +356,68 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 
 // GetDBVersion get the current level node db version
 func (lndb *LevelNodeDB) GetDBVersion() int64 {
-	lndb.mu.Lock()
-	defer lndb.mu.Unlock()
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
 	return lndb.version
 }
 
 // GetDBVersions returns all tracked db versions
-func (lndb *LevelNodeDB) GetDBVersions() []int64 {
-	lndb.mu.Lock()
-	defer lndb.mu.Unlock()
-	vs := make([]int64, len(lndb.versions))
-	for i, v := range lndb.versions {
-		vs[i] = v
-	}
-	return vs
+func (lndb *LevelNodeDB) GetDBVersions() (versions []int64) {
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
+	versions = make([]int64, len(lndb.versions))
+	copy(versions, lndb.versions)
+	return
 }
 
 // GetCurrent returns current node db
 func (lndb *LevelNodeDB) GetCurrent() NodeDB {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
 	return lndb.current
 }
 
 // GetPrev returns previous node db
 func (lndb *LevelNodeDB) GetPrev() NodeDB {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
 	return lndb.prev
 }
 
 // SetPrev sets  previous node db
 func (lndb *LevelNodeDB) SetPrev(prevDB NodeDB) {
-	lndb.mu.Lock()
-	defer lndb.mu.Unlock()
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
 	lndb.prev = prevDB
 }
 
-func (lndb *LevelNodeDB) isCurrentPersistent() bool {
-	_, ok := lndb.current.(*PNodeDB)
-	return ok
+func (lndb *LevelNodeDB) isCurrentPersistent() (ok bool) {
+	_, ok = lndb.current.(*PNodeDB)
+	return
 }
 
-/*GetNode - implement interface */
-func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
-	c := lndb.current
-	p := lndb.prev
-	node, err := c.GetNode(key)
+// unsafe
+func (lndb *LevelNodeDB) getNode(key Key) (node Node, err error) {
+	p, c := lndb.prev, lndb.current
+	node, err = c.GetNode(key)
 	if err != nil {
 		if p != c {
 			return p.GetNode(key)
 		}
-		return nil, err
+		return
 	}
-	return node, nil
+	return
 }
 
-/*PutNode - implement interface */
-func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
+// unsafe
+func (lndb *LevelNodeDB) putNode(key Key, node Node) (err error) {
 	return lndb.current.PutNode(key, node)
 }
 
-/*DeleteNode - implement interface */
-func (lndb *LevelNodeDB) DeleteNode(key Key) error {
-	lndb.mu.Lock()
-	defer lndb.mu.Unlock()
-
-	//Logger.Debug("LevelNodeDB delete node",
-	//	zap.String("key", ToHex(key)),
-	//	zap.Int64("version", lndb.version),
-	//	zap.Int64s("db versions", lndb.versions))
-
-	c := lndb.current
-	p := lndb.prev
-	_, err := c.GetNode(key)
+// unsafe
+func (lndb *LevelNodeDB) deleteNode(key Key) (err error) {
+	p, c := lndb.prev, lndb.current
+	_, err = c.GetNode(key)
 	if err != nil {
 		if lndb.PropagateDeletes && p != c {
 			return p.DeleteNode(key)
@@ -402,65 +429,89 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	return c.DeleteNode(key)
 }
 
+/*GetNode - implement interface */
+func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
+	return lndb.getNode(key)
+}
+
+/*PutNode - implement interface */
+func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
+	return lndb.putNode(key, node)
+}
+
+/*DeleteNode - implement interface */
+func (lndb *LevelNodeDB) DeleteNode(key Key) error {
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
+	return lndb.deleteNode(key)
+}
+
 /*MultiGetNode - get multiple nodes */
-func (lndb *LevelNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
-	var nodes []Node
-	var err error
+func (lndb *LevelNodeDB) MultiGetNode(keys []Key) (nodes []Node, err error) {
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
+	nodes = make([]Node, 0, len(keys))
 	for _, key := range keys {
-		node, nerr := lndb.GetNode(key)
+		node, nerr := lndb.getNode(key)
 		if nerr != nil {
 			err = nerr
 			continue
 		}
 		nodes = append(nodes, node)
 	}
-	return nodes, err
+	return
 }
 
 /*MultiPutNode - implement interface */
-func (lndb *LevelNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+func (lndb *LevelNodeDB) MultiPutNode(keys []Key, nodes []Node) (err error) {
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
 	for idx, key := range keys {
-		err := lndb.PutNode(key, nodes[idx])
+		err = lndb.putNode(key, nodes[idx])
 		if err != nil {
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
 /*MultiDeleteNode - implement interface */
-func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) error {
+func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) (err error) {
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
 	for _, key := range keys {
-		err := lndb.DeleteNode(key)
+		err = lndb.deleteNode(key)
 		if err != nil {
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
 /*Iterate - implement interface */
-func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
-	c := lndb.current
-	p := lndb.prev
-	err := c.Iterate(ctx, handler)
+func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) (err error) {
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
+	p, c := lndb.prev, lndb.current
+	err = c.Iterate(ctx, handler)
 	if err != nil {
-		return err
+		return
 	}
-	if p != c && !lndb.isCurrentPersistent() {
+	if p != c && !lndb.isCurrentPersistent() { // Why is it skipped when current is PNodeDB?
 		return p.Iterate(ctx, handler)
 	}
-	return nil
+	return
 }
 
 /*Size - implement interface */
 func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
-	c := lndb.current
-	p := lndb.prev
+	lndb.mutex.RLock()
+	defer lndb.mutex.RUnlock()
+	p, c := lndb.prev, lndb.current
 	size := c.Size(ctx)
 	if p != c {
 		size += p.Size(ctx)
@@ -470,35 +521,35 @@ func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
 
 // PruneBelowVersion - implement interface.
 func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	// TODO
+	// TODO: Why not implemented?
 	return nil
 }
 
 // RebaseCurrentDB - set the current database.
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
-	lndb.mu.Lock()
-	defer lndb.mu.Unlock()
+	lndb.mutex.Lock()
+	defer lndb.mutex.Unlock()
 	Logger.Debug("LevelNodeDB rebase db")
-	lndb.current = ndb
-	lndb.prev = ndb
+	lndb.prev, lndb.current = ndb, ndb
 }
 
 // MergeState - merge the state from another node db.
-func MergeState(ctx context.Context, fndb NodeDB, tndb NodeDB) error {
-	var nodes []Node
+func MergeState(ctx context.Context, fndb NodeDB, tndb NodeDB) (err error) {
 	var keys []Key
-	handler := func(ctx context.Context, key Key, node Node) error {
-		keys = append(keys, key)
-		nodes = append(nodes, node)
-		return nil
-	}
-	err := fndb.Iterate(ctx, handler)
+	var nodes []Node
+	err = fndb.Iterate(ctx, func(ctx context.Context, key Key, node Node) (err error) {
+		keys, nodes = append(keys, key), append(nodes, node)
+		return
+	})
 	if err != nil {
-		return err
+		return
 	}
 	err = tndb.MultiPutNode(keys, nodes)
+	if err != nil {
+		return
+	}
 	if pndb, ok := tndb.(*PNodeDB); ok {
 		pndb.Flush()
 	}
-	return nil
+	return
 }
