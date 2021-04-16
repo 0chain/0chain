@@ -117,7 +117,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 	require.NoError(t, err)
 
 	var dmn *DKGMinerNodes
-	dmn, err = msc.getMinersDKGList(balances)
+	dmn, err = getDKGMinersList(balances)
 	require.NoError(t, err)
 
 	dmn.setConfigs(gn)
@@ -126,7 +126,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 		dmn.Waited[mn.miner.id] = true
 	}
 
-	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
+	err = updateDKGMinersList(balances, dmn)
 	require.NoError(t, err)
 }
 

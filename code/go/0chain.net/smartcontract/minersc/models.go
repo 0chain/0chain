@@ -82,7 +82,7 @@ type (
 	phaseFunctions func(balances cstate.StateContextI, gn *GlobalNode) (
 		err error)
 	movePhaseFunctions func(balances cstate.StateContextI, pn *PhaseNode,
-		gn *GlobalNode) bool
+		gn *GlobalNode) error
 	smartContractFunction func(t *transaction.Transaction, inputData []byte,
 		gn *GlobalNode, balances cstate.StateContextI) (string, error)
 
@@ -999,4 +999,157 @@ func (dmn *DKGMinerNodes) GetHash() string {
 
 func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
+}
+
+// getMinersList returns miners list
+func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
+	minerNodes, err := getNodesList(state, AllMinersKey)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
+		return &MinerNodes{}, nil
+	}
+
+	return minerNodes, nil
+}
+
+func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
+	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
+		return common.NewError("update_all_miners_list_failed", err.Error())
+	}
+	return nil
+}
+
+// getDKGMinersList gets dkg miners list
+func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
+	dkgMiners := NewDKGMinerNodes()
+	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
+		return dkgMiners, nil
+	}
+
+	if err := dkgMiners.Decode(allMinersDKGBytes.Encode()); err != nil {
+		return nil, fmt.Errorf("decode DKGMinersKey failed, err: %v", err)
+	}
+
+	return dkgMiners, nil
+}
+
+// updateDKGMinersList update the dkg miners list
+func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
+	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
+	return err
+}
+
+func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
+	var mpksBytes util.Serializable
+	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
+	if err != nil {
+		return nil, err
+	}
+
+	mpks := block.NewMpks()
+	if err := mpks.Decode(mpksBytes.Encode()); err != nil {
+		return nil, fmt.Errorf("failed to decode node MinersMPKKey, err: %v", err)
+	}
+
+	return mpks, nil
+}
+
+func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
+	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
+	return err
+}
+
+func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
+	magicBlockBytes, err := state.GetTrieNode(MagicBlockKey)
+	if err != nil {
+		return nil, err
+	}
+
+	magicBlock := block.NewMagicBlock()
+	if err = magicBlock.Decode(magicBlockBytes.Encode()); err != nil {
+		return nil, fmt.Errorf("failed to decode MagicBlockKey, err: %v", err)
+	}
+
+	return magicBlock, nil
+}
+
+func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) error {
+	_, err := state.InsertTrieNode(MagicBlockKey, magicBlock)
+	return err
+}
+
+func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var gsos = block.NewGroupSharesOrSigns()
+	if err = gsos.Decode(groupBytes.Encode()); err != nil {
+		return nil, fmt.Errorf("failed to decode GroupShareOrSignKey, err: %v", err)
+	}
+
+	return gsos, nil
+}
+
+func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupSharesOrSigns) error {
+	_, err := state.InsertTrieNode(GroupShareOrSignsKey, gsos)
+	return err
+}
+
+// getShardersKeepList returns the sharder list
+func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
+	sharders, err := getNodesList(balances, ShardersKeepKey)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		return &MinerNodes{}, nil
+	}
+
+	return sharders, nil
+}
+
+// getAllShardersKeepList returns the sharder list
+func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
+	sharders, err := getNodesList(balances, AllShardersKey)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		return &MinerNodes{}, nil
+	}
+	return sharders, nil
+}
+
+func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
+	_, err := state.InsertTrieNode(AllShardersKey, sharders)
+	return err
+}
+
+func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
+	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
+	return err
+}
+
+func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
+	nodesBytes, err := balances.GetTrieNode(key)
+	if err != nil {
+		return nil, err
+	}
+
+	nodesList := &MinerNodes{}
+	if err = nodesList.Decode(nodesBytes.Encode()); err != nil {
+		return nil, err
+	}
+
+	return nodesList, nil
 }

@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"errors"
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -46,12 +45,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	var all *MinerNodes
-	if all, err = msc.getMinersList(balances); err != nil {
+	all, err = getMinersList(balances)
+	if err != nil {
 		Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
 		return "", common.NewErrorf("add_miner_failed",
 			"failed to get miner list: %v", err)
 	}
+
 	msc.verifyMinerState(balances,
 		"add_miner: checking all miners list in the beginning")
 
@@ -123,7 +124,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	// add to all miners list
 	all.Nodes = append(all.Nodes, newMiner)
-	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
+	if err = updateMinersList(balances, all); err != nil {
 		return "", common.NewErrorf("add_miner_failed",
 			"saving all miners list: %v", err)
 	}
@@ -210,7 +211,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 	msg string) {
 
-	allMinersList, err := msc.getMinersList(balances)
+	allMinersList, err := getMinersList(balances)
 	if err != nil {
 		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
 			"Failed to retrieve existing miners list: " + err.Error())
@@ -235,26 +236,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
-	return msc.getMinersList(balances)
-}
-
-func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
-	all *MinerNodes, err error) {
-
-	all = new(MinerNodes)
-	allMinersBytes, err := balances.GetTrieNode(AllMinersKey)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, errors.New("get_miners_list_failed - " +
-			"failed to retrieve existing miners list: " + err.Error())
-	}
-	if allMinersBytes == nil {
-		return all, nil
-	}
-	err = all.Decode(allMinersBytes.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return all, nil
+	return getMinersList(balances)
 }
 
 func (msc *MinerSmartContract) getMinerNode(id string,
