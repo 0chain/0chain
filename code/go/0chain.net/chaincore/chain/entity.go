@@ -293,7 +293,9 @@ func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	return c.GetPrevMagicBlock(mb.StartingRound)
+	var round = mbRoundOffset(mb.StartingRound)
+
+	return c.GetPrevMagicBlock(round)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
