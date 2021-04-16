@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 
@@ -78,7 +77,7 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 }
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
+	allShardersList, err := getAllShardersList(balances)
 	if err != nil {
 		return "", err
 	}
@@ -86,7 +85,7 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 }
 
 func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances, ShardersKeepKey)
+	allShardersList, err := getShardersKeepList(balances)
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +93,7 @@ func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, pa
 }
 
 func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	dkgMinersList, err := msc.getMinersDKGList(balances)
+	dkgMinersList, err := getDKGMinersList(balances)
 	if err != nil {
 		return "", err
 	}
@@ -104,29 +103,11 @@ func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, param
 func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
-	var mpks block.Mpks
-	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
-	if err != nil {
-		return nil, err
-	}
-	err = mpks.Decode(mpksBytes.Encode())
-	if err != nil {
-		return "", err
-	}
-	return mpks, nil
+	return getMinersMPKs(balances)
 }
 
 func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	gsos := block.NewGroupSharesOrSigns()
-	groupBytes, err := balances.GetTrieNode(GroupShareOrSignsKey)
-	if err != nil {
-		return nil, err
-	}
-	err = gsos.Decode(groupBytes.Encode())
-	if err != nil {
-		return "", err
-	}
-	return gsos, nil
+	return getGroupShareOrSigns(balances)
 }
 
 func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -138,16 +119,7 @@ func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.V
 }
 
 func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	magicBlockBytes, err := balances.GetTrieNode(MagicBlockKey)
-	if err != nil {
-		return nil, err
-	}
-	magicBlock := block.NewMagicBlock()
-	err = magicBlock.Decode(magicBlockBytes.Encode())
-	if err != nil {
-		return nil, err
-	}
-	return magicBlock, nil
+	return getMagicBlock(balances)
 }
 
 /*
@@ -202,7 +174,7 @@ func (msc *MinerSmartContract) configsHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var gn *GlobalNode
-	if gn, err = msc.getGlobalNode(balances); err != nil {
+	if gn, err = getGlobalNode(balances); err != nil {
 		return
 	}
 

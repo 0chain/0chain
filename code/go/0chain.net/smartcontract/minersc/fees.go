@@ -159,10 +159,10 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	err error) {
 
 	var miners, sharders *MinerNodes
-	if miners, err = msc.getMinersList(balances); err != nil {
+	if miners, err = getMinersList(balances); err != nil {
 		return fmt.Errorf("getting all miners list: %v", err)
 	}
-	sharders, err = msc.getShardersList(balances, AllShardersKey)
+	sharders, err = getAllShardersList(balances)
 	if err != nil {
 		return fmt.Errorf("getting all sharders list: %v", err)
 	}
@@ -252,7 +252,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	var dmn *DKGMinerNodes
-	if dmn, err = msc.getMinersDKGList(balances); err != nil {
+	if dmn, err = getDKGMinersList(balances); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't get DKG miners: %v", err)
 	}
@@ -290,8 +290,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
-	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
-	if err != nil {
+	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
 	}
@@ -335,7 +334,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	var mn *MinerNode
 	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
 		// TODO: remove this debug info after issue is fixed.
-		all, er := msc.getMinersList(balances)
+		all, er := getMinersList(balances)
 		if er != nil {
 			Logger.Debug("get miners list failed",
 				zap.Error(er),
