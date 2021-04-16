@@ -71,7 +71,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
 			logging.Logger.Error("invalid share or sign",
-				zap.Error(err), zap.Any("sign_status", ok),
+				zap.Error(err), zap.Any("minersc/dkg.gosign_status", ok),
 				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 			return
 		}
@@ -80,7 +80,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		return
 	}
 
-	n.RequestEntityFromNode(ctx, DKGShareSender, params, handler)
+	if !n.RequestEntityFromNode(ctx, DKGShareSender, params, handler) {
+		return common.NewError("send_dkg_share", "send message failed")
+	}
 
 	if len(shareOrSignSuccess) == 0 {
 		return common.NewError("send_dkg_share", "miner returned error")

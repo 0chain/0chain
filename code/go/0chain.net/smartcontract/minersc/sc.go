@@ -113,7 +113,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
-	gn, err := msc.getGlobalNode(balances)
+	gn, err := getGlobalNode(balances)
 	if err != nil {
 		return "", common.NewError("failed_to_get_global_node", err.Error())
 	}
@@ -162,7 +162,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
-func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
+func getGlobalNode(balances cstate.StateContextI) (
 	gn *GlobalNode, err error) {
 
 	gn = new(GlobalNode)

@@ -94,6 +94,7 @@ func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityReques
 	rhandler := requestor(params, handler)
 	select {
 	case <-ctx.Done():
+		Logger.Error("RequestEntityFromNode failed", zap.Error(ctx.Err()))
 		return false
 	default:
 		return rhandler(n)

@@ -1,6 +1,11 @@
 package minersc
 
 import (
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
@@ -13,10 +18,6 @@ import (
 	"0chain.net/core/util"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/require"
-	"os"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 const (
@@ -300,7 +301,8 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	var allMiners = &MinerNodes{
 		Nodes: []*MinerNode{miner},
 	}
-	_, err = ctx.InsertTrieNode(AllMinersKey, allMiners)
+
+	err = updateMinersList(ctx, allMiners)
 	require.NoError(t, err)
 
 	var sharders = []*MinerNode{}
@@ -328,7 +330,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	var allSharders = &MinerNodes{
 		Nodes: sharders,
 	}
-	_, err = ctx.InsertTrieNode(AllShardersKey, allSharders)
+	err = updateAllShardersList(ctx, allSharders)
 	require.NoError(t, err)
 
 	ctx.LastestFinalizedMagicBlock.Miners.Nodes = []*node.Node{{}}
@@ -339,7 +341,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	globalNode.ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
 		var allMinersList = NewDKGMinerNodes()
-		_, err = ctx.InsertTrieNode(DKGMinersKey, allMinersList)
+		err = updateDKGMinersList(ctx, allMinersList)
 	}
 
 	_, err = msc.payFees(txn, nil, globalNode, ctx)
