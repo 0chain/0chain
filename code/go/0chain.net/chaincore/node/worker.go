@@ -78,7 +78,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
 	nodes := np.shuffleNodesLock()
-	for _, node := range nodes {
+	for i, node := range nodes {
 		select {
 		case <-ctx.Done():
 			N2n.Debug("[monitor] status monitor canceled - statusMonitor",
@@ -92,7 +92,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 			continue
 		}
 		if common.Within(node.GetLastActiveTime().Unix(), 10) {
-			node.updateMessageTimings()
+			nodes[i].updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
 				N2n.Debug("node active check - active",
 					zap.Int64("start round", startRound),
@@ -141,7 +141,8 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 					zap.Int("node port", nd.Port),
 					zap.String("node n2n host", nd.N2NHost),
 					zap.Int64("ErrCount", nd.GetErrorCount()),
-					zap.Int64("ErrThresholdCount", CountErrorThresholdNodeInactive))
+					zap.Int64("ErrThresholdCount", CountErrorThresholdNodeInactive),
+					zap.String("pool miners pointer", fmt.Sprintf("%p", np)))
 				return
 			}
 
@@ -149,7 +150,8 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 				zap.Int64("start round", startRound),
 				zap.String("node host", nd.Host),
 				zap.Int("node port", nd.Port),
-				zap.String("node n2n host", nd.N2NHost))
+				zap.String("node n2n host", nd.N2NHost),
+				zap.String("miners  pointer", fmt.Sprintf("%p", np)))
 			info := Info{}
 			if err := common.FromJSON(resp.Body, &info); err == nil {
 				info.AsOf = time.Now()
@@ -165,7 +167,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 			nd.SetErrorCount(0)
 			nd.SetStatus(NodeStatusActive)
 			nd.SetLastActiveTime(ts)
-		}(node)
+		}(nodes[i])
 	}
 	np.ComputeNetworkStats()
 }

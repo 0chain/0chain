@@ -33,51 +33,55 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go node.Self.Underlying().MemoryUsage()
 }
 
-/*FinalizeRoundWorker - a worker that handles the finalized blocks */
+// StatusMonitor monitors and updates the node connection status on current magic block
 func (c *Chain) StatusMonitor(ctx context.Context) {
 	mb := c.GetCurrentMagicBlock()
-	monitorRound := mb.StartingRound
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
 	cancel := startStatusMonitor(mb, ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
+			cancel()
 			return
 		case newRound := <-UpdateNodes:
-			mb := c.GetMagicBlockNoOffset(newRound)
-			N2n.Debug("Got nodes update",
-				zap.Int64("monitoring round", monitorRound),
-				zap.Int64("new round", newRound),
-				zap.Int64("mb starting round", mb.StartingRound))
+			newMB := c.GetMagicBlockNoOffset(newRound)
+			if newMB == mb {
+				continue
+			}
 
-			if mb.StartingRound <= monitorRound {
+			N2n.Debug("Got nodes update",
+				zap.Int64("monitoring round", mb.StartingRound),
+				zap.Int64("new round", newRound),
+				zap.Int64("mb starting round", newMB.StartingRound))
+
+			if newMB.StartingRound < mb.StartingRound {
 				continue
 			}
 
 			N2n.Info("Restart status monitor - update nodes",
 				zap.Int64("update round", newRound),
-				zap.Int64("mb starting round", mb.StartingRound))
+				zap.Int64("mb starting round", newMB.StartingRound))
 			cancel()
-			monitorRound = newRound
-			cancel = startStatusMonitor(mb, ctx)
+			mb = newMB
+			cancel = startStatusMonitor(newMB, ctx)
 		case <-newMagicBlockCheckTk.C:
-			mb := c.GetCurrentMagicBlock()
+			cmb := c.GetCurrentMagicBlock()
 			// current magic block may be kicked back, restart if changed.
 			N2n.Debug("new mb status monitor ticker",
-				zap.Int64("current mb starting round", mb.StartingRound),
-				zap.Int64("monitoring round", monitorRound))
+				zap.Int64("current mb starting round", cmb.StartingRound),
+				zap.Int64("monitoring round", mb.StartingRound))
 
-			if mb.StartingRound == monitorRound {
+			if cmb == mb {
 				continue
 			}
 
 			N2n.Info("Restart status monitor - new mb detected",
-				zap.Int64("starting round", mb.StartingRound),
-				zap.Int64("previous starting round", monitorRound))
+				zap.Int64("starting round", cmb.StartingRound),
+				zap.Int64("previous starting round", mb.StartingRound))
 			cancel()
-			monitorRound = mb.StartingRound
-			cancel = startStatusMonitor(mb, ctx)
+			mb = cmb
+			cancel = startStatusMonitor(cmb, ctx)
 		}
 	}
 }
