@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -155,10 +157,11 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
-		logging.Logger.Debug("dkg process: trying",
+		logging.Logger.Debug("dkg process trying",
 			zap.Any("next_phase", pn),
-			zap.Any("current_phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+			zap.Bool("active", active),
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
@@ -171,10 +174,9 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Info("dkg process: run phase func",
-			zap.Any("next_phase", pn),
-			zap.Any("current_phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+		logging.Logger.Info("dkg process start", zap.Any("next_phase", pn),
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
 		if !ok {
@@ -210,6 +212,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 	}
 
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
 func (vcp *viewChangeProcess) clearViewChange() {

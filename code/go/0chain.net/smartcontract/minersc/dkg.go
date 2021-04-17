@@ -94,6 +94,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	return nil
 }
 
+// moveToShareOrPublish move function for contribute phase
 func (msc *MinerSmartContract) moveToShareOrPublish(
 	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) error {
 
@@ -240,6 +241,9 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		if err := currentMoveFunc(balances, pn, gn); err != nil {
 			Logger.Error("failed to move phase",
 				zap.Any("phase", pn.Phase),
+				zap.Int64("phase start round", pn.StartRound),
+				zap.Int64("phase current round", pn.CurrentRound),
+				zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
 			msc.RestartDKG(pn, balances)
@@ -579,7 +583,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
-	Logger.Debug("contribute_mpk success", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	Logger.Debug("contribute_mpk success",
+		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 
 	return string(mpk.Encode()), nil
 }
@@ -625,6 +630,12 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	if err = sos.Decode(inputData); err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
 			"decoding input %v", err)
+	}
+
+	if len(sos.ShareOrSigns) < dmn.K-1 {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
+			len(sos.ShareOrSigns), dmn.K-1)
 	}
 
 	msc.mutexMinerMPK.Lock()
