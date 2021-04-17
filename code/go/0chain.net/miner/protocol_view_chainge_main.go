@@ -123,7 +123,11 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
 
 	for k := range mpks.Mpks {
-		if _, ok := sos.ShareOrSigns[k]; !ok && k != selfNodeKey {
+		if k == selfNodeKey {
+			continue
+		}
+
+		if _, ok := sos.ShareOrSigns[k]; !ok {
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
 		}
@@ -213,6 +217,8 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 	for _, v := range mc.viewChangeProcess.viewChangeDKG.Mpk {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
+
+	Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
 
 	var data = new(httpclientutil.SmartContractTxnData)
 	data.Name = scNameContributeMpk

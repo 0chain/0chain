@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -143,9 +145,11 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
-		logging.Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+		logging.Logger.Debug("dkg process trying",
+			zap.Any("next_phase", pn),
+			zap.Bool("active", active),
+			zap.String("phase", mc.CurrentPhase().String()),
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		// skip the check only for share
 		if pn.Phase != minersc.Share {
@@ -161,7 +165,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		logging.Logger.Info("dkg process start", zap.Any("next_phase", pn),
 			zap.Any("phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
 		if !ok {
@@ -169,6 +173,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 				zap.Any("phase", pn.Phase))
 			continue
 		}
+
+		Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
 
 		var txn *httpclientutil.Transaction
 		if txn, err = scFunc(ctx, lfb, mb, active); err != nil {
@@ -192,6 +198,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 	}
 
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
 func (vcp *viewChangeProcess) clearViewChange() {

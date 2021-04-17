@@ -94,6 +94,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	return nil
 }
 
+// moveToShareOrPublish move function for contribute phase
 func (msc *MinerSmartContract) moveToShareOrPublish(
 	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) error {
 
@@ -240,6 +241,9 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		if err := currentMoveFunc(balances, pn, gn); err != nil {
 			Logger.Error("failed to move phase",
 				zap.Any("phase", pn.Phase),
+				zap.Int64("phase start round", pn.StartRound),
+				zap.Int64("phase current round", pn.CurrentRound),
+				zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
 			msc.RestartDKG(pn, balances)
@@ -579,7 +583,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
-	Logger.Debug("contribute_mpk success", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	Logger.Debug("contribute_mpk success",
+		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 
 	return string(mpk.Encode()), nil
 }
@@ -627,11 +632,10 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			"decoding input %v", err)
 	}
 
-	// TODO (sfxdx): What the dmn.N-2 means here?
-	//               Should it be T or K, shouldn't it?
-	if len(sos.ShareOrSigns) < dmn.N-2 {
-		return "", common.NewError("share_signs_or_shares",
-			"number of share or signs doesn't equal N for this dkg")
+	if len(sos.ShareOrSigns) < dmn.K-1 {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
+			len(sos.ShareOrSigns), dmn.K-1)
 	}
 
 	msc.mutexMinerMPK.Lock()
