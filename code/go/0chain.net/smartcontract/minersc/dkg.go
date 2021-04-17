@@ -677,13 +677,6 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			"decoding input %v", err)
 	}
 
-	// TODO (sfxdx): What the dmn.N-2 means here?
-	//               Should it be T or K, shouldn't it?
-	if len(sos.ShareOrSigns) < dmn.N-2 {
-		return "", common.NewError("share_signs_or_shares",
-			"number of share or signs doesn't equal N for this dkg")
-	}
-
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 
@@ -700,6 +693,13 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	if err = mpks.Decode(mpksBytes.Encode()); err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
 			"invalid state: decoding miners MPK: %v", err)
+	}
+
+	// We may use != instead of < here? @kenwes13
+	if len(sos.ShareOrSigns) < len(mpks.Mpks)-1 {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"not enough signs or shares; expected=%d, received=%d",
+			len(mpks.Mpks)-1, len(sos.ShareOrSigns))
 	}
 
 	var publicKeys = make(map[string]string)
