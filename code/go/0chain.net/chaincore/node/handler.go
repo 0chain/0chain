@@ -92,9 +92,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if nd.IsActive() {
-		info := Self.Underlying().Info.Copy()
-		N2n.Info("status handler -- sending data", zap.Any("data", &info))
-		common.Respond(w, r, &info, nil)
+		info := Self.Underlying().Info
+		N2n.Info("status handler -- sending data", zap.Any("data", info))
+		common.Respond(w, r, info, nil)
 		return
 	}
 	data := r.FormValue("data")
@@ -122,9 +122,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		nd.SetStatus(NodeStatusActive)
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
-	info := Self.Underlying().Info.Copy()
-	N2n.Info("status handler -- sending data", zap.Any("data", &info))
-	common.Respond(w, r, &info, nil)
+	info := Self.Underlying().Info
+	N2n.Info("status handler -- sending data", zap.Any("data", info))
+	common.Respond(w, r, info, nil)
 }
 
 //ToDo: Move this to MagicBlock logic
