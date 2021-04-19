@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Allocate interactive TTY to allow Ctrl-C.

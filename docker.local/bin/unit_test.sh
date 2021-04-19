@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # Allocate interactive TTY to allow Ctrl-C.
@@ -10,7 +10,7 @@ IMAGE=""
 GENERAL_IMAGE="zchain_unit_test"
 SC_IMAGE="zchain_sc_unit_test"
 
-if [[ "$@" == *"--ci"* ]]
+if [[ "$*" == *"--ci"* ]]
 then
     # We need non-interactive mode for CI
     INTERACTIVE=""
@@ -21,7 +21,7 @@ then
 else
     PACKAGE="$1"
 
-    if [[ "$@" == *"--sc"* ]]
+    if [[ "$*" == *"--sc"* ]]
     then
         IMAGE="$SC_IMAGE"
         echo "Building SC test image"
