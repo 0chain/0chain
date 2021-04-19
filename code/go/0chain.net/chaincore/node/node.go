@@ -637,15 +637,15 @@ func (n *Node) SetNodeInfo(oldNode *Node) {
 	n.Status = oldNode.Status
 }
 
-func (n *Node) SetInfo(info Info) {
+func (n *Node) SetInfo(info *Info) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
-	n.Info = info
+	n.Info = info.Copy()
 }
 
 // GetInfo returns copy Info.
 func (n *Node) GetInfo() Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
-	return n.Info
+	return n.Info.Copy()
 }

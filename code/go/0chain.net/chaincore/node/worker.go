@@ -153,7 +153,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 			info := Info{}
 			if err := common.FromJSON(resp.Body, &info); err == nil {
 				info.AsOf = time.Now()
-				nd.SetInfo(info)
+				nd.SetInfo(&info)
 			}
 			resp.Body.Close()
 			if !nd.IsActive() {
