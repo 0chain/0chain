@@ -13,8 +13,6 @@ if [[ "$1" == *"--ci"* ]]
 then
     # We need non-interactive mode for CI
     INTERACTIVE=""
-    echo piers intereative
-
     echo "Building both general and SC test images"
     docker build -f docker.local/build.sc_unit_test/Dockerfile . -t zchain_sc_unit_test
     docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
@@ -34,7 +32,7 @@ else
 fi
 
 GO_TEST="go test -v -cover -tags bn256"
-echo piers pacage $PACKAGE
+
 if [[ -n "$PACKAGE" ]]; then
     # Run tests from a single package.
     # assume that $PACKAGE looks something like: 0chain.net/chaincore/threshold/bls
