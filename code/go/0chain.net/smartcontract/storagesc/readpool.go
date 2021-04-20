@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -499,7 +500,8 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return
+		err := smartcontract.NewError(smartcontract.FailRetrievingReadPoolErr, err)
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 
 	var (
@@ -533,7 +535,8 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		return
+		err := smartcontract.NewError(smartcontract.FailRetrievingReadPoolErr, err)
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 
 	return rp.stat(common.Now()), nil

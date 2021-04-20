@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +28,9 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 		return nil, err
 	}
 	err = alloc.Decode(allocb.Encode())
+	if err != nil {
+		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
+	}
 	return
 }
 

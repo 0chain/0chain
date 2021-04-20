@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract"
 	"errors"
 	"fmt"
 	"net/url"
@@ -239,6 +240,9 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	if us == nil {
 		return un, nil
 	}
-	un.Decode(us.Encode())
-	return un, err
+	err = un.Decode(us.Encode())
+	if err != nil {
+		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
+	}
+	return un, nil
 }

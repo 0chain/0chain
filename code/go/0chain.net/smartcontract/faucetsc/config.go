@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"net/url"
 	"time"
@@ -37,5 +38,10 @@ func getConfig() (conf *faucetConfig, err error) {
 
 func (fc *FaucetSmartContract) getConfigHandler(context.Context,
 	url.Values, chainstate.StateContextI) (interface{}, error) {
-	return getConfig()
+	res, err := getConfig()
+	if err != nil {
+		err := smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err.Error())
+		return nil, smartcontract.WrapErrNoResource(err)
+	}
+	return res, nil
 }

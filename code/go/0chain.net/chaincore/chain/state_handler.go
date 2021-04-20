@@ -1,8 +1,11 @@
 package chain
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -12,9 +15,9 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	sc "0chain.net/smartcontract"
 
 	"0chain.net/chaincore/transaction"
-	// "0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -31,6 +34,46 @@ func SetupStateHandlers() {
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
 }
 
+func RespondSCRest(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		data := make(map[string]interface{}, 2)
+		data["error"] = err.Error()
+		if cErr, ok := err.(*common.Error); ok {
+			data["code"] = cErr.Code
+		}
+
+		switch {
+		case errors.Is(err, sc.NewErrInvalidRequest()):
+			w.WriteHeader(http.StatusBadRequest)
+		case errors.Is(err, sc.NewErrInternal()):
+			w.WriteHeader(http.StatusInternalServerError)
+		case errors.Is(err, sc.NewErrNoResource()):
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		buf := bytes.NewBuffer(nil)
+		json.NewEncoder(buf).Encode(data)
+		buf.WriteTo(w)
+		return
+	}
+	if data != nil {
+		w.Header().Set("Content-Type", "application/json")
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			json.NewEncoder(w).Encode(data)
+		} else {
+			w.Header().Set("Content-Encoding", "gzip")
+			gzw := gzip.NewWriter(w)
+			defer gzw.Close()
+			json.NewEncoder(gzw).Encode(data)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
@@ -42,7 +85,12 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 		scRestRE = regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
 		pathParams = scRestRE.FindStringSubmatch(r.URL.Path)
 		if len(pathParams) == 3 {
-			common.ToJSONResponse(c.GetSCRestOutput)(w, r)
+			if !common.CheckCrossOrigin(w, r) {
+				return
+			}
+			ctx := r.Context()
+			data, err := c.GetSCRestOutput(ctx, r)
+			RespondSCRest(w, r, data, err)
 		} else {
 			c.GetSCRestPoints(w, r)
 		}

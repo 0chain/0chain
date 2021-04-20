@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract"
 	"errors"
 	"fmt"
 
@@ -149,7 +150,7 @@ func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
 	}
 	err = allMinersList.Decode(allMinersBytes.Encode())
 	if err != nil {
-		return nil, err
+		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
 	}
 	return allMinersList, nil
 }

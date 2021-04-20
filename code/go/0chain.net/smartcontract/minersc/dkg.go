@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract"
 	"errors"
 	"reflect"
 	"runtime"
@@ -788,7 +789,10 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 	if allMinersBytes == nil {
 		return allMinersList, nil
 	}
-	allMinersList.Decode(allMinersBytes.Encode())
+	err = allMinersList.Decode(allMinersBytes.Encode())
+	if err != nil {
+		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
+	}
 	return allMinersList, nil
 }
 

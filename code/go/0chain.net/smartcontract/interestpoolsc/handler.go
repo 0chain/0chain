@@ -1,26 +1,28 @@
 package interestpoolsc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
-	"time"
-	// "encoding/json"
+	"fmt"
 	"net/url"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 )
 
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	un := ip.getUserNode(params.Get("client_id"), balances)
 	if len(un.Pools) == 0 {
-		return nil, common.NewError("failed to get stats", "no pools exist")
+		err := fmt.Errorf("%w: %s", smartcontract.FailRetrievingStatsErr, "no pools exist")
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
 		stat, err := ip.getPoolStats(pool, t)
 		if err != nil {
-			return nil, common.NewError("failed to get stats", "crap this shouldn't happen")
+			err = smartcontract.NewError(smartcontract.FailRetrievingStatsErr, err)
+			return nil, smartcontract.WrapErrInternal(err)
 		}
 		stats.addStat(stat)
 	}

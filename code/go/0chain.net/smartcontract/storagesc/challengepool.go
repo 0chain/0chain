@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -364,15 +365,24 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	)
 
 	if allocationID == "" {
-		return nil, errors.New("missing allocation_id URL query parameter")
+		err := errors.New("missing allocation_id URL query parameter")
+		return nil, smartcontract.WrapErrInvalidRequest(err)
 	}
 
 	if alloc, err = ssc.getAllocation(allocationID, balances); err != nil {
-		return
+		intErr := smartcontract.NewError(smartcontract.FailRetrievingAllocationErr, err)
+
+		switch {
+		case errors.Is(err, util.ErrValueNotPresent):
+			return nil, smartcontract.WrapErrNoResource(intErr)
+		default:
+			return nil, smartcontract.WrapErrInternal(intErr)
+		}
 	}
 
 	if cp, err = ssc.getChallengePool(allocationID, balances); err != nil {
-		return
+		err := smartcontract.NewError(smartcontract.FailRetrievingChallengePoolErr, err)
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 
 	return cp.stat(alloc), nil

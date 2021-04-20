@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -572,7 +573,8 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		err := smartcontract.NewError(smartcontract.FailRetrievingWritePoolErr, err)
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 
 	var (
@@ -606,7 +608,8 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		err := smartcontract.NewError(smartcontract.FailRetrievingWritePoolErr, err)
+		return nil, smartcontract.WrapErrNoResource(err)
 	}
 
 	return wp.stat(common.Now()), nil

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -353,7 +354,7 @@ func (ssc *StorageSmartContract) getConfig(
 	}
 
 	if err = conf.Decode(confb); err != nil {
-		return nil, err
+		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
 	}
 	return
 }
@@ -366,12 +367,18 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	conf, err = ssc.getConfig(balances, false)
 
 	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
+		err = smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
+		return nil, smartcontract.WrapErrInternal(err)
 	}
 
 	// return configurations from sc.yaml not saving them
 	if err == util.ErrValueNotPresent {
-		return getConfiguredConfig()
+		res, err := getConfiguredConfig()
+		if err != nil {
+			err = smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
+			return nil, smartcontract.WrapErrInternal(err)
+		}
+		return res, nil
 	}
 
 	return conf, nil // actual value
