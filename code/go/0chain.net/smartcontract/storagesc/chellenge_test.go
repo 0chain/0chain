@@ -448,10 +448,10 @@ type formulaeBlobberReward struct {
 
 func (f formulaeBlobberReward) reward() int64 {
 	var challengePool = float64(f.challengePoolIntegralValue)
-	var passedPrevious = f.previousChallange
-	var passedCurrent = f.thisChallange
-	var currentExpires = f.thisExpires
-	var interpolationFraction = float64(passedCurrent-passedPrevious) / float64(currentExpires-passedPrevious)
+	var passedPrevious = float64(f.previousChallange)
+	var passedCurrent = float64(f.thisChallange)
+	var currentExpires = float64(f.thisExpires)
+	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
 
 	return int64(challengePool * interpolationFraction)
 }
