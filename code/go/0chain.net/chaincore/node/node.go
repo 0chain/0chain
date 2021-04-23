@@ -595,6 +595,9 @@ func (n *Node) getTime(uri string) float64 {
 
 func (n *Node) SetNodeInfo(oldNode *Node) {
 	// Copy timers and size to new map from oldNode
+	if n == oldNode {
+		return
+	}
 	oldNode.mutex.RLock()
 	timersByURI := make(map[string]metrics.Timer, len(oldNode.TimersByURI))
 	sizeByURI := make(map[string]metrics.Histogram, len(oldNode.SizeByURI))

@@ -19,12 +19,12 @@ type configYaml struct {
 	MinersMap          map[string]*yamlNode
 	Sharders           []*yamlNode `yaml:"sharders"`
 	ShardersMap        map[string]*yamlNode
-	Message            string `yaml:"message"`
 	MagicBlockNumber   int64  `yaml:"magic_block_number"`
 	StartingRound      int64  `yaml:"starting_round"`
 	TPercent           int    `yaml:"t_percent"`
 	KPercent           int    `yaml:"k_percent"`
 	MagicBlockFilename string `yaml:"magic_block_filename"`
+	DKGSummaryFilename string `yaml:"dkg_summary_filename"`
 }
 
 func newYaml() *configYaml {
