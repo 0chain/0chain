@@ -442,10 +442,11 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 
 	var at = dp.MintAt // last periodic mint
 
+	var floatMint = 0.0
 	for ; at+period < now; at += period {
-		mint += state.Balance(rate * float64(dp.Balance))
+		floatMint += rate * float64(dp.Balance)
 	}
-
+	mint = state.Balance(floatMint)
 	dp.MintAt = at // update last minting time
 
 	if mint == 0 {
