@@ -30,7 +30,7 @@ func TestBlobberReward(t *testing.T) {
 	var challengePoolIntegralValue = state.Balance(73000000)
 	var challengePoolBalance = state.Balance(700000)
 	var partial = 0.9
-	var preiviousChallenge = common.Timestamp(3)
+	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(99)
@@ -57,7 +57,7 @@ func TestBlobberReward(t *testing.T) {
 	t.Run("test blobberReward", func(t *testing.T) {
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -65,7 +65,7 @@ func TestBlobberReward(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
 	})
@@ -74,7 +74,7 @@ func TestBlobberReward(t *testing.T) {
 		var challengePoolBalance = state.Balance(0)
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	})
@@ -83,7 +83,7 @@ func TestBlobberReward(t *testing.T) {
 		var stakes = []int64{}
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errNoStakePools))
 		require.True(t, strings.Contains(err.Error(), errRewardBlobber))
@@ -93,7 +93,7 @@ func TestBlobberReward(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {999}, {}}
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errNoStakePools))
 		require.True(t, strings.Contains(err.Error(), errRewardValidator))
