@@ -2,7 +2,6 @@ package vestingsc
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"testing"
 	"time"
@@ -506,7 +505,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Equal(t, fmt.Errorf("%w: %s", common.ErrNoResource, "can't get pool: value not present"), err)
+	require.Equal(t, common.NewErrNoResource("can't get pool: value not present"), err)
 
 	balances.balances[client.id] = 200e10
 
