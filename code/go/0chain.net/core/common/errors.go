@@ -10,15 +10,21 @@ var (
 	ErrTemporaryFailure = NewError("temporary_failure", "Please retry again later")
 
 	// ErrNoResource represents error corresponds to http.StatusNotFound.
-	ErrNoResource = NewError("resource_not_found", "can't retrieve resource")
+	ErrNoResource = NewError(ErrNoResourceCode, "can't retrieve resource")
 
 	// ErrBadRequest represents error corresponds to http.StatusBadRequest.
-	ErrBadRequest = NewError("bad_request", "request is invalid")
+	ErrBadRequest = NewError(ErrBadRequestCode, "request is invalid")
 
 	// ErrInternal represents error corresponds to http.StatusInternalServerError.
-	ErrInternal = NewError("internal", "internal server error")
+	ErrInternal = NewError(ErrInternalCode, "internal server error")
 
 	ErrDecoding = errors.New("decoding error")
+)
+
+const (
+	ErrNoResourceCode = "resource_not_found"
+	ErrBadRequestCode = "invalid_request"
+	ErrInternalCode   = "internal_error"
 )
 
 /*Error type for a new application error */
@@ -29,6 +35,15 @@ type Error struct {
 
 func (err *Error) Error() string {
 	return fmt.Sprintf("%s: %s", err.Code, err.Msg)
+}
+
+func (err *Error) Is(target error) bool {
+	t, ok := target.(*Error)
+	if ok {
+		return err.Code == t.Code
+	}
+
+	return false
 }
 
 /*NewError - create a new error */
@@ -46,29 +61,29 @@ func InvalidRequest(msg string) error {
 	return NewError("invalid_request", fmt.Sprintf("Invalid request (%v)", msg))
 }
 
-// WrapErrInternal wraps ErrInternal in new error with provided messages and returns resulted error.
-func WrapErrInternal(msgs ...string) error {
+// NewErrInternal creates new Error with ErrInternalCode.
+func NewErrInternal(msgs ...string) error {
 	if len(msgs) == 0 {
 		return ErrNoResource
 	}
 
-	return fmt.Errorf("%w: %s", ErrInternal, strings.Join(msgs, ": "))
+	return NewError(ErrInternalCode, strings.Join(msgs, ": "))
 }
 
-// WrapErrNoResource wraps ErrNoResource in new error with provided messages and returns resulted error.
-func WrapErrNoResource(msgs ...string) error {
+// NewErrNoResource creates new Error with ErrNoResourceCode.
+func NewErrNoResource(msgs ...string) error {
 	if len(msgs) == 0 {
 		return ErrNoResource
 	}
 
-	return fmt.Errorf("%w: %s", ErrNoResource, strings.Join(msgs, ": "))
+	return NewError(ErrNoResourceCode, strings.Join(msgs, ": "))
 }
 
-// WrapErrBadRequest wraps ErrBadRequest in new error with provided messages and returns resulted error.
-func WrapErrBadRequest(msgs ...string) error {
+// NewErrBadRequest creates new Error with ErrBadRequestCode.
+func NewErrBadRequest(msgs ...string) error {
 	if len(msgs) == 0 {
 		return ErrBadRequest
 	}
 
-	return fmt.Errorf("%w: %s", ErrBadRequest, strings.Join(msgs, ": "))
+	return NewError(ErrBadRequestCode, strings.Join(msgs, ": "))
 }

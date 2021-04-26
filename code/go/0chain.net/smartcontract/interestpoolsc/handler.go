@@ -1,7 +1,7 @@
 package interestpoolsc
 
 import (
-	"0chain.net/smartcontract"
+	"0chain.net/core/common"
 	"context"
 	"fmt"
 	"net/url"
@@ -13,16 +13,14 @@ import (
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	un := ip.getUserNode(params.Get("client_id"), balances)
 	if len(un.Pools) == 0 {
-		err := fmt.Errorf("%w: %s", smartcontract.FailRetrievingStatsErr, "no pools exist")
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, common.NewErrNoResource("can't find user node")
 	}
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
 		stat, err := ip.getPoolStats(pool, t)
 		if err != nil {
-			err = smartcontract.NewError(smartcontract.FailRetrievingStatsErr, err)
-			return nil, smartcontract.WrapErrInternal(err)
+			return nil, common.NewErrInternal("can't get pool stats", err.Error())
 		}
 		stats.addStat(stat)
 	}
@@ -34,7 +32,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	statBytes := pool.LockStats(t)
 	err := stat.decode(statBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	stat.ID = pool.ID
 	stat.Locked = pool.IsLocked(t)

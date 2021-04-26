@@ -266,6 +266,9 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	}
 	rp = new(readPool)
 	err = rp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -500,8 +503,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingReadPoolErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get retrieving read pool")
 	}
 
 	var (
@@ -524,6 +526,8 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	return &stat, nil
 }
 
+const cantReadPoolMsg = "can't get read pool"
+
 // statistic for all locked tokens of the read pool
 func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
@@ -535,8 +539,7 @@ func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	)
 
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingReadPoolErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get read pool")
 	}
 
 	return rp.stat(common.Now()), nil

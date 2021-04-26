@@ -784,6 +784,9 @@ func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
 	}
 	usp = newUserStakePools()
 	err = usp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -832,6 +835,9 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	}
 	sp = newStakePool()
 	err = sp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -1122,6 +1128,8 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 // stat
 //
 
+const cantGetStakePoolMsg = "can't get related stake pool"
+
 // statistic for all locked tokens of a stake pool
 func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
@@ -1135,18 +1143,15 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 	)
 
 	if conf, err = ssc.getConfig(balances, false); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	if blobber, err = ssc.getBlobber(blobberID, balances); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingBlobberErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobberMsg)
 	}
 
 	if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingStakePool, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 	}
 
 	return sp.stat(conf, ssc.ID, common.Now(), blobber), nil
@@ -1169,8 +1174,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 	)
 
 	if conf, err = ssc.getConfig(balances, false); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	var (
@@ -1180,8 +1184,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 
 	usp, err = ssc.getUserStakePool(clientID, balances)
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingUserStakePoolErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get user stake pool")
 	}
 
 	var ups = new(userPoolStat)
@@ -1191,15 +1194,13 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
-			err := smartcontract.NewError(smartcontract.FailRetrievingStakePool, err)
-			return nil, smartcontract.WrapErrNoResource(err)
+			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 		}
 
 		for _, id := range poolIDs {
 			var dp, ok = sp.Pools[id]
 			if !ok {
-				err := errors.New("missing delegate pool")
-				return nil, smartcontract.WrapErrNoResource(err)
+				return nil, common.NewErrNoResource("missing delegate pool")
 			}
 			var dps = delegatePoolStat{
 				ID:         dp.ID,

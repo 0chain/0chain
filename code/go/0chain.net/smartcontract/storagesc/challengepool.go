@@ -299,6 +299,9 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	}
 	cp = newChallengePool()
 	err = cp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -366,23 +369,15 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 
 	if allocationID == "" {
 		err := errors.New("missing allocation_id URL query parameter")
-		return nil, smartcontract.WrapErrInvalidRequest(err)
+		return nil, common.NewErrBadRequest(err.Error())
 	}
 
 	if alloc, err = ssc.getAllocation(allocationID, balances); err != nil {
-		intErr := smartcontract.NewError(smartcontract.FailRetrievingAllocationErr, err)
-
-		switch {
-		case errors.Is(err, util.ErrValueNotPresent):
-			return nil, smartcontract.WrapErrNoResource(intErr)
-		default:
-			return nil, smartcontract.WrapErrInternal(intErr)
-		}
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 
 	if cp, err = ssc.getChallengePool(allocationID, balances); err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingChallengePoolErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get challenge pool")
 	}
 
 	return cp.stat(alloc), nil

@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,7 +28,7 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	}
 	err = alloc.Decode(allocb.Encode())
 	if err != nil {
-		return nil, smartcontract.NewError(smartcontract.DecodingErr, err)
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return
 }
@@ -46,8 +45,7 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	}
 	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
 	if err != nil {
-		return nil, common.NewError("getAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, "failed to retrieve existing allocations list")
 	}
 	return clientAlloc.Allocations, nil
 }
@@ -926,7 +924,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = common.NewError("allocation_creation_failed", "Invalid preferred blobber URL")
+			err = errors.New("invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)

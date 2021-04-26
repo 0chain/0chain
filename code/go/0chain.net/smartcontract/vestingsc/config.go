@@ -1,7 +1,7 @@
 package vestingsc
 
 import (
-	"0chain.net/smartcontract"
+	"0chain.net/core/common"
 	"context"
 	"errors"
 	"net/url"
@@ -71,8 +71,7 @@ func (vsc *VestingSmartContract) getConfigHandler(context.Context,
 
 	res, err := getConfig()
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("can't get config", err.Error())
 	}
 	return res, nil
 }

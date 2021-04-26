@@ -121,6 +121,34 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
+			name: "Faucet_/personalPeriodicLimit_Decoding_Global_Node_Err_500",
+			chain: func() *chain.Chain {
+				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
+
+				lfb := block.NewBlock("", 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
+				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
+					t.Fatal(err)
+				}
+
+				ch := chain.NewChainFromConfig()
+				ch.LatestFinalizedBlock = lfb
+
+				return ch
+			}(),
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					req := httptest.NewRequest(http.MethodGet, tar, nil)
+
+					return req
+				}(),
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
 			name: "Faucet_/personalPeriodicLimit_Empty_User_Node_404",
 			chain: func() *chain.Chain {
 				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
@@ -154,6 +182,51 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
+			name: "Faucet_/personalPeriodicLimit_Decoding_User_Node_Err_500",
+			chain: func() *chain.Chain {
+				gn := &faucetsc.GlobalNode{ID: faucetsc.ADDRESS}
+				blob, err := json.Marshal(gn)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gv := util.SecureSerializableValue{Buffer: blob}
+				gk := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
+
+				uv := util.SecureSerializableValue{Buffer: []byte("}{")}
+				uk := encryption.Hash(faucetsc.ADDRESS + clientID)
+
+				lfb := block.NewBlock("", 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := lfb.ClientState.Insert(util.Path(uk), &uv); err != nil {
+					t.Fatal(err)
+				}
+
+				ch := chain.NewChainFromConfig()
+				ch.LatestFinalizedBlock = lfb
+
+				return ch
+			}(),
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/personalPeriodicLimit")
+					u, err := url.Parse(tar)
+					if err != nil {
+						t.Fatal(err)
+					}
+					q := u.Query()
+					q.Set("client_id", clientID)
+					u.RawQuery = q.Encode()
+
+					return httptest.NewRequest(http.MethodGet, u.String(), nil)
+				}(),
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
 			name:  "Faucet_/globalPerodicLimit_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
@@ -168,6 +241,34 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
+			name: "Faucet_/globalPerodicLimit_Decoding_Global_Node_Err_500",
+			chain: func() *chain.Chain {
+				v := util.SecureSerializableValue{Buffer: []byte("}{")}
+				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
+
+				lfb := block.NewBlock("", 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
+					t.Fatal(err)
+				}
+
+				ch := chain.NewChainFromConfig()
+				ch.LatestFinalizedBlock = lfb
+
+				return ch
+			}(),
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					req := httptest.NewRequest(http.MethodGet, tar, nil)
+
+					return req
+				}(),
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
+		{
 			name:  "Faucet_/pourAmount_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
@@ -180,6 +281,34 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "Faucet_/pourAmount_Decoding_Global_Node_500",
+			chain: func() *chain.Chain {
+				v := util.SecureSerializableValue{Buffer: []byte("}{")}
+				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
+
+				lfb := block.NewBlock("", 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
+					t.Fatal(err)
+				}
+
+				ch := chain.NewChainFromConfig()
+				ch.LatestFinalizedBlock = lfb
+
+				return ch
+			}(),
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/pourAmount")
+					req := httptest.NewRequest(http.MethodGet, tar, nil)
+
+					return req
+				}(),
+			},
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:  "Interestpool_/getPoolsStats_Empty_User_Nodes_404",
@@ -325,7 +454,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/configs_404",
+			name: "Minersc_/configs_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -350,7 +479,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusNotFound,
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Minersc_/getMinerList_DEcoding_User_Node_Err_500",
@@ -517,6 +646,60 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			wantStatus: http.StatusNotFound,
+		},
+		{
+			name: "Minersc_/getUserPools_Decoding_Miners_Node_Err_500",
+			chain: func() *chain.Chain {
+				minerID := "miner id"
+
+				un := minersc.UserNode{
+					ID: clientID,
+					Pools: map[datastore.Key][]datastore.Key{
+						minerID: {},
+					},
+				}
+				blob, err := json.Marshal(un)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gv := util.SecureSerializableValue{Buffer: blob}
+				gk := encryption.Hash(minersc.ADDRESS + clientID)
+
+				mv := util.SecureSerializableValue{Buffer: []byte("}{")}
+				mk := encryption.Hash(minersc.ADDRESS + minerID)
+
+				lfb := block.NewBlock("", 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := lfb.ClientState.Insert(util.Path(mk), &mv); err != nil {
+					t.Fatal(err)
+				}
+
+				ch := chain.NewChainFromConfig()
+				ch.LatestFinalizedBlock = lfb
+
+				return ch
+			}(),
+			args: args{
+				w: httptest.NewRecorder(),
+				r: func() *http.Request {
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", minersc.ADDRESS, "/getUserPools")
+					u, err := url.Parse(tar)
+					if err != nil {
+						t.Fatal(err)
+					}
+					q := u.Query()
+					q.Set("client_id", clientID)
+					u.RawQuery = q.Encode()
+
+					req := httptest.NewRequest(http.MethodGet, u.String(), nil)
+
+					return req
+				}(),
+			},
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name:  "Minersc_/getMpksList_Empty_Miners_Mpks_404",
@@ -1017,7 +1200,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name: "Storagesc_/getchallenge_400",
+			name: "Storagesc_/getchallenge_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1042,10 +1225,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusBadRequest,
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Storagesc_/getblobbers_404",
+			name: "Storagesc_/getblobbers_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1071,7 +1254,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusInternalServerError,
 		},
 		{
 			name:  "Storagesc_/getBlobber_400",

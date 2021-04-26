@@ -3,7 +3,7 @@ package storagesc
 import (
 	"0chain.net/smartcontract"
 	"context"
-	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -15,6 +15,8 @@ import (
 	"0chain.net/core/util"
 )
 
+const cantGetBlobberMsg = "can't get blobber"
+
 // GetBlobberHandler returns Blobber object from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
@@ -22,13 +24,12 @@ func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
 
 	var blobberID = params.Get("blobber_id")
 	if blobberID == "" {
-		return nil, smartcontract.WrapErrInvalidRequest(errors.New("missing 'blobber_id' URL query parameter"))
+		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
 
 	bl, err := ssc.getBlobber(blobberID, balances)
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingBlobberErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber")
 	}
 
 	return bl, nil
@@ -41,8 +42,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
 
 	blobbers, err := ssc.getBlobbersList(balances)
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingBlobbersListErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
 	}
 	return blobbers, nil
 }
@@ -53,8 +53,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	clientID := params.Get("client")
 	allocations, err := ssc.getAllocationsList(clientID, balances)
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingAllocationList, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("can't get allocation list", err.Error())
 	}
 	result := make([]*StorageAllocation, 0)
 	for _, allocationID := range allocations.List {
@@ -65,7 +64,10 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		if err != nil {
 			continue
 		}
-		allocationObj.Decode(allocationBytes.Encode())
+		if err := allocationObj.Decode(allocationBytes.Encode()); err != nil {
+			msg := fmt.Sprintf("can't decode allocation with id '%s'", allocationID)
+			return nil, common.NewErrInternal(msg, err.Error())
+		}
 		result = append(result, allocationObj)
 	}
 	return result, nil
@@ -80,35 +82,25 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	allocData := params.Get("allocation_data")
 	var request newAllocationRequest
 	if err = request.decode([]byte(allocData)); err != nil {
-		err = smartcontract.NewError(smartcontract.FailAllocationMinLockErr, err)
-		return "", smartcontract.WrapErrInternal(err)
+		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		intErr := smartcontract.NewError(smartcontract.FailRetrievingConfigErr, err)
-
-		switch {
-		case errors.Is(err, util.ErrValueNotPresent):
-			return nil, smartcontract.WrapErrNoResource(intErr)
-		default:
-			return nil, smartcontract.WrapErrInternal(intErr)
-		}
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = ssc.getBlobbersList(balances)
 	if err != nil || len(allBlobbersList.Nodes) == 0 {
-		err = smartcontract.NewError(smartcontract.FailAllocationMinLockErr, smartcontract.NoRegisteredBlobberErr, err)
-		return "", smartcontract.WrapErrNoResource(err)
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
 	sa.TimeUnit = conf.TimeUnit          // keep the initial time unit
 
 	if err = sa.validate(creationDate, conf); err != nil {
-		err = smartcontract.NewError(smartcontract.FailAllocationMinLockErr, err)
-		return "", smartcontract.WrapErrInvalidRequest(err)
+		return "", common.NewErrBadRequest("allocation min lock failed", err.Error())
 	}
 
 	var (
@@ -123,8 +115,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	)
 
 	if len(list) < size {
-		err = smartcontract.NewError(smartcontract.FailAllocationMinLockErr, smartcontract.NotEnoughBlobbersErr, err)
-		return "", smartcontract.WrapErrNoResource(err)
+		return "", common.NewErrNoResource("not enough blobbers to honor the allocation")
 	}
 
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)
@@ -134,8 +125,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	if preferredBlobbersSize > 0 {
 		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
 		if err != nil {
-			err := smartcontract.NewError(smartcontract.FailAllocationMinLockErr, smartcontract.FailRetrievingPreferredBlobbers, err)
-			return "", smartcontract.WrapErrNoResource(err)
+			return "", common.NewErrNoResource("can't get preferred blobbers", err.Error())
 		}
 	}
 
@@ -160,6 +150,8 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 	return response, nil
 }
 
+const cantGetAllocation = "can't get allocation"
+
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 	allocationObj := &StorageAllocation{}
@@ -167,13 +159,11 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 
 	allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID))
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailRetrievingAllocationErr, err)
-		return nil, smartcontract.WrapErrNoResource(err)
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
 	}
 	err = allocationObj.Decode(allocationBytes.Encode())
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.FailDecodingAllocationErr, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("can't decode allocation", err.Error())
 	}
 	return allocationObj, nil
 }
@@ -197,8 +187,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	var commitReadBytes util.Serializable
 	commitReadBytes, err = balances.GetTrieNode(commitRead.GetKey(ssc.ID))
 	if err != nil && err != util.ErrValueNotPresent {
-		err = smartcontract.NewError(smartcontract.FailRetrievingReadMarker, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("can't get read marker", err.Error())
 	}
 
 	if commitReadBytes == nil {
@@ -206,8 +195,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	if err = commitRead.Decode(commitReadBytes.Encode()); err != nil {
-		err = smartcontract.NewError(smartcontract.FailDecodingReadMarker, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("can't decode read marker", err.Error())
 	}
 
 	return commitRead.ReadMarker, nil // ok
@@ -222,13 +210,11 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.BlobberChallengeReadErr, err)
-		return "", smartcontract.WrapErrNoResource(err)
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "error reading blobber challenge from DB")
 	}
 	err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.BlobberChallengeDecodingErr, err)
-		return nil, smartcontract.WrapErrInternal(err)
+		return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
 	}
 
 	// for k, v := range blobberChallengeObj.ChallengeMap {
@@ -253,14 +239,15 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
 	if err != nil {
-		err := smartcontract.NewError(smartcontract.BlobberChallengeReadErr, err)
-		return "", smartcontract.WrapErrNoResource(err)
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber challenge")
 	}
-	blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
+	if err := blobberChallengeObj.Decode(blobberChallengeBytes.Encode()); err != nil {
+		return "", common.NewErrInternal("can't decode blobber challenge", err.Error())
+	}
 
 	challengeID := params.Get("challenge")
 	if _, ok := blobberChallengeObj.ChallengeMap[challengeID]; !ok {
-		return nil, smartcontract.WrapErrInvalidRequest(errors.New("missing 'challenge' param"))
+		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 
 	return blobberChallengeObj.ChallengeMap[challengeID], nil
