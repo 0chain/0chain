@@ -21,9 +21,8 @@ require (
 	github.com/herumi/bls v0.0.0-20190423083323-d414f74643cb
 	github.com/herumi/mcl v0.0.0-20190422075523-7f408a29acdc
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
-	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/spf13/viper v1.7.0
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/valyala/gozstd v1.4.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.4.0

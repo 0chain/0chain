@@ -14,6 +14,7 @@ replace 0chain.net/conductor => ../../conductor
 
 require (
 	0chain.net/chaincore v0.0.0
+	0chain.net/conductor v0.0.0-00010101000000-000000000000
 	0chain.net/core v0.0.0
 	0chain.net/sharder v0.0.0
 	0chain.net/smartcontract v0.0.0
