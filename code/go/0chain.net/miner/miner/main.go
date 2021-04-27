@@ -248,7 +248,7 @@ func main() {
 		dkgShare.SecretShares = oldDKGShare.SecretShares
 		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
 			if config.DevConfiguration.ViewChange {
-				Logger.Error(fmt.Sprintf("Failed to verify genesis dkg", zap.Any("error", err)))
+				Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
 				Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
 			}
