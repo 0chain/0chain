@@ -20,6 +20,7 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 
 # Build it:
 ARG GIT_COMMIT
+ARG DEV
 ENV GIT_COMMIT=$GIT_COMMIT
 RUN if [ "$DEV" = "yes" ] ;\
     then echo "Artifacts will be copied from local machine";\

@@ -9,7 +9,7 @@ DOCKERDIR="$ROOT/docker.local/build.miner"
 DOCKERFILE="$DOCKERDIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKERDIR/docker-compose.yml"
 
-if [[ "$@" == *"--dev"* ]]
+if [[ "$*" == *"--dev"* ]]
 then
     echo -e "\nDevelopment mode: building miner locally\n"
 

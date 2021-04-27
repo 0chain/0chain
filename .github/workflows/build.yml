@@ -1,9 +1,12 @@
 name: Dockerize
 
 on:
-  push:
-    branches: [ master ]
   workflow_dispatch:
+    inputs:
+      latest_tag:
+        description: 'type yes for building latest tag'
+        default: 'no'
+        required: true
 
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
@@ -52,9 +55,14 @@ jobs:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push image with latest tag
-      if: github.ref == 'refs/heads/master'
       run: |
-        docker push $MINER_REGISTRY:latest
+        if [[ "$PUSH_LATEST" == "yes" ]]; then
+          docker push $MINER_REGISTRY:latest
+        else
+          echo "Skipped pushing latest tag"
+        fi
+      env:
+        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
 
   dockerize_sharder:
     runs-on: ubuntu-20.04
@@ -95,6 +103,11 @@ jobs:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push image with latest tag
-      if: github.ref == 'refs/heads/master'
       run: |
-        docker push $SHARDER_REGISTRY:latest
+        if [[ "$PUSH_LATEST" == "yes" ]]; then
+          docker push $SHARDER_REGISTRY:latest
+        else
+          echo "Skipped pushing latest tag"
+        fi
+      env:
+        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
