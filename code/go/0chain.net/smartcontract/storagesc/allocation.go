@@ -969,16 +969,7 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	return false
 }
 
-func passOnes(n int) (po []float64) {
-	po = make([]float64, n)
-	for i := range po {
-		po[i] = 1.0
-	}
-	return
-}
-
-func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation,
-	now common.Timestamp, balances chainstate.StateContextI) ([]float64, error) {
+func (sc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([]float64, error) {
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
@@ -1026,7 +1017,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			return nil, fmt.Errorf("getting blobber challenge: %v", err)
 		}
 		// no blobber challenges, no failures
-		if err == util.ErrValueNotPresent {
+		if err == util.ErrValueNotPresent || len(bc.Challenges) == 0 {
 			passRates, err = append(passRates, 1.0), nil
 			continue // no challenges for the blobber
 		}
@@ -1176,7 +1167,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	var passRates []float64
-	passRates, err = sc.finalizedPassRates(alloc, t.CreationDate, balances)
+	passRates, err = sc.finalizedPassRates(alloc)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
@@ -1237,41 +1228,26 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get all blobbers list: "+err.Error())
 	}
 
-	// we can use the i for the blobbers list above because of algorithm
-	// of the getAllocationBlobbers method; also, we can use the i in the
-	// passRates list above because of algorithm of the adjustChallenges
-	var left = cp.Balance // tokens left in related challenge pool
-	for i, d := range alloc.BlobberDetails {
-		var (
-			sp       *stakePool     // related stake pool
-			b        = blobbers[i]  // related blobber
-			passRate = passRates[i] // related success rate
-		)
+	var sps = []*stakePool{}
+	for _, d := range alloc.BlobberDetails {
+		var sp *stakePool
 		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		// challenge pool rest
-		if alloc.UsedSize > 0 && left > 0 && passRate > 0 && d.Stats != nil {
-			var (
-				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-				move  = state.Balance(float64(left) * ratio * passRate)
-			)
-			var reward state.Balance
-			if reward, err = moveReward(sc.ID, *cp.ZcnPool, sp, move, balances); err != nil {
-				return common.NewError("fini_alloc_failed",
-					"moving tokens to stake pool of "+d.BlobberID+": "+
-						err.Error())
-			}
-			sp.Rewards.Blobber += reward
-			d.Spent += move       // }
-			d.FinalReward += move // } stat
-		}
+		sps = append(sps, sp)
+	}
+
+	// we can use the i for the blobbers list above because of algorithm
+	// of the getAllocationBlobbers method; also, we can use the i in the
+	// passRates list above because of algorithm of the adjustChallenges
+	var cpLeft = cp.Balance // tokens left in related challenge pool
+	for i, d := range alloc.BlobberDetails {
 		// min lock demand rest
 		var fctrml = conf.FailedChallengesToRevokeMinLock
 		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
 			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp,
+				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sps[i],
 					alloc.Until(), lack, balances)
 				if err != nil {
 					return common.NewError("alloc_cacnel_failed",
@@ -1279,16 +1255,36 @@ func (sc *StorageSmartContract) finishAllocation(
 				}
 				d.Spent += lack
 				d.FinalReward += lack
+				cpLeft -= lack
 			}
 		}
-		// -------
+	}
+	var passPayments state.Balance = 0
+	for i, d := range alloc.BlobberDetails {
+		var b = blobbers[i] // related blobber
+		if alloc.UsedSize > 0 && cpLeft > 0 && passRates[i] > 0 && d.Stats != nil {
+			var (
+				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+				move  = state.Balance(float64(cpLeft) * ratio * passRates[i])
+			)
+			var reward state.Balance
+			if reward, err = moveReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
+				return common.NewError("fini_alloc_failed",
+					"moving tokens to stake pool of "+d.BlobberID+": "+
+						err.Error())
+			}
+			sps[i].Rewards.Blobber += reward
+			d.Spent += move
+			d.FinalReward += move
+			passPayments += move
+		}
 		var info *stakePoolUpdateInfo
-		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		info, err = sps[i].update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return common.NewError("fini_alloc_failed",
 				"updating stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err = sp.save(sc.ID, d.BlobberID, balances); err != nil {
+		if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
@@ -1302,7 +1298,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		// update the blobber in all (replace with existing one)
 		allb.Nodes.update(b)
 	}
-
+	cp.Balance = cpLeft - passPayments
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
 	err = cp.moveToWritePool(alloc.ID, "", alloc.Until(), wp, cp.Balance)
