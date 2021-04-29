@@ -1044,6 +1044,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 			continue
 		}
 		// success rate for the blobber allocation
+		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(d.Stats.SuccessChallenges)/float64(d.Stats.TotalChallenges))
 		succesful += d.Stats.SuccessChallenges
 		failed += d.Stats.FailedChallenges
