@@ -107,6 +107,22 @@ func (_m *StateContextI) GetBlockSharders(b *block.Block) []string {
 	return r0
 }
 
+// GetChainCurrentMagicBlock provides a mock function with given fields:
+func (_m *StateContextI) GetChainCurrentMagicBlock() *block.MagicBlock {
+	ret := _m.Called()
+
+	var r0 *block.MagicBlock
+	if rf, ok := ret.Get(0).(func() *block.MagicBlock); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*block.MagicBlock)
+		}
+	}
+
+	return r0
+}
+
 // GetClientBalance provides a mock function with given fields: clientID
 func (_m *StateContextI) GetClientBalance(clientID string) (state.Balance, error) {
 	ret := _m.Called(clientID)
