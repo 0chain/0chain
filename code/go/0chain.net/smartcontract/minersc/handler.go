@@ -10,7 +10,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -58,7 +58,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 	regMiner := NewMinerNode()
 	err := regMiner.decodeFromValues(params)
 	if err != nil {
-		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
+		logging.Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
 		return nil, err
 	}
 	if !msc.doesMinerExist(regMiner.getKey(), statectx) {

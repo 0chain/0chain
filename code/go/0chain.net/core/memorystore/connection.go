@@ -9,7 +9,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -111,7 +111,7 @@ func GetInfo() {
 			panic("invalid setup")
 		}
 		if re.MatchString(info) {
-			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
+			logging.Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
 			time.Sleep(delay)
 		} else {
 			break
@@ -236,14 +236,14 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 func Close(ctx context.Context) {
 	c := ctx.Value(CONNECTION)
 	if c == nil {
-		Logger.Error("Connection is nil while closing")
+		logging.Logger.Error("Connection is nil while closing")
 		return
 	}
 	cMap := c.(connections)
 	for _, con := range cMap {
 		err := con.Close()
 		if err != nil {
-			Logger.Error("Connection not closed", zap.Error(err))
+			logging.Logger.Error("Connection not closed", zap.Error(err))
 		}
 	}
 }

@@ -11,7 +11,7 @@ import (
 
 	"reflect"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -261,7 +261,7 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 	iterate(root)
 	for _, nd := range mndb.Nodes {
 		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
-			Logger.Error("mndb validate",
+			logging.Logger.Error("mndb validate",
 				zap.String("node_type", fmt.Sprintf("%T", nd)),
 				zap.String("node_key", nd.GetHash()))
 			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
@@ -288,7 +288,7 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 	v := levelNodeVersion.Add(1)
 
 	if len(vs) == 0 {
-		Logger.Error("NewLevelNodeDB new thread",
+		logging.Logger.Error("NewLevelNodeDB new thread",
 			zap.Any("predb type", reflect.TypeOf(prevNDB)),
 			zap.Any("new start db version", v),
 		)
@@ -383,7 +383,7 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
 
-	//Logger.Debug("LevelNodeDB delete node",
+	//logging.Logger.Debug("LevelNodeDB delete node",
 	//	zap.String("key", ToHex(key)),
 	//	zap.Int64("version", lndb.version),
 	//	zap.Int64s("db versions", lndb.versions))
@@ -478,7 +478,7 @@ func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
-	Logger.Debug("LevelNodeDB rebase db")
+	logging.Logger.Debug("LevelNodeDB rebase db")
 	lndb.current = ndb
 	lndb.prev = ndb
 }

@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -92,9 +92,9 @@ func (ns *Nodes) MartialStateNodes(data map[string]interface{}) ([]byte, error) 
 	data["nodes"] = nodes
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		Logger.Error("marshal JSON - state nodes", zap.Error(err))
+		logging.Logger.Error("marshal JSON - state nodes", zap.Error(err))
 	} else {
-		Logger.Info("marshal JSON - state nodes", zap.Int("nodes", len(ns.Nodes)))
+		logging.Logger.Info("marshal JSON - state nodes", zap.Int("nodes", len(ns.Nodes)))
 	}
 	return bytes, err
 }
@@ -104,7 +104,7 @@ func (ns *Nodes) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		Logger.Error("unmarshal json - state nodes", zap.Error(err))
+		logging.Logger.Error("unmarshal json - state nodes", zap.Error(err))
 		return err
 	}
 	return ns.UnmarshalStateNodes(obj)
@@ -115,7 +115,7 @@ func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 	if str, ok := obj["version"].(string); ok {
 		ns.Version = str
 	} else {
-		Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	if nodes, ok := obj["nodes"].([]interface{}); ok {
@@ -124,21 +124,21 @@ func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 			if nd, ok := nd.(string); ok {
 				buf, err := base64.StdEncoding.DecodeString(nd)
 				if err != nil {
-					Logger.Error("unmarshal json - state change", zap.Error(err))
+					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 					return err
 				}
 				ns.Nodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
 				if err != nil {
-					Logger.Error("unmarshal json - state change", zap.Error(err))
+					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 					return err
 				}
 			} else {
-				Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
+				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
 				return common.ErrInvalidData
 			}
 		}
 	} else {
-		Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	return nil

@@ -14,7 +14,7 @@ import (
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -49,7 +49,7 @@ var members poolMembers
 // Given the discover_pool file, read the IP addresses in it to find our miners
 // and sharders.
 func discoverPoolMembers(discoveryFile string) {
-	Logger.Info("Discovering blockchain")
+	logging.Logger.Info("Discovering blockchain")
 
 	discoveryIps := extractDiscoverIps(discoveryFile)
 
@@ -60,12 +60,12 @@ func discoverPoolMembers(discoveryFile string) {
 		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm)
 
 		if pm.Miners == nil {
-			Logger.Info("Miners are nil")
-			Logger.Fatal("Cannot discover pool members")
+			logging.Logger.Info("Miners are nil")
+			logging.Logger.Fatal("Cannot discover pool members")
 		}
 
 		if len(pm.Miners) == 0 {
-			Logger.Info("Length of Miners is 0")
+			logging.Logger.Info("Length of Miners is 0")
 			continue
 		}
 
@@ -74,21 +74,21 @@ func discoverPoolMembers(discoveryFile string) {
 
 		if len(members.Miners) == 0 {
 			members = pm
-			// Logger.Info("First set of members from", zap.String("URL", ip),
+			// logging.Logger.Info("First set of members from", zap.String("URL", ip),
 			//		zap.Any("Miners", members.Miners), zap.Any("Sharders", members.Sharders))
 		} else {
 			if !isSliceEq(pm.Miners, members.Miners) || !isSliceEq(pm.Sharders, members.Sharders) {
-				Logger.Fatal("The members are different from", zap.String("URL", ip),
+				logging.Logger.Fatal("The members are different from", zap.String("URL", ip),
 					zap.Any("Miners", members.Miners), zap.Any("Sharders", pm.Sharders))
 			}
 		}
 	}
 
 	if len(pm.Miners) == 0 {
-		Logger.Fatal("Could not discover blockchain")
+		logging.Logger.Fatal("Could not discover blockchain")
 	}
 
-	Logger.Info("Discovered pool members", zap.Any("Miners", pm.Miners), zap.Any("Sharders", pm.Sharders))
+	logging.Logger.Info("Discovered pool members", zap.Any("Miners", pm.Miners), zap.Any("Sharders", pm.Sharders))
 }
 
 func extractDiscoverIps(discFile string) []string {
@@ -106,7 +106,7 @@ func extractDiscoverIps(discFile string) []string {
 			discoveryIps = append(discoveryIps, url["ip"].(string))
 		}
 	} else {
-		Logger.Fatal("Could not read discovery file", zap.String("name", discFile))
+		logging.Logger.Fatal("Could not read discovery file", zap.String("name", discFile))
 	}
 
 	return discoveryIps
@@ -192,7 +192,7 @@ func getOwnerWallet(signatureScheme, ownerKeysFile string) mptwallet.Wallet {
 
 // Register a client on the blockchain's MPT.
 func registerMPTWallet(w mptwallet.Wallet) {
-	Logger.Info("Registering MPT wallet", zap.Any("ClientID", w.ClientID))
+	logging.Logger.Info("Registering MPT wallet", zap.Any("ClientID", w.ClientID))
 
 	data, err := json.Marshal(w)
 	if err != nil {
@@ -202,24 +202,24 @@ func registerMPTWallet(w mptwallet.Wallet) {
 	for _, ip := range members.Miners {
 		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, data, "", "", nil)
 		if err != nil {
-			Logger.Fatal("HTTP POST error", zap.Error(err), zap.Any("body", body))
+			logging.Logger.Fatal("HTTP POST error", zap.Error(err), zap.Any("body", body))
 		}
 	}
 
-	Logger.Info("Success on registering MPT wallet")
+	logging.Logger.Info("Success on registering MPT wallet")
 }
 
 func executeSCTransaction(from mptwallet.Wallet, scAddress string, value int64, data interface{}) httpclientutil.Transaction {
 	dataBytes, err := json.Marshal(&data)
 	if err != nil {
-		Logger.Fatal("Failed to marshal data", zap.Error(err))
+		logging.Logger.Fatal("Failed to marshal data", zap.Error(err))
 	}
 
 	return executeTransaction(from, scAddress, value, httpclientutil.TxnTypeSmartContract, string(dataBytes))
 }
 
 func airdrop(owner mptwallet.Wallet, recipientClientID string) {
-	Logger.Info("Requesting airdrop for MPT wallet", zap.String("ClientID", recipientClientID))
+	logging.Logger.Info("Requesting airdrop for MPT wallet", zap.String("ClientID", recipientClientID))
 	executeTransaction(owner, recipientClientID, airdropSize, httpclientutil.TxnTypeSend, "Airdrop")
 }
 
@@ -235,11 +235,11 @@ func executeTransaction(from mptwallet.Wallet, toClientID string, value int64, t
 		}
 
 		if i != executeRetries-1 {
-			Logger.Info("Transaction not found on sharders, retrying...", zap.Int("retry#", i+1), zap.Error(err))
+			logging.Logger.Info("Transaction not found on sharders, retrying...", zap.Int("retry#", i+1), zap.Error(err))
 		}
 	}
 
-	Logger.Fatal("Submitting transaction failed too many times", zap.Error(err))
+	logging.Logger.Fatal("Submitting transaction failed too many times", zap.Error(err))
 	return httpclientutil.Transaction{} // Never reached.
 }
 
@@ -265,7 +265,7 @@ func postTransaction(from mptwallet.Wallet, toClientID string, value int64, txnT
 
 	err := txn.ComputeHashAndSign(signer)
 	if err != nil {
-		Logger.Fatal("Could not sign transaction with public key", zap.Error(err))
+		logging.Logger.Fatal("Could not sign transaction with public key", zap.Error(err))
 	}
 
 	httpclientutil.SendTransaction(&txn, members.Miners, "", "")
@@ -293,7 +293,7 @@ func confirmTransaction(hash string) (httpclientutil.Transaction, error) {
 func getBalance(clientID string) state.Balance {
 	balance, err := httpclientutil.MakeClientBalanceRequest(clientID, members.Sharders, confirmationQuorum)
 	if err != nil {
-		Logger.Fatal("Couldn't get client balance", zap.Error(err))
+		logging.Logger.Fatal("Couldn't get client balance", zap.Error(err))
 	}
 
 	return balance

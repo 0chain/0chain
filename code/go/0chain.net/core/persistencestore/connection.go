@@ -12,7 +12,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 )
 
 //KeySpace - the keyspace usef for the 0chain data
@@ -69,11 +69,11 @@ func initSession(delay time.Duration, maxTries int) error {
 		start := time.Now()
 		s, err := cluster.CreateSession()
 		if err != nil {
-			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
+			logging.Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
 			Session = NewSession(s)
-			Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Any("try_duration", time.Since(start)))
+			logging.Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Any("try_duration", time.Since(start)))
 			return nil
 		}
 	}

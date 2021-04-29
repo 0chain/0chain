@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -112,10 +112,10 @@ func (ps *PartialState) ComputeProperties() {
 			ps.mndb = mndb
 			ps.root = root
 		} else {
-			Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
+			logging.Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
 		}
 	} else {
-		Logger.Error("partial state root is null", zap.Int("nodes", len(ps.Nodes)))
+		logging.Logger.Error("partial state root is null", zap.Int("nodes", len(ps.Nodes)))
 	}
 }
 
@@ -139,7 +139,7 @@ func (ps *PartialState) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		Logger.Error("unmarshal json - state change", zap.Error(err))
+		logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 		return err
 	}
 	return ps.UnmarshalPartialState(obj)
@@ -154,16 +154,16 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 		case []byte:
 			ps.Hash = rootImpl
 		default:
-			Logger.Error("unmarshal json - unknown type", zap.Any("obj", obj))
+			logging.Logger.Error("unmarshal json - unknown type", zap.Any("obj", obj))
 		}
 	} else {
-		Logger.Error("unmarshal json - no hash", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - no hash", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	if str, ok := obj["version"].(string); ok {
 		ps.Version = str
 	} else {
-		Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	if nodes, ok := obj["nodes"].([]interface{}); ok {
@@ -172,21 +172,21 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 			if nd, ok := nd.(string); ok {
 				buf, err := base64.StdEncoding.DecodeString(nd)
 				if err != nil {
-					Logger.Error("unmarshal json - state change", zap.Error(err))
+					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 					return err
 				}
 				ps.Nodes[idx], err = util.CreateNode(bytes.NewBuffer(buf))
 				if err != nil {
-					Logger.Error("unmarshal json - state change", zap.Error(err))
+					logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 					return err
 				}
 			} else {
-				Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
+				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
 				return common.ErrInvalidData
 			}
 		}
 	} else {
-		Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	return nil
@@ -209,9 +209,9 @@ func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte
 	data["nodes"] = nodes
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		Logger.Error("marshal JSON - state change", zap.Any("block", ps.Hash), zap.Error(err))
+		logging.Logger.Error("marshal JSON - state change", zap.Any("block", ps.Hash), zap.Error(err))
 	} else {
-		Logger.Info("marshal JSON - state change", zap.Any("block", ps.Hash))
+		logging.Logger.Info("marshal JSON - state change", zap.Any("block", ps.Hash))
 	}
 	return bytes, err
 }

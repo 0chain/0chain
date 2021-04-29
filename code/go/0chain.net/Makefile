@@ -1,0 +1,2 @@
+mock:
+	mockery --all --keeptree

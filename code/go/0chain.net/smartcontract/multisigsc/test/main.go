@@ -12,7 +12,7 @@ import (
 	chainconfig "0chain.net/chaincore/config"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/multisigsc"
 	"go.uber.org/zap"
 )
@@ -64,16 +64,16 @@ func main() {
 	chainconfig.SetupDefaultConfig()
 	chainconfig.SetupConfig()
 	chainconfig.SetupSmartContractConfig()
-	InitLogging("development")
+	logging.InitLogging("development")
 
 	// Find our miners and sharders.
 	discoverPoolMembers(c.discoveryFile)
 
 	testRegistration()
 
-	Logger.Info("")
-	Logger.Info("")
-	Logger.Info("")
+	logging.Logger.Info("")
+	logging.Logger.Info("")
+	logging.Logger.Info("")
 	time.Sleep(10 * time.Second)
 
 	if multisigsc.ExpirationTime <= 60 {
@@ -82,23 +82,23 @@ func main() {
 		//       do a recompile.
 		testExpiration()
 
-		Logger.Info("")
-		Logger.Info("")
-		Logger.Info("")
+		logging.Logger.Info("")
+		logging.Logger.Info("")
+		logging.Logger.Info("")
 		time.Sleep(10 * time.Second)
 	} else {
-		Logger.Info("Multi-sig proposal expiration time is large, not testing expiration in this run")
+		logging.Logger.Info("Multi-sig proposal expiration time is large, not testing expiration in this run")
 
-		Logger.Info("")
-		Logger.Info("")
-		Logger.Info("")
+		logging.Logger.Info("")
+		logging.Logger.Info("")
+		logging.Logger.Info("")
 	}
 
 	testFinishProposal()
 
-	Logger.Info("")
-	Logger.Info("")
-	Logger.Info("")
+	logging.Logger.Info("")
+	logging.Logger.Info("")
+	logging.Logger.Info("")
 	time.Sleep(10 * time.Second)
 
 	for i := 0; i < c.numWallets; i++ {
@@ -116,7 +116,7 @@ func idle() {
 }
 
 func testRegistration() {
-	Logger.Info("Testing multi-sig wallet registration...")
+	logging.Logger.Info("Testing multi-sig wallet registration...")
 
 	// Generate a group key and associated sub-keys.
 	w := newTestWallet(0, c.signatureScheme, c.t, c.n)
@@ -128,14 +128,14 @@ func testRegistration() {
 	// Start the real test...
 	output := w.registerSCWallet()
 	if !strings.HasPrefix(output, "success:") {
-		Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
+		logging.Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
 	}
 
-	Logger.Info("Finished test")
+	logging.Logger.Info("Finished test")
 }
 
 func testExpiration() {
-	Logger.Info("Testing multi-sig proposal expiration...")
+	logging.Logger.Info("Testing multi-sig proposal expiration...")
 
 	// Generate a group key and associated sub-keys.
 	w := newTestWallet(0, c.signatureScheme, c.t, c.n)
@@ -146,17 +146,17 @@ func testExpiration() {
 
 	output := w.registerSCWallet()
 	if !strings.HasPrefix(output, "success:") {
-		Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
+		logging.Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
 	}
 
 	// Start the real test...
 	doExpiredProposal(w)
 
-	Logger.Info("Finished test")
+	logging.Logger.Info("Finished test")
 }
 
 func doExpiredProposal(w testWallet) {
-	Logger.Info("Testing proposal expiration...")
+	logging.Logger.Info("Testing proposal expiration...")
 
 	anonWallet := newRegisteredMPTWallet()
 
@@ -168,24 +168,24 @@ func doExpiredProposal(w testWallet) {
 	// Create proposal.
 	output := w.registerVote(p, signer)
 	if !strings.HasPrefix(output, expectedOutput) {
-		Logger.Fatal("Vote before expiration failed: TxnOutput should have prefix '" + expectedOutput + "'")
+		logging.Logger.Fatal("Vote before expiration failed: TxnOutput should have prefix '" + expectedOutput + "'")
 	}
 
 	// Let the proposal expire.
-	Logger.Info("Waiting until proposal expires...", zap.Int("seconds", multisigsc.ExpirationTime))
+	logging.Logger.Info("Waiting until proposal expires...", zap.Int("seconds", multisigsc.ExpirationTime))
 	time.Sleep(multisigsc.ExpirationTime * time.Second)
 
 	// This should re-create it, which means we'll get the same output as above.
 	output2 := w.registerVote(p, signer)
 	if output != output2 {
-		Logger.Fatal("Vote after expiration failed: Second vote should be identical because first expired", zap.String("first vote", output), zap.String("second vote", output2))
+		logging.Logger.Fatal("Vote after expiration failed: Second vote should be identical because first expired", zap.String("first vote", output), zap.String("second vote", output2))
 	}
 
-	Logger.Info("Success on proposal expiration")
+	logging.Logger.Info("Success on proposal expiration")
 }
 
 func testFinishProposal() {
-	Logger.Info("Testing multi-sig transfer...")
+	logging.Logger.Info("Testing multi-sig transfer...")
 
 	// Generate a group key and associated sub-keys.
 	w := newTestWallet(0, c.signatureScheme, c.t, c.n)
@@ -196,14 +196,14 @@ func testFinishProposal() {
 
 	output := w.registerSCWallet()
 	if !strings.HasPrefix(output, "success:") {
-		Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
+		logging.Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
 	}
 
 	// Start the real test...
 	doProposalWithAllN(w)
 	printBalance(0, w)
 
-	Logger.Info("Finished test")
+	logging.Logger.Info("Finished test")
 }
 
 func doProposalWithAllN(w testWallet) {
@@ -229,13 +229,13 @@ func doProposalWithAllN(w testWallet) {
 		}
 
 		if !strings.HasPrefix(output, expectedOutput) {
-			Logger.Fatal("Vote failed: TxnOutput should have prefix '" + expectedOutput + "'")
+			logging.Logger.Fatal("Vote failed: TxnOutput should have prefix '" + expectedOutput + "'")
 		}
 	}
 }
 
 func testStress(id int) {
-	Logger.Info("Stress testing multi-sig transfers...", zap.Int("worker#", id))
+	logging.Logger.Info("Stress testing multi-sig transfers...", zap.Int("worker#", id))
 
 	// Generate a group key and associated sub-keys.
 	w := newTestWallet(id, c.signatureScheme, c.t, c.n)
@@ -246,7 +246,7 @@ func testStress(id int) {
 
 	output := w.registerSCWallet()
 	if !strings.HasPrefix(output, "success:") {
-		Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
+		logging.Logger.Fatal("Register failed: TxnOutput should have prefix 'success:'")
 	}
 
 	// Start the real test...
@@ -279,17 +279,17 @@ func doProposalWithT(id int, w testWallet, finished int) {
 		}
 
 		if !strings.HasPrefix(output, expectedOutput) {
-			Logger.Fatal("Vote failed: TxnOutput should have prefix '"+expectedOutput+"'", zap.Int("multi-sig wallet#", id))
+			logging.Logger.Fatal("Vote failed: TxnOutput should have prefix '"+expectedOutput+"'", zap.Int("multi-sig wallet#", id))
 		}
 	}
 
-	Logger.Info("Successful multi-sig transfer", zap.Int("multi-sig wallet#", id), zap.Int("num finished", finished))
+	logging.Logger.Info("Successful multi-sig transfer", zap.Int("multi-sig wallet#", id), zap.Int("num finished", finished))
 }
 
 func printBalance(id int, w testWallet) {
 	balance := getBalance(w.groupClientID)
 
-	Logger.Info("Multi-sig wallet balance", zap.Int("multi-sig wallet#", id), zap.Int64("balance", int64(balance)))
+	logging.Logger.Info("Multi-sig wallet balance", zap.Int("multi-sig wallet#", id), zap.Int64("balance", int64(balance)))
 }
 
 func newRegisteredMPTWallet() string {
@@ -297,7 +297,7 @@ func newRegisteredMPTWallet() string {
 
 	err := scheme.GenerateKeys()
 	if err != nil {
-		Logger.Fatal("Couldn't generate key pair", zap.Error(err))
+		logging.Logger.Fatal("Couldn't generate key pair", zap.Error(err))
 	}
 
 	clientID := clientIDForKey(scheme)

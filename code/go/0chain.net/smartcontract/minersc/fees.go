@@ -13,7 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -272,7 +272,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			waited, dmn.K)
 	}
 	if err != nil {
-		Logger.Info("adjust_view_change", zap.Error(err))
+		logging.Logger.Info("adjust_view_change", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)
@@ -337,38 +337,38 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		// TODO: remove this debug info after issue is fixed.
 		all, er := msc.getMinersList(balances)
 		if er != nil {
-			Logger.Debug("get miners list failed",
+			logging.Logger.Debug("get miners list failed",
 				zap.Error(er),
 				zap.Int64("round", block.Round),
 				zap.String("block hash", block.Hash))
 		}
 
 		if all == nil {
-			Logger.Debug("miners list is empty")
+			logging.Logger.Debug("miners list is empty")
 		} else {
 			ids := []string{}
 			for _, n := range all.Nodes {
 				ids = append(ids, n.ID)
 			}
-			Logger.Debug("all miners", zap.Strings("miners", ids))
+			logging.Logger.Debug("all miners", zap.Strings("miners", ids))
 		}
 
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)
 	}
 
-	Logger.Debug("Pay fees, get miner id successfully",
+	logging.Logger.Debug("Pay fees, get miner id successfully",
 		zap.String("miner id", block.MinerID),
 		zap.Int64("round", block.Round),
 		zap.String("hash", block.Hash))
 
 	selfID := node.Self.Underlying().GetKey()
 	if _, err := msc.getMinerNode(selfID, balances); err != nil {
-		Logger.Debug("Pay fees, get self miner id failed",
+		logging.Logger.Debug("Pay fees, get self miner id failed",
 			zap.String("id", selfID),
 			zap.Error(err))
 	} else {
-		Logger.Debug("Pay fees, get self miner id successfully")
+		logging.Logger.Debug("Pay fees, get self miner id successfully")
 	}
 
 	var (
@@ -487,7 +487,7 @@ func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 			userMint = state.Balance(float64(value) * ratio)
 		)
 
-		Logger.Info("mint delegate",
+		logging.Logger.Info("mint delegate",
 			zap.Any("pool", pool),
 			zap.Any("mint", userMint))
 
@@ -531,7 +531,7 @@ func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
 			userFee = state.Balance(float64(value) * ratio)
 		)
 
-		Logger.Info("pay delegate",
+		logging.Logger.Info("pay delegate",
 			zap.Any("pool", pool),
 			zap.Any("fee", userFee))
 
@@ -643,7 +643,7 @@ func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
 	resp string, err error) {
 
 	if reward != 0 {
-		Logger.Info("pay "+mn.NodeType.String()+" service charge",
+		logging.Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_reward", reward))
 
@@ -656,7 +656,7 @@ func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
 		resp += string(mint.Encode())
 	}
 	if fee != 0 {
-		Logger.Info("pay "+mn.NodeType.String()+" service charge",
+		logging.Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_fee", fee))
 

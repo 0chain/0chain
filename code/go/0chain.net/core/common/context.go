@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ func SetupRootContext(nodectx context.Context) {
 	go func() {
 		select {
 		case <-done:
-			Logger.Info("Shutting down all workers...")
+			logging.Logger.Info("Shutting down all workers...")
 			rootCancel()
 		}
 	}()
@@ -40,7 +40,7 @@ func GetRootContext() context.Context {
 
 /*Done - call this when the program needs to stop and notify all workers */
 func Done() {
-	Logger.Info("Initiating shutdown...")
+	logging.Logger.Info("Initiating shutdown...")
 	rootCancel()
 	//TODO: How do we ensure every worker is completed any shutdown sequence before we finally shut down
 	//the server using server.Shutdown(ctx)
@@ -64,7 +64,7 @@ func HandleShutdown(server *http.Server) {
 				server.Shutdown(ctx)
 				cancelf()
 			default:
-				Logger.Info("unhandled signal", zap.Any("signal", sig))
+				logging.Logger.Info("unhandled signal", zap.Any("signal", sig))
 			}
 		}
 	}()

@@ -11,7 +11,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -66,10 +66,10 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 	key := p2pKey(pushURI, id)
 	pcde, err := pushDataCache.Get(key)
 	if err != nil {
-		N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
+		logging.N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
 		return nil, common.NewError("request_data_not_found", "Requested data is not found")
 	}
-	//N2n.Debug("push to pull", zap.String("key", key))
+	//logging.N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil
 }
 
@@ -88,11 +88,11 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		_, err := handler(ctx, entity)
 		duration := time.Since(start)
 		if err != nil {
-			N2n.Error("message pull", zap.Int("from", nd.SetIndex),
+			logging.N2n.Error("message pull", zap.Int("from", nd.SetIndex),
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
-		//N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+		//logging.N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		return entity, nil
 	}
 	params := &url.Values{}
@@ -156,7 +156,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			pcde.state = pullStateDone
 			break
 		} else {
-			//N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
+			//logging.N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
 		}
 	}
 }

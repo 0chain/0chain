@@ -18,7 +18,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -38,13 +38,13 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round), zap.Any("current_round", sc.GetCurrentRound()))
+	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round), zap.Any("current_round", sc.GetCurrentRound()))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
 				continue
 			}
-			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
+			logging.Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
 	sc.BlockCache.Add(b.Hash, b)
@@ -57,14 +57,14 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummaryFromBlock(ctx, b)
 	if err != nil {
-		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		logging.Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
 	if b.MagicBlock != nil {
 		bs := b.GetSummary()
 		err = sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
 		if err != nil {
-			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
+			logging.Logger.DPanic("failed to store magic block map", zap.Any("error", err))
 		}
 	}
 	if sc.IsBlockSharder(b, self.Underlying()) {
@@ -75,13 +75,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		blockSaveTimer.UpdateSince(ts)
 		p95 := blockSaveTimer.Percentile(.95)
 		if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+			logging.Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 		}
 	}
 	if frImpl, ok := fr.(*round.Round); ok {
 		err := sc.StoreRound(ctx, frImpl)
 		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
+			logging.Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
 	}
 	sc.DeleteRoundsBelow(ctx, b.Round)
@@ -141,7 +141,7 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 
 	// pull related magic block if missing
 	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-		Logger.Error("after_fetch -- pulling related magic block",
+		logging.Logger.Error("after_fetch -- pulling related magic block",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.Error(err))
 		return
@@ -158,9 +158,9 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	Logger.Debug("process notarized block", zap.Int64("round", b.Round))
+	logging.Logger.Debug("process notarized block", zap.Int64("round", b.Round))
 	defer func() {
-		Logger.Debug("process notarized block end", zap.Int64("round", b.Round))
+		logging.Logger.Debug("process notarized block end", zap.Int64("round", b.Round))
 	}()
 	var er = sc.GetRound(b.Round)
 	if er == nil {
@@ -168,13 +168,13 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	} else {
-		Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
+		logging.Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
 	}
 
 	// pull related magic block if missing
 	var err error
 	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-		Logger.Error("pulling related magic block", zap.Error(err),
+		logging.Logger.Error("pulling related magic block", zap.Error(err),
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return
 	}
@@ -182,7 +182,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	err = sc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
 		er.GetRoundNumber())
 	if err != nil {
-		Logger.Error("notarization verification failed",
+		logging.Logger.Error("notarization verification failed",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Error(err))
@@ -190,14 +190,14 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	}
 
 	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round),
+		logging.Logger.Error("block validation", zap.Any("round", b.Round),
 			zap.Any("hash", b.Hash), zap.Error(err))
 		return
 	}
 
 	sc.AddNotarizedBlockToRound(er, b)
 	sc.SetRoundRank(er, b)
-	Logger.Info("received block", zap.Int64("round", b.Round),
+	logging.Logger.Info("received block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
@@ -218,7 +218,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 		// Received reply for roundRange of blocks starting at roundNum
 		sc.storeRoundSummaries(ctx, rs)
 	} else {
-		HCLogger.Info("HC-MissingObject",
+		logging.HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "RoundSummaries"),
@@ -238,7 +238,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 	if sc.isValidRound(r) {
 		err := sc.StoreRound(ctx, r)
 		if err != nil {
-			Logger.Error("HC-DSWriteFailure",
+			logging.Logger.Error("HC-DSWriteFailure",
 				zap.String("object", "RoundSummary"),
 				zap.Int64("cycle", cc.CycleCount),
 				zap.Int64("round", roundNum),
@@ -248,7 +248,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 		}
 	} else {
 		// Missing round summary. Log it.
-		HCLogger.Info("HC-MissingObject",
+		logging.HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "RoundSummary"),
@@ -287,7 +287,7 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRang
 		// Store errors will be displayed by the function.
 		sc.storeBlockSummary(ctx, blockS)
 	} else {
-		HCLogger.Info("HC-MissingObject",
+		logging.HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "BlockSummary"),
@@ -317,7 +317,7 @@ func (sc *Chain) requestBlock(ctx context.Context, r *round.Round) *block.Block 
 //	var b *block.Block
 //	b = sc.requestForBlock(ctx, params, r)
 //	if b == nil {
-//		Logger.Info("health-check: MissingObject",
+//		logging.Logger.Info("health-check: MissingObject",
 //			zap.String("object", "Block"),
 //			zap.Int64("cycle", bss.CycleCount),
 //			zap.Int64("round", r.Number),
@@ -328,7 +328,7 @@ func (sc *Chain) requestBlock(ctx context.Context, r *round.Round) *block.Block 
 //		// Save the block
 //		err := sc.storeBlock(ctx, b)
 //		if err != nil {
-//			Logger.Error("health-check: DataStoreWriteFailure",
+//			logging.Logger.Error("health-check: DataStoreWriteFailure",
 //				zap.String("object", "block"),
 //				zap.Int64("cycle", bss.CycleCount),
 //				zap.Int64("round", r.Number),
@@ -348,7 +348,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 	var b *block.Block
 	b = sc.requestForBlock(ctx, params, r)
 	if b == nil {
-		HCLogger.Info("HC-MissingObject",
+		logging.HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "Block"),
@@ -361,7 +361,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 		// Save the block
 		err := sc.storeBlock(ctx, b)
 		if err != nil {
-			Logger.Error("HC-DSWriteFailure",
+			logging.Logger.Error("HC-DSWriteFailure",
 				zap.String("object", "block"),
 				zap.Int64("cycle", cc.CycleCount),
 				zap.Int64("round", r.Number),
@@ -389,7 +389,7 @@ func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Value
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		roundSummaries, ok := entity.(*RoundSummaries)
 		if !ok {
-			Logger.Error("received invalid round summaries")
+			logging.Logger.Error("received invalid round summaries")
 			return nil, nil
 		}
 		rs = roundSummaries
@@ -405,7 +405,7 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		roundEntity, ok := entity.(*round.Round)
 		if !ok {
-			Logger.Error("received invalid round entity")
+			logging.Logger.Error("received invalid round entity")
 			return nil, nil
 		}
 		if sc.isValidRound(roundEntity) {
@@ -424,7 +424,7 @@ func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Value
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		blockSummaries, ok := entity.(*BlockSummaries)
 		if !ok {
-			Logger.Error("received invalid block summaries", zap.String("round", params.Get("round")), zap.String("range", params.Get("range")))
+			logging.Logger.Error("received invalid block summaries", zap.String("round", params.Get("round")), zap.String("range", params.Get("range")))
 			return nil, nil
 		}
 		bs = blockSummaries
@@ -440,7 +440,7 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		bs, ok := entity.(*block.BlockSummary)
 		if !ok {
-			Logger.Error("received invalid block summary entity", zap.String("hash", params.Get("hash")))
+			logging.Logger.Error("received invalid block summary entity", zap.String("hash", params.Get("hash")))
 			return nil, nil
 		}
 		blockS = bs
@@ -458,7 +458,7 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 		self.Underlying())
 
 	if len(nodes) == 0 {
-		Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))
+		logging.Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))
 	}
 
 	var requestNode *node.Node
@@ -471,7 +471,7 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 		handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			blockEntity, ok := entity.(*block.Block)
 			if !ok {
-				Logger.Error("invalid request block", zap.Int64("round", r.Number))
+				logging.Logger.Error("invalid request block", zap.Int64("round", r.Number))
 				return nil, nil
 			}
 			err := blockEntity.Validate(ctx)
@@ -485,7 +485,7 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 		if b != nil {
 			return b
 		}
-		Logger.Info("request round info - block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
+		logging.Logger.Info("request round info - block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
 	}
 	return nil
 }
@@ -494,7 +494,7 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 	//roundEntityMetadata := datastore.GetEntityMetadata("round")
 	//
 	//rsEntities := make([]datastore.Entity, 0, 1)
-	Logger.Debug("HC-StoreRoundSummaries",
+	logging.Logger.Debug("HC-StoreRoundSummaries",
 		zap.Int("round-count", len(rs.RSummaryList)))
 
 	for _, roundS := range rs.RSummaryList {
@@ -502,14 +502,14 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 			_, present := sc.hasRoundSummary(ctx, roundS.Number)
 			// Store only rounds that are not present.
 			if present == false {
-				Logger.Debug("HC-StoreRoundSummaries",
+				logging.Logger.Debug("HC-StoreRoundSummaries",
 					zap.String("object", "RoundSummary"),
 					zap.Int64("round", roundS.Number),
 					zap.String("hash", roundS.BlockHash))
 				sc.StoreRound(ctx, roundS)
 			}
 		} else {
-			Logger.Debug("HC-StoreRoundSummaries",
+			logging.Logger.Debug("HC-StoreRoundSummaries",
 				zap.String("round", "nil"))
 		}
 	}
@@ -520,34 +520,34 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 	//	defer ememorystore.Close(rsctx)
 	//	err := rsStore.MultiWrite(rsctx, roundEntityMetadata, rsEntities)
 	//	if err != nil {
-	//		Logger.Info("write round summaries failed", zap.Error(err))
+	//		logging.Logger.Info("write round summaries failed", zap.Error(err))
 	//	}
-	//	Logger.Info("write round summaries successful")
+	//	logging.Logger.Info("write round summaries successful")
 	//}
 }
 
 func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
-	Logger.Debug("HC-StoreBlockSummaries",
+	logging.Logger.Debug("HC-StoreBlockSummaries",
 		zap.Int("round-count", len(bs.BSummaryList)))
 
 	for _, blockS := range bs.BSummaryList {
 		if blockS != nil {
 			_, present := sc.hasBlockSummary(ctx, blockS.Hash)
 			if present == false {
-				Logger.Debug("HC-StoreBlockSummaries",
+				logging.Logger.Debug("HC-StoreBlockSummaries",
 					zap.String("object", "BlockSummary"),
 					zap.Int64("block", blockS.Round),
 					zap.String("hash", blockS.Hash))
 				storeError := sc.StoreBlockSummary(ctx, blockS)
 				if storeError != nil {
-					HCLogger.Error("HC-StoreBlockSummary",
+					logging.HCLogger.Error("HC-StoreBlockSummary",
 						zap.Int64("round", blockS.Round),
 						zap.String("hash", blockS.Hash),
 						zap.Error(storeError))
 				}
 			}
 		} else {
-			Logger.Debug("HC-StoreBlockSummaries", zap.String("blockSummary", "nil"))
+			logging.Logger.Debug("HC-StoreBlockSummaries", zap.String("blockSummary", "nil"))
 		}
 	}
 	//blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
@@ -565,9 +565,9 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 	//	defer ememorystore.Close(bsctx)
 	//	err := bsStore.MultiWrite(bsctx, blockSummaryEntityMetadata, bsEntities)
 	//	if err != nil {
-	//		Logger.Info("write block summaries failed", zap.Error(err))
+	//		logging.Logger.Info("write block summaries failed", zap.Error(err))
 	//	}
-	//	Logger.Info("write block summaries successful")
+	//	logging.Logger.Info("write block summaries successful")
 	//}
 }
 
@@ -576,7 +576,7 @@ func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) {
 	for true {
 		err = sc.StoreRound(ctx, r)
 		if err != nil {
-			Logger.Error("db error (save round summary)", zap.Int64("round", r.Number), zap.Error(err))
+			logging.Logger.Error("db error (save round summary)", zap.Int64("round", r.Number), zap.Error(err))
 			time.Sleep(time.Second)
 			continue
 		}
@@ -591,7 +591,7 @@ func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 		if err == nil {
 			return
 		}
-		Logger.Error("db error (save block summary)", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.Error(err))
+		logging.Logger.Error("db error (save block summary)", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.Error(err))
 		time.Sleep(time.Second)
 	}
 }
@@ -616,7 +616,7 @@ func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
 
 func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) error {
 	err := sc.StoreTransactions(ctx, b)
-	//	Logger.Error(caller,
+	//	logging.Logger.Error(caller,
 	//		zap.Int64("round", b.Round),
 	//		zap.String("block", b.Hash),
 	//		zap.Error(err))

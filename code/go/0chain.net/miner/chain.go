@@ -21,7 +21,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -377,18 +377,18 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 
 	round, err := strconv.Atoi(r.FormValue("round"))
 	if err != nil {
-		Logger.Error("failed to send start chain", zap.Any("error", err))
+		logging.Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
 
 	mb := mc.GetMagicBlock(int64(round))
 	if mb == nil || !mb.Miners.HasNode(nodeID) {
-		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		logging.Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}
 
 	if mc.GetCurrentRound() != int64(round) {
-		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
+		logging.Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
@@ -411,7 +411,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 		startChain, ok := entity.(*StartChain)
 		if !ok {
 			err := common.NewError("invalid object", fmt.Sprintf("entity: %v", entity))
-			Logger.Error("failed to request start chain", zap.Any("error", err))
+			logging.Logger.Error("failed to request start chain", zap.Any("error", err))
 			return nil, err
 		}
 		if startChain.Start {
@@ -430,7 +430,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 
 func (mc *Chain) SetStarted() {
 	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
-		Logger.Warn("chain already started")
+		logging.Logger.Warn("chain already started")
 	}
 }
 

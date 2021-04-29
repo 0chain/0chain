@@ -3,7 +3,7 @@ package miner
 import (
 	"context"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +26,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	var b = msg.Block
 
 	if b.Round < mc.GetCurrentRound()-1 {
-		Logger.Debug("verify block (round mismatch)",
+		logging.Logger.Debug("verify block (round mismatch)",
 			zap.Int64("current_round", mc.GetCurrentRound()),
 			zap.Int64("block_round", b.Round))
 		return
@@ -35,20 +35,20 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	var mr, pr = mc.GetMinerRound(b.Round), mc.GetMinerRound(b.Round - 1)
 
 	if pr == nil {
-		Logger.Error("handle verify block -- no previous round (ignore)",
+		logging.Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
 		return
 	}
 
 	if mr == nil {
 
-		Logger.Error("handle verify block -- got block proposal before starting round",
+		logging.Logger.Error("handle verify block -- got block proposal before starting round",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
 		var mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
 		if mr == nil {
-			Logger.Error("handle verify block -- can't start new round",
+			logging.Logger.Error("handle verify block -- can't start new round",
 				zap.Int64("round", b.Round))
 			return
 		}
@@ -57,12 +57,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 
 	} else {
 		if !mr.IsVRFComplete() {
-			Logger.Info("handle verify block - got block proposal before VRF is complete",
+			logging.Logger.Info("handle verify block - got block proposal before VRF is complete",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("miner", b.MinerID))
 
 			if mr.GetTimeoutCount() < b.RoundTimeoutCount {
-				Logger.Info("Insync ignoring handle verify block - got block proposal before VRF is complete",
+				logging.Logger.Info("Insync ignoring handle verify block - got block proposal before VRF is complete",
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.String("miner", b.MinerID),
 					zap.Int("round_toc", mr.GetTimeoutCount()),
@@ -82,7 +82,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 					b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
 					b = b1
 					mr = r1.(*Round)
-					Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",
+					logging.Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
 						zap.String("miner", b.MinerID),
@@ -100,7 +100,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	}
 
 	if mr == nil {
-		Logger.Error("this should not happen %v", zap.Int64("round", b.Round),
+		logging.Logger.Error("this should not happen %v", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int64("cround", mc.GetCurrentRound()))
 		return
@@ -113,7 +113,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	}
 
 	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-		Logger.Error("Got a block for verification with wrong random seed",
+		logging.Logger.Error("Got a block for verification with wrong random seed",
 			zap.Int64("round", mr.GetRoundNumber()),
 			zap.Int("roundToc", mr.GetTimeoutCount()),
 			zap.Int("blockToc", b.RoundTimeoutCount),
@@ -123,12 +123,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	}
 
 	if !mc.ValidGenerator(mr.Round, b) {
-		Logger.Error("Not a valid generator. Ignoring block",
+		logging.Logger.Error("Not a valid generator. Ignoring block",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 
-	Logger.Info("Added block to Round", zap.Int64("round", b.Round),
+	logging.Logger.Info("Added block to Round", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
 	mc.AddToRoundVerification(ctx, mr, b)
 }
@@ -144,13 +144,13 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	var mr = mc.getOrStartRoundNotAhead(ctx, rn)
 	if mr == nil {
-		Logger.Error("handle vt. msg -- ahead of sharders or no pr",
+		logging.Logger.Error("handle vt. msg -- ahead of sharders or no pr",
 			zap.Int64("round", rn))
 		return
 	}
 
 	if mc.GetMinerRound(rn-1) == nil {
-		Logger.Error("handle vt. msg -- no previous round (ignore)",
+		logging.Logger.Error("handle vt. msg -- no previous round (ignore)",
 			zap.Int64("round", rn), zap.Int64("pr", rn-1))
 		return
 	}
@@ -159,7 +159,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 	if err != nil {
 		err = mc.VerifyTicket(ctx, bvt.BlockID, &bvt.VerificationTicket, rn)
 		if err != nil {
-			Logger.Debug("verification ticket", zap.Error(err))
+			logging.Logger.Debug("verification ticket", zap.Error(err))
 			return
 		}
 		mr.AddVerificationTicket(bvt)
@@ -168,7 +168,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
-		Logger.Debug("verification message (round mismatch)",
+		logging.Logger.Debug("verification message (round mismatch)",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.Int64("lfb", lfb.Round))
 		return
@@ -176,7 +176,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	err = mc.VerifyTicket(ctx, b.Hash, &bvt.VerificationTicket, rn)
 	if err != nil {
-		Logger.Debug("verification ticket", zap.Error(err))
+		logging.Logger.Debug("verification ticket", zap.Error(err))
 		return
 	}
 
@@ -192,7 +192,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	)
 
 	if not.Round < lfb.Round {
-		Logger.Debug("handle notarization message",
+		logging.Logger.Debug("handle notarization message",
 			zap.Int64("round", not.Round),
 			zap.Int64("finalized_round", lfb.Round),
 			zap.String("block", not.BlockID))
@@ -202,12 +202,12 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	var r = mc.GetMinerRound(not.Round)
 	if r == nil {
 		if msg.ShouldRetry() {
-			Logger.Error("handle notarization message (round not started yet) retrying",
+			logging.Logger.Error("handle notarization message (round not started yet) retrying",
 				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
 			msg.Retry(mc.blockMessageChannel)
 		} else {
-			Logger.Error("handle notarization message (round not started yet)",
+			logging.Logger.Error("handle notarization message (round not started yet)",
 				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
 		}
@@ -215,7 +215,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	}
 
 	if mc.GetMinerRound(not.Round-1) == nil {
-		Logger.Error("handle notarization message -- no previous round",
+		logging.Logger.Error("handle notarization message -- no previous round",
 			zap.Int64("round", not.Round),
 			zap.Int64("prev_round", not.Round-1))
 		return
@@ -249,7 +249,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	if mr == nil {
 
 		if mr = mc.getOrStartRoundNotAhead(ctx, nb.Round); mr == nil {
-			Logger.Error("handle not. block -- ahead of sharders or no pr",
+			logging.Logger.Error("handle not. block -- ahead of sharders or no pr",
 				zap.Int64("round", nb.Round),
 				zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
 			return
@@ -260,7 +260,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	} else {
 
 		if mc.GetMinerRound(nb.Round-1) == nil {
-			Logger.Error("handle not. block -- no previous round (ignore)",
+			logging.Logger.Error("handle not. block -- no previous round (ignore)",
 				zap.Int64("round", nb.Round),
 				zap.Int64("prev_round", nb.Round-1))
 			return
@@ -288,7 +288,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	}
 
 	if mc.isAheadOfSharders(ctx, nb.Round+1) {
-		Logger.Error("handle not. block -- ahead of sharders",
+		logging.Logger.Error("handle not. block -- ahead of sharders",
 			zap.Int64("round", nb.Round+1))
 		return
 	}

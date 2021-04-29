@@ -21,7 +21,7 @@ import (
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/spf13/viper"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -55,7 +55,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	for true {
 		select {
 		case <-ctx.Done():
-			Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
+			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
 		case b := <-sc.GetBlockChannel():
 			sc.processBlock(ctx, b)
@@ -161,19 +161,19 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
-			Logger.Error("register_sharder_keep_worker", zap.Error(err))
+			logging.Logger.Error("register_sharder_keep_worker", zap.Error(err))
 			continue // repeat next time
 		}
 
 		// so, transaction sent, let's verify it
 
 		if !sc.ConfirmTransaction(txn) {
-			Logger.Debug("register_sharder_keep_worker -- failed "+
+			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
 				"to confirm transaction", zap.Any("txn", txn))
 			continue
 		}
 
-		Logger.Info("register_sharder_keep_worker -- registered")
+		logging.Logger.Info("register_sharder_keep_worker -- registered")
 		phaseRound = pe.Phase.StartRound // accepted
 
 	}
@@ -213,12 +213,12 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 				for roundToProcess > 0 {
 					hash, err := sc.GetBlockHash(ctx, roundToProcess)
 					if err != nil {
-						Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+						logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
 						roundToProcess--
 						continue
 					}
 					if fs.CloudObjectExists(hash) {
-						Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
+						logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
 						break
 					} else {
 						swg.Add()
@@ -228,7 +228,7 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 				}
 				swg.Wait()
 				iterInprogress = false
-				Logger.Info("Moved old blocks to cloud successfully")
+				logging.Logger.Info("Moved old blocks to cloud successfully")
 			}
 		}
 	}
@@ -237,9 +237,9 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
 	err := fs.UploadToCloud(hash, round)
 	if err != nil {
-		Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
+		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
 	} else {
-		Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
+		logging.Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
 		sc.TieringStats.TotalBlocksUploaded++
 		sc.TieringStats.LastRoundUploaded = round
 		sc.TieringStats.LastUploadTime = time.Now()

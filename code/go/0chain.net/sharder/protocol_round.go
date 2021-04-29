@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +27,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	if sc.BlocksToSharder == chain.FINALIZED {
 		nb := r.GetNotarizedBlocks()
 		if len(nb) > 0 {
-			Logger.Error("*** different blocks for the same round ***",
+			logging.Logger.Error("*** different blocks for the same round ***",
 				zap.Any("round", b.Round), zap.Any("block", b.Hash),
 				zap.Any("existing_block", nb[0].Hash))
 		}
@@ -46,7 +46,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 				return
 			}
 		} else {
-			Logger.Debug("AddNotarizedBlock client state is nil", zap.Int64("round", b.Round))
+			logging.Logger.Debug("AddNotarizedBlock client state is nil", zap.Int64("round", b.Round))
 		}
 
 		if err := sc.ComputeState(ctx, b); err != nil {
@@ -59,14 +59,14 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	select {
 	case <-doneC:
 		ret = true
-		Logger.Debug("AddNotarizedBlock compute state successfully", zap.Any("duration", time.Since(t)))
+		logging.Logger.Debug("AddNotarizedBlock compute state successfully", zap.Any("duration", time.Since(t)))
 	case err := <-errC:
-		Logger.Error("AddNotarizedBlock failed to compute state",
+		logging.Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
 		ret = false
 	case <-time.NewTimer(3 * time.Second).C:
-		Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
+		logging.Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
 		ret = false
 	}
 	sc.FinalizeRound(ctx, r, sc)

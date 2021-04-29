@@ -7,7 +7,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -142,14 +142,14 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 		if err != nil {
 			key.Free()
 			value.Free()
-			Logger.Error("iterate - create node", zap.String("key", ToHex(kdata)), zap.Error(err))
+			logging.Logger.Error("iterate - create node", zap.String("key", ToHex(kdata)), zap.Error(err))
 			continue
 		}
 		err = handler(ctx, kdata, node)
 		if err != nil {
 			key.Free()
 			value.Free()
-			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(kdata)), zap.Any("data", vdata), zap.Error(err))
+			logging.Logger.Error("iterate - create node handler error", zap.String("key", ToHex(kdata)), zap.Any("data", vdata), zap.Error(err))
 			return err
 		}
 		key.Free()
@@ -186,7 +186,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				logging.Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 				return err
 			}
 		}
@@ -199,7 +199,7 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 	if len(batch) > 0 {
 		err := pndb.MultiDeleteNode(batch)
 		if err != nil {
-			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
+			logging.Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
 			return err
 		}
 	}
@@ -221,7 +221,7 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 	}
 	err := pndb.Iterate(ctx, handler)
 	if err != nil {
-		Logger.Error("count", zap.Error(err))
+		logging.Logger.Error("count", zap.Error(err))
 		return -1
 	}
 	return count

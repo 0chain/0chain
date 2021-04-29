@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -123,13 +123,13 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
 func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error) {
 	if value == nil {
-		Logger.Debug("Insert nil value, delete data on path:",
+		logging.Logger.Debug("Insert nil value, delete data on path:",
 			zap.String("path", string(path)))
 		return mpt.Delete(path)
 	}
 	eval := value.Encode()
 	if eval == nil || len(eval) == 0 {
-		Logger.Debug("Insert encoded nil value, delete data on path:",
+		logging.Logger.Debug("Insert encoded nil value, delete data on path:",
 			zap.String("path", string(path)))
 		return mpt.Delete(path)
 	}
@@ -261,10 +261,10 @@ func (mpt *MerklePatriciaTrie) SaveChanges(ctx context.Context, ndb NodeDB, incl
 
 	select {
 	case <-ctx.Done():
-		Logger.Debug("MPT save changes failed", zap.Error(ctx.Err()))
+		logging.Logger.Debug("MPT save changes failed", zap.Error(ctx.Err()))
 		return ctx.Err()
 	case err := <-errC:
-		Logger.Debug("MPT save changes failed", zap.Error(err))
+		logging.Logger.Debug("MPT save changes failed", zap.Error(err))
 		return err
 	case <-doneC:
 	}
@@ -315,7 +315,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		nnode, err := mpt.db.GetNode(ckey)
 		if err != nil || nnode == nil {
 			if err != nil {
-				Logger.Error("full node get node failed",
+				logging.Logger.Error("full node get node failed",
 					zap.Any("version", mpt.Version),
 					//zap.Int("path len", len(path)),
 					//zap.String("path", string(path)),
@@ -337,7 +337,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
 			if err != nil || nnode == nil {
 				if err != nil {
-					Logger.Error("extension node get node failed", zap.Error(err))
+					logging.Logger.Error("extension node get node failed", zap.Error(err))
 				}
 				return nil, ErrNodeNotFound
 			}
@@ -687,7 +687,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.Error(err))
+		logging.Logger.Error("iterate - get node error", zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}
@@ -727,7 +727,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 					ecount++
 				} else {
-					Logger.Error("iterate - child node", zap.Error(err))
+					logging.Logger.Error("iterate - child node", zap.Error(err))
 					return err
 				}
 			}
@@ -753,7 +753,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		if oldNode != nil {
 			ohash = oldNode.GetHash()
 		}
-		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
+		logging.Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
 	}
 
 	//ohash := ""
@@ -766,7 +766,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 	//if ok {
 	//	dbVersion = lndb.version
 	//}
-	//Logger.Debug("insert node",
+	//logging.Logger.Debug("insert node",
 	//	zap.Any("version", mpt.Version),
 	//	zap.Int64("db version", dbVersion),
 	//	zap.Any("root", hex.EncodeToString(mpt.Root)),
@@ -790,9 +790,9 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 
 func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 	if DebugMPTNode {
-		Logger.Info("delete node", zap.String("dn", node.GetHash()))
+		logging.Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
-	//Logger.Debug("delete node", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
+	//logging.Logger.Debug("delete node", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
 	mpt.ChangeCollector.DeleteChange(node)
 	return mpt.db.DeleteNode(node.GetHashBytes())
 }
@@ -874,7 +874,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 			keys = keys[:0]
 			values = values[:0]
 			if err != nil {
-				Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				logging.Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 			}
 			return err
 		}
@@ -888,7 +888,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
-				Logger.Error("update version - multi put - last batch", zap.Error(err))
+				logging.Logger.Error("update version - multi put - last batch", zap.Error(err))
 				return err
 			}
 		}
@@ -914,14 +914,14 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 	if err != nil {
 		switch err {
 		case ErrNodeNotFound, ErrIteratingChildNodes:
-			Logger.Debug("Find missing nodes err", zap.Error(err))
+			logging.Logger.Debug("Find missing nodes err", zap.Error(err))
 		default:
-			Logger.Error("Find missing node with unexpected err", zap.Error(err))
+			logging.Logger.Error("Find missing node with unexpected err", zap.Error(err))
 			return nil, nil, err
 		}
 	}
 
-	Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
+	logging.Logger.Debug("Find missing nodes iteration time", zap.Any("duration", time.Since(st)))
 
 	return paths, keys, nil
 }
@@ -986,26 +986,26 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 // MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	if bytes.Compare(mpt.GetRoot(), mpt2.GetRoot()) == 0 {
-		Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
+		logging.Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
 		return nil
 	}
 
 	if DebugMPTNode {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
-			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
+			logging.Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
 		}
 	}
 
 	newDB := mpt2.GetNodeDB()
 	newLNDB, ok := newDB.(*LevelNodeDB)
 	if !ok {
-		Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
+		logging.Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
 		return errors.New("invalid mpt db")
 	}
 
 	preDB := newLNDB.GetPrev()
 	if preDB != mpt.GetNodeDB() {
-		Logger.Error("MergeMPTChanges does not merge direct child mpt")
+		logging.Logger.Error("MergeMPTChanges does not merge direct child mpt")
 		return errors.New("mpt does not merge changes from its child")
 	}
 
@@ -1017,13 +1017,13 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 	if bytes.Compare(mpt.Root, newRoot) == 0 {
-		Logger.Error("MergeMPTChanges - MPT merge changes with the same root")
+		logging.Logger.Error("MergeMPTChanges - MPT merge changes with the same root")
 		return nil
 	}
 
 	db := mpt.db.(*LevelNodeDB)
 
-	//Logger.Debug("MergeMPTChanges",
+	//logging.Logger.Debug("MergeMPTChanges",
 	//	zap.Int("change num", len(changes)),
 	//	zap.Int("delete num", len(deletes)),
 	//	zap.Any("old mpt version", mpt.Version),
@@ -1045,7 +1045,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	}
 
 	mpt.setRoot(newRoot)
-	//Logger.Debug("replaced db version",
+	//logging.Logger.Debug("replaced db version",
 	//	zap.Int64("version", db.version),
 	//	zap.Int64("new version", newLNDB.version))
 	db.versions = append(db.versions, newLNDB.version)

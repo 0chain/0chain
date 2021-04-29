@@ -10,7 +10,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -25,16 +25,16 @@ var MaxStateNodesForSync = 10000
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
-		Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
+		logging.Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
 		return errors.New("get block state changes - no bsc")
 	}
 	if bsc == nil {
 		return nil
 	}
-	Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
+	logging.Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
-		Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
+		logging.Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
 		return err
 	}
 	return nil
@@ -44,14 +44,14 @@ func (c *Chain) GetBlockStateChange(b *block.Block) error {
 func (c *Chain) GetPartialState(ctx context.Context, key util.Key) {
 	ps, err := c.getPartialState(ctx, key)
 	if err != nil {
-		Logger.Error("get partial state - no ps", zap.String("key", util.ToHex(key)), zap.Error(err))
+		logging.Logger.Error("get partial state - no ps", zap.String("key", util.ToHex(key)), zap.Error(err))
 		return
 	}
 	err = c.SavePartialState(ctx, ps)
 	if err != nil {
-		Logger.Error("get partial state - error saving", zap.String("key", util.ToHex(key)), zap.Error(err))
+		logging.Logger.Error("get partial state - error saving", zap.String("key", util.ToHex(key)), zap.Error(err))
 	} else {
-		Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(ps.Nodes)))
+		logging.Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(ps.Nodes)))
 	}
 }
 
@@ -63,7 +63,7 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 		for idx, key := range keys {
 			skeys[idx] = util.ToHex(key)
 		}
-		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
+		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
 			zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
@@ -73,12 +73,12 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
-		Logger.Error("get state nodes - error saving",
+		logging.Logger.Error("get state nodes - error saving",
 			zap.Int("num_keys", len(keys)),
 			zap.Strings("keys:", keysStr),
 			zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving",
+		logging.Logger.Info("get state nodes - saving",
 			zap.Int("num_keys", len(keys)),
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
@@ -94,7 +94,7 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		for idx, key := range keys {
 			skeys[idx] = util.ToHex(key)
 		}
-		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
+		logging.Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
 			zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
@@ -104,12 +104,12 @@ func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
-		Logger.Error("get state nodes - error saving",
+		logging.Logger.Error("get state nodes - error saving",
 			zap.Int("num_keys", len(keys)),
 			zap.Strings("keys:", keysStr),
 			zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving",
+		logging.Logger.Info("get state nodes - saving",
 			zap.Int("num_keys", len(keys)),
 			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
@@ -186,19 +186,19 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var ps *state.PartialState
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
+		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
 		rps, ok := entity.(*state.PartialState)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
+		logging.Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
 		if bytes.Compare(key, rps.Hash) != 0 {
-			Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
+			logging.Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
 			return nil, state.ErrHashMismatch
 		}
 		root := rps.GetRoot()
 		if root == nil {
-			Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(ps.Nodes)))
+			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(ps.Nodes)))
 			return nil, common.NewError("state_root_error", "Partial state root calculcation error")
 		}
 		cancelf()
@@ -229,7 +229,7 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		if len(rns.Nodes) == 0 {
 			return nil, util.ErrNodeNotFound
 		}
-		Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
+		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
 		ns = rns
 		return rns, nil
@@ -261,7 +261,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		if len(rns.Nodes) == 0 {
 			return nil, util.ErrNodeNotFound
 		}
-		Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
+		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
 		ns = rns
 		return rns, nil
@@ -293,7 +293,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
-		Logger.Debug("get block state change", zap.Int64("round", b.Round),
+		logging.Logger.Debug("get block state change", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
 
 		var rsc, ok = entity.(*block.StateChange)
@@ -302,20 +302,20 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		}
 
 		if rsc.Block != b.Hash {
-			Logger.Error("get block state change - hash mismatch error",
+			logging.Logger.Error("get block state change - hash mismatch error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
 		}
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
-			Logger.Error("get block state change - state hash mismatch error",
+			logging.Logger.Error("get block state change - state hash mismatch error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockStateHashMismatch
 		}
 
 		var root = rsc.GetRoot()
 		if root == nil {
-			Logger.Error("get block state change - state root error",
+			logging.Logger.Error("get block state change - state root error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))
 			return nil, common.NewError("state_root_error",
@@ -369,7 +369,7 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 
 	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
-		Logger.Error("apply block state change - error merging",
+		logging.Logger.Error("apply block state change - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return err
 	}

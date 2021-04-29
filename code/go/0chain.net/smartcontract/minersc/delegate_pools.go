@@ -8,7 +8,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -71,7 +71,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	pool.DelegateID = t.ClientID
 	pool.Status = PENDING
 
-	Logger.Info("add delegate pool", zap.Any("pool", pool))
+	logging.Logger.Info("add delegate pool", zap.Any("pool", pool))
 
 	if transfer, _, err = pool.DigPool(t.Hash, t); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",

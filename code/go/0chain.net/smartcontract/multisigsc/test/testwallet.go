@@ -5,7 +5,7 @@ import (
 	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/multisigsc"
 	"go.uber.org/zap"
 )
@@ -74,14 +74,14 @@ func (t testWallet) registerMPTWallets() {
 	// Give the group and its sub-keys some tokens to play with.
 	owner := getOwnerWallet(c.signatureScheme, c.ownerKeysFile)
 
-	Logger.Info("Requesting airdrop for group wallet...", zap.Int("multi-sig wallet#", t.id))
+	logging.Logger.Info("Requesting airdrop for group wallet...", zap.Int("multi-sig wallet#", t.id))
 	airdrop(owner, t.groupClientID)
-	Logger.Info("Success on airdrop for group wallet", zap.Int("multi-sig wallet#", t.id))
+	logging.Logger.Info("Success on airdrop for group wallet", zap.Int("multi-sig wallet#", t.id))
 
 	for i, signerClientID := range t.signerClientIDs {
-		Logger.Info("Requesting airdrop for signer wallet...", zap.Int("multi-sig wallet#", t.id), zap.Int("signer#", i))
+		logging.Logger.Info("Requesting airdrop for signer wallet...", zap.Int("multi-sig wallet#", t.id), zap.Int("signer#", i))
 		airdrop(owner, signerClientID)
-		Logger.Info("Success on airdrop for signer wallet", zap.Int("multi-sig wallet#", t.id), zap.Int("signer#", i))
+		logging.Logger.Info("Success on airdrop for signer wallet", zap.Int("multi-sig wallet#", t.id), zap.Int("signer#", i))
 	}
 }
 
@@ -108,11 +108,11 @@ func (t testWallet) registerSCWallet() string {
 		},
 	}
 
-	Logger.Info("Requesting SC:Register...", zap.Int("multi-sig wallet#", t.id), zap.Any("args", data.InputArgs))
+	logging.Logger.Info("Requesting SC:Register...", zap.Int("multi-sig wallet#", t.id), zap.Any("args", data.InputArgs))
 
 	txn := t.groupTransaction(0, &data)
 
-	Logger.Info("Response received for SC:Register", zap.Int("multi-sig wallet#", t.id), zap.String("txn hash", txn.Hash), zap.String("txn output", txn.TransactionOutput))
+	logging.Logger.Info("Response received for SC:Register", zap.Int("multi-sig wallet#", t.id), zap.String("txn hash", txn.Hash), zap.String("txn output", txn.TransactionOutput))
 
 	return txn.TransactionOutput
 }
@@ -137,7 +137,7 @@ func (t testWallet) newProposal(proposalID string, toClientID string, value int6
 
 		err := signedTransfer.Sign(signer.(encryption.SignatureScheme))
 		if err != nil {
-			Logger.Fatal("Failed to sign transfer", zap.Error(err))
+			logging.Logger.Fatal("Failed to sign transfer", zap.Error(err))
 		}
 
 		votes[t.signerClientIDs[i]] = multisigsc.Vote{
@@ -158,11 +158,11 @@ func (t testWallet) registerVote(p testProposal, signerClientID string) string {
 		InputArgs: p.votes[signerClientID],
 	}
 
-	Logger.Info("Requesting SC:Vote...", zap.Int("multi-sig wallet#", t.id), zap.Any("args", data.InputArgs))
+	logging.Logger.Info("Requesting SC:Vote...", zap.Int("multi-sig wallet#", t.id), zap.Any("args", data.InputArgs))
 
 	txn := t.signerTransaction(signerClientID, 0, &data)
 
-	Logger.Info("Response received for SC:Vote", zap.Int("multi-sig wallet#", t.id), zap.String("txn hash", txn.Hash), zap.String("txn output", txn.TransactionOutput))
+	logging.Logger.Info("Response received for SC:Vote", zap.Int("multi-sig wallet#", t.id), zap.String("txn hash", txn.Hash), zap.String("txn output", txn.TransactionOutput))
 
 	return txn.TransactionOutput
 }
@@ -207,7 +207,7 @@ func (t testWallet) getMPTWalletForSigner(signerClientID string) mptwallet.Walle
 		}
 	}
 
-	Logger.Fatal("Logic error in asking for signer wallet", zap.String("signerClientID", signerClientID))
+	logging.Logger.Fatal("Logic error in asking for signer wallet", zap.String("signerClientID", signerClientID))
 	return mptwallet.Wallet{} // Never reached.
 }
 

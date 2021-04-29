@@ -10,7 +10,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -65,7 +65,7 @@ func printTimeTaken(start int64) {
 	end := time.Now().UnixNano()
 	duration := (end - start) / int64(time.Microsecond)
 
-	Logger.Info("Multi-signature smart contract execution time", zap.Int64("µs duration", duration))
+	logging.Logger.Info("Multi-signature smart contract execution time", zap.Int64("µs duration", duration))
 }
 
 func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte, balances state.StateContextI) (string, error) {

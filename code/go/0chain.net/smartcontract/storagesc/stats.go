@@ -1,9 +1,9 @@
 package storagesc
 
 import (
-	"0chain.net/core/common"
 	c_state "0chain.net/chaincore/chain/state"
-	. "0chain.net/core/logging"
+	"0chain.net/core/common"
+	"0chain.net/core/logging"
 )
 
 func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
@@ -13,7 +13,7 @@ func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSi
 	if statsBytes != nil {
 		err = stats.Decode(statsBytes.Encode())
 		if err != nil {
-			Logger.Error("storage stats decode error")
+			logging.Logger.Error("storage stats decode error")
 			return
 		}
 	}
@@ -34,7 +34,7 @@ func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads
 	if statsBytes != nil {
 		err = stats.Decode(statsBytes.Encode())
 		if err != nil {
-			Logger.Error("storage stats decode error")
+			logging.Logger.Error("storage stats decode error")
 			return
 		}
 	}
@@ -53,7 +53,7 @@ func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, cha
 	if statsBytes != nil {
 		err = stats.Decode(statsBytes.Encode())
 		if err != nil {
-			Logger.Error("storage stats decode error")
+			logging.Logger.Error("storage stats decode error")
 			return
 		}
 	}
@@ -75,7 +75,7 @@ func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI
 	if statsBytes != nil {
 		err = stats.Decode(statsBytes.Encode())
 		if err != nil {
-			Logger.Error("storage stats decode error")
+			logging.Logger.Error("storage stats decode error")
 			return
 		}
 	}

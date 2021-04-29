@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -435,7 +435,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		sc.challengeResolved(balances, true)
-		//Logger.Info("Challenge passed", zap.Any("challenge", challResp.ID))
+		//logging.Logger.Info("Challenge passed", zap.Any("challenge", challResp.ID))
 
 		var partial = 1.0
 		if success < threshold {
@@ -485,7 +485,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		sc.challengeResolved(balances, false)
-		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
+		logging.Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
 		err = sc.blobberPenalty(t, alloc, prev, blobberChall, details,
 			validators, balances)
@@ -542,11 +542,11 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	}
 	if statsBytes != nil {
 		if err = stats.Decode(statsBytes.Encode()); err != nil {
-			Logger.Error("storage stats decode error")
+			logging.Logger.Error("storage stats decode error")
 			return
 		}
 	}
-	//Logger.Info("Stats for generating challenge", zap.Any("stats", stats))
+	//logging.Logger.Info("Stats for generating challenge", zap.Any("stats", stats))
 	lastChallengeTime := stats.LastChallengedTime
 	if lastChallengeTime == 0 {
 		lastChallengeTime = t.CreationDate
@@ -578,12 +578,12 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	}
 	numChallenges := int64(math.Min(rated,
 		float64(conf.MaxChallengesPerGeneration)))
-	//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
+	//	logging.Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
 	var randomSeed uint64
 	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
 	if err != nil {
-		Logger.Error("Error in creating seed for creating challenges",
+		logging.Logger.Error("Error in creating seed for creating challenges",
 			zap.Error(err))
 		return err
 	}
@@ -620,7 +620,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 				"unexpected error getting allocation: %v", err)
 		}
 		if err == util.ErrValueNotPresent {
-			Logger.Error("client state has invalid allocations",
+			logging.Logger.Error("client state has invalid allocations",
 				zap.Any("allocation_list", all.List),
 				zap.Any("selected_allocation", all.List[i]))
 			return nil, common.NewErrorf("invalid_allocation",
@@ -663,7 +663,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		var challengeSeed uint64
 		challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
 		if err != nil {
-			Logger.Error("Error in creating challenge seed", zap.Error(err),
+			logging.Logger.Error("Error in creating challenge seed", zap.Error(err),
 				zap.Any("challengeID", challengeID))
 			continue
 		}
@@ -675,7 +675,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		challengeString, err = sc.addChallenge(alloc, validators, challengeID,
 			t.CreationDate, r, int64(challengeSeed), balances)
 		if err != nil {
-			Logger.Error("Error in adding challenge", zap.Error(err),
+			logging.Logger.Error("Error in adding challenge", zap.Error(err),
 				zap.Any("challengeString", challengeString))
 			continue
 		}
@@ -706,7 +706,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		selectedBlobberObj = alloc.Blobbers[ri]
 		_, ok := alloc.BlobberMap[selectedBlobberObj.ID]
 		if !ok {
-			Logger.Error("Selected blobber not found in allocation state",
+			logging.Logger.Error("Selected blobber not found in allocation state",
 				zap.Any("selected_blobber", selectedBlobberObj),
 				zap.Any("blobber_map", alloc.BlobberMap))
 			return "", common.NewError("invalid_parameters",
@@ -733,7 +733,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		}
 	}
 
-	// Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", alloc.Blobbers[randIdx]), zap.Any("blobbers", alloc.Blobbers), zap.Any("random_index", randIdx))
+	// logging.Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", alloc.Blobbers[randIdx]), zap.Any("blobbers", alloc.Blobbers), zap.Any("random_index", randIdx))
 
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = challengeID
@@ -771,7 +771,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
+	//logging.Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(balances, storageChallenge.Created)
 	return string(challengeBytes), err

@@ -5,7 +5,7 @@ import (
 
 	"0chain.net/chaincore/node"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -50,12 +50,12 @@ func (bc *BCContext) GetNodepoolInfo() interface{} {
 		case node.NodeTypeSharder:
 			pm.Type = Sharder
 		default:
-			Logger.Info("unknown_node_type", zap.Int8("Type", n.Type))
+			logging.Logger.Info("unknown_node_type", zap.Int8("Type", n.Type))
 		}
 		pm.PublicKey = n.PublicKey
-		//Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))
+		//logging.Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))
 		members.MembersInfo = append(members.MembersInfo, *pm)
 	}
-	Logger.Info("GetNodePoolInfo returning ", zap.Int("membersInfo", len(members.MembersInfo)))
+	logging.Logger.Info("GetNodePoolInfo returning ", zap.Int("membersInfo", len(members.MembersInfo)))
 	return members
 }

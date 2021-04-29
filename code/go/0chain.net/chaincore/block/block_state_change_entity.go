@@ -1,13 +1,13 @@
 package block
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"encoding/json"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -85,16 +85,16 @@ func (sc *StateChange) UnmarshalJSON(data []byte) error {
 	var obj map[string]interface{}
 	err := json.Unmarshal(data, &obj)
 	if err != nil {
-		Logger.Error("unmarshal json - state change", zap.Error(err))
+		logging.Logger.Error("unmarshal json - state change", zap.Error(err))
 		return err
 	}
 	if block, ok := obj["block"]; ok {
 		if sc.Block, ok = block.(string); !ok {
-			Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
+			logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
 			return common.ErrInvalidData
 		}
 	} else {
-		Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
+		logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
 		return common.ErrInvalidData
 	}
 	return sc.UnmarshalPartialState(obj)

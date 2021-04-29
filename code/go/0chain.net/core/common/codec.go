@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack"
 	"go.uber.org/zap"
 )
@@ -49,7 +49,7 @@ func ToJSONPipe(entity interface{}) *io.PipeReader {
 		defer pw.Close()
 		err := json.NewEncoder(pw).Encode(entity)
 		if err != nil {
-			Logger.Error("TOJSONPipe:error", zap.Error(err))
+			logging.Logger.Error("TOJSONPipe:error", zap.Error(err))
 		}
 	}()
 	return pr

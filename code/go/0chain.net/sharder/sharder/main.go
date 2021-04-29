@@ -32,7 +32,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
 	"0chain.net/sharder"
@@ -128,7 +127,7 @@ func main() {
 	signatureScheme := serverChain.GetSignatureScheme()
 	err = signatureScheme.ReadKeys(reader)
 	if err != nil {
-		Logger.Panic("Error reading keys file")
+		logging.Logger.Panic("Error reading keys file")
 	}
 	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
@@ -160,13 +159,13 @@ func main() {
 	if dnsURL == "" {
 		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
 		if err != nil {
-			Logger.Panic("can't read magic block file", zap.Error(err))
+			logging.Logger.Panic("can't read magic block file", zap.Error(err))
 			return
 		}
 	} else {
 		magicBlock, err = chain.GetMagicBlockFrom0DNS(dnsURL)
 		if err != nil {
-			Logger.Panic("can't read magic block from DNS", zap.Error(err))
+			logging.Logger.Panic("can't read magic block from DNS", zap.Error(err))
 			return
 		}
 	}
@@ -178,20 +177,20 @@ func main() {
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
-	Logger.Info("sharder node", zap.Any("node", node.Self))
+	logging.Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
 	if selfNode.GetKey() == "" {
-		Logger.Panic("node definition for self node doesn't exist")
+		logging.Logger.Panic("node definition for self node doesn't exist")
 	}
 
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
-			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
+			logging.Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
-		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum), zap.String("path", path))
+		logging.Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum), zap.String("path", path))
 		selfNode.Host = hostName
 		selfNode.N2NHost = n2nHost
 		selfNode.Port = portNum
@@ -200,16 +199,16 @@ func main() {
 		selfNode.Description = description
 	} else {
 		if initStateErr != nil {
-			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+			logging.Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
 		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
-		Logger.Panic("node not configured as sharder")
+		logging.Logger.Panic("node not configured as sharder")
 	}
 
 	// start sharding from the LFB stored
 	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
+		logging.Logger.Error("load latest blocks from store: " + err.Error())
 		return
 	}
 
@@ -224,13 +223,13 @@ func main() {
 
 	address := fmt.Sprintf(":%v", selfNode.Port)
 
-	Logger.Info("Starting sharder", zap.String("build_tag", build.BuildTag),
+	logging.Logger.Info("Starting sharder", zap.String("build_tag", build.BuildTag),
 		zap.String("go_version", runtime.Version()),
 		zap.Int("available_cpus", runtime.NumCPU()),
 		zap.String("port", address))
-	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()),
+	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()),
 		zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex),
+	logging.Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex),
 		zap.Any("id", selfNode.GetKey()))
 
 	initIntegrationsTests(node.Self.Underlying().GetKey())
@@ -261,7 +260,7 @@ func main() {
 	initN2NHandlers()
 
 	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
-		Logger.Fatal("update LFMB from sharders", zap.Error(err))
+		logging.Logger.Fatal("update LFMB from sharders", zap.Error(err))
 	}
 
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <
@@ -286,7 +285,7 @@ func main() {
 
 	defer done(ctx)
 
-	Logger.Info("Ready to listen to the requests")
+	logging.Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	Listen(server)
 	defer server.Shutdown(ctx)
@@ -310,9 +309,9 @@ func done(ctx context.Context) {
 
 func startBlocksInfoLogs(sc *sharder.Chain) {
 	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
-	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
+	logging.Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
-	Logger.Info("start from LFMB",
+	logging.Logger.Info("start from LFMB",
 		zap.Int64("round", lfmb.MagicBlock.StartingRound),
 		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
 }
@@ -336,7 +335,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	h := scanner.Text()
-	Logger.Info("Host inside", zap.String("host", h))
+	logging.Logger.Info("Host inside", zap.String("host", h))
 
 	result = scanner.Scan()
 	if result == false {
@@ -344,7 +343,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	n2nh := scanner.Text()
-	Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
+	logging.Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
 
 	scanner.Scan()
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
@@ -359,7 +358,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	path := scanner.Text()
-	Logger.Info("Path inside", zap.String("path", path))
+	logging.Logger.Info("Path inside", zap.String("path", path))
 
 	result = scanner.Scan()
 	if result == false {
@@ -367,7 +366,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	description := scanner.Text()
-	Logger.Info("Description inside", zap.String("description", description))
+	logging.Logger.Info("Description inside", zap.String("description", description))
 	return h, n2nh, p, path, description, nil
 }
 
@@ -448,16 +447,16 @@ func setupBlockStorageProvider(mConf blockstore.MinioConfiguration) {
 
 		// trying to initialize bucket.
 		if err := mClient.MakeBucket(mConf.BucketName, mConf.BucketLocation); err != nil {
-			Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
+			logging.Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
 			exists, errBucketExists := mClient.BucketExists(mConf.BucketName)
 			if errBucketExists == nil && exists {
-				Logger.Info("We already own ", zap.Any("bucket_name", mConf.BucketName))
+				logging.Logger.Info("We already own ", zap.Any("bucket_name", mConf.BucketName))
 			} else {
-				Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", mConf.BucketName))
+				logging.Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", mConf.BucketName))
 				panic(err)
 			}
 		} else {
-			Logger.Info(mConf.BucketName + " bucket successfully created")
+			logging.Logger.Info(mConf.BucketName + " bucket successfully created")
 		}
 	}
 

@@ -10,7 +10,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -19,10 +19,10 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	Logger.Info("try to add sharder", zap.Any("txn", t))
+	logging.Logger.Info("try to add sharder", zap.Any("txn", t))
 	var all *MinerNodes
 	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
-		Logger.Error("Error in getting list from the DB", zap.Error(err))
+		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("add_sharder",
 			"getting miner list: %v", err)
 	}
@@ -32,7 +32,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
-		Logger.Error("Error in decoding the input", zap.Error(err))
+		logging.Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	newSharder.LastHealthCheck = t.CreationDate
 
-	Logger.Info("The new sharder info",
+	logging.Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
@@ -53,10 +53,10 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 		zap.Int64("min_stake", int64(newSharder.MinStake)),
 		zap.Int64("max_stake", int64(newSharder.MaxStake)))
 
-	Logger.Info("SharderNode", zap.Any("node", newSharder))
+	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
-		Logger.Error("public key or ID is empty")
+		logging.Logger.Error("public key or ID is empty")
 		return "", common.NewError("add_sharder",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
@@ -120,17 +120,17 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI, key datastore.Key, msg string) {
 	allSharderList, err := msc.getShardersList(balances, key)
 	if err != nil {
-		Logger.Info(msg + " getShardersList_failed - Failed to retrieve existing miners list")
+		logging.Logger.Info(msg + " getShardersList_failed - Failed to retrieve existing miners list")
 		return
 	}
 	if allSharderList == nil || len(allSharderList.Nodes) == 0 {
-		Logger.Info(msg + " allSharderList is empty")
+		logging.Logger.Info(msg + " allSharderList is empty")
 		return
 	}
 
-	Logger.Info(msg)
+	logging.Logger.Info(msg)
 	for _, sharder := range allSharderList.Nodes {
-		Logger.Info("allSharderList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
+		logging.Logger.Info("allSharderList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
 	}
 
 }
@@ -192,7 +192,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 
 	sharderKeepList, err := msc.getShardersList(balances, ShardersKeepKey)
 	if err != nil {
-		Logger.Error("Error in getting list from the DB", zap.Error(err))
+		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("sharder_keep_failed",
 			"Failed to get miner list: %v", err)
 	}
@@ -201,25 +201,25 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	newSharder := NewMinerNode()
 	err = newSharder.Decode(input)
 	if err != nil {
-		Logger.Error("Error in decoding the input", zap.Error(err))
+		logging.Logger.Error("Error in decoding the input", zap.Error(err))
 
 		return "", err
 	}
-	Logger.Info("The new sharder info",
+	logging.Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
 		zap.Any("mscID", msc.ID))
-	Logger.Info("SharderNode", zap.Any("node", newSharder))
+	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
-		Logger.Error("public key or ID is empty")
+		logging.Logger.Error("public key or ID is empty")
 		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	//check new sharder
 	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
 	if err != nil {
-		Logger.Error("Error in getting list from the DB", zap.Error(err))
+		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("sharder_keep_failed",
 			"Failed to get miner list: %v", err)
 	}

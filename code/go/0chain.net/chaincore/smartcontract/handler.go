@@ -13,7 +13,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -43,7 +43,7 @@ func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w htt
 	if sc != nil {
 		int, err := sc.HandlerStats(ctx, params)
 		if err != nil {
-			Logger.Warn("unexpected error", zap.Error(err))
+			logging.Logger.Warn("unexpected error", zap.Error(err))
 		}
 		fmt.Fprintf(w, "%v", int)
 		return
@@ -94,7 +94,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balan
 		dataBytes := []byte(t.TransactionData)
 		err := json.Unmarshal(dataBytes, &smartContractData)
 		if err != nil {
-			Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
+			logging.Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
 			return "", err
 		}
 		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)

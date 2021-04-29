@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -60,7 +60,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
 		if count == 0 {
-			Logger.Info("Redis returned 0 rows after seclect")
+			logging.Logger.Info("Redis returned 0 rows after seclect")
 			return nil
 		}
 		offset += count
@@ -75,12 +75,12 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			if ok {
 				score, err := strconv.ParseInt(string(scoredata), 10, 63)
 				if err != nil {
-					Logger.Debug("iterator error", zap.Any("score", scoredata), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+					logging.Logger.Debug("iterator error", zap.Any("score", scoredata), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 					return err
 				}
 				ce.SetCollectionScore(score)
 			} else {
-				Logger.Info("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+				logging.Logger.Info("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 			}
 		}
 		err = ms.MultiRead(ctx, entityMetadata, keys[:count], bucket)
@@ -142,7 +142,7 @@ func trackCollection(entityMetadata datastore.EntityMetadata, qe datastore.Colle
 
 /*CollectionTrimmer - trims the collection based on size and duration options */
 func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection string, trimSize int64, trimBeyond time.Duration) {
-	Logger.Debug("starting collection trimmer", zap.String("collection", collection))
+	logging.Logger.Debug("starting collection trimmer", zap.String("collection", collection))
 	ctx := WithEntityConnection(common.GetRootContext(), entityMetadata)
 	con := GetEntityCon(ctx, entityMetadata)
 	defer Close(ctx)
@@ -156,12 +156,12 @@ func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection strin
 			con.Flush()
 			data, err := con.Receive()
 			if err != nil {
-				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
+				logging.Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
 				continue
 			}
 			size, ok := data.(int64)
 			if !ok {
-				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Any("data", data))
+				logging.Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Any("data", data))
 			}
 			if size < trimSize {
 				continue

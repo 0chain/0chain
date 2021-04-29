@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -58,20 +58,20 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 	var lfb = sc.GetLatestFinalizedBlock()
 	if b.Round <= lfb.Round {
-		Logger.Debug("NotarizedBlockHandler block.Round <= lfb.Round",
+		logging.Logger.Debug("NotarizedBlockHandler block.Round <= lfb.Round",
 			zap.Int64("block round", b.Round),
 			zap.Int64("lfb round", lfb.Round))
 		return true, nil // doesn't need a not. block for the round
 	}
 	_, err := sc.GetBlock(ctx, b.Hash)
 	if err == nil {
-		Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
+		logging.Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
 		return true, nil
 	}
 	select {
 	case sc.GetBlockChannel() <- b:
 	case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
-		Logger.Error("Push notarized block to channel timeout")
+		logging.Logger.Error("Push notarized block to channel timeout")
 		return false, nil
 	}
 

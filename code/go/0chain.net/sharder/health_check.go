@@ -4,7 +4,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
 	"github.com/rcrowley/go-metrics"
@@ -219,7 +219,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 		// Scan is disabled. Print event periodically.
 		wakeToReport := config.ReportStatus
 		for true {
-			Logger.Info("HC-CycleHistory",
+			logging.Logger.Info("HC-CycleHistory",
 				zap.String("scan", scanMode.String()),
 				zap.Bool("enabled", config.Enabled))
 			time.Sleep(wakeToReport)
@@ -230,20 +230,20 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	sc.setCycleBounds(ctx, scanMode)
 	cb := &cc.bounds
 
-	Logger.Info("HC-Init",
+	logging.Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
 		zap.Int64("high", cb.highRound),
 		zap.Int64("low", cb.lowRound),
 		zap.Int64("current", cb.currentRound),
 		zap.Int64("window", cb.window))
 
-	Logger.Info("HC-Init",
+	logging.Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
 		zap.Int64("batch-size", config.BatchSize),
 		zap.Int("interval", config.RepeatIntervalMins))
 
 	// Initial setup
-	Logger.Info("HC-Init",
+	logging.Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
 		zap.Time("inception", cc.inception))
 
@@ -296,7 +296,7 @@ func (sc *Chain) initSyncStats(_ context.Context, scanMode HealthCheckScan) {
 	cc.counters.current.init()
 
 	// Log start of new round
-	Logger.Info("HC-CycleHistory",
+	logging.Logger.Info("HC-CycleHistory",
 		zap.String("mode", cc.ScanMode.String()),
 		zap.Int64("cycle", cc.CycleCount),
 		zap.String("event", "start"),
@@ -339,7 +339,7 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		// Mark as cycle is in hiatus
 		cc.Status = SyncHiatus
 
-		Logger.Info("HC-CycleHistory",
+		logging.Logger.Info("HC-CycleHistory",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("event", "end"),
@@ -356,7 +356,7 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 			bc.SweepRate = bc.SweepCount / bc.ElapsedSeconds
 		}
 
-		Logger.Info("HC-CycleHistory",
+		logging.Logger.Info("HC-CycleHistory",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("event", "sweep-rate"),
@@ -376,7 +376,7 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		// Add time to sleep before waking up
 		restartCycle := time.Now().Add(sleepTime)
 		for ok := true; ok; ok = restartCycle.After(time.Now()) {
-			Logger.Info("HC-CycleHistory",
+			logging.Logger.Info("HC-CycleHistory",
 				zap.String("mode", cc.ScanMode.String()),
 				zap.Int64("cycle", cc.CycleCount),
 				zap.String("event", "hiatus"),
@@ -495,7 +495,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 			b = sc.requestBlock(ctx, r)
 			if b == nil {
-				HCLogger.Info("HC-MissingObject",
+				logging.HCLogger.Info("HC-MissingObject",
 					zap.String("mode", cc.ScanMode.String()),
 					zap.Int64("cycle", cc.CycleCount),
 					zap.String("object", "Block"),
@@ -511,7 +511,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			// The sharder has acquired the block and should save it.
 			err := sc.storeBlock(ctx, b)
 			if err != nil {
-				Logger.Error("HC-DSWriteFailure",
+				logging.Logger.Error("HC-DSWriteFailure",
 					zap.String("mode", cc.ScanMode.String()),
 					zap.Int64("cycle", cc.CycleCount),
 					zap.String("object", "block"),
@@ -528,7 +528,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	// Check if the sharder needs to store txn summary
 	if needTxnSummary {
 		if b == nil {
-			Logger.Panic("HC-Assertion",
+			logging.Logger.Panic("HC-Assertion",
 				zap.String("mode", cc.ScanMode.String()),
 				zap.Int64("cycle", cc.CycleCount),
 				zap.String("object", "block"),
@@ -541,7 +541,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		if err == nil {
 			current.txnSummary.RepairSuccess++
 		} else {
-			Logger.Error("HC-DSWriteFailure",
+			logging.Logger.Error("HC-DSWriteFailure",
 				zap.String("mode", cc.ScanMode.String()),
 				zap.Int64("cycle", cc.CycleCount),
 				zap.String("object", "TransactionSummary"),

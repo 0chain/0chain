@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/chain"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -226,9 +226,9 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	if fbs.Minio.DeleteLocal() {
 		err = os.Remove(filePath)
 		if err != nil {
-			Logger.Error("Failed to delete block which is moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
+			logging.Logger.Error("Failed to delete block which is moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
 		}
-		Logger.Info("Local block successfully deleted, moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
+		logging.Logger.Info("Local block successfully deleted, moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
 	}
 	return nil
 }

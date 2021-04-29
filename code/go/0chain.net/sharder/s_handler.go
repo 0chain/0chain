@@ -13,7 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 )
 
 var (
@@ -86,7 +86,7 @@ func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 	if err == nil {
 		rangeBounds := GetRangeBounds(roundEdge, roundRange)
 		roundS := sc.getRoundSummaries(ctx, rangeBounds)
-		Logger.Info("RoundSummariesHandler",
+		logging.Logger.Info("RoundSummariesHandler",
 			zap.String("object", "roundSummaries"),
 			zap.Int64("low", rangeBounds.roundLow),
 			zap.Int64("high", rangeBounds.roundHigh),
@@ -95,7 +95,7 @@ func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 		rs.RSummaryList = roundS
 		return rs, nil
 	}
-	Logger.Error("RoundSummariesHandler - Parsing Param Error",
+	logging.Logger.Error("RoundSummariesHandler - Parsing Param Error",
 		zap.String("round", roundEdgeValue),
 		zap.String("range", roundRangeValue),
 		zap.Error(err))
@@ -116,7 +116,7 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 	if err == nil {
 		rangeBounds := GetRangeBounds(roundEdge, roundRange)
 		rs := sc.getRoundSummaries(ctx, rangeBounds)
-		Logger.Info("BlockSummariesHandler",
+		logging.Logger.Info("BlockSummariesHandler",
 			zap.String("object", "roundSummaries"),
 			zap.Int64("low", rangeBounds.roundLow),
 			zap.Int64("high", rangeBounds.roundHigh),
@@ -138,14 +138,14 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 			}
 		}
 		bs.BSummaryList = blockS
-		Logger.Info("BlockSummariesHandler",
+		logging.Logger.Info("BlockSummariesHandler",
 			zap.String("object", "blockSummaries"),
 			zap.Int64("low", rangeBounds.roundLow),
 			zap.Int64("high", rangeBounds.roundHigh),
 			zap.Int64("range", rangeBounds.roundRange))
 		return bs, nil
 	}
-	Logger.Error("BlockSummariesHandler - Parsing Param Error",
+	logging.Logger.Error("BlockSummariesHandler - Parsing Param Error",
 		zap.String("round", roundEdgeValue),
 		zap.String("range", roundRangeValue),
 		zap.Error(err))
@@ -173,7 +173,7 @@ func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, err
 	roundValue := r.FormValue("round")
 	roundNum, err := strconv.ParseInt(roundValue, 10, 64)
 	if err == nil {
-		Logger.Debug("RoundRequestHandler",
+		logging.Logger.Debug("RoundRequestHandler",
 			zap.String("object", "round"),
 			zap.Int64("round", roundNum))
 		roundEntity := sc.GetSharderRound(roundNum)

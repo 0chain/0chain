@@ -15,7 +15,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -146,12 +146,12 @@ func (*LFBTicket) Delete(context.Context) error              { return nil }
 
 // sendLFBTicket to all appropriate nodes (by corresponding MB)
 func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
-	Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
+	logging.Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
 		zap.String("hash", ticket.LFBHash))
 
 	var mb = c.GetMagicBlock(ticket.Round)
 	if mb == nil {
-		Logger.Debug("broadcast LFB ticket: skip due to missing magic block",
+		logging.Logger.Debug("broadcast LFB ticket: skip due to missing magic block",
 			zap.Int64("round", ticket.Round),
 			zap.String("hash", ticket.LFBHash))
 		return
@@ -208,13 +208,13 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 func (c *Chain) sendLFBTicketEventToSubscribers(
 	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
 
-	Logger.Debug("[send LFB-ticket event to subscribers]",
+	logging.Logger.Debug("[send LFB-ticket event to subscribers]",
 		zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
 	for s := range subs {
 		select {
 		case s <- ticket: // the sending must be non-blocking
 		default:
-			Logger.Debug("[send LFB-ticket event to subscribers] ignore one")
+			logging.Logger.Debug("[send LFB-ticket event to subscribers] ignore one")
 		}
 	}
 }
@@ -371,19 +371,19 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 
 	var ticket LFBTicket
 	if err = dec.Decode(&ticket); err != nil {
-		Logger.Debug("handling LFB ticket", zap.String("from", r.RemoteAddr),
+		logging.Logger.Debug("handling LFB ticket", zap.String("from", r.RemoteAddr),
 			zap.Error(err))
 		return // (nil, err)
 	}
 
 	var chain = GetServerChain()
 	if !chain.verifyLFBTicket(&ticket) {
-		Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
+		logging.Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
 			zap.Int64("round", ticket.Round))
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
-	Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),
+	logging.Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),
 		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)

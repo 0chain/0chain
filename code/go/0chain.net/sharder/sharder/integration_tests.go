@@ -10,7 +10,7 @@ import (
 
 // start lock, where the sharder is ready to connect to blockchain (BC)
 func initIntegrationsTests(id string) {
-	logging.Logger.Info("integration tests")
+	logging.logging.Logger.Info("integration tests")
 	crpc.Init(id)
 }
 

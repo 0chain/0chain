@@ -20,7 +20,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -190,7 +190,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(mpks.Mpks) == 0 {
-		Logger.Error("empty miners mpks keys")
+		logging.Logger.Error("empty miners mpks keys")
 		return
 	}
 
@@ -202,7 +202,7 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 		}
 	}
 
-	Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
+	logging.Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
 	return // false, hasn't
 }
 
@@ -211,7 +211,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 	balances cstate.StateContextI) (has bool) {
 
 	if len(gsos.Shares) == 0 {
-		Logger.Error("empty sharder or sign keys")
+		logging.Logger.Error("empty sharder or sign keys")
 		return
 	}
 
@@ -223,7 +223,7 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 		}
 	}
 
-	Logger.Debug("has no prev miner in GSoS",
+	logging.Logger.Debug("has no prev miner in GSoS",
 		zap.Int64("prev_mb_round", pmb.StartingRound),
 		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
 	)
@@ -336,7 +336,7 @@ func (gn *GlobalNode) epochDecline() {
 	gn.InterestRate = gn.InterestRate * (1.0 - gn.InterestDeclineRate)
 
 	// log about the epoch declining
-	Logger.Info("miner sc: epoch decline",
+	logging.Logger.Info("miner sc: epoch decline",
 		zap.Int64("round", gn.LastRound),
 		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
 		zap.Float64("interest_decline_rate", gn.InterestDeclineRate),
@@ -443,7 +443,7 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 
-	//Logger.Debug("MinerNode save successfully",
+	//logging.Logger.Debug("MinerNode save successfully",
 	//	zap.String("path", encryption.Hash(mn.getKey())),
 	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return nil
