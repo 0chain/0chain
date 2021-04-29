@@ -105,7 +105,7 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 	return
 }
 
-func (cp *challengePool) moveBlobberCharge(sscKey string, sp *stakePool,
+func (cp *challengePool) moveServiceCharge(sscKey string, sp *stakePool,
 	value state.Balance, balances cstate.StateContextI) (err error) {
 
 	if value == 0 {
@@ -131,72 +131,40 @@ func (cp *challengePool) moveBlobberCharge(sscKey string, sp *stakePool,
 }
 
 // moveToBlobber moves tokens to given blobber on challenge passed
-func (cp *challengePool) moveToBlobber(sscKey string, sp *stakePool,
-	value state.Balance, balances cstate.StateContextI) (err error) {
+func (cp *challengePool) moveReward(sscKey string, sp *stakePool,
+	value state.Balance, balances cstate.StateContextI) (moved state.Balance, err error) {
 
 	if value == 0 {
 		return // nothing to move
 	}
 
 	if cp.Balance < value {
-		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+		return 0, fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
 	}
 
-	var blobberCharge state.Balance
-	blobberCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
+	var serviceCharge state.Balance
+	serviceCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
 
-	err = cp.moveBlobberCharge(sscKey, sp, blobberCharge, balances)
+	err = cp.moveServiceCharge(sscKey, sp, serviceCharge, balances)
 	if err != nil {
 		return
 	}
 
-	value = value - blobberCharge
+	value = value - serviceCharge
 
 	if value == 0 {
 		return // nothing to move
 	}
 
 	if len(sp.Pools) == 0 {
-		return fmt.Errorf("no stake pools to move tokens to %s", cp.ID)
+		return 0, fmt.Errorf("no stake pools to move tokens to %s", cp.ID)
 	}
 
 	var stake = float64(sp.stake())
 	for _, dp := range sp.orderedPools() {
 		var ratio float64
 
-		if stake == 0.0 {
-			ratio = 1.0 / float64(len(sp.Pools))
-		} else {
-			ratio = float64(dp.Balance) / stake
-		}
-		var (
-			move     = state.Balance(float64(value) * ratio)
-			transfer *state.Transfer
-		)
-		transfer, _, err = cp.DrainPool(sscKey, dp.DelegateID, move, nil)
-		if err != nil {
-			return fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
-				"stake_pool_holder(%s): %v", cp.ID, dp.DelegateID, err)
-		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding transfer: %v", err)
-		}
-		// stat
-		dp.Rewards += move         // add to stake_pool_holder rewards
-		sp.Rewards.Blobber += move // add to total blobber rewards
-	}
-
-	return
-}
-
-func (cp *challengePool) moveToValidator(sscKey string, sp *stakePool,
-	value state.Balance, balances cstate.StateContextI) (moved state.Balance,
-	err error) {
-
-	var stake = float64(sp.stake())
-	for _, dp := range sp.orderedPools() {
-		var ratio float64
 		if stake == 0.0 {
 			ratio = 1.0 / float64(len(sp.Pools))
 		} else {
@@ -215,10 +183,10 @@ func (cp *challengePool) moveToValidator(sscKey string, sp *stakePool,
 			return 0, fmt.Errorf("adding transfer: %v", err)
 		}
 		// stat
-		dp.Rewards += move           // add to stake_pool_holder rewards
-		sp.Rewards.Validator += move // add to total blobber rewards
+		dp.Rewards += move // add to stake_pool_holder rewards
 		moved += move
 	}
+
 	return
 }
 
@@ -238,7 +206,8 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 				cp.Balance, oneReward)
 		}
 		var oneMove state.Balance
-		oneMove, err = cp.moveToValidator(sscKey, sp, oneReward, balances)
+		oneMove, err = cp.moveReward(sscKey, sp, oneReward, balances)
+		sp.Rewards.Validator += oneMove
 		if err != nil {
 			return 0, fmt.Errorf("moving to validator %s: %v",
 				validatos[i], err)

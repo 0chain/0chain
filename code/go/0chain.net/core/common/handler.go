@@ -91,7 +91,7 @@ func validOrigin(origin string) bool {
 	if host == "localhost" || strings.HasPrefix(host, "file") {
 		return true
 	}
-	if host == "0chain.net" ||
+	if host == "0chain.net" || host == "0box.io" ||
 		strings.HasSuffix(host, ".0chain.net") ||
 		strings.HasSuffix(host, ".alphanet-0chain.net") ||
 		strings.HasSuffix(host, ".testnet-0chain.net") ||
