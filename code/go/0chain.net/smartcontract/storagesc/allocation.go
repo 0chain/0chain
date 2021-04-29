@@ -1247,10 +1247,8 @@ func (sc *StorageSmartContract) finishAllocation(
 		var fctrml = conf.FailedChallengesToRevokeMinLock
 		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
 			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sps[i],
-					alloc.Until(), lack, balances)
-				if err != nil {
-					return common.NewError("alloc_cacnel_failed",
+				if _, err := moveReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
+					return common.NewError("alloc_cancel_failed",
 						"paying min_lock for "+d.BlobberID+": "+err.Error())
 				}
 				d.Spent += lack

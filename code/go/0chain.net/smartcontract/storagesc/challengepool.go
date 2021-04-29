@@ -129,7 +129,7 @@ func moveServiceCharge(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
 	return
 }
 
-// moveToBlobber moves tokens to given blobber on challenge passed
+// moveToBlobber moves tokens to given blobber
 func moveReward(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
 	value state.Balance, balances cstate.StateContextI) (moved state.Balance, err error) {
 
@@ -138,7 +138,7 @@ func moveReward(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
 	}
 
 	if zcnPool.Balance < value {
-		return 0, fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+		return 0, fmt.Errorf("not enough tokens in pool %s: %d < %d",
 			zcnPool.ID, zcnPool.Balance, value)
 	}
 
