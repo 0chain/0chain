@@ -885,7 +885,7 @@ func isAllocBlobber(id string, alloc *StorageAllocation) bool {
 
 // no challenge responses, finalize
 func Test_flow_no_challenge_responses_finalize(t *testing.T) {
-	t.Skip()
+	t.Skip("Assumes blobbers do not get a reward form finilizeAllocation")
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -1311,7 +1311,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.Nil(t, sp.findOffer(allocID)) // no offers expected
+			require.NotNil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
