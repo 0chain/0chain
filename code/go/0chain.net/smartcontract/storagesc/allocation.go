@@ -1110,7 +1110,21 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	// new values
 	alloc.Expiration, alloc.ChallengeCompletionTime = t.CreationDate, 0
 
-	err = sc.finishAllocation(t, alloc, passRates, balances)
+	var sps = []*stakePool{}
+	for _, d := range alloc.BlobberDetails {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		if err = sp.extendOffer(alloc, d); err != nil {
+			return "", common.NewError("alloc_cacnel_failed",
+				"removing stake pool offer for "+d.BlobberID+": "+err.Error())
+		}
+		sps = append(sps, sp)
+	}
+
+	err = sc.finishAllocation(t, alloc, passRates, sps, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1174,7 +1188,17 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
-	err = sc.finishAllocation(t, alloc, passRates, balances)
+	var sps = []*stakePool{}
+	for _, d := range alloc.BlobberDetails {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		sps = append(sps, sp)
+	}
+
+	err = sc.finishAllocation(t, alloc, passRates, sps, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
@@ -1193,6 +1217,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	t *transaction.Transaction,
 	alloc *StorageAllocation,
 	passRates []float64,
+	sps []*stakePool,
 	balances chainstate.StateContextI,
 ) (err error) {
 	// SC configurations
@@ -1227,16 +1252,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if allb, err = sc.getBlobbersList(balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"can't get all blobbers list: "+err.Error())
-	}
-
-	var sps = []*stakePool{}
-	for _, d := range alloc.BlobberDetails {
-		var sp *stakePool
-		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {
-			return common.NewError("fini_alloc_failed",
-				"can't get stake pool of "+d.BlobberID+": "+err.Error())
-		}
-		sps = append(sps, sp)
 	}
 
 	// we can use the i for the blobbers list above because of algorithm

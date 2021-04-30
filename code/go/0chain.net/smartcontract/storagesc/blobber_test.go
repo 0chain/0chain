@@ -1311,7 +1311,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			var sp *stakePool
 			sp, err = ssc.getStakePool(b.id, balances)
 			require.NoError(t, err)
-			require.NotNil(t, sp.findOffer(allocID)) // no offers expected
+			require.Nil(t, sp.findOffer(allocID)) // no offers expected
 			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
