@@ -21,12 +21,19 @@ import (
 type blobberStakes []int64
 
 const (
-	errValueNotPresent = "value not present"
-	ownerId            = "owin"
+	errValueNotPresent   = "value not present"
+	ownerId              = "owin"
+	ErrCancelFailed      = "alloc_cancel_failed"
+	ErrExpired           = "trying to cancel expired allocation"
+	ErrNotOwner          = "only owner can cancel an allocation"
+	ErrNotEnoughFailiars = "not enough failed challenges of allocation to cancel"
+	ErrNotEnoughLock     = "paying min_lock for"
+	ErrFinalizedFailed   = "fini_alloc_failed"
+	ErrFinalizedTooSoon  = "allocation is not expired yet, or waiting a challenge completion"
 )
 
 func TestNewAllocation(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
 	scYaml = &scConfig{
@@ -90,7 +97,7 @@ func TestNewAllocation(t *testing.T) {
 }
 
 func TestCancelAllocationRequest(t *testing.T) {
-	//t.Skip()
+	t.Skip()
 	var blobberStakePools = [][]mockStakePool{}
 	var challenges = [][]common.Timestamp{}
 	var scYaml = scConfig{
@@ -185,84 +192,63 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var blobberOffer = int64(123000)
 	var otherWritePools = 4
 
-	t.Run("finialzeAllocation", func(t *testing.T) {
+	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
 			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
 		require.NoError(t, err)
 	})
-}
 
-func testCancelAllocation(
-	t *testing.T,
-	sAllocation StorageAllocation,
-	blobbers sortedBlobbers,
-	bStakes [][]mockStakePool,
-	scYaml scConfig,
-	otherWritePools int,
-	challengePoolBalance int64,
-	challenges [][]common.Timestamp,
-	blobberOffer int64,
-	thisExpires, now common.Timestamp,
-) error {
-	var f = formulaeFinalizeAllocation{
-		t:                    t,
-		scYaml:               scYaml,
-		allocation:           sAllocation,
-		blobbers:             blobbers,
-		bStakes:              bStakes,
-		challengePoolBalance: challengePoolBalance,
-		now:                  now,
-		challengeCreation:    challenges,
-	}
-	f.setCancelPassRates()
+	t.Run(ErrNotOwner, func(t *testing.T) {
+		var allocationNotOwner = allocation
+		allocationNotOwner.Owner = "someone else"
 
-	var ssc, txn, input, ctx = setupMocksFinishAllocation(
-		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
-		state.Balance(challengePoolBalance), blobberOffer, thisExpires, now,
-	)
+		err := testCancelAllocation(t, allocationNotOwner, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotOwner))
+	})
 
-	require.True(t, len(challenges) <= len(blobbers))
-	for i, blobberChallenges := range challenges {
-		var bc = BlobberChallenge{
-			BlobberID:  strconv.Itoa(i),
-			Challenges: []*StorageChallenge{},
-		}
-		for _, created := range blobberChallenges {
-			bc.Challenges = append(bc.Challenges, &StorageChallenge{
-				Created: created,
-			})
-		}
-		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
+	t.Run(ErrExpired, func(t *testing.T) {
+		var allocationExpired = allocation
+		allocationExpired.Expiration = now - 1
+
+		err := testCancelAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrExpired))
+	})
+
+	t.Run(ErrNotEnoughFailiars, func(t *testing.T) {
+		var failersScYaml = scYaml
+		failersScYaml.FailedChallengesToCancel = 29
+
+		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
+			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughFailiars))
+	})
+
+	t.Run("enough failiars", func(t *testing.T) {
+		var failersScYaml = scYaml
+		failersScYaml.FailedChallengesToCancel = 28
+
+		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
+			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
 		require.NoError(t, err)
-	}
+	})
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
+	t.Run(ErrNotEnoughLock, func(t *testing.T) {
+		var zeroChallengePoolBalance int64 = 0
 
-	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
-	if err != nil {
-		return err
-	}
-	require.EqualValues(t, "canceled", resp)
-
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
-	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
-
-	var newScYaml = &scConfig{}
-	newScYaml, err = ssc.getConfig(ctx, false)
-	require.NoError(t, err)
-	newAllb, err := ssc.getBlobbersList(ctx)
-	require.NoError(t, err)
-	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
-	require.NoError(t, err)
-	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
-	require.NoError(t, err)
-	var newAlloc *StorageAllocation
-	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
-	require.NoError(t, err)
-
-	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, ctx)
-	return nil
+		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, zeroChallengePoolBalance, challenges, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
+	})
 }
 
 func TestFinalizeAllocation(t *testing.T) {
@@ -353,12 +339,105 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberOffer = int64(123000)
 	var otherWritePools = 4
 
-	t.Run("finialzeAllocation", func(t *testing.T) {
+	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
-			otherWritePools,
-			challengePoolBalance, blobberOffer, thisExpires, now)
+			otherWritePools, challengePoolBalance, blobberOffer, thisExpires, now)
 		require.NoError(t, err)
 	})
+
+	t.Run(ErrFinalizedTooSoon, func(t *testing.T) {
+		var allocationExpired = allocation
+		allocationExpired.Expiration = now - toSeconds(allocation.ChallengeCompletionTime) + 1
+
+		err := testFinalizeAllocation(t, allocationExpired, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, challengePoolBalance, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
+		require.True(t, strings.Contains(err.Error(), ErrFinalizedTooSoon))
+	})
+
+	t.Run(ErrNotEnoughLock, func(t *testing.T) {
+		var zeroChallengePoolBalance int64 = 0
+
+		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, zeroChallengePoolBalance, blobberOffer, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
+	})
+}
+
+func testCancelAllocation(
+	t *testing.T,
+	sAllocation StorageAllocation,
+	blobbers sortedBlobbers,
+	bStakes [][]mockStakePool,
+	scYaml scConfig,
+	otherWritePools int,
+	challengePoolBalance int64,
+	challenges [][]common.Timestamp,
+	blobberOffer int64,
+	thisExpires, now common.Timestamp,
+) error {
+	var f = formulaeFinalizeAllocation{
+		t:                    t,
+		scYaml:               scYaml,
+		allocation:           sAllocation,
+		blobbers:             blobbers,
+		bStakes:              bStakes,
+		challengePoolBalance: challengePoolBalance,
+		now:                  now,
+		challengeCreation:    challenges,
+	}
+	f.setCancelPassRates()
+
+	var ssc, txn, input, ctx = setupMocksFinishAllocation(
+		t, sAllocation, blobbers, bStakes, scYaml, otherWritePools,
+		state.Balance(challengePoolBalance), blobberOffer, thisExpires, now,
+	)
+
+	require.True(t, len(challenges) <= len(blobbers))
+	for i, blobberChallenges := range challenges {
+		var bc = BlobberChallenge{
+			BlobberID:  strconv.Itoa(i),
+			Challenges: []*StorageChallenge{},
+		}
+		for _, created := range blobberChallenges {
+			bc.Challenges = append(bc.Challenges, &StorageChallenge{
+				Created: created,
+			})
+		}
+		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
+		require.NoError(t, err)
+	}
+
+	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
+
+	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
+	if err != nil {
+		return err
+	}
+	require.EqualValues(t, "canceled", resp)
+
+	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
+	require.NoError(t, err)
+	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+
+	var newScYaml = &scConfig{}
+	newScYaml, err = ssc.getConfig(ctx, false)
+	require.NoError(t, err)
+	newAllb, err := ssc.getBlobbersList(ctx)
+	require.NoError(t, err)
+	newCp, err := ssc.getChallengePool(sAllocation.ID, ctx)
+	require.NoError(t, err)
+	newWp, err := ssc.getWritePool(sAllocation.Owner, ctx)
+	require.NoError(t, err)
+	var newAlloc *StorageAllocation
+	newAlloc, err = ssc.getAllocation(sAllocation.ID, ctx)
+	require.NoError(t, err)
+
+	confirmFinalizeAllocation(t, f, *newScYaml, *newAllb, *newCp, *newWp, *newAlloc, ctx)
+	return nil
 }
 
 func testFinalizeAllocation(

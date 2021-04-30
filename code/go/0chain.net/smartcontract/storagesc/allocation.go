@@ -1066,42 +1066,42 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	var req lockRequest
 	if err = req.decode(input); err != nil {
-		return "", common.NewError("alloc_cacnel_failed", err.Error())
+		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
-		return "", common.NewError("alloc_cacnel_failed", err.Error())
+		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
 	if alloc.Owner != t.ClientID {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"only owner can cancel an allocation")
 	}
 
 	if alloc.Expiration < t.CreationDate {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"trying to cancel expired allocation")
 	}
 
 	var passRates []float64
 	passRates, err = sc.canceledPassRates(alloc, t.CreationDate, balances)
 	if err != nil {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
 	// SC configurations
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, false); err != nil {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"can't get SC configurations: "+err.Error())
 	}
 
 	if fctc := conf.FailedChallengesToCancel; fctc > 0 {
 		if alloc.Stats == nil || alloc.Stats.FailedChallenges < int64(fctc) {
-			return "", common.NewError("alloc_cacnel_failed",
+			return "", common.NewError("alloc_cancel_failed",
 				"not enough failed challenges of allocation to cancel")
 		}
 	}
@@ -1112,13 +1112,13 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 
 	err = sc.finishAllocation(t, alloc, passRates, balances)
 	if err != nil {
-		return "", err
+		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
 	alloc.Finalized, alloc.Canceled = true, true
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
 	}
 
@@ -1176,13 +1176,13 @@ func (sc *StorageSmartContract) finalizeAllocation(
 
 	err = sc.finishAllocation(t, alloc, passRates, balances)
 	if err != nil {
-		return "", err
+		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 
 	alloc.Finalized = true
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", common.NewError("alloc_cacnel_failed",
+		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
 	}
 
