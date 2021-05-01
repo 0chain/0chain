@@ -397,33 +397,32 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
-func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
-	lfmb *block.Block) {
+func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
 
-	lfmb = c.LatestFinalizedMagicBlock
+	var lfmb = c.latestFinalizedMagicBlock
 
 	rn = mbRoundOffset(rn) // round number with MB offset
 
 	if len(c.magicBlockStartingRounds) > 0 {
 		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
-		for round := range c.magicBlockStartingRounds {
-			startingRounds = append(startingRounds, round)
+		for rd := range c.magicBlockStartingRounds {
+			startingRounds = append(startingRounds, rd)
 		}
 		sort.SliceStable(startingRounds, func(i, j int) bool {
 			return startingRounds[i] >= startingRounds[j]
 		})
 		foundRound := startingRounds[0]
-		for _, round := range startingRounds {
-			foundRound = round
-			if round <= rn {
+		for _, rd := range startingRounds {
+			foundRound = rd
+			if rd <= rn {
 				break
 			}
 		}
 		lfmb = c.magicBlockStartingRounds[foundRound]
 	}
 
-	return
+	return lfmb
 }
