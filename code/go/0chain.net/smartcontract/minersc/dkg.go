@@ -202,7 +202,8 @@ func (msc *MinerSmartContract) moveToStart(balances cstate.StateContextI,
 	return nil
 }
 
-func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (
+// GetPhaseNode gets phase nodes from client state
+func GetPhaseNode(statectx cstate.StateContextI) (
 	*PhaseNode, error) {
 
 	pn := &PhaseNode{}
@@ -300,7 +301,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	if len(allMinersList.Nodes) < gn.MinN {
-		return common.NewError("failed to create dkg miners", "too few miners for dkg")
+		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
 	}
 
 	dkgMiners := NewDKGMinerNodes()
@@ -420,7 +421,7 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 func (msc *MinerSmartContract) createMagicBlockForWait(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return err
 	}
@@ -533,7 +534,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	string, error) {
 	Logger.Debug("miner smart contract, contribute Mpk")
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return "", common.NewErrorf("contribute_mpk_failed",
 			"can't get phase node: %v", err)
@@ -594,7 +595,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	resp string, err error) {
 
 	var pn *PhaseNode
-	if pn, err = msc.getPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
 			"can't get phase node: %v", err)
 	}
@@ -692,7 +693,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 	resp string, err error) {
 
 	var pn *PhaseNode
-	if pn, err = msc.getPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return "", common.NewErrorf("wait",
 			"can't get phase node: %v", err)
 	}
