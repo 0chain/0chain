@@ -141,7 +141,7 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if mpt.Root == nil {
 		_, newRootHash, err = mpt.insertLeaf(nil, value, path)
 	} else {
-		_, newRootHash, err = mpt.insert(value, []byte(mpt.Root), path)
+		_, newRootHash, err = mpt.insert(value, mpt.Root, path)
 	}
 	if err != nil {
 		return nil, err
