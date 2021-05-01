@@ -379,18 +379,18 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return ps, nil
 }
 
-func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
+func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
 
 	var (
-		round = r.FormValue("round")
-		hash  = r.FormValue("block")
+		r = req.FormValue("round")
+		hash  = req.FormValue("block")
 
 		mc = GetMinerChain()
 	)
 
 	errBlockNotAvailable := common.NewError("block_not_available",
 		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
-			mc.GetCurrentRound(), round, hash))
+			mc.GetCurrentRound(), r, hash))
 
 	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
@@ -404,12 +404,12 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 		return nil, errBlockNotAvailable
 	}
 
-	if round == "" {
+	if r == "" {
 		return nil, common.NewError("none_round_or_hash_provided",
 			"no block hash or round number is provided")
 	}
 
-	roundN, err := strconv.ParseInt(round, 10, 63)
+	roundN, err := strconv.ParseInt(r, 10, 63)
 	if err != nil {
 		return nil, err
 	}
