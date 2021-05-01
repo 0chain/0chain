@@ -140,9 +140,11 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err = cp.moveToBlobber(sc.ID, sp, reward, balances); err != nil {
+	var movedReward state.Balance
+	if movedReward, err = cp.moveReward(sc.ID, sp, reward, balances); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
+	sp.Rewards.Blobber += movedReward
 	details.ChallengeReward += reward
 
 	// validators' stake pools
@@ -288,23 +290,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
-
-		// make sure all mints not payed yet be payed before the stake
-		// pools will be slashed
-		var info *stakePoolUpdateInfo
-		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
-		if err != nil {
-			return fmt.Errorf("updating stake pool: %v", err)
-		}
-		conf.Minted += info.minted
-
-		// save configuration (minted tokens)
-		_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
-		if err != nil {
-			return fmt.Errorf("saving configurations: %v", err)
-		}
-
-		// move blobber's stake tokens to allocation's write pool
 
 		var offer = sp.findOffer(alloc.ID)
 		if offer == nil {

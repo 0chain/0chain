@@ -1,0 +1,848 @@
+##
+## all miners/sharders donw/up at 50, 100, 150, 200, vc-1, vc, and vc+2 rounds.
+##
+
+
+# Note: the vc is 250, 500 etc rounds. Actual VC is between
+#       250-251, 500-501 rounds.
+
+---
+
+enable:
+  - "Miner down/up"
+  - "Sharder down/up"
+  - "All miners down/up"
+  - "All sharders down/up"
+  - "All nodes down/up"
+
+sets:
+  - name: "Miner down/up"
+    tests:
+      - "Miner: 50 (switch to contribute)"
+      - "Miner: 100 (switch to share)"
+      - "Miner: 150 (switch to publish)"
+      - "Miner: 200 (switch to wait)"
+      - "Miner: vc-1 round"
+      - "Miner: vc round"
+      - "Miner: vc+2 rounds"
+
+  - name: "Sharder down/up"
+    tests:
+      - "Sharder: 50 (switch to contribute)"
+      - "Sharder: 100 (switch to share)"
+      - "Sharder: 150 (switch to publish)"
+      - "Sharder: 200 (switch to wait)"
+      - "Sharder: vc-1 round"
+      - "Sharder: vc round"
+      - "Sharder: vc+2 rounds"
+
+  - name: "All miners down/up"
+    tests:
+      - "All miners: 50 (switch to contribute)"
+      - "All miners: 100 (switch to share)"
+      - "All miners: 150 (switch to publish)"
+      - "All miners: 200 (switch to wait)"
+      - "All miners: vc-1 round"
+      - "All miners: vc round"
+      - "All miners: vc+2 rounds"
+
+  - name: "All sharders down/up"
+    tests:
+      - "All sharders: 50 (switch to contribute)"
+      - "All sharders: 100 (switch to share)"
+      - "All sharders: 150 (switch to publish)"
+      - "All sharders: 200 (switch to wait)"
+      - "All sharders: vc-1 round"
+      - "All sharders: vc round"
+      - "All sharders: vc+2 rounds"
+
+  - name: "All nodes down/up"
+    tests:
+      - "All nodes: 50 (switch to contribute)"
+      - "All nodes: 100 (switch to share)"
+      - "All nodes: 150 (switch to publish)"
+      - "All nodes: 200 (switch to wait)"
+      - "All nodes: vc-1 round"
+      - "All nodes: vc round"
+      - "All nodes: vc+2 rounds"
+
+  # known phases
+
+  # 'start'      (0)
+  # 'contribute' (50)
+  # 'share'      (100)
+  # 'publish'    (150)
+  # 'wait'       (200)
+
+# test cases
+tests:
+
+  # miner down / up
+
+  - name: "Miner: 50 (switch to contribute)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'contribute'
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Miner: 100 (switch to share)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'share'
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Miner: 150 (switch to publish)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'publish'
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Miner: 200 (switch to wait)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Miner: vc-1 round"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 48
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '10m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+      - wait_round:
+          shift: 10 # make sure it moves on after the VC
+  - name: "Miner: vc round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 49
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+      - wait_round:
+          shift: 10 # make sure it moves on after the VC
+  - name: "Miner: vc+2 rounds"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+      - wait_round:
+          shift: 2
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+
+  # sharder down / up
+
+  - name: "Sharder: 50 (switch to contribute)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'contribute'
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: 100 (switch to share)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'share'
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '15m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: 150 (switch to publish)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'publish'
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: 200 (switch to wait)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: vc-1 round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 48
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: vc round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 49
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Sharder: vc+2 rounds"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+      - wait_round:
+          shift: 2
+      - stop: ['sharder-1']
+      - start: ['sharder-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+
+  # all miners down / up
+
+  - name: "All miners: 50 (switch to contribute)"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'contribute'
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: 100 (switch to share)"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'share'
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '15m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: 150 (switch to publish)"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'publish'
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: 200 (switch to wait)"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: vc-1 round"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 48
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: vc round"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 49
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "All miners: vc+2 rounds"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+      - wait_round:
+          shift: 2
+      - stop: ['miner-1', 'miner-2', 'miner-3']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+
+  # all sharders down / up (2 sharders, 3 miners)
+
+  - name: "All sharders: 50 (switch to contribute)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'contribute'
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: 100 (switch to share)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'share'
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: 150 (switch to publish)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'publish'
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: 200 (switch to wait)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: vc-1 round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 48
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: vc round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 49
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All sharders: vc+2 rounds"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_round:
+          shift: 2
+      - stop: ['sharder-1', 'sharder-2']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+
+  # all nodes down / up
+
+  - name: "All nodes: 50 (switch to contribute)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'contribute'
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: 100 (switch to share)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'share'
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: 150 (switch to publish)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'publish'
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: 200 (switch to wait)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: vc-1 round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 48
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: vc round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_phase:
+          phase: 'wait'
+      - wait_round:
+          shift: 49
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+  - name: "All nodes: vc+2 rounds"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+      - wait_round:
+          shift: 2
+      - stop: ['sharder-1', 'sharder-2', 'miner-1', 'miner-2', 'miner-3']
+      - start: ['sharder-1']
+      - start: ['sharder-2']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_sharder_keep:
+          timeout: '5m'
+          sharders: ['sharder-2']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
+
+...

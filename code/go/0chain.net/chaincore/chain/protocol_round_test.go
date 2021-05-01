@@ -42,11 +42,11 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 				{Round: 1, WantRound: 1},
 				{Round: 50, WantRound: 1},
 				{Round: 100, WantRound: 1},
-				{Round: 101, WantRound: 101},
-				{Round: 102, WantRound: 101},
+				{Round: 101, WantRound: 1},
+				{Round: 102, WantRound: 1},
 				{Round: 199, WantRound: 101},
 				{Round: 380, WantRound: 301},
-				{Round: 401, WantRound: 401},
+				{Round: 401, WantRound: 301},
 				{Round: 502, WantRound: 401},
 				{Round: 1001, WantRound: 401},
 			},
@@ -55,7 +55,6 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
-			t.Parallel()
 			chain := &Chain{LatestFinalizedMagicBlock: lfmb, magicBlockStartingRounds: map[int64]*block.Block{}}
 			for _, r := range test.MagicBlocks {
 				chain.magicBlockStartingRounds[r] = &block.Block{

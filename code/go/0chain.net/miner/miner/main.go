@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strconv"
 	"time"
 
@@ -42,6 +41,7 @@ import (
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
+	dkgFile := flag.String("dkg_file", "", "dkg_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
@@ -133,19 +133,20 @@ func main() {
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
-		hostName, n2nHostName, portNum, path, err := readNonGenesisHostAndPort(keysFile)
+		hostName, n2nHostName, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number",
 				zap.Error(err))
 		}
 
 		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName),
-			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path))
+			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path), zap.String("description", description))
 
 		node.Self.Underlying().Host = hostName
 		node.Self.Underlying().N2NHost = n2nHostName
 		node.Self.Underlying().Port = portNum
 		node.Self.Underlying().Path = path
+		node.Self.Underlying().Description = description
 	} else {
 		if initStateErr != nil {
 			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
@@ -215,7 +216,7 @@ func main() {
 	}
 
 	if err = mc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
-		Logger.Panic("can't update LFMB from sharders", zap.Error(err))
+		Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it
@@ -224,15 +225,37 @@ func main() {
 
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
-		dkgShare := &bls.DKGSummary{
+		genesisDKG := viper.GetInt64("network.genesis_dkg")
+		dkgShare, oldDKGShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
-		}
+		}, &bls.DKGSummary{}
 		dkgShare.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
-		for k, v := range mb.GetShareOrSigns().GetShares() {
-			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
+		if genesisDKG == 0 {
+			oldDKGShare, err = miner.ReadDKGSummaryFile(*dkgFile)
+			if err != nil {
+				Logger.Panic(fmt.Sprintf("Error reading DKG file. ERROR: %v", err.Error()))
+			}
+		} else {
+			oldDKGShare, err = miner.LoadDKGSummary(ctx, strconv.FormatInt(genesisDKG, 10))
+			if err != nil {
+				if config.DevConfiguration.ViewChange {
+					Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+				} else {
+					Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+				}
+			}
+		}
+		dkgShare.SecretShares = oldDKGShare.SecretShares
+		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
+			if config.DevConfiguration.ViewChange {
+				Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
+			} else {
+				Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
+			}
+
 		}
 		if err = miner.StoreDKGSummary(ctx, dkgShare); err != nil {
-			panic(err)
+			Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
 		}
 	}
 
@@ -243,7 +266,7 @@ func main() {
 		log.Fatal(server.ListenAndServe())
 	}()
 
-	mc.RegisterClient()
+	go mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 
 	// start restart round event worker before the StartProtocol to be able
@@ -267,7 +290,7 @@ func main() {
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
-		go mc.InitSetupSC()
+		go mc.SetupSC(ctx)
 		if config.DevConfiguration.ViewChange {
 			go mc.DKGProcess(ctx)
 		}
@@ -283,7 +306,7 @@ func done(ctx context.Context) {
 	mc.Stop()
 }
 
-func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, error) {
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, string, error) {
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
@@ -294,7 +317,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, "", errors.New("error reading Host")
+		return "", "", 0, "", "", errors.New("error reading Host")
 	}
 
 	h := scanner.Text()
@@ -302,7 +325,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, "", errors.New("error reading n2n host")
+		return "", "", 0, "", "", errors.New("error reading n2n host")
 	}
 
 	n2nh := scanner.Text()
@@ -312,22 +335,29 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
 	p := int(po)
 	if err != nil {
-		return "", "", 0, "", err
+		return "", "", 0, "", "", err
 	}
 
 	result = scanner.Scan()
 	if result == false {
-		return h, n2nh, p, "", nil
+		return h, n2nh, p, "", "", nil
 	}
 
 	path := scanner.Text()
 	Logger.Info("Path inside", zap.String("path", path))
-	return h, n2nh, p, path, nil
+
+	result = scanner.Scan()
+	if result == false {
+		return h, n2nh, p, path, "", errors.New("error reading description")
+	}
+
+	description := scanner.Text()
+	Logger.Info("Description inside", zap.String("description", description))
+	return h, n2nh, p, path, description, nil
 
 }
 
-func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
-	list []*block.Block, err error) {
+func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (*block.Block, error) {
 
 	const limitAttempts = 10
 
@@ -335,45 +365,37 @@ func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
 		attempt      = 0
 		retryTimeout = time.Second * 5
 	)
+	for {
+		lfmb := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
+		if lfmb != nil {
+			return lfmb, nil
+		}
 
-	for len(list) == 0 {
-		list = mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-		if len(list) == 0 {
-			attempt++
-			if attempt >= limitAttempts {
-				return nil, common.NewErrorf("get_lfmbs_from_sharders",
-					"no lfmb given after %d attempts", attempt)
-			}
-			Logger.Warn("get_current_mb_sharder -- retry",
-				zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
-			select {
-			case <-ctx.Done():
-				return nil, common.NewError("get_lfmbs_from_sharders",
-					"context done: exiting")
-			case <-time.After(retryTimeout):
-			}
+		attempt++
+		if attempt >= limitAttempts {
+			return nil, common.NewErrorf("get_lfmbs_from_sharders",
+				"no lfmb given after %d attempts", attempt)
+		}
+		Logger.Warn("get_current_mb_sharder -- retry",
+			zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
+		select {
+		case <-ctx.Done():
+			return nil, common.NewError("get_lfmbs_from_sharders",
+				"context done: exiting")
+		case <-time.After(retryTimeout):
 		}
 	}
-
-	return
 }
 
 func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
 	err error) {
 
-	var list []*block.Block
-	if list, err = getMagicBlocksFromSharders(ctx, mc); err != nil {
-		return
+	lfmb, err := getMagicBlocksFromSharders(ctx, mc)
+	if err != nil {
+		return err
 	}
 
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].StartingRound > list[j].StartingRound
-	})
-
-	var (
-		lfmb = list[0]
-		cmb  = mc.GetCurrentMagicBlock()
-	)
+	cmb := mc.GetCurrentMagicBlock()
 
 	switch {
 	case lfmb.StartingRound < cmb.StartingRound:
@@ -382,7 +404,7 @@ func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
 	case lfmb.StartingRound == cmb.StartingRound:
 		// ok, initialize the magicBlock
 	default: // magicBlock > cmb.StartingRoound, verify chain
-		err = mc.VerifyChainHistory(common.GetRootContext(), lfmb, nil)
+		err = mc.VerifyChainHistoryAndRepair(common.GetRootContext(), lfmb, nil)
 		if err != nil {
 			return
 		}

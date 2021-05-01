@@ -26,8 +26,8 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
-	sharderChain.BlockChannel = make(chan *block.Block, 128)
-	sharderChain.RoundChannel = make(chan *round.Round, 128)
+	sharderChain.BlockChannel = make(chan *block.Block, 1)
+	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
@@ -331,10 +331,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 // iterate over rounds from latest to zero looking for LFB and ignoring
 // missing blocks in blockstore
-func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
-	bl *blocksLoaded) {
-
-	bl = new(blocksLoaded)
+func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
+	bl := new(blocksLoaded)
 
 	var (
 		remd = datastore.GetEntityMetadata("round")
@@ -390,7 +388,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 		err = nil // reset this error and exit
 	}
 
-	return // got them all (or excluding the nlfmb)
+	return bl // got them all (or excluding the nlfmb)
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them

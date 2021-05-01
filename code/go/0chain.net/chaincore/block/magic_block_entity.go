@@ -82,7 +82,7 @@ func (mb *MagicBlock) GetHashBytes() []byte {
 		mpkKeys = append(mpkKeys, k)
 	}
 	sort.Strings(mpkKeys)
-	for _, v := range sharderKeys {
+	for _, v := range mpkKeys {
 		data = append(data, []byte(v)...)
 	}
 	data = append(data, []byte(strconv.Itoa(mb.T))...)

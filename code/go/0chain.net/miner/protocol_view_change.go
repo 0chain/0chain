@@ -3,6 +3,8 @@ package miner
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -672,8 +674,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	vcdkg.N = magicBlock.N
 
 	// save DKG and MB
-
-	if err = StoreDKG(ctx, vcdkg); err != nil {
+	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
@@ -739,11 +740,6 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 
 // DKG save / load
 
-// StoreDKG in DB.
-func StoreDKG(ctx context.Context, dkg *bls.DKG) error {
-	return StoreDKGSummary(ctx, dkg.GetDKGSummary())
-}
-
 // StoreDKGSummary in DB.
 func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 	var (
@@ -774,6 +770,30 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 	)
 	defer ememorystore.Close(dctx)
 	err = dkgs.Read(dctx, dkgs.GetKey())
+	return
+}
+
+// ReadDKGSummaryFile obtains dkg summary from JSON file with given path.
+func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
+	dkgs = &bls.DKGSummary{SecretShares: make(map[string]string)}
+	if path == "" {
+		return nil, common.NewError("Error reading dkg file", "path is blank")
+	}
+
+	if ext := filepath.Ext(path); ext != ".json" {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
+	}
+
+	var b []byte
+	if b, err = ioutil.ReadFile(path); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
+	}
+
+	if err = dkgs.Decode(b); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
+	}
+
+	Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
 	return
 }
 

@@ -1,13 +1,11 @@
 package minersc
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -18,10 +16,6 @@ import (
 	. "0chain.net/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-)
-
-var (
-	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
 )
 
 func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
@@ -96,7 +90,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 }
 
 func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
-	pool *sci.DelegatePool, round int64, balances cstate.StateContextI) (
+	pool *sci.DelegatePool, _ int64, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	mn.TotalStaked -= int64(pool.Balance)
@@ -340,7 +334,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 }
 
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	_ []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var pn *PhaseNode
@@ -427,13 +421,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	)
 
 	if mn.numActiveDelegates() == 0 {
-		iresp, err = msc.payMiner(charger+restr, chargef+restf, mn, block, gn, balances)
+		iresp, err = msc.payNode(charger+restr, chargef+restf, mn, gn, balances)
 		if err != nil {
 			return "", err
 		}
 		resp += iresp
 	} else {
-		iresp, err = msc.payMiner(charger, chargef, mn, block, gn, balances)
+		iresp, err = msc.payNode(charger, chargef, mn, gn, balances)
 		if err != nil {
 			return "", err
 		}
@@ -450,7 +444,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		resp += iresp
 	}
 	// pay and mint rest for block sharders
-	iresp, err = msc.paySharders(sharderf, sharderr, block, gn, balances)
+	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, block, gn, balances)
 	if err != nil {
 		return "", err
 	}
@@ -462,22 +456,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	// view change stuff, Either run on view change or round reward frequency
-	if config.DevConfiguration.ViewChange {
-		if block.Round == gn.ViewChange {
-			var mb = balances.GetBlock().MagicBlock
-			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
-			if err != nil {
-				return "", err
-			}
-		}
-	} else if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
+	if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
 		var mb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if mb != nil {
 			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
 			if err != nil {
 				return "", err
 			}
+		} else {
+			return "", common.NewError("pay fees", "cannot find latest magic bock")
 		}
 	}
 
@@ -624,7 +611,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 }
 
 // pay fees and mint sharders
-func (msc *MinerSmartContract) paySharders(fee, mint state.Balance,
+func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -641,23 +628,40 @@ func (msc *MinerSmartContract) paySharders(fee, mint state.Balance,
 
 	// part for every sharder
 	for _, sh := range sharders {
-
 		var sresp string
-		sresp, err = msc.payStakeHolders(partf, sh, true, balances)
-		if err != nil {
-			return "", common.NewErrorf("pay_fees/pay_sharders",
-				"paying block sharder fees: %v", err)
+		if sh.numActiveDelegates() > 0 {
+			var delegateBr = state.Balance(float64(partm) * (1 - sh.ServiceCharge))
+			var delegateFees = state.Balance(float64(partf) * (1 - sh.ServiceCharge))
+			var sharderBR = state.Balance(float64(partm) * sh.ServiceCharge)
+			var sharderFees = state.Balance(float64(partf) * sh.ServiceCharge)
+
+			sresp, err = msc.payNode(sharderBR, sharderFees, sh, gn, balances)
+			if err != nil {
+				return "", err
+			}
+			resp += sresp
+
+			sresp, err = msc.payStakeHolders(delegateFees, sh, true, balances)
+			if err != nil {
+				return "", common.NewErrorf("pay_fees/pay_sharders",
+					"paying block sharder fees: %v", err)
+			}
+
+			resp += sresp
+
+			sresp, err = msc.mintStakeHolders(delegateBr, sh, gn, true, balances)
+			if err != nil {
+				return "", common.NewErrorf("pay_fees/mint_sharders",
+					"minting block sharder reward: %v", err)
+			}
+			resp += sresp
+		} else {
+			sresp, err = msc.payNode(partm, partf, sh, gn, balances)
+			if err != nil {
+				return "", err
+			}
+			resp += sresp
 		}
-
-		resp += sresp
-
-		sresp, err = msc.mintStakeHolders(partm, sh, gn, true, balances)
-		if err != nil {
-			return "", common.NewErrorf("pay_fees/mint_sharders",
-				"minting block sharder reward: %v", err)
-		}
-
-		resp += sresp
 
 		if err = sh.save(balances); err != nil {
 			return "", common.NewErrorf("pay_fees/pay_sharders",
@@ -668,13 +672,12 @@ func (msc *MinerSmartContract) paySharders(fee, mint state.Balance,
 	return
 }
 
-// pay miner's charge
-func (msc *MinerSmartContract) payMiner(reward, fee state.Balance, mn *MinerNode,
-	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
+func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
+	gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	if reward != 0 {
-		Logger.Info("pay miner service charge",
+		Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_reward", reward))
 
@@ -687,7 +690,7 @@ func (msc *MinerSmartContract) payMiner(reward, fee state.Balance, mn *MinerNode
 		resp += string(mint.Encode())
 	}
 	if fee != 0 {
-		Logger.Info("pay miner service charge",
+		Logger.Info("pay "+mn.NodeType.String()+" service charge",
 			zap.Any("delegate_wallet", mn.DelegateWallet),
 			zap.Any("service_charge_fee", fee))
 

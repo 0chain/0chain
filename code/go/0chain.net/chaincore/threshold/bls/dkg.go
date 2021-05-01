@@ -4,8 +4,8 @@ package bls
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 	"sync"
 
@@ -356,13 +356,15 @@ func SetupDKGSummary(store datastore.Store) {
 }
 
 func SetupDKGDB() {
-	//Clean old files on restart
-	os.RemoveAll("data/rocksdb/dkg")
 	db, err := ememorystore.CreateDB("data/rocksdb/dkg")
 	if err != nil {
 		panic(err)
 	}
 	ememorystore.AddPool("dkgsummarydb", db)
+}
+
+func (dkgSummary *DKGSummary) Decode(input []byte) error {
+	return json.Unmarshal(input, dkgSummary)
 }
 
 func (dkgSummary *DKGSummary) Read(ctx context.Context, key string) error {
@@ -375,6 +377,22 @@ func (dkgSummary *DKGSummary) Write(ctx context.Context) error {
 
 func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 	return dkgSummary.GetEntityMetadata().GetStore().Delete(ctx, dkgSummary)
+}
+
+//Verify is used to verify a dkg summary with the mpks
+func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) error {
+	for k, v := range mpks {
+		var sij Key
+		share := dkgSummary.SecretShares[k.GetHexString()]
+		if share == "" {
+			return common.NewError("failed to verify dkg summary", "share is nil")
+		}
+		sij.SetHexString(share)
+		if !ValidateShare(v, sij, id) {
+			return common.NewError("failed to verify dkg summary", fmt.Sprintf("share unable to verify: %v", share))
+		}
+	}
+	return nil
 }
 
 func (dkg *DKG) GetDKGSummary() *DKGSummary {

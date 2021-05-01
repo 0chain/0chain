@@ -95,64 +95,20 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 		return nil
 	}
 
-	blocks := make([]*block.Block, 0, 50)
-	blocks = append(blocks, b)
-	lfr := c.GetLatestFinalizedBlock().Round
-
-	round := b.Round
-	if lfr == round {
-		Logger.Error("Finalized block is not computed")
-		return errors.New("finalized block is not computed")
-	}
-
-	for r := round - 1; r >= lfr; r-- {
-		rd := c.GetRound(r)
-		if rd == nil {
-			Logger.Error("Round does not exist",
-				zap.Int64("round", r),
-				zap.Int64("current_round", round),
-				zap.Int64("latest_finalized_round", lfr))
-			return fmt.Errorf("round does not exist, round: %d, current_round: %d, latest_determinisitc_round: %d", r, round, lfr)
-		}
-
-		pb := rd.GetHeaviestNotarizedBlock()
-		if pb == nil {
-			Logger.Error("Found no block on previous round", zap.Int64("round", r))
-			return errors.New("no previous round block")
-		}
-
-		blocks = append(blocks, pb)
-		if r == lfr {
-			Logger.Debug("Reached the latest finalized block round",
-				zap.Int64("round", pb.Round),
-				zap.Int64("current_round", round),
-				zap.Int64("round_gap", round-pb.Round))
-			break
-		}
-	}
-
-	lastBlock := blocks[len(blocks)-1]
-	if !lastBlock.IsStateComputed() {
-		return errors.New("could not find block with computed state")
-	}
-	// calculate the state changes from the latest deterministic block
-	for i := len(blocks) - 2; i >= 0; i-- {
-		// get state change of the block
-		blocks[i].CreateState(lastBlock.ClientState.GetNodeDB())
-		c.GetBlockStateChange(blocks[i])
-		blocks[i].SetPreviousBlock(blocks[i+1])
-		lastBlock = blocks[i]
-	}
-
-	Logger.Debug("updateStateFromNetwork",
-		zap.Int("num", len(blocks)-1),
-		zap.Int64("start_round", lfr),
-		zap.Int64("to_round", round))
+	// get block state changes from network
+	return c.GetBlockStateChange(b)
 
 	return nil
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
+	select {
+	case <-ctx.Done():
+		Logger.Warn("computeState context done", zap.Error(ctx.Err()))
+		return ctx.Err()
+	default:
+	}
+
 	if b.IsStateComputed() {
 		return nil
 	}
@@ -186,6 +142,10 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			if !pb.IsStateComputed() {
 				return ErrPreviousStateUnavailable
 			}
+			Logger.Debug("fetch previous block state from network successfully",
+				zap.Int64("prev_round", pb.Round),
+				zap.Any("hash", pb.Hash),
+				zap.Any("prev_state", util.ToHex(pb.ClientStateHash)))
 		} else {
 			Logger.Info("compute state - previous block state not ready",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -296,7 +256,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	ts := time.Now()
 	switch b.GetStateStatus() {
 	case block.StateSynched, block.StateSuccessful:
-		err = b.ClientState.SaveChanges(c.stateDB, false)
+		err = b.ClientState.SaveChanges(ctx, c.stateDB, false)
 		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
 		if ok {
 			c.stateDB.(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
@@ -394,8 +354,11 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction) (balances *bcstate.StateContext) {
 
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer, txn,
-		c.GetBlockSharders, c.GetLatestFinalizedMagicBlock,
+	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
+		txn,
+		c.GetBlockSharders,
+		c.GetLatestFinalizedMagicBlock,
+		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme)
 }
 

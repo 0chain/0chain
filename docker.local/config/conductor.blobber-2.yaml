@@ -1,22 +1,33 @@
 ###
-### Blockchain miners Byzantine tests
+### Blockchain blobber upload/download and repair
 ###
-
 ---
 
 # enabled test cases sets
 enable:
-  - "Blobber"
+  - "Upload/Download"
+  - "Repair"
 
 # sets of test cases
 sets:
-  - name: "Blobber"
+  - name: "Upload/Download"
     tests:
-      - "All blobber tests"
+      - "Error on upload/download"
+  - name: "Repair"
+    tests:
+      - "Repair after blobber comes back online"
 
 # test cases
 tests:
-  - name: "All blobber tests"
+  # This test verifies the expected failures on zbox upload and download such as the following.
+  # - `zbox upload` without meta
+  # - `zbox upload` non-existing file
+  # - `zbox upload` without write marker
+  # - `zbox download` without locked read tokens
+  # - `zbox download` without read marker
+  # - Markers out of order
+  # - Simulatenous `zbox upload`, `zbox download`, and `zbox delete`
+  - name: "Error on upload/download"
     flow:
       - command:
           name: 'build_test_blobbers'
@@ -41,35 +52,39 @@ tests:
       - command:
           name: 'init_pour_allocation'
           timeout: '35m'
-      # upload/download without enough tokens in read/write pools
+      # upload failure without enough tokens in write pool
+      # NOTE: cannot be done as upload allowed at this point due to lock added on new allocation
+#      - command:
+#          name: "upload_no_tokens"
+#          timeout: '5m'
+      # upload failure without metadata (add tokens to write pool)
       - command:
-          name: "upload_no_tokens"
+          name: "upload_no_meta" # this locks token in a write pool
           timeout: '5m'
-      # upload without metadata (add tokens to write pool)
-      - command:
-          name: "upload_no_meta"
-          timeout: '5m'
-      # upload without file
+      # upload failure without file
       - command:
           name: "upload_no_file"
           timeout: '5m'
-      # upload without write_marker
+      # upload failure without write_marker
       - command:
           name: "upload_no_wm"
           timeout: '5m'
-      # download without tokens
+      # upload failure without enough tokens in read pool
       - command:
           name: "download_no_tokens"
           timeout: '5m'
-      # download without read_marker
+      # download failure without read_marker
       - command:
-          name: "download_no_rm"
+          name: "download_no_rm" # this locks token in a read pool
           timeout: '5m'
       # markers out of order
       - command:
           name: "markers_out_of_order"
           timeout: '5m'
-      # simultaneous
+      # simultaneous (new allocation to avoid conflict with markers_out_of_order)
+      - command:
+          name: 'init_pour_allocation'
+          timeout: '35m'
       - command:
           name: 'simultaneous'
           timeout: '5m'
@@ -77,5 +92,51 @@ tests:
       #- command:
       #    name: "sleep_1m"
       #    timeout: '100h'
+
+  # This test verifies `zbox start-repair` is working.
+  # The test uploads when a blobber node is not available and then use the repair to fix the data on that blobber.
+  - name: "Repair after blobber comes back online"
+    flow:
+      - command:
+          name: 'build_test_blobbers'
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['0dns']
+      # wait the 0dns starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber-1', 'blobber-2']
+      - wait_add:
+          blobbers: ['blobber-1', 'blobber-2']
+          timeout: '15m'
+      - start: ['blobber-3', 'blobber-4']
+      - wait_add:
+          blobbers: ['blobber-3', 'blobber-4']
+          timeout: '15m'
+      - command:
+          name: 'repair_allocation'
+          timeout: '15m'
+      - stop: ['blobber-4']
+      - wait_round:
+          shift: 30
+      - command:
+          name: 'upload_repair'
+          timeout: '5m'
+      - start: ['blobber-4']
+      - wait_round:
+          shift: 30
+      - command:
+          name: 'list_repair'
+          timeout: '5m'
+      - command:
+          name: 'repair'
+          timeout: '5m'
 
 ...

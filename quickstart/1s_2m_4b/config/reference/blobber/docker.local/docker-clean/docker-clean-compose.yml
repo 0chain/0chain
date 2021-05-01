@@ -1,0 +1,23 @@
+version: '3'
+services:
+  docker-clean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # 1-6 blobbers
+      - ../blobber1/:/blobber1
+      - ../blobber2/:/blobber2
+      - ../blobber3/:/blobber3
+      - ../blobber4/:/blobber4
+      - ../blobber5/:/blobber5
+      - ../blobber6/:/blobber6
+    command: /bin/sh docker-clean.sh
+
+volumes:
+  blobber1:
+  blobber2:
+  blobber3:
+  blobber4:
+  blobber5:
+  blobber6:

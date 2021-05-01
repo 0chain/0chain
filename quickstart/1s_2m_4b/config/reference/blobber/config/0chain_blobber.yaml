@@ -1,0 +1,118 @@
+version: 1.0
+
+logging:
+  level: "info"
+  console: false # printing log to console is only supported in development mode
+
+# for testing
+#  500 MB - 536870912
+#    1 GB - 1073741824
+#    2 GB - 2147483648
+#    3 GB - 3221225472
+#  100 GB - 107374182400
+capacity: 1073741824 # 1 GB bytes total blobber capacity
+read_price: 0.01     # token / GB for reading
+write_price: 0.10    # token / GB / time_unit for writing
+price_in_usd: false
+price_worker_in_hours: 12
+# the time_unit configured in Storage SC and can be given using
+#
+#     ./zbox sc-config
+#
+
+# min_lock_demand is value in [0; 1] range; it represents number of tokens the
+# blobber earned even if a user will not read or write something
+# to an allocation; the number of tokens will be calculated by the following
+# formula (regarding the time_unit and allocation duration)
+#
+#     allocation_size * write_price * min_lock_demand
+#
+min_lock_demand: 0.1
+# max_offer_duration restrict long contracts where,
+# in the future, prices can be changed
+max_offer_duration: 744h # 31 day
+challenge_completion_time: 2m # duration to complete a challenge
+# these timeouts required by blobber to check client pools, perform
+# a task and redeem tokens, it should be big enough
+read_lock_timeout: 1m
+write_lock_timeout: 1m
+max_file_size: 10485760 #10MB
+
+# update_allocations_interval used to refresh known allocation objects from SC
+update_allocations_interval: 1m
+
+# delegate wallet (must be set)
+delegate_wallet: '8b87739cd6c966c150a8a6e7b327435d4a581d9d9cc1d86a88c8a13ae1ad7a96'
+# min stake allowed, tokens
+min_stake: 1.0
+# max stake allowed, tokens
+max_stake: 100.0
+# maximum allowed number of stake holders
+num_delegates: 50
+# service charge of the blobber
+service_charge: 0.30
+
+block_worker: http://198.18.0.98:9091
+
+handlers:
+  rate_limit: 10 # 10 per second
+
+server_chain:
+  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
+  owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
+  genesis_block:
+    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
+  signature_scheme: "bls0chain"
+
+contentref_cleaner:
+  frequency: 30
+  tolerance: 3600
+openconnection_cleaner:
+  frequency: 30
+  tolerance: 3600
+writemarker_redeem:
+  frequency: 10
+  num_workers: 5
+readmarker_redeem:
+  frequency: 10
+  num_workers: 5
+challenge_response:
+  frequency: 10
+  num_workers: 5
+  max_retries: 20
+db:
+  name: blobber_meta
+  user: blobber_user
+  password: blobber
+  host: postgres
+  port: 5432
+
+minio:
+  # Enable or disable minio backup service
+  start: false
+  # The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+  worker_frequency: 3600 # In Seconds
+  # Use SSL for connection or not
+  use_ssl: false
+
+cold_storage:
+  # Minimum file size to be considered for moving to cloud
+  min_file_size: 1048576 #in bytes
+  # Minimum time for which file is not updated or not used
+  file_time_limit_in_hours: 720 #in hours
+  # Number of files to be queried and processed at once
+  job_query_limit: 100
+  # Capacity filled in bytes after which the cloud backup should start work
+  start_capacity_size: 536870912 # 500MB
+  # Delete local copy once the file is moved to cloud
+  delete_local_copy: true
+  # Delete cloud copy if the file is deleted from the blobber by user/other process
+  delete_cloud_copy: true
+
+# integration tests related configurations
+integration_tests:
+  # address of the server
+  address: host.docker.internal:15210
+  # lock_interval used by nodes to request server to connect to blockchain
+  # after start
+  lock_interval: 1s

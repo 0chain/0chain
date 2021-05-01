@@ -7,7 +7,7 @@ RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev z
     cd /tmp && \
     wget -O - https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz | tar xz && \
     cd /tmp/rocksdb* && \
-    make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
+    PORTABLE=1 make -j $(nproc) install-shared OPT=-g0 USE_RTTI=1 && \
     rm -R /tmp/rocksdb* && \
     apk del coreutils linux-headers perl
 
