@@ -365,15 +365,15 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 // PartialStateHandler - return the partial state from a given root.
 func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	node := r.FormValue("node")
+	n := r.FormValue("node")
 	mc := GetMinerChain()
-	nodeKey, err := hex.DecodeString(node)
+	nodeKey, err := hex.DecodeString(n)
 	if err != nil {
 		return nil, err
 	}
 	ps, err := mc.GetStateFrom(ctx, nodeKey)
 	if err != nil {
-		Logger.Error("partial state handler", zap.String("key", node), zap.Error(err))
+		Logger.Error("partial state handler", zap.String("key", n), zap.Error(err))
 		return nil, err
 	}
 	return ps, nil
