@@ -136,8 +136,8 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	}
 
 	var publicKeys = make(map[string]string)
-	for _, node := range dmn.SimpleNodes {
-		publicKeys[node.ID] = node.PublicKey
+	for _, n := range dmn.SimpleNodes {
+		publicKeys[n.ID] = n.PublicKey
 	}
 
 	var _, ok = sos.Validate(mpks, publicKeys,
