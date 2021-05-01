@@ -88,14 +88,14 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				break
 			}
 			if cround == mc.GetCurrentRound() {
-				round := mc.GetMinerRound(cround)
+				r := mc.GetMinerRound(cround)
 
-				if round != nil {
+				if r != nil {
 					logging.Logger.Info("Round timeout",
-						zap.Any("Number", round.Number),
-						zap.Int("VRF_shares", len(round.GetVRFShares())),
-						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
-						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
+						zap.Any("Number", r.Number),
+						zap.Int("VRF_shares", len(r.GetVRFShares())),
+						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
+						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 					func(ctx context.Context) {
 						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 						defer cancel()
