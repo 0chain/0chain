@@ -64,7 +64,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	sctx := c.newStateContext(lfb, clientState, &transaction.Transaction{})
+	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{})
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {
