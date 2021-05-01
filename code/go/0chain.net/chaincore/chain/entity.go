@@ -98,9 +98,8 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	LatestFinalizedMagicBlock    *block.Block `json:"-"`
+	latestFinalizedMagicBlock    *block.Block `json:"-"`
 	lfmbMutex                    sync.RWMutex
-	lfmbSummary                  *block.BlockSummary
 	latestOwnFinalizedBlockRound int64 // finalized by this node
 
 	/* This is a cache of blocks that may include speculative blocks */
@@ -1321,16 +1320,20 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlock()
+		lfmb = c.GetLatestFinalizedMagicBlockBrief()
 	)
 
 	if newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) && lfmb != nil &&
-		lfmb.MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
-		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
+		lfmb.MagicBlockHash != newMagicBlock.PreviousMagicBlockHash {
 
-		logging.Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
-		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
+		Logger.Error("failed to update magic block",
+			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
+			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
+		return common.NewError("failed to update magic block",
+			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
 	}
+
 	mb := c.GetCurrentMagicBlock()
 
 	pmb := mb.Miners.Size()
@@ -1424,7 +1427,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	c.lfmbMutex.Lock()
 	defer c.lfmbMutex.Unlock()
 
-	var latest = c.LatestFinalizedMagicBlock
+	var latest = c.latestFinalizedMagicBlock
 
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
@@ -1433,26 +1436,54 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		logging.Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
 			"hashes don't match up: chain's finalized block hash %v, block's"+
 			" magic block previous hash %v",
-			c.LatestFinalizedMagicBlock.Hash,
+			c.latestFinalizedMagicBlock.Hash,
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
-	c.LatestFinalizedMagicBlock = b
+	c.latestFinalizedMagicBlock = b
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
-	c.lfmbSummary = b.GetSummary()
 }
 
+// GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
+// note: the block will be deep copied, used this carefully.
 func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-	return c.LatestFinalizedMagicBlock
+	if c.latestFinalizedMagicBlock == nil {
+		return nil
+	}
+	return c.latestFinalizedMagicBlock.Clone()
+}
+
+// LatestFinalizedMagicBlockUpdate executes a function within the mutex of a read-write managed lock.
+func (c *Chain) LatestFinalizedMagicBlockUpdate(ctx context.Context, fn func(*block.Block) error) error {
+	c.lfmbMutex.Lock()
+	defer c.lfmbMutex.Unlock()
+	errC := make(chan error)
+	stopC := make(chan struct{})
+	go func() {
+		if err := fn(c.latestFinalizedMagicBlock); err != nil {
+			errC <- err
+			return
+		}
+		defer close(stopC)
+	}()
+
+	select {
+	case err := <-errC:
+		return common.NewError("get_lfmb_safe_failed", err.Error())
+	case <-stopC:
+		return nil
+	case <-ctx.Done():
+		return common.NewError("get_lfmb_safe_failed", ctx.Err().Error())
+	}
 }
 
 // GetLatestFinalizedBlockSummary - get the latest finalized block summary.
 func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-	return c.lfmbSummary
+	return c.latestFinalizedMagicBlock.GetSummary()
 }
 
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
@@ -1461,7 +1492,7 @@ func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 		numGenerators := c.GetGeneratorsNumOfMagicBlock(prevMB)
 		for key, miner := range mb.Miners.CopyNodesMap() {
 			if old := prevMB.Miners.GetNode(key); old != nil {
-				miner.SetNodeInfo(old)
+				miner.SetNode(old)
 				if miner.ProtocolStats == nil {
 					ms := &MinerStats{}
 					ms.GenerationCountByRank = make([]int64, numGenerators)
@@ -1473,7 +1504,7 @@ func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 		}
 		for key, sharder := range mb.Sharders.CopyNodesMap() {
 			if old := prevMB.Sharders.GetNode(key); old != nil {
-				sharder.SetNodeInfo(old)
+				sharder.SetNode(old)
 			}
 		}
 	}
