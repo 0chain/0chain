@@ -1,12 +1,13 @@
 package chain
 
 import (
+	"strconv"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/assert"
-	"strconv"
-	"testing"
 )
 
 func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
@@ -18,7 +19,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 		MagicBlocks []int64
 		CheckRounds []struct {
 			Round     int64
-			WantRound int64 //-1 from LatestFinalizedMagicBlock
+			WantRound int64 //-1 from latestFinalizedMagicBlock
 		}
 	}{
 		{
@@ -55,7 +56,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
-			chain := &Chain{LatestFinalizedMagicBlock: lfmb, magicBlockStartingRounds: map[int64]*block.Block{}}
+			chain := &Chain{latestFinalizedMagicBlock: lfmb, magicBlockStartingRounds: map[int64]*block.Block{}}
 			for _, r := range test.MagicBlocks {
 				chain.magicBlockStartingRounds[r] = &block.Block{
 					HashIDField: datastore.HashIDField{Hash: strconv.FormatInt(r, 10)},
