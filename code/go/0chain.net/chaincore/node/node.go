@@ -593,48 +593,42 @@ func (n *Node) getTime(uri string) float64 {
 	return pullTimer.Mean()
 }
 
-func (n *Node) SetNodeInfo(oldNode *Node) {
-	// Copy timers and size to new map from oldNode
-	if n == oldNode {
+func (n *Node) SetNode(old *Node) {
+	// Copy timers and size to new map from clone
+	if n == old {
 		return
 	}
-	oldNode.mutex.RLock()
-	timersByURI := make(map[string]metrics.Timer, len(oldNode.TimersByURI))
-	sizeByURI := make(map[string]metrics.Histogram, len(oldNode.SizeByURI))
-	for k, v := range oldNode.TimersByURI {
-		timersByURI[k] = v
-	}
-	for k, v := range oldNode.SizeByURI {
-		sizeByURI[k] = v
-	}
-	oldNode.mutex.RUnlock()
 
+	clone := old.Clone()
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+
 	// NOTE:
 	// We can avoid copying and simply assign the new maps if
 	// n.TimersByURI and n.SizeByURI are expected to be empty while
 	// calling this method
-	for k, v := range timersByURI {
+	n.TimersByURI = make(map[string]metrics.Timer, len(clone.TimersByURI))
+	n.SizeByURI = make(map[string]metrics.Histogram, len(clone.SizeByURI))
+	for k, v := range clone.TimersByURI {
 		n.TimersByURI[k] = v
 	}
-	for k, v := range sizeByURI {
+	for k, v := range clone.SizeByURI {
 		n.SizeByURI[k] = v
 	}
 
-	n.Sent = oldNode.Sent
-	n.SendErrors = oldNode.SendErrors
-	n.Received = oldNode.Received
-
-	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
-	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
-	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
-	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
-	if oldNode.ProtocolStats != nil {
-		n.ProtocolStats = oldNode.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+	n.Sent = clone.Sent
+	n.SendErrors = clone.SendErrors
+	n.Received = clone.Received
+	n.largeMessageSendTime = clone.largeMessageSendTime
+	n.SetLargeMessageSendTime(clone.GetLargeMessageSendTime())
+	n.SetSmallMessageSendTime(clone.GetSmallMessageSendTime())
+	n.LargeMessagePullServeTime = clone.LargeMessagePullServeTime
+	n.SmallMessagePullServeTime = clone.SmallMessagePullServeTime
+	if clone.ProtocolStats != nil {
+		n.ProtocolStats = clone.ProtocolStats.(interface{ Clone() interface{} }).Clone()
 	}
-	n.Info = oldNode.GetInfo()
-	n.Status = oldNode.Status
+	n.Info = clone.Info
+	n.Status = clone.Status
 }
 
 func (n *Node) SetInfo(info Info) {

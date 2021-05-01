@@ -301,7 +301,6 @@ func (np *Pool) HasNode(key string) (ok bool) {
 func (np *Pool) Keys() (keys []string) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	keys = make([]string, 0, len(np.NodesMap))
 	for k := range np.NodesMap {
 		keys = append(keys, k)
@@ -325,4 +324,23 @@ func (np *Pool) NewNodes(newPool *Pool) (newNodes []*Node) {
 	}
 
 	return
+}
+
+// Clone returns a clone of Pool instance
+func (np *Pool) Clone() *Pool {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	clone := NewPool(np.Type)
+	clone.Nodes = make([]*Node, 0, len(np.Nodes))
+	clone.NodesMap = make(map[string]*Node, len(np.NodesMap))
+	clone.medianNetworkTime = np.medianNetworkTime
+
+	for k, v := range np.NodesMap {
+		nv := v.Clone()
+		clone.NodesMap[k] = nv
+	}
+
+	clone.computeNodesArray()
+
+	return clone
 }
