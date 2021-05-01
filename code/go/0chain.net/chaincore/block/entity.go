@@ -51,9 +51,8 @@ const (
 	VerificationFailed     = iota
 )
 
-/*UnverifiedBlockBody - used to compute the signature
-* This is what is used to verify the correctness of the block & the associated signature
- */
+// UnverifiedBlockBody - used to compute the signature
+// This is what is used to verify the correctness of the block & the associated signature
 type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
@@ -74,6 +73,31 @@ type UnverifiedBlockBody struct {
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
 }
 
+// SetRoundRandomSeed - set the random seed.
+func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
+	atomic.StoreInt64(&u.RoundRandomSeed, seed)
+}
+
+// GetRoundRandomSeed - returns the random seed of the round.
+func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
+	return atomic.LoadInt64(&u.RoundRandomSeed)
+}
+
+// Clone returns a clone of the UnverifiedBlockBody
+func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
+	cloneU := *u
+	cloneU.PrevBlockVerificationTickets = copyVerificationTickets(u.PrevBlockVerificationTickets)
+
+	cloneU.Txns = make([]*transaction.Transaction, 0, len(u.Txns))
+	for _, t := range u.Txns {
+		if t != nil {
+			cloneU.Txns = append(cloneU.Txns, t.Clone())
+		}
+	}
+
+	return &cloneU
+}
+
 /*Block - data structure that holds the block data */
 type Block struct {
 	UnverifiedBlockBody
@@ -88,7 +112,7 @@ type Block struct {
 	PrevBlock   *Block        `json:"-"`
 
 	TxnsMap   map[string]bool `json:"-"`
-	mutexTxns sync.RWMutex
+	mutexTxns *sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
@@ -107,6 +131,7 @@ type Block struct {
 func NewBlock(chainID datastore.Key, round int64) *Block {
 	b := datastore.GetEntityMetadata("block").Instance().(*Block)
 	b.Round = round
+	b.ChainID = chainID
 	return b
 }
 
@@ -147,9 +172,10 @@ func (b *Block) ComputeProperties() {
 	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
+
+	b.mutexTxns.Lock()
+	defer b.mutexTxns.Unlock()
 	if b.Txns != nil {
-		b.mutexTxns.Lock()
-		defer b.mutexTxns.Unlock()
 		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
 			txn.ComputeProperties()
@@ -234,6 +260,7 @@ func Provider() datastore.Entity {
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.RWMutex{}
 	b.stateStatusMutex = &sync.RWMutex{}
+	b.mutexTxns = &sync.RWMutex{}
 	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
@@ -534,7 +561,6 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 func (b *Block) SetBlockNotarized() {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
-
 	b.isNotarized = true
 }
 
@@ -631,12 +657,43 @@ func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 	b.PrevBlockVerificationTickets = bvt
 }
 
-// SetRoundRandomSeed - set the random seed.
-func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
-	atomic.StoreInt64(&u.RoundRandomSeed, seed)
+// Clone returns a clone of the block instance
+func (b *Block) Clone() *Block {
+	clone := *b
+	clone.UnverifiedBlockBody = *b.UnverifiedBlockBody.Clone()
+	clone.VerificationTickets = copyVerificationTickets(b.VerificationTickets)
+
+	clone.mutexTxns = &sync.RWMutex{}
+	b.mutexTxns.RLock()
+	clone.TxnsMap = make(map[string]bool, len(b.TxnsMap))
+	for k, v := range b.TxnsMap {
+		clone.TxnsMap[k] = v
+	}
+	b.mutexTxns.RUnlock()
+
+	clone.StateMutex = &sync.RWMutex{}
+	b.StateMutex.RLock()
+	if b.ClientState != nil {
+		clone.CreateState(b.ClientState.GetNodeDB(), b.ClientStateHash)
+	}
+	b.StateMutex.RUnlock()
+
+	clone.stateStatusMutex = &sync.RWMutex{}
+	clone.ticketsMutex = &sync.RWMutex{}
+	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
+	for k, v := range b.UniqueBlockExtensions {
+		clone.UniqueBlockExtensions[k] = v
+	}
+
+	clone.MagicBlock = b.MagicBlock.Clone()
+	return &clone
 }
 
-// GetRoundRandomSeed - returns the random seed of the round.
-func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
-	return atomic.LoadInt64(&u.RoundRandomSeed)
+func copyVerificationTickets(src []*VerificationTicket) []*VerificationTicket {
+	dst := make([]*VerificationTicket, 0, len(src))
+	for i := range src {
+		nvt := *src[i]
+		dst = append(dst, &nvt)
+	}
+	return dst
 }
