@@ -87,17 +87,9 @@ func (np *Pool) GetNode(id string) *Node {
 
 var none = make([]*Node, 0)
 
-func (np *Pool) copyNodes() (cp []*Node) {
-	if len(np.Nodes) == 0 {
-		return // nil
-	}
-	cp = make([]*Node, len(np.Nodes))
-	copy(cp, np.Nodes)
-	return
-}
-
+// TODO: refactor to return a copy of Nodes instead of the pointers
 func (np *Pool) shuffleNodes() (shuffled []*Node) {
-	shuffled = np.copyNodes()
+	shuffled = np.Nodes
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
