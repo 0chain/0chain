@@ -347,7 +347,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	var (
 		sharders = mb.Sharders
-		snk      = node.Self.Underlying().GetKey()
 
 		listMutex sync.Mutex
 	)
@@ -381,11 +380,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
 		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
-	}
-
-	// add own LFMB
-	if sharders.HasNode(snk) {
-		magicBlocks = append(magicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 
 	if len(magicBlocks) == 0 {
