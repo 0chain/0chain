@@ -56,3 +56,7 @@ func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values
 	}
 	return fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil
 }
+
+func (fc *FaucetSmartContract) getConfigHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	return fc.getGlobalNode(balances)
+}

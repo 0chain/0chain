@@ -273,38 +273,10 @@ func (msc *MinerSmartContract) DeleteMiner(t *transaction.Transaction,
 		return "", err
 	}
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-
-	var all *MinerNodes
-	if all, err = msc.getMinersList(balances); err != nil {
-		Logger.Error("delete_miner: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("delete_miner",
-			"failed to get miner list: %v", err)
-	}
-	msc.verifyMinerState(balances,
-		"delete_miner: checking all miners list in the beginning")
-
-	for i, v := range all.Nodes {
-		if v.ID == mn.ID {
-			all.Nodes[i] = mn
-			break
-		}
-	}
-
-	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
-		return "", common.NewErrorf("delete_miner",
-			"saving all miners list: %v", err)
-	}
-
 	// set node type -- miner
 	if err = mn.save(balances); err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
-
-	msc.verifyMinerState(balances,
-		"delete_miner: Checking all miners list afterInsert")
 
 	resp = string(mn.Encode())
 	return
@@ -379,7 +351,10 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 	if allMinersBytes == nil {
 		return all, nil
 	}
-	all.Decode(allMinersBytes.Encode())
+	err = all.Decode(allMinersBytes.Encode())
+	if err != nil {
+		return nil, err
+	}
 	return all, nil
 }
 

@@ -250,38 +250,10 @@ func (msc *MinerSmartContract) DeleteSharder(t *transaction.Transaction,
 		return "", err
 	}
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-
-	var all *MinerNodes
-	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
-		Logger.Error("delete_sharder: Error in getting list from the DB",
-			zap.Error(err))
-		return "", common.NewErrorf("delete_sharder",
-			"failed to get sharder list: %v", err)
-	}
-	msc.verifySharderState(balances, AllShardersKey,
-		"delete_sharder: checking all sharders list in the beginning")
-
-	for i, v := range all.Nodes {
-		if v.ID == sn.ID {
-			all.Nodes[i] = sn
-			break
-		}
-	}
-
-	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
-		return "", common.NewErrorf("delete_sharder",
-			"saving all sharders list: %v", err)
-	}
-
 	// set node type -- miner
 	if err = sn.save(balances); err != nil {
 		return "", common.NewError("delete_sharder", err.Error())
 	}
-
-	msc.verifySharderState(balances, AllShardersKey,
-		"delete_sharder: Checking all sharders list afterInsert")
 
 	resp = string(sn.Encode())
 	return
@@ -342,20 +314,20 @@ func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI,
 func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
 	key datastore.Key) (*MinerNodes, error) {
 
-	allMinersList := &MinerNodes{}
-	allMinersBytes, err := balances.GetTrieNode(key)
+	allShardersList := new(MinerNodes)
+	allShardersBytes, err := balances.GetTrieNode(key)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("getShardersList_failed",
 			fmt.Sprintf("Failed to retrieve existing sharders list: %v", err))
 	}
-	if allMinersBytes == nil {
-		return allMinersList, nil
+	if allShardersBytes == nil {
+		return allShardersList, nil
 	}
-	err = allMinersList.Decode(allMinersBytes.Encode())
+	err = allShardersList.Decode(allShardersBytes.Encode())
 	if err != nil {
 		return nil, err
 	}
-	return allMinersList, nil
+	return allShardersList, nil
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,

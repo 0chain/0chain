@@ -88,7 +88,7 @@ func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var update *config
+	update := &config{}
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}

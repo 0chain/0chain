@@ -153,6 +153,9 @@ func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction,
 		gn.MaxMint = newGn.MaxMint
 		conf.Set(pfx+"max_mint", gn.MaxMint)
 	}
+	if err = gn.validate(); err != nil {
+		return "", err
+	}
 	balances.InsertTrieNode(gn.getKey(), gn)
 	return string(gn.Encode()), nil
 }

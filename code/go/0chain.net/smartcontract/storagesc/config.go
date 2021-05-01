@@ -274,6 +274,12 @@ func (conf *scConfig) update(newConf *scConfig) {
 	if newConf.MaxWritePrice > 0 {
 		conf.MaxWritePrice = newConf.MaxWritePrice
 	}
+	if newConf.FailedChallengesToCancel > 0 {
+		conf.FailedChallengesToCancel = newConf.FailedChallengesToCancel
+	}
+	if newConf.FailedChallengesToRevokeMinLock > 0 {
+		conf.FailedChallengesToRevokeMinLock = newConf.FailedChallengesToRevokeMinLock
+	}
 	conf.ChallengeEnabled = newConf.ChallengeEnabled
 	if newConf.MaxChallengesPerGeneration > 0 {
 		conf.MaxChallengesPerGeneration = newConf.MaxChallengesPerGeneration
@@ -293,32 +299,38 @@ func (conf *scConfig) update(newConf *scConfig) {
 	if newConf.MaxCharge > 0 {
 		conf.MaxCharge = newConf.MaxCharge
 	}
-	if newConf.ReadPool.MinLock > 0 {
-		conf.ReadPool.MinLock = newConf.ReadPool.MinLock
+	if newConf.ReadPool != nil {
+		if newConf.ReadPool.MinLock > 0 {
+			conf.ReadPool.MinLock = newConf.ReadPool.MinLock
+		}
+		if newConf.ReadPool.MinLockPeriod > 0 {
+			conf.ReadPool.MinLockPeriod = newConf.ReadPool.MinLockPeriod
+		}
+		if newConf.ReadPool.MaxLockPeriod > 0 {
+			conf.ReadPool.MaxLockPeriod = newConf.ReadPool.MaxLockPeriod
+		}
 	}
-	if newConf.ReadPool.MinLockPeriod > 0 {
-		conf.ReadPool.MinLockPeriod = newConf.ReadPool.MinLockPeriod
+	if newConf.WritePool != nil {
+		if newConf.WritePool.MinLock > 0 {
+			conf.WritePool.MinLock = newConf.WritePool.MinLock
+		}
+		if newConf.WritePool.MinLockPeriod > 0 {
+			conf.WritePool.MinLockPeriod = newConf.WritePool.MinLockPeriod
+		}
+		if newConf.WritePool.MaxLockPeriod > 0 {
+			conf.WritePool.MaxLockPeriod = newConf.WritePool.MaxLockPeriod
+		}
 	}
-	if newConf.ReadPool.MaxLockPeriod > 0 {
-		conf.ReadPool.MaxLockPeriod = newConf.ReadPool.MaxLockPeriod
-	}
-	if newConf.WritePool.MinLock > 0 {
-		conf.WritePool.MinLock = newConf.WritePool.MinLock
-	}
-	if newConf.WritePool.MinLockPeriod > 0 {
-		conf.WritePool.MinLockPeriod = newConf.WritePool.MinLockPeriod
-	}
-	if newConf.WritePool.MaxLockPeriod > 0 {
-		conf.WritePool.MaxLockPeriod = newConf.WritePool.MaxLockPeriod
-	}
-	if newConf.StakePool.MinLock > 0 {
-		conf.StakePool.MinLock = newConf.StakePool.MinLock
-	}
-	if newConf.StakePool.InterestRate > 0 {
-		conf.StakePool.InterestRate = newConf.StakePool.InterestRate
-	}
-	if newConf.StakePool.InterestInterval > 0 {
-		conf.StakePool.InterestInterval = newConf.StakePool.InterestInterval
+	if newConf.StakePool != nil {
+		if newConf.StakePool.MinLock > 0 {
+			conf.StakePool.MinLock = newConf.StakePool.MinLock
+		}
+		if newConf.StakePool.InterestRate > 0 {
+			conf.StakePool.InterestRate = newConf.StakePool.InterestRate
+		}
+		if newConf.StakePool.InterestInterval > 0 {
+			conf.StakePool.InterestInterval = newConf.StakePool.InterestInterval
+		}
 	}
 }
 
@@ -475,7 +487,7 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var update *scConfig
+	update := &scConfig{}
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
