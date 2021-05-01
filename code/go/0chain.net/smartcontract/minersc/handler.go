@@ -29,7 +29,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 	var ups = newUserPools()
 	for nodeID, poolIDs := range un.Pools {
 		var mn *MinerNode
-		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
+		if mn, err = getMinerNode(nodeID, balances); err != nil {
 			return nil, fmt.Errorf("can't get node %s: %v", nodeID, err)
 		}
 		if ups.Pools[mn.NodeType.String()] == nil {
@@ -137,7 +137,7 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 		sn *MinerNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = getMinerNode(id, balances); err != nil {
 		return
 	}
 
@@ -154,7 +154,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 		sn     *MinerNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = getMinerNode(id, balances); err != nil {
 		return
 	}
 
