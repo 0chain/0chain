@@ -403,8 +403,10 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 // block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
 // finalized magic block of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
+	c.lfmbMutex.Lock()
+	defer c.lfmbMutex.Unlock()
 	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-		c.GetLatestFinalizedMagicBlock().MagicBlock)
+		c.latestFinalizedMagicBlock.MagicBlock)
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
