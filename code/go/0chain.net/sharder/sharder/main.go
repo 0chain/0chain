@@ -309,12 +309,16 @@ func done(ctx context.Context) {
 }
 
 func startBlocksInfoLogs(sc *sharder.Chain) {
-	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
+	var (
+		lfb  = sc.GetLatestFinalizedBlock()
+		lfmb = sc.GetLatestFinalizedMagicBlockBrief()
+	)
+
 	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
 	Logger.Info("start from LFMB",
-		zap.Int64("round", lfmb.MagicBlock.StartingRound),
-		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
+		zap.Int64("round", lfmb.StartingRound),
+		zap.String("hash", lfmb.MagicBlockHash)) // hash of block with the magic block
 }
 
 func initServer() {

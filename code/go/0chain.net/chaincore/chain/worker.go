@@ -137,17 +137,46 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 	}
 }
 
+// MagicBlockBrief represents base info of magic block
+type MagicBlockBrief struct {
+	MagicBlockNumber int64
+	Round            int64
+	StartingRound    int64
+	MagicBlockHash   string
+	MinersN2NURLs    []string
+	ShardersN2NURLs  []string
+}
+
+// GetLatestFinalizedMagicBlockBrief returns a brief info of the MagicBlock
+// to avoid the heavy copy action of the whole block
+func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
+	c.lfmbMutex.RLock()
+	defer c.lfmbMutex.RUnlock()
+	if c.latestFinalizedMagicBlock == nil {
+		return nil
+	}
+
+	return &MagicBlockBrief{
+		MagicBlockNumber: c.latestFinalizedMagicBlock.MagicBlockNumber,
+		MagicBlockHash:   c.latestFinalizedMagicBlock.MagicBlock.Hash,
+		Round:            c.latestFinalizedMagicBlock.Round,
+		StartingRound:    c.latestFinalizedMagicBlock.MagicBlock.StartingRound,
+		MinersN2NURLs:    c.latestFinalizedMagicBlock.Miners.N2NURLs(),
+		ShardersN2NURLs:  c.latestFinalizedMagicBlock.Sharders.N2NURLs(),
+	}
+}
+
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	saveFunc MagicBlockSaveFunc) (err error) {
 
-	var latest = c.GetLatestFinalizedMagicBlock()
+	lfmb := c.GetLatestFinalizedMagicBlockBrief()
 
-	if newMB.MagicBlockNumber <= latest.MagicBlockNumber {
+	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
 		return common.NewError("repair_mb_chain", "already have such MB")
 	}
 
-	if newMB.MagicBlockNumber == latest.MagicBlockNumber+1 {
-		if newMB.PreviousMagicBlockHash != latest.MagicBlock.Hash {
+	if newMB.MagicBlockNumber == lfmb.MagicBlockNumber+1 {
+		if newMB.PreviousMagicBlockHash != lfmb.MagicBlockHash {
 			return common.NewError("repair_mb_chain", "invalid prev-MB ref.")
 		}
 		return // it's just next MB
@@ -156,7 +185,7 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	// here the newBM is not next but newer
 
 	Logger.Info("repair_mb_chain: repair from-to mb_number",
-		zap.Int64("from", latest.MagicBlockNumber),
+		zap.Int64("from", lfmb.MagicBlockNumber),
 		zap.Int64("to", newMB.MagicBlockNumber))
 
 	// until the end of the days

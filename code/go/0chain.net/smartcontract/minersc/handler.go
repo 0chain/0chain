@@ -119,7 +119,7 @@ func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, 
 }
 
 func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return "", common.NewErrNoResource("can't get phase node", err.Error())
 	}
