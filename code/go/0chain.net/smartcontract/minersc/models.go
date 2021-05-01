@@ -148,8 +148,8 @@ type GlobalNode struct {
 	MaxMint state.Balance `json:"max_mint"`
 
 	// PrevMagicBlock keeps previous magic block to make Miner SC more stable.
-	// In case LatestFinalizedMagicBlock of a miner works incorrect. We are
-	// using this previous MB or LatestFinalizedMagicBlock for genesis block.
+	// In case latestFinalizedMagicBlock of a miner works incorrect. We are
+	// using this previous MB or latestFinalizedMagicBlock for genesis block.
 	PrevMagicBlock *block.MagicBlock `json:"prev_magic_block"`
 
 	// Minted tokens by SC.
