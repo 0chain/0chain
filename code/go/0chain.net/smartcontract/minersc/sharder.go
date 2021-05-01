@@ -178,7 +178,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return "", err
 	}

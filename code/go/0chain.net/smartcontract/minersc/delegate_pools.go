@@ -34,7 +34,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		mn       *MinerNode
 		transfer *state.Transfer
 	)
-	mn, err = msc.getMinerNode(dp.MinerID, balances)
+	mn, err = getMinerNode(dp.MinerID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
@@ -114,7 +114,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	}
 
 	var mn *MinerNode
-	if mn, err = msc.getMinerNode(dp.MinerID, balances); err != nil {
+	if mn, err = getMinerNode(dp.MinerID, balances); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error getting miner node: %v", err)
 	}

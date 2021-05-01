@@ -567,13 +567,13 @@ func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
 func (c *Chain) GetPhaseFromSharders() {
 
 	var (
-		mb  = c.GetLatestFinalizedMagicBlock().MagicBlock
 		cmb = c.GetCurrentMagicBlock()
 		got util.Serializable
 	)
 
+	shardersN2NURLs := c.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs
 	got = GetFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
+		shardersN2NURLs, func() util.Serializable {
 			return new(minersc.PhaseNode)
 		}, func(val util.Serializable) bool {
 			if pn, ok := val.(*minersc.PhaseNode); ok {
