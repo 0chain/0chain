@@ -195,12 +195,18 @@ func (n *Node) AddErrorCount(ecd int64) {
 	n.ErrorCount += ecd
 }
 
-// GetInfo returns pointer to underlying Info.
-func (n *Node) GetInfoPtr() *Info {
+// GetNodeInfo returns the node info
+func (n *Node) GetNodeInfo() Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
+	return n.Info
+}
 
-	return &n.Info
+// SetNodeInfo updates the node info
+func (n *Node) SetNodeInfo(info *Info) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.Info = *info
 }
 
 // GetStatus asynchronously.
@@ -643,4 +649,52 @@ func (n *Node) GetInfo() Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 	return n.Info
+}
+
+// Clone returns a clone of Node instance.
+func (n *Node) Clone() *Node {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	clone := &Node{
+		N2NHost:                   n.N2NHost,
+		Host:                      n.Host,
+		Port:                      n.Port,
+		Path:                      n.Path,
+		Type:                      n.Type,
+		Description:               n.Description,
+		SetIndex:                  n.SetIndex,
+		Status:                    n.Status,
+		LastActiveTime:            n.LastActiveTime,
+		ErrorCount:                n.ErrorCount,
+		Sent:                      n.Sent,
+		SendErrors:                n.SendErrors,
+		Received:                  n.Received,
+		largeMessageSendTime:      n.largeMessageSendTime,
+		smallMessageSendTime:      n.smallMessageSendTime,
+		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
+		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
+		Client:                    *(n.Client.Clone()),
+		CommChannel:               make(chan struct{}, 5),
+	}
+
+	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
+	for k, v := range n.TimersByURI {
+		clone.TimersByURI[k] = v
+	}
+
+	clone.SizeByURI = make(map[string]metrics.Histogram, len(n.SizeByURI))
+	for k, v := range n.SizeByURI {
+		clone.SizeByURI[k] = v
+	}
+
+	clone.idBytes = make([]byte, len(n.idBytes))
+	copy(clone.idBytes, n.idBytes)
+
+	ps, ok := n.ProtocolStats.(interface{ Clone() interface{} })
+	if ok {
+		clone.ProtocolStats = ps.Clone()
+	}
+
+	return clone
 }
