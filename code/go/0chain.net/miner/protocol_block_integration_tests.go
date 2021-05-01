@@ -19,8 +19,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-
-	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -126,12 +124,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		if !mc.validateTransaction(b, txn) {
 			invalidTxns = append(invalidTxns, txn)
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.Any("now", common.Now()))
+				logging.Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.Any("now", common.Now()))
 			}
 			return false
 		}
 		if debugTxn {
-			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+			logging.Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 		if dstxn == nil || (dstxn != nil && txn.Hash != dstxn.Hash) {
 			if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
@@ -143,7 +141,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		if err := mc.UpdateState(b, txn); err != nil {
 			if debugTxn {
-				Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
+				logging.Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
 			failedStateCount++
 			return false
@@ -155,7 +153,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn
 		if debugTxn {
-			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
+			logging.Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}
 		etxns[idx] = txn
 		b.AddTransaction(txn)
@@ -179,7 +177,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
-			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+			logging.Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
 		if txnProcessor(ctx, txn) {
@@ -197,25 +195,25 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
-	Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
+	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	if isDoubleSpend {
 		txnIterHandler(ctx, dstxn) // inject double-spend transaction
 	}
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(invalidTxns) > 0 {
-		Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
+		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
 		go mc.deleteTxns(invalidTxns) // OK to do in background
 	}
 	if roundMismatch {
-		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
 	}
 	if roundTimeout {
-		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
+		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
 		return ErrRoundTimeout
 	}
 	if ierr != nil {
-		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
+		logging.Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
 	}
 	if err != nil {
 		return err
@@ -247,7 +245,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		reusedTxns = idx - blockSize
 		blockSize = idx
-		Logger.Error("generate block (reused txns)",
+		logging.Logger.Error("generate block (reused txns)",
 			zap.Int64("round", b.Round), zap.Int("ub", len(blocks)),
 			zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount),
 			zap.Int32("blockSize", idx))
@@ -255,7 +253,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
 		if !waitOver && blockSize < mc.MinBlockSize {
 			b.Txns = nil
-			Logger.Debug("generate block (insufficient txns)",
+			logging.Logger.Debug("generate block (insufficient txns)",
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", count),
 				zap.Int32("block_size", blockSize))
@@ -272,15 +270,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if count > 10*mc.BlockSize {
-		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
+		logging.Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
 
 	if err = client.GetClients(ctx, clients); err != nil {
-		Logger.Error("generate block (get clients error)", zap.Error(err))
+		logging.Logger.Error("generate block (get clients error)", zap.Error(err))
 		return common.NewError("get_clients_error", err.Error())
 	}
 
-	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
+	logging.Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
@@ -290,7 +288,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		cl := clients[txn.ClientID]
 		if cl == nil || cl.PublicKey == "" {
-			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
+			logging.Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
 			return common.NewError("invalid_client", "client not available")
 		}
 		txn.PublicKey = cl.PublicKey
@@ -298,7 +296,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 	b.ClientStateHash = b.ClientState.GetRoot()
 	bgTimer.UpdateSince(start)
-	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
+	logging.Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
@@ -306,7 +304,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
+	logging.Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	mc.StateSanityCheck(ctx, b)
