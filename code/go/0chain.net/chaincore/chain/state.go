@@ -7,6 +7,8 @@ import (
 	"math"
 	"time"
 
+	"errors"
+
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -18,7 +20,6 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
-	"errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -97,8 +98,6 @@ func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) erro
 
 	// get block state changes from network
 	return c.GetBlockStateChange(b)
-
-	return nil
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
@@ -189,12 +188,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	b.SetStateDB(pb)
 
-	Logger.Info("compute state", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("client_state", util.ToHex(b.ClientStateHash)),
-		zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())),
-		zap.String("prev_block", b.PrevHash),
-		zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+	beginState := b.ClientState.GetRoot()
 
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
@@ -212,6 +206,15 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			return common.NewError("state_update_error", "error updating state")
 		}
 	}
+
+	Logger.Info("compute state", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("client_state", util.ToHex(b.ClientStateHash)),
+		zap.String("begin_client_state", util.ToHex(beginState)),
+		zap.String("after_client_state", util.ToHex(b.ClientState.GetRoot())),
+		zap.String("prev_block", b.PrevHash),
+		zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(block.StateFailed)
 		Logger.Error("compute state - state hash mismatch",
@@ -350,8 +353,8 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 	return c.updateState(b, txn)
 }
 
-// newStateContext creation helper.
-func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
+// NewStateContext creation helper.
+func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction) (balances *bcstate.StateContext) {
 
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
@@ -365,10 +368,18 @@ func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	err error) {
 
+	// check if the block's ClientState has root value
+	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
+	if err != nil {
+		return common.NewErrorf("update_state_failed",
+			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
+			b.Hash, b.ClientStateHash, b.ClientState.GetRoot(), b.Round)
+	}
+
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		startRoot   = clientState.GetRoot()
-		sctx        = c.newStateContext(b, clientState, txn)
+		sctx        = c.NewStateContext(b, clientState, txn)
 	)
 
 	switch txn.TransactionType {
@@ -411,8 +422,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	}
 
 	for _, transfer := range sctx.GetTransfers() {
-		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID,
-			state.Balance(transfer.Amount))
+		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
 			return
 		}
@@ -420,14 +430,14 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 
 	for _, signedTransfer := range sctx.GetSignedTransfers() {
 		err = c.transferAmount(sctx, signedTransfer.ClientID,
-			signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
+			signedTransfer.ToClientID, signedTransfer.Amount)
 		if err != nil {
 			return
 		}
 	}
 
 	for _, mint := range sctx.GetMints() {
-		err = c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
+		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash))
