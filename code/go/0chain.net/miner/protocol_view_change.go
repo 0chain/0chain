@@ -135,7 +135,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
-			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
 			active = mc.IsActiveInChain()
 
 			pn = pe.Phase
@@ -177,8 +176,19 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
 
 		var txn *httpclientutil.Transaction
-		if txn, err = scFunc(ctx, lfb, mb, active); err != nil {
-			logging.Logger.Error("smart contract function failed",
+		if err = func() error {
+			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			return mc.LatestFinalizedMagicBlockUpdate(cctx, func(lfmb *block.Block) error {
+				var err error
+				txn, err = scFunc(ctx, lfb, lfmb.MagicBlock, active)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+		}(); err != nil {
+			Logger.Error("smart contract function failed",
 				zap.Any("error", err), zap.Any("next_phase", pn))
 			continue
 		}
@@ -862,8 +872,11 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	logging.Logger.Info("setup latest and previous fmbs")
+	lfmb := mc.GetLatestFinalizedMagicBlock()
+	if lfmb.Sharders == nil || lfmb.Miners == nil {
+		return
+	}
 
-	var lfmb = mc.GetLatestFinalizedMagicBlock()
 	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
 
 	if lfmb.MagicBlockNumber <= 1 {
