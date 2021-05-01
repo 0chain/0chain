@@ -226,17 +226,17 @@ func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
 
 	if active {
 
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
 		if err != nil {
 			return
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		mpks = block.NewMpks()
-		if err = mpks.Decode(node.Encode()); err != nil {
+		if err = mpks.Decode(n.Encode()); err != nil {
 			return nil, err
 		}
 
@@ -269,17 +269,17 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 
 	if active {
 
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
 		if err != nil {
 			return
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		dmn = minersc.NewDKGMinerNodes()
-		err = dmn.Decode(node.Encode())
+		err = dmn.Decode(n.Encode())
 		if err != nil {
 			return nil, err
 		}
@@ -480,17 +480,17 @@ func (mc *Chain) GetMagicBlockFromSC(lfb *block.Block, mb *block.MagicBlock,
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
 	if active {
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
 		if err != nil {
 			return // error
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		magicBlock = block.NewMagicBlock()
-		if err = magicBlock.Decode(node.Encode()); err != nil {
+		if err = magicBlock.Decode(n.Encode()); err != nil {
 			return nil, err
 		}
 
