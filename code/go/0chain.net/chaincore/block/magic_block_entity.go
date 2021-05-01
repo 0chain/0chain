@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -106,6 +107,68 @@ func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
 		if sender == nil {
 			return false
 		}
+		if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// Clone returns a clone of MagicBlock instance
+func (mb *MagicBlock) Clone() *MagicBlock {
+	mb.mutex.RLock()
+	defer mb.mutex.RUnlock()
+	clone := &MagicBlock{
+		HashIDField:            mb.HashIDField,
+		PreviousMagicBlockHash: mb.PreviousMagicBlockHash,
+		MagicBlockNumber:       mb.MagicBlockNumber,
+		StartingRound:          mb.StartingRound,
+		T:                      mb.T,
+		K:                      mb.K,
+		N:                      mb.N,
+	}
+
+	if mb.ShareOrSigns != nil {
+		clone.ShareOrSigns = mb.ShareOrSigns.Clone()
+	}
+	if mb.Mpks != nil {
+		clone.Mpks = mb.Mpks.Clone()
+	}
+	if mb.Miners != nil {
+		clone.Miners = mb.Miners.Clone()
+	}
+	if mb.Sharders != nil {
+		clone.Sharders = mb.Sharders.Clone()
+	}
+
+	return clone
+}
+
+// MagicBlockMinersSignatureVerifier will use the magic block to verify blocks tickets
+type MagicBlockMinersSignatureVerifier struct {
+	clients map[string]client.Client
+}
+
+// NewMagicBlockMinersSignatureVerifier creats a MagicBlockMinersSignatureVerifier instance
+func NewMagicBlockMinersSignatureVerifier(mb *MagicBlock) *MagicBlockMinersSignatureVerifier {
+	vf := &MagicBlockMinersSignatureVerifier{
+		clients: make(map[string]client.Client),
+	}
+	nodes := mb.Miners.CopyNodesMap()
+	for k, v := range nodes {
+		vf.clients[k] = v.Client
+	}
+	return vf
+}
+
+// VerifySignatures verify the tickets signatures in a block
+func (mbsv *MagicBlockMinersSignatureVerifier) VerifySignatures(b *Block) bool {
+	for _, bvt := range b.GetVerificationTickets() {
+		sender, ok := mbsv.clients[bvt.VerifierID]
+		if !ok {
+			return false
+		}
+
 		if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
 			return false
 		}
