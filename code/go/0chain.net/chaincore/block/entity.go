@@ -307,8 +307,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	logging.Logger.Debug("Prev state root", zap.Int64("round", b.Round),
 		zap.String("prev_block", prevBlock.Hash),
 		zap.String("root", util.ToHex(rootHash)))
-	b.CreateState(pndb)
-	b.ClientState.SetRoot(rootHash)
+	b.CreateState(pndb, rootHash)
 }
 
 // InitStateDB - initialize the block's state from the db
@@ -319,17 +318,17 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 		return err
 	}
 
-	b.CreateState(ndb)
-	b.ClientState.SetRoot(b.ClientStateHash)
+	b.CreateState(ndb, b.ClientStateHash)
 	b.SetStateStatus(StateSuccessful)
 	return nil
 }
 
 //CreateState - create the state from the prior state db
-func (b *Block) CreateState(pndb util.NodeDB) {
+func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
+	b.ClientState.SetRoot(root)
 }
 
 /*AddTransaction - add a transaction to the block */
