@@ -986,15 +986,7 @@ type BlockConsensus struct {
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
-	var (
-		mb  = mc.GetLatestFinalizedMagicBlock()
-		m2s = mb.Sharders
-
-		mx sync.Mutex
-	)
-
-	fbs = make([]*BlockConsensus, 0, m2s.Size())
-
+	var mx sync.Mutex
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
@@ -1047,8 +1039,8 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		return fb, nil
 	}
 
-	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil,
-		handler)
+	fbs = make([]*BlockConsensus, 0, len(mc.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs))
+	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 
 	// highest (the first sorting order), most popular (the second order)
 	sort.Slice(fbs, func(i int, j int) bool {
@@ -1521,17 +1513,16 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	// LFMB. The LFMB can be already update by LFMD worker (which uses 0DNS)
 	// and here we just set correct DKG.
 
-	lfmb := mc.GetLatestFinalizedMagicBlock()
-	rcvd := mc.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-		lfmb.MagicBlock)
-
+	rcvd := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
 	if rcvd == nil {
 		return
 	}
 
+	lfmb := mc.GetLatestFinalizedMagicBlock()
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
+		Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb")
 		return
 	}
 
@@ -1542,8 +1533,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		return false, err
 	}
 	mc.UpdateNodesFromMagicBlock(rcvd.MagicBlock)
-	mc.SetLatestFinalizedMagicBlock(rcvd)
 	mc.ensureDKG(ctx, rcvd)
+	mc.SetLatestFinalizedMagicBlock(rcvd)
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
