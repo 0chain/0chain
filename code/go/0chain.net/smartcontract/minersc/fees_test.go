@@ -113,7 +113,7 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 
 	t.Helper()
 
-	var gn, err = msc.getGlobalNode(balances)
+	var gn, err = getGlobalNode(balances)
 	require.NoError(t, err)
 
 	var dmn *DKGMinerNodes
@@ -234,7 +234,7 @@ func Test_payFees(t *testing.T) {
 		balances.txn = tx
 		balances.block = b
 		balances.blockSharders = extractBlockSharders(sharders, 3)
-		var gn, err = msc.getGlobalNode(balances)
+		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
 		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
@@ -260,7 +260,7 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		gn, err = msc.getGlobalNode(balances)
+		gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "can't get global node")
 		assert.EqualValues(t, 251, gn.LastRound)
 		assert.EqualValues(t, 0, gn.Minted)
@@ -292,7 +292,7 @@ func Test_payFees(t *testing.T) {
 		balances.txn = tx
 		balances.block = b
 		balances.blockSharders = extractBlockSharders(sharders, 3)
-		var gn, err = msc.getGlobalNode(balances)
+		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
 		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
@@ -361,7 +361,7 @@ func Test_payFees(t *testing.T) {
 		// add fees
 		tx.Fee = 100e10
 		b.Txns = append(b.Txns, tx)
-		var gn, err = msc.getGlobalNode(balances)
+		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
 		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
@@ -427,7 +427,7 @@ func Test_payFees(t *testing.T) {
 		balances.block = b
 		balances.blockSharders = extractBlockSharders(sharders, 3)
 		// add fees
-		var gn, err = msc.getGlobalNode(balances)
+		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "getting global node")
 		_, err = msc.payFees(tx, nil, gn, balances)
 		require.NoError(t, err, "pay_fees error")
@@ -472,7 +472,7 @@ func Test_payFees(t *testing.T) {
 	})
 
 	t.Run("epoch", func(t *testing.T) {
-		var gn, err = msc.getGlobalNode(balances)
+		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err)
 		var ir, rr = gn.InterestRate, gn.RewardRate
 		gn.epochDecline()

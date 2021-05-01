@@ -356,67 +356,6 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 }
 
-func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (*block.Block, error) {
-
-	const limitAttempts = 10
-
-	var (
-		attempt      = 0
-		retryTimeout = time.Second * 5
-	)
-	for {
-		lfmb := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-		if lfmb != nil {
-			return lfmb, nil
-		}
-
-		attempt++
-		if attempt >= limitAttempts {
-			return nil, common.NewErrorf("get_lfmbs_from_sharders",
-				"no lfmb given after %d attempts", attempt)
-		}
-		logging.Logger.Warn("get_current_mb_sharder -- retry",
-			zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
-		select {
-		case <-ctx.Done():
-			return nil, common.NewError("get_lfmbs_from_sharders",
-				"context done: exiting")
-		case <-time.After(retryTimeout):
-		}
-	}
-}
-
-func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
-	err error) {
-
-	lfmb, err := getMagicBlocksFromSharders(ctx, mc)
-	if err != nil {
-		return err
-	}
-
-	cmb := mc.GetCurrentMagicBlock()
-
-	switch {
-	case lfmb.StartingRound < cmb.StartingRound:
-		// can't initialize this magic block
-		return // nil
-	case lfmb.StartingRound == cmb.StartingRound:
-		// ok, initialize the magicBlock
-	default: // magicBlock > cmb.StartingRoound, verify chain
-		err = mc.VerifyChainHistoryAndRepair(common.GetRootContext(), lfmb, nil)
-		if err != nil {
-			return
-		}
-	}
-
-	if err = mc.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err)
-	}
-	mc.SetLatestFinalizedMagicBlock(lfmb)
-	mc.UpdateNodesFromMagicBlock(lfmb.MagicBlock)
-	return nil
-}
-
 func initEntities() {
 	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
 	memoryStorage := memorystore.GetStorageProvider()
