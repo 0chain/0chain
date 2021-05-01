@@ -37,11 +37,14 @@ func GetFetchStrategy() int {
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
+	np.mmx.Lock()
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock()
+		nodes = np.shuffleNodes()
 	} else {
-		nodes = np.GetNodesByLargeMessageTime()
+		nodes = np.getNodesByLargeMessageTime()
 	}
+	np.mmx.Unlock()
+
 	for _, nd := range nodes {
 		select {
 		case <-ctx.Done():

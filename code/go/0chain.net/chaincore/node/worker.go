@@ -55,23 +55,28 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context, startRound int64) {
 }
 
 func (np *Pool) statusUpdate(ctx context.Context) {
-	np.mmx.RLock()
-	nodes := np.shuffleNodes()
-	np.mmx.RUnlock()
-	for _, node := range nodes {
-		if Self.IsEqual(node) {
-			continue
-		}
-		if common.Within(node.GetLastActiveTime().Unix(), 10) {
-			node.updateMessageTimings()
-			if time.Since(node.Info.AsOf) < 60*time.Second {
+	np.mmx.Lock()
+	select {
+	case <-ctx.Done():
+		np.mmx.Unlock()
+		return
+	default:
+		for _, node := range np.Nodes {
+			if Self.IsEqual(node) {
 				continue
 			}
-		}
-		if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
-			node.SetStatus(NodeStatusInactive)
+			if common.Within(node.GetLastActiveTime().Unix(), 10) {
+				node.updateMessageTimings()
+				if time.Since(node.Info.AsOf) < 60*time.Second {
+					continue
+				}
+			}
+			if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
+				node.SetStatus(NodeStatusInactive)
+			}
 		}
 	}
+	np.mmx.Unlock()
 	np.ComputeNetworkStats()
 }
 
