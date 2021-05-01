@@ -406,13 +406,12 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
-func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
-	lfmb *block.Block) {
+func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
 
-	lfmb = c.LatestFinalizedMagicBlock
+	var lfmb = c.latestFinalizedMagicBlock
 
 	rn = mbRoundOffset(rn) // round number with MB offset
 
@@ -434,5 +433,5 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
 		lfmb = c.magicBlockStartingRounds[foundRound]
 	}
 
-	return
+	return lfmb
 }
