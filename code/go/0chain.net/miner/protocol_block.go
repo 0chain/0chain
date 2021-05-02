@@ -345,7 +345,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			return common.NewError(RoundMismatch, "current round different from generation round")
 		}
 		if !result {
-			//logging.Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
 			return common.NewError("txn_validation_failed", "Transaction validation failed")
 		}
 		count++
