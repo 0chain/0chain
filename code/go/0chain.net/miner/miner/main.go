@@ -348,7 +348,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 	result = scanner.Scan()
 	if result == false {
-		return h, n2nh, p, path, "", errors.New("error reading description")
+		return h, n2nh, p, path, "", nil
 	}
 
 	description := scanner.Text()
