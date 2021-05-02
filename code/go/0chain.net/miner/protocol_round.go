@@ -489,9 +489,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Int64("round", b.Round),
 				zap.Int64("pre round", pb.Round),
 				zap.Any("prior_block_state", pb.GetStateStatus()))
-			//if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
-			//	logging.Logger.Error("(re) computing previous block", zap.Error(err))
-			//}
 		}
 
 		b.SetStateDB(pb)
@@ -1548,28 +1545,6 @@ func (mc *Chain) bumpLFBTicket(ctx context.Context, lfbs *block.Block) {
 	}
 }
 
-// func (mc *Chain) initLFBState(lfb *block.Block) {
-// 	var err error
-// 	if err = mc.InitBlockState(lfb); err != nil {
-// 		go mc.asyncInitLFBState()
-// 	}
-// }
-
-// func (mc *Chain) asyncInitLFBState() {
-// 	var (
-// 		lfb *block.Block
-// 		err error
-// 	)
-// 	for {
-// 		time.Sleep(time.Second * 1)
-// 		lfb = mc.GetLatestFinalizedBlock()
-// 		if err = mc.InitBlockState(lfb); err == nil {
-// 			return
-// 		}
-// 		logging.Logger.Error("start_protocol", zap.Error(err))
-// 	}
-// }
-
 func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mr *Round) {
 
@@ -1654,17 +1629,6 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
 	// don't setup the latest MB since it can be promoted
 
-	//	if err = mc.setupLoadedMagicBlock(latest); err != nil {
-	//		logging.Logger.Info("load_mbs_and_dkg -- updating the latest MB",
-	//			zap.Error(err))
-	//		return // can't continue
-	//	}
-	//	mc.SetMagicBlock(latest)
-	//	// related DKG (if any)
-	//	if err = mc.SetDKGSFromStore(ctx, latest); err != nil {
-	//		logging.Logger.Info("load_mbs_and_dkg -- loading the latest DKG",
-	//			zap.Error(err))
-	//	}
 	if latest.MagicBlockNumber <= 1 {
 		return // done
 	}
