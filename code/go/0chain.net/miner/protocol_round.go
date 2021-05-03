@@ -588,7 +588,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		b.SetBlockState(block.StateVerificationRejected)
 		logging.Logger.Error("add to verification (invalid magic block)",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
+			zap.String("magic_block", b.LatestFinalizedMagicBlockHash),
+			zap.Int64("magic_block_round", b.LatestFinalizedMagicBlockRound))
 		return
 	}
 
@@ -1189,6 +1190,18 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 				logging.Logger.Info("sending the best block to the network",
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
+			}
+			lfmbr := mc.GetLatestFinalizedMagicBlockRound(round) // related magic block
+			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
+				Logger.Error("handleNoProgress mismatch latest finalized magic block",
+					zap.Any("lfmbr hash", lfmbr.Hash),
+					zap.Any("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
+					zap.Int64("lfmbr starting round", lfmbr.Round),
+					zap.Int64("block lfmbr starting round", b.LatestFinalizedMagicBlockRound))
+			} else {
+				Logger.Debug("handleNoProgress match latest finalized magic block",
+					zap.Any("lfmbr hash", lfmbr.Hash),
+					zap.Int64("lfmbr round", lfmbr.Round))
 			}
 			mc.SendBlock(ctx, b)
 		}
