@@ -55,21 +55,21 @@ var dkgShares []*DKGKeyShareImpl
 //GenerateWallets - generate the wallets used to participate in DKG
 func GenerateWallets(n int) {
 	for i := 0; i < n; i++ {
-		wallet := &wallet.Wallet{}
-		if err := wallet.Initialize("bls0chain"); err != nil {
+		w := &wallet.Wallet{}
+		if err := w.Initialize("bls0chain"); err != nil {
 			panic(err)
 		}
-		wallets = append(wallets, wallet)
+		wallets = append(wallets, w)
 	}
 }
 
 //InitializeDKGShares - initialize DKG Share structures
 func InitializeDKGShares(t int) {
 	dkgShares = dkgShares[:0]
-	for _, wallet := range wallets {
-		dkgShare := &DKGKeyShareImpl{wallet: wallet}
-		if err := dkgShare.id.SetHexString("1" + wallet.ClientID[:31]); err != nil {
-			fmt.Printf("client id: %v\n", wallet.ClientID)
+	for _, w := range wallets {
+		dkgShare := &DKGKeyShareImpl{wallet: w}
+		if err := dkgShare.id.SetHexString("1" + w.ClientID[:31]); err != nil {
+			fmt.Printf("client id: %v\n", w.ClientID)
 			panic(err)
 		}
 		dkgShare.sij = make(map[bls.ID]bls.SecretKey)
