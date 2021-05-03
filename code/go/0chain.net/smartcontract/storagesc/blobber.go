@@ -22,7 +22,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
 	if err != nil {
-		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return allBlobbersList, nil
 }
@@ -55,7 +55,7 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 
 	blobber = new(StorageNode)
 	if err = blobber.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding stored blobber: %v", err)
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 
 	return

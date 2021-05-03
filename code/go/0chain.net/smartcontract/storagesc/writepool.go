@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -326,6 +327,9 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	}
 	wp = new(writePool)
 	err = wp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -572,7 +576,7 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
 
 	var (
@@ -595,18 +599,20 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	return &stat, nil
 }
 
+const cantGetWritePoolMsg = "can't get write pool"
+
 // statistic for all locked tokens of the write pool
 func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
+		clientID = params.Get("client_id")
 		wp       *writePool
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
 
 	return wp.stat(common.Now()), nil
