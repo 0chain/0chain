@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -83,17 +83,17 @@ func (n *Node) PrintSendStats(w io.Writer) {
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	if id == "" {
-		N2n.Error("status handler -- missing id", zap.Any("from", r.RemoteAddr))
+		logging.N2n.Error("status handler -- missing id", zap.Any("from", r.RemoteAddr))
 		return
 	}
 	nd := GetNode(id)
 	if nd == nil {
-		N2n.Error("status handler -- node nil", zap.Any("id", id))
+		logging.N2n.Error("status handler -- node nil", zap.Any("id", id))
 		return
 	}
 	if nd.IsActive() {
 		info := Self.Underlying().Info
-		N2n.Info("status handler -- sending data", zap.Any("data", info))
+		logging.N2n.Info("status handler -- sending data", zap.Any("data", info))
 		common.Respond(w, r, info, nil)
 		return
 	}
@@ -101,11 +101,11 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	hash := r.FormValue("hash")
 	signature := r.FormValue("signature")
 	if data == "" || hash == "" || signature == "" {
-		N2n.Error("status handler -- missing fields", zap.Any("data", data), zap.Any("hash", hash), zap.Any("signature", signature), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		logging.N2n.Error("status handler -- missing fields", zap.Any("data", data), zap.Any("hash", hash), zap.Any("signature", signature), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
 	if ok, err := ValidateSignatureTime(data); !ok {
-		N2n.Error("status handler -- validate time failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		logging.N2n.Error("status handler -- validate time failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
 	/*
@@ -114,16 +114,16 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} */
 	if ok, err := nd.Verify(signature, hash); !ok || err != nil {
-		N2n.Error("status handler -- signature failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		logging.N2n.Error("status handler -- signature failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
 	nd.SetLastActiveTime(time.Now().UTC())
 	if nd.GetStatus() == NodeStatusInactive {
 		nd.SetStatus(NodeStatusActive)
-		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		logging.N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 	info := Self.Underlying().Info
-	N2n.Info("status handler -- sending data", zap.Any("data", info))
+	logging.N2n.Info("status handler -- sending data", zap.Any("data", info))
 	common.Respond(w, r, info, nil)
 }
 
