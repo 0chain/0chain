@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
 
@@ -23,7 +24,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -1186,13 +1186,13 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 			}
 			lfmbr := mc.GetLatestFinalizedMagicBlockRound(round) // related magic block
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
-				Logger.Error("handleNoProgress mismatch latest finalized magic block",
+				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Any("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
 					zap.Int64("lfmbr starting round", lfmbr.Round),
 					zap.Int64("block lfmbr starting round", b.LatestFinalizedMagicBlockRound))
 			} else {
-				Logger.Debug("handleNoProgress match latest finalized magic block",
+				logging.Logger.Debug("handleNoProgress match latest finalized magic block",
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
@@ -1258,6 +1258,11 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		lfb = mc.GetLatestFinalizedBlock()
 		tk  = mc.GetLatestLFBTicket(ctx)
 	)
+
+	if tk == nil /* context expired */ ||
+		lfb == nil {
+		return
+	}
 
 	if lfb.Round <= tk.Round {
 		mc.kickFinalization(ctx)
@@ -1516,7 +1521,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb")
+		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb")
 		return
 	}
 
