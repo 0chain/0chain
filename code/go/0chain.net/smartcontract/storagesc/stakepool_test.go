@@ -150,7 +150,6 @@ func TestStakePoolLock(t *testing.T) {
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
-		t.Skip("no error returned when minted reaches max mint")
 		scYaml.Minted = scYaml.MaxMint
 		var value = 10 * scYaml.StakePool.MinLock
 		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
