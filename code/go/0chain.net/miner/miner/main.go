@@ -31,7 +31,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
@@ -69,14 +68,14 @@ func main() {
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
 
-	Logger.Info("Owner keys file", zap.String("filename", *keysFile))
+	logging.Logger.Info("Owner keys file", zap.String("filename", *keysFile))
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}
 	err = signatureScheme.ReadKeys(reader)
 	if err != nil {
-		Logger.Panic("Error reading keys file")
+		logging.Logger.Panic("Error reading keys file")
 	}
 	reader.Close()
 
@@ -113,13 +112,13 @@ func main() {
 	if dnsURL == "" {
 		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
 		if err != nil {
-			Logger.Panic("can't read magic block file", zap.Error(err))
+			logging.Logger.Panic("can't read magic block file", zap.Error(err))
 			return
 		}
 	} else {
 		magicBlock, err = chain.GetMagicBlockFrom0DNS(dnsURL)
 		if err != nil {
-			Logger.Panic("can't read magic block from DNS", zap.Error(err))
+			logging.Logger.Panic("can't read magic block from DNS", zap.Error(err))
 			return
 		}
 	}
@@ -130,16 +129,16 @@ func main() {
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 	mb := mc.GetLatestMagicBlock()
-	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
+	logging.Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
 		hostName, n2nHostName, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
-			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number",
+			logging.Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number",
 				zap.Error(err))
 		}
 
-		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName),
+		logging.Logger.Info("Inside nonGenesis", zap.String("host_name", hostName),
 			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path), zap.String("description", description))
 
 		node.Self.Underlying().Host = hostName
@@ -149,15 +148,15 @@ func main() {
 		node.Self.Underlying().Description = description
 	} else {
 		if initStateErr != nil {
-			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+			logging.Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
 		}
 	}
 
 	if node.Self.Underlying().GetKey() == "" {
-		Logger.Panic("node definition for self node doesn't exist")
+		logging.Logger.Panic("node definition for self node doesn't exist")
 	}
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
-		Logger.Panic("node not configured as miner")
+		logging.Logger.Panic("node not configured as miner")
 	}
 	err = common.NewError("saving self as client", "client save")
 	for err != nil {
@@ -178,9 +177,9 @@ func main() {
 
 	var address = fmt.Sprintf(":%v", node.Self.Underlying().Port)
 
-	Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
-	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
+	logging.Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	logging.Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+	logging.Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
 	initIntegrationsTests(node.Self.Underlying().GetKey())
 	defer shutdownIntegrationTests()
@@ -212,11 +211,11 @@ func main() {
 	mc.LoadMagicBlocksAndDKG(ctx)
 
 	if err = mc.WaitForActiveSharders(ctx); err != nil {
-		Logger.Error("failed to wait sharders", zap.Error(err))
+		logging.Logger.Error("failed to wait sharders", zap.Error(err))
 	}
 
 	if err = mc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
-		Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
+		logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it
@@ -233,36 +232,36 @@ func main() {
 		if genesisDKG == 0 {
 			oldDKGShare, err = miner.ReadDKGSummaryFile(*dkgFile)
 			if err != nil {
-				Logger.Panic(fmt.Sprintf("Error reading DKG file. ERROR: %v", err.Error()))
+				logging.Logger.Panic(fmt.Sprintf("Error reading DKG file. ERROR: %v", err.Error()))
 			}
 		} else {
 			oldDKGShare, err = miner.LoadDKGSummary(ctx, strconv.FormatInt(genesisDKG, 10))
 			if err != nil {
 				if config.DevConfiguration.ViewChange {
-					Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+					logging.Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
 				} else {
-					Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+					logging.Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
 				}
 			}
 		}
 		dkgShare.SecretShares = oldDKGShare.SecretShares
 		if err = dkgShare.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), magicBlock.Mpks.GetMpkMap()); err != nil {
 			if config.DevConfiguration.ViewChange {
-				Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
+				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
-				Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
+				logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
 			}
 
 		}
 		if err = miner.StoreDKGSummary(ctx, dkgShare); err != nil {
-			Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
+			logging.Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
 		}
 	}
 
 	initHandlers()
 
 	go func() {
-		Logger.Info("Ready to listen to the requests")
+		logging.Logger.Info("Ready to listen to the requests")
 		log.Fatal(server.ListenAndServe())
 	}()
 
@@ -277,7 +276,7 @@ func main() {
 	if activeMiner {
 		mb = mc.GetLatestMagicBlock()
 		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
-			Logger.Error("failed to set DKG", zap.Error(err))
+			logging.Logger.Error("failed to set DKG", zap.Error(err))
 		} else {
 			miner.StartProtocol(ctx, gb)
 		}
@@ -321,7 +320,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	h := scanner.Text()
-	Logger.Info("Host inside", zap.String("host", h))
+	logging.Logger.Info("Host inside", zap.String("host", h))
 
 	result = scanner.Scan()
 	if result == false {
@@ -329,7 +328,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	n2nh := scanner.Text()
-	Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
+	logging.Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
 
 	scanner.Scan()
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
@@ -344,15 +343,15 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 
 	path := scanner.Text()
-	Logger.Info("Path inside", zap.String("path", path))
+	logging.Logger.Info("Path inside", zap.String("path", path))
 
 	result = scanner.Scan()
 	if result == false {
-		return h, n2nh, p, path, "", errors.New("error reading description")
+		return h, n2nh, p, path, "", nil
 	}
 
 	description := scanner.Text()
-	Logger.Info("Description inside", zap.String("description", description))
+	logging.Logger.Info("Description inside", zap.String("description", description))
 	return h, n2nh, p, path, description, nil
 
 }
@@ -376,7 +375,7 @@ func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (*block.Bl
 			return nil, common.NewErrorf("get_lfmbs_from_sharders",
 				"no lfmb given after %d attempts", attempt)
 		}
-		Logger.Warn("get_current_mb_sharder -- retry",
+		logging.Logger.Warn("get_current_mb_sharder -- retry",
 			zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
 		select {
 		case <-ctx.Done():

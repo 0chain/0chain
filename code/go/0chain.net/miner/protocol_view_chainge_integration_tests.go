@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/minersc"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
@@ -74,7 +74,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
 		var share, ok = entity.(*bls.DKGKeyShare)
 		if !ok {
-			Logger.Error("invalid share or sign", zap.Any("entity", entity))
+			logging.Logger.Error("invalid share or sign", zap.Any("entity", entity))
 			return
 		}
 
@@ -88,7 +88,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		var err error
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
-			Logger.Error("invalid share or sign",
+			logging.Logger.Error("invalid share or sign",
 				zap.Error(err), zap.Any("sign_status", ok),
 				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 			return
@@ -166,7 +166,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	var _, ok = sos.Validate(mpks, publicKeys,
 		chain.GetServerChain().GetSignatureScheme())
 	if !ok {
-		Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
+		logging.Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
 
 	var clone = sos.Clone()
@@ -197,7 +197,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	for id := range dmn.SimpleNodes {
 		var nodeSend = node.GetNode(id)
 		if nodeSend == nil {
-			Logger.Warn("failed to get node", zap.Any("id", id))
+			logging.Logger.Warn("failed to get node", zap.Any("id", id))
 			continue
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
@@ -245,7 +245,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
-		Logger.Error("can't contribute", zap.Any("error", err))
+		logging.Logger.Error("can't contribute", zap.Any("error", err))
 		return
 	}
 
@@ -325,7 +325,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	)
 
 	if err = share.SetHexString(secShare); err != nil {
-		Logger.Error("failed to set hex string", zap.Any("error", err))
+		logging.Logger.Error("failed to set hex string", zap.Any("error", err))
 		return nil, common.NewErrorf("sign_share",
 			"setting hex string: %v", err)
 	}
@@ -339,7 +339,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	}
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
-		Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
+		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
 			zap.Any("node_id", nodeID))
 		return nil, common.NewError("sign_share", "failed to verify DKG share")
 	}
@@ -354,7 +354,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	message.Message = node.Self.Underlying().GetKey()
 	message.Sign, err = node.Self.Sign(message.Message)
 	if err != nil {
-		Logger.Error("failed to sign DKG share message", zap.Any("error", err))
+		logging.Logger.Error("failed to sign DKG share message", zap.Any("error", err))
 		return nil, common.NewErrorf("sign_share",
 			"signing DKG share message: %v", err)
 	}

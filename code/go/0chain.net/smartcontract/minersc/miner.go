@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"errors"
+	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -249,7 +250,10 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 	if allMinersBytes == nil {
 		return all, nil
 	}
-	all.Decode(allMinersBytes.Encode())
+	err = all.Decode(allMinersBytes.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return all, nil
 }
 
@@ -266,7 +270,7 @@ func (msc *MinerSmartContract) getMinerNode(id string,
 	}
 
 	if err := mn.Decode(ms.Encode()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return mn, nil
 }
