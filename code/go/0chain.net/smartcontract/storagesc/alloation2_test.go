@@ -33,7 +33,6 @@ const (
 )
 
 func TestNewAllocation(t *testing.T) {
-	t.Skip()
 	var stakes = blobberStakes{}
 	var now = common.Timestamp(10000)
 	scYaml = &scConfig{
@@ -97,7 +96,6 @@ func TestNewAllocation(t *testing.T) {
 }
 
 func TestCancelAllocationRequest(t *testing.T) {
-	t.Skip()
 	var blobberStakePools = [][]mockStakePool{}
 	var challenges = [][]common.Timestamp{}
 	var scYaml = scConfig{
@@ -252,7 +250,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 }
 
 func TestFinalizeAllocation(t *testing.T) {
-	//t.Skip()
 	var now = common.Timestamp(300)
 	var blobberStakePools = [][]mockStakePool{}
 	var scYaml = scConfig{
