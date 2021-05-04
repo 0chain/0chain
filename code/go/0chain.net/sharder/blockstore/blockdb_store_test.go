@@ -3,6 +3,7 @@ package blockstore
 import (
 	"bytes"
 	"io"
+	"os"
 	"reflect"
 	"testing"
 
@@ -396,6 +397,8 @@ func TestBlockDBStore_DeleteBlock(t *testing.T) {
 			if saved {
 				t.Errorf("DeleteBlock() saved = %v, want %v", saved, false)
 			}
+
+			_ = os.RemoveAll("tmp")
 		})
 	}
 }
@@ -520,8 +523,6 @@ func TestBlockDBStore_CloudObjectExists(t *testing.T) {
 }
 
 func Test_txnRecordProvider_NewRecord(t *testing.T) {
-	t.Parallel()
-
 	type fields struct {
 		txnMetadataProvider datastore.EntityMetadata
 	}
@@ -541,8 +542,6 @@ func Test_txnRecordProvider_NewRecord(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			trp := &txnRecordProvider{
 				txnMetadataProvider: tt.fields.txnMetadataProvider,
 			}
@@ -554,9 +553,6 @@ func Test_txnRecordProvider_NewRecord(t *testing.T) {
 }
 
 func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
-	t.Skip("needs fixing")
-	t.Parallel()
-
 	bs := makeTestBlockDBStore()
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
@@ -606,8 +602,6 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			bdbs := &BlockDBStore{
 				FSBlockStore:        tt.fields.FSBlockStore,
 				txnMetadataProvider: tt.fields.txnMetadataProvider,
@@ -626,6 +620,8 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 			if got != nil && !reflect.DeepEqual(got.Hash, tt.want.Hash) {
 				t.Errorf("ReadWithBlockSummary() got = %v, want %v", got, tt.want)
 			}
+
+			_ = os.RemoveAll("tmp")
 		})
 	}
 }
