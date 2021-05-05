@@ -101,7 +101,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 
 	// phase before {
 	var pn *PhaseNode
-	if pn, err = msc.GetPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 	var phaseBefore = pn.Phase
@@ -138,31 +138,29 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 	// view change after {
 	if isViewChange {
 		var mb = balances.GetBlock().MagicBlock
-		if mb == nil {
-			panic("missing magic block on view change")
-		}
+		if mb != nil {
+			var vc crpc.ViewChangeEvent
+			vc.Round = crpc.Round(balances.GetBlock().Round)
+			vc.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+			vc.Number = crpc.Number(mb.MagicBlockNumber)
 
-		var vc crpc.ViewChangeEvent
-		vc.Round = crpc.Round(balances.GetBlock().Round)
-		vc.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
-		vc.Number = crpc.Number(mb.MagicBlockNumber)
+			for _, sid := range mb.Sharders.Keys() {
+				vc.Sharders = append(vc.Sharders, state.Name(crpc.NodeID(sid)))
+			}
 
-		for _, sid := range mb.Sharders.Keys() {
-			vc.Sharders = append(vc.Sharders, state.Name(crpc.NodeID(sid)))
-		}
+			for _, mid := range mb.Miners.Keys() {
+				vc.Miners = append(vc.Miners, state.Name(crpc.NodeID(mid)))
+			}
 
-		for _, mid := range mb.Miners.Keys() {
-			vc.Miners = append(vc.Miners, state.Name(crpc.NodeID(mid)))
-		}
-
-		if err = client.ViewChange(&vc); err != nil {
-			panic(err)
+			if err = client.ViewChange(&vc); err != nil {
+				panic(err)
+			}
 		}
 	}
 	// }
 
 	// phase after {
-	if pn, err = msc.GetPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 	if pn.Phase != phaseBefore {
