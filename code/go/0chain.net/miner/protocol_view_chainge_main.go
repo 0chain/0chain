@@ -16,9 +16,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -218,7 +218,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 
-	Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
+	logging.Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
 
 	var data = new(httpclientutil.SmartContractTxnData)
 	data.Name = scNameContributeMpk

@@ -19,13 +19,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+	"0chain.net/core/logging"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
 	hbls "github.com/herumi/bls/ffi/go/bls"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -173,7 +173,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
+		logging.Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
 
 		var txn *httpclientutil.Transaction
 		if err = func() error {
@@ -188,7 +188,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 				return nil
 			})
 		}(); err != nil {
-			Logger.Error("smart contract function failed",
+			logging.Logger.Error("smart contract function failed",
 				zap.Any("error", err), zap.Any("next_phase", pn))
 			continue
 		}
