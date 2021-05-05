@@ -24,6 +24,7 @@ type mockBlobberYaml struct {
 	writePrice              float64
 	challengeCompletionTime time.Duration
 	MaxOfferDuration        time.Duration
+	minLockDemand           float64
 }
 
 var (
