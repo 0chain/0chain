@@ -130,8 +130,33 @@ func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
 	require.NoError(t, err)
 }
 
+func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
+	for _, n := range nodes {
+		if n.DelegateWallet == id {
+			return true
+		}
+	}
+	return false
+}
+
+func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) state.Balance {
+	blockReward := gn.BlockReward
+	minerR, _ := gn.splitByShareRatio(blockReward)
+	fees := msc.sumFee(b, false)
+	minerF, _ := gn.splitByShareRatio(fees)
+
+	return minerR + minerF
+}
+
+func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) state.Balance {
+	blockReward := gn.BlockReward
+	_, sharderR := gn.splitByShareRatio(blockReward)
+	fees := msc.sumFee(b, false)
+	_, sharderF := gn.splitByShareRatio(fees)
+	return sharderR + sharderF
+}
+
 func Test_payFees(t *testing.T) {
-	t.Skip("needs fixing")
 	const stakeVal, stakeHolders = 10e10, 5
 
 	var (
@@ -242,6 +267,14 @@ func Test_payFees(t *testing.T) {
 		// pools becomes active, nothing should be payed
 
 		for _, mn := range miners {
+			if mn == generator {
+				assert.Equal(t,
+					balances.balances[mn.delegate.id],
+					computeMinerPayments(gn, msc, b),
+				)
+				balances.balances[mn.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[mn.miner.id],
 				"miner balance")
 			assert.Zero(t, balances.balances[mn.delegate.id],
@@ -250,7 +283,19 @@ func Test_payFees(t *testing.T) {
 				assert.Zero(t, balances.balances[st.id], "stake balance?")
 			}
 		}
+
+		blockSharders, err := msc.getBlockSharders(b, balances)
+		require.NoError(t, err)
 		for _, sh := range sharders {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				assert.Equal(t,
+					balances.balances[sh.delegate.id],
+					shP,
+				)
+				balances.balances[sh.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[sh.sharder.id],
 				"sharder balance")
 			assert.Zero(t, balances.balances[sh.delegate.id],
@@ -263,14 +308,13 @@ func Test_payFees(t *testing.T) {
 		gn, err = msc.getGlobalNode(balances)
 		require.NoError(t, err, "can't get global node")
 		assert.EqualValues(t, 251, gn.LastRound)
-		assert.EqualValues(t, 0, gn.Minted)
+		assert.EqualValues(t, gn.BlockReward, gn.Minted)
 	})
 
 	// add all the miners to DKG miners list
 	msc.setDKGMinersTestHelper(t, miners, balances)
 
 	t.Run("pay fees -> no fees", func(t *testing.T) {
-
 		for id, bal := range balances.balances {
 			if id == ADDRESS {
 				continue
@@ -306,19 +350,33 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			if mn == generator {
+				assert.Equal(t,
+					balances.balances[mn.delegate.id],
+					computeMinerPayments(gn, msc, b),
+				)
+				balances.balances[mn.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[mn.miner.id])
 			assert.Zero(t, balances.balances[mn.delegate.id])
 			for _, st := range mn.stakers {
-				if mn == generator {
-					expected[st.id] += 77e7
-				} else {
-					expected[st.id] = 0
-				}
+				expected[st.id] = 0
 				got[st.id] = balances.balances[st.id]
 			}
 		}
 
+		blockSharders, err := msc.getBlockSharders(b, balances)
+		require.NoError(t, err)
+		sharderPayments := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
 		for _, sh := range sharders {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+				assert.Equal(t,
+					balances.balances[sh.delegate.id],
+					sharderPayments,
+				)
+				balances.balances[sh.delegate.id] = 0
+			}
 			assert.Zero(t, balances.balances[sh.sharder.id])
 			assert.Zero(t, balances.balances[sh.delegate.id])
 			for _, st := range sh.stakers {
@@ -327,14 +385,7 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 
-		for _, sh := range getBlockSharders(sharders, balances.blockSharders) {
-			for _, st := range sh.stakers {
-				expected[st.id] += 21e7
-			}
-		}
-
 		assert.Equal(t, expected, got, "balances")
-
 	})
 
 	// don't set DKG miners list, because no VC is expected
@@ -374,35 +425,45 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			if mn == generator {
+				assert.Equal(t,
+					balances.balances[mn.delegate.id],
+					computeMinerPayments(gn, msc, b),
+				)
+				balances.balances[mn.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[mn.miner.id])
 			assert.Zero(t, balances.balances[mn.delegate.id])
+
 			for _, st := range mn.stakers {
-				if mn == generator {
-					expected[st.id] += 77e7 + 11e10 // + generator fees
-				} else {
-					expected[st.id] += 0
-				}
+				expected[st.id] += 0
 				got[st.id] = balances.balances[st.id]
 			}
 		}
 
+		blockSharders, err := msc.getBlockSharders(b, balances)
+		require.NoError(t, err)
 		for _, sh := range sharders {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				assert.Equal(t,
+					balances.balances[sh.delegate.id],
+					shP,
+				)
+				balances.balances[sh.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[sh.sharder.id])
 			assert.Zero(t, balances.balances[sh.delegate.id])
+
 			for _, st := range sh.stakers {
 				expected[st.id] += 0
 				got[st.id] = balances.balances[st.id]
 			}
 		}
 
-		for _, sh := range getBlockSharders(sharders, balances.blockSharders) {
-			for _, st := range sh.stakers {
-				expected[st.id] += 21e7 + 3e10 // + block sharders fees
-			}
-		}
-
 		assert.Equal(t, expected, got, "balances")
-
 	})
 
 	// don't set DKG miners list, because no VC is expected
@@ -440,30 +501,40 @@ func Test_payFees(t *testing.T) {
 		)
 
 		for _, mn := range miners {
+			if mn == generator {
+				assert.Equal(t,
+					balances.balances[mn.delegate.id],
+					computeMinerPayments(gn, msc, b),
+				)
+				balances.balances[mn.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[mn.miner.id])
 			assert.Zero(t, balances.balances[mn.delegate.id])
 			for _, st := range mn.stakers {
-				if mn == generator {
-					expected[st.id] += 77e7 + 1e10
-				} else {
-					expected[st.id] += 1e10
-				}
+				expected[st.id] += 0
 				got[st.id] = balances.balances[st.id]
 			}
 		}
 
+		blockSharders, err := msc.getBlockSharders(b, balances)
+		require.NoError(t, err)
 		for _, sh := range sharders {
+			if existInDelegatesOfNodes(sh.delegate.id, blockSharders) {
+				shP := computeShardersPayments(gn, msc, b) / state.Balance(len(blockSharders))
+				assert.Equal(t,
+					balances.balances[sh.delegate.id],
+					shP,
+				)
+				balances.balances[sh.delegate.id] = 0
+			}
+
 			assert.Zero(t, balances.balances[sh.sharder.id])
 			assert.Zero(t, balances.balances[sh.delegate.id])
-			for _, st := range sh.stakers {
-				expected[st.id] += 1e10
-				got[st.id] = balances.balances[st.id]
-			}
-		}
 
-		for _, sh := range getBlockSharders(sharders, balances.blockSharders) {
 			for _, st := range sh.stakers {
-				expected[st.id] += 21e7
+				expected[st.id] += 0
+				got[st.id] = balances.balances[st.id]
 			}
 		}
 
