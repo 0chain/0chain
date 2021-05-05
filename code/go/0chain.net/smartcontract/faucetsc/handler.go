@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"time"
@@ -8,17 +9,22 @@ import (
 	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
+)
+
+const (
+	noLimitsMsg     = "can't get limits"
+	noGlobalNodeMsg = "can't get global node"
+	noClient        = "can't get client"
 )
 
 func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
-		return nil, common.NewError("failed to get limits", "global node does not exist")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
 	}
 	un, err := fc.getUserNode(params.Get("client_id"), gn.ID, balances)
 	if err != nil {
-		return nil, common.NewError("failed to get limits", "client does not exist")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noClient)
 	}
 	var resp periodicResponse
 	resp.Start = un.StartTime
@@ -35,7 +41,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params
 func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil || gn == nil {
-		return nil, common.NewError("failed to get limits", "global node does not exist")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
 	}
 	var resp periodicResponse
 	resp.Start = gn.StartTime
@@ -52,7 +58,7 @@ func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params ur
 func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
-		return nil, common.NewError("failed to get limits", "global node does not exist")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pour amount", noGlobalNodeMsg)
 	}
 	return fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil
 }

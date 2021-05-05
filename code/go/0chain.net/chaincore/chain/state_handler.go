@@ -12,9 +12,7 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
-
 	"0chain.net/chaincore/transaction"
-	// "0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"

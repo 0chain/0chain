@@ -27,6 +27,9 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 		return nil, err
 	}
 	err = alloc.Decode(allocb.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -42,8 +45,7 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	}
 	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
 	if err != nil {
-		return nil, common.NewError("getAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, "failed to retrieve existing allocations list")
 	}
 	return clientAlloc.Allocations, nil
 }
@@ -922,7 +924,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = common.NewError("allocation_creation_failed", "Invalid preferred blobber URL")
+			err = errors.New("invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)
@@ -1145,11 +1147,13 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
+			var reward state.Balance
+			if reward, err = cp.moveReward(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("alloc_cacnel_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
+			sp.Rewards.Blobber += reward
 			d.Spent += move       // }
 			d.FinalReward += move // } stat
 		}
@@ -1354,11 +1358,13 @@ func (sc *StorageSmartContract) finalizeAllocation(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
+			var reward state.Balance
+			if reward, err = cp.moveReward(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("fini_alloc_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
+			sp.Rewards.Blobber += reward
 			d.Spent += move       // }
 			d.FinalReward += move // } stat
 		}

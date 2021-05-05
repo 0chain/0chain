@@ -4,3 +4,4 @@ localhost
 198.18.0.78
 7078
 miner78
+Miner8's description

@@ -8,6 +8,7 @@ import (
 
 	"github.com/herumi/mcl/ffi/go/mcl"
 	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMiraclToHerumiPK(t *testing.T) {
@@ -17,8 +18,22 @@ func TestMiraclToHerumiPK(t *testing.T) {
 	// Assert DeserializeHexStr works on the output of MiraclToHerumiPK
 	var pk bls.PublicKey
 	err := pk.DeserializeHexStr(pk1)
-	if err != nil {
-		panic(err)
+	require.NoError(t, err)
+}
+
+func TestMiraclToHerumiSig(t *testing.T) {
+	miraclsig1 := `(0d4dbad6d2586d5e01b6b7fbad77e4adfa81212c52b4a0b885e19c58e0944764,110061aa16d5ba36eef0ad4503be346908d3513c0a2aedfd0d2923411b420eca)`
+	sig1 := MiraclToHerumiSig(miraclsig1)
+
+	// Assert DeserializeHexStr works on the output of MiraclToHerumiSig
+	var sig bls.Sign
+	err := sig.DeserializeHexStr(sig1)
+	require.NoError(t, err)
+
+	// Test that passing in normal herumi sig just gets back the original.
+	sig2 := MiraclToHerumiSig(sig1)
+	if sig1 != sig2 {
+		panic("Sigs should've been the same")
 	}
 }
 

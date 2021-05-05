@@ -27,14 +27,16 @@ these are set up in the settings panel.
 ## Miner
 The builds in GoLand are set up in the `Run\Debug Configurations` panel accessed from the
 `Run\Configurations..` menu item. 
-Possible way of populating the panel for building and running the miner would be:
+Possible way of populating the panel for building and running the miner shown below, `b0mnode?_` replace the `?`
+with the appropriate miner id e.g. 0,1 or 2:
 * Run kind: `Directory`
 * Directory: `/home/piers/GolandProjects/0chain/code/go/0chain.net/miner/miner`
 * Output directory: `/home/piers/GolandProjects/0chain/local/miner`
 * Working directory: `/home/piers/GolandProjects/0chain/local/miner`  
 * Environment: `REDIS_HOST=redis;REDIS_TXNS=redis_txns`
 * Use custom build tags: ticked
-* Program arguments: `--deployment_mode 0 --keys_file config/b0snode1_keys.txt -mino_file config/mino_config.txt` 
+* Program arguments: `--deployment_mode 0 --keys_file config/b0mnode1_keys.txt 
+  --delay_file config/n2n_delay.yaml --dkg_file config/b0mnode1_dkg.json` 
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20miner.png?raw=true)
 
 ## Sharder
@@ -47,7 +49,8 @@ Possible way of populating the panel for building and running the sharder would 
 * Working directory: `/home/piers/GolandProjects/0chain/local/sharder`
 * Environment: `CASSANDRA_CLUSTER=cassandra`
 * Use custom build tags: ticked
-* Program arguments: `--deployment_mode 0 --keys_file config/b0snode1_keys.txt --minio_file config/minio_config.txt`
+* Program arguments: `--deployment_mode 0 --keys_file config/b0snode1_keys.txt 
+  --minio_file config/minio_config.txt`
 ![pierses image](https://github.com/0chain/0chain/blob/debug_builds/local/goland%20sharder.png?raw=true)
   
 ## Debug config files

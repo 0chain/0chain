@@ -4,3 +4,4 @@ localhost
 198.18.0.76
 7076
 miner76
+Miner6's description
