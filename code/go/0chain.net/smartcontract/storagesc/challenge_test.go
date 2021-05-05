@@ -584,7 +584,9 @@ func confirmBlobberPenalty(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
+
+	require.InDelta(t, f.challengePoolBalance-(f.reward()-f.validatorsReward()),
+		int64(challengePool.Balance), errDelta)
 
 	require.EqualValues(t, 0, int64(blobber.Rewards.Charge))
 	require.EqualValues(t, 0, int64(blobber.Rewards.Blobber))
@@ -671,7 +673,7 @@ func confirmBlobberReward(
 	blobber stakePool,
 	ctx cstate.StateContextI,
 ) {
-	require.InDelta(t, f.challengePoolBalance-f.reward(), int64(challengePool.Balance), errDelta)
+	require.InDelta(t, f.challengePoolBalance-f.rewardReturned(), int64(challengePool.Balance), errDelta)
 
 	require.InDelta(t, f.blobberServiceCharge(), int64(blobber.Rewards.Charge), errDelta)
 	require.InDelta(t, f.blobberReward()-f.blobberServiceCharge(), int64(blobber.Rewards.Blobber), errDelta)
