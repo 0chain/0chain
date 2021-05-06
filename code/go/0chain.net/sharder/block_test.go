@@ -1,25 +1,26 @@
 package sharder_test
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/core/ememorystore"
-	dmocks "0chain.net/mocks/core/datastore"
-	bsmocks "0chain.net/mocks/sharder/blockstore"
-	"0chain.net/sharder/blockstore"
 	"context"
-	"github.com/stretchr/testify/require"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
+	dmocks "0chain.net/mocks/core/datastore"
+	bsmocks "0chain.net/mocks/sharder/blockstore"
 	"0chain.net/sharder"
+	"0chain.net/sharder/blockstore"
 )
 
 func init() {

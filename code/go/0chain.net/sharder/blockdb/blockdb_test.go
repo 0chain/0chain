@@ -1,9 +1,10 @@
 package blockdb
 
 import (
-	"github.com/stretchr/testify/require"
 	"io"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/common"
 )

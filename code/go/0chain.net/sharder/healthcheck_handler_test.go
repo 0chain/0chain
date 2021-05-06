@@ -1,11 +1,13 @@
 package sharder
 
 import (
-	"0chain.net/chaincore/chain"
-	"github.com/rcrowley/go-metrics"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/rcrowley/go-metrics"
+
+	"0chain.net/chaincore/chain"
 )
 
 func makeTestChain(t *testing.T) *Chain {
