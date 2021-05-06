@@ -8,15 +8,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/miner"
-
-	_ "net/http/pprof"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -26,15 +24,16 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
+	"0chain.net/miner"
 	"0chain.net/smartcontract/setupsc"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -480,6 +479,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	//miner.SetupWorkers(ctx)
+	// miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }

@@ -9,14 +9,15 @@ import (
 	"sort"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/state"
 	mptwallet "0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
 )
 
 const (

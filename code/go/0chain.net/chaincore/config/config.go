@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/spf13/viper"
+	"0chain.net/core/viper"
 )
 
 var SmartContractConfig *viper.Viper

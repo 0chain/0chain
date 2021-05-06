@@ -7,8 +7,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"0chain.net/core/viper"
 )
 
 const MB = 1024 * 1024

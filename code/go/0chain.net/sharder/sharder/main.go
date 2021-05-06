@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -35,6 +34,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
@@ -328,8 +328,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 	defer reader.Close()
 	scanner := bufio.NewScanner(reader)
-	scanner.Scan() //throw away the publickey
-	scanner.Scan() //throw away the secretkey
+	scanner.Scan() // throw away the publickey
+	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
 		return "", "", 0, "", "", errors.New("error reading Host")

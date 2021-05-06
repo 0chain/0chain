@@ -12,6 +12,7 @@ require (
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
+	github.com/fsnotify/fsnotify v1.4.7
 	github.com/go-ini/ini v1.55.0 // indirect
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
@@ -28,8 +29,10 @@ require (
 	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
-	github.com/spf13/afero v1.2.2 // indirect
+	github.com/spf13/afero v1.2.2
+	github.com/spf13/cast v1.3.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.3.0
 	github.com/valyala/gozstd v1.5.0

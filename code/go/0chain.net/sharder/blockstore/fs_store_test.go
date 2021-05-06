@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/minio/minio-go"
-	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -16,6 +15,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 )
 
 func init() {
