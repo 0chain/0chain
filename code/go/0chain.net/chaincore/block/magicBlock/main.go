@@ -87,7 +87,6 @@ func (cmd *cmdMagicBlock) setupMPKS() {
 func (cmd *cmdMagicBlock) createShareOrSigns() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
 	cmd.setupDKGSummaries()
-
 	for mid := range cmd.block.Miners.NodesMap {
 		ss := block.NewShareOrSigns()
 		partyId := bls.ComputeIDdkg(mid)
