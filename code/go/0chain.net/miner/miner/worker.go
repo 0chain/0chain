@@ -87,7 +87,7 @@ func TransactionGenerator(c *chain.Chain) {
 		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 	}
 
-	numGenerators := sc.NumGenerators
+	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
 	numMiners := mb.Miners.Size()
 	var timerCount int64
