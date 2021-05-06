@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestAggregateSignatures(t *testing.T) {
@@ -32,7 +31,6 @@ func TestAggregateSignatures(t *testing.T) {
 	if aggSigScheme == nil {
 		aggregate = false
 	}
-	ts := time.Now()
 	if aggregate {
 		var wg sync.WaitGroup
 		for t := 0; t < numBatches; t++ {
@@ -73,5 +71,4 @@ func TestAggregateSignatures(t *testing.T) {
 		}
 		wg.Wait()
 	}
-	fmt.Printf("signature verification (scheme = %s , aggregate = %v) successful in %v\n", clientSignatureScheme, aggregate, time.Since(ts))
 }

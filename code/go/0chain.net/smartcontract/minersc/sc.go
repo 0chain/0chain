@@ -174,8 +174,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 
 	if err == nil {
 		if err = gn.Decode(p.Encode()); err != nil {
-			return nil, fmt.Errorf(
-				"invalid state: decoding global node: %v", err)
+			return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 		}
 		return gn, nil
 	}
@@ -239,6 +238,9 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	if us == nil {
 		return un, nil
 	}
-	un.Decode(us.Encode())
-	return un, err
+	err = un.Decode(us.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return un, nil
 }

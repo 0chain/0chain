@@ -2,12 +2,10 @@ package encryption
 
 import (
 	"bytes"
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/herumi/mcl/ffi/go/mcl"
 	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/mcl/ffi/go/mcl"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,7 +46,6 @@ func TestBLS0ChainWriteKeys(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	sigScheme.WriteKeys(os.Stdout)
 }
 
 func TestBLS0ChainReadKeys(t *testing.T) {
@@ -79,11 +76,8 @@ func TestBLS0ChainSignAndVerify(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("signature: %T %v\n", signature, signature)
 	if ok, err := sigScheme.Verify(signature, expectedHash); err != nil || !ok {
-		fmt.Printf("Verification failed\n")
-	} else {
-		fmt.Printf("Signing Verification successful\n")
+		t.Errorf("Verification failed\n")
 	}
 }
 
