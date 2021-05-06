@@ -1284,10 +1284,6 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		return
 	}
 
-	if lfb == nil || tk == nil {
-		return
-	}
-
 	if lfb.Round <= tk.Round {
 		mc.kickFinalization(ctx)
 		return
