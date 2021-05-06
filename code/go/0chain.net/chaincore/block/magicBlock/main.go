@@ -93,10 +93,10 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 		ss.ID = mid
 		var privateKey bls.Key
 		privateKey.SetHexString(cmd.yml.MinersMap[mid].PrivateKey)
-		for id, node := range cmd.block.Miners.NodesMap {
+		for id, n := range cmd.block.Miners.NodesMap {
 			otherPartyId := bls.ComputeIDdkg(id)
 			share, _ := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
-			cmd.summaries[node.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
+			cmd.summaries[n.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
 			message := encryption.Hash(share.GetHexString())
 			ss.ShareOrSigns[id] = &bls.DKGKeyShare{
 				Message: message,
@@ -109,13 +109,13 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 // setupDKGSummaries initializes the dkg summaries
 func (cmd *cmdMagicBlock) setupDKGSummaries() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
-	for _, node := range cmd.block.Miners.NodesMap {
+	for _, n := range cmd.block.Miners.NodesMap {
 		dkg := &bls.DKGSummary{
 			SecretShares:  make(map[string]string),
 			StartingRound: cmd.block.StartingRound,
 		}
 		dkg.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
-		cmd.summaries[node.SetIndex] = dkg
+		cmd.summaries[n.SetIndex] = dkg
 	}
 }
 
@@ -144,12 +144,12 @@ func (cmd *cmdMagicBlock) saveBlock() error {
 
 // saveDKGSummaries method saves the dkg summaries on file storage
 func (cmd *cmdMagicBlock) saveDKGSummaries() error {
-	for _, node := range cmd.block.Miners.NodesMap {
-		file, err := json.MarshalIndent(cmd.summaries[node.SetIndex], "", " ")
+	for _, n := range cmd.block.Miners.NodesMap {
+		file, err := json.MarshalIndent(cmd.summaries[n.SetIndex], "", " ")
 		if err != nil {
 			return err
 		}
-		path := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/b0mnode%v_%v_dkg.json", node.SetIndex+1, cmd.yml.DKGSummaryFilename)
+		path := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/b0mnode%v_%v_dkg.json", n.SetIndex+1, cmd.yml.DKGSummaryFilename)
 		if err := ioutil.WriteFile(path, file, 0644); err != nil {
 			return err
 		}

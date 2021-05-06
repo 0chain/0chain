@@ -28,7 +28,7 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -1408,7 +1408,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 		out, err := json.MarshalIndent(errMsg, "", "    ")
 		if err != nil {
-			Logger.Error("Dump state failed", zap.Error(err))
+			logging.Logger.Error("Dump state failed", zap.Error(err))
 			return
 		}
 		fmt.Fprintf(w, string(out))
