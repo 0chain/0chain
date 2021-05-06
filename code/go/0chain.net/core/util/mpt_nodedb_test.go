@@ -4,30 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 func TestMain(m *testing.M) {
-	flag.Parse() // verbose and short testing flags
-
-	var err error
-	if testing.Verbose() {
-		if logging.Logger, err = zap.NewProduction(); err != nil {
-			panic(err)
-		}
-	} else {
-		logging.Logger = zap.NewNop() // suppress all logs for the tests
-	}
-
 	os.Exit(m.Run())
 }
 
@@ -78,18 +63,6 @@ func getTestKeysAndValues(kvs []keyNode) (keys []Key, nodes []Node) {
 		nodes = append(nodes, kv.node)
 	}
 	return
-}
-
-// based on full previous with empty current
-func newTestLevelDB(t *testing.T, n int) (mndb NodeDB) {
-	var (
-		prev, next = NewMemoryNodeDB(), NewMemoryNodeDB()
-		kvs        = getTestKeyValues(n)
-	)
-	for _, kv := range kvs {
-		require.NoError(t, prev.PutNode(kv.key, kv.node))
-	}
-	return NewLevelNodeDB(prev, next, true)
 }
 
 func TestMemoryNodeDB_Full(t *testing.T) {
@@ -155,8 +128,8 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 	// multi get / put / delete
 	//
 
-	var keys, nodes = getTestKeysAndValues(kvs)
-	nodes = nil // reset the list for the next tests
+	var keys, _ = getTestKeysAndValues(kvs)
+	nodes := make([]Node, 0) // reset the list for the next tests
 
 	t.Run("multi_get_put_delete", func(t *testing.T) {
 		// node not found
@@ -237,7 +210,9 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 		}
 		keys, nodes = getTestKeysAndValues(kvs)
 		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		mndb.PruneBelowVersion(back, Sequence(200))
+		if err := mndb.PruneBelowVersion(back, Sequence(200)); err != nil {
+			t.Fatal(err)
+		}
 		require.EqualValues(t, N, mndb.Size(back))
 	})
 
@@ -257,10 +232,6 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 	// })
 
 }
-
-//
-//
-//
 
 func TestLevelNodeDB_Full(t *testing.T) {
 
@@ -363,8 +334,8 @@ func TestLevelNodeDB_Full(t *testing.T) {
 	// multi get / put / delete
 	//
 
-	var keys, nodes = getTestKeysAndValues(kvs)
-	nodes = nil // reset the list for the next tests
+	var keys, _ = getTestKeysAndValues(kvs)
+	nodes := make([]Node, 0) // reset the list for the next tests
 
 	t.Run("multi_get_put_delete", func(t *testing.T) {
 		// node not found
@@ -446,7 +417,9 @@ func TestLevelNodeDB_Full(t *testing.T) {
 		}
 		keys, nodes = getTestKeysAndValues(kvs)
 		require.NoError(t, lndb.MultiPutNode(keys, nodes))
-		lndb.PruneBelowVersion(back, Sequence(200))
+		if err := lndb.PruneBelowVersion(back, Sequence(200)); err != nil {
+			t.Fatal(err)
+		}
 		require.EqualValues(t, N, lndb.Size(back))
 	})
 
@@ -502,11 +475,17 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 			for j := 0; j < len(kvs); j++ {
 				switch (i + j) % 3 {
 				case 0:
-					lndb.GetNode(kvs[j].key)
+					if _, err := lndb.GetNode(kvs[j].key); err != nil {
+						t.Fatal(err)
+					}
 				case 1:
-					lndb.PutNode(kvs[j].key, kvs[j].node)
+					if err := lndb.PutNode(kvs[j].key, kvs[j].node); err != nil {
+						t.Fatal(err)
+					}
 				case 2:
-					lndb.DeleteNode(kvs[j].key)
+					if err := lndb.DeleteNode(kvs[j].key); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 
@@ -579,8 +558,8 @@ func TestPNodeDB_Full(t *testing.T) {
 	// multi get / put / delete
 	//
 
-	var keys, nodes = getTestKeysAndValues(kvs)
-	nodes = nil // reset the list for the next tests
+	var keys, _ = getTestKeysAndValues(kvs)
+	nodes := make([]Node, 0) // reset the list for the next tests
 
 	t.Run("multi_get_put_delete", func(t *testing.T) {
 		// node not found
@@ -663,7 +642,9 @@ func TestPNodeDB_Full(t *testing.T) {
 		}
 		keys, nodes = getTestKeysAndValues(kvs)
 		require.NoError(t, mndb.MultiPutNode(keys, nodes))
-		mndb.PruneBelowVersion(back, Sequence(200))
+		if err := mndb.PruneBelowVersion(back, Sequence(200)); err != nil {
+			t.Fatal(err)
+		}
 		require.EqualValues(t, N, mndb.Size(back))
 	})
 
@@ -672,8 +653,7 @@ func TestPNodeDB_Full(t *testing.T) {
 func TestMergeState(t *testing.T) {
 
 	const (
-		parallel = 100
-		n        = 100
+		n = 100
 	)
 
 	var (
@@ -708,7 +688,6 @@ func TestMergeState(t *testing.T) {
 		require.NoError(t, MergeState(back, fmdb, pndb))
 		require.EqualValues(t, n, pndb.Size(back))
 	})
-
 }
 
 func noNodeNotFound(err error) error {
@@ -746,7 +725,6 @@ func TestNodeDB_parallel(t *testing.T) {
 		lndb,
 		mndb,
 	} {
-		t.Logf("parallel tests for %T", ndb)
 		t.Run(fmt.Sprintf("%T", ndb), func(t *testing.T) {
 			for i := 0; i < parallel; i++ {
 				t.Run("parallel access", func(t *testing.T) {

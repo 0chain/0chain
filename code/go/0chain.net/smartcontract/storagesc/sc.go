@@ -188,7 +188,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "finalize_allocation":
 		resp, err = sc.finalizeAllocation(t, input, balances)
 	case "cancel_allocation":
-		resp, err = sc.cacnelAllocationRequest(t, input, balances)
+		resp, err = sc.cancelAllocationRequest(t, input, balances)
 
 	// blobbers
 

@@ -4,3 +4,4 @@ localhost
 198.18.0.83
 7173
 sharder73
+Sharder3's description

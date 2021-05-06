@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"runtime"
 	"sort"
@@ -788,7 +789,10 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 	if allMinersBytes == nil {
 		return allMinersList, nil
 	}
-	allMinersList.Decode(allMinersBytes.Encode())
+	err = allMinersList.Decode(allMinersBytes.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return allMinersList, nil
 }
 

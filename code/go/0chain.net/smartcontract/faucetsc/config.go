@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/core/common"
 	"context"
 	"net/url"
 	"time"
@@ -35,7 +36,13 @@ func getConfig() (conf *faucetConfig, err error) {
 // REST-handler
 //
 
+const cantGetConfig = "can't get config"
+
 func (fc *FaucetSmartContract) getConfigHandler(context.Context,
 	url.Values, chainstate.StateContextI) (interface{}, error) {
-	return getConfig()
+	res, err := getConfig()
+	if err != nil {
+		return nil, common.NewErrNoResource(cantGetConfig, err.Error())
+	}
+	return res, nil
 }

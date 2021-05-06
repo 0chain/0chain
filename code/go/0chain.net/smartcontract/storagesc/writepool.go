@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -114,41 +115,8 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	return
 }
 
-func (wp *writePool) movePartToStake(sscKey string, ap *allocationPool,
-	sp *stakePool, value state.Balance, balances chainState.StateContextI) (
-	moved state.Balance, err error) {
-
-	var stake = float64(sp.stake())
-	for _, dp := range sp.orderedPools() {
-		var ratio float64
-		if stake == 0.0 {
-			ratio = 1.0 / float64(len(sp.Pools))
-		} else {
-			ratio = float64(dp.Balance) / stake
-		}
-		var (
-			move     = state.Balance(float64(value) * ratio)
-			transfer *state.Transfer
-		)
-		transfer, _, err = ap.DrainPool(sscKey, dp.DelegateID, move, nil)
-		if err != nil {
-			return 0, fmt.Errorf("transferring tokens"+
-				" write_pool/alloc_pool(%s) -> stake_pool_holder(%s): %v",
-				ap.ID, dp.DelegateID, err)
-		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return 0, fmt.Errorf("adding transfer: %v", err)
-		}
-		// stat
-		dp.Rewards += move           // add to stake_pool_holder rewards
-		sp.Rewards.Validator += move // add to total blobber rewards
-		moved += move
-	}
-
-	return
-}
-
-func (wp *writePool) moveToStake(sscKey, allocID, blobID string,
+/*
+func (wp *writePool) moveToStake(sscKey, allocID, blobID string, zcnPool tokenpool.ZcnPool,
 	sp *stakePool, now common.Timestamp, value state.Balance,
 	balances chainState.StateContextI) (err error) {
 
@@ -177,9 +145,8 @@ func (wp *writePool) moveToStake(sscKey, allocID, blobID string,
 		} else {
 			move, bp.Balance = value, bp.Balance-value
 		}
-		_, err = wp.movePartToStake(sscKey, ap, sp, move, balances)
-		if err != nil {
-			return
+		if _, err := moveReward(sscKey, zcnPool, sp, move, balances); err != nil {
+			return err
 		}
 		sp.Rewards.Blobber += move
 		value -= move
@@ -198,9 +165,9 @@ func (wp *writePool) moveToStake(sscKey, allocID, blobID string,
 
 	// remove empty allocation pools
 	wp.removeEmpty(allocID, torm)
-	return
+	return nil
 }
-
+*/
 // take write pool by ID to unlock (the take is get and remove)
 func (wp *writePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
@@ -326,6 +293,9 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	}
 	wp = new(writePool)
 	err = wp.Decode(poolb)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return
 }
 
@@ -572,7 +542,7 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
 
 	var (
@@ -595,18 +565,20 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 	return &stat, nil
 }
 
+const cantGetWritePoolMsg = "can't get write pool"
+
 // statistic for all locked tokens of the write pool
 func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
+		clientID = params.Get("client_id")
 		wp       *writePool
 	)
 
 	if wp, err = ssc.getWritePool(clientID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetWritePoolMsg)
 	}
 
 	return wp.stat(common.Now()), nil

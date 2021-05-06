@@ -43,6 +43,11 @@ by its `keys_file`. For information purposes links between each id, public key
 and private key triplet is given in `docker.local\config\magicBlock_5_miners_1_sharder.yaml` 
 and `docker.local\config\magicBlock_3_miners_3_sharder.yaml`.
 
+## Dkg summery 
+Copy the dkg secret share summery file, for example 
+`0chain/docker.local/config/b0mnode*_dkg.json` to the config directory, this
+file's location is one of the miner's command line options.
+
 ### Magic Block
 
 To start the chain off we need a genesis magic block file. There are two 
