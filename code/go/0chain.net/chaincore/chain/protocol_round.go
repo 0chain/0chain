@@ -128,7 +128,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	}
 }
 
-func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	roundNumber := r.GetRoundNumber()
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
