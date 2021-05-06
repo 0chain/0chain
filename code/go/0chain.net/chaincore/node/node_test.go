@@ -1,9 +1,9 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"0chain.net/chaincore/client"
@@ -70,14 +70,11 @@ func createMiners(np *Pool) {
 }
 
 func TestNodeSetup(t *testing.T) {
-	Miners.Print(os.Stdout)
+	Miners.Print(bytes.NewBuffer(nil))
 }
 
 func TestNodeGetRandomNodes(t *testing.T) {
-	fmt.Printf("testing random\n")
-	for idx, n := range Miners.GetRandomNodes(2) {
-		fmt.Printf("%v: %v\n", idx, *n)
-	}
+	Miners.GetRandomNodes(2)
 }
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
@@ -110,10 +107,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 
 	options := SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true, CODEC: datastore.CodecMsgpack}
 	sendHandler := SendEntityHandler("/v1/_n2n/entity/post", &options)
-	sentTo := np.SendAtleast(2, sendHandler(entity))
-	for _, r := range sentTo {
-		fmt.Printf("sentTo:%v\n", r.GetKey())
-	}
+	_ = np.SendAtleast(2, sendHandler(entity))
 }
 
 func TestPoolScorer(t *testing.T) {
@@ -127,7 +121,9 @@ func TestPoolScorer(t *testing.T) {
 		}
 		publicKey := sigScheme.GetPublicKey()
 		nd.SetPublicKey(publicKey)
-		nd.SetID(nd.GetKey())
+		if err := nd.SetID(nd.GetKey()); err != nil {
+			t.Fatal(err)
+		}
 		sharders.AddNode(&nd)
 	}
 	sharders.ComputeProperties()
@@ -146,9 +142,5 @@ func TestPoolScorer(t *testing.T) {
 
 func computeScore(np *Pool, hash string) {
 	ps := NewHashPoolScorer(encryption.NewXORHashScorer())
-	nodes := ps.ScoreHashString(np, hash)
-	fmt.Printf("block hash: %v\n", hash)
-	for idx, ns := range nodes {
-		fmt.Printf("%2v %v %2v %v %v\n", idx, ns.Node.GetKey(), ns.Node.SetIndex, ns.Score, ns.Node.IsInTop(nodes, 8))
-	}
+	_ = ps.ScoreHashString(np, hash)
 }
