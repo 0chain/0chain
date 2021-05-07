@@ -266,7 +266,7 @@ func (c *Chain) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
 		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
-		Logger.Panic("failed to get magic block from mb storage")
+		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
 	return entity.(*block.MagicBlock)
 }
@@ -1306,7 +1306,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
 		lfmb.MagicBlockHash != newMagicBlock.PreviousMagicBlockHash {
 
-		Logger.Error("failed to update magic block",
+		logging.Logger.Error("failed to update magic block",
 			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
