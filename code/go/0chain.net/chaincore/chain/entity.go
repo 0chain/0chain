@@ -892,14 +892,6 @@ func (c *Chain) AreAllNodesActive() bool {
 	return active >= mb.Miners.Size()
 }
 
-/*CanStartNetwork - check whether the network can start */
-func (c *Chain) CanStartNetwork() bool {
-	mb := c.GetCurrentMagicBlock()
-	active := mb.Miners.GetActiveCount()
-	threshold := c.GetNotarizationThresholdCount(mb.Miners.Size())
-	return active >= threshold && c.CanShardBlocks(c.GetCurrentRound())
-}
-
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
 	nodeConfig := config.ReadConfig(configFile)
