@@ -10,7 +10,6 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -21,7 +20,7 @@ const (
 
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context, startRound int64, waitC chan struct{}) {
-	N2n.Debug("[monitor] start status monitor",
+	logging.N2n.Debug("[monitor] start status monitor",
 		zap.Int64("starting round", startRound),
 		zap.Any("node type", NodeTypeNames[np.Type].Code))
 	np.statusMonitor(ctx, startRound)
@@ -30,7 +29,7 @@ func (np *Pool) StatusMonitor(ctx context.Context, startRound int64, waitC chan 
 	for {
 		select {
 		case <-ctx.Done():
-			N2n.Debug("[monitor] status monitor canceled, StatusMonitor",
+			logging.N2n.Debug("[monitor] status monitor canceled, StatusMonitor",
 				zap.Any("node type", NodeTypeNames[np.Type].Code),
 				zap.Int64("start round", startRound))
 			close(waitC)
@@ -76,12 +75,12 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 }
 
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
-	N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
+	logging.N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
 	nodes := np.shuffleNodesLock()
 	for _, node := range nodes {
 		select {
 		case <-ctx.Done():
-			N2n.Debug("[monitor] status monitor canceled - statusMonitor",
+			logging.N2n.Debug("[monitor] status monitor canceled - statusMonitor",
 				zap.Any("node type", NodeTypeNames[np.Type].Code),
 				zap.Int64("starting round", startRound))
 			return
@@ -94,7 +93,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
-				N2n.Debug("node active check - active",
+				logging.N2n.Debug("node active check - active",
 					zap.Int64("start round", startRound),
 					zap.String("node host", node.Host),
 					zap.Int("node port", node.Port),
@@ -111,7 +110,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Underlying().GetKey(), data, hash, signature)
 		req, err := http.NewRequest(http.MethodGet, statusURL, nil)
 		if err != nil {
-			N2n.Error("node active check - failed to create request",
+			logging.N2n.Error("node active check - failed to create request",
 				zap.Int64("start round", startRound),
 				zap.String("node host", node.Host),
 				zap.Int("node port", node.Port),
@@ -132,7 +131,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 					nodeInActive = true
 				}
 
-				N2n.Debug("node active check - ping failed",
+				logging.N2n.Debug("node active check - ping failed",
 					zap.Error(err),
 					zap.Bool("node is inactive", nodeInActive),
 					zap.Int64("start round", startRound),
@@ -145,7 +144,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 				return
 			}
 
-			N2n.Debug("node active check - ping success",
+			logging.N2n.Debug("node active check - ping success",
 				zap.Int64("start round", startRound),
 				zap.String("node host", nd.Host),
 				zap.Int("node port", nd.Port),
@@ -157,7 +156,7 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 			}
 			resp.Body.Close()
 			if !nd.IsActive() {
-				N2n.Info("Node active",
+				logging.N2n.Info("Node active",
 					zap.String("node_type", nd.GetNodeTypeName()),
 					zap.Int("set_index", nd.SetIndex),
 					zap.Any("key", nd.GetKey()))

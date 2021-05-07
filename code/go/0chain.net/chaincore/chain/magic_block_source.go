@@ -11,7 +11,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/httpclientutil"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -54,7 +54,7 @@ func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 		return nil, fmt.Errorf("decoding magic block file: %v", err)
 	}
 
-	Logger.Info("read magic block file",
+	logging.Logger.Info("read magic block file",
 		zap.Any("number", mb.MagicBlockNumber),
 		zap.Any("sr", mb.StartingRound),
 		zap.Any("hash", mb.Hash))
@@ -74,7 +74,7 @@ func GetMagicBlockFrom0DNS(urlBase string) (mb *block.MagicBlock, err error) {
 	if err = httpclientutil.MakeGetRequest(full, mb); err != nil {
 		return nil, fmt.Errorf("getting MB from 0DNS %q: %v", full, err)
 	}
-	Logger.Info("get magic block file from 0DNS", zap.String("0dns", full),
+	logging.Logger.Info("get magic block file from 0DNS", zap.String("0dns", full),
 		zap.Any("number", mb.MagicBlockNumber),
 		zap.Any("sr", mb.StartingRound),
 		zap.Any("hash", mb.Hash))
