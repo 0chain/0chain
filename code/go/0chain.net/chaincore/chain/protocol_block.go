@@ -123,17 +123,18 @@ func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb  = c.GetMagicBlock(round)
-		num = mb.Miners.Size()
+		mb        = c.GetMagicBlock(round)
+		num       = mb.Miners.GetActiveCount()
+		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
 	if c.ThresholdByCount > 0 {
 		var numSignatures = len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount(num) {
+		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("miners", num),
-				zap.Int("threshold", c.GetNotarizationThresholdCount(num)),
+				zap.Int("active_miners", num),
+				zap.Int("threshold", threshold),
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -150,9 +151,9 @@ func (c *Chain) reachedNotarization(round int64,
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Int("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake),
-				zap.Int("miners", num),
+				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
-				zap.Int("signature threshold", c.GetNotarizationThresholdCount(num)),
+				zap.Int("signature threshold", threshold),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
 			return false
@@ -161,11 +162,11 @@ func (c *Chain) reachedNotarization(round int64,
 
 	logging.Logger.Info("Reached notarization!!!",
 		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("miners", num),
+		zap.Int("active_miners", num),
 		zap.Int64("round", round),
 		zap.Int64("current_cound", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", c.GetNotarizationThresholdCount(num)))
+		zap.Int("threshold", threshold))
 
 	return true
 }
