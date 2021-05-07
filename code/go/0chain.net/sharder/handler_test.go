@@ -35,7 +35,7 @@ func TestBlockHandler(t *testing.T) {
 
 	sc := makeTestChain(t)
 	sc.AddBlock(b)
-	sc.LatestFinalizedBlock = b
+	sc.SetLatestFinalizedBlock(b)
 
 	cl := initDBs(t)
 	defer cl()

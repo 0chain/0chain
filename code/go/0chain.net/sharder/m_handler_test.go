@@ -169,7 +169,7 @@ func TestNotarizedBlockHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 			}
 
 			got, err := sharder.NotarizedBlockHandler(tt.args.ctx, tt.args.entity)
