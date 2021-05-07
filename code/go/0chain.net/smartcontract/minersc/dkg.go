@@ -648,13 +648,6 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 		return "", common.NewError("share_signs_or_shares_failed", err.Error())
 	}
 
-	// We may use != instead of < here? @kenwes13
-	if len(sos.ShareOrSigns) < len(mpks.Mpks)-1 {
-		return "", common.NewErrorf("share_signs_or_shares",
-			"not enough signs or shares; expected=%d, received=%d",
-			len(mpks.Mpks)-1, len(sos.ShareOrSigns))
-	}
-
 	var publicKeys = make(map[string]string)
 	for key, miner := range dmn.SimpleNodes {
 		publicKeys[key] = miner.PublicKey
