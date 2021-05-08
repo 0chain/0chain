@@ -13,13 +13,16 @@ type CodecTestStruct struct {
 func (c *CodecTestStruct) getNumbers() []int {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.Numbers
+	nums := make([]int, len(c.Numbers))
+	copy(nums, c.Numbers)
+	return nums
 }
 
 func (c *CodecTestStruct) setNumbers(numbers []int) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.Numbers = numbers
+	c.Numbers = make([]int, len(numbers))
+	copy(c.Numbers, numbers)
 }
 
 func (c *CodecTestStruct) DoReadLock() {
@@ -33,27 +36,21 @@ func (c *CodecTestStruct) DoReadUnlock() {
 func TestConcurrentCodec(t *testing.T) {
 	var o CodecTestStruct
 	var wg sync.WaitGroup
-	count := 0
 	for idx := 0; idx < 10; idx++ {
 		o.setNumbers(append(o.getNumbers(), 1))
 		for i := 0; i < 10; i++ {
-			var mi = i
-			go func() {
+			go func(mi int, wg *sync.WaitGroup) {
 				wg.Add(1)
-				var nums = []int{}
-				nums = append(nums, o.getNumbers()...)
+				nums := o.getNumbers()
 				for j := 0; j < 1; j++ {
 					nums = append(nums, 100*mi+j)
 				}
 				o.setNumbers(nums)
 				wg.Done()
-			}()
+			}(i, &wg)
 		}
 		for i := 0; i < 10; i++ {
-			encoded := ToMsgpack(&o)
-			if encoded.Len() > 16 {
-				count++
-			}
+			_ = ToMsgpack(&o)
 		}
 		wg.Wait()
 	}
