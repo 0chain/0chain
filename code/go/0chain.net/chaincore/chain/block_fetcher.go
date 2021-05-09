@@ -463,28 +463,42 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 
 // RequestEntityFromMiners requests entity from miners in latest finalized magic block
 func (c *Chain) RequestEntityFromMiners(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.lfmbMutex.Lock()
-	c.latestFinalizedMagicBlock.Miners.RequestEntity(ctx, requestor, params, handler)
-	c.lfmbMutex.Unlock()
+	c.RequestEntityFromMinersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
 }
 
 // RequestEntityFromSharders requests entity from sharders in latest finalized magic block
 func (c *Chain) RequestEntityFromSharders(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	c.RequestEntityFromShardersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
+}
+
+// RequestEntityFromMinersOnMB requests entity from miners on given magic block
+func (c *Chain) RequestEntityFromMinersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Miners.RequestEntity(ctx, requestor, params, handler)
+}
+
+// RequestEntityFromShardersOnMB requests entity from sharders on given magic block
+func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Sharders.RequestEntity(ctx, requestor, params, handler)
+}
+
+func (c *Chain) getLatestFinalizedMagicBlock() *block.MagicBlock {
 	c.lfmbMutex.Lock()
-	c.latestFinalizedMagicBlock.Sharders.RequestEntity(ctx, requestor, params, handler)
-	c.lfmbMutex.Unlock()
+	defer c.lfmbMutex.Unlock()
+	return c.latestFinalizedMagicBlock.MagicBlock
 }
 
 func (c *Chain) requestEntityFromSharderOrAll(ctx context.Context, sharderID string,
 	requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-	if sh := c.latestFinalizedMagicBlock.Sharders.GetNode(sharderID); sh != nil {
+	sharders := c.getLatestFinalizedMagicBlock().Sharders
+
+	if sh := sharders.GetNode(sharderID); sh != nil {
 		sh.RequestEntityFromNode(ctx, requestor, params, handler)
 		return
 	}
 
-	c.latestFinalizedMagicBlock.Sharders.RequestEntityFromAll(ctx, FBRequestor, params, handler)
+	sharders.RequestEntityFromAll(ctx, FBRequestor, params, handler)
 }
 
 //
