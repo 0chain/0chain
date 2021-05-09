@@ -5,6 +5,7 @@ package bls
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -269,6 +270,11 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 			idVec = append(idVec, forID)
 		}
 	}
+
+	if len(idVec) == 0 || len(signVec) == 0 {
+		return Sign{}, errors.New("empty id or share")
+	}
+
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
