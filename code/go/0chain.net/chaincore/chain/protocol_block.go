@@ -124,7 +124,7 @@ func (c *Chain) reachedNotarization(round int64,
 
 	var (
 		mb        = c.GetMagicBlock(round)
-		num       = mb.Miners.GetActiveCount()
+		num       = mb.Miners.Size()
 		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
