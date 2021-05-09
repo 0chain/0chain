@@ -205,8 +205,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		ps = rps
 		return rps, nil
 	}
-	mb := c.GetCurrentMagicBlock()
-	mb.Miners.RequestEntity(ctx, psRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(ctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
 	if ps == nil {
 		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
 	}
@@ -235,9 +234,9 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		return rns, nil
 	}
 	mb := c.GetCurrentMagicBlock()
-	mb.Miners.RequestEntity(ctx, nsRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(ctx, mb, nsRequestor, params, handler)
 	if ns == nil {
-		mb.Sharders.RequestEntity(ctx, nsRequestor, params, handler)
+		c.RequestEntityFromShardersOnMB(ctx, mb, nsRequestor, params, handler)
 	}
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
@@ -266,8 +265,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		ns = rns
 		return rns, nil
 	}
-	mb := c.GetCurrentMagicBlock()
-	mb.Sharders.RequestEntity(ctx, nsRequestor, params, handler)
+	c.RequestEntityFromShardersOnMB(ctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}
@@ -327,8 +325,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 
-	var mb = c.GetMagicBlock(b.Round)
-	mb.Miners.RequestEntity(ctx, BlockStateChangeRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(ctx, c.GetMagicBlock(b.Round), BlockStateChangeRequestor, params, handler)
 
 	if bsc == nil {
 		return nil, common.NewError("block_state_change_error",
