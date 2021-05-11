@@ -42,6 +42,10 @@ func NewClient() *Client {
 
 // Clone returns a clone of the Client.
 func (c *Client) Clone() *Client {
+	if c == nil {
+		return nil
+	}
+
 	clone := *c
 	clone.CollectionMemberField = *(c.CollectionMemberField.Clone())
 	clone.PublicKeyBytes = make([]byte, len(c.PublicKeyBytes))
