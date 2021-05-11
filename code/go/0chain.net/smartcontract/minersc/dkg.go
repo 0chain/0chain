@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"fmt"
 	"reflect"
 	"runtime"
 	"sort"
@@ -306,12 +305,18 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	dkgMiners := NewDKGMinerNodes()
 	if lmb := balances.GetChainCurrentMagicBlock(); lmb != nil {
-		activeCount := lmb.Miners.GetActiveCount()
+		num := lmb.Miners.Size()
 		Logger.Debug("Calculate TKN from lmb",
-			zap.Int("active count", activeCount),
 			zap.Int64("starting round", lmb.StartingRound),
-			zap.String("lfmb.Miners point", fmt.Sprintf("%p", lmb.Miners)))
-		dkgMiners.calculateTKN(gn, activeCount)
+			zap.Int("miners num", num))
+		if num >= gn.MinN {
+			dkgMiners.calculateTKN(gn, num)
+		} else {
+			Logger.Debug("Calculate TKN from all miner list",
+				zap.Int("all count", len(allMinersList.Nodes)),
+				zap.Int64("gn.LastRound", gn.LastRound))
+			dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
+		}
 	} else {
 		Logger.Debug("Calculate TKN from all miner list",
 			zap.Int("all count", len(allMinersList.Nodes)),
@@ -319,8 +324,8 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
 	}
 
-	for _, node := range allMinersList.Nodes {
-		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
+	for _, nd := range allMinersList.Nodes {
+		dkgMiners.SimpleNodes[nd.ID] = nd.SimpleNode
 	}
 
 	dkgMiners.StartRound = gn.LastRound
@@ -328,7 +333,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	//sharders
+	// sharders
 	allSharderKeepList := new(MinerNodes)
 	return updateShardersKeepList(balances, allSharderKeepList)
 }
