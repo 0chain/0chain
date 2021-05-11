@@ -279,9 +279,9 @@ func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	var round = mbRoundOffset(mb.StartingRound)
+	var r = mbRoundOffset(mb.StartingRound)
 
-	return c.GetPrevMagicBlock(round)
+	return c.GetPrevMagicBlock(r)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -786,8 +786,8 @@ func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
 }
 
 // GetGeneratorsNumOfRound returns the number of generators of a given round
-func (c *Chain) GetGeneratorsNumOfRound(round int64) int {
-	if mb := c.GetMagicBlock(round); mb != nil {
+func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
+	if mb := c.GetMagicBlock(r); mb != nil {
 		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
 	}
 
