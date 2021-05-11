@@ -713,8 +713,12 @@ func (n *Node) Clone() *Node {
 		smallMessageSendTime:      n.smallMessageSendTime,
 		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
 		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
-		Client:                    *(n.Client.Clone()),
 		CommChannel:               make(chan struct{}, 5),
+	}
+
+	cc := n.Client.Clone()
+	if cc != nil {
+		clone.Client = *cc
 	}
 
 	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
