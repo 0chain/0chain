@@ -1,15 +1,16 @@
 package datastore_test
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/memorystore"
 	"context"
 	"errors"
 	"reflect"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/memorystore"
 )
 
 func makeTestChunkProcessors() []datastore.ChunkProcessor {

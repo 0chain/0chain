@@ -1,10 +1,11 @@
 package datastore_test
 
 import (
-	"0chain.net/core/datastore"
 	"reflect"
 	"testing"
 	"time"
+
+	"0chain.net/core/datastore"
 )
 
 func TestEntityCollection_Copy(t *testing.T) {

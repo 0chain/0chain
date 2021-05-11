@@ -1,16 +1,18 @@
 package datastore_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"reflect"
+	"testing"
+
+	"github.com/vmihailenco/msgpack"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"bytes"
-	"encoding/json"
-	"github.com/vmihailenco/msgpack"
-	"io"
-	"reflect"
-	"testing"
 )
 
 func init() {
