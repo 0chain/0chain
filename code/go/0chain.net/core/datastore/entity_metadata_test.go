@@ -1,11 +1,12 @@
 package datastore_test
 
 import (
+	"reflect"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"reflect"
-	"testing"
 )
 
 func makeTestEntityMetadataImpl() datastore.EntityMetadataImpl {
@@ -242,7 +243,10 @@ func TestEntityMetadataImpl_Instance(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			em := &datastore.EntityMetadataImpl{
 				Name:         tt.fields.Name,
 				DB:           tt.fields.DB,
@@ -316,7 +320,10 @@ func TestGetEntityMetadata(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := datastore.GetEntityMetadata(tt.args.entityName); !reflect.DeepEqual(got.Instance(), tt.want.Instance()) {
 				t.Errorf("GetEntityMetadata() = %#v, want %#v", got, tt.want)
 			}

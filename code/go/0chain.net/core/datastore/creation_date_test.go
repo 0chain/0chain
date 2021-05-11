@@ -1,10 +1,11 @@
 package datastore
 
 import (
-	"0chain.net/core/common"
 	"reflect"
 	"testing"
 	"time"
+
+	"0chain.net/core/common"
 )
 
 func TestCreationDateField_GetCreationTime(t *testing.T) {
@@ -61,7 +62,10 @@ func TestCreationDateField_ToTime(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cd := &CreationDateField{
 				CreationDate: tt.fields.CreationDate,
 			}

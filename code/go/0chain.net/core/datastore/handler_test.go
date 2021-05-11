@@ -162,6 +162,8 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 }
 
 func TestGetEntityHandler(t *testing.T) {
+	t.Parallel()
+
 	e := mocks.Entity{}
 	e.On("Read", context.TODO(), mock.AnythingOfType("string")).Return(
 		func(ctx context.Context, _ datastore.Key) error {
@@ -239,7 +241,10 @@ func TestGetEntityHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := datastore.GetEntityHandler(tt.args.ctx, tt.args.r, tt.args.entityMetadata, tt.args.idparam)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetEntityHandler() error = %v, wantErr %v", err, tt.wantErr)
@@ -255,7 +260,6 @@ func TestGetEntityHandler(t *testing.T) {
 func TestPutEntityHandler(t *testing.T) {
 	t.Parallel()
 
-	// Test_PutEntityHandler_Sync_Ctx_OK
 	ctx := context.TODO()
 	ch := make(chan datastore.QueuedEntity)
 	ctx = datastore.WithAsyncChannel(ctx, ch)

@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
 	"testing"
 
 	"github.com/0chain/gorocksdb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
@@ -28,33 +30,58 @@ func init() {
 	em.DB = "block"
 }
 
-func initRoundDBAndBlockDB(t *testing.T) (*gorocksdb.TransactionDB, *gorocksdb.TransactionDB, func()) {
-	rDir := dataDir + "/round"
-	err := os.MkdirAll(rDir, 0700)
-	require.NoError(t, err)
-	rDB, err := ememorystore.CreateDB(rDir)
-	require.NoError(t, err)
+// connections stores keys as entity name and values as database name
+var connections = map[string]string{
+	"round": "roundsummarydb",
+	"block": "block",
+}
 
-	ememorystore.AddPool(round.Provider().GetEntityMetadata().GetDB(), rDB)
+var pools = make(map[string]*gorocksdb.TransactionDB)
 
-	bDir := dataDir + "/block"
-	err = os.MkdirAll(bDir, 0700)
-	require.NoError(t, err)
+func initDBs() error {
+	for entityName, dbName := range connections {
+		dir := dataDir + "/" + dbName
+		err := os.MkdirAll(dir, 0700)
+		if err != nil {
+			return err
+		}
+		db, err := ememorystore.CreateDB(dir)
+		if err != nil {
+			return err
+		}
 
-	bDB, err := ememorystore.CreateDB(bDir)
-	require.NoError(t, err)
+		ememorystore.AddPool(dbName, db)
 
-	ememorystore.AddPool(block.Provider().GetEntityMetadata().GetDB(), bDB)
-
-	cl := func() {
-		rDB.Close()
-		bDB.Close()
-
-		err := cleanUp()
-		require.NoError(t, err)
+		_, ok := pools[entityName]
+		if ok {
+			return errors.New("trying to init existing db")
+		}
+		pools[entityName] = db
 	}
 
-	return rDB, bDB, cl
+	return nil
+}
+
+func closeTestPools() {
+	for _, pool := range pools {
+		pool.Close()
+	}
+	pools = make(map[string]*gorocksdb.TransactionDB)
+}
+
+func TestMain(m *testing.M) {
+	if err := initDBs(); err != nil {
+		panic(err)
+	}
+
+	r := m.Run()
+
+	closeTestPools()
+	if err := cleanUp(); err != nil {
+		panic(err)
+	}
+
+	os.Exit(r)
 }
 
 func cleanUp() error {
@@ -62,9 +89,6 @@ func cleanUp() error {
 }
 
 func TestStore_Read(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
-
 	r := round.NewRound(1)
 	r.BlockHash = encryption.Hash("data")
 	rByt, err := json.Marshal(r)
@@ -139,16 +163,28 @@ func TestStore_Read(t *testing.T) {
 				t.Errorf("Read() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			if !tt.wantErr && !reflect.DeepEqual(tt.args.entity, tt.want) {
-				t.Errorf("Read() got = %v, want = %v", tt.args.entity, tt.want)
+			if !tt.wantErr {
+				assert.Equal(t, tt.want, tt.args.entity)
 			}
 		})
 	}
 }
 
+func refreshDBs() error {
+	closeTestPools()
+	if err := cleanUp(); err != nil {
+		return err
+	}
+
+	if err := initDBs(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func TestStore_Write(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	r := round.NewRound(1)
 	r.BlockHash = encryption.Hash("data")
@@ -177,50 +213,14 @@ func TestStore_Write(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			ems := &ememorystore.Store{}
-			if err := ems.Write(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
-				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
+			t.Parallel()
+
+			if err := refreshDBs(); err != nil {
+				t.Error(err)
 			}
-		})
-	}
-}
 
-func TestStore_Write_ERR(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
-
-	r := round.NewRound(1)
-	r.BlockHash = encryption.Hash("data")
-	rByt, err := json.Marshal(r)
-	if err != nil {
-		t.Error(err)
-	}
-	ctx := ememorystore.WithEntityConnection(context.TODO(), r.GetEntityMetadata())
-	txn := ememorystore.GetEntityCon(ctx, r.GetEntityMetadata())
-	key := make([]byte, 8)
-	binary.BigEndian.PutUint64(key, 1)
-	if err := txn.Conn.Put(key, rByt); err != nil {
-		t.Fatal(err)
-	}
-
-	type args struct {
-		ctx    context.Context
-		entity datastore.Entity
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name:    "Test_Store_Write_Round_ERR",
-			args:    args{entity: round.NewRound(1)},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
 			ems := &ememorystore.Store{}
 			if err := ems.Write(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
@@ -230,8 +230,7 @@ func TestStore_Write_ERR(t *testing.T) {
 }
 
 func TestStore_Delete(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	type args struct {
 		ctx    context.Context
@@ -249,7 +248,10 @@ func TestStore_Delete(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.Delete(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
@@ -259,8 +261,7 @@ func TestStore_Delete(t *testing.T) {
 }
 
 func TestStore_MultiRead(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	b := block.NewBlock("", 1)
 	b.Hash = b.ComputeHash()
@@ -321,7 +322,10 @@ func TestStore_MultiRead(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.MultiRead(tt.args.ctx, tt.args.entityMetadata, tt.args.keys, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiRead() error = %v, wantErr %v", err, tt.wantErr)
@@ -335,8 +339,7 @@ func TestStore_MultiRead(t *testing.T) {
 }
 
 func TestStore_MultiWrite(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	b1 := block.NewBlock("", 1)
 	b1.Hash = b1.ComputeHash()
@@ -366,7 +369,14 @@ func TestStore_MultiWrite(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := refreshDBs(); err != nil {
+				t.Error(err)
+			}
+
 			ems := &ememorystore.Store{}
 			if err := ems.MultiWrite(tt.args.ctx, tt.args.entityMetadata, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiWrite() error = %v, wantErr %v", err, tt.wantErr)
@@ -376,8 +386,7 @@ func TestStore_MultiWrite(t *testing.T) {
 }
 
 func TestStore_MultiDelete(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	b1 := block.NewBlock("", 1)
 	b1.Hash = b1.ComputeHash()
@@ -406,7 +415,13 @@ func TestStore_MultiDelete(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := refreshDBs()
+			require.NoError(t, err)
+
 			ems := &ememorystore.Store{}
 			if err := ems.MultiDelete(tt.args.ctx, tt.args.entityMetadata, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiDelete() error = %v, wantErr %v", err, tt.wantErr)
@@ -416,6 +431,8 @@ func TestStore_MultiDelete(t *testing.T) {
 }
 
 func TestStore_AddToCollection(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx    context.Context
 		entity datastore.CollectionEntity
@@ -431,7 +448,10 @@ func TestStore_AddToCollection(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.AddToCollection(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("AddToCollection() error = %v, wantErr %v", err, tt.wantErr)
@@ -441,6 +461,8 @@ func TestStore_AddToCollection(t *testing.T) {
 }
 
 func TestStore_MultiAddToCollection(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx            context.Context
 		entityMetadata datastore.EntityMetadata
@@ -459,6 +481,8 @@ func TestStore_MultiAddToCollection(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.MultiAddToCollection(tt.args.ctx, tt.args.entityMetadata, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiAddToCollection() error = %v, wantErr %v", err, tt.wantErr)
@@ -468,6 +492,8 @@ func TestStore_MultiAddToCollection(t *testing.T) {
 }
 
 func TestStore_DeleteFromCollection(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx    context.Context
 		entity datastore.CollectionEntity
@@ -485,6 +511,8 @@ func TestStore_DeleteFromCollection(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.DeleteFromCollection(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("DeleteFromCollection() error = %v, wantErr %v", err, tt.wantErr)
@@ -494,6 +522,8 @@ func TestStore_DeleteFromCollection(t *testing.T) {
 }
 
 func TestStore_MultiDeleteFromCollection(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx            context.Context
 		entityMetadata datastore.EntityMetadata
@@ -512,6 +542,8 @@ func TestStore_MultiDeleteFromCollection(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.MultiDeleteFromCollection(tt.args.ctx, tt.args.entityMetadata, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiDeleteFromCollection() error = %v, wantErr %v", err, tt.wantErr)
@@ -521,6 +553,8 @@ func TestStore_MultiDeleteFromCollection(t *testing.T) {
 }
 
 func TestStore_GetCollectionSize(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx            context.Context
 		entityMetadata datastore.EntityMetadata
@@ -539,6 +573,8 @@ func TestStore_GetCollectionSize(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if got := ems.GetCollectionSize(tt.args.ctx, tt.args.entityMetadata, tt.args.collectionName); got != tt.want {
 				t.Errorf("GetCollectionSize() = %v, want %v", got, tt.want)
@@ -548,6 +584,8 @@ func TestStore_GetCollectionSize(t *testing.T) {
 }
 
 func TestStore_IterateCollection(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx            context.Context
 		entityMetadata datastore.EntityMetadata
@@ -567,6 +605,8 @@ func TestStore_IterateCollection(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.IterateCollection(tt.args.ctx, tt.args.entityMetadata, tt.args.collectionName, tt.args.handler); (err != nil) != tt.wantErr {
 				t.Errorf("IterateCollection() error = %v, wantErr %v", err, tt.wantErr)
@@ -576,8 +616,7 @@ func TestStore_IterateCollection(t *testing.T) {
 }
 
 func TestStore_InsertIfNE(t *testing.T) {
-	_, _, cl := initRoundDBAndBlockDB(t)
-	defer cl()
+	t.Parallel()
 
 	type args struct {
 		ctx    context.Context
@@ -595,7 +634,10 @@ func TestStore_InsertIfNE(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			ems := &ememorystore.Store{}
 			if err := ems.InsertIfNE(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("InsertIfNE() error = %v, wantErr %v", err, tt.wantErr)

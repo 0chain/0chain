@@ -1,10 +1,11 @@
 package datastore_test
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
 	"reflect"
 	"testing"
+
+	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
 )
 
 func TestAllocateEntities(t *testing.T) {
@@ -30,7 +31,10 @@ func TestAllocateEntities(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := datastore.AllocateEntities(tt.args.size, tt.args.entityMetadata); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("AllocateEntities() = %v, want %v", got, tt.want)
 			}
