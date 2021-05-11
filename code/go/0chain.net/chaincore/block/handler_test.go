@@ -18,6 +18,8 @@ func init() {
 }
 
 func TestGetBlock(t *testing.T) {
+	t.Parallel()
+
 	type args struct {
 		ctx context.Context
 		r   *http.Request
@@ -35,7 +37,10 @@ func TestGetBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			_, err := GetBlock(tt.args.ctx, tt.args.r)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlock() error = %v, wantErr %v", err, tt.wantErr)
@@ -46,6 +51,8 @@ func TestGetBlock(t *testing.T) {
 }
 
 func TestPutBlock(t *testing.T) {
+	t.Parallel()
+
 	nwb := NewBlock("", 1)
 	nwb.CreationDate = 0
 
@@ -100,7 +107,10 @@ func TestPutBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := PutBlock(tt.args.ctx, tt.args.entity)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PutBlock() error = %v, wantErr %v", err, tt.wantErr)
