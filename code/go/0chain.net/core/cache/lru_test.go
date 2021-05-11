@@ -42,6 +42,8 @@ func TestNewLRUCache(t *testing.T) {
 }
 
 func TestLRU_Add(t *testing.T) {
+	t.Parallel()
+
 	c := NewLRUCache(2000)
 
 	type fields struct {
@@ -74,7 +76,10 @@ func TestLRU_Add(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := &LRU{
 				Cache: tt.fields.Cache,
 				Hit:   tt.fields.Hit,
@@ -96,6 +101,8 @@ func TestLRU_Add(t *testing.T) {
 }
 
 func TestLRU_Get(t *testing.T) {
+	t.Parallel()
+
 	c := NewLRUCache(2000)
 
 	type fields struct {
@@ -144,7 +151,10 @@ func TestLRU_Get(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := &LRU{
 				Cache: tt.fields.Cache,
 				Hit:   tt.fields.Hit,
@@ -180,6 +190,8 @@ func TestLRU_Get(t *testing.T) {
 }
 
 func TestLRU_GetHit(t *testing.T) {
+	t.Parallel()
+
 	c := NewLRUCache(2000)
 
 	type fields struct {
@@ -203,7 +215,10 @@ func TestLRU_GetHit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := &LRU{
 				Cache: tt.fields.Cache,
 				Hit:   tt.fields.Hit,

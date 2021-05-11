@@ -41,6 +41,8 @@ func TestNewLFUCache(t *testing.T) {
 }
 
 func TestLFU_Add(t *testing.T) {
+	t.Parallel()
+
 	c := NewLFUCache(2000)
 
 	type fields struct {
@@ -73,7 +75,10 @@ func TestLFU_Add(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := &LFU{
 				Cache: tt.fields.Cache,
 				Hit:   tt.fields.Hit,
@@ -95,6 +100,8 @@ func TestLFU_Add(t *testing.T) {
 }
 
 func TestLFU_Get(t *testing.T) {
+	t.Parallel()
+
 	c := NewLFUCache(2000)
 
 	type fields struct {
@@ -145,6 +152,8 @@ func TestLFU_Get(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			c := &LFU{
 				Cache: tt.fields.Cache,
 				Hit:   tt.fields.Hit,
@@ -156,7 +165,7 @@ func TestLFU_Get(t *testing.T) {
 				}
 			}
 
-			var hit, miss int64 = c.Hit, c.Miss
+			var hit, miss = c.Hit, c.Miss
 
 			got, err := c.Get(tt.args.key)
 			if (err != nil) != tt.wantErr {
