@@ -99,8 +99,6 @@ func TestCreateDB(t *testing.T) {
 }
 
 func TestAddPool(t *testing.T) {
-	t.Parallel()
-
 	db, err := CreateDB(dataDir)
 	if err != nil {
 		t.Fatal(err)
@@ -130,10 +128,7 @@ func TestAddPool(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			got := AddPool(tt.args.dbid, tt.args.db)
 			if !reflect.DeepEqual(got, tt.want) && !reflect.DeepEqual(pools[tt.args.dbid], tt.want) {
 				t.Errorf("AddPool() = %v, want %v", got, tt.want)
@@ -147,8 +142,6 @@ func TestAddPool(t *testing.T) {
 }
 
 func TestGetConnection(t *testing.T) {
-	t.Parallel()
-
 	var err error
 	DefaultPool, err = CreateDB(dataDir)
 	if err != nil {
@@ -677,8 +670,6 @@ func Test_getConnectionCtxKey(t *testing.T) {
 }
 
 func Test_getdbpool(t *testing.T) {
-	t.Parallel()
-
 	db, err := CreateDB(dataDir)
 	if err != nil {
 		t.Fatal(err)
@@ -708,10 +699,7 @@ func Test_getdbpool(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
