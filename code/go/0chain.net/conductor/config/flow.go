@@ -43,7 +43,7 @@ func getNodeNames(val interface{}) (ss []NodeName, ok bool) {
 }
 
 func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
-	var tm = 2 * time.Minute // default timeout is 2 minute
+	var tm = 10 * time.Minute // default timeout is 10 minutes
 
 	var name, val, ok = d.unwrap()
 	if !ok {
@@ -79,7 +79,7 @@ func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
 }
 
 func execute(name string, ex Executor, val interface{}, tm time.Duration) (
-    err error) {
+	err error) {
 
 	var fn, ok = flowRegistry[name]
 	if !ok {
