@@ -22,7 +22,8 @@ const (
 )
 
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
-var FetchStrategy = FetchStrategyNearest
+// var FetchStrategy = FetchStrategyNearest
+var FetchStrategy = FetchStrategyRandom
 
 //GetFetchStrategy - indicate which fetch strategy to use
 func GetFetchStrategy() int {
@@ -39,7 +40,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	var nodes []*Node
 	np.mmx.Lock()
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes()
+		nodes = np.shuffleNodes(true)
 	} else {
 		nodes = np.getNodesByLargeMessageTime()
 	}
@@ -72,7 +73,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock()
+		nodes = np.shuffleNodesLock(true)
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
