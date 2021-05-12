@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -23,20 +24,36 @@ func init() {
 	transactionEntityMetadata.Store = memorystore.GetStorageProvider()
 
 	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
+
+	memoryStorage := memorystore.GetStorageProvider()
+	block.SetupEntity(memoryStorage)
 }
 
-func makeTestBlockDBStore() *BlockDBStore {
+func TestMain(m *testing.M) {
+	r := m.Run()
+
+	currDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	if err := os.RemoveAll(filepath.Join(currDir, "tmp")); err != nil {
+		panic(err)
+	}
+
+	os.Exit(r)
+}
+
+func makeTestBlockDBStore(t *testing.T) (*BlockDBStore, func()) {
+	fbs, cleanUp := makeTestFSBlockStore(t)
+
 	return &BlockDBStore{
-		FSBlockStore:        makeTestFSBlockStore("tmp/test/blockdbstore"),
+		FSBlockStore:        fbs,
 		txnMetadataProvider: datastore.GetEntityMetadata("txn"),
 		compress:            true,
-	}
+	}, cleanUp
 }
 
 func makeTestBlock() *block.Block {
-	memoryStorage := memorystore.GetStorageProvider()
-	block.SetupEntity(memoryStorage)
-
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
@@ -46,9 +63,8 @@ func makeTestBlock() *block.Block {
 func TestNewBlockDBStore(t *testing.T) {
 	t.Parallel()
 
-	var (
-		store = makeTestBlockDBStore()
-	)
+	store, cleanUp := makeTestBlockDBStore(t)
+	defer cleanUp()
 
 	type args struct {
 		fsbs *FSBlockStore
@@ -343,10 +359,9 @@ func Test_txnRecord_Decode(t *testing.T) {
 func TestBlockDBStore_DeleteBlock(t *testing.T) {
 	t.Parallel()
 
-	var (
-		db = makeTestBlockDBStore()
-		b  = makeTestBlock()
-	)
+	b := makeTestBlock()
+	db, cleanUp := makeTestBlockDBStore(t)
+	defer cleanUp()
 
 	type fields struct {
 		FSBlockStore        *FSBlockStore
@@ -553,7 +568,9 @@ func Test_txnRecordProvider_NewRecord(t *testing.T) {
 }
 
 func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
-	bs := makeTestBlockDBStore()
+	bs, cleanUp := makeTestBlockDBStore(t)
+	defer cleanUp()
+
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
@@ -600,7 +617,6 @@ func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			bdbs := &BlockDBStore{
 				FSBlockStore:        tt.fields.FSBlockStore,

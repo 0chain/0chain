@@ -29,7 +29,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 	sc := sharder.GetSharderChain()
-	sc.LatestFinalizedBlock = b
+	sc.SetLatestFinalizedBlock(b)
 
 	type args struct {
 		ctx context.Context
@@ -53,7 +53,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 			t.Parallel()
 
 			sc := sharder.GetSharderChain()
-			sc.LatestFinalizedBlock = b
+			sc.SetLatestFinalizedBlock(b)
 
 			got, err := sharder.LatestFinalizedBlockHandler(tt.args.ctx, tt.args.r)
 			if (err != nil) != tt.wantErr {
@@ -215,7 +215,7 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 			}
 
 			got, err := sharder.NotarizedBlockKickHandler(tt.args.ctx, tt.args.entity)
