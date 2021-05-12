@@ -266,7 +266,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
-	err = dmn.recalculateTKN(true, gn, balances)
+	err = dmn.reduceNodes(true, gn, balances)
 	if err == nil && waited < dmn.K {
 		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
 			waited, dmn.K)

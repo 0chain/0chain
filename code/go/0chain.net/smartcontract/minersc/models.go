@@ -86,8 +86,6 @@ type (
 		gn *GlobalNode) error
 	smartContractFunction func(t *transaction.Transaction, inputData []byte,
 		gn *GlobalNode, balances cstate.StateContextI) (string, error)
-
-	SimpleNodes = map[string]*SimpleNode
 )
 
 func globalKeyHash(name string) datastore.Key {
@@ -96,6 +94,86 @@ func globalKeyHash(name string) datastore.Key {
 
 func NewSimpleNodes() SimpleNodes {
 	return make(map[string]*SimpleNode)
+}
+
+// not thread safe
+type SimpleNodes map[string]*SimpleNode
+
+func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (maxNodes int) {
+
+	var pmbNodes, newNodes, selectedNodes []*SimpleNode
+
+	// separate previous mb miners and new miners from dkg miners list
+	for _, sn := range sns {
+		if pmb != nil && pmb.MagicBlock != nil && pmb.Miners.HasNode(sn.ID) {
+			pmbNodes = append(pmbNodes, sn)
+			continue
+		}
+		newNodes = append(newNodes, sn)
+	}
+
+	// sort pmb nodes by total stake: desc
+	sort.SliceStable(pmbNodes, func(i, j int) bool {
+		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked
+	})
+
+	// calculate max nodes count for next mb
+	maxNodes = min(limit, len(pmbNodes)+len(newNodes))
+
+	// get number of nodes from previous mb that are required to be part of next mb
+	x := min(len(pmbNodes), int(math.Ceil(xPercent*float64(maxNodes))))
+	y := maxNodes - x
+
+	// select first x nodes from pmb miners
+	selectedNodes = pmbNodes[:x]
+
+	// add rest of the pmb miners into new miners list
+	newNodes = append(newNodes, pmbNodes[x:]...)
+	sort.SliceStable(newNodes, func(i, j int) bool {
+		return newNodes[i].TotalStaked > newNodes[j].TotalStaked
+	})
+
+	if len(newNodes) <= y {
+		// less than allowed nodes remaining
+		selectedNodes = append(selectedNodes, newNodes...)
+
+	} else if y > 0 {
+		// more than allowed nodes remaining
+
+		// find the range of nodes with equal stakes, start (s), end (e)
+		s, e := 0, len(newNodes)-1
+		stake := newNodes[y-1].TotalStaked
+		for i, sn := range newNodes {
+			if s == 0 && sn.TotalStaked == stake {
+				s = i
+			} else if sn.TotalStaked < stake {
+				e = i
+				break
+			}
+		}
+
+		// select nodes that don't have equal stake
+		selectedNodes = append(selectedNodes, newNodes[:s]...)
+
+		// resolve equal stake condition by randomly selecting nodes with equal stake
+		newNodes = newNodes[s:e]
+		for _, j := range rand.New(rand.NewSource(pmb.RoundRandomSeed)).Perm(e - s) {
+			if len(selectedNodes) < maxNodes {
+				selectedNodes = append(selectedNodes, newNodes[j])
+			}
+		}
+
+	}
+
+	// update map with selected nodes
+	for k := range sns {
+		delete(sns, k)
+	}
+	for _, sn := range selectedNodes {
+		sns[sn.ID] = sn
+	}
+
+	return maxNodes
 }
 
 //
@@ -916,84 +994,6 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }
 
-func (dkgmn *DKGMinerNodes) reduce(
-	gn *GlobalNode,
-	balances cstate.StateContextI) int {
-
-	pmb := balances.GetLastestFinalizedMagicBlock()
-
-	var pmbMiners, newMiners, selectedMiners []*SimpleNode
-
-	// separate previous mb miners and new miners from dkg miners list
-	for _, sn := range dkgmn.SimpleNodes {
-		if pmb.Miners.HasNode(sn.ID) {
-			pmbMiners = append(pmbMiners, sn)
-			continue
-		}
-		newMiners = append(newMiners, sn)
-	}
-
-	// sort pmb miners by total stake: desc
-	sort.SliceStable(pmbMiners, func(i, j int) bool {
-		return pmbMiners[i].TotalStaked > pmbMiners[j].TotalStaked
-	})
-
-	// calculate max miners count for next mb
-	maxMiners := min(dkgmn.MaxN, len(pmbMiners)+len(newMiners))
-
-	// get number of miners from previous mb that are required to be part of next mb
-	x := min(len(pmbMiners), int(math.Ceil(dkgmn.XPercent*float64(maxMiners))))
-	y := maxMiners - x
-
-	// select first x miners from pmb miners
-	selectedMiners = pmbMiners[:x]
-
-	// add rest of the pmb miners into new miners list
-	newMiners = append(newMiners, pmbMiners[x:]...)
-	sort.SliceStable(newMiners, func(i, j int) bool {
-		return newMiners[i].TotalStaked > newMiners[j].TotalStaked
-	})
-
-	if len(newMiners) <= y {
-		// less than allowed miners remaining
-		selectedMiners = append(selectedMiners, newMiners...)
-
-	} else if y > 0 {
-		// more than allowed miners remaining
-
-		// find the range of nodes with equal stakes, start (s), end (e)
-		s, e := 0, len(newMiners)-1
-		stake := newMiners[y-1].TotalStaked
-		for i, sn := range newMiners {
-			if s == 0 && sn.TotalStaked == stake {
-				s = i
-			} else if sn.TotalStaked < stake {
-				e = i
-				break
-			}
-		}
-
-		// select nodes that don't have equal stake
-		selectedMiners = append(selectedMiners, newMiners[:s]...)
-
-		// resolve equal stake condition by randomly selecting nodes with equal stake
-		newMiners = newMiners[s:e]
-		for _, j := range rand.New(rand.NewSource(pmb.RoundRandomSeed)).Perm(e - s) {
-			if len(selectedMiners) < maxMiners {
-				selectedMiners = append(selectedMiners, newMiners[j])
-			}
-		}
-
-	}
-
-	dkgmn.SimpleNodes = make(SimpleNodes)
-	for _, node := range selectedMiners {
-		dkgmn.SimpleNodes[node.ID] = node
-	}
-
-	return maxMiners
-}
-
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	ks = make([]string, 0, len(sns))
 	for k := range sns {
@@ -1002,9 +1002,11 @@ func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	return
 }
 
-// The recalculateTKN reconstructs and checks current DKG list. It never affects
-// T, K, and N.
-func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
+// reduce method checks boundaries and if final, reduces the
+// list to adhere to the limits (min_n, max_n) and conditions
+func (dkgmn *DKGMinerNodes) reduceNodes(
+	final bool,
+	gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	var n = len(dkgmn.SimpleNodes)
@@ -1019,7 +1021,13 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 	}
 
 	if final {
-		dkgmn.reduce(gn, balances)
+		simpleNodes := make(SimpleNodes)
+		for k, v := range dkgmn.SimpleNodes {
+			simpleNodes[k] = v
+		}
+		simpleNodes.reduce(
+			gn.MaxN, gn.XPercent, balances.GetLastestFinalizedMagicBlock())
+		dkgmn.SimpleNodes = simpleNodes
 	}
 
 	return

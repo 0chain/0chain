@@ -1,9 +1,9 @@
 package minersc
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
-	"sort"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -364,7 +364,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 		}
 	}
 
-	if err = dkgMiners.recalculateTKN(false, gn, balances); err != nil {
+	if err = dkgMiners.reduceNodes(false, gn, balances); err != nil {
 		Logger.Error("widdle dkg miners", zap.Error(err))
 		return err
 	}
@@ -377,49 +377,50 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	return nil
 }
 
-func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
-	gn *GlobalNode, balances cstate.StateContextI) (
-	list []*MinerNode, err error) {
+func (msc *MinerSmartContract) reduceShardersList(
+	keep,
+	all *MinerNodes,
+	gn *GlobalNode,
+	balances cstate.StateContextI) (nodes []*MinerNode, err error) {
 
-	var (
-		pmb  = gn.prevMagicBlock(balances)
-		hasp bool // TODO (sfxdx): remove the temporary debug code
-	)
+	simpleNodes := NewSimpleNodes()
 
-	list = make([]*MinerNode, 0, len(keep.Nodes))
-	for _, ksh := range keep.Nodes {
-		var ash = all.FindNodeById(ksh.ID)
-		if ash == nil {
+	tmpMinerNodes := make([]*MinerNode, 0, len(keep.Nodes))
+
+	for _, keepNode := range keep.Nodes {
+		var found = all.FindNodeById(keepNode.ID)
+		if found == nil {
 			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
-				" keep list doesn't exists in all sharders list: %s", ksh.ID)
+				" keep list doesn't exists in all sharders list: %s", keepNode.ID)
 		}
-		list = append(list, ash)
-		hasp = hasp || pmb.Sharders.HasNode(ksh.ID)
+		tmpMinerNodes = append(tmpMinerNodes, found)
+		simpleNodes[found.ID] = found.SimpleNode
 	}
 
-	if !hasp {
-		panic("must not happen")
+	if len(simpleNodes) < gn.MinS {
+		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
 	}
 
-	if len(list) <= gn.MaxS {
-		return // doesn't need to sort, has sharder from previous set
+	simpleNodes.reduce(
+		gn.MaxS, gn.XPercent, balances.GetLastestFinalizedMagicBlock())
+
+	nodes = make([]*MinerNode, 0, len(simpleNodes))
+
+	for _, mn := range tmpMinerNodes {
+		if sn, ok := simpleNodes[mn.ID]; ok {
+			mn.SimpleNode = sn
+			nodes = append(nodes, mn)
+		}
 	}
 
-	// get max staked
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].TotalStaked > list[j].TotalStaked ||
-			list[i].ID < list[j].ID
-	})
-
-	if !gn.hasPrevSharderInList(list[:gn.MaxS], balances) {
-		var prev = gn.rankedPrevSharders(list, balances)
+	if !gn.hasPrevSharderInList(nodes, balances) {
+		var prev = gn.rankedPrevSharders(nodes, balances)
 		if len(prev) == 0 {
 			panic("must not happen")
 		}
-		list[gn.MaxS-1] = prev[0] // best rank
+		nodes = append(nodes, prev[0])
 	}
 
-	list = list[:gn.MaxS]
 	return
 }
 
@@ -474,14 +475,13 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	if sharders == nil || len(sharders.Nodes) == 0 {
 		sharders = allSharderList
 	} else {
-		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList,
-			gn, balances)
+		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
 		if err != nil {
 			return err
 		}
 	}
 
-	if err = dkgMinersList.recalculateTKN(true, gn, balances); err != nil {
+	if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {
 		Logger.Error("create magic block for wait", zap.Error(err))
 		return err
 	}
