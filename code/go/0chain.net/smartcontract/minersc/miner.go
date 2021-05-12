@@ -1,13 +1,16 @@
 package minersc
 
 import (
+	"regexp"
+	"strings"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +19,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 
 	mbits, err := balances.GetTrieNode(pkey)
 	if err != nil && err != util.ErrValueNotPresent {
-		Logger.Error("GetTrieNode from state context", zap.Error(err),
+		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 			zap.String("key", pkey))
 		return false
 	}
@@ -40,12 +43,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
+	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	var all *MinerNodes
 	all, err = getMinersList(balances)
 	if err != nil {
-		Logger.Error("add_miner: Error in getting list from the DB",
+		logging.Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
 		return "", common.NewErrorf("add_miner_failed",
 			"failed to get miner list: %v", err)
@@ -60,7 +63,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	newMiner.LastHealthCheck = t.CreationDate
 
-	Logger.Info("add_miner: The new miner info",
+	logging.Logger.Info("add_miner: The new miner info",
 		zap.String("base URL", newMiner.N2NHost),
 		zap.String("ID", newMiner.ID),
 		zap.String("pkey", newMiner.PublicKey),
@@ -71,10 +74,10 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Int64("min_stake", int64(newMiner.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.MaxStake)),
 	)
-	Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
+	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
-		Logger.Error("add_miner: public key or ID is empty")
+		logging.Logger.Error("add_miner: public key or ID is empty")
 		return "", common.NewError("add_miner_failed",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
@@ -114,6 +117,23 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	newMiner.NodeType = NodeTypeMiner // set node type
+
+	// quick fix: localhost check + duplicate check
+	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
+	host, n2nhost := strings.TrimSpace(newMiner.Host), strings.TrimSpace(newMiner.N2NHost)
+	if localhost.MatchString(n2nhost) {
+		return "", common.NewErrorf("add_miner", "invalid n2nhost: %v", n2nhost)
+	}
+	if localhost.MatchString(host) {
+		host = n2nhost
+	}
+	for _, n := range all.Nodes {
+		if n2nhost == strings.TrimSpace(n.N2NHost) {
+			return "", common.NewErrorf("add_miner", "n2nhost already exists: %v", n2nhost)
+		}
+	}
+	newMiner.Host, newMiner.N2NHost = host, n2nhost
+	// end: quick fix: localhost check + duplicate check
 
 	allMap := make(map[string]struct{}, len(all.Nodes))
 	for _, n := range all.Nodes {
@@ -222,18 +242,18 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 
 	allMinersList, err := getMinersList(balances)
 	if err != nil {
-		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
+		logging.Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
 			"Failed to retrieve existing miners list: " + err.Error())
 		return
 	}
 	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
-		Logger.Info(msg + " allminerslist is empty")
+		logging.Logger.Info(msg + " allminerslist is empty")
 		return
 	}
 
-	Logger.Info(msg)
+	logging.Logger.Info(msg)
 	for _, miner := range allMinersList.Nodes {
-		Logger.Info("allminerslist",
+		logging.Logger.Info("allminerslist",
 			zap.String("url", miner.N2NHost),
 			zap.String("ID", miner.ID))
 	}
