@@ -39,7 +39,7 @@ func TestMerkleTreeComputeTree(t *testing.T) {
 	mt.ComputeTree(txns)
 	tree := mt.GetTree()
 	if len(tree) != 202 {
-		fmt.Printf("%v: %v\n", len(tree), tree)
+		t.Errorf("%v: %v\n", len(tree), tree)
 	}
 }
 
@@ -53,7 +53,7 @@ func TestMerkleTreeGetNVerifyPath(t *testing.T) {
 	for i := 0; i < len(txns); i++ {
 		path := mt.GetPath(txns[i])
 		if !mt.VerifyPath(txns[i], path) {
-			fmt.Printf("path: %v %v\n", txns[i], path)
+			t.Errorf("path: %v %v\n", txns[i], path)
 		}
 	}
 }
@@ -113,7 +113,7 @@ func BenchmarkMerkleTreeVerifyPath(b *testing.B) {
 		j := rand.Intn(len(txns))
 
 		if !mt.VerifyPath(txns[j], paths[j]) {
-			fmt.Printf("path verification failed")
+			b.Fatal("path verification failed")
 			return
 		}
 	}
