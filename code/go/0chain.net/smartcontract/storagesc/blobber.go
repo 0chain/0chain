@@ -71,27 +71,63 @@ func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 	return
 }
 
-// remove blobber (when a blobber provides capacity = 0)
-func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
-	existingBytes util.Serializable, all *StorageNodes) (
-	existingBlobber *StorageNode, err error) {
+// insert new blobber, filling its stake pool
+func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
+	conf *scConfig, blobber *StorageNode, all *StorageNodes,
+	balances cstate.StateContextI) (err error) {
 
-	// is the blobber exists?
-	if existingBytes == nil {
-		return nil, errors.New("invalid capacity of blobber: 0")
+	// check config
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid values in request: %v", err)
 	}
 
-	existingBlobber = new(StorageNode)
-	if err = existingBlobber.Decode(existingBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("can't decode existing blobber: %v", err)
+	// check for duplicates
+	for _, b := range all.Nodes {
+		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
+			return sc.updateBlobber(t, blobber, allBlobbersList)
+		}
 	}
 
-	existingBlobber.Capacity = 0 // change it to zero for the removing
+	blobber.LastHealthCheck = t.CreationDate // set to now
 
-	// remove from the all list, since the blobber can't accept new allocations
-	all.Nodes.remove(existingBlobber.ID)
+	// the stake pool can be created by related validator
+	var sp *stakePool
+	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
+		&blobber.StakePoolSettings, balances)
+	if err != nil {
+		return
+	}
+
+	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+		return fmt.Errorf("saving stake pool: %v", err)
+	}
+
+	all.Nodes.add(blobber) // add to all
 
 	// statistic
+	sc.statIncr(statAddBlobber)
+	sc.statIncr(statNumberOfBlobbers)
+	return
+}
+
+// remove blobber (when a blobber provides capacity = 0)
+func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
+	blobber *StorageNode, all *StorageNodes) (blobber *StorageNode, err error) {
+
+	var blobberBytes util.Serializable
+	blobberBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
+
+	if err != nil { // experimental, removed: && err != util.ErrValueNotPresent
+		return "", common.NewError("can't find existing blobber", err.Error())
+	}
+
+	// change it to zero for the removing
+	blobber.Capacity = 0
+
+	// remove from the all list, since the blobber can't accept new allocations
+	all.Nodes.remove(blobber.ID)
+
+	// update statistic
 	sc.statIncr(statRemoveBlobber)
 	sc.statDecr(statNumberOfBlobbers)
 	return // removed, opened offers are still opened
@@ -99,8 +135,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	blobber *StorageNode, existingBytes util.Serializable, all *StorageNodes) (
-	err error) {
+	blobber *StorageNode, existingBytes util.Serializable, all *StorageNodes) (err error) {
 
 	var existingBlobber StorageNode
 	if err = existingBlobber.Decode(existingBytes.Encode()); err != nil {
@@ -169,7 +204,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	return string(existingBlobber.Encode()), nil
 }
 
-// addBlobber adds, updates or removes a blobber; the blobber should
+// addBlobber insert, updates or removes a blobber; the blobber should
 // provide required tokens for stake pool; otherwise it will not be
 // registered; if it provides token, but it's already registered and
 // related stake pool has required tokens, then no tokens will be
@@ -180,85 +215,58 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (string, error) {
 
-	// SC configurations
+	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"can't get config: "+err.Error())
 	}
 
-	// all registered active blobbers
-	allBlobbersList, err := sc.getBlobbersList(balances)
+	// get registered "blobbers"
+	allBlobbers, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"Failed to get blobber list: "+err.Error())
 	}
 
-	// read request
-	var newBlobber = new(StorageNode)
-	if err = newBlobber.Decode(input); err != nil {
+	// create new "blobber"
+	var blobber = new(StorageNode)
+	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"malformed request: "+err.Error())
 	}
 
-	// when capacity is 0, then the blobber want be removed
-	if newBlobber.Capacity > 0 {
-		// validate the request
-		if err = newBlobber.validate(conf); err != nil {
-			return "", common.NewError("add_blobber_failed",
-				"invalid values in request: "+err.Error())
-		}
-	}
+	// edit new "blobber", setting transaction information
+	blobber.ID = t.ClientID
+	blobber.PublicKey = t.PublicKey
 
-	// set transaction information
-	newBlobber.ID = t.ClientID
-	newBlobber.PublicKey = t.PublicKey
-
-	// check out stored
-	var existb util.Serializable
-	existb, err = balances.GetTrieNode(newBlobber.GetKey(sc.ID))
-
-	// unexpected error
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("add_blobber_failed", err.Error())
-	}
-
-	switch {
-
-	// remove blobber case
-	case newBlobber.Capacity == 0:
-		// use loaded blobber in response
-		newBlobber, err = sc.removeBlobber(t, existb, allBlobbersList)
-
-	// insert blobber case
-	case err == util.ErrValueNotPresent:
-		err = sc.insertBlobber(t, conf, newBlobber, allBlobbersList, balances)
-
-	// update blobber case
-	default:
-		err = sc.updateBlobber(t, newBlobber, existb, allBlobbersList)
-
+	if blobber.Capacity > 0 {
+		// insert or update "blobber"
+		err = sc.insertBlobber(t, conf, blobber, allBlobbers, balances)
+	} else {
+		// remove "blobber"
+		blobber, err = sc.removeBlobber(t, blobber, allBlobbers)
 	}
 
 	if err != nil {
 		return "", common.NewError("add_blobber_failed", err.Error())
 	}
 
-	// save the all
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
+	// save all the blobbers
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"saving all blobbers: "+err.Error())
 	}
 
-	// save the blobber
-	_, err = balances.InsertTrieNode(newBlobber.GetKey(sc.ID), newBlobber)
+	// save the new blobber
+	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"saving blobber: "+err.Error())
 	}
 
-	return string(newBlobber.Encode()), nil
+	return string(blobber.Encode()), nil
 }
 
 func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction,
