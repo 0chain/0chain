@@ -275,6 +275,8 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 
+	logging.Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
+
 	var (
 		state             = crpc.Client().State()
 		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
