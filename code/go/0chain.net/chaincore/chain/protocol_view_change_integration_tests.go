@@ -7,31 +7,28 @@ import (
 	"time"
 
 	crpc "0chain.net/conductor/conductrpc"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
 func (mc *Chain) SetupSC(ctx context.Context) {
-	Logger.Info("SetupSC start...")
+	logging.Logger.Info("SetupSC start...")
 	tm := time.NewTicker(5 * time.Second)
-
-	state := crpc.Client().State()
-
 	for {
 		select {
 		case <-ctx.Done():
-			Logger.Debug("SetupSC is done")
+			logging.Logger.Debug("SetupSC is done")
 			return
 		case <-tm.C:
-			if state.IsLock {
+			if crpc.Client().State().IsLock {
 				continue
 			}
 
-			Logger.Debug("SetupSC - check if node is registered")
+			logging.Logger.Debug("SetupSC - check if node is registered")
 			isRegisteredC := make(chan bool)
 			go func() {
 				if mc.isRegistered() {
-					Logger.Debug("SetupSC - node is already registered")
+					logging.Logger.Debug("SetupSC - node is already registered")
 					isRegisteredC <- true
 					return
 				}
@@ -44,23 +41,23 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 					continue
 				}
 			case <-time.NewTimer(3 * time.Second).C:
-				Logger.Debug("SetupSC - check node registered timeout")
+				logging.Logger.Debug("SetupSC - check node registered timeout")
 			}
 
-			Logger.Debug("Request to register node")
+			logging.Logger.Debug("Request to register node")
 			txn, err := mc.RegisterNode()
 			if err != nil {
-				Logger.Warn("failed to register node in SC -- init_setup_sc",
+				logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
 					zap.Error(err))
 				continue
 			}
 
 			if txn != nil && mc.ConfirmTransaction(txn) {
-				Logger.Debug("Register node transaction confirmed")
+				logging.Logger.Debug("Register node transaction confirmed")
 				continue
 			}
 
-			Logger.Debug("Register node transaction not confirmed yet")
+			logging.Logger.Debug("Register node transaction not confirmed yet")
 		}
 	}
 }
