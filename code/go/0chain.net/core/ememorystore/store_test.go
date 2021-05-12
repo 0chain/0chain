@@ -225,8 +225,6 @@ func TestStore_Write(t *testing.T) {
 }
 
 func TestStore_Delete(t *testing.T) {
-	t.Parallel()
-
 	type args struct {
 		ctx    context.Context
 		entity datastore.Entity
@@ -243,10 +241,7 @@ func TestStore_Delete(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			ems := &ememorystore.Store{}
 			if err := ems.Delete(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
@@ -256,8 +251,6 @@ func TestStore_Delete(t *testing.T) {
 }
 
 func TestStore_MultiRead(t *testing.T) {
-	t.Parallel()
-
 	b := block.NewBlock("", 1)
 	b.Hash = b.ComputeHash()
 	bByt, err := json.Marshal(b)
@@ -317,10 +310,7 @@ func TestStore_MultiRead(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			ems := &ememorystore.Store{}
 			if err := ems.MultiRead(tt.args.ctx, tt.args.entityMetadata, tt.args.keys, tt.args.entities); (err != nil) != tt.wantErr {
 				t.Errorf("MultiRead() error = %v, wantErr %v", err, tt.wantErr)
@@ -376,8 +366,6 @@ func TestStore_MultiWrite(t *testing.T) {
 }
 
 func TestStore_MultiDelete(t *testing.T) {
-	t.Parallel()
-
 	b1 := block.NewBlock("", 1)
 	b1.Hash = b1.ComputeHash()
 	b2 := block.NewBlock("", 2)
@@ -405,10 +393,7 @@ func TestStore_MultiDelete(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			err := refreshDBs()
 			require.NoError(t, err)
 
