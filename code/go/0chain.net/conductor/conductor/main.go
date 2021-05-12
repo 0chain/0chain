@@ -30,7 +30,7 @@ import (
 const noProgressRounds = 10
 
 func init() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
 }
 
 // type aliases
