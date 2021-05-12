@@ -96,7 +96,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 					func(ctx context.Context) {
-						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 						defer cancel()
 						rc := make(chan struct{})
 						ts := time.Now()
@@ -104,6 +104,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 							protocol.HandleRoundTimeout(cctx, cround)
 							rc <- struct{}{}
 						}()
+
 						select {
 						case <-cctx.Done():
 							logging.Logger.Error("protocol.HandleRoundTimeout timeout",

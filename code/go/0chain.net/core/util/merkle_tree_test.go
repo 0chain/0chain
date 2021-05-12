@@ -65,7 +65,9 @@ func TestMerkleTreeSetTree(t *testing.T) {
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
 	var mt2 MerkleTreeI = &MerkleTree{}
-	mt2.SetTree(len(txns), mt.GetTree())
+	if err := mt2.SetTree(len(txns), mt.GetTree()); err != nil {
+		t.Fatal(err)
+	}
 	if mt.GetRoot() != mt2.GetRoot() {
 		t.Errorf("Merkle roots didn't match")
 	}

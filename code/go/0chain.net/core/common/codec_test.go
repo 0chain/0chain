@@ -1,10 +1,8 @@
 package common
 
 import (
-	"fmt"
 	"sync"
 	"testing"
-	//"encoding/hex"
 )
 
 type CodecTestStruct struct {
@@ -34,9 +32,7 @@ func TestConcurrentCodec(t *testing.T) {
 			if encoded.Len() > 16 {
 				count++
 			}
-			//fmt.Printf("encoded: %v %v\n",len(o.Numbers),hex.EncodeToString(encoded.Bytes())[:16])
 		}
 		wg.Wait()
-		fmt.Printf("all done: %v\n", count)
 	}
 }

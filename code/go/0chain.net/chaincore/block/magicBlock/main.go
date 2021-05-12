@@ -116,13 +116,13 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 // setupDKGSummaries initializes the dkg summaries
 func (cmd *cmdMagicBlock) setupDKGSummaries() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
-	for _, node := range cmd.block.Miners.NodesMap {
+	for _, n := range cmd.block.Miners.NodesMap {
 		dkg := &bls.DKGSummary{
 			SecretShares:  make(map[string]string),
 			StartingRound: cmd.block.StartingRound,
 		}
 		dkg.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
-		cmd.summaries[node.SetIndex] = dkg
+		cmd.summaries[n.SetIndex] = dkg
 	}
 }
 
@@ -151,14 +151,14 @@ func (cmd *cmdMagicBlock) saveBlock() error {
 
 // saveDKGSummaries method saves the dkg summaries on file storage
 func (cmd *cmdMagicBlock) saveDKGSummaries() error {
-	for _, node := range cmd.block.Miners.NodesMap {
-		file, err := json.MarshalIndent(cmd.summaries[node.SetIndex], "", " ")
+	for _, n := range cmd.block.Miners.NodesMap {
+		file, err := json.MarshalIndent(cmd.summaries[n.SetIndex], "", " ")
 		if err != nil {
 			return err
 		}
-		filename := fmt.Sprintf("b0mnode%v_dkg.json", node.SetIndex+1)
+		filename := fmt.Sprintf("b0mnode%v_dkg.json", n.SetIndex+1)
 		if cmd.yml.DKGSummaryFilename != "" {
-			filename = fmt.Sprintf("b0mnode%v_%v_dkg.json", node.SetIndex+1, cmd.yml.DKGSummaryFilename)
+			filename = fmt.Sprintf("b0mnode%v_%v_dkg.json", n.SetIndex+1, cmd.yml.DKGSummaryFilename)
 		}
 		path := "/0chain/go/0chain.net/docker.local/config/" + filename
 		if err := ioutil.WriteFile(path, file, 0644); err != nil {

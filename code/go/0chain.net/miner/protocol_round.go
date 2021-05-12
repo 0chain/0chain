@@ -1259,8 +1259,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		tk  = mc.GetLatestLFBTicket(ctx)
 	)
 
-	if tk == nil /* context expired */ ||
-		lfb == nil {
+	if lfb == nil || tk == nil {
 		return
 	}
 

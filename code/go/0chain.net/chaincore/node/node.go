@@ -121,9 +121,9 @@ type Node struct {
 	ErrorCount     int64         `json:"-"`
 	CommChannel    chan struct{} `json:"-"`
 	//These are approximiate as we are not going to lock to update
-	Sent       int64 `json:"-"` // messages sent to this node
-	SendErrors int64 `json:"-"` // failed message sent to this node
-	Received   int64 `json:"-"` // messages received from this node
+	sent       int64 `json:"-"` // messages sent to this node
+	sendErrors int64 `json:"-"` // failed message sent to this node
+	received   int64 `json:"-"` // messages received from this node
 
 	TimersByURI map[string]metrics.Timer     `json:"-"`
 	SizeByURI   map[string]metrics.Histogram `json:"-"`
@@ -178,6 +178,24 @@ func (n *Node) GetErrorCount() int64 {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 	return n.ErrorCount
+}
+
+// AddSendErrors add sent errors
+func (n *Node) AddSendErrors(num int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.sendErrors += num
+	//n.recordChangesFunc(func(tn *Node) {
+	//	tn.sendErrors += num
+	//	fmt.Println("add send errors")
+	//})
+}
+
+// GetSendErrors returns the send errors num
+func (n *Node) GetSendErrors() int64 {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	return n.sendErrors
 }
 
 // SetErrorCount asynchronously.
@@ -370,12 +388,33 @@ func (n *Node) Grab() {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	n.Sent++
+	n.sent++
 }
 
 //Release - release a slot after sending the message
 func (n *Node) Release() {
 	<-n.CommChannel
+}
+
+// GetSent returns the sent num
+func (n *Node) GetSent() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.sent
+}
+
+// GetReceived returns the received num
+func (n *Node) GetReceived() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.received
+}
+
+// AddReceived increases received num
+func (n *Node) AddReceived(num int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.received += num
 }
 
 //GetTimer - get the timer
@@ -423,11 +462,11 @@ func (n *Node) GetLargeMessageSendTimeSec() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime)) / 1000000
 }
 
-func (n *Node) SetLargeMessageSendTime(value float64) {
+func (n *Node) setLargeMessageSendTime(value float64) {
 	atomic.StoreUint64(&n.largeMessageSendTime, math.Float64bits(value))
 }
 
-//GetSmallMessageSendTime - get the time it takes to send a small message to this node
+// GetSmallMessageSendTimeSec gets the time it takes to send a small message to this node
 func (n *Node) GetSmallMessageSendTimeSec() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime)) / 1000000
 }
@@ -436,7 +475,7 @@ func (n *Node) GetSmallMessageSendTime() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime))
 }
 
-func (n *Node) SetSmallMessageSendTime(value float64) {
+func (n *Node) setSmallMessageSendTime(value float64) {
 	atomic.StoreUint64(&n.smallMessageSendTime, math.Float64bits(value))
 }
 
@@ -482,8 +521,8 @@ func (n *Node) updateSendMessageTimings() {
 			minval = maxval
 		}
 	}
-	n.SetLargeMessageSendTime(maxval)
-	n.SetSmallMessageSendTime(minval)
+	n.setLargeMessageSendTime(maxval)
+	n.setSmallMessageSendTime(minval)
 }
 
 func (n *Node) updateRequestMessageTimings() {
@@ -623,12 +662,12 @@ func (n *Node) SetNode(old *Node) {
 		n.SizeByURI[k] = v
 	}
 
-	n.Sent = clone.Sent
-	n.SendErrors = clone.SendErrors
-	n.Received = clone.Received
+	n.sent = clone.sent
+	n.sendErrors = clone.sendErrors
+	n.received = clone.received
 	n.largeMessageSendTime = clone.largeMessageSendTime
-	n.SetLargeMessageSendTime(clone.GetLargeMessageSendTime())
-	n.SetSmallMessageSendTime(clone.GetSmallMessageSendTime())
+	n.setLargeMessageSendTime(clone.GetLargeMessageSendTime())
+	n.setSmallMessageSendTime(clone.GetSmallMessageSendTime())
 	n.LargeMessagePullServeTime = clone.LargeMessagePullServeTime
 	n.SmallMessagePullServeTime = clone.SmallMessagePullServeTime
 	if clone.ProtocolStats != nil {
@@ -668,15 +707,19 @@ func (n *Node) Clone() *Node {
 		InPrevMB:                  n.InPrevMB,
 		LastActiveTime:            n.LastActiveTime,
 		ErrorCount:                n.ErrorCount,
-		Sent:                      n.Sent,
-		SendErrors:                n.SendErrors,
-		Received:                  n.Received,
+		sent:                      n.sent,
+		sendErrors:                n.sendErrors,
+		received:                  n.received,
 		largeMessageSendTime:      n.largeMessageSendTime,
 		smallMessageSendTime:      n.smallMessageSendTime,
 		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
 		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
-		Client:                    *(n.Client.Clone()),
 		CommChannel:               make(chan struct{}, 5),
+	}
+
+	cc := n.Client.Clone()
+	if cc != nil {
+		clone.Client = *cc
 	}
 
 	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))

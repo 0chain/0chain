@@ -1,40 +1,73 @@
-// +build has-issues-exclude-from-build
-
 package client
 
 import (
-	"0chain.net/core/logging"
-	"context"
-	"fmt"
-	"testing"
-	"time"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"context"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
+	"testing"
+	"time"
 )
 
 func init() {
 	logging.InitLogging("testing")
 }
 
+func initDefaultPool() error {
+	mr, err := miniredis.Run()
+	if err != nil {
+		return err
+	}
+
+	memorystore.DefaultPool = &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", mr.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	}
+
+	return nil
+}
+
+func setupEntity() {
+	em := datastore.EntityMetadataImpl{
+		Name:     "client",
+		DB:       "clientdb",
+		Store:    memorystore.GetStorageProvider(),
+		Provider: Provider,
+	}
+	clientEntityMetadata = &em
+	datastore.RegisterEntityMetadata("client", &em)
+
+	memorystore.AddPool(em.DB, memorystore.DefaultPool)
+
+	cliEntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
+}
+
 func TestClientChunkSave(t *testing.T) {
 	common.SetupRootContext(context.Background())
-	SetupEntity(memorystore.GetStorageProvider())
-	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
-	start := time.Now()
-	fmt.Printf("Testing at %v\n", start)
+	if err := initDefaultPool(); err != nil {
+		t.Fatal(err)
+	}
+	setupEntity()
 	numWorkers := 1000
 	done := make(chan bool, 100)
 	for i := 1; i <= numWorkers; i++ {
 		sigScheme := encryption.NewED25519Scheme()
 		err := sigScheme.GenerateKeys()
 		if err != nil {
-			fmt.Printf("Error genreating keys %v\n", err)
-			continue
+			t.Fatal(err)
 		}
-		go postClient(sigScheme.GetPublicKey(), done)
+		go postClient(t, sigScheme.GetPublicKey(), done)
 	}
 	for count := 0; true; {
 		<-done
@@ -43,9 +76,7 @@ func TestClientChunkSave(t *testing.T) {
 			break
 		}
 	}
-	time.Sleep(1000 * time.Millisecond)
 	common.Done()
-	fmt.Printf("Elapsed time: %v\n", time.Since(start))
 }
 
 func TestClientID(t *testing.T) {
@@ -53,26 +84,24 @@ func TestClientID(t *testing.T) {
 	entity := Provider()
 	client, ok := entity.(*Client)
 	if !ok {
-		panic("it's not ok!\n")
+		t.Fatal("expected Client implementation")
 	}
 	client.SetPublicKey(publicKey)
-	fmt.Printf("client id: %v\n", client.ID)
 }
 
-func postClient(publicKey string, done chan<- bool) {
+func postClient(t *testing.T, publicKey string, done chan<- bool) {
 	entity := Provider()
 	client, ok := entity.(*Client)
 	if !ok {
-		panic("it's not ok!\n")
+		t.Fatal("expected Client implementation")
 	}
 	client.SetPublicKey(publicKey)
 
 	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
-	//ctx := memorystore.WithEntityConnection(context.Background(), clientEntityMetadata)
-	//defer memorystore.Close(ctx)
+	ctx = memorystore.WithConnection(ctx)
 	_, err := PutClient(ctx, entity)
 	if err != nil {
-		fmt.Printf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
+		t.Errorf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
 	}
 	done <- true
 }

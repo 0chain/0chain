@@ -90,10 +90,13 @@ func (cf *CollectionMemberField) InitCollectionScore() {
 
 // Clone returns a clone of this collection
 func (cf *CollectionMemberField) Clone() *CollectionMemberField {
-	return &CollectionMemberField{
-		EntityCollection: &(*cf.EntityCollection),
-		CollectionScore:  cf.CollectionScore,
+	cmf := &CollectionMemberField{
+		CollectionScore: cf.CollectionScore,
 	}
+	if cf.EntityCollection != nil {
+		cmf.EntityCollection = &(*cf.EntityCollection)
+	}
+	return cmf
 }
 
 /*GetCollectionScore - Get collection score */

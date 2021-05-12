@@ -28,7 +28,7 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -673,9 +673,9 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 				fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
 			}
 		}
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetSent())
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetSendErrors())
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetReceived())
 		fmt.Fprintf(w, "<td>%v</td>", nd.GetLastActiveTime().Format(common.DateTimeFormat))
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTimeSec())
 		lmt := nd.GetLargeMessageSendTimeSec()
@@ -1408,7 +1408,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 
 		out, err := json.MarshalIndent(errMsg, "", "    ")
 		if err != nil {
-			Logger.Error("Dump state failed", zap.Error(err))
+			logging.Logger.Error("Dump state failed", zap.Error(err))
 			return
 		}
 		fmt.Fprintf(w, string(out))

@@ -89,22 +89,28 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 	// DKG process constants
 	const (
-		repeat = 5 * time.Second // repeat phase from sharders requesting
+		repeat = 5 * time.Second // repeat phase from sharders
 	)
 
 	var (
-		phaseq = mc.PhaseEvents() //
-		pe     chain.PhaseEvent   //
-		last   time.Time          // last time phase event given
+		phaseEventsChan = mc.PhaseEvents()
+		newPhaseEvent   chain.PhaseEvent
 
-		// if a phase event didn't given after the 'repeat' period,
-		// then request it from sharders; so, for an inactive node we
-		// will request for sharders every 'repeat x2' = 10s
-		ticker  = time.NewTicker(repeat) //
-		tcikerq = ticker.C               //
+		// last time a phase event is received from miner in
+		// phaseEventChan
+		lastPhaseEventTime time.Time
 
-		phaseRound int64 // phase starting round
-		err        error
+		// if a phase event isn't given after the 'repeat' period,
+		// then request it from sharders; for an inactive node we
+		// will request from sharders every 'repeat x 2' = 10s
+		ticker = time.NewTicker(repeat)
+
+		// start round of the accepted phase
+		phaseStartRound int64
+
+		// flag indicating whether previous share phase failed
+		// and should be retried with the already generated shares
+		retrySharePhase bool
 	)
 
 	defer ticker.Stop()
@@ -113,8 +119,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case tp := <-tcikerq:
-			if tp.Sub(last) <= repeat || len(phaseq) > 0 {
+		case tp := <-ticker.C:
+			if tp.Sub(lastPhaseEventTime) <= repeat || len(phaseEventsChan) > 0 {
 				continue // already have a fresh phase
 			}
 			// otherwise, request phase from sharders; since we aren't using
@@ -123,52 +129,57 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// buffered (at least 1 element in the buffer)
 			mc.GetPhaseFromSharders()
 			continue
-		case pe = <-phaseq:
-			if !pe.Sharders {
-				last = time.Now() // keep last time the phase given by the miner
+		case newPhaseEvent = <-phaseEventsChan:
+			if !newPhaseEvent.Sharders {
+				// keep last time the phase given by the miner
+				lastPhaseEventTime = time.Now()
 			}
 		}
 
-		if pe.Phase.StartRound == phaseRound {
-			continue // phase already accepted
+		pn := newPhaseEvent.Phase
+
+		// only retry if new phase is share phase
+		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
+
+		if pn.StartRound == phaseStartRound {
+			if !retrySharePhase {
+				continue // phase already accepted
+			}
 		}
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
 			active = mc.IsActiveInChain()
-
-			pn = pe.Phase
 		)
 
-		if active && pe.Sharders {
+		if active && newPhaseEvent.Sharders {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
 		logging.Logger.Debug("dkg process trying",
 			zap.Any("next_phase", pn),
 			zap.Bool("active", active),
-			zap.String("phase", mc.CurrentPhase().String()),
+			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
-		// skip the check only for share
-		if pn.Phase != minersc.Share {
-			if pn.Phase != 0 && pn.Phase != mc.CurrentPhase()+1 {
-				logging.Logger.Debug("dkg process -- jumping over a phase;"+
-					" skip, wait for 'start'",
-					zap.Int("current_phase", int(mc.CurrentPhase())),
-					zap.Any("phase", pn.Phase))
-				mc.SetCurrentPhase(minersc.Unknown)
-				continue
-			}
+		// only go through if pn.Phase is expected
+		if !(pn.Phase == minersc.Start ||
+			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
+			logging.Logger.Debug(
+				"dkg process: jumping over a phase; skip and wait for restart",
+				zap.Any("next_phase", pn.Phase),
+				zap.Any("current_phase", mc.CurrentPhase()))
+			mc.SetCurrentPhase(minersc.Unknown)
+			continue
 		}
 
 		logging.Logger.Info("dkg process start", zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
+			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
 		if !ok {
-			logging.Logger.Debug("dkg process: no such phase function",
+			logging.Logger.Debug("dkg process: no such phase func",
 				zap.Any("phase", pn.Phase))
 			continue
 		}
@@ -176,7 +187,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		logging.Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
 
 		var txn *httpclientutil.Transaction
-		if err = func() error {
+		if err := func() error {
 			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 			return mc.LatestFinalizedMagicBlockUpdate(cctx, func(lfmb *block.Block) error {
@@ -188,23 +199,29 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 				return nil
 			})
 		}(); err != nil {
-			logging.Logger.Error("smart contract function failed",
-				zap.Any("error", err), zap.Any("next_phase", pn))
-			continue
+			logging.Logger.Error("dkg process: phase func failed",
+				zap.Any("error", err),
+				zap.Any("next_phase", pn),
+				zap.Any("current_phase", mc.CurrentPhase()))
+			if pn.Phase != minersc.Share {
+				continue
+			}
+
+			retrySharePhase = true
 		}
 
-		logging.Logger.Debug("dkg process move phase",
+		logging.Logger.Debug("dkg process: move phase",
 			zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
+			zap.Any("current_phase", mc.CurrentPhase()),
 			zap.Any("txn", txn))
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
-			var oldPhase = mc.CurrentPhase()
-			mc.SetCurrentPhase(pn.Phase) //
-			phaseRound = pn.StartRound   //
-			logging.Logger.Debug("dkg process moved phase",
-				zap.Any("old_phase", oldPhase),
-				zap.Any("phase", mc.CurrentPhase()))
+			prevPhase := mc.CurrentPhase()
+			mc.SetCurrentPhase(pn.Phase)
+			phaseStartRound = pn.StartRound
+			logging.Logger.Debug("dkg process: moved phase",
+				zap.Any("prev_phase", prevPhase),
+				zap.Any("current_phase", mc.CurrentPhase()))
 		}
 	}
 

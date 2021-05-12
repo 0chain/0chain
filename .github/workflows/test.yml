@@ -1,7 +1,6 @@
 name: Lint test
 
-on:
-#  [push]
+on: [push]
 
 jobs:
   lint:

@@ -11,7 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -345,7 +345,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 		}
 
 		if gfb.ComputeHash() != ticket.LFBHash {
-			Logger.Error("fetch_fb_from_sharders - wrong block hash",
+			logging.Logger.Error("fetch_fb_from_sharders - wrong block hash",
 				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash))
 			return nil, common.NewError("fetch_fb_from_sharders",
 				"wrong block hash")
@@ -354,14 +354,14 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 		err = c.VerifyNotarization(ctx, gfb, gfb.GetVerificationTickets(),
 			gfb.Round)
 		if err != nil {
-			Logger.Error("fetch_fb_from_sharders - not notarized",
+			logging.Logger.Error("fetch_fb_from_sharders - not notarized",
 				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash),
 				zap.Error(err))
 			return nil, err
 		}
 
 		if err = gfb.Validate(ctx); err != nil {
-			Logger.Error("fetch_fb_from_sharders - invalid",
+			logging.Logger.Error("fetch_fb_from_sharders - invalid",
 				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash),
 				zap.Any("block_obj", gfb), zap.Error(err))
 			return nil, err
@@ -407,7 +407,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		_ interface{}, err error) {
 
-		Logger.Info("fetch_nb_from_miners",
+		logging.Logger.Info("fetch_nb_from_miners",
 			zap.String("block", hash),
 			zap.Int64("cround", cround),
 			zap.Int64("current_round", c.GetCurrentRound()))
@@ -418,7 +418,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 		}
 
 		if nb.ComputeHash() != hash {
-			Logger.Error("fetch_nb_from_miners - wrong block hash",
+			logging.Logger.Error("fetch_nb_from_miners - wrong block hash",
 				zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
 			return nil, common.NewError("fetch_nb_from_miners",
 				"wrong block hash")
@@ -427,20 +427,20 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(),
 			nb.Round)
 		if err != nil {
-			Logger.Error("fetch_nb_from_miners - not notarized",
+			logging.Logger.Error("fetch_nb_from_miners - not notarized",
 				zap.Int64("round", nb.Round), zap.String("block", hash),
 				zap.Error(err))
 			return nil, err
 		}
 
 		if err = nb.Validate(ctx); err != nil {
-			Logger.Error("fetch_nb_from_miners - invalid",
+			logging.Logger.Error("fetch_nb_from_miners - invalid",
 				zap.Int64("round", nb.Round), zap.String("block", hash),
 				zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
 
-		Logger.Debug("fetch_nb_from_miners -- ok",
+		logging.Logger.Debug("fetch_nb_from_miners -- ok",
 			zap.String("block", nb.Hash),
 			zap.Int64("round", nb.Round),
 			zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
@@ -463,28 +463,42 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 
 // RequestEntityFromMiners requests entity from miners in latest finalized magic block
 func (c *Chain) RequestEntityFromMiners(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.lfmbMutex.Lock()
-	c.latestFinalizedMagicBlock.Miners.RequestEntity(ctx, requestor, params, handler)
-	c.lfmbMutex.Unlock()
+	c.RequestEntityFromMinersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
 }
 
 // RequestEntityFromSharders requests entity from sharders in latest finalized magic block
 func (c *Chain) RequestEntityFromSharders(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	c.RequestEntityFromShardersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
+}
+
+// RequestEntityFromMinersOnMB requests entity from miners on given magic block
+func (c *Chain) RequestEntityFromMinersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Miners.RequestEntity(ctx, requestor, params, handler)
+}
+
+// RequestEntityFromShardersOnMB requests entity from sharders on given magic block
+func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Sharders.RequestEntity(ctx, requestor, params, handler)
+}
+
+func (c *Chain) getLatestFinalizedMagicBlock() *block.MagicBlock {
 	c.lfmbMutex.Lock()
-	c.latestFinalizedMagicBlock.Sharders.RequestEntity(ctx, requestor, params, handler)
-	c.lfmbMutex.Unlock()
+	defer c.lfmbMutex.Unlock()
+	return c.latestFinalizedMagicBlock.MagicBlock
 }
 
 func (c *Chain) requestEntityFromSharderOrAll(ctx context.Context, sharderID string,
 	requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-	if sh := c.latestFinalizedMagicBlock.Sharders.GetNode(sharderID); sh != nil {
+	sharders := c.getLatestFinalizedMagicBlock().Sharders
+
+	if sh := sharders.GetNode(sharderID); sh != nil {
 		sh.RequestEntityFromNode(ctx, requestor, params, handler)
 		return
 	}
 
-	c.latestFinalizedMagicBlock.Sharders.RequestEntityFromAll(ctx, FBRequestor, params, handler)
+	sharders.RequestEntityFromAll(ctx, FBRequestor, params, handler)
 }
 
 //
@@ -526,7 +540,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	}
 
 	if rpl.Err != nil {
-		Logger.Error("get notarized block - error",
+		logging.Logger.Error("get notarized block - error",
 			zap.Int64("cround", cround), zap.Int64("round", rn),
 			zap.String("block", hash), zap.Error(rpl.Err))
 		return // nil
@@ -537,14 +551,14 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 
 	var r = c.GetRound(nb.Round)
 	if r == nil {
-		Logger.Info("get notarized block - no round, creating...",
+		logging.Logger.Info("get notarized block - no round, creating...",
 			zap.Int64("round", nb.Round), zap.String("block", nb.Hash),
 			zap.Int64("cround", cround))
 
 		r = c.RoundF.CreateRoundF(nb.Round)
 	}
 
-	Logger.Info("got notarized block", zap.String("block", nb.Hash),
+	logging.Logger.Info("got notarized block", zap.String("block", nb.Hash),
 		zap.Int64("round", nb.Round),
 		zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 
@@ -591,7 +605,7 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	}
 
 	if rpl.Err != nil {
-		Logger.Error("async fetch fb from sharders - error",
+		logging.Logger.Error("async fetch fb from sharders - error",
 			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
 			zap.Error(rpl.Err))
 		return // nil
@@ -604,7 +618,7 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	if afterFetcher != nil {
 		var err error
 		if err = afterFetcher.AfterFetch(ctx, fb); err != nil {
-			Logger.Error("async fetch fb from sharders - rejected by "+
+			logging.Logger.Error("async fetch fb from sharders - rejected by "+
 				"the 'after fetch' hook", zap.Int64("round", bfr.round),
 				zap.String("block", bfr.hash), zap.Error(err))
 			return // nil
@@ -616,13 +630,13 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 
 	var r = c.GetRound(fb.Round)
 	if r == nil {
-		Logger.Info("async fetch fb from sharders - no round, creating...",
+		logging.Logger.Info("async fetch fb from sharders - no round, creating...",
 			zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 
 		r = c.RoundF.CreateRoundF(fb.Round)
 	}
 
-	Logger.Info("async fetch fb from sharders", zap.String("block", fb.Hash),
+	logging.Logger.Info("async fetch fb from sharders", zap.String("block", fb.Hash),
 		zap.Int64("round", fb.Round))
 
 	var b *block.Block

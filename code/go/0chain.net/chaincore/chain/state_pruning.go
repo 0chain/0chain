@@ -7,7 +7,7 @@ import (
 	"0chain.net/chaincore/node"
 
 	"0chain.net/chaincore/block"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/remeh/sizedwaitgroup"
@@ -50,7 +50,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	} else {
 		if lfb.Round == 0 {
-			Logger.Debug("Last finalized block round is 0")
+			logging.Logger.Debug("Last finalized block round is 0")
 			return
 		}
 	}
@@ -62,7 +62,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	}
 
-	Logger.Info("prune client state - new version",
+	logging.Logger.Info("prune client state - new version",
 		zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("latest_finalized_round", lfb.Round),
 		zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
@@ -122,7 +122,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
 
 	if err != nil {
-		Logger.Error("prune client state (update origin)",
+		logging.Logger.Error("prune client state (update origin)",
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
@@ -136,7 +136,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			return
 		}
 	} else {
-		Logger.Info("prune client state (update origin)",
+		logging.Logger.Info("prune client state (update origin)",
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
@@ -152,7 +152,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	ps.Stage = util.PruneStateDelete
 	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
-		Logger.Info("prune client state error", zap.Error(err))
+		logging.Logger.Info("prune client state error", zap.Error(err))
 	}
 	ps.Stage = util.PruneStateCommplete
 
@@ -161,11 +161,11 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	StatePruneDeleteTimer.Update(d2)
 
 	var (
-		logf   = Logger.Info
+		logf   = logging.Logger.Info
 		logMsg = "prune client state stats"
 	)
 	if d1 > time.Second || d2 > time.Second {
-		logf = Logger.Error
+		logf = logging.Logger.Error
 		logMsg = logMsg + " - slow"
 	}
 
