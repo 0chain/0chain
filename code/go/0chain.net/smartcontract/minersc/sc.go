@@ -190,6 +190,7 @@ func getGlobalNode(balances cstate.StateContextI) (
 	gn.MinN = conf.GetInt(pfx + "min_n")
 	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
 	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
+	gn.XPercent = conf.GetFloat64(pfx + "x_percent")
 	gn.MaxS = conf.GetInt(pfx + "max_s")
 	gn.MinS = conf.GetInt(pfx + "min_s")
 	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")

@@ -449,7 +449,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		}
 	}
 	for key, sharesRevealed := range dkgMinersList.RevealedShares {
-		if sharesRevealed == dkgMinersList.N {
+		if sharesRevealed >= dkgMinersList.T {
 			delete(dkgMinersList.SimpleNodes, key)
 			delete(gsos.Shares, key)
 			delete(mpks.Mpks, key)
@@ -481,10 +481,6 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	// 1. remove GSOS not listed in DKG
-	// 2. remove MPKS not listed in DKG
-	// 3. continue as usual
-
 	for id := range gsos.Shares {
 		if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
 			delete(gsos.Shares, id)
@@ -497,8 +493,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		}
 	}
 
-	magicBlock, err := msc.CreateMagicBlock(balances, sharders, dkgMinersList,
-		gsos, mpks, pn)
+	magicBlock, err := msc.createMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
 		return err
 	}
@@ -721,12 +716,19 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 	return
 }
 
-func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
-	sharderList *MinerNodes, dkgMinersList *DKGMinerNodes,
-	gsos *block.GroupSharesOrSigns, mpks *block.Mpks, pn *PhaseNode) (
-	*block.MagicBlock, error) {
+func (msc *MinerSmartContract) createMagicBlock(
+	balances cstate.StateContextI,
+	sharders *MinerNodes,
+	dkgMinersList *DKGMinerNodes,
+	gsos *block.GroupSharesOrSigns,
+	mpks *block.Mpks,
+	pn *PhaseNode,
+) (*block.MagicBlock, error) {
+
+	pmb := balances.GetLastestFinalizedMagicBlock()
 
 	magicBlock := block.NewMagicBlock()
+
 	magicBlock.Miners = node.NewPool(node.NodeTypeMiner)
 	magicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
 	magicBlock.SetShareOrSigns(gsos)
@@ -734,6 +736,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 	magicBlock.T = dkgMinersList.T
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
+
 	for _, v := range dkgMinersList.SimpleNodes {
 		n := &node.Node{}
 		n.ID = v.ID
@@ -746,11 +749,11 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
+		n.InPrevMB = pmb.Miners.HasNode(v.ID)
 		magicBlock.Miners.AddNode(n)
 	}
-	prevMagicBlock := balances.GetLastestFinalizedMagicBlock()
 
-	for _, v := range sharderList.Nodes {
+	for _, v := range sharders.Nodes {
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -762,10 +765,12 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 		n.Type = node.NodeTypeSharder
 		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
+		n.InPrevMB = pmb.Sharders.HasNode(v.ID)
 		magicBlock.Sharders.AddNode(n)
 	}
-	magicBlock.MagicBlockNumber = prevMagicBlock.MagicBlock.MagicBlockNumber + 1
-	magicBlock.PreviousMagicBlockHash = prevMagicBlock.MagicBlock.Hash
+
+	magicBlock.MagicBlockNumber = pmb.MagicBlock.MagicBlockNumber + 1
+	magicBlock.PreviousMagicBlockHash = pmb.MagicBlock.Hash
 	magicBlock.StartingRound = pn.CurrentRound + PhaseRounds[Wait]
 	magicBlock.Hash = magicBlock.GetHash()
 	return magicBlock, nil
