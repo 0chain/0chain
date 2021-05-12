@@ -242,6 +242,10 @@ func TestStore_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if err := refreshDBs(); err != nil {
+				t.Error(err)
+			}
+
 			ems := &ememorystore.Store{}
 			if err := ems.Delete(tt.args.ctx, tt.args.entity); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
