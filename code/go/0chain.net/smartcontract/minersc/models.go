@@ -942,13 +942,13 @@ func (dkgmn *DKGMinerNodes) reduce(
 	maxMiners := min(dkgmn.MaxN, len(pmbMiners)+len(newMiners))
 
 	// get number of miners from previous mb that are required to be part of next mb
-	x := min(len(pmbMiners), int(dkgmn.XPercent*float64(maxMiners)))
+	x := min(len(pmbMiners), int(math.Ceil(dkgmn.XPercent*float64(maxMiners))))
 	y := maxMiners - x
 
 	// select first x miners from pmb miners
 	selectedMiners = pmbMiners[:x]
 
-	// put remaining miners from pmb miners into new miners list
+	// add rest of the pmb miners into new miners list
 	newMiners = append(newMiners, pmbMiners[x:]...)
 	sort.SliceStable(newMiners, func(i, j int) bool {
 		return newMiners[i].TotalStaked > newMiners[j].TotalStaked
