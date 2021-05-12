@@ -88,11 +88,16 @@ func (np *Pool) GetNode(id string) *Node {
 var none = make([]*Node, 0)
 
 // TODO: refactor to return a copy of Nodes instead of the pointers
-func (np *Pool) shuffleNodes() (shuffled []*Node) {
+func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 	shuffled = np.Nodes
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
+	if preferPrevMBNodes {
+		sort.SliceStable(shuffled, func(i, j int) bool {
+			return shuffled[i].InPrevMB
+		})
+	}
 	return
 }
 
@@ -123,7 +128,7 @@ func (np *Pool) GetActiveCount() (count int) {
 func (np *Pool) GetRandomNodes(num int) []*Node {
 	np.mmx.Lock()
 	defer np.mmx.Unlock()
-	nodes := np.shuffleNodes()
+	nodes := np.shuffleNodes(false)
 	if num > len(nodes) {
 		num = len(nodes)
 	}
@@ -153,16 +158,16 @@ func (np *Pool) getNodesByLargeMessageTime() (sorted []*Node) {
 	return
 }
 
-func (np *Pool) shuffleNodesLock() []*Node {
+func (np *Pool) shuffleNodesLock(preferPrevMBNodes bool) []*Node {
 	np.mmx.Lock()
 	defer np.mmx.Unlock()
-	return np.shuffleNodes()
+	return np.shuffleNodes(preferPrevMBNodes)
 }
 
 /*Print - print this pool. This will be used for http response and Read method
 should be able to consume it*/
 func (np *Pool) Print(w io.Writer) {
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(false)
 	for _, node := range nodes {
 		if node.IsActive() {
 			node.Print(w)

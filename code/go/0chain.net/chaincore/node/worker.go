@@ -82,7 +82,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(true)
 	for i, node := range nodes {
 		select {
 		case <-ctx.Done():
