@@ -2,6 +2,7 @@ package blockdb
 
 import (
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -60,10 +61,20 @@ func TestDBWrite(t *testing.T) {
 	students[0] = &Student{Name: "Bitcoin - the first cryptocurrency", ID: "2009"}
 	students[1] = &Student{Name: "Linux - the most popular open source operating system", ID: "1991"}
 	students[2] = &Student{Name: "Apache - the first open source web server", ID: "1995"}
+
+	var wg sync.WaitGroup
 	for _, s := range students {
-		err = db.WriteData(s)
-		require.NoError(t, err)
+		wg.Add(1)
+		go func(s *Student, wg *sync.WaitGroup) {
+			defer wg.Done()
+			err = db.WriteData(s)
+			if err != nil {
+				panic(err)
+			}
+		}(s, &wg)
 	}
+	wg.Wait()
+
 	err = db.Save()
 	require.NoError(t, err)
 	cls2 := &Class{}

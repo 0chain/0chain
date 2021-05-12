@@ -1,42 +1,57 @@
 package common
 
 import (
-	"fmt"
 	"sync"
 	"testing"
-	//"encoding/hex"
 )
 
 type CodecTestStruct struct {
 	Numbers []int `json:"numbers" msgpack:"nums"`
+	mutex   sync.RWMutex
+}
+
+func (c *CodecTestStruct) getNumbers() []int {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	nums := make([]int, len(c.Numbers))
+	copy(nums, c.Numbers)
+	return nums
+}
+
+func (c *CodecTestStruct) setNumbers(numbers []int) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.Numbers = make([]int, len(numbers))
+	copy(c.Numbers, numbers)
+}
+
+func (c *CodecTestStruct) DoReadLock() {
+	c.mutex.RLock()
+}
+
+func (c *CodecTestStruct) DoReadUnlock() {
+	c.mutex.RUnlock()
 }
 
 func TestConcurrentCodec(t *testing.T) {
 	var o CodecTestStruct
 	var wg sync.WaitGroup
-	count := 0
-	for idx := 0; idx < 100; idx++ {
-		o.Numbers = append(o.Numbers, 1)
-		for i := 0; i < 100; i++ {
-			var mi = i
-			go func() {
+	for idx := 0; idx < 10; idx++ {
+		o.setNumbers(append(o.getNumbers(), 1))
+		for i := 0; i < 10; i++ {
+			go func(mi int, wg *sync.WaitGroup) {
 				wg.Add(1)
-				nums := o.Numbers
+				nums := o.getNumbers()
 				for j := 0; j < 1; j++ {
 					nums = append(nums, 100*mi+j)
 				}
-				o.Numbers = nums
+				o.setNumbers(nums)
 				wg.Done()
-			}()
+			}(i, &wg)
 		}
-		for i := 0; i < 100; i++ {
-			encoded := ToMsgpack(o)
-			if encoded.Len() > 16 {
-				count++
-			}
-			//fmt.Printf("encoded: %v %v\n",len(o.Numbers),hex.EncodeToString(encoded.Bytes())[:16])
+		for i := 0; i < 10; i++ {
+			_ = ToMsgpack(&o)
 		}
 		wg.Wait()
-		fmt.Printf("all done: %v\n", count)
 	}
 }

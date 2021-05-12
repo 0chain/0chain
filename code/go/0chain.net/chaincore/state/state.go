@@ -2,7 +2,7 @@ package state
 
 import (
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"bytes"
 	"encoding/binary"
@@ -51,7 +51,7 @@ func (s *State) Decode(data []byte) error {
 	var balance Balance
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {
-		Logger.Error("invalid state")
+		logging.Logger.Error("invalid state")
 	}
 	binary.Read(buf, binary.LittleEndian, &origin)
 	binary.Read(buf, binary.LittleEndian, &balance)

@@ -953,6 +953,9 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"updating stake pool: %v", err)
 	}
 	conf.Minted += info.minted
+	if conf.Minted >= conf.MaxMint {
+		return "", common.NewErrorf("stake_pool_lock_failed", "reached max mint")
+	}
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)

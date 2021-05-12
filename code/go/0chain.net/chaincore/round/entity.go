@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -290,7 +290,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 
 	if found > -1 {
 		fb := r.notarizedBlocks[found]
-		Logger.Info("Removing the old notarized block with the same rank",
+		logging.Logger.Info("Removing the old notarized block with the same rank",
 			zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
 			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()),
 			zap.Int("fb_toc", fb.RoundTimeoutCount),
@@ -469,11 +469,11 @@ func SetupRoundSummaryDB() {
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) computeMinerRanks(minersNum int) {
-	Logger.Info("waiting to compute miner ranks",
+	logging.Logger.Info("waiting to compute miner ranks",
 		zap.Any("num_miners", minersNum),
 		zap.Any("round", r.Number))
 	seed := r.GetRandomSeed()
-	Logger.Info("compute miner ranks",
+	logging.Logger.Info("compute miner ranks",
 		zap.Any("num_miners", minersNum),
 		zap.Any("round", r.Number))
 	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(minersNum)
@@ -492,13 +492,13 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
+		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
-	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
+	logging.Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
 		zap.Any("miner", miner), zap.Any("round", r.Number),
 		zap.Any("miner_set_index", miner.SetIndex))
 	if miner.SetIndex >= len(r.minerPerm) {
-		Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
+		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
 			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),
 			zap.Any("node", miner))
 		return -1
@@ -511,21 +511,21 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	nodes := miners.CopyNodes()
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
+	logging.Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
 		zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
 		if nodes[i].SetIndex < len(r.minerPerm) {
 			idxi = r.minerPerm[nodes[i].SetIndex]
 		} else {
-			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
 				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[i].SetIndex),
 				zap.Any("node", nodes[i]))
 		}
 		if nodes[j].SetIndex < len(r.minerPerm) {
 			idxj = r.minerPerm[nodes[j].SetIndex]
 		} else {
-			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
 				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[j].SetIndex),
 				zap.Any("node", nodes[j]))
 		}
@@ -554,7 +554,7 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	defer r.mutex.Unlock()
 
 	if _, ok := r.shares[share.party.GetKey()]; ok {
-		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
 	r.setState(RoundShareVRF)
@@ -568,11 +568,11 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	defer r.mutex.Unlock()
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
-		Logger.Info("AddVRFShare Already at threshold. Returning false.")
+		logging.Logger.Info("AddVRFShare Already at threshold. Returning false.")
 		return false
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
-		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
 	r.setState(RoundShareVRF)

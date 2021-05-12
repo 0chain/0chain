@@ -2,8 +2,6 @@ package encryption
 
 import (
 	"bytes"
-	"fmt"
-	"os"
 	"testing"
 )
 
@@ -21,7 +19,6 @@ func TestED25519ChainWriteKeys(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	sigScheme.WriteKeys(os.Stdout)
 }
 
 func TestED25519ReadKeys(t *testing.T) {
@@ -41,11 +38,8 @@ func TestED25519SignAndVerify(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("signature: %v\n", signature)
 	if ok, err := sigScheme.Verify(signature, expectedHash); err != nil || !ok {
-		fmt.Printf("Verification failed\n")
-	} else {
-		fmt.Printf("Signing Verification successful\n")
+		t.Fatal("Verification failed\n")
 	}
 }
 
