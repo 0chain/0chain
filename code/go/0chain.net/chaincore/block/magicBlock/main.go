@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"strconv"
 
 	"0chain.net/chaincore/block"
@@ -50,8 +51,8 @@ func (cmd *cmdMagicBlock) setupBlock() {
 	mb.MagicBlockNumber = cmd.yml.MagicBlockNumber
 	mb.StartingRound = cmd.yml.StartingRound
 	mb.N = len(cmd.yml.Miners)
-	mb.T = int(float64(mb.N) * (float64(cmd.yml.TPercent) / 100.0))
-	mb.K = int(float64(mb.N) * (float64(cmd.yml.KPercent) / 100.0))
+	mb.K = int(math.Ceil(float64(cmd.yml.KPercent) / 100.0 * float64(mb.N)))
+	mb.T = int(math.Ceil(float64(cmd.yml.TPercent) / 100.0 * float64(mb.N)))
 	cmd.block = mb
 }
 
@@ -77,7 +78,7 @@ func (cmd *cmdMagicBlock) setupMPKS() {
 		cmd.dkgs[id] = bls.MakeDKG(cmd.block.T, cmd.block.N, id)
 		mpk := &block.MPK{ID: id}
 		for _, v := range cmd.dkgs[id].Mpk {
-			mpk.Mpk = append(mpk.Mpk, v.SerializeToHexStr())
+			mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 		}
 		cmd.block.Mpks.Mpks[id] = mpk
 	}
@@ -88,21 +89,27 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
 	cmd.setupDKGSummaries()
 	for mid := range cmd.block.Miners.NodesMap {
-		ss := block.NewShareOrSigns()
+		sos := block.NewShareOrSigns()
+		sos.ID = mid
 		partyId := bls.ComputeIDdkg(mid)
-		ss.ID = mid
-		var privateKey bls.Key
-		privateKey.SetHexString(cmd.yml.MinersMap[mid].PrivateKey)
 		for id, node := range cmd.block.Miners.NodesMap {
 			otherPartyId := bls.ComputeIDdkg(id)
-			share, _ := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
+			share, err := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
+			if err != nil {
+				panic(err)
+			}
 			cmd.summaries[node.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
-			message := encryption.Hash(share.GetHexString())
-			ss.ShareOrSigns[id] = &bls.DKGKeyShare{
-				Message: message,
-				Sign:    privateKey.Sign(message).SerializeToHexStr()}
+			if mid != id {
+				var privateKey bls.Key
+				privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey)
+				message := encryption.Hash(share.GetHexString())
+				sos.ShareOrSigns[id] = &bls.DKGKeyShare{
+					Message: message,
+					Sign:    privateKey.Sign(message).GetHexString(),
+				}
+			}
 		}
-		cmd.block.ShareOrSigns.Shares[mid] = ss
+		cmd.block.ShareOrSigns.Shares[mid] = sos
 	}
 }
 
@@ -149,7 +156,11 @@ func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 		if err != nil {
 			return err
 		}
-		path := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/b0mnode%v_%v_dkg.json", node.SetIndex+1, cmd.yml.DKGSummaryFilename)
+		filename := fmt.Sprintf("b0mnode%v_dkg.json", node.SetIndex+1)
+		if cmd.yml.DKGSummaryFilename != "" {
+			filename = fmt.Sprintf("b0mnode%v_%v_dkg.json", node.SetIndex+1, cmd.yml.DKGSummaryFilename)
+		}
+		path := "/0chain/go/0chain.net/docker.local/config/" + filename
 		if err := ioutil.WriteFile(path, file, 0644); err != nil {
 			return err
 		}
@@ -178,7 +189,7 @@ func main() {
 		log.Printf("Error writing json file: %v\n", err.Error())
 		return
 	}
-	log.Printf("Success: Magic block already created")
+	log.Printf("Success: Magic block created")
 	if err := cmd.saveDKGSummaries(); err != nil {
 		log.Printf("Error writing json file: %v\n", err.Error())
 		return
