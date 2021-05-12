@@ -436,6 +436,8 @@ func makeSCRESTAPICall(address, relative, sharder string,
 		Logger.Error("requesting phase node from sharder",
 			zap.String("sharder", sharder),
 			zap.Error(err))
+		collect <- nil
+		return
 	}
 	collect <- seri // regardless error
 }
