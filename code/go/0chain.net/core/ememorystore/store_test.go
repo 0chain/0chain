@@ -334,8 +334,6 @@ func TestStore_MultiRead(t *testing.T) {
 }
 
 func TestStore_MultiWrite(t *testing.T) {
-	t.Parallel()
-
 	b1 := block.NewBlock("", 1)
 	b1.Hash = b1.ComputeHash()
 	b2 := block.NewBlock("", 2)
@@ -364,10 +362,7 @@ func TestStore_MultiWrite(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			if err := refreshDBs(); err != nil {
 				t.Error(err)
 			}
