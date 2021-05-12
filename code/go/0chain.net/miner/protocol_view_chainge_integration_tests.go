@@ -143,8 +143,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 		if k == selfNodeKey {
 			continue
 		}
-		var _, ok = sos.ShareOrSigns[k]
-		if isRevealed || !ok {
+		if _, ok := sos.ShareOrSigns[k]; !ok || isRevealed {
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
 		}
@@ -269,13 +268,20 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 		mc.viewChangeProcess.viewChangeDKG = vc
 	}
 
+	logging.Logger.Debug("[vc] contribute_mpk", zap.Int("T", dmn.T),
+		zap.Int("K", dmn.K), zap.Int("N", dmn.N),
+		zap.Int64("mb_number",
+			mc.viewChangeProcess.viewChangeDKG.MagicBlockNumber))
+
 	for _, v := range mc.viewChangeProcess.viewChangeDKG.Mpk {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 
+	logging.Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
+
 	var (
-		state     = crpc.Client().State()
-		good, bad = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
+		state             = crpc.Client().State()
+		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
 	)
