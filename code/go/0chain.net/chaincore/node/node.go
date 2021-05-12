@@ -116,6 +116,7 @@ type Node struct {
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status"`
+	InPrevMB       bool          `json:"in_prev_mb"`
 	LastActiveTime time.Time     `json:"-"`
 	ErrorCount     int64         `json:"-"`
 	CommChannel    chan struct{} `json:"-"`
@@ -664,6 +665,7 @@ func (n *Node) Clone() *Node {
 		Description:               n.Description,
 		SetIndex:                  n.SetIndex,
 		Status:                    n.Status,
+		InPrevMB:                  n.InPrevMB,
 		LastActiveTime:            n.LastActiveTime,
 		ErrorCount:                n.ErrorCount,
 		Sent:                      n.Sent,
