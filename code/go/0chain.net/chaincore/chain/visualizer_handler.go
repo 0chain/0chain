@@ -61,7 +61,8 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 	bNodes := make([]*bNode, 0, len(bl))
 	radius := 3
 	padding := 5
-	DXR := c.NumGenerators*radius + padding
+	numGenerators := c.GetGeneratorsNum()
+	DXR := numGenerators*radius + padding
 	DYR := DXR
 	for _, b := range bl {
 		if b.Round < minr {
@@ -86,7 +87,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 			Finalized:          finalized,
 			X:                  x*DXR*2 + DXR,
 			Y:                  y*DYR*2 + DYR,
-			Size:               6 * (c.NumGenerators - b.RoundRank),
+			Size:               6 * (numGenerators - b.RoundRank),
 		}
 		bNodes = append(bNodes, bNd)
 	}
