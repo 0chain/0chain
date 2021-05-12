@@ -184,8 +184,6 @@ func refreshDBs() error {
 }
 
 func TestStore_Write(t *testing.T) {
-	t.Parallel()
-
 	r := round.NewRound(1)
 	r.BlockHash = encryption.Hash("data")
 
@@ -213,10 +211,7 @@ func TestStore_Write(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			if err := refreshDBs(); err != nil {
 				t.Error(err)
 			}
