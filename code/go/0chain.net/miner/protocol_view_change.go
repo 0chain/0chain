@@ -41,9 +41,9 @@ const (
 	scRestAPIGetMinerList  = "/getMinerList"
 )
 
-// SmartContractFunctions represents local VC function returns optional
+// PhaseFunc represents local VC function returns optional
 // Miner SC transactions.
-type SmartContractFunctions func(ctx context.Context, lfb *block.Block,
+type PhaseFunc func(ctx context.Context, lfb *block.Block,
 	lfmb *block.MagicBlock, isActive bool) (tx *httpclientutil.Transaction,
 	err error)
 
@@ -51,7 +51,7 @@ type SmartContractFunctions func(ctx context.Context, lfb *block.Block,
 type viewChangeProcess struct {
 	sync.Mutex
 
-	scFunctions   map[minersc.Phase]SmartContractFunctions
+	phaseFuncs    map[minersc.Phase]PhaseFunc
 	currentPhase  minersc.Phase
 	shareOrSigns  *block.ShareOrSigns
 	mpks          *block.Mpks
@@ -71,7 +71,7 @@ func (vcp *viewChangeProcess) SetCurrentPhase(ph minersc.Phase) {
 }
 
 func (vcp *viewChangeProcess) init(mc *Chain) {
-	vcp.scFunctions = map[minersc.Phase]SmartContractFunctions{
+	vcp.phaseFuncs = map[minersc.Phase]PhaseFunc{
 		minersc.Start:      mc.DKGProcessStart,
 		minersc.Contribute: mc.ContributeMpk,
 		minersc.Share:      mc.SendSijs,
@@ -156,43 +156,45 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
-		logging.Logger.Debug("dkg process trying",
+		logging.Logger.Debug("dkg process: trying",
+			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("next_phase", pn),
 			zap.Bool("active", active),
-			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
+			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
 			logging.Logger.Debug(
 				"dkg process: jumping over a phase; skip and wait for restart",
-				zap.Any("next_phase", pn.Phase),
-				zap.Any("current_phase", mc.CurrentPhase()))
+				zap.Any("current_phase", mc.CurrentPhase()),
+				zap.Any("next_phase", pn.Phase))
 			mc.SetCurrentPhase(minersc.Unknown)
 			continue
 		}
 
-		logging.Logger.Info("dkg process start", zap.Any("next_phase", pn),
+		logging.Logger.Info("dkg process start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
+			zap.Any("next_phase", pn),
+			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
-		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
+		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
 		if !ok {
 			logging.Logger.Debug("dkg process: no such phase func",
 				zap.Any("phase", pn.Phase))
 			continue
 		}
 
-		logging.Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
+		logging.Logger.Debug("dkg process: run phase function",
+			zap.Any("name", getFunctionName(phaseFunc)))
 
 		var txn *httpclientutil.Transaction
 		if err := func() error {
-			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 			return mc.LatestFinalizedMagicBlockUpdate(cctx, func(lfmb *block.Block) error {
 				var err error
-				txn, err = scFunc(ctx, lfb, lfmb.MagicBlock, active)
+				txn, err = phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 				if err != nil {
 					return err
 				}
@@ -200,19 +202,19 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			})
 		}(); err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
-				zap.Any("error", err),
+				zap.Any("current_phase", mc.CurrentPhase()),
 				zap.Any("next_phase", pn),
-				zap.Any("current_phase", mc.CurrentPhase()))
+				zap.Any("error", err),
+			)
 			if pn.Phase != minersc.Share {
 				continue
 			}
-
 			retrySharePhase = true
 		}
 
 		logging.Logger.Debug("dkg process: move phase",
-			zap.Any("next_phase", pn),
 			zap.Any("current_phase", mc.CurrentPhase()),
+			zap.Any("next_phase", pn),
 			zap.Any("txn", txn))
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
@@ -221,7 +223,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			phaseStartRound = pn.StartRound
 			logging.Logger.Debug("dkg process: moved phase",
 				zap.Any("prev_phase", prevPhase),
-				zap.Any("current_phase", mc.CurrentPhase()))
+				zap.Any("current_phase", mc.CurrentPhase()),
+			)
 		}
 	}
 
