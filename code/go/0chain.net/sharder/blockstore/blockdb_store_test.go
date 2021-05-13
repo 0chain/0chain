@@ -412,8 +412,6 @@ func TestBlockDBStore_DeleteBlock(t *testing.T) {
 			if saved {
 				t.Errorf("DeleteBlock() saved = %v, want %v", saved, false)
 			}
-
-			_ = os.RemoveAll("tmp")
 		})
 	}
 }
