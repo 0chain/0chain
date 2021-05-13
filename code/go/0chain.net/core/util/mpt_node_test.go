@@ -379,8 +379,6 @@ func TestGetValueNode(t *testing.T) {
 func TestCreateNode(t *testing.T) {
 	t.Parallel()
 
-	buf := bytes.NewBuffer([]byte{0})
-
 	type args struct {
 		r io.Reader
 	}
@@ -393,7 +391,7 @@ func TestCreateNode(t *testing.T) {
 	}{
 		{
 			name:      "Test_CreateNode_Panic",
-			args:      args{r: buf},
+			args:      args{r: bytes.NewBuffer([]byte{0})},
 			wantPanic: true,
 		},
 	}
