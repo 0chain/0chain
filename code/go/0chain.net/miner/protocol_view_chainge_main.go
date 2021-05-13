@@ -97,7 +97,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 // P U B L I S H
 //
 
-func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
+func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
@@ -114,7 +114,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	)
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
+	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
 		return nil, err
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
@@ -134,7 +134,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		return nil, err
 	}
 	if len(dmn.SimpleNodes) == 0 {
@@ -179,12 +179,12 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 // C O N T R I B U T E
 //
 
-func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
+func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		logging.Logger.Error("can't contribute", zap.Any("error", err))
 		return
 	}
