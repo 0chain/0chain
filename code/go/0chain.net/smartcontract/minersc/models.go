@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -99,13 +100,13 @@ func NewSimpleNodes() SimpleNodes {
 // not thread safe
 type SimpleNodes map[string]*SimpleNode
 
-func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (maxNodes int) {
+func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *node.Pool) (maxNodes int) {
 
 	var pmbNodes, newNodes, selectedNodes []*SimpleNode
 
 	// separate previous mb miners and new miners from dkg miners list
 	for _, sn := range sns {
-		if pmb != nil && pmb.MagicBlock != nil && pmb.Miners.HasNode(sn.ID) {
+		if pmbnp != nil && pmbnp.HasNode(sn.ID) {
 			pmbNodes = append(pmbNodes, sn)
 			continue
 		}
@@ -114,7 +115,9 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (ma
 
 	// sort pmb nodes by total stake: desc
 	sort.SliceStable(pmbNodes, func(i, j int) bool {
-		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked
+		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked ||
+			pmbNodes[i].ID < pmbNodes[j].ID
+
 	})
 
 	// calculate max nodes count for next mb
@@ -130,7 +133,8 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (ma
 	// add rest of the pmb miners into new miners list
 	newNodes = append(newNodes, pmbNodes[x:]...)
 	sort.SliceStable(newNodes, func(i, j int) bool {
-		return newNodes[i].TotalStaked > newNodes[j].TotalStaked
+		return newNodes[i].TotalStaked > newNodes[j].TotalStaked ||
+			newNodes[i].ID < newNodes[j].ID
 	})
 
 	if len(newNodes) <= y {
@@ -141,7 +145,7 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (ma
 		// more than allowed nodes remaining
 
 		// find the range of nodes with equal stakes, start (s), end (e)
-		s, e := 0, len(newNodes)-1
+		s, e := 0, len(newNodes)
 		stake := newNodes[y-1].TotalStaked
 		for i, sn := range newNodes {
 			if s == 0 && sn.TotalStaked == stake {
@@ -157,7 +161,7 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmb *block.Block) (ma
 
 		// resolve equal stake condition by randomly selecting nodes with equal stake
 		newNodes = newNodes[s:e]
-		for _, j := range rand.New(rand.NewSource(pmb.RoundRandomSeed)).Perm(e - s) {
+		for _, j := range rand.New(rand.NewSource(pmbrss)).Perm(len(newNodes)) {
 			if len(selectedNodes) < maxNodes {
 				selectedNodes = append(selectedNodes, newNodes[j])
 			}
@@ -1025,8 +1029,16 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 		for k, v := range dkgmn.SimpleNodes {
 			simpleNodes[k] = v
 		}
-		simpleNodes.reduce(
-			gn.MaxN, gn.XPercent, balances.GetLastestFinalizedMagicBlock())
+		var pmbrss int64
+		var pmbnp *node.Pool
+		pmb := balances.GetLastestFinalizedMagicBlock()
+		if pmb != nil {
+			pmbrss = pmb.RoundRandomSeed
+			if pmb.MagicBlock != nil {
+				pmbnp = pmb.MagicBlock.Miners
+			}
+		}
+		simpleNodes.reduce(gn.MaxN, gn.XPercent, pmbrss, pmbnp)
 		dkgmn.SimpleNodes = simpleNodes
 	}
 
@@ -1179,6 +1191,11 @@ func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 	return sharders, nil
 }
 
+func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
+	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
+	return err
+}
+
 // getAllShardersKeepList returns the sharder list
 func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, AllShardersKey)
@@ -1193,11 +1210,6 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 
 func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
 	_, err := state.InsertTrieNode(AllShardersKey, sharders)
-	return err
-}
-
-func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
 	return err
 }
 
