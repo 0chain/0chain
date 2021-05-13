@@ -119,12 +119,12 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	}
 	req, err := NewHTTPRequest(http.MethodPost, url, data, ID, pkey)
 	if err != nil {
-		logging.Logger.Info("SendPostRequest failure", zap.String("url", url))
+		logging.N2n.Info("SendPostRequest failure", zap.String("url", url))
 		return nil, err
 	}
 	resp, err := httpClient.Do(req)
 	if resp == nil || err != nil {
-		logging.Logger.Error("Failed after multiple retries", zap.Int("retried", maxRetries))
+		logging.N2n.Error("Failed after multiple retries", zap.Int("retried", maxRetries))
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -153,7 +153,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 		urlString := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
 		response, err := httpClient.Get(urlString)
 		if err != nil {
-			logging.Logger.Error("get transaction status -- failed", zap.Any("error", err))
+			logging.N2n.Error("get transaction status -- failed", zap.Any("error", err))
 			numErrs++
 		} else {
 			contents, err := ioutil.ReadAll(response.Body)
@@ -222,7 +222,7 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 // MakeGetRequest make a generic get request. URL should have complete path.
 // It allows 200 responses only, returning error for all other, even successful.
 func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
-	logging.Logger.Info("make GET request", zap.String("url", remoteUrl))
+	logging.N2n.Info("make GET request", zap.String("url", remoteUrl))
 
 	var (
 		client http.Client
@@ -267,18 +267,18 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 	for _, sharder := range urls {
 		u := fmt.Sprintf("%v/%v%v", sharder, clientBalanceURL, clientID)
 
-		logging.Logger.Info("Running GetClientBalance on", zap.String("url", u))
+		logging.N2n.Info("Running GetClientBalance on", zap.String("url", u))
 
 		response, err := http.Get(u)
 		if err != nil {
-			logging.Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
 			errString = errString + sharder + ":" + err.Error()
 			continue
 		}
 
 		if response.StatusCode != 200 {
-			logging.Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+			logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 			numErrs++
 			errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
 			continue
@@ -335,7 +335,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 	//normally this goes to sharders
 	for _, sharder := range urls {
 		urlString := fmt.Sprintf("%v/%v%v%v", sharder, scRestAPIURL, scAddress, relativePath)
-		logging.Logger.Info("Running SCRestAPI on", zap.String("urlString", urlString))
+		logging.N2n.Info("Running SCRestAPI on", zap.String("urlString", urlString))
 		urlObj, _ := url.Parse(urlString)
 		q := urlObj.Query()
 		for k, v := range params {
@@ -344,12 +344,12 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 		urlObj.RawQuery = q.Encode()
 		response, err := httpClient.Get(urlObj.String())
 		if err != nil {
-			logging.Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
 			errString = errString + sharder + ":" + err.Error()
 		} else {
 			if response.StatusCode != 200 {
-				logging.Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+				logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 				numErrs++
 				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
 				response.Body.Close()
@@ -431,12 +431,12 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 		}
 		response, err := httpClient.Get(fmt.Sprintf("%v/%v", sharder, blockUrl))
 		if err != nil {
-			logging.Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
 			errString = errString + sharder + ":" + err.Error()
 		} else {
 			if response.StatusCode != 200 {
-				logging.Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+				logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 				numErrs++
 				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
 				response.Body.Close()
@@ -508,7 +508,7 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 				break
 			}
 			response.Body.Close()
-			logging.Logger.Warn("attempt to retry the request",
+			logging.N2n.Warn("attempt to retry the request",
 				zap.Any("response Status", response.StatusCode),
 				zap.Any("response Status text", response.Status), zap.String("URL", u),
 				zap.Any("retried", retried+1))
@@ -517,12 +517,12 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 		}
 
 		if err != nil {
-			logging.Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
 			errString = errString + sharder + ":" + err.Error()
 		} else {
 			if response.StatusCode != 200 {
-				logging.Logger.Error("Error getting response from", zap.String("URL", u),
+				logging.N2n.Error("Error getting response from", zap.String("URL", u),
 					zap.Any("response Status", response.StatusCode),
 					zap.Any("response Status text", response.Status))
 				numErrs++
