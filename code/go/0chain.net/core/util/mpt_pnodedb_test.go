@@ -56,51 +56,44 @@ func TestNewPNodeDB(t *testing.T) {
 }
 
 func TestPNodeDB_Iterate(t *testing.T) {
-	db, cleanUp := newPNodeDB(t)
-	defer cleanUp()
+	t.Parallel()
 
-	wo := gorocksdb.NewDefaultWriteOptions()
-	err := db.db.Put(wo, []byte("key"), make([]byte, 0))
-	require.NoError(t, err)
-
-	type fields struct {
-		dataDir  string
-		db       *gorocksdb.DB
-		ro       *gorocksdb.ReadOptions
-		wo       *gorocksdb.WriteOptions
-		to       *gorocksdb.TransactionOptions
-		fo       *gorocksdb.FlushOptions
-		version  int64
-		versions []int64
-	}
 	type args struct {
 		ctx     context.Context
 		handler NodeDBIteratorHandler
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		wantErr bool
 	}{
 		{
-			name:    "Test_PNodeDB_Iterate_Err_Reading_OK",
-			fields:  fields{db: db.db},
+			name: "Test_PNodeDB_Iterate_Err_Reading_OK",
+			args: args{
+				handler: func(_ context.Context, _ Key, _ Node) error {
+					return nil
+				},
+			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			pndb := &PNodeDB{
-				dataDir:  tt.fields.dataDir,
-				db:       tt.fields.db,
-				ro:       tt.fields.ro,
-				wo:       tt.fields.wo,
-				to:       tt.fields.to,
-				fo:       tt.fields.fo,
-				version:  tt.fields.version,
-				versions: tt.fields.versions,
+			t.Parallel()
+
+			pndb, cleanUp := newPNodeDB(t)
+			defer cleanUp()
+
+			wo := gorocksdb.NewDefaultWriteOptions()
+			for i := 0; i < 257; i++ {
+				r := rand.Int()
+				err := pndb.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
+				require.NoError(t, err)
 			}
+			err := pndb.db.Put(wo, []byte("key"), make([]byte, 0))
+			require.NoError(t, err)
+
 			if err := pndb.Iterate(tt.args.ctx, tt.args.handler); (err != nil) != tt.wantErr {
 				t.Errorf("Iterate() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -109,30 +102,12 @@ func TestPNodeDB_Iterate(t *testing.T) {
 }
 
 func TestPNodeDB_PruneBelowVersion_Iterator_Err(t *testing.T) {
-	db, cleanUp := newPNodeDB(t)
-	defer cleanUp()
-
-	wo := gorocksdb.NewDefaultWriteOptions()
-
-	for i := 0; i < 257; i++ {
-		r := rand.Int()
-		err := db.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
-		require.NoError(t, err)
-	}
-
-	wo.DisableWAL(true)
-	wo.SetSync(true)
-
-	fo := gorocksdb.NewDefaultFlushOptions()
-	ctx := context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{})
+	t.Parallel()
 
 	type fields struct {
 		dataDir  string
-		db       *gorocksdb.DB
 		ro       *gorocksdb.ReadOptions
-		wo       *gorocksdb.WriteOptions
 		to       *gorocksdb.TransactionOptions
-		fo       *gorocksdb.FlushOptions
 		version  int64
 		versions []int64
 	}
@@ -147,25 +122,42 @@ func TestPNodeDB_PruneBelowVersion_Iterator_Err(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "Test_PNodeDB_PruneBelowVersion_OK",
-			fields:  fields{db: db.db, wo: wo, fo: fo},
-			args:    args{ctx: ctx, version: 1},
+			name: "Test_PNodeDB_PruneBelowVersion_OK",
+			args: args{
+				ctx:     context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
+				version: 1,
+			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			db, cleanUp := newPNodeDB(t)
+			defer cleanUp()
+			wo := gorocksdb.NewDefaultWriteOptions()
+			for i := 0; i < 257; i++ {
+				r := rand.Int()
+				err := db.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
+				require.NoError(t, err)
+			}
+			wo.DisableWAL(true)
+			wo.SetSync(true)
+			fo := gorocksdb.NewDefaultFlushOptions()
+			ctx := context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{})
 			pndb := &PNodeDB{
 				dataDir:  tt.fields.dataDir,
-				db:       tt.fields.db,
+				db:       db.db,
 				ro:       tt.fields.ro,
-				wo:       tt.fields.wo,
+				wo:       wo,
 				to:       tt.fields.to,
-				fo:       tt.fields.fo,
+				fo:       fo,
 				version:  tt.fields.version,
 				versions: tt.fields.versions,
 			}
-			if err := pndb.PruneBelowVersion(tt.args.ctx, tt.args.version); (err != nil) != tt.wantErr {
+			if err := pndb.PruneBelowVersion(ctx, tt.args.version); (err != nil) != tt.wantErr {
 				t.Errorf("PruneBelowVersion() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -173,27 +165,12 @@ func TestPNodeDB_PruneBelowVersion_Iterator_Err(t *testing.T) {
 }
 
 func TestPNodeDB_PruneBelowVersion_Multi_Delete_Err(t *testing.T) {
-	db, cleanUp := newPNodeDB(t)
-	defer cleanUp()
-
-	wo := gorocksdb.NewDefaultWriteOptions()
-	n := NewValueNode()
-	err := db.db.Put(wo, []byte("key"), n.Encode())
-	require.NoError(t, err)
-
-	wo.DisableWAL(true)
-	wo.SetSync(true)
-
-	fo := gorocksdb.NewDefaultFlushOptions()
-	ctx := context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{})
+	t.Parallel()
 
 	type fields struct {
 		dataDir  string
-		db       *gorocksdb.DB
 		ro       *gorocksdb.ReadOptions
-		wo       *gorocksdb.WriteOptions
 		to       *gorocksdb.TransactionOptions
-		fo       *gorocksdb.FlushOptions
 		version  int64
 		versions []int64
 	}
@@ -208,21 +185,45 @@ func TestPNodeDB_PruneBelowVersion_Multi_Delete_Err(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "Test_PNodeDB_PruneBelowVersion_OK",
-			fields:  fields{db: db.db, wo: wo, fo: fo},
-			args:    args{ctx: ctx, version: 1},
+			name: "Test_PNodeDB_PruneBelowVersion_OK",
+			args: args{
+				ctx:     context.WithValue(context.TODO(), PruneStatsKey, &PruneStats{}),
+				version: 1,
+			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			db, cleanUp := newPNodeDB(t)
+			defer cleanUp()
+
+			wo := gorocksdb.NewDefaultWriteOptions()
+			for i := 0; i < 257; i++ {
+				r := rand.Int()
+				err := db.db.Put(wo, []byte(strconv.Itoa(r)), []byte{NodeTypeValueNode})
+				require.NoError(t, err)
+			}
+
+			n := NewValueNode()
+			err := db.db.Put(wo, []byte("key"), n.Encode())
+			require.NoError(t, err)
+
+			wo.DisableWAL(true)
+			wo.SetSync(true)
+
+			fo := gorocksdb.NewDefaultFlushOptions()
+
 			pndb := &PNodeDB{
 				dataDir:  tt.fields.dataDir,
-				db:       tt.fields.db,
+				db:       db.db,
 				ro:       tt.fields.ro,
-				wo:       tt.fields.wo,
+				wo:       wo,
 				to:       tt.fields.to,
-				fo:       tt.fields.fo,
+				fo:       fo,
 				version:  tt.fields.version,
 				versions: tt.fields.versions,
 			}
