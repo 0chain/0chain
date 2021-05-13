@@ -399,8 +399,16 @@ func (msc *MinerSmartContract) reduceShardersList(
 		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
 	}
 
-	simpleNodes.reduce(
-		gn.MaxS, gn.XPercent, balances.GetLastestFinalizedMagicBlock())
+	var pmbrss int64
+	var pmbnp *node.Pool
+	pmb := balances.GetLastestFinalizedMagicBlock()
+	if pmb != nil {
+		pmbrss = pmb.RoundRandomSeed
+		if pmb.MagicBlock != nil {
+			pmbnp = pmb.MagicBlock.Sharders
+		}
+	}
+	simpleNodes.reduce(gn.MaxS, gn.XPercent, pmbrss, pmbnp)
 
 	nodes = make([]*MinerNode, 0, len(simpleNodes))
 
