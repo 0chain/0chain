@@ -255,7 +255,7 @@ func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 
 func (vcp *viewChangeProcess) isNeedCreateSijs() (ok bool) {
 	return vcp.viewChangeDKG != nil &&
-		len(vcp.viewChangeDKG.Sij) < vcp.viewChangeDKG.T
+		vcp.viewChangeDKG.GetSijLen() < vcp.viewChangeDKG.T
 }
 
 func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
@@ -358,6 +358,10 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 
 func (mc *Chain) createSijs(lfb *block.Block, mb *block.MagicBlock,
 	active bool) (err error) {
+
+	if !mc.viewChangeProcess.isDKGSet() {
+		return common.NewError("createSijs", "DKG is not set")
+	}
 
 	if !mc.viewChangeProcess.isNeedCreateSijs() {
 		return // doesn't need to create them
@@ -468,11 +472,20 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 	return
 }
 
-func (mc *Chain) getNodeSij(nodeID hbls.ID) (secShare hbls.SecretKey) {
+func (mc *Chain) getNodeSij(nodeID hbls.ID) (*hbls.SecretKey, bool) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
-	return mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+	if mc.viewChangeProcess.viewChangeDKG == nil {
+		return nil, false
+	}
+
+	k, ok := mc.viewChangeProcess.viewChangeDKG.GetKeyShare(nodeID)
+	if !ok {
+		return nil, false
+	}
+
+	return &k, true
 }
 
 func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare) {
