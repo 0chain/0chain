@@ -59,8 +59,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 }
 
 func TestBlockSummaryRequestHandler(t *testing.T) {
-	cl := initDBs(t)
-	defer cl()
+	t.Parallel()
 
 	const baseUrl = "/v1/_s2s/blocksummary/get"
 
@@ -92,7 +91,13 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cl := initDBs(t)
+			defer cl()
+
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockSummaryRequestHandler)))
 
