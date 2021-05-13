@@ -2,17 +2,21 @@ package transaction
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/node"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var keyPairs = make(map[string]string)
@@ -24,6 +28,19 @@ var clientSignatureScheme = "bls0chain"
 
 func init() {
 	client.SetClientSignatureScheme(clientSignatureScheme)
+}
+
+func assertErrMsg(t *testing.T, err error, msg string) {
+	t.Helper()
+
+	if msg == "" {
+		assert.Nil(t, err)
+		return
+	}
+
+	if assert.NotNil(t, err) {
+		assert.Equal(t, msg, err.Error())
+	}
 }
 
 func BenchmarkTransactionVerify(b *testing.B) {
@@ -190,5 +207,66 @@ func processWorker(txnChannel <-chan *Transaction, done chan<- bool) {
 			fmt.Printf("error for %v : %v\n", entity, err)
 		}
 		done <- true
+	}
+}
+
+func TestExemptedSCFunctions(t *testing.T) {
+	txn := &Transaction{}
+	invalidFeeMessage := "invalid_request: Invalid request (The given fee is less than the minimum required fee to process the txn)"
+
+	t.Run("min fee is zero and fee is zero", func(t *testing.T) {
+		err := txn.ValidateFee()
+		require.NoError(t, err)
+		assert.Zero(t, TXN_MIN_FEE, "min fee is zero")
+		assert.Zero(t, txn.Fee, "min fee is zero")
+	})
+
+	TXN_MIN_FEE = 10
+
+	t.Run("min fee is not zero and fee is zero", func(t *testing.T) {
+		err := txn.ValidateFee()
+		assertErrMsg(t, err, invalidFeeMessage)
+	})
+
+	t.Run("testing excemptions when true", func(t *testing.T) {
+		testExcempts(t, txn, "")
+	})
+
+	setExcemptsToFalse()
+
+	t.Run("testing excemptions when false", func(t *testing.T) {
+		testExcempts(t, txn, invalidFeeMessage)
+	})
+
+	t.Run("test function that isn't exempted", func(t *testing.T) {
+		smartContractData := smartContractTransactionData{FunctionName: "random_sc_function"}
+		dataBytes, err := json.Marshal(smartContractData)
+		require.NoError(t, err)
+		txn.TransactionData = string(dataBytes)
+		err = txn.ValidateFee()
+		assertErrMsg(t, err, invalidFeeMessage)
+	})
+
+}
+
+func testExcempts(t *testing.T, txn *Transaction, errMessage string) {
+	var smartContractData smartContractTransactionData
+	for name := range exemptedSCFunctions {
+		smartContractData.FunctionName = name
+		dataBytes, err := json.Marshal(smartContractData)
+		require.NoError(t, err)
+		txn.TransactionData = string(dataBytes)
+		err = txn.ValidateFee()
+		if errMessage == "" {
+			require.NoError(t, err)
+		} else {
+			assertErrMsg(t, err, errMessage)
+		}
+	}
+}
+
+func setExcemptsToFalse() {
+	for name := range exemptedSCFunctions {
+		exemptedSCFunctions[name] = false
 	}
 }

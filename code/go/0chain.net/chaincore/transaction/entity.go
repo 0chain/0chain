@@ -88,14 +88,22 @@ type smartContractTransactionData struct {
 }
 
 var exemptedSCFunctions = map[string]bool{
-	"add_miner":            true,
-	"miner_health_check":   true,
-	"add_sharder":          true,
-	"sharder_health_check": true,
-	"contributeMpk":        true,
-	"sharder_keep":         true,
-	"shareSignsOrShares":   true,
-	"wait":                 true,
+	"add_miner":               true,
+	"miner_health_check":      true,
+	"add_sharder":             true,
+	"sharder_health_check":    true,
+	"contributeMpk":           true,
+	"sharder_keep":            true,
+	"shareSignsOrShares":      true,
+	"wait":                    true,
+	"read_redeem":             true,
+	"commit_connection":       true,
+	"add_blobber":             true,
+	"add_validator":           true,
+	"challenge_response":      true,
+	"blobber_health_check":    true,
+	"update_blobber_settings": true,
+	"finalize_allocation":     true,
 }
 
 // ValidateFee - Validate fee
@@ -105,7 +113,7 @@ func (t *Transaction) ValidateFee() error {
 		dataBytes := []byte(t.TransactionData)
 		err := json.Unmarshal(dataBytes, &smartContractData)
 		if err == nil {
-			if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+			if ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
 				return nil
 			}
 		}
