@@ -548,6 +548,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
+	c.UpdateMagicBlock(b.MagicBlock)
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
 	c.SetLatestDeterministicBlock(b)
@@ -557,6 +558,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 // AddLoadedFinalizedBlock - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
+	c.UpdateMagicBlock(lfmb.MagicBlock)
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
 	// c.LatestDeterministicBlock left as genesis
@@ -809,11 +811,7 @@ func getGeneratorsNum(minersNum, minGenerators int, generatorsPercent float64) i
 
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
-	mb := c.GetMagicBlock(round)
-	logging.Logger.Debug("get miners -- current magic block",
-		zap.Any("miners", mb.Miners.N2NURLs()), zap.Any("round", round))
-
-	return mb.Miners
+	return c.GetMagicBlock(round).Miners
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
