@@ -121,10 +121,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	blobber *StorageNode, all *StorageNodes, balances cstate.StateContextI) (err error) {
 
-	var blobberBytes util.Serializable
-	blobberBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
-
-	if err != nil {
+	if _, err = balances.GetTrieNode(blobber.GetKey(sc.ID)); err != nil {
 		return fmt.Errorf("can't find existing blobber: %v", err)
 	}
 
@@ -212,7 +209,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	return string(existingBlobber.Encode()), nil
 }
 
-// addBlobber insert, updates or removes a blobber; the blobber should
+// addBlobber inserts, updates or removes a blobber; the blobber should
 // provide required tokens for stake pool; otherwise it will not be
 // registered; if it provides token, but it's already registered and
 // related stake pool has required tokens, then no tokens will be
