@@ -561,6 +561,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
+	c.UpdateMagicBlock(b.MagicBlock)
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
 	c.SetLatestDeterministicBlock(b)
@@ -570,6 +571,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 // AddLoadedFinalizedBlock - adds the genesis block to the chain.
 func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
+	c.UpdateMagicBlock(lfmb.MagicBlock)
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
 	// c.LatestDeterministicBlock left as genesis
@@ -789,11 +791,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
-	mb := c.GetMagicBlock(round)
-	logging.Logger.Debug("get miners -- current magic block",
-		zap.Any("miners", mb.Miners.N2NURLs()), zap.Any("round", round))
-
-	return mb.Miners
+	return c.GetMagicBlock(round).Miners
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
@@ -1424,30 +1422,6 @@ func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
 		return nil
 	}
 	return c.latestFinalizedMagicBlock.Clone()
-}
-
-// LatestFinalizedMagicBlockUpdate executes a function within the mutex of a read-write managed lock.
-func (c *Chain) LatestFinalizedMagicBlockUpdate(ctx context.Context, fn func(*block.Block) error) error {
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-	errC := make(chan error)
-	stopC := make(chan struct{})
-	go func() {
-		if err := fn(c.latestFinalizedMagicBlock); err != nil {
-			errC <- err
-			return
-		}
-		defer close(stopC)
-	}()
-
-	select {
-	case err := <-errC:
-		return common.NewError("get_lfmb_safe_failed", err.Error())
-	case <-stopC:
-		return nil
-	case <-ctx.Done():
-		return common.NewError("get_lfmb_safe_failed", ctx.Err().Error())
-	}
 }
 
 // GetLatestFinalizedBlockSummary - get the latest finalized block summary.

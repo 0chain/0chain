@@ -274,6 +274,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.updateFeeStats(fb)
 
 	if fb.MagicBlock != nil {
+		c.UpdateMagicBlock(fb.MagicBlock)
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 	if config.Development() {

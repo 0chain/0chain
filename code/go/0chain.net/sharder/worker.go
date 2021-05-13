@@ -137,7 +137,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
 				continue // already have a fresh phase
 			}
-			sc.GetPhaseFromSharders() // not in a goroutine
+			sc.GetPhaseFromSharders(ctx) // not in a goroutine
 			continue
 		case pe = <-phaseq:
 			if !pe.Sharders {
@@ -154,7 +154,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue // we are interesting in contribute phase only on sharders
 		}
 
-		if sc.IsRegisteredSharderKeep(false) {
+		if sc.IsRegisteredSharderKeep(context.Background(), false) {
 			phaseRound = pe.Phase.StartRound // already registered
 			continue
 		}
