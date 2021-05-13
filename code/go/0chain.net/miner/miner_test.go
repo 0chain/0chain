@@ -397,7 +397,7 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	c.NumGenerators = 1
+	c.MinGenerators = 1
 	c.RoundRange = 10000000
 	c.MinBlockSize = 1
 	c.MaxByteSize = 1638400

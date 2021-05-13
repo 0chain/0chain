@@ -45,7 +45,8 @@ server_chain:
     min_block_size: 1
     max_block_size: 10
     max_byte_size: 1638400
-    generators: 2
+    min_generators: 2
+    generators_percent: 0.2
     replicators: 0
     generation:
       timeout: 15
