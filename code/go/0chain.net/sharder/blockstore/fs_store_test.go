@@ -305,8 +305,6 @@ func TestFSBlockStore_Read(t *testing.T) {
 }
 
 func TestFSBlockStore_getFileName(t *testing.T) {
-	t.Parallel()
-
 	fbs, cleanUp := makeTestFSBlockStore(t)
 	defer cleanUp()
 
@@ -353,8 +351,6 @@ func TestFSBlockStore_getFileName(t *testing.T) {
 }
 
 func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
-	t.Parallel()
-
 	fbs, cleanUp := makeTestFSBlockStore(t)
 	defer cleanUp()
 
@@ -388,10 +384,7 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,

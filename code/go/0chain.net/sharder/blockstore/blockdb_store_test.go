@@ -357,8 +357,6 @@ func Test_txnRecord_Decode(t *testing.T) {
 }
 
 func TestBlockDBStore_DeleteBlock(t *testing.T) {
-	t.Parallel()
-
 	b := makeTestBlock()
 	db, cleanUp := makeTestBlockDBStore(t)
 	defer cleanUp()
@@ -388,10 +386,7 @@ func TestBlockDBStore_DeleteBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			bdbs := &BlockDBStore{
 				FSBlockStore:        tt.fields.FSBlockStore,
 				txnMetadataProvider: tt.fields.txnMetadataProvider,
