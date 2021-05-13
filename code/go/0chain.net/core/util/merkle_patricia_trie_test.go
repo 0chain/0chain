@@ -1604,6 +1604,7 @@ func TestMerklePatriciaTrie_MergeDB(t *testing.T) {
 }
 
 func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
+	t.Skip("need protect DebugMPTNode against concurrent access")
 	t.Parallel()
 
 	DebugMPTNode = true
