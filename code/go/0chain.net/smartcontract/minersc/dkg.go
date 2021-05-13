@@ -105,15 +105,15 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	if len(shardersKeep.Nodes) < gn.MinS {
 		return common.NewErrorf("move_to_share_or_publish_failed",
-			"not enough sharders in keep list to move phase",
-			"keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
+			"not enough sharders in keep list to move phase keep: %d, min_s: %d",
+			len(shardersKeep.Nodes), gn.MinS)
 	}
 
 	if !gn.hasPrevShader(shardersKeep, balances) {
 		return common.NewErrorf("move_to_share_or_publish_failed",
 			"missing at least one sharder from previous set in "+
 				"sharders keep list to move phase, keep: %d, min_s: %d",
-			len(shardersKeep.Nodes), "min_s", gn.MinS)
+			len(shardersKeep.Nodes), gn.MinS)
 	}
 
 	dkgMinersList, err := getDKGMinersList(balances)
@@ -401,8 +401,16 @@ func (msc *MinerSmartContract) reduceShardersList(
 		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
 	}
 
-	simpleNodes.reduce(
-		gn.MaxS, gn.XPercent, balances.GetLastestFinalizedMagicBlock())
+	var pmbrss int64
+	var pmbnp *node.Pool
+	pmb := balances.GetLastestFinalizedMagicBlock()
+	if pmb != nil {
+		pmbrss = pmb.RoundRandomSeed
+		if pmb.MagicBlock != nil {
+			pmbnp = pmb.MagicBlock.Sharders
+		}
+	}
+	simpleNodes.reduce(gn.MaxS, gn.XPercent, pmbrss, pmbnp)
 
 	nodes = make([]*MinerNode, 0, len(simpleNodes))
 
