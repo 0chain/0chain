@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"0chain.net/chaincore/state"
 	"bytes"
 	"context"
 	"flag"
@@ -10,6 +11,7 @@ import (
 	"os/user"
 	"strconv"
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -135,7 +137,6 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	t.Skip("needs fixing")
 	clean := SetUpSingleSelf()
 	defer clean()
 	ctx := common.GetRootContext()
@@ -161,35 +162,31 @@ func TestBlockGeneration(t *testing.T) {
 		usr.HomeDir, string(os.PathSeparator)), mClient))
 
 	r := CreateRound(1)
+	r.RandomSeed = time.Now().UnixNano()
 
 	b, err = mc.GenerateRoundBlock(ctx, r)
-
 	if err != nil {
 		t.Errorf("Error generating block: %v\n", err)
 		return
 	}
 
-	t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
-	t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
 	err = blockstore.Store.Write(b)
 	require.NoError(t, err)
 
-	b2, err := blockstore.Store.Read(b.Hash, r.Number)
+	_, err = blockstore.Store.Read(b.Hash, r.Number)
 	require.NoError(t, err)
-
-	t.Logf("Block hash is: %v\n", b2.Hash)
 
 	common.Done()
 }
 
 func TestBlockVerification(t *testing.T) {
-	t.Skip("needs fixing")
 	clean := SetUpSingleSelf()
 	defer clean()
 	mc := GetMinerChain()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
+	mr.RandomSeed = time.Now().UnixNano()
 
 	b, err := generateSingleBlock(ctx, nil, mr)
 	if b != nil {
@@ -197,18 +194,16 @@ func TestBlockVerification(t *testing.T) {
 	}
 	if err != nil {
 		t.Errorf("Block failed verification because %v", err.Error())
-	} else {
-		t.Log("Block passed verification")
 	}
 	common.Done()
 }
 
 func TestTwoCorrectBlocks(t *testing.T) {
-	t.Skip("needs fixing")
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx := context.Background()
 	mr := CreateMockRound(1)
+	mr.RandomSeed = time.Now().UnixNano()
 	b0, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
 	rd := mc.GetRound(1)
@@ -216,25 +211,24 @@ func TestTwoCorrectBlocks(t *testing.T) {
 	if b0 != nil {
 		var b1 *block.Block
 		mr2 := CreateMockRound(2)
+		mr2.RandomSeed = time.Now().UnixNano()
 		b1, err = generateSingleBlock(ctx, b0, mr2.Round)
 		require.NoError(t, err)
 		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
 	}
 	if err != nil {
 		t.Errorf("Block failed verification because %v", err.Error())
-	} else {
-		t.Log("Block passed verification")
 	}
 	common.Done()
 }
 
 func TestTwoBlocksWrongRound(t *testing.T) {
-	t.Skip("needs fixing")
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
+	mr.RandomSeed = time.Now().UnixNano()
 	b0, err := generateSingleBlock(ctx, nil, mr)
 	//mc := GetMinerChain()
 	if b0 != nil {
@@ -243,21 +237,19 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 		_, err = generateSingleBlock(ctx, b0, mr3)
 		//_, err = mc.VerifyRoundBlock(ctx, b1)
 	}
-	if err != nil {
-		t.Log("Second block failed to generate")
-	} else {
+	if err == nil {
 		t.Error("Second block generated")
 	}
 	common.Done()
 }
 
 func TestBlockVerificationBadHash(t *testing.T) {
-	t.Skip("needs fixing")
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
+	mr.RandomSeed = time.Now().UnixNano()
 	b, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
 	if b != nil {
@@ -266,8 +258,6 @@ func TestBlockVerificationBadHash(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("FAIL: Block with bad hash passed verification")
-	} else {
-		t.Log("SUCCESS: Block with bad hash failed verifcation")
 	}
 	common.Done()
 }
@@ -341,7 +331,7 @@ func SetupGenesisBlock() *block.Block {
 	sp := node.NewPool(node.NodeTypeSharder)
 	mb.Sharders = sp
 	mc.SetMagicBlock(mb)
-	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, nil)
+	gr, gb := mc.GenerateGenesisBlock("ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4", mb, state.NewInitStates())
 	mr := mc.CreateRound(gr.(*round.Round))
 	mc.AddRoundBlock(gr, gb)
 	mc.AddRound(mr)
@@ -407,7 +397,7 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	c.NumGenerators = 1
+	c.MinGenerators = 1
 	c.RoundRange = 10000000
 	c.MinBlockSize = 1
 	c.MaxByteSize = 1638400

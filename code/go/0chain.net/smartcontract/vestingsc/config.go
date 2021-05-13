@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	"0chain.net/core/common"
 	"context"
 	"encoding/json"
 	"errors"
@@ -134,6 +135,9 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 
 	err = conf.validate()
+	if err != nil {
+		return nil, err
+	}
 	return
 }
 
@@ -179,5 +183,9 @@ func (vsc *VestingSmartContract) getConfig(
 func (vsc *VestingSmartContract) getConfigHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (interface{}, error) {
 
-	return vsc.getConfig(balances)
+	res, err := vsc.getConfig(balances)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get config", err.Error())
+	}
+	return res, nil
 }

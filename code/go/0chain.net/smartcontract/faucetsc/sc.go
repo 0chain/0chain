@@ -168,7 +168,9 @@ func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances
 	if err != nil {
 		return un, err
 	}
-	un.Decode(us.Encode())
+	if err := un.Decode(us.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return un, err
 }
 
@@ -191,8 +193,10 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	if err != nil {
 		return gn, err
 	}
-	gn.Decode(gv.Encode())
-	return gn, err
+	if err := gn.Decode(gv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) *GlobalNode {

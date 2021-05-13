@@ -14,7 +14,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -182,7 +182,7 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 		}
 		cbytes, err := compDecomp.Decompress(cbytes)
 		if err != nil {
-			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
+			logging.N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
 			return nil, err
 		}
 		buffer = bytes.NewReader(cbytes)
@@ -200,7 +200,7 @@ func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetad
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
-			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
+			logging.N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
 			return size, nil, err
 		}
 		buffer = bytes.NewReader(cbytes)
@@ -214,24 +214,24 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	switch codec {
 	case CodecMsgpack:
 		if err := datastore.FromMsgpack(reader, entity.(datastore.Entity)); err != nil {
-			N2n.Error("msgpack decoding", zap.Error(err))
+			logging.N2n.Error("msgpack decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	case CodecJSON:
 		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
-			N2n.Error("json decoding", zap.Error(err))
+			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	default:
 		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
-			N2n.Error("json decoding", zap.Error(err))
+			logging.N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	}
-	N2n.Error("unknown_encoding", zap.String("encoding", codec))
+	logging.N2n.Error("unknown_encoding", zap.String("encoding", codec))
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
@@ -263,13 +263,13 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
 	if entityName == "" {
-		N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex),
+		logging.N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex),
 			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 		return false
 	}
 	entityMetadata := datastore.GetEntityMetadata(entityName)
 	if entityMetadata == nil {
-		N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex),
+		logging.N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex),
 			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}

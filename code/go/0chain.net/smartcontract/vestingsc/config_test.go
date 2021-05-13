@@ -31,7 +31,7 @@ func s(n time.Duration) time.Duration {
 
 func Test_config_validate(t *testing.T) {
 
-	for i, tt := range []struct {
+	for _, tt := range []struct {
 		config config
 		err    string
 	}{
@@ -51,7 +51,6 @@ func Test_config_validate(t *testing.T) {
 		// max_description_length
 		{config{1, s(1), s(2), 1, 0}, "invalid max_description_length (< 1)"},
 	} {
-		t.Log(i)
 		assertErrMsg(t, tt.config.validate(), tt.err)
 	}
 }

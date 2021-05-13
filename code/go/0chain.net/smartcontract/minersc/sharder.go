@@ -325,7 +325,7 @@ func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
 	}
 	err = allShardersList.Decode(allShardersBytes.Encode())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: can't decode miners list: %s", common.ErrDecoding, err)
 	}
 	return allShardersList, nil
 }

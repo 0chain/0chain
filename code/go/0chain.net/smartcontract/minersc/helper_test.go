@@ -100,6 +100,8 @@ func newClient(balance state.Balance, balances cstate.StateContextI) (
 	return
 }
 
+const minerServiceCharge = 0.5
+
 // add_miner or add_sharder transaction data
 func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	var mn = NewMinerNode()
@@ -111,7 +113,7 @@ func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
 	mn.ShortName = "test_miner(" + c.id + ")"
 	mn.BuildTag = "commit"
 	mn.DelegateWallet = delegateWallet
-	mn.ServiceCharge = 0.5
+	mn.ServiceCharge = minerServiceCharge
 	mn.NumberOfDelegates = 10
 	mn.MinStake = 1e10
 	mn.MaxStake = 100e10

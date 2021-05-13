@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"go.uber.org/zap"
 )
@@ -36,7 +36,7 @@ func CleanupWorker(ctx context.Context) {
 		if !ok {
 			err := qe.Delete(ctx)
 			if err != nil {
-				Logger.Error("Error in deleting txn in redis", zap.Error(err))
+				logging.Logger.Error("Error in deleting txn in redis", zap.Error(err))
 			}
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
@@ -57,22 +57,22 @@ func CleanupWorker(ctx context.Context) {
 		case <-ticker.C:
 			err := mstore.IterateCollectionAsc(cctx, transactionEntityMetadata, collectionName, handler)
 			if err != nil {
-				Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
+				logging.Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
 			}
 			if len(invalidTxns) > 0 {
-				Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)), zap.Any("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
+				logging.Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)), zap.Any("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
 				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
 				if err != nil {
-					Logger.Error("Error in MultiDelete", zap.Error(err))
+					logging.Logger.Error("Error in MultiDelete", zap.Error(err))
 				} else {
 					invalidTxns = invalidTxns[:0]
 				}
 			}
 			if len(invalidHashes) > 0 {
-				Logger.Info("missing transactions cleanup", zap.String("collection", collectionName), zap.Int("missing_count", len(invalidHashes)))
+				logging.Logger.Info("missing transactions cleanup", zap.String("collection", collectionName), zap.Int("missing_count", len(invalidHashes)))
 				err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, invalidHashes)
 				if err != nil {
-					Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
+					logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 				} else {
 					invalidHashes = invalidHashes[:0]
 				}

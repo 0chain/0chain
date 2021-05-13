@@ -23,7 +23,7 @@ import (
 
 	hbls "github.com/herumi/bls/ffi/go/bls"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -87,22 +87,28 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 	// DKG process constants
 	const (
-		repeat = 5 * time.Second // repeat phase from sharders requesting
+		repeat = 5 * time.Second // repeat phase from sharders
 	)
 
 	var (
-		phaseq = mc.PhaseEvents() //
-		pe     chain.PhaseEvent   //
-		last   time.Time          // last time phase event given
+		phaseEventsChan = mc.PhaseEvents()
+		newPhaseEvent   chain.PhaseEvent
 
-		// if a phase event didn't given after the 'repeat' period,
-		// then request it from sharders; so, for an inactive node we
-		// will request for sharders every 'repeat x2' = 10s
-		ticker  = time.NewTicker(repeat) //
-		tcikerq = ticker.C               //
+		// last time a phase event is received from miner in
+		// phaseEventChan
+		lastPhaseEventTime time.Time
 
-		phaseRound int64 // phase starting round
-		err        error
+		// if a phase event isn't given after the 'repeat' period,
+		// then request it from sharders; for an inactive node we
+		// will request from sharders every 'repeat x 2' = 10s
+		ticker = time.NewTicker(repeat)
+
+		// start round of the accepted phase
+		phaseStartRound int64
+
+		// flag indicating whether previous share phase failed
+		// and should be retried with the already generated shares
+		retrySharePhase bool
 	)
 
 	defer ticker.Stop()
@@ -111,8 +117,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case tp := <-tcikerq:
-			if tp.Sub(last) <= repeat || len(phaseq) > 0 {
+		case tp := <-ticker.C:
+			if tp.Sub(lastPhaseEventTime) <= repeat || len(phaseEventsChan) > 0 {
 				continue // already have a fresh phase
 			}
 			// otherwise, request phase from sharders; since we aren't using
@@ -121,74 +127,86 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// buffered (at least 1 element in the buffer)
 			mc.GetPhaseFromSharders()
 			continue
-		case pe = <-phaseq:
-			if !pe.Sharders {
-				last = time.Now() // keep last time the phase given by the miner
+		case newPhaseEvent = <-phaseEventsChan:
+			if !newPhaseEvent.Sharders {
+				// keep last time the phase given by the miner
+				lastPhaseEventTime = time.Now()
 			}
 		}
 
-		if pe.Phase.StartRound == phaseRound {
-			continue // phase already accepted
+		pn := newPhaseEvent.Phase
+
+		// only retry if new phase is share phase
+		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
+
+		if pn.StartRound == phaseStartRound {
+			if !retrySharePhase {
+				continue // phase already accepted
+			}
 		}
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
 			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
 			active = mc.IsActiveInChain()
-
-			pn = pe.Phase
 		)
 
-		if active && pe.Sharders {
+		if active && newPhaseEvent.Sharders {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
-		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
+		logging.Logger.Debug("dkg process: trying",
+			zap.Any("next_phase", pn),
+			zap.Any("current_phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
 
-		// skip the check only for share
-		if pn.Phase != minersc.Share {
-			if pn.Phase != 0 && pn.Phase != mc.CurrentPhase()+1 {
-				Logger.Debug("dkg process -- jumping over a phase;"+
-					" skip, wait for 'start'",
-					zap.Int("current_phase", int(mc.CurrentPhase())),
-					zap.Any("phase", pn.Phase))
-				mc.SetCurrentPhase(minersc.Unknown)
-				continue
-			}
+		// only go through if pn.Phase is expected
+		if !(pn.Phase == minersc.Start ||
+			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
+			logging.Logger.Debug(
+				"dkg process: jumping over a phase; skip and wait for restart",
+				zap.Any("next_phase", pn.Phase),
+				zap.Any("current_phase", mc.CurrentPhase()))
+			mc.SetCurrentPhase(minersc.Unknown)
+			continue
 		}
 
-		Logger.Info("dkg process start", zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
+		logging.Logger.Info("dkg process: run phase func",
+			zap.Any("next_phase", pn),
+			zap.Any("current_phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
 
 		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
 		if !ok {
-			Logger.Debug("dkg process: no such phase function",
+			logging.Logger.Debug("dkg process: no such phase func",
 				zap.Any("phase", pn.Phase))
 			continue
 		}
 
-		var txn *httpclientutil.Transaction
-		if txn, err = scFunc(ctx, lfb, mb, active); err != nil {
-			Logger.Error("smart contract function failed",
-				zap.Any("error", err), zap.Any("next_phase", pn))
-			continue
+		txn, err := scFunc(ctx, lfb, mb, active)
+		if err != nil {
+			logging.Logger.Error("dkg process: phase func failed",
+				zap.Any("error", err),
+				zap.Any("next_phase", pn),
+				zap.Any("current_phase", mc.CurrentPhase()))
+			if pn.Phase != minersc.Share {
+				continue
+			}
+			retrySharePhase = true
 		}
 
-		Logger.Debug("dkg process move phase",
+		logging.Logger.Debug("dkg process: move phase",
 			zap.Any("next_phase", pn),
-			zap.Any("phase", mc.CurrentPhase()),
+			zap.Any("current_phase", mc.CurrentPhase()),
 			zap.Any("txn", txn))
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
-			var oldPhase = mc.CurrentPhase()
-			mc.SetCurrentPhase(pn.Phase) //
-			phaseRound = pn.StartRound   //
-			Logger.Debug("dkg process moved phase",
-				zap.Any("old_phase", oldPhase),
-				zap.Any("phase", mc.CurrentPhase()))
+			prevPhase := mc.CurrentPhase()
+			mc.SetCurrentPhase(pn.Phase)
+			phaseStartRound = pn.StartRound
+			logging.Logger.Debug("dkg process: moved phase",
+				zap.Any("prev_phase", prevPhase),
+				zap.Any("current_phase", mc.CurrentPhase()))
 		}
 	}
 
@@ -226,17 +244,17 @@ func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
 
 	if active {
 
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey)
 		if err != nil {
 			return
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		mpks = block.NewMpks()
-		if err = mpks.Decode(node.Encode()); err != nil {
+		if err = mpks.Decode(n.Encode()); err != nil {
 			return nil, err
 		}
 
@@ -269,17 +287,17 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 
 	if active {
 
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey)
 		if err != nil {
 			return
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		dmn = minersc.NewDKGMinerNodes()
-		err = dmn.Decode(node.Encode())
+		err = dmn.Decode(n.Encode())
 		if err != nil {
 			return nil, err
 		}
@@ -328,13 +346,13 @@ func (mc *Chain) createSijs(lfb *block.Block, mb *block.MagicBlock,
 
 	var mpks *block.Mpks
 	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
-		Logger.Error("can't share", zap.Any("error", err))
+		logging.Logger.Error("can't share", zap.Any("error", err))
 		return
 	}
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
-		Logger.Error("can't share", zap.Any("error", err))
+		logging.Logger.Error("can't share", zap.Any("error", err))
 		return
 	}
 
@@ -365,7 +383,7 @@ func (mc *Chain) createSijs(lfb *block.Block, mb *block.MagicBlock,
 		id := bls.ComputeIDdkg(k)
 		share, err := mc.viewChangeDKG.ComputeDKGKeyShare(id)
 		if err != nil {
-			Logger.Error("can't compute secret share", zap.Any("error", err))
+			logging.Logger.Error("can't compute secret share", zap.Any("error", err))
 			return err
 		}
 		if k == node.Self.Underlying().GetKey() {
@@ -374,7 +392,7 @@ func (mc *Chain) createSijs(lfb *block.Block, mb *block.MagicBlock,
 		}
 	}
 	if !foundSelf {
-		Logger.Error("failed to add secret key for self",
+		logging.Logger.Error("failed to add secret key for self",
 			zap.Any("lfb_round", lfb.Round))
 	}
 
@@ -406,7 +424,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 
 	var selfNodeKey = node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()),
+		logging.Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()),
 			zap.Any("ok", ok))
 		return // (nil, nil)
 	}
@@ -480,17 +498,17 @@ func (mc *Chain) GetMagicBlockFromSC(lfb *block.Block, mb *block.MagicBlock,
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
 	if active {
-		var node util.Serializable
-		node, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
+		var n util.Serializable
+		n, err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey)
 		if err != nil {
 			return // error
 		}
-		if node == nil {
+		if n == nil {
 			return nil, common.NewError("key_not_found", "key was not found")
 		}
 
 		magicBlock = block.NewMagicBlock()
-		if err = magicBlock.Decode(node.Encode()); err != nil {
+		if err = magicBlock.Decode(n.Encode()); err != nil {
 			return nil, err
 		}
 
@@ -561,7 +579,7 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 	var seri util.Serializable
 	seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
 	if err != nil {
-		Logger.Error("block_next_vc -- can't get miner SC global node",
+		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
@@ -572,7 +590,7 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 	}
 	var gn minersc.GlobalNode
 	if err = gn.Decode(seri.Encode()); err != nil {
-		Logger.Error("block_next_vc -- can't decode miner SC global node",
+		logging.Logger.Error("block_next_vc -- can't decode miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
@@ -582,7 +600,7 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			lfb.Round, err, lfb.Hash)
 	}
 
-	Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
+	logging.Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
 		zap.Int64("nvc", gn.ViewChange))
 
 	return gn.ViewChange, nil // got it
@@ -793,7 +811,7 @@ func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
 	}
 
-	Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
+	logging.Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
 	return
 }
 
@@ -851,7 +869,7 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
-	Logger.Info("setup latest and previous fmbs")
+	logging.Logger.Info("setup latest and previous fmbs")
 
 	var lfmb = mc.GetLatestFinalizedMagicBlock()
 	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
@@ -882,14 +900,14 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
 		lfmb.MagicBlockNumber-1, 1)
 	if err != nil || pfmb.MagicBlock == nil {
-		Logger.Error("getting previous FMB from sharder", zap.Error(err),
+		logging.Logger.Error("getting previous FMB from sharder", zap.Error(err),
 			zap.Int64("num", lfmb.MagicBlockNumber-1),
 			zap.Bool("has_mb", pfmb.MagicBlock != nil))
 		return // error
 	}
 
 	if pfmb.MagicBlock.GetHash() != lfmb.MagicBlock.PreviousMagicBlockHash {
-		Logger.Error("getting previous FMB from sharder",
+		logging.Logger.Error("getting previous FMB from sharder",
 			zap.String("err", "invalid hash"),
 			zap.Int64("num", lfmb.MagicBlockNumber-1))
 		return // error

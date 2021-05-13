@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -536,7 +537,7 @@ func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
 
 	vp = newVestingPool()
 	if err = vp.Decode(poolb); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 
 	return
@@ -840,7 +841,7 @@ func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
 	)
 
 	if vp, err = vsc.getPool(poolID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool")
 	}
 
 	return vp.info(common.Now()), nil

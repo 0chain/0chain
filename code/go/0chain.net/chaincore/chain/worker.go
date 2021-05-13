@@ -105,7 +105,7 @@ func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
 }
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
-func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) {
+func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -118,7 +118,7 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 				doneC := make(chan struct{})
 				go func() {
 					defer close(doneC)
-					c.finalizeRound(cctx, r, bsh)
+					c.finalizeRound(cctx, r)
 					c.UpdateRoundInfo(r)
 				}()
 
