@@ -1,9 +1,10 @@
-package mocks
+package blockstore
 
 import (
+	"errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/sharder/blockstore"
-	"errors"
 )
 
 type BlockStoreCustom struct {
