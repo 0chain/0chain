@@ -35,6 +35,20 @@ func TestLogWriter(t *testing.T) {
 			}(),
 			want: w,
 		},
+		// duplicating tests to expose race issues
+		{
+			name: "Test_LogWriter_OK",
+			args: func() args {
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r.URL.Query().Set("detail", "1")
+
+				return args{
+					w: httptest.NewRecorder(),
+					r: r,
+				}
+			}(),
+			want: w,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -65,6 +79,20 @@ func TestN2NLogWriter(t *testing.T) {
 		args args
 		want http.ResponseWriter
 	}{
+		{
+			name: "Test_N2NLogWriter_OK",
+			args: func() args {
+				r := httptest.NewRequest(http.MethodGet, "/", nil)
+				r.URL.Query().Set("detail", "1")
+
+				return args{
+					w: httptest.NewRecorder(),
+					r: r,
+				}
+			}(),
+			want: w,
+		},
+		// duplicating tests to expose race issues
 		{
 			name: "Test_N2NLogWriter_OK",
 			args: func() args {

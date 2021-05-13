@@ -48,6 +48,19 @@ func TestHashHandler(t *testing.T) {
 			}(),
 			wantW: w,
 		},
+		// duplicating tests to expose race issues
+		{
+			name: "Test_HashHandler_OK",
+			args: func() args {
+				buf := bytes.NewBuffer(nil)
+				_, err := buf.WriteString(data)
+				require.NoError(t, err)
+				r := httptest.NewRequest(http.MethodGet, "/", buf)
+
+				return args{w: httptest.NewRecorder(), r: r}
+			}(),
+			wantW: w,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -98,6 +111,52 @@ func TestSignHandler(t *testing.T) {
 		want    interface{}
 		wantErr bool
 	}{
+		{
+			name: "Test_SignHandler_Invalid_Public_Key_ERR",
+			args: func() args {
+				u := url.URL{}
+				q := u.Query()
+				q.Set("public_key", "!")
+				u.RawQuery = q.Encode()
+
+				return args{r: httptest.NewRequest(http.MethodPost, "/"+u.String(), nil)}
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Test_SignHandler_Invalid_Sign_ERR_ERR",
+			args: func() args {
+				u := url.URL{}
+				q := u.Query()
+				q.Set("public_key", pbKey)
+				q.Set("private_key", "123")
+				q.Set("data", "!")
+				u.RawQuery = q.Encode()
+
+				return args{r: httptest.NewRequest(http.MethodPost, "/"+u.String(), nil)}
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "Test_SignHandler_OK",
+			args: func() args {
+				u := url.URL{}
+				q := u.Query()
+				q.Set("public_key", pbKey)
+				q.Set("private_key", prKey)
+				q.Set("data", data)
+				q.Set("timestamp", ts)
+				u.RawQuery = q.Encode()
+
+				return args{r: httptest.NewRequest(http.MethodPost, "/"+u.String(), nil)}
+			}(),
+			want: map[string]interface{}{
+				"client_id": clientID,
+				"hash":      hash,
+				"signature": sign,
+			},
+		},
+		// duplicating tests to expose race issues
 		{
 			name: "Test_SignHandler_Invalid_Public_Key_ERR",
 			args: func() args {
