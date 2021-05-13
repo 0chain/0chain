@@ -1118,6 +1118,11 @@ func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 	return sharders, nil
 }
 
+func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
+	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
+	return err
+}
+
 // getAllShardersKeepList returns the sharder list
 func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, AllShardersKey)
@@ -1132,11 +1137,6 @@ func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 
 func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) error {
 	_, err := state.InsertTrieNode(AllShardersKey, sharders)
-	return err
-}
-
-func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
-	_, err := state.InsertTrieNode(ShardersKeepKey, sharders)
 	return err
 }
 
