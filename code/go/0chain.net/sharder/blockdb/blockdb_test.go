@@ -57,7 +57,7 @@ func TestDBWrite(t *testing.T) {
 
 	cls := &Class{Grade: 4, Description: "Most pouplar open source projects and technologies"}
 	db.SetDBHeader(cls)
-	students := make([]*Student, 3, 3)
+	students := make([]*Student, 3)
 	students[0] = &Student{Name: "Bitcoin - the first cryptocurrency", ID: "2009"}
 	students[1] = &Student{Name: "Linux - the most popular open source operating system", ID: "1991"}
 	students[2] = &Student{Name: "Apache - the first open source web server", ID: "1995"}
