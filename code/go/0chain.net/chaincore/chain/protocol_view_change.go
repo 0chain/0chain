@@ -51,39 +51,46 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 			return
 		case <-tm.C:
 			logging.Logger.Debug("SetupSC - check if node is registered")
-			isRegisteredC := make(chan bool)
-			go func() {
-				if mc.isRegistered() {
-					logging.Logger.Debug("SetupSC - node is already registered")
-					isRegisteredC <- true
+			func() {
+				isRegisteredC := make(chan bool)
+				cctx, cancel := context.WithCancel(ctx)
+				defer cancel()
+
+				go func() {
+					if mc.isRegistered(cctx) {
+						isRegisteredC <- true
+						return
+					}
+					isRegisteredC <- false
+				}()
+
+				select {
+				case reg := <-isRegisteredC:
+					if reg {
+						logging.Logger.Debug("SetupSC - node is already registered")
+						return
+					}
+				case <-time.NewTimer(3 * time.Second).C:
+					logging.Logger.Debug("SetupSC - check node registered timeout")
+					cancel()
+				}
+
+				logging.Logger.Debug("Request to register node")
+				txn, err := mc.RegisterNode()
+				if err != nil {
+					logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
+						zap.Error(err))
 					return
 				}
-				isRegisteredC <- false
-			}()
 
-			select {
-			case reg := <-isRegisteredC:
-				if reg {
-					continue
+				if txn != nil && mc.ConfirmTransaction(txn) {
+					logging.Logger.Debug("Register node transaction confirmed")
+					return
 				}
-			case <-time.NewTimer(3 * time.Second).C:
-				logging.Logger.Debug("SetupSC - check node registered timeout")
-			}
 
-			logging.Logger.Debug("Request to register node")
-			txn, err := mc.RegisterNode()
-			if err != nil {
-				logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
-					zap.Error(err))
-				continue
-			}
+				logging.Logger.Debug("Register node transaction not confirmed yet")
 
-			if txn != nil && mc.ConfirmTransaction(txn) {
-				logging.Logger.Debug("Register node transaction confirmed")
-				continue
-			}
-
-			logging.Logger.Debug("Register node transaction not confirmed yet")
+			}()
 		}
 	}
 }
@@ -145,8 +152,8 @@ func (mc *Chain) RegisterClient() {
 	}
 }
 
-func (mc *Chain) isRegistered() (is bool) {
-	is = mc.isRegisteredEx(
+func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
+	is = mc.isRegisteredEx(ctx,
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeMiner {
 				return minersc.AllMinersKey
@@ -166,7 +173,7 @@ func (mc *Chain) isRegistered() (is bool) {
 	return
 }
 
-func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
+func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string, remote bool) bool {
 
 	var (
@@ -207,7 +214,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 			err      error
 		)
 
-		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil,
+		err = httpclientutil.MakeSCRestAPICall(ctx, minersc.ADDRESS, relPath, nil,
 			sharders, allNodesList, 1)
 		if err != nil {
 			logging.Logger.Error("is registered", zap.Any("error", err))
@@ -332,8 +339,8 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 	return txn, err
 }
 
-func (mc *Chain) IsRegisteredSharderKeep(remote bool) bool {
-	return mc.isRegisteredEx(
+func (mc *Chain) IsRegisteredSharderKeep(ctx context.Context, remote bool) bool {
+	return mc.isRegisteredEx(ctx,
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {
 				return minersc.ShardersKeepKey
@@ -475,10 +482,10 @@ func getHighestOnly(list []seriHigh) []seriHigh {
 }
 
 // The makeSCRESTAPICall is internal for GetFromSharders.
-func makeSCRESTAPICall(address, relative, sharder string,
+func makeSCRESTAPICall(ctx context.Context, address, relative, sharder string,
 	seri util.Serializable, collect chan util.Serializable) {
 
-	var err = httpclientutil.MakeSCRestAPICall(address, relative, nil,
+	var err = httpclientutil.MakeSCRestAPICall(ctx, address, relative, nil,
 		[]string{sharder}, seri, 1)
 	if err != nil {
 		logging.Logger.Error("requesting phase node from sharder",
@@ -513,7 +520,7 @@ func makeSCRESTAPICall(address, relative, sharder string,
 //
 // Probably, block requesting verifying, and syncing its state and then
 // extracting phase can help. But it's not 100% (slow or doesn't work for now ?).
-func GetFromSharders(address, relative string, sharders []string,
+func GetFromSharders(ctx context.Context, address, relative string, sharders []string,
 	newFunc func() util.Serializable,
 	rejectFunc func(seri util.Serializable) bool,
 	highFunc func(seri util.Serializable) int64) (
@@ -521,7 +528,7 @@ func GetFromSharders(address, relative string, sharders []string,
 
 	var collect = make(chan util.Serializable, len(sharders))
 	for _, sharder := range sharders {
-		go makeSCRESTAPICall(address, relative, sharder,
+		go makeSCRESTAPICall(ctx, address, relative, sharder,
 			newFunc(), collect)
 	}
 
@@ -566,7 +573,7 @@ func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
 //
 // There is no a worker uses the GetPhaseFromSharders in the chaincore/chain.
 // Both, miners and sharders should trigger it themselves.
-func (c *Chain) GetPhaseFromSharders() {
+func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 
 	var (
 		cmb = c.GetCurrentMagicBlock()
@@ -574,7 +581,7 @@ func (c *Chain) GetPhaseFromSharders() {
 	)
 
 	shardersN2NURLs := c.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs
-	got = GetFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
+	got = GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetPhase,
 		shardersN2NURLs, func() util.Serializable {
 			return new(minersc.PhaseNode)
 		}, func(val util.Serializable) bool {
