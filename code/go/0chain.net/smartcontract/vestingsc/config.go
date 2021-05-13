@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
 	"context"
 	"encoding/json"
 	"errors"
