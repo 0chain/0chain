@@ -44,10 +44,11 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		nodeID = bls.ComputeIDdkg(n.ID)
 	)
 
-	var (
-		secShare           = mc.getNodeSij(nodeID)
-		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
-	)
+	shareOrSignSuccess := make(map[string]*bls.DKGKeyShare)
+	secShare, ok := mc.getNodeSij(nodeID)
+	if !ok {
+		return common.NewErrorf("send_dkg_share", "could not found sec share of node id: %s", to)
+	}
 
 	params.Add("secret_share", secShare.GetHexString())
 
@@ -128,8 +129,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 		}
 
 		if _, ok := sos.ShareOrSigns[k]; !ok {
-			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
-			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
+			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
 		}
 	}
 
@@ -214,7 +214,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 		zap.Int64("mb_number",
 			mc.viewChangeProcess.viewChangeDKG.MagicBlockNumber))
 
-	for _, v := range mc.viewChangeProcess.viewChangeDKG.Mpk {
+	for _, v := range mc.viewChangeProcess.viewChangeDKG.GetMPKs() {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 

@@ -76,7 +76,7 @@ func (cmd *cmdMagicBlock) setupMPKS() {
 	for id := range cmd.block.Miners.NodesMap {
 		cmd.dkgs[id] = bls.MakeDKG(cmd.block.T, cmd.block.N, id)
 		mpk := &block.MPK{ID: id}
-		for _, v := range cmd.dkgs[id].Mpk {
+		for _, v := range cmd.dkgs[id].GetMPKs() {
 			mpk.Mpk = append(mpk.Mpk, v.SerializeToHexStr())
 		}
 		cmd.block.Mpks.Mpks[id] = mpk
