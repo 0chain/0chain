@@ -2,6 +2,7 @@ package httpclientutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -322,54 +325,62 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 }
 
 //MakeSCRestAPICall for smart contract REST API Call
-func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]string, urls []string, entity util.Serializable, consensus int) error {
+func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath string, params map[string]string, urls []string, entity util.Serializable, consensus int) error {
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
-	//responses := make(map[string]int)
-	var retObj util.Serializable
-	//maxCount := 0
-	numSuccess := 0
-	numErrs := 0
-	var errString string
+	var (
+		numSuccess int32
+		numErrs    int32
+		errStringC = make(chan string, len(urls))
+	)
 
 	//normally this goes to sharders
+	wg := &sync.WaitGroup{}
 	for _, sharder := range urls {
-		urlString := fmt.Sprintf("%v/%v%v%v", sharder, scRestAPIURL, scAddress, relativePath)
-		logging.N2n.Info("Running SCRestAPI on", zap.String("urlString", urlString))
-		urlObj, _ := url.Parse(urlString)
-		q := urlObj.Query()
-		for k, v := range params {
-			q.Add(k, v)
-		}
-		urlObj.RawQuery = q.Encode()
-		response, err := httpClient.Get(urlObj.String())
-		if err != nil {
-			logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
-			numErrs++
-			errString = errString + sharder + ":" + err.Error()
-		} else {
-			if response.StatusCode != 200 {
-				logging.N2n.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
-				numErrs++
-				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
-				response.Body.Close()
-				continue
+		wg.Add(1)
+		go func(sharderURL string) {
+			defer wg.Done()
+			urlString := fmt.Sprintf("%v/%v%v%v", sharderURL, scRestAPIURL, scAddress, relativePath)
+			logging.N2n.Info("Running SCRestAPI on", zap.String("urlString", urlString))
+			urlObj, _ := url.Parse(urlString)
+			q := urlObj.Query()
+			for k, v := range params {
+				q.Add(k, v)
 			}
-			bodyBytes, err := ioutil.ReadAll(response.Body)
-			logging.Logger.Info("sc rest", zap.Any("body", string(bodyBytes)), zap.Any("err", err), zap.Any("code", response.StatusCode))
-			response.Body.Close()
+			urlObj.RawQuery = q.Encode()
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlObj.String(), nil)
 			if err != nil {
-				logging.Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
+				logging.N2n.Error("Create http request with context failed", zap.Error(err))
 			}
-			err = entity.Decode(bodyBytes)
+
+			rsp, err := httpClient.Do(req)
 			if err != nil {
+				logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
+				atomic.AddInt32(&numErrs, 1)
+				errStringC <- sharderURL + ":" + err.Error()
+				return
+			}
+			defer rsp.Body.Close()
+			if rsp.StatusCode != 200 {
+				logging.N2n.Error("Error getting response from", zap.String("URL", sharderURL), zap.Any("response Status", rsp.StatusCode))
+				atomic.AddInt32(&numErrs, 1)
+				errStringC <- sharderURL + ": response_code: " + strconv.Itoa(rsp.StatusCode)
+				return
+			}
+
+			bodyBytes, err := ioutil.ReadAll(rsp.Body)
+			logging.Logger.Info("sc rest", zap.Any("body", string(bodyBytes)), zap.Any("err", err), zap.Any("code", rsp.StatusCode))
+			if err != nil {
+				logging.Logger.Error("Failed to read body response", zap.String("URL", sharderURL), zap.Any("error", err))
+			}
+			if err := entity.Decode(bodyBytes); err != nil {
 				logging.Logger.Error("Error unmarshalling response", zap.Any("error", err))
-				numErrs++
-				errString = errString + sharder + ":" + err.Error()
-				continue
+				atomic.AddInt32(&numErrs, 1)
+				errStringC <- sharderURL + ":" + err.Error()
+				return
 			}
-			retObj = entity
-			numSuccess++
+			atomic.AddInt32(&numSuccess, 1)
+
 			/*
 				Todo: Incorporate hash verification
 				hashBytes := h.Sum(nil)
@@ -380,35 +391,49 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 					retObj = entity
 				}
 			*/
-		}
+		}(sharder)
 	}
-	logging.Logger.Info("sc rest consensus", zap.Any("success", numSuccess))
-	if numSuccess+numErrs == 0 {
+
+	wg.Wait()
+	close(errStringC)
+	errStrs := make([]string, 0, len(urls))
+	for s := range errStringC {
+		errStrs = append(errStrs, s)
+	}
+
+	errStr := strings.Join(errStrs, " ")
+
+	nSuccess := atomic.LoadInt32(&numSuccess)
+	nErrs := atomic.LoadInt32(&numErrs)
+	logging.Logger.Info("sc rest consensus", zap.Any("success", nSuccess))
+	if nSuccess+nErrs == 0 {
 		return common.NewError("req_not_run", "Could not run the request") //why???
 
 	}
-	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	sr := int(math.Ceil((float64(nSuccess) * 100) / float64(nSuccess+nErrs)))
 	// We've at least one success and success rate sr is at least same as consensus
-	if numSuccess > 0 && sr >= consensus {
-		if retObj != nil {
-			return nil
-		}
-		return common.NewError("err_getting_resp", errString)
-	} else if numSuccess > 0 {
+	if nSuccess > 0 && sr >= consensus {
+		return nil
+	} else if nSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
-		logging.Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return common.NewError("err_getting_consensus", errString)
-	} else if numErrs > 0 {
+		logging.Logger.Error("Error Getting consensus",
+			zap.Int32("Success", nSuccess),
+			zap.Int32("Errs", nErrs),
+			zap.Int("consensus", consensus))
+		return common.NewError("err_getting_consensus", errStr)
+	} else if nErrs > 0 {
 		//We have received only errors
-		logging.Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return common.NewError("err_running_req", errString)
+		logging.Logger.Error("Error running the request",
+			zap.Int32("Success", nSuccess),
+			zap.Int32("Errs", nErrs),
+			zap.Int("consensus", consensus))
+		return common.NewError("err_running_req", errStr)
 	}
 	//this should never happen
 	return common.NewError("unknown_err", "Not able to run the request. unknown reason")
-
 }
 
-//MakeSCRestAPICall for smart contract REST API Call
+// MakeSCRestAPICall for smart contract REST API Call
 func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.BlockSummary, error) {
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
