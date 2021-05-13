@@ -189,7 +189,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("name", getFunctionName(phaseFunc)))
 
 		lfmb := mc.GetLatestFinalizedMagicBlock()
-		txn, err := scFunc(ctx, lfb, lfmb.MagicBlock, active)
+		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
 				zap.Any("current_phase", mc.CurrentPhase()),
