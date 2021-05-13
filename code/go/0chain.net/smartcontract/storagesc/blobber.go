@@ -84,7 +84,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	// check for duplicates
 	for _, b := range all.Nodes {
 		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
-			return sc.updateBlobber(t, blobber, allBlobbersList)
+			var existingBytes util.Serializable
+			existingBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
+
+			if err = blobber.validate(conf); err != nil {
+				return fmt.Errorf("invalid values in request: %v", err)
+			}
+
+			return sc.updateBlobber(t, existingBytes, blobber, all)
 		}
 	}
 
@@ -112,13 +119,13 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 // remove blobber (when a blobber provides capacity = 0)
 func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
-	blobber *StorageNode, all *StorageNodes) (blobber *StorageNode, err error) {
+	blobber *StorageNode, all *StorageNodes, balances cstate.StateContextI) (err error) {
 
 	var blobberBytes util.Serializable
 	blobberBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
 
-	if err != nil { // experimental, removed: && err != util.ErrValueNotPresent
-		return "", common.NewError("can't find existing blobber", err.Error())
+	if err != nil {
+		return fmt.Errorf("can't find existing blobber: %v", err)
 	}
 
 	// change it to zero for the removing
@@ -135,7 +142,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	blobber *StorageNode, existingBytes util.Serializable, all *StorageNodes) (err error) {
+	existingBytes util.Serializable, blobber *StorageNode, all *StorageNodes) (err error) {
 
 	var existingBlobber StorageNode
 	if err = existingBlobber.Decode(existingBytes.Encode()); err != nil {
@@ -148,8 +155,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update in the list, or add to the list if the blobber was removed before
 	all.Nodes.add(blobber)
 
-	// statistics
+	// update statistics
 	sc.statIncr(statUpdateBlobber)
+
 	// if has removed (the reborn case)
 	if existingBlobber.Capacity == 0 {
 		sc.statIncr(statNumberOfBlobbers)
@@ -245,7 +253,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		err = sc.insertBlobber(t, conf, blobber, allBlobbers, balances)
 	} else {
 		// remove "blobber"
-		blobber, err = sc.removeBlobber(t, blobber, allBlobbers)
+		err = sc.removeBlobber(t, blobber, allBlobbers, balances)
 	}
 
 	if err != nil {
