@@ -1443,30 +1443,6 @@ func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
 	return c.latestFinalizedMagicBlock.Clone()
 }
 
-// LatestFinalizedMagicBlockUpdate executes a function within the mutex of a read-write managed lock.
-func (c *Chain) LatestFinalizedMagicBlockUpdate(ctx context.Context, fn func(*block.Block) error) error {
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-	errC := make(chan error)
-	stopC := make(chan struct{})
-	go func() {
-		if err := fn(c.latestFinalizedMagicBlock); err != nil {
-			errC <- err
-			return
-		}
-		defer close(stopC)
-	}()
-
-	select {
-	case err := <-errC:
-		return common.NewError("get_lfmb_safe_failed", err.Error())
-	case <-stopC:
-		return nil
-	case <-ctx.Done():
-		return common.NewError("get_lfmb_safe_failed", ctx.Err().Error())
-	}
-}
-
 // GetLatestFinalizedBlockSummary - get the latest finalized block summary.
 func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 	c.lfmbMutex.RLock()
