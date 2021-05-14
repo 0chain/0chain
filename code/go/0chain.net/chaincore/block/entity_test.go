@@ -401,9 +401,14 @@ func TestBlock_ComputeProperties(t *testing.T) {
 	}
 }
 
+func nilBlocksMutexes(b *Block) {
+	b.ticketsMutex = nil
+	b.stateStatusMutex = nil
+	b.StateMutex = nil
+}
+
 func TestBlock_Decode(t *testing.T) {
 	b := NewBlock("", 1)
-	b.stateStatusMutex = &sync.RWMutex{}
 	byt, err := json.Marshal(b)
 	if err != nil {
 		t.Fatal(err)
@@ -461,7 +466,7 @@ func TestBlock_Decode(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          nil,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -471,12 +476,10 @@ func TestBlock_Decode(t *testing.T) {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			b.StateMutex = nil
-			b.stateStatusMutex = nil
-			b.ticketsMutex = nil
-			tt.want.StateMutex = nil
-			tt.want.stateStatusMutex = nil
-			tt.want.ticketsMutex = nil
+			// setting mutexes to nil because they are is not comparable
+			nilBlocksMutexes(b)
+			nilBlocksMutexes(tt.want)
+
 			if !tt.wantErr && !assert.Equal(t, tt.want, b) {
 				t.Errorf("Decode() got = %v, want = %v", b, tt.want)
 			}
