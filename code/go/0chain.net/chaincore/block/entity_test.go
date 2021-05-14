@@ -101,7 +101,10 @@ func copyBlock(b *Block) *Block {
 func copyVerTickets(t []*VerificationTicket) []*VerificationTicket {
 	copiedT := make([]*VerificationTicket, len(t))
 	for i, v := range t {
-		copiedT[i] = &*v
+		copiedT[i] = &VerificationTicket{
+			VerifierID: v.VerifierID,
+			Signature:  v.Signature,
+		}
 	}
 
 	return copiedT
@@ -115,7 +118,11 @@ func copyTxn(txn *transaction.Transaction) *transaction.Transaction {
 	}
 
 	if txn.EntityCollection != nil {
-		copiedTxn.EntityCollection = &*txn.EntityCollection
+		copiedTxn.EntityCollection = &datastore.EntityCollection{
+			CollectionName:     txn.EntityCollection.CollectionName,
+			CollectionSize:     txn.EntityCollection.CollectionSize,
+			CollectionDuration: txn.EntityCollection.CollectionDuration,
+		}
 	}
 
 	return &copiedTxn
@@ -470,7 +477,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 
 			b.ComputeProperties()
 
-			// setting mutexes to nil because they are is not comparable
+			// setting mutexes to nil because they are not comparable
 			nilBlocksMutexes(b)
 			nilBlocksMutexes(tt.want)
 
@@ -545,7 +552,7 @@ func TestBlock_Decode(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          nil,
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -555,7 +562,7 @@ func TestBlock_Decode(t *testing.T) {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			// setting mutexes to nil because they are is not comparable
+			// setting mutexes to nil because they are not comparable
 			nilBlocksMutexes(b)
 			nilBlocksMutexes(tt.want)
 
@@ -1010,6 +1017,7 @@ func TestBlock_Read(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
+				ticketsMutex: tt.fields.ticketsMutex,
 			}
 			if err := b.Read(tt.args.ctx, tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("Read() error = %v, wantErr %v", err, tt.wantErr)
@@ -1145,6 +1153,7 @@ func TestBlock_Write(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
+				ticketsMutex: tt.fields.ticketsMutex,
 			}
 			if err := b.Write(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
@@ -1219,6 +1228,7 @@ func TestBlock_Delete(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
+				ticketsMutex: tt.fields.ticketsMutex,
 			}
 			if err := b.Delete(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
@@ -1285,7 +1295,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 			args: args{prevBlock: prevB},
 			want: func() *Block {
 				b := NewBlock("", 2)
-				b.PrevBlock = copyBlock(b.PrevBlock)
+				b.PrevBlock = copyBlock(prevB)
 				b.PrevHash = prevB.Hash
 				b.Round = prevB.Round + 1
 				if len(b.PrevBlockVerificationTickets) == 0 {
@@ -1321,12 +1331,10 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 
 			b.SetPreviousBlock(tt.args.prevBlock)
 
-			b.StateMutex = nil
-			b.stateStatusMutex = nil
-			b.ticketsMutex = nil
-			tt.want.StateMutex = nil
-			tt.want.stateStatusMutex = nil
-			tt.want.ticketsMutex = nil
+			// setting mutexes and states to nil because they are not comparable
+			nilBlocksMutexes(tt.want)
+			nilBlocksMutexes(b)
+
 			if !assert.Equal(t, tt.want, b) {
 				t.Errorf("SetPreviousBlock() got = %v, want = %v", b, tt.want)
 			}
@@ -1559,7 +1567,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 			}
 			b.SetStateDB(tt.args.prevBlock)
 
-			// setting mutexes and states to nil because they are is not comparable
+			// setting mutexes and states to nil because they are not comparable
 			nilBlocksMutexes(b)
 			nilBlocksMutexes(tt.want)
 			b.ClientState = nil
