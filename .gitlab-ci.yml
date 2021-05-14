@@ -119,32 +119,23 @@ build-sharders-integration:
   - ./docker.local/bin/setup_network.sh || true
   - ./docker.local/bin/sync_clock.sh
 
-test-view-change-1:
+test-view-change.fault-tolerance:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh view-change-1
+  - ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
-test-view-change-2:
+test-view-change.byzantine:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh view-change-2
-
-test-view-change-3:
-  <<: *only-protected
-  <<: *run-integration-tests
-  stage: test
-  tags:
-  - virtual
-  script:
-  - ./docker.local/bin/start.conductor.sh view-change-3
+  - ./docker.local/bin/start.conductor.sh view-change.byzantine
 
 test-miners:
   <<: *only-protected
@@ -163,3 +154,12 @@ test-sharders:
   - virtual
   script:
   - ./docker.local/bin/start.conductor.sh sharders
+
+test-no-view-change.fault-tolerance:
+  <<: *only-protected
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
