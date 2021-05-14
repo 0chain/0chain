@@ -91,7 +91,13 @@ func TestMpks_Decode(t *testing.T) {
 			fields: fields{
 				Mpks: mpk.Mpks,
 			},
-			args: args{input: blob},
+			args: args{
+				input: func() []byte{
+					res := make([]byte, len(blob))
+					copy(res, blob)
+					return res
+				}(),
+			},
 			want: mpk,
 		},
 		{
