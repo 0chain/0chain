@@ -525,7 +525,7 @@ func TestBlock_Decode(t *testing.T) {
 		{
 			name:    "OK",
 			args:    args{input: byt},
-			want:    b,
+			want:    copyBlock(b),
 			wantErr: false,
 		},
 	}
