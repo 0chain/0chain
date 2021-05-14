@@ -125,6 +125,7 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -139,6 +140,7 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 			name: "OK",
 			fields: fields{
 				VerificationTickets: b.VerificationTickets,
+				ticketsMutex: b.ticketsMutex,
 			},
 			wantVts: []*VerificationTicket{
 				b.VerificationTickets[0].Copy(),
@@ -147,6 +149,9 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 		},
 		{
 			name:    "Empty_Tickets_OK",
+			fields: fields{
+				ticketsMutex: &sync.RWMutex{},
+			},
 			wantVts: nil,
 		},
 	}
@@ -166,7 +171,7 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -204,6 +209,7 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -216,7 +222,10 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 	}{
 		{
 			name:   "OK",
-			fields: fields{VerificationTickets: b.VerificationTickets},
+			fields: fields{
+				VerificationTickets: b.VerificationTickets,
+				ticketsMutex: b.ticketsMutex,
+			},
 			want:   2,
 		},
 	}
@@ -236,7 +245,7 @@ func TestBlock_VerificationTicketsSize(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -264,6 +273,7 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -295,7 +305,7 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -328,6 +338,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -389,7 +400,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -434,6 +445,7 @@ func TestBlock_Decode(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -520,6 +532,7 @@ func TestBlock_Validate(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -856,7 +869,7 @@ func TestBlock_Validate(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -895,6 +908,7 @@ func TestBlock_Read(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -958,6 +972,7 @@ func TestBlock_GetScore(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -990,7 +1005,7 @@ func TestBlock_GetScore(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1029,6 +1044,7 @@ func TestBlock_Write(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1102,6 +1118,7 @@ func TestBlock_Delete(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1167,6 +1184,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1200,6 +1218,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				verificationStatus:    b.verificationStatus,
 				RunningTxnCount:       b.RunningTxnCount,
 				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				ticketsMutex: b.ticketsMutex,
 				MagicBlock:            b.MagicBlock,
 			},
 			args: args{prevBlock: prevB},
@@ -1232,7 +1251,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1269,6 +1288,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1314,7 +1334,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				stateStatusMutex:      &sync.RWMutex{},
 				StateMutex:            &sync.RWMutex{},
 				verificationStatus:    tt.fields.verificationStatus,
@@ -1351,8 +1371,11 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 		TxnsMap               map[string]bool
 		ClientState           util.MerklePatriciaTrieI
 		stateStatus           int8
+		stateStatusMutex      *sync.RWMutex
+		StateMutex            *sync.RWMutex
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex          *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1465,9 +1488,9 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
-				stateStatusMutex:      &sync.RWMutex{},
-				StateMutex:            &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
+				stateStatusMutex:      tt.fields.stateStatusMutex,
+				StateMutex:            tt.fields.StateMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1475,8 +1498,12 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 			}
 			b.SetStateDB(tt.args.prevBlock)
 
+			// setting mutexes and states to nil because they are is not comparable
+			nilBlocksMutexes(b)
+			nilBlocksMutexes(tt.want)
 			b.ClientState = nil
 			tt.want.ClientState = nil
+
 			if !assert.Equal(t, tt.want, b) {
 				assert.Equal(t, tt.want.ClientState, b.ClientState)
 				t.Errorf("SetStateDB() got = %v, want = %v", b, tt.want)
@@ -1503,6 +1530,7 @@ func TestBlock_InitStateDB(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1556,7 +1584,7 @@ func TestBlock_InitStateDB(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1596,6 +1624,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1614,6 +1643,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 			name: "TRUE",
 			fields: fields{
 				VerificationTickets: b.VerificationTickets,
+				ticketsMutex: b.ticketsMutex,
 			},
 			args: args{vt: &VerificationTicket{VerifierID: "unknown id"}},
 			want: true,
@@ -1622,6 +1652,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 			name: "FALSE",
 			fields: fields{
 				VerificationTickets: b.VerificationTickets,
+				ticketsMutex: b.ticketsMutex,
 			},
 			args: args{vt: &VerificationTicket{VerifierID: verID}},
 			want: false,
@@ -1643,7 +1674,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1681,6 +1712,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1697,12 +1729,16 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 	}{
 		{
 			name: "Received_OK",
+			fields: fields{
+				ticketsMutex: &sync.RWMutex{},
+			},
 			want: []*VerificationTicket(nil),
 		},
 		{
 			name: "Already_Have_OK",
 			fields: fields{
 				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
 			},
 			want: tickets,
 		},
@@ -1710,6 +1746,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 			name: "Nil_Ticket_OK",
 			fields: fields{
 				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
 			},
 			args: args{vts: make([]*VerificationTicket, 2)},
 			want: tickets,
@@ -1718,6 +1755,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 			name: "Not_Nil_Tickets_But_Duplicate_OK",
 			fields: fields{
 				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
 			},
 			args: args{
 				vts: []*VerificationTicket{
@@ -1736,6 +1774,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 			name: "OK",
 			fields: fields{
 				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
 			},
 			args: args{
 				vts: []*VerificationTicket{
@@ -1763,7 +1802,7 @@ func TestBlock_MergeVerificationTickets(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1804,6 +1843,7 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1838,7 +1878,7 @@ func TestBlock_GetMerkleTree(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1883,6 +1923,7 @@ func TestBlock_ComputeHash(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -1933,7 +1974,7 @@ func TestBlock_ComputeHash(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -1978,6 +2019,7 @@ func TestBlock_HashBlock(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2028,7 +2070,7 @@ func TestBlock_HashBlock(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2064,6 +2106,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2121,7 +2164,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2158,6 +2201,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2237,7 +2281,7 @@ func TestBlock_HasTransaction(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2290,6 +2334,7 @@ func TestBlock_GetSummary(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2340,7 +2385,7 @@ func TestBlock_GetSummary(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2368,6 +2413,7 @@ func TestBlock_Weight(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2400,7 +2446,7 @@ func TestBlock_Weight(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2431,6 +2477,7 @@ func TestBlock_ComputeChainWeight(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2504,7 +2551,7 @@ func TestBlock_ComputeChainWeight(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2534,6 +2581,7 @@ func TestBlock_GetBlockState(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2565,7 +2613,7 @@ func TestBlock_GetBlockState(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2602,6 +2650,7 @@ func TestBlock_GetClients(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2641,7 +2690,7 @@ func TestBlock_GetClients(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2669,6 +2718,7 @@ func TestBlock_GetStateStatus(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2701,7 +2751,7 @@ func TestBlock_GetStateStatus(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2730,6 +2780,7 @@ func TestBlock_IsStateComputed(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2767,7 +2818,7 @@ func TestBlock_IsStateComputed(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2803,6 +2854,7 @@ func TestBlock_GetTransaction(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2846,7 +2898,7 @@ func TestBlock_GetTransaction(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2874,6 +2926,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2886,6 +2939,9 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
+			fields: fields{
+				ticketsMutex: &sync.RWMutex{},
+			},
 			want: true,
 		},
 	}
@@ -2905,7 +2961,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -2935,6 +2991,7 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -2966,7 +3023,7 @@ func TestBlock_GetVerificationStatus(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -3013,6 +3070,7 @@ func TestBlock_UnknownTickets(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -3029,13 +3087,19 @@ func TestBlock_UnknownTickets(t *testing.T) {
 	}{
 		{
 			name:   "OK",
-			fields: fields{VerificationTickets: tickets},
+			fields: fields{
+				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
+			},
 			args:   args{vts: newTickets},
 			want:   newTickets,
 		},
 		{
 			name:   "Nil_New_Tickets_OK",
-			fields: fields{VerificationTickets: tickets},
+			fields: fields{
+				VerificationTickets: tickets,
+				ticketsMutex: &sync.RWMutex{},
+			},
 			args:   args{vts: make([]*VerificationTicket, 1)},
 			want:   nil,
 		},
@@ -3056,7 +3120,7 @@ func TestBlock_UnknownTickets(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -3086,6 +3150,7 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -3124,7 +3189,7 @@ func TestBlock_AddUniqueBlockExtension(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -3163,6 +3228,7 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -3175,12 +3241,16 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 	}{
 		{
 			name:      "Nil_tickets_OK",
+			fields: fields{
+				ticketsMutex: &sync.RWMutex{},
+			},
 			wantPbvts: nil,
 		},
 		{
 			name: "OK",
 			fields: fields{
 				UnverifiedBlockBody: UnverifiedBlockBody{PrevBlockVerificationTickets: tickets},
+				ticketsMutex: &sync.RWMutex{},
 			},
 			wantPbvts: tickets,
 		},
@@ -3201,7 +3271,7 @@ func TestBlock_GetPrevBlockVerificationTickets(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -3240,6 +3310,7 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -3252,7 +3323,10 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 	}{
 		{
 			name:   "OK",
-			fields: fields{UnverifiedBlockBody: b.UnverifiedBlockBody},
+			fields: fields{
+				UnverifiedBlockBody: b.UnverifiedBlockBody,
+				ticketsMutex: &sync.RWMutex{},
+			},
 			want:   len(tickets),
 		},
 	}
@@ -3272,7 +3346,7 @@ func TestBlock_PrevBlockVerificationTicketsSize(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -3350,6 +3424,7 @@ func TestBlock_DoReadLock(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
+		ticketsMutex *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -3361,6 +3436,9 @@ func TestBlock_DoReadLock(t *testing.T) {
 	}{
 		{
 			name: "OK",
+			fields: fields{
+				ticketsMutex: &sync.RWMutex{},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -3379,7 +3457,7 @@ func TestBlock_DoReadLock(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          &sync.RWMutex{},
+				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
