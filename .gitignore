@@ -37,7 +37,6 @@ docker.local/sharder*
 *.sublime-workspace
 
 # executables
-
 code/go/0chain.net/sharder/sharder/sharder
 code/go/0chain.net/sharder/miner/miner
 
@@ -45,10 +44,8 @@ code/go/0chain.net/sharder/miner/miner
 cover.html
 cover.out
 
-
 # conductor executable
 code/go/0chain.net/conductor/conductor/conductor
-
 conductor/logs/*
 
 # log dumps
@@ -56,3 +53,6 @@ docker.local/log_dumps
 
 # tar archives
 *.tar.gz
+
+# temporary dirs
+**/tmp/
