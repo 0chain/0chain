@@ -257,6 +257,20 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	return entity.(*block.MagicBlock)
 }
 
+// GetMagicBlockNoOffset returns magic block of a given round with out offset
+func (c *Chain) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
+	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
+	entity := c.MagicBlockStorage.Get(round)
+	if entity == nil {
+		entity = c.MagicBlockStorage.GetLatest()
+	}
+	if entity == nil {
+		logging.Logger.Panic("failed to get magic block from mb storage")
+	}
+	return entity.(*block.MagicBlock)
+}
+
 func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 
 	r = mbRoundOffset(r)
