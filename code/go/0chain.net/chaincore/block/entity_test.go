@@ -1245,7 +1245,87 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 	}
 }
 
-func TestBlock_SetStateDB(t *testing.T) {
+func TestBlock_SetStateDB_Debug_True(t *testing.T) {
+	type fields struct {
+		UnverifiedBlockBody   UnverifiedBlockBody
+		VerificationTickets   []*VerificationTicket
+		HashIDField           datastore.HashIDField
+		Signature             string
+		ChainID               datastore.Key
+		ChainWeight           float64
+		RoundRank             int
+		PrevBlock             *Block
+		TxnsMap               map[string]bool
+		ClientState           util.MerklePatriciaTrieI
+		stateStatus           int8
+		blockState            int8
+		isNotarized           bool
+		verificationStatus    int
+		RunningTxnCount       int64
+		UniqueBlockExtensions map[string]bool
+		MagicBlock            *MagicBlock
+	}
+	type args struct {
+		prevBlock *Block
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		args      args
+		want      *Block
+		wantPanic bool
+	}{
+		{
+			name:      "Debug_PANIC",
+			wantPanic: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				got := recover()
+				if (got != nil) != tt.wantPanic {
+					t.Errorf("SetStateDB() want panic  = %v, but got = %v", tt.wantPanic, got)
+				}
+			}()
+
+			state.SetDebugLevel(1)
+
+			b := &Block{
+				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
+				VerificationTickets:   tt.fields.VerificationTickets,
+				HashIDField:           tt.fields.HashIDField,
+				Signature:             tt.fields.Signature,
+				ChainID:               tt.fields.ChainID,
+				ChainWeight:           tt.fields.ChainWeight,
+				RoundRank:             tt.fields.RoundRank,
+				PrevBlock:             tt.fields.PrevBlock,
+				TxnsMap:               tt.fields.TxnsMap,
+				ClientState:           tt.fields.ClientState,
+				stateStatus:           tt.fields.stateStatus,
+				blockState:            tt.fields.blockState,
+				isNotarized:           tt.fields.isNotarized,
+				ticketsMutex:          &sync.RWMutex{},
+				stateStatusMutex:      &sync.RWMutex{},
+				StateMutex:            &sync.RWMutex{},
+				verificationStatus:    tt.fields.verificationStatus,
+				RunningTxnCount:       tt.fields.RunningTxnCount,
+				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
+				MagicBlock:            tt.fields.MagicBlock,
+			}
+			b.SetStateDB(tt.args.prevBlock)
+
+			b.ClientState = nil
+			tt.want.ClientState = nil
+			if !assert.Equal(t, tt.want, b) {
+				assert.Equal(t, tt.want.ClientState, b.ClientState)
+				t.Errorf("SetStateDB() got = %v, want = %v", b, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 	b := NewBlock("", 1)
 	prevB := NewBlock("", 0)
 	cs := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), util.Sequence(b.Round))
@@ -1276,7 +1356,6 @@ func TestBlock_SetStateDB(t *testing.T) {
 		name      string
 		fields    fields
 		args      args
-		debug     bool
 		want      *Block
 		wantPanic bool
 	}{
@@ -1311,11 +1390,6 @@ func TestBlock_SetStateDB(t *testing.T) {
 
 				return b
 			}(),
-		},
-		{
-			name:      "Debug_PANIC",
-			debug:     true,
-			wantPanic: true,
 		},
 		{
 			name: "Non_Nil_Client_State",
@@ -1366,11 +1440,7 @@ func TestBlock_SetStateDB(t *testing.T) {
 				}
 			}()
 
-			if tt.debug {
-				state.SetDebugLevel(1)
-			} else {
-				state.SetDebugLevel(0)
-			}
+			state.SetDebugLevel(0)
 
 			b := &Block{
 				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
