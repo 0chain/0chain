@@ -397,6 +397,12 @@ func TestBlock_ComputeProperties(t *testing.T) {
 			}
 
 			b.ComputeProperties()
+
+			// setting mutexes to nil because they are is not comparable
+			nilBlocksMutexes(b)
+			nilBlocksMutexes(tt.want)
+
+			assert.Equal(t, tt.want, b)
 		})
 	}
 }
