@@ -86,13 +86,13 @@ func TestN2NRateLimit(t *testing.T) {
 		name  string
 		args  args
 		n2nRL float64
-		want  http.ResponseWriter
+		want  *httptest.ResponseRecorder
 	}{
 		{
 			name:  "Test_N2NRateLimit_1.0_OK",
 			args:  args{handler: handler},
 			n2nRL: 1.0,
-			want: func() http.ResponseWriter {
+			want: func() *httptest.ResponseRecorder {
 				w := httptest.NewRecorder()
 				w.Header().Set("X-Rate-Limit-Limit", "1.00")
 				w.Header().Set("X-Rate-Limit-Duration", "1")
