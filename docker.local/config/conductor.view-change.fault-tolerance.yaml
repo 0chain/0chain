@@ -29,26 +29,26 @@
 ---
 enable:
   # View Change
-  # - "Miner goes down"
-  # - "Miner goes down and comes up"
-  # - "Outside miner comes up"
-  # - "Outside miner comes up and goes down"
-  # - "Sharder goes down"
-  # - "Sharder goes down and comes up"
-  # - "Outside sharder comes up"
-  # - "Outside sharder comes up and goes down"
+  - "Miner goes down"
+  - "Miner goes down and comes up"
+  - "Outside miner comes up"
+  - "Outside miner comes up and goes down"
+  - "Sharder goes down"
+  - "Sharder goes down and comes up"
+  - "Outside sharder comes up"
+  - "Outside sharder comes up and goes down"
 
-  # # Threshold Conditions
-  # - "Threshold min/max miners"
-  # - "Threshold min/max sharders"
-  # - "Threshold K miners"
-  # - "X percent of nodes are from previous MB"
-  # - "More nodes than current active set come online at once"
+  # Threshold Conditions
+  - "Threshold min/max miners"
+  - "Threshold min/max sharders"
+  - "Threshold K miners"
+  - "X percent of nodes are from previous MB"
+  - "More nodes than current active set come online at once"
 
-  # # Fault Tolerance - Stress Test
-  # - "All miners go down and come up"
-  # - "All sharders go down and come up"
-  # - "All nodes go down and come up"
+  # Fault Tolerance - Stress Test
+  - "All miners go down and come up"
+  - "All sharders go down and come up"
+  - "All nodes go down and come up"
   - "All nodes fail and recover randomly"
 
 sets:
