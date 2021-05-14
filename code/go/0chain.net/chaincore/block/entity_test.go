@@ -1285,7 +1285,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 			args: args{prevBlock: prevB},
 			want: func() *Block {
 				b := NewBlock("", 2)
-				b.PrevBlock = prevB
+				b.PrevBlock = copyBlock(b.PrevBlock)
 				b.PrevHash = prevB.Hash
 				b.Round = prevB.Round + 1
 				if len(b.PrevBlockVerificationTickets) == 0 {
