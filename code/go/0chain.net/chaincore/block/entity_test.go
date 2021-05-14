@@ -15,15 +15,14 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/logging"
-
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	mocks "0chain.net/mocks/core/datastore"
+	"0chain.net/mocks"
 )
 
 func init() {

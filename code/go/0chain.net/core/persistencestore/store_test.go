@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	mocks "0chain.net/mocks/core/persistencestore"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/mocks"
 )
 
 func init() {

@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	mocks "0chain.net/mocks/core/datastore"
+	"0chain.net/mocks"
 )
 
 func init() {

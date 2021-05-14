@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/core/datastore"
-	mocks "0chain.net/mocks/core/datastore"
 	"github.com/stretchr/testify/require"
+
+	"0chain.net/core/datastore"
+	"0chain.net/mocks"
 )
 
 func init() {
