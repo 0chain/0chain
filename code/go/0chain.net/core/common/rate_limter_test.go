@@ -124,7 +124,7 @@ func TestN2NRateLimit(t *testing.T) {
 			handler(w, r)
 			w.Body = nil
 
-			if !reflect.DeepEqual(w, tt.want) {
+			if !reflect.DeepEqual(w.HeaderMap, tt.want.HeaderMap) && !reflect.DeepEqual(w, tt.want) {
 				t.Errorf("N2NRateLimit() = %#v, want %#v", w, tt.want)
 			}
 		})
