@@ -50,13 +50,17 @@ func (c *CodecTestStruct) DoReadUnlock() {
 }
 
 func TestConcurrentCodec(t *testing.T) {
-	var o CodecTestStruct
-	var wg sync.WaitGroup
+	var (
+		o   CodecTestStruct
+		wg  sync.WaitGroup
+		num = 10
+	)
+
 	for idx := 0; idx < 10; idx++ {
 		o.setNumbers(append(o.getNumbers(), 1))
-		for i := 0; i < 10; i++ {
+		wg.Add(num)
+		for i := 0; i < num; i++ {
 			go func(mi int, wg *sync.WaitGroup) {
-				wg.Add(1)
 				nums := o.getNumbers()
 				for j := 0; j < 1; j++ {
 					nums = append(nums, 100*mi+j)

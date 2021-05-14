@@ -7,11 +7,10 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestUserRateLimit(t *testing.T) {
-	t.Parallel()
-
 	handler := func(w http.ResponseWriter, r *http.Request) {
 	}
 
@@ -50,10 +49,7 @@ func TestUserRateLimit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			viper.Set("network.user_handlers.rate_limit", tt.userRL)
 			ConfigRateLimits()
 
@@ -63,16 +59,12 @@ func TestUserRateLimit(t *testing.T) {
 			handler(w, r)
 			w.Body = nil
 
-			if !reflect.DeepEqual(w, tt.want) {
-				t.Errorf("UserRateLimit() = %#v, want %#v", w, tt.want)
-			}
+			assert.Equal(t, tt.want, w)
 		})
 	}
 }
 
 func TestN2NRateLimit(t *testing.T) {
-	t.Parallel()
-
 	handler := func(w http.ResponseWriter, r *http.Request) {
 	}
 
@@ -111,10 +103,7 @@ func TestN2NRateLimit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			viper.Set("network.n2n_handlers.rate_limit", tt.n2nRL)
 			ConfigRateLimits()
 

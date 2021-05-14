@@ -19,8 +19,6 @@ func init() {
 }
 
 func TestRecover(t *testing.T) {
-	t.Parallel()
-
 	UseRecoverHandler = false
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
@@ -41,10 +39,7 @@ func TestRecover(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
 			handler := Recover(tt.args.handler)
@@ -58,14 +53,13 @@ func TestRecover(t *testing.T) {
 }
 
 func TestRecover_Use_Recover_Handler(t *testing.T) {
-	t.Parallel()
+	UseRecoverHandler = true
 
 	var err error = NewError("code", "msg")
 
 	tests := []struct {
-		name                string
-		want                http.ResponseWriter
-		UseRecoveredHandler bool
+		name string
+		want http.ResponseWriter
 	}{
 		{
 			name: "Test_Recover_Use_Recover_Handler_OK",
@@ -89,16 +83,10 @@ func TestRecover_Use_Recover_Handler(t *testing.T) {
 
 				return w
 			}(),
-			UseRecoveredHandler: true,
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			UseRecoverHandler = tt.UseRecoveredHandler
-
 			panHandler := func(w http.ResponseWriter, r *http.Request) {
 				panic(err)
 			}
