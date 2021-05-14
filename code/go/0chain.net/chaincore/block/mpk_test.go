@@ -91,7 +91,9 @@ func TestMpks_Decode(t *testing.T) {
 		{
 			name: "OK",
 			fields: fields{
-				Mpks: mpk.Mpks,
+				Mpks: map[string]*MPK{
+					"key" : {ID: "id"},
+				},
 			},
 			args: args{
 				input: func() []byte{
@@ -105,7 +107,9 @@ func TestMpks_Decode(t *testing.T) {
 		{
 			name: "ERR",
 			fields: fields{
-				Mpks: mpk.Mpks,
+				Mpks: map[string]*MPK{
+					"key" : {ID: "id"},
+				},
 			},
 			args:    args{input: []byte("}{")},
 			wantErr: true,
@@ -114,7 +118,9 @@ func TestMpks_Decode(t *testing.T) {
 		{
 			name: "OK",
 			fields: fields{
-				Mpks: mpk.Mpks,
+				Mpks: map[string]*MPK{
+					"key" : {ID: "id"},
+				},
 			},
 			args: args{
 				input: func() []byte{
@@ -128,7 +134,9 @@ func TestMpks_Decode(t *testing.T) {
 		{
 			name: "ERR",
 			fields: fields{
-				Mpks: mpk.Mpks,
+				Mpks: map[string]*MPK{
+					"key" : {ID: "id"},
+				},
 			},
 			args:    args{input: []byte("}{")},
 			wantErr: true,
