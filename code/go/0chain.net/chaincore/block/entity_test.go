@@ -406,6 +406,8 @@ func TestBlock_GetEntityMetadata(t *testing.T) {
 }
 
 func TestBlock_ComputeProperties(t *testing.T) {
+	t.Parallel()
+
 	b := NewBlock("", 1)
 	b.Txns = []*transaction.Transaction{
 		new(transaction.Transaction),
@@ -432,6 +434,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 				return want
 			}(),
 		},
+		// duplicating tests to expose race errors
 		{
 			name: "OK",
 			fields: copyBlock(b),
@@ -493,6 +496,8 @@ func nilBlocksMutexes(b *Block) {
 }
 
 func TestBlock_Decode(t *testing.T) {
+	t.Parallel()
+
 	b := NewBlock("", 1)
 	byt, err := json.Marshal(b)
 	if err != nil {
@@ -535,9 +540,19 @@ func TestBlock_Decode(t *testing.T) {
 			want:    copyBlock(b),
 			wantErr: false,
 		},
+		// duplicating tests to expose race errors
+		{
+			name:    "OK",
+			args:    args{input: byt},
+			want:    copyBlock(b),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := &Block{
 				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
 				VerificationTickets:   tt.fields.VerificationTickets,
@@ -1343,6 +1358,10 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_True(t *testing.T) {
+	t.Skip("need to protect debug global variable against parallel access")
+
+	t.Parallel()
+
 	type fields struct {
 		UnverifiedBlockBody   UnverifiedBlockBody
 		VerificationTickets   []*VerificationTicket
@@ -1377,9 +1396,17 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 			name:      "Debug_PANIC",
 			wantPanic: true,
 		},
+		// duplicating tests to expose race errors
+		{
+			name:      "Debug_PANIC",
+			wantPanic: true,
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -1424,6 +1451,10 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_False(t *testing.T) {
+	t.Skip("need to protect debug global variable against parallel access")
+
+	t.Parallel()
+
 	b := NewBlock("", 1)
 	prevB := NewBlock("", 0)
 	cs := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), util.Sequence(b.Round))
@@ -1531,9 +1562,84 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				return b
 			}(),
 		},
+		// duplicating tests to expose race errors
+		{
+			name: "OK",
+			fields: fields{
+				UnverifiedBlockBody:   b.UnverifiedBlockBody,
+				VerificationTickets:   b.VerificationTickets,
+				HashIDField:           b.HashIDField,
+				Signature:             b.Signature,
+				ChainID:               b.ChainID,
+				ChainWeight:           b.ChainWeight,
+				RoundRank:             b.RoundRank,
+				PrevBlock:             b.PrevBlock,
+				TxnsMap:               b.TxnsMap,
+				ClientState:           b.ClientState,
+				stateStatus:           b.stateStatus,
+				blockState:            b.blockState,
+				isNotarized:           b.isNotarized,
+				verificationStatus:    b.verificationStatus,
+				RunningTxnCount:       b.RunningTxnCount,
+				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				MagicBlock:            b.MagicBlock,
+			},
+			args: args{prevBlock: prevB},
+			want: func() *Block {
+				b := NewBlock("", 1)
+				pndb := util.NewMemoryNodeDB()
+				rootHash := prevB.ClientStateHash
+				b.CreateState(pndb)
+				b.ClientState.SetRoot(rootHash)
+
+				return b
+			}(),
+		},
+		{
+			name: "Non_Nil_Client_State",
+			fields: fields{
+				UnverifiedBlockBody:   b.UnverifiedBlockBody,
+				VerificationTickets:   b.VerificationTickets,
+				HashIDField:           b.HashIDField,
+				Signature:             b.Signature,
+				ChainID:               b.ChainID,
+				ChainWeight:           b.ChainWeight,
+				RoundRank:             b.RoundRank,
+				PrevBlock:             b.PrevBlock,
+				TxnsMap:               b.TxnsMap,
+				ClientState:           b.ClientState,
+				stateStatus:           b.stateStatus,
+				blockState:            b.blockState,
+				isNotarized:           b.isNotarized,
+				verificationStatus:    b.verificationStatus,
+				RunningTxnCount:       b.RunningTxnCount,
+				UniqueBlockExtensions: b.UniqueBlockExtensions,
+				MagicBlock:            b.MagicBlock,
+			},
+			args: args{
+				prevBlock: func() *Block {
+					prevB := NewBlock("", 0)
+					prevB.ClientState = cs
+					return prevB
+				}(),
+			},
+
+			want: func() *Block {
+				b := NewBlock("", 1)
+				pndb := cs.GetNodeDB()
+				rootHash := prevB.ClientStateHash
+				b.CreateState(pndb)
+				b.ClientState.SetRoot(rootHash)
+
+				return b
+			}(),
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {

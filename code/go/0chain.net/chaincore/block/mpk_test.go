@@ -66,6 +66,8 @@ func TestMpks_Encode(t *testing.T) {
 }
 
 func TestMpks_Decode(t *testing.T) {
+	t.Parallel()
+
 	mpk := NewMpks()
 	mpk.Mpks["key"] = &MPK{ID: "id"}
 	blob, err := json.Marshal(mpk)
@@ -108,9 +110,35 @@ func TestMpks_Decode(t *testing.T) {
 			args:    args{input: []byte("}{")},
 			wantErr: true,
 		},
+		// duplicating tests to expose race errors
+		{
+			name: "OK",
+			fields: fields{
+				Mpks: mpk.Mpks,
+			},
+			args: args{
+				input: func() []byte{
+					res := make([]byte, len(blob))
+					copy(res, blob)
+					return res
+				}(),
+			},
+			want: mpk,
+		},
+		{
+			name: "ERR",
+			fields: fields{
+				Mpks: mpk.Mpks,
+			},
+			args:    args{input: []byte("}{")},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			mpks := &Mpks{
 				Mpks: tt.fields.Mpks,
 			}
