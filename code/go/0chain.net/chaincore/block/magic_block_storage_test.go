@@ -9,7 +9,12 @@ import (
 
 	"0chain.net/core/datastore"
 	mocks "0chain.net/mocks/core/datastore"
+	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	SetupMagicBlockData(&mocks.Store{})
+}
 
 func TestMagicBlockData_GetEntityMetadata(t *testing.T) {
 	type fields struct {
@@ -243,7 +248,9 @@ func TestNewMagicBlockData(t *testing.T) {
 	mb := NewMagicBlock()
 	mb.MagicBlockNumber = 2
 
-	mbData := datastore.GetEntityMetadata("magicblockdata").Instance().(*MagicBlockData)
+	mbData, ok := datastore.GetEntityMetadata("magicblockdata").Instance().(*MagicBlockData)
+	require.True(t, ok)
+
 	mbData.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
 	mbData.MagicBlock = mb
 
