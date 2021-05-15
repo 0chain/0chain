@@ -330,7 +330,7 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 	v := levelNodeVersion.Add(1)
 
 	if len(vs) == 0 {
-		Logger.Error("NewLevelNodeDB new thread",
+		Logger.Debug("NewLevelNodeDB new thread",
 			zap.Any("predb type", reflect.TypeOf(prevNDB)),
 			zap.Any("new start db version", v),
 		)

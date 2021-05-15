@@ -55,9 +55,12 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	)
 
 	var (
-		secShare           = mc.getNodeSij(nodeID)
 		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
 	)
+	secShare, ok := mc.getNodeSij(nodeID)
+	if !ok {
+		return common.NewErrorf("send_dkg_share", "could not get node sij")
+	}
 
 	var state = crpc.Client().State()
 	switch nodeID := n.GetKey(); {
@@ -145,8 +148,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 		var _, ok = sos.ShareOrSigns[k]
 		if isRevealed || !ok {
-			share := mc.viewChangeDKG.sij[bls.ComputeIDdkg(k)]
-			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
+			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
 		}
 	}
 
