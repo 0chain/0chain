@@ -59,16 +59,19 @@ func (v *Viper) AllSettings() map[string]interface{} {
 }
 
 // AllowEmptyEnv wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) AllowEmptyEnv(allow bool) {
 	v.viper.AllowEmptyEnv(allow)
 }
 
 // AutomaticEnv wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) AutomaticEnv() {
 	v.viper.AutomaticEnv()
 }
 
 // ConfigFileUsed wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) ConfigFileUsed() string {
 	return v.viper.ConfigFileUsed()
 }
@@ -115,6 +118,9 @@ func (v *Viper) BindEnv(in ...string) error {
 
 // Debug wraps viper's method.
 func (v *Viper) Debug() {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
+
 	v.viper.Debug()
 }
 
@@ -255,6 +261,7 @@ func (v *Viper) MergeInConfig() error {
 }
 
 // OnConfigChange wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) OnConfigChange(run func(in fsnotify.Event)) {
 	v.viper.OnConfigChange(run)
 }
@@ -316,21 +323,25 @@ func (v *Viper) Set(key string, val interface{}) {
 }
 
 // SetConfigFile wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetConfigFile(in string) {
 	v.viper.SetConfigFile(in)
 }
 
 // SetConfigName wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetConfigName(in string) {
 	v.viper.SetConfigName(in)
 }
 
 // SetConfigPermissions wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetConfigPermissions(perm os.FileMode) {
 	v.viper.SetConfigPermissions(perm)
 }
 
 // SetConfigType wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetConfigType(in string) {
 	v.viper.SetConfigType(in)
 }
@@ -344,21 +355,25 @@ func (v *Viper) SetDefault(key string, val interface{}) {
 }
 
 // SetEnvPrefix wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetEnvPrefix(in string) {
 	v.viper.SetEnvPrefix(in)
 }
 
 // SetEnvKeyReplacer wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetEnvKeyReplacer(r *strings.Replacer) {
 	v.viper.SetEnvKeyReplacer(r)
 }
 
 // SetFs wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetFs(fs afero.Fs) {
 	v.viper.SetFs(fs)
 }
 
 // SetTypeByDefaultValue wraps viper's method.
+// NOTE that this method is not thread safe.
 func (v *Viper) SetTypeByDefaultValue(enable bool) {
 	v.viper.SetTypeByDefaultValue(enable)
 }
@@ -366,9 +381,9 @@ func (v *Viper) SetTypeByDefaultValue(enable bool) {
 // Sub wraps viper's method.
 func (v *Viper) Sub(key string) *Viper {
 	v.mutex.RLock()
-	sub := v.viper.Sub(key)
-	v.mutex.RUnlock()
+	defer v.mutex.RUnlock()
 
+	sub := v.viper.Sub(key)
 	if sub != nil {
 		return &Viper{viper: sub}
 	}
