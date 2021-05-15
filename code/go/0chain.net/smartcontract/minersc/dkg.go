@@ -105,8 +105,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	if len(shardersKeep.Nodes) < gn.MinS {
 		return common.NewErrorf("move_to_share_or_publish_failed",
-			"not enough sharders in keep list to move phase",
-			"keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
+			"not enough sharders in keep list to move phase keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
 	}
 
 	if !gn.hasPrevShader(shardersKeep, balances) {
