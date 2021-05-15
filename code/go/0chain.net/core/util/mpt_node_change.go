@@ -49,9 +49,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	cc.mutex.Lock()
 	defer cc.mutex.Unlock()
 	nhash := newNode.GetHash()
-	if _, ok := cc.Deletes[nhash]; ok {
-		delete(cc.Deletes, nhash)
-	}
+	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
 		change.New = newNode
@@ -63,7 +61,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	if ok {
 		delete(cc.Changes, ohash)
 		if prevChange.Old != nil {
-			if bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
+			if bytes.Equal(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) {
 				return
 			}
 		}
@@ -166,7 +164,7 @@ func (cc *ChangeCollector) PrintChanges(w io.Writer) {
 //Validate - validate if this change collector is valid
 func (cc *ChangeCollector) Validate() error {
 	cc.mutex.RLock()
-	cc.mutex.RUnlock()
+	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
 			return errors.New("key present in both add and delete")
