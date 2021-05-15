@@ -83,8 +83,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	mc.AddVRFShare(ctx, r, r.vrfShare)
-	go mc.SendVRFShare(ctx, r.vrfShare)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs.Clone())
+	}
 }
 
 func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
