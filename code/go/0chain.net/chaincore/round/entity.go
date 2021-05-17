@@ -158,6 +158,17 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 	return tc.count
 }
 
+func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
+	tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
+	if tolerance <= 1 {
+		return tc.count
+	}
+	if tc.count%tolerance == 0 {
+		return tc.count
+	}
+	return tolerance * (1 + tc.count/tolerance)
+}
+
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
