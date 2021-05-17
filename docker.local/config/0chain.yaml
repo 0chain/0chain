@@ -71,7 +71,7 @@ server_chain:
     softto_mult: 3 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 2 #number of soft timeouts before round is restarted
     timeout_cap: 0 # 0 indicates no cap
-    vrfs_timeout_mismatch_tolerance: 10
+    vrfs_timeout_mismatch_tolerance: 5
   transaction:
     payload:
       max_size: 98304 # bytes
