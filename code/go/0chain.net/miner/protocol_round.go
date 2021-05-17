@@ -1686,11 +1686,15 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	var oldRound = mc.GetCurrentRound()
-	defer mc.SetCurrentRound(oldRound)
-	defer chain.ResetStatusMonitor(oldRound)
+	var (
+		oldRound = mc.GetCurrentRound()
+		lmb      = mc.GetCurrentMagicBlock()
+	)
 
-	var lmb = mc.GetCurrentMagicBlock()
+	defer func() {
+		mc.SetCurrentRound(oldRound)
+		chain.ResetStatusMonitor(lmb.StartingRound)
+	}()
 
 	// we can't use the lmb.StartingRound as current round, since the lmb
 	// is saved in store but can be rejected by Miner SC if the LMB is not
