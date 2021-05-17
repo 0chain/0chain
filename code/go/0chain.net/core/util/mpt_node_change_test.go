@@ -14,16 +14,10 @@ func TestChangeCollector_AddChange(t *testing.T) {
 	t.Skip("need protect ChangeCollector against concurrent access")
 	t.Parallel()
 
-	cc := &ChangeCollector{
-		Changes: make(map[string]*NodeChange),
-		Deletes: make(map[string]Node),
-	}
-
-	nn := NewValueNode()
-	cc.Deletes[nn.GetHash()] = nn
-
-	on := NewFullNode(&AState{balance: 2})
-	cc.Changes[on.GetHash()] = &NodeChange{Old: nn}
+	var(
+		newNode = NewValueNode()
+		oldNode = NewFullNode(&AState{balance: 2})
+	)
 
 	type fields struct {
 		Changes map[string]*NodeChange
@@ -41,18 +35,26 @@ func TestChangeCollector_AddChange(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_AddChange_Nil_Old_Node_OK",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: map[string]*NodeChange{
+					oldNode.GetHash(): {Old: newNode},
+				},
+				Deletes: map[string]Node{
+					newNode.GetHash(): newNode,
+				},
 			},
-			args: args{newNode: nn},
+			args: args{newNode: newNode},
 		},
 		{
 			name: "Test_ChangeCollector_AddChange_OK",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: map[string]*NodeChange{
+					oldNode.GetHash(): {Old: newNode},
+				},
+				Deletes: map[string]Node{
+					newNode.GetHash(): newNode,
+				},
 			},
-			args: args{newNode: nn, oldNode: on},
+			args: args{newNode: newNode, oldNode: oldNode},
 		},
 	}
 	for _, tt := range tests {
@@ -71,14 +73,6 @@ func TestChangeCollector_AddChange(t *testing.T) {
 }
 
 func TestChangeCollector_UpdateChanges(t *testing.T) {
-	cc := &ChangeCollector{
-		Changes: make(map[string]*NodeChange),
-		Deletes: make(map[string]Node),
-	}
-
-	n := NewValueNode()
-	cc.Changes[n.GetHash()] = &NodeChange{New: n}
-
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
 
@@ -104,8 +98,12 @@ func TestChangeCollector_UpdateChanges(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_UpdateChanges_OK",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: func() map[string]*NodeChange{
+					ch := make(map[string]*NodeChange)
+					n := NewValueNode()
+					ch[n.GetHash()] = &NodeChange{New: n}
+					return ch
+				}(),
 			},
 			args:    args{ndb: pndb},
 			wantErr: true,
@@ -127,13 +125,7 @@ func TestChangeCollector_UpdateChanges(t *testing.T) {
 func TestChangeCollector_PrintChanges(t *testing.T) {
 	t.Parallel()
 
-	cc := &ChangeCollector{
-		Changes: make(map[string]*NodeChange),
-		Deletes: make(map[string]Node),
-	}
-
 	n := NewValueNode()
-	cc.Changes[n.GetHash()] = &NodeChange{Old: n, New: n}
 
 	type fields struct {
 		Changes map[string]*NodeChange
@@ -147,8 +139,9 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_PrintChanges_OK",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: map[string]*NodeChange{
+					n.GetHash(): {Old: n, New: n},
+				},
 			},
 			wantW: func() string {
 				w := &bytes.Buffer{}
@@ -161,12 +154,9 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_PrintChanges_OK2",
 			fields: fields{
-				Changes: func() map[string]*NodeChange {
-					m := make(map[string]*NodeChange)
-					m[n.GetHash()] = &NodeChange{New: n}
-
-					return m
-				}(),
+				Changes:  map[string]*NodeChange {
+					n.GetHash(): {New: n},
+				},
 				Deletes: make(map[string]Node),
 			},
 			wantW: func() string {
@@ -199,14 +189,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 func TestChangeCollector_Validate(t *testing.T) {
 	t.Parallel()
 
-	cc := &ChangeCollector{
-		Changes: make(map[string]*NodeChange),
-		Deletes: make(map[string]Node),
-	}
-
 	n := NewValueNode()
-	cc.Changes[n.GetHash()] = &NodeChange{Old: n, New: n}
-	cc.Deletes[n.GetHash()] = n
 
 	type fields struct {
 		Changes map[string]*NodeChange
@@ -220,8 +203,12 @@ func TestChangeCollector_Validate(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_Validate_ERR",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: map[string]*NodeChange{
+					n.GetHash(): {Old: n, New: n},
+				},
+				Deletes: map[string]Node{
+					n.GetHash(): n,
+				},
 			},
 			wantErr: true,
 		},
@@ -253,14 +240,7 @@ func TestChangeCollector_Validate(t *testing.T) {
 func TestChangeCollector_Clone(t *testing.T) {
 	t.Parallel()
 
-	cc := &ChangeCollector{
-		Changes: make(map[string]*NodeChange),
-		Deletes: make(map[string]Node),
-	}
-
 	n := NewValueNode()
-	cc.Changes[n.GetHash()] = &NodeChange{Old: n, New: n}
-	cc.Deletes[n.GetHash()] = n
 
 	type fields struct {
 		Changes map[string]*NodeChange
@@ -274,10 +254,21 @@ func TestChangeCollector_Clone(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_Clone_OK",
 			fields: fields{
-				Changes: cc.Changes,
-				Deletes: cc.Deletes,
+				Changes: map[string]*NodeChange{
+					n.GetHash(): {Old: n, New: n},
+				},
+				Deletes: map[string]Node{
+					n.GetHash(): n,
+				},
 			},
-			want: cc,
+			want: &ChangeCollector{
+				Changes: map[string]*NodeChange{
+					n.GetHash(): {Old: n, New: n},
+				},
+				Deletes: map[string]Node{
+					n.GetHash(): n,
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
