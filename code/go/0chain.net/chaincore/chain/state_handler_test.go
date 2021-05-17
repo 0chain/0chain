@@ -1,6 +1,9 @@
 package chain_test
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
@@ -17,10 +20,11 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"encoding/json"
-	"fmt"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -454,7 +458,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/configs_500",
+			name: "Minersc_/configs_400",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -479,7 +483,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Minersc_/getMinerList_DEcoding_User_Node_Err_500",
@@ -2055,7 +2059,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/configs_500",
+			name: "Minersc_/configs_400",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -2080,7 +2084,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusBadRequest,
 		},
 		{
 			name: "Minersc_/getMinerList_DEcoding_User_Node_Err_500",
@@ -3314,7 +3318,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		test := test
 		t.Run(test.name,
 			func(t *testing.T) {
-				t.Parallel()
 				if test.setValidConfig {
 					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", 1000)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", time.Second*5)
@@ -3324,7 +3327,9 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}
 
 				test.chain.HandleSCRest(test.args.w, test.args.r)
-				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode)
+				d, err := ioutil.ReadAll(test.args.w.Result().Body)
+				require.NoError(t, err)
+				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},
 		)
 	}

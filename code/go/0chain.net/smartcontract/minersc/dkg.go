@@ -112,7 +112,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return common.NewErrorf("move_to_share_or_publish_failed",
 			"missing at least one sharder from previous set in "+
 				"sharders keep list to move phase, keep: %d, min_s: %d",
-			len(shardersKeep.Nodes), "min_s", gn.MinS)
+			len(shardersKeep.Nodes), gn.MinS)
 	}
 
 	dkgMinersList, err := getDKGMinersList(balances)
@@ -232,7 +232,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	if movePhase {
 		Logger.Debug("setPhaseNode",
 			zap.String("phase", pn.Phase.String()),
-			zap.Int64("db version", int64(balances.GetState().GetVersion())),
 			zap.Int64("phase current round", pn.CurrentRound),
 			zap.Int64("phase start round", pn.StartRound))
 
