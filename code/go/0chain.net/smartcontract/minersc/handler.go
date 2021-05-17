@@ -111,11 +111,21 @@ func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, param
 func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
-	return getMinersMPKs(balances)
+	mpks, err := getMinersMPKs(balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
+	}
+
+	return mpks, nil
 }
 
 func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	return getGroupShareOrSigns(balances)
+	sos, err := getGroupShareOrSigns(balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
+	}
+
+	return sos, nil
 }
 
 func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -127,7 +137,12 @@ func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.V
 }
 
 func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	return getMagicBlock(balances)
+	mb, err := getMagicBlock(balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
+	}
+
+	return mb, nil
 }
 
 /*

@@ -57,7 +57,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	shareOrSignSuccess := make(map[string]*bls.DKGKeyShare)
 	secShare, ok := mc.getNodeSij(nodeID)
 	if !ok {
-		return common.NewErrorf("send_dkg_share", "could not found sec share of node id: %s", to)
+		return common.NewErrorf("send_dkg_share", "could not get node sij: %s", to)
 	}
 
 	var state = crpc.Client().State()

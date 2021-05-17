@@ -289,7 +289,7 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	getFromMinersList := func() (*MinerNode, error) {
 		allMiners, err := getMinersList(state)
 		if err != nil {
-			return nil, common.NewError("get_miners_list_failed", err.Error())
+			return nil, err
 		}
 
 		for _, node := range allMiners.Nodes {
@@ -297,8 +297,8 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 				return node, nil
 			}
 		}
-		return nil, common.NewErrorf("get_miner_from_list_failed",
-			"miner node does not exist in miners list, id: %v", id)
+
+		return nil, util.ErrValueNotPresent
 	}
 
 	getFuncs := []func() (*MinerNode, error){
@@ -306,21 +306,24 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 		getFromMinersList,
 	}
 
-	var errs []error
+	var err error
 	var mn *MinerNode
 	for _, fn := range getFuncs {
-		node, err := fn()
+		var node *MinerNode
+		node, err = fn()
 		if err == nil {
 			return node, nil
 		}
 
-		if err == util.ErrValueNotPresent {
+		switch err {
+		case util.ErrNodeNotFound, util.ErrValueNotPresent:
 			mn = NewMinerNode()
 			mn.ID = id
+			continue
+		default:
+			return nil, err
 		}
-
-		errs = append(errs, err)
 	}
 
-	return mn, common.NewErrorf("get_miner_failed", "errs: %v", errs)
+	return mn, err
 }

@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"sync"
 
-	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -142,36 +141,4 @@ func (mb *MagicBlock) Clone() *MagicBlock {
 	}
 
 	return clone
-}
-
-// MagicBlockMinersSignatureVerifier will use the magic block to verify blocks tickets
-type MagicBlockMinersSignatureVerifier struct {
-	clients map[string]client.Client
-}
-
-// NewMagicBlockMinersSignatureVerifier creats a MagicBlockMinersSignatureVerifier instance
-func NewMagicBlockMinersSignatureVerifier(mb *MagicBlock) *MagicBlockMinersSignatureVerifier {
-	vf := &MagicBlockMinersSignatureVerifier{
-		clients: make(map[string]client.Client),
-	}
-	nodes := mb.Miners.CopyNodesMap()
-	for k, v := range nodes {
-		vf.clients[k] = v.Client
-	}
-	return vf
-}
-
-// VerifySignatures verify the tickets signatures in a block
-func (mbsv *MagicBlockMinersSignatureVerifier) VerifySignatures(b *Block) bool {
-	for _, bvt := range b.GetVerificationTickets() {
-		sender, ok := mbsv.clients[bvt.VerifierID]
-		if !ok {
-			return false
-		}
-
-		if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
-			return false
-		}
-	}
-	return true
 }

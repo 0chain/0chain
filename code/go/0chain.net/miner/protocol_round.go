@@ -83,8 +83,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	mc.AddVRFShare(ctx, r, r.vrfShare)
-	go mc.SendVRFShare(ctx, r.vrfShare)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs.Clone())
+	}
 }
 
 func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
@@ -1685,11 +1686,15 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	var oldRound = mc.GetCurrentRound()
-	defer mc.SetCurrentRound(oldRound)
-	defer chain.ResetStatusMonitor(oldRound)
+	var (
+		oldRound = mc.GetCurrentRound()
+		lmb      = mc.GetCurrentMagicBlock()
+	)
 
-	var lmb = mc.GetCurrentMagicBlock()
+	defer func() {
+		mc.SetCurrentRound(oldRound)
+		chain.ResetStatusMonitor(lmb.StartingRound)
+	}()
 
 	// we can't use the lmb.StartingRound as current round, since the lmb
 	// is saved in store but can be rejected by Miner SC if the LMB is not

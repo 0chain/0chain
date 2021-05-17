@@ -79,7 +79,7 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 			ce.InitCollectionScore()
 		}
 	}
-	err = datastore.AddToCollection(ce, ctx)
+	err = datastore.AddToCollection(ctx, ce)
 	return err
 }
 

@@ -233,7 +233,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	if movePhase {
 		Logger.Debug("setPhaseNode",
 			zap.String("phase", pn.Phase.String()),
-			zap.Int64("db version", int64(balances.GetState().GetVersion())),
 			zap.Int64("phase current round", pn.CurrentRound),
 			zap.Int64("phase start round", pn.StartRound))
 

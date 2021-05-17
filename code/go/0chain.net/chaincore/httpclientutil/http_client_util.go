@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -332,7 +333,11 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 		numSuccess int32
 		numErrs    int32
 		errStringC = make(chan string, len(urls))
+		respDataC  = make(chan []byte, len(urls))
 	)
+
+	// get the entity type
+	entityType := reflect.TypeOf(entity).Elem()
 
 	//normally this goes to sharders
 	wg := &sync.WaitGroup{}
@@ -350,35 +355,36 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 			urlObj.RawQuery = q.Encode()
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlObj.String(), nil)
 			if err != nil {
-				logging.N2n.Error("Create http request with context failed", zap.Error(err))
+				logging.N2n.Error("SCRestAPI - create http request with context failed", zap.Error(err))
 			}
 
 			rsp, err := httpClient.Do(req)
 			if err != nil {
-				logging.N2n.Error("Error getting response for sc rest api", zap.Any("error", err))
+				logging.N2n.Error("SCRestAPI - error getting response for sc rest api", zap.Any("error", err))
 				atomic.AddInt32(&numErrs, 1)
 				errStringC <- sharderURL + ":" + err.Error()
 				return
 			}
 			defer rsp.Body.Close()
 			if rsp.StatusCode != 200 {
-				logging.N2n.Error("Error getting response from", zap.String("URL", sharderURL), zap.Any("response Status", rsp.StatusCode))
+				logging.N2n.Error("SCRestAPI Error getting response from", zap.String("URL", sharderURL), zap.Any("response Status", rsp.StatusCode))
 				atomic.AddInt32(&numErrs, 1)
 				errStringC <- sharderURL + ": response_code: " + strconv.Itoa(rsp.StatusCode)
 				return
 			}
 
 			bodyBytes, err := ioutil.ReadAll(rsp.Body)
-			logging.Logger.Info("sc rest", zap.Any("body", string(bodyBytes)), zap.Any("err", err), zap.Any("code", rsp.StatusCode))
 			if err != nil {
-				logging.Logger.Error("Failed to read body response", zap.String("URL", sharderURL), zap.Any("error", err))
+				logging.Logger.Error("SCRestAPI - failed to read body response", zap.String("URL", sharderURL), zap.Any("error", err))
 			}
-			if err := entity.Decode(bodyBytes); err != nil {
-				logging.Logger.Error("Error unmarshalling response", zap.Any("error", err))
+			newEntity := reflect.New(entityType).Interface().(util.Serializable)
+			if err := newEntity.Decode(bodyBytes); err != nil {
+				logging.Logger.Error("SCRestAPI - error unmarshalling response", zap.Any("error", err))
 				atomic.AddInt32(&numErrs, 1)
 				errStringC <- sharderURL + ":" + err.Error()
 				return
 			}
+			respDataC <- bodyBytes
 			atomic.AddInt32(&numSuccess, 1)
 
 			/*
@@ -396,6 +402,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 
 	wg.Wait()
 	close(errStringC)
+	close(respDataC)
 	errStrs := make([]string, 0, len(urls))
 	for s := range errStringC {
 		errStrs = append(errStrs, s)
@@ -405,25 +412,33 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 
 	nSuccess := atomic.LoadInt32(&numSuccess)
 	nErrs := atomic.LoadInt32(&numErrs)
-	logging.Logger.Info("sc rest consensus", zap.Any("success", nSuccess))
+	logging.Logger.Info("SCRestAPI - sc rest consensus", zap.Any("success", nSuccess))
 	if nSuccess+nErrs == 0 {
 		return common.NewError("req_not_run", "Could not run the request") //why???
-
 	}
 	sr := int(math.Ceil((float64(nSuccess) * 100) / float64(nSuccess+nErrs)))
 	// We've at least one success and success rate sr is at least same as consensus
 	if nSuccess > 0 && sr >= consensus {
+		// choose the first returned entity
+		select {
+		case data := <-respDataC:
+			if err := entity.Decode(data); err != nil {
+				logging.Logger.Error("SCRestAPI - decode failed", zap.Error(err))
+				return nil
+			}
+		default:
+		}
 		return nil
 	} else if nSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
-		logging.Logger.Error("Error Getting consensus",
+		logging.Logger.Error("SCRestAPI - error Getting consensus",
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))
 		return common.NewError("err_getting_consensus", errStr)
 	} else if nErrs > 0 {
 		//We have received only errors
-		logging.Logger.Error("Error running the request",
+		logging.Logger.Error("SCRestAPI - error running the request",
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))
