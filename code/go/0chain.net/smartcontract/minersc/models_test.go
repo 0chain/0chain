@@ -85,3 +85,26 @@ func TestSimpleNodesReduce(t *testing.T) {
 	}
 
 }
+
+func TestQuickFixDuplicateHosts(t *testing.T) {
+	node := func(n2nhost, host string, port int) *MinerNode {
+		return &MinerNode{SimpleNode: &SimpleNode{N2NHost: n2nhost, Host: host, Port: port}}
+	}
+	nodes := func() []*MinerNode {
+		return []*MinerNode{
+			{SimpleNode: &SimpleNode{N2NHost: "abc.com", Host: "lmn.com", Port: 0}},
+		}
+	}
+	assert.EqualError(t, quickFixDuplicateHosts(node("", "", 0), nodes()), "invalid n2nhost: ")
+	assert.EqualError(t, quickFixDuplicateHosts(node("localhost", "", 0), nodes()), "invalid n2nhost: localhost")
+	assert.EqualError(t, quickFixDuplicateHosts(node("127.0.0.1", "", 0), nodes()), "invalid n2nhost: 127.0.0.1")
+	assert.NoError(t, quickFixDuplicateHosts(node("xyz.com", "", 0), nodes()))
+	assert.NoError(t, quickFixDuplicateHosts(node("xyz.com", "localhost", 0), nodes()))
+	assert.NoError(t, quickFixDuplicateHosts(node("xyz.com", "127.0.0.1", 0), nodes()))
+	assert.NoError(t, quickFixDuplicateHosts(node("xyz.com", "prq.com", 0), nodes()))
+	assert.EqualError(t, quickFixDuplicateHosts(node("abc.com", "", 0), nodes()), "n2nhost:port already exists: abc.com:0")
+	assert.NoError(t, quickFixDuplicateHosts(node("abc.com", "", 1), nodes()))
+	assert.EqualError(t, quickFixDuplicateHosts(node("lmn.com", "", 0), nodes()), "host:port already exists: lmn.com:0")
+	assert.NoError(t, quickFixDuplicateHosts(node("lmn.com", "", 1), nodes()))
+
+}

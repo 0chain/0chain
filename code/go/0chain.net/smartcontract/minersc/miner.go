@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"regexp"
-	"strings"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -36,7 +33,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	var newMiner = NewMinerNode()
 	if err = newMiner.Decode(inputData); err != nil {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"decoding request: %v", err)
 	}
 
@@ -45,12 +42,11 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
-	var all *MinerNodes
-	all, err = getMinersList(balances)
+	allMiners, err := getMinersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"failed to get miner list: %v", err)
 	}
 
@@ -78,74 +74,61 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		logging.Logger.Error("add_miner: public key or ID is empty")
-		return "", common.NewError("add_miner_failed",
+		return "", common.NewError("add_miner",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	if newMiner.ServiceCharge < 0 {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"invalid negative service charge: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"max_charge is greater than allowed by SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxCharge)
 	}
 
 	if newMiner.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"invalid negative number_of_delegates: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if newMiner.MinStake < gn.MinStake {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"min_stake is less than allowed by SC: %v > %v",
 			newMiner.MinStake, gn.MinStake)
 	}
 
 	if newMiner.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newMiner.MaxStake, gn.MaxStake)
 	}
 
 	newMiner.NodeType = NodeTypeMiner // set node type
 
-	// quick fix: localhost check + duplicate check
-	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
-	host, n2nhost := strings.TrimSpace(newMiner.Host), strings.TrimSpace(newMiner.N2NHost)
-	if localhost.MatchString(n2nhost) {
-		return "", common.NewErrorf("add_miner", "invalid n2nhost: %v", n2nhost)
+	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
+		return "", common.NewError("add_miner", err.Error())
 	}
-	if localhost.MatchString(host) {
-		host = n2nhost
-	}
-	for _, n := range all.Nodes {
-		if n2nhost == strings.TrimSpace(n.N2NHost) {
-			return "", common.NewErrorf("add_miner", "n2nhost already exists: %v", n2nhost)
-		}
-	}
-	newMiner.Host, newMiner.N2NHost = host, n2nhost
-	// end: quick fix: localhost check + duplicate check
 
-	allMap := make(map[string]struct{}, len(all.Nodes))
-	for _, n := range all.Nodes {
+	allMap := make(map[string]struct{}, len(allMiners.Nodes))
+	for _, n := range allMiners.Nodes {
 		allMap[n.getKey()] = struct{}{}
 	}
 
 	var update bool
 	if _, ok := allMap[newMiner.getKey()]; !ok {
-		all.Nodes = append(all.Nodes, newMiner)
+		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
-		if err = updateMinersList(balances, all); err != nil {
-			return "", common.NewErrorf("add_miner_failed",
+		if err = updateMinersList(balances, allMiners); err != nil {
+			return "", common.NewErrorf("add_miner",
 				"saving all miners list: %v", err)
 		}
 		update = true
@@ -153,7 +136,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if !msc.doesMinerExist(newMiner.getKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
-			return "", common.NewError("add_miner_failed", err.Error())
+			return "", common.NewError("add_miner", err.Error())
 		}
 
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
@@ -163,8 +146,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	if !update {
-		return "", common.NewErrorf("add_miner_failed", "miner already exists, "+
-			"l_all_miners: %d, state DB version: %d", len(all.Nodes), balances.GetState().GetVersion())
+		return "", common.NewErrorf("add_miner", "miner already exists, "+
+			"l_all_miners: %d, state DB version: %d", len(allMiners.Nodes), balances.GetState().GetVersion())
 	}
 
 	return resp, nil
@@ -197,7 +180,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", common.NewErrorf("add_miner",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			update.ServiceCharge, gn.MaxDelegates)
 	}

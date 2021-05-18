@@ -7,7 +7,9 @@ import (
 	"math"
 	"math/rand"
 	"net/url"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -1225,4 +1227,29 @@ func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes
 	}
 
 	return nodesList, nil
+}
+
+// quick fix: localhost check + duplicate check
+// TODO: remove this after more robust challenge based node addtion/health_check is added
+func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
+	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
+	host := strings.TrimSpace(nn.Host)
+	n2nhost := strings.TrimSpace(nn.N2NHost)
+	port := nn.Port
+	if n2nhost == "" || localhost.MatchString(n2nhost) {
+		return fmt.Errorf("invalid n2nhost: %v", n2nhost)
+	}
+	if host == "" || localhost.MatchString(host) {
+		host = n2nhost
+	}
+	for _, n := range allNodes {
+		if n2nhost == n.N2NHost && n.Port == port {
+			return fmt.Errorf("n2nhost:port already exists: %v:%v", n2nhost, port)
+		}
+		if host == n.Host && n.Port == port {
+			return fmt.Errorf("host:port already exists: %v:%v", host, port)
+		}
+	}
+	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port
+	return nil
 }

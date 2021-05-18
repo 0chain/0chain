@@ -3,8 +3,6 @@ package minersc
 import (
 	"errors"
 	"fmt"
-	"regexp"
-	"strings"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -25,7 +23,7 @@ func (msc *MinerSmartContract) AddSharder(
 
 	logging.Logger.Info("add_sharder", zap.Any("txn", t))
 
-	all, err := getAllShardersList(balances)
+	allSharders, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_sharder: failed to get sharders list", zap.Error(err))
 		return "", common.NewErrorf("add_sharder", "getting all sharders list: %v", err)
@@ -90,7 +88,7 @@ func (msc *MinerSmartContract) AddSharder(
 	// if found
 	if err == nil {
 		// and found in all
-		if all.FindNodeById(newSharder.ID) != nil {
+		if allSharders.FindNodeById(newSharder.ID) != nil {
 			return "", common.NewError("add_sharder", "sharder already exists")
 		}
 		// otherwise the sharder has saved by block sharders reward
@@ -99,24 +97,11 @@ func (msc *MinerSmartContract) AddSharder(
 
 	newSharder.NodeType = NodeTypeSharder // set node type
 
-	// quick fix: localhost check + duplicate check
-	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
-	host, n2nhost := strings.TrimSpace(newSharder.Host), strings.TrimSpace(newSharder.N2NHost)
-	if localhost.MatchString(n2nhost) {
-		return "", common.NewErrorf("add_sharder", "invalid n2nhost: %v", n2nhost)
+	if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
+		return "", common.NewError("add_sharder", err.Error())
 	}
-	if localhost.MatchString(host) {
-		host = n2nhost
-	}
-	for _, n := range all.Nodes {
-		if n2nhost == strings.TrimSpace(n.N2NHost) {
-			return "", common.NewErrorf("add_sharder", "n2nhost already exists: %v", n2nhost)
-		}
-	}
-	newSharder.Host, newSharder.N2NHost = host, n2nhost
-	// end: quick fix: localhost check + duplicate check
 
-	all.Nodes = append(all.Nodes, newSharder)
+	allSharders.Nodes = append(allSharders.Nodes, newSharder)
 
 	// save the added sharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
@@ -125,7 +110,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	// save all sharders list
-	if err = updateAllShardersList(balances, all); err != nil {
+	if err = updateAllShardersList(balances, allSharders); err != nil {
 		return "", common.NewErrorf("add_sharder", "saving all sharders list: %v", err)
 	}
 
