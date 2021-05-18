@@ -14,7 +14,7 @@ func TestChangeCollector_AddChange(t *testing.T) {
 	t.Skip("need protect ChangeCollector against concurrent access")
 	t.Parallel()
 
-	var(
+	var (
 		newNode = NewValueNode()
 		oldNode = NewFullNode(&AState{balance: 2})
 	)
@@ -98,7 +98,7 @@ func TestChangeCollector_UpdateChanges(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_UpdateChanges_OK",
 			fields: fields{
-				Changes: func() map[string]*NodeChange{
+				Changes: func() map[string]*NodeChange {
 					ch := make(map[string]*NodeChange)
 					n := NewValueNode()
 					ch[n.GetHash()] = &NodeChange{New: n}
@@ -154,7 +154,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 		{
 			name: "Test_ChangeCollector_PrintChanges_OK2",
 			fields: fields{
-				Changes:  map[string]*NodeChange {
+				Changes: map[string]*NodeChange{
 					n.GetHash(): {New: n},
 				},
 				Deletes: make(map[string]Node),
