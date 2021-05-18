@@ -391,7 +391,13 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			return nil
 		}
 
-		cb = nb
+		// link blocks beforehand
+		pb, err = c.GetBlock(ctx, cb.PrevHash)
+		if pb != nil {
+			cb.SetPreviousBlock(pb)
+		}
+
+		cb = pb
 		blocks = append(blocks, cb)
 		pb, err = c.GetBlock(ctx, cb.PrevHash)
 		if pb != nil {
