@@ -1357,7 +1357,7 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_True(t *testing.T) {
-	t.Parallel()
+	state.SetDebugLevel(1)
 
 	type fields struct {
 		UnverifiedBlockBody   UnverifiedBlockBody
@@ -1411,8 +1411,6 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 				}
 			}()
 
-			state.SetDebugLevel(1)
-
 			b := &Block{
 				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
 				VerificationTickets:   tt.fields.VerificationTickets,
@@ -1448,7 +1446,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_False(t *testing.T) {
-	t.Parallel()
+	state.SetDebugLevel(0)
 
 	b := NewBlock("", 1)
 	prevB := NewBlock("", 0)
@@ -1641,8 +1639,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 					t.Errorf("SetStateDB() want panic  = %v, but got = %v", tt.wantPanic, got)
 				}
 			}()
-
-			state.SetDebugLevel(0)
 
 			b := &Block{
 				UnverifiedBlockBody:   tt.fields.UnverifiedBlockBody,
