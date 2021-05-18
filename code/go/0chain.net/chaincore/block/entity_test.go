@@ -47,22 +47,22 @@ func copyBlock(b *Block) *Block {
 	}
 
 	copiedB := Block{
-		HashIDField:           b.HashIDField,
-		Signature:            b.Signature,
-		ChainID:              b.ChainID,
-		ChainWeight:           b.ChainWeight,
-		RoundRank:             b.RoundRank,
-		PrevBlock:             copyBlock(b.PrevBlock),
-		ClientState:           nil,
-		stateStatus:           b.stateStatus,
-		stateStatusMutex:      &sync.RWMutex{},
-		StateMutex:            &sync.RWMutex{},
-		blockState:            b.blockState,
-		isNotarized:           b.isNotarized,
-		ticketsMutex:          &sync.RWMutex{},
-		verificationStatus:    b.verificationStatus,
-		RunningTxnCount:       b.RunningTxnCount,
-		MagicBlock:            nil,
+		HashIDField:        b.HashIDField,
+		Signature:          b.Signature,
+		ChainID:            b.ChainID,
+		ChainWeight:        b.ChainWeight,
+		RoundRank:          b.RoundRank,
+		PrevBlock:          copyBlock(b.PrevBlock),
+		ClientState:        nil,
+		stateStatus:        b.stateStatus,
+		stateStatusMutex:   &sync.RWMutex{},
+		StateMutex:         &sync.RWMutex{},
+		blockState:         b.blockState,
+		isNotarized:        b.isNotarized,
+		ticketsMutex:       &sync.RWMutex{},
+		verificationStatus: b.verificationStatus,
+		RunningTxnCount:    b.RunningTxnCount,
+		MagicBlock:         nil,
 	}
 
 	copiedB.UnverifiedBlockBody = b.UnverifiedBlockBody
@@ -418,7 +418,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 		want   *Block
 	}{
 		{
-			name: "OK",
+			name:   "OK",
 			fields: copyBlock(b),
 			want: func() *Block {
 				want := NewBlock("", 1)
@@ -435,7 +435,7 @@ func TestBlock_ComputeProperties(t *testing.T) {
 		},
 		// duplicating tests to expose race errors
 		{
-			name: "OK",
+			name:   "OK",
 			fields: copyBlock(b),
 			want: func() *Block {
 				want := NewBlock("", 1)
@@ -1031,7 +1031,7 @@ func TestBlock_Read(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
-				ticketsMutex: tt.fields.ticketsMutex,
+				ticketsMutex:          tt.fields.ticketsMutex,
 			}
 			if err := b.Read(tt.args.ctx, tt.args.key); (err != nil) != tt.wantErr {
 				t.Errorf("Read() error = %v, wantErr %v", err, tt.wantErr)
@@ -1167,7 +1167,7 @@ func TestBlock_Write(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
-				ticketsMutex: tt.fields.ticketsMutex,
+				ticketsMutex:          tt.fields.ticketsMutex,
 			}
 			if err := b.Write(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Write() error = %v, wantErr %v", err, tt.wantErr)
@@ -1242,7 +1242,7 @@ func TestBlock_Delete(t *testing.T) {
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
-				ticketsMutex: tt.fields.ticketsMutex,
+				ticketsMutex:          tt.fields.ticketsMutex,
 			}
 			if err := b.Delete(tt.args.ctx); (err != nil) != tt.wantErr {
 				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)

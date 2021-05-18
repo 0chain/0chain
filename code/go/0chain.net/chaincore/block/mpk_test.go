@@ -92,11 +92,11 @@ func TestMpks_Decode(t *testing.T) {
 			name: "OK",
 			fields: fields{
 				Mpks: map[string]*MPK{
-					"key" : {ID: "id"},
+					"key": {ID: "id"},
 				},
 			},
 			args: args{
-				input: func() []byte{
+				input: func() []byte {
 					res := make([]byte, len(blob))
 					copy(res, blob)
 					return res
@@ -108,7 +108,7 @@ func TestMpks_Decode(t *testing.T) {
 			name: "ERR",
 			fields: fields{
 				Mpks: map[string]*MPK{
-					"key" : {ID: "id"},
+					"key": {ID: "id"},
 				},
 			},
 			args:    args{input: []byte("}{")},
@@ -119,11 +119,11 @@ func TestMpks_Decode(t *testing.T) {
 			name: "OK",
 			fields: fields{
 				Mpks: map[string]*MPK{
-					"key" : {ID: "id"},
+					"key": {ID: "id"},
 				},
 			},
 			args: args{
-				input: func() []byte{
+				input: func() []byte {
 					res := make([]byte, len(blob))
 					copy(res, blob)
 					return res
@@ -135,7 +135,7 @@ func TestMpks_Decode(t *testing.T) {
 			name: "ERR",
 			fields: fields{
 				Mpks: map[string]*MPK{
-					"key" : {ID: "id"},
+					"key": {ID: "id"},
 				},
 			},
 			args:    args{input: []byte("}{")},
