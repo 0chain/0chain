@@ -2,7 +2,6 @@ package block
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"strconv"
 	"testing"
@@ -61,39 +60,6 @@ func TestMagicBlockDataProvider(t *testing.T) {
 				t.Errorf("MagicBlockDataProvider() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestSetupMagicBlockDataDB(t *testing.T) {
-	path := "data/rocksdb/mb"
-	if err := os.MkdirAll(path, 0700); err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name      string
-		wantPanic bool
-	}{
-		{
-			name:      "OK",
-			wantPanic: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				got := recover()
-				if (got != nil) != tt.wantPanic {
-					t.Errorf("SetupBlockSummaryDB() want panic  = %v, but got = %v", tt.wantPanic, got)
-				}
-			}()
-
-			SetupMagicBlockDataDB()
-		})
-	}
-
-	if err := os.RemoveAll("data"); err != nil {
-		t.Error(err)
 	}
 }
 
