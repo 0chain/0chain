@@ -1055,7 +1055,14 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 			return "", common.NewErrorf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
-		return toJson(&unlockResponse{Unstake: unstake}), nil
+
+		var respb []byte
+		respb, err = json.Marshal(&unlockResponse{Unstake: unstake})
+		if err != nil {
+			panic(err) // must not happen / from the very legacy code
+		}
+
+		return string(respb), nil
 	}
 
 	if !usp.del(spr.BlobberID, spr.PoolID) {
