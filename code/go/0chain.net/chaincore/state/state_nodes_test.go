@@ -73,7 +73,7 @@ func TestNewStateNodes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			if got := state.NewStateNodes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewStateNodes() = %v, want %v", got, tt.want)
@@ -108,7 +108,7 @@ func TestNodes_Read(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -147,7 +147,7 @@ func TestNodes_Write(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -186,7 +186,7 @@ func TestNodes_Delete(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -247,7 +247,7 @@ func TestNodes_SaveState(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -298,7 +298,7 @@ func TestNodes_MarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -365,7 +365,7 @@ func TestNodes_MartialStateNodes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -423,7 +423,7 @@ func TestNodes_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,
@@ -511,7 +511,7 @@ func TestNodes_UnmarshalStateNodes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			ns := &state.Nodes{
 				IDField: tt.fields.IDField,

@@ -56,7 +56,7 @@ func TestSignedTransfer_Sign(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			st := &SignedTransfer{
 				Transfer:   tt.fields.Transfer,
@@ -160,7 +160,7 @@ func TestSignedTransfer_VerifySignature(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			st := SignedTransfer{
 				Transfer:   tt.fields.Transfer,
@@ -229,7 +229,7 @@ func TestSignedTransfer_verifyPublicKey(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			st := SignedTransfer{
 				Transfer:   tt.fields.Transfer,
@@ -271,7 +271,7 @@ func TestSignedTransfer_computeTransferHash(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			st := SignedTransfer{
 				Transfer:   tt.fields.Transfer,

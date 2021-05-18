@@ -291,11 +291,11 @@ func TestPartialState_GetRoot(t *testing.T) {
 		want   util.Node
 	}{
 		{
-			name:   "OK",
+			name: "OK",
 			fields: fields{
 				Nodes: ps.Nodes,
 			},
-			want:   root,
+			want: root,
 		},
 	}
 	for _, tt := range tests {
@@ -524,8 +524,8 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "OK",
-			fields:  fields{
+			name: "OK",
+			fields: fields{
 				Hash:    ps.Hash,
 				Version: ps.Version,
 				Nodes:   ps.Nodes,

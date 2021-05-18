@@ -48,7 +48,7 @@ func TestState_GetHash(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -88,7 +88,7 @@ func TestState_GetHashBytes(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -139,7 +139,7 @@ func TestState_Encode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -187,7 +187,7 @@ func TestState_Decode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -232,7 +232,7 @@ func TestState_ComputeProperties(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -287,7 +287,7 @@ func TestState_Set(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			s := &State{
 				TxnHash:      tt.fields.TxnHash,
@@ -332,7 +332,7 @@ func TestDeserializer_Deserialize(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			bd := &Deserializer{}
 			got := bd.Deserialize(tt.args.sv)

@@ -61,7 +61,7 @@ func TestTransfer_Encode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount   Balance
+		Amount     Balance
 	}
 	tests := []struct {
 		name   string
@@ -77,12 +77,12 @@ func TestTransfer_Encode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			tr := &Transfer{
 				ClientID:   tt.fields.ClientID,
 				ToClientID: tt.fields.ToClientID,
-				Amount:   tt.fields.Amount,
+				Amount:     tt.fields.Amount,
 			}
 			if got := tr.Encode(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Encode() = %v, want %v", got, tt.want)
@@ -103,7 +103,7 @@ func TestTransfer_Decode(t *testing.T) {
 	type fields struct {
 		ClientID   datastore.Key
 		ToClientID datastore.Key
-		Amount   Balance
+		Amount     Balance
 	}
 	type args struct {
 		input []byte
@@ -125,12 +125,12 @@ func TestTransfer_Decode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			tr := &Transfer{
 				ClientID:   tt.fields.ClientID,
 				ToClientID: tt.fields.ToClientID,
-				Amount:   tt.fields.Amount,
+				Amount:     tt.fields.Amount,
 			}
 			if err := tr.Decode(tt.args.input); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)

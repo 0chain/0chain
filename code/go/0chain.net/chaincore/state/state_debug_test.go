@@ -24,7 +24,7 @@ func TestDebug(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			SetDebugLevel(tt.debugState)
 			if got := Debug(); got != tt.want {
@@ -58,7 +58,7 @@ func TestDebugChain(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			SetDebugLevel(tt.debugState)
 			if got := DebugChain(); got != tt.want {
@@ -92,7 +92,7 @@ func TestDebugBlock(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			SetDebugLevel(tt.debugState)
 			if got := DebugBlock(); got != tt.want {
@@ -126,7 +126,7 @@ func TestDebugTxn(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			SetDebugLevel(tt.debugState)
 			if got := DebugTxn(); got != tt.want {
@@ -160,7 +160,7 @@ func TestDebugNode(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
+			t.Parallel()
 
 			SetDebugLevel(tt.debugState)
 			if got := DebugNode(); got != tt.want {

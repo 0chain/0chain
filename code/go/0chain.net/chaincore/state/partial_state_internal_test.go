@@ -27,11 +27,11 @@ func TestPartialState_GetNodeDB(t *testing.T) {
 		want   util.NodeDB
 	}{
 		{
-			name:   "OK",
+			name: "OK",
 			fields: fields{
 				mndb: util.NewMemoryNodeDB(),
 			},
-			want:   util.NewMemoryNodeDB(),
+			want: util.NewMemoryNodeDB(),
 		},
 	}
 	for _, tt := range tests {
@@ -206,8 +206,8 @@ func TestPartialState_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "OK",
-			fields: fields(ps),
+			name:    "OK",
+			fields:  fields(ps),
 			wantErr: false,
 		},
 	}

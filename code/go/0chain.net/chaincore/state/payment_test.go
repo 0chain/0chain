@@ -37,9 +37,9 @@ func TestNewMint(t *testing.T) {
 				amount:   amount,
 			},
 			want: &Mint{
-				Minter:   minter,
+				Minter:     minter,
 				ToClientID: toClientID,
-				Amount:   amount,
+				Amount:     amount,
 			},
 		},
 	}
@@ -65,9 +65,9 @@ func TestMint_Encode(t *testing.T) {
 	}
 
 	type fields struct {
-		Minter   datastore.Key
+		Minter     datastore.Key
 		ToClientID datastore.Key
-		Amount   Balance
+		Amount     Balance
 	}
 	tests := []struct {
 		name   string
@@ -86,9 +86,9 @@ func TestMint_Encode(t *testing.T) {
 			t.Parallel()
 
 			m := &Mint{
-				Minter:   tt.fields.Minter,
+				Minter:     tt.fields.Minter,
 				ToClientID: tt.fields.ToClientID,
-				Amount:   tt.fields.Amount,
+				Amount:     tt.fields.Amount,
 			}
 			if got := m.Encode(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Encode() = %v, want %v", got, tt.want)
@@ -134,9 +134,9 @@ func TestMint_Decode(t *testing.T) {
 			t.Parallel()
 
 			m := &Mint{
-				Minter:   tt.fields.Minter,
+				Minter:     tt.fields.Minter,
 				ToClientID: tt.fields.ToClientID,
-				Amount:   tt.fields.Amount,
+				Amount:     tt.fields.Amount,
 			}
 			if err := m.Decode(tt.args.input); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
