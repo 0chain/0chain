@@ -18,8 +18,6 @@ func init() {
 }
 
 func TestGetBlock(t *testing.T) {
-	t.Skip("need protect blockEntityMetadata from concurrent access")
-
 	t.Parallel()
 
 	type args struct {
@@ -53,8 +51,6 @@ func TestGetBlock(t *testing.T) {
 }
 
 func TestPutBlock(t *testing.T) {
-	t.Skip("need protect blockEntityMetadata from concurrent access")
-
 	t.Parallel()
 
 	nwb := NewBlock("", 1)

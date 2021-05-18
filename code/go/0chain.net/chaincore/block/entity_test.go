@@ -1357,8 +1357,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_True(t *testing.T) {
-	t.Skip("need to protect debug global variable against parallel access")
-
 	t.Parallel()
 
 	type fields struct {
@@ -1450,8 +1448,6 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 }
 
 func TestBlock_SetStateDB_Debug_False(t *testing.T) {
-	t.Skip("need to protect debug global variable against parallel access")
-
 	t.Parallel()
 
 	b := NewBlock("", 1)
