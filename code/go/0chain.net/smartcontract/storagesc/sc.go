@@ -77,6 +77,12 @@ func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/getWritePoolAllocBlobberStat"] = ssc.getWritePoolAllocBlobberStatHandler
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
+	// client pool
+	ssc.SmartContract.RestHandlers["/getClientPoolStat"] = ssc.getClientPoolStatHandler
+	// CHECK / ssc.SmartContract.RestHandlers["/getClientPoolAllocBlobberStat"] = ssc.getClientPoolAllocBlobberStatHandler
+	// CHECK / ssc.SmartContractExecutionStats["new_client_pool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_client_pool"), nil)
+	ssc.SmartContractExecutionStats["client_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "client_pool_lock"), nil)
+	ssc.SmartContractExecutionStats["client_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "client_pool_unlock"), nil)
 	// stake pool
 	ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
 	ssc.SmartContract.RestHandlers["/getUserStakePoolStat"] = ssc.getUserStakePoolStatHandler
@@ -217,7 +223,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
 
-		// stake pool
+	// stake pool
 
 	case "stake_pool_lock":
 		resp, err = sc.stakePoolLock(t, input, balances)

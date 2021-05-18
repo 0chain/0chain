@@ -366,6 +366,12 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		MaxLockPeriod: 20 * time.Minute,
 	}
 
+	conf.ClientPool = &clientPoolConfig{
+		MinLock:       10,
+		MinLockPeriod: 5 * time.Second,
+		MaxLockPeriod: 20 * time.Minute,
+	}
+
 	conf.StakePool = &stakePoolConfig{
 		MinLock:          10,
 		InterestRate:     0.01,
