@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"fmt"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -24,6 +25,14 @@ const (
 
 type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func (fc *FaucetSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+	var fcCopy = &FaucetSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	fcCopy.SetSC(fcCopy.SmartContract, &smartcontract.BCContext{})
+	return fcCopy, fcCopy.SmartContract
 }
 
 func (fc *FaucetSmartContract) InitSC() {}

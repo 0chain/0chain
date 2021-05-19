@@ -37,6 +37,7 @@ type SmartContractInterface interface {
 	GetName() string
 	GetAddress() string
 	InitSC()
+	MakeCopy() (SmartContractInterface, *SmartContract)
 }
 
 /*BCContextI interface for smart contracts to access blockchain.

@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"fmt"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -18,6 +19,14 @@ type RestPoints = map[string]smartcontractinterface.SmartContractRestHandler
 
 type VestingSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func (vsc *VestingSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+	var vscCopy = &VestingSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	vscCopy.SetSC(vscCopy.SmartContract, &smartcontract.BCContext{})
+	return vscCopy, vscCopy.SmartContract
 }
 
 func (vsc *VestingSmartContract) InitSC() {}

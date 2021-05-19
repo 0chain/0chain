@@ -1,6 +1,7 @@
 package multisigsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -25,6 +26,14 @@ const (
 
 type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func (ms *MultiSigSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+	var msCopy = &MultiSigSmartContract{
+		SmartContract: smartcontractinterface.NewSC(Address),
+	}
+	msCopy.SetSC(msCopy.SmartContract, &smartcontract.BCContext{})
+	return msCopy, msCopy.SmartContract
 }
 
 func (ms *MultiSigSmartContract) InitSC() {}
