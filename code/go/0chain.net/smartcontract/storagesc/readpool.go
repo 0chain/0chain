@@ -126,7 +126,7 @@ func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 			return fmt.Errorf("adding transfer: %v", err)
 		}
 		// stat
-		dp.Rewards += move         // add to stake_pool_holder rewards
+		dp.Rewards += move // add to stake_pool_holder rewards
 		sp.Rewards.Blobber += move // add to total blobber rewards
 	}
 
@@ -138,14 +138,6 @@ func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 type readPoolRedeem struct {
 	PoolID  string        `json:"pool_id"` // read pool ID
 	Balance state.Balance `json:"balance"` // balance reduction
-}
-
-func toJson(val interface{}) string {
-	var b, err = json.Marshal(val)
-	if err != nil {
-		panic(err) // must not happen
-	}
-	return string(b)
 }
 
 func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
@@ -210,7 +202,13 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	rp.removeEmpty(allocID, torm)
 
 	// return the read redeems for blobbers read pools cache
-	return toJson(redeems), nil // ok
+	var respb []byte
+	respb, err = json.Marshal(&unlockResponse{Unstake: unstake})
+	if err != nil {
+		panic(err) // must not happen / from the very legacy code
+	}
+
+	return string(respb), nil
 }
 
 // take read pool by ID to unlock (the take is get and remove)
