@@ -19,43 +19,7 @@ func init() {
 }
 
 func TestRecover(t *testing.T) {
-	UseRecoverHandler = false
-
-	handler := func(w http.ResponseWriter, r *http.Request) {
-	}
-
-	type args struct {
-		handler ReqRespHandlerf
-	}
-	tests := []struct {
-		name string
-		args args
-		want http.ResponseWriter
-	}{
-		{
-			name: "Test_Recover_OK",
-			args: args{handler: handler},
-			want: httptest.NewRecorder(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest(http.MethodGet, "/", nil)
-			handler := Recover(tt.args.handler)
-			handler(w, r)
-
-			if !reflect.DeepEqual(w, tt.want) {
-				t.Errorf("ToJSONResponse() = %#v, want %#v", w, tt.want)
-			}
-		})
-	}
-}
-
-func TestRecover_Use_Recover_Handler(t *testing.T) {
-	UseRecoverHandler = true
-
-	var err error = NewError("code", "msg")
+	t.Parallel()
 
 	tests := []struct {
 		name string
@@ -68,10 +32,9 @@ func TestRecover_Use_Recover_Handler(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
+				err := NewError("code", "msg")
 				data["error"] = fmt.Sprintf("%v", err)
-				if are, ok := err.(*Error); ok {
-					data["code"] = are.Code
-				}
+				data["code"] = err.Code
 				buf := bytes.NewBuffer(nil)
 				if err := json.NewEncoder(buf).Encode(data); err != nil {
 					t.Fatal(err)
@@ -86,9 +49,12 @@ func TestRecover_Use_Recover_Handler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			panHandler := func(w http.ResponseWriter, r *http.Request) {
-				panic(err)
+				panic(NewError("code", "msg"))
 			}
 
 			w := httptest.NewRecorder()

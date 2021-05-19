@@ -10,12 +10,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestUserRateLimit(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-	}
+func init() {
+	viper.Set("network.user_handlers.rate_limit", 1.0)
+	viper.Set("network.n2n_handlers.rate_limit", 1.0)
+	ConfigRateLimits()
+}
 
-	w := httptest.NewRecorder()
-	w.Body = nil
+func makeTestHandler() ReqRespHandlerf {
+	return func(w http.ResponseWriter, r *http.Request) {
+	}
+}
+
+func TestUserRateLimit(t *testing.T) {
+	t.Parallel()
 
 	type args struct {
 		handler ReqRespHandlerf
@@ -27,8 +34,8 @@ func TestUserRateLimit(t *testing.T) {
 		want   http.ResponseWriter
 	}{
 		{
-			name:   "Test_UserRateLimit_1.0_OK",
-			args:   args{handler: handler},
+			name:   "Test_UserRateLimit_OK",
+			args:   args{handler: makeTestHandler()},
 			userRL: 1.0,
 			want: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
@@ -41,17 +48,11 @@ func TestUserRateLimit(t *testing.T) {
 				return w
 			}(),
 		},
-		{
-			name:   "Test_UserRateLimit_0_OK",
-			args:   args{handler: handler},
-			userRL: 0,
-			want:   w,
-		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			viper.Set("network.user_handlers.rate_limit", tt.userRL)
-			ConfigRateLimits()
+			t.Parallel()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -65,25 +66,19 @@ func TestUserRateLimit(t *testing.T) {
 }
 
 func TestN2NRateLimit(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-	}
-
-	w := httptest.NewRecorder()
-	w.Body = nil
+	t.Parallel()
 
 	type args struct {
 		handler ReqRespHandlerf
 	}
 	tests := []struct {
-		name  string
-		args  args
-		n2nRL float64
-		want  *httptest.ResponseRecorder
+		name string
+		args args
+		want *httptest.ResponseRecorder
 	}{
 		{
-			name:  "Test_N2NRateLimit_1.0_OK",
-			args:  args{handler: handler},
-			n2nRL: 1.0,
+			name: "Test_N2NRateLimit_OK",
+			args: args{handler: makeTestHandler()},
 			want: func() *httptest.ResponseRecorder {
 				w := httptest.NewRecorder()
 				w.Header().Set("X-Rate-Limit-Limit", "1.00")
@@ -95,17 +90,11 @@ func TestN2NRateLimit(t *testing.T) {
 				return w
 			}(),
 		},
-		{
-			name:  "Test_N2NRateLimit_0_OK",
-			args:  args{handler: handler},
-			n2nRL: 0,
-			want:  w,
-		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			viper.Set("network.n2n_handlers.rate_limit", tt.n2nRL)
-			ConfigRateLimits()
+			t.Parallel()
 
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -113,7 +102,7 @@ func TestN2NRateLimit(t *testing.T) {
 			handler(w, r)
 			w.Body = nil
 
-			if !reflect.DeepEqual(w.HeaderMap, tt.want.HeaderMap) && !reflect.DeepEqual(w, tt.want) {
+			if !reflect.DeepEqual(w.Header(), tt.want.Header()) && !reflect.DeepEqual(w, tt.want) {
 				t.Errorf("N2NRateLimit() = %#v, want %#v", w, tt.want)
 			}
 		})
