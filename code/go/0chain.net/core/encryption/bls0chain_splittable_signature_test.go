@@ -2,16 +2,13 @@ package encryption
 
 import (
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 var numSplits = 2
 
 func TestGenerateSplitKeys(t *testing.T) {
 	b0Sig := NewBLS0ChainScheme()
-	err := b0Sig.GenerateKeys()
-	require.NoError(t, err)
+	b0Sig.GenerateKeys()
 	splittableSigScheme := b0Sig
 	genSplitKeys(splittableSigScheme)
 	genSplitKeys(splittableSigScheme)
@@ -29,16 +26,15 @@ func genSplitKeys(splittableSigScheme SplittableSignatureScheme) {
 
 func TestValidateSplitKeys(t *testing.T) {
 	b0Sig := NewBLS0ChainScheme()
-	err := b0Sig.GenerateKeys()
-	require.NoError(t, err)
+	b0Sig.GenerateKeys()
 	splittableSigScheme := b0Sig
 	splitKeys, err := splittableSigScheme.GenerateSplitKeys(numSplits)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	signature, err := b0Sig.Sign(expectedHash)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	signatures := make([]string, numSplits)
@@ -49,8 +45,8 @@ func TestValidateSplitKeys(t *testing.T) {
 		}
 		signatures[idx] = signature
 	}
-	aggSignature, _ := splittableSigScheme.AggregateSignatures(signatures)
+	aggSignature, err := splittableSigScheme.AggregateSignatures(signatures)
 	if signature != aggSignature {
-		t.Fatal("signature mismatch!")
+		panic("signature mismatch!")
 	}
 }

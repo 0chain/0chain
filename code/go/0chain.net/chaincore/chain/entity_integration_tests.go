@@ -12,11 +12,10 @@ import (
 func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 	var (
-		rank          = r.GetMinerRank(nd)
-		state         = crpc.Client().State()
-		comp          bool
-		numGenerators = c.GetGeneratorsNumOfRound(r.GetRoundNumber())
-		is            = rank != -1 && rank < numGenerators
+		rank  = r.GetMinerRank(nd)
+		state = crpc.Client().State()
+		comp  bool
+		is    = rank != -1 && rank < c.NumGenerators
 	)
 
 	if is {

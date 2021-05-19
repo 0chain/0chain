@@ -754,18 +754,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
-		numGenerators := mc.GetGeneratorsNumOfRound(r.GetRoundNumber())
-		if b.RoundRank >= numGenerators || b.RoundRank < 0 {
+		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
 			logging.Logger.Warn("round rank is invalid or greater than num_generators",
 				zap.String("hash", b.Hash), zap.Int64("round", b.Round),
 				zap.Int("round_rank", b.RoundRank),
-				zap.Int("num_generators", numGenerators))
+				zap.Int("num_generators", mc.NumGenerators))
 		} else {
-			if numGenerators > len(minerStats.VerificationTicketsByRank) {
-				newRankStat := make([]int64, numGenerators)
-				copy(newRankStat, minerStats.VerificationTicketsByRank)
-				minerStats.VerificationTicketsByRank = newRankStat
-			}
 			minerStats.VerificationTicketsByRank[b.RoundRank]++
 		}
 		return true

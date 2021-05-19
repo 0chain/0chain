@@ -89,38 +89,9 @@ func TestNewPool(t *testing.T) {
 			},
 			wantDialCheck: true,
 		},
-		{
-			name: "Test_NewPool_OK",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-		},
-		{
-			name: "Test_NewPool_Panic",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantPanic:     true,
-			wantDialCheck: true,
-		},
-		{
-			name: "Test_NewPool_Dial_Check_OK",
-			args: args{port: portInt},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantDialCheck: true,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -164,19 +135,9 @@ func TestNewPool_Docker(t *testing.T) {
 				MaxActive: 1000, // max number of connections
 			},
 		},
-		{
-			name: "Test_NewPool_OK",
-			args: args{host: "host"},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000, // max number of connections
-			},
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			got := NewPool(tt.args.host, tt.args.port)
 			got.Dial = nil
 			if !reflect.DeepEqual(got, tt.want) {
@@ -212,24 +173,9 @@ func TestAddPool(t *testing.T) {
 				return p
 			}(),
 		},
-		{
-			name: "Test_AddPool_OK",
-			args: args{dbid: dbid, pool: pool},
-			want: func() map[string]*dbpool {
-				p := make(map[string]*dbpool)
-				for key, value := range pools {
-					p[key] = value
-				}
-
-				p[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-				return p
-			}(),
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			AddPool(tt.args.dbid, tt.args.pool)
 			if !reflect.DeepEqual(pools, tt.want) {
 				t.Errorf("AddPool() got = %v, want = %v", pools, tt.want)
@@ -264,22 +210,9 @@ func TestGetConnectionCount(t *testing.T) {
 			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
 			wantPanic: true,
 		},
-		{
-			name:  "Test_GetConnectionCount_OK",
-			args:  args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want:  pool.ActiveCount(),
-			want1: pool.IdleCount(),
-		},
-		{
-			name:      "Test_GetConnectionCount_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -312,16 +245,6 @@ func Test_getdbpool(t *testing.T) {
 		want      *dbpool
 		wantPanic bool
 	}{
-		{
-			name: "Test_getdbpool_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
-		},
-		{
-			name:      "Test_getdbpool_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
 		{
 			name: "Test_getdbpool_OK",
 			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
@@ -365,15 +288,9 @@ func TestGetConnection(t *testing.T) {
 			name: "Test_GetConnection_OK",
 			want: DefaultPool,
 		},
-		{
-			name: "Test_GetConnection_OK",
-			want: DefaultPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			if got := GetConnection(); !reflect.DeepEqual(got.Pool, tt.want) {
 				t.Errorf("GetConnection() = %v, want %v", got, tt.want)
 			}
@@ -394,15 +311,9 @@ func TestGetInfo(t *testing.T) {
 			name:      "Test_GetInfo_Panic",
 			wantPanic: true,
 		},
-		{
-			name:      "Test_GetInfo_Panic",
-			wantPanic: true,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -441,21 +352,9 @@ func TestGetEntityConnection(t *testing.T) {
 			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: ""}},
 			want: DefaultPool,
 		},
-		{
-			name: "Test_GetEntityConnection_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: DefaultPool,
-		},
-		{
-			name: "Test_GetEntityConnection_Empty_dbid_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: ""}},
-			want: DefaultPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			if got := GetEntityConnection(tt.args.entityMetadata); !reflect.DeepEqual(got.Pool, tt.want) {
 				t.Errorf("GetEntityConnection() = %v, want %v", got, tt.want)
 			}
@@ -492,26 +391,9 @@ func TestWithConnection(t *testing.T) {
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
 			want: DefaultPool,
 		},
-		{
-			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.TODO()},
-			want: DefaultPool,
-		},
-		{
-			name:      "Test_WithConnection_Panic",
-			args:      args{ctx: context.WithValue(context.TODO(), CONNECTION, 123)},
-			wantPanic: true,
-		},
-		{
-			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
-			want: DefaultPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -569,31 +451,9 @@ func TestGetCon(t *testing.T) {
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
 			want: DefaultPool,
 		},
-		{
-			name: "Test_GetCon_Nil_Ctx_OK",
-			args: args{ctx: nil},
-			want: DefaultPool,
-		},
-		{
-			name: "Test_GetCon_Nil_Connection_Value_In_Ctx_OK",
-			args: args{ctx: context.TODO()},
-			want: DefaultPool,
-		},
-		{
-			name:      "Test_GetCon_Panic",
-			args:      args{ctx: context.WithValue(context.TODO(), CONNECTION, 123)},
-			wantPanic: true,
-		},
-		{
-			name: "Test_GetCon_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
-			want: DefaultPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -654,32 +514,9 @@ func TestWithEntityConnection(t *testing.T) {
 			ctxKey: getConnectionCtxKey(anotherDbid),
 			want:   anotherPool,
 		},
-		{
-			name:   "Test_WithEntityConnection_DefaultPool_OK",
-			args:   args{ctx: context.TODO(), entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			ctxKey: CONNECTION,
-			want:   DefaultPool,
-		},
-		{
-			name:   "Test_WithEntityConnection_Nil_Connection_Value_In_Ctx_OK",
-			args:   args{ctx: context.TODO(), entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid}},
-			ctxKey: getConnectionCtxKey(anotherDbid),
-			want:   anotherPool,
-		},
-		{
-			name: "Test_WithEntityConnection_OK",
-			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
-				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
-			},
-			ctxKey: getConnectionCtxKey(anotherDbid),
-			want:   anotherPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
@@ -753,37 +590,9 @@ func TestGetEntityCon(t *testing.T) {
 			},
 			want: anotherPool,
 		},
-		{
-			name: "TestGetEntityCon_Nil_Context_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: DefaultPool,
-		},
-		{
-			name: "TestGetEntityCon_Default_Pool_OK",
-			args: args{ctx: context.TODO(), entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: DefaultPool,
-		},
-		{
-			name: "TestGetEntityCon_Nil_Connection_In_Ctx_OK",
-			args: args{
-				ctx:            context.TODO(),
-				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
-			},
-			want: nil,
-		},
-		{
-			name: "TestGetEntityCon_OK",
-			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
-				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
-			},
-			want: anotherPool,
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			got := GetEntityCon(tt.args.ctx, tt.args.entityMetadata)
 			if got == nil && tt.want == nil {
 				return
@@ -833,19 +642,9 @@ func TestClose(t *testing.T) {
 			name: "Test_Close_OK2",
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, cMap)},
 		},
-		{
-			name: "Test_Close_OK",
-			args: args{ctx: context.TODO()},
-		},
-		{
-			name: "Test_Close_OK2",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, cMap)},
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			Close(tt.args.ctx)
 		})
 	}
@@ -862,9 +661,6 @@ func TestInitDefaultPool(t *testing.T) {
 		name string
 		args args
 	}{
-		{
-			name: "Test_InitDefaultPool_OK",
-		},
 		{
 			name: "Test_InitDefaultPool_OK",
 		},
@@ -890,15 +686,6 @@ func Test_getConnectionCtxKey(t *testing.T) {
 		args args
 		want common.ContextKey
 	}{
-		{
-			name: "Test_getConnectionCtxKey_Empty_Dbid_OK",
-			args: args{dbid: ""},
-			want: CONNECTION,
-		},
-		{
-			args: args{dbid: "dbid"},
-			want: common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, "dbid")),
-		},
 		{
 			name: "Test_getConnectionCtxKey_Empty_Dbid_OK",
 			args: args{dbid: ""},

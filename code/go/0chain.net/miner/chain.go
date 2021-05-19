@@ -194,7 +194,7 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
 	mr.Round = r
-	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(r.GetRoundNumber()))
+	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	return &mr
 }

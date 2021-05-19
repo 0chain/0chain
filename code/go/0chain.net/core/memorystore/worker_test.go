@@ -43,20 +43,6 @@ func TestMemoryDBChunk_Add(t *testing.T) {
 				Length: 1,
 			},
 		},
-		{
-			name: "Test_MemoryDBChunk_Add_OK",
-			fields: fields{
-				Buffer: make([]datastore.Entity, 1),
-				Length: 0,
-			},
-			args: args{entity: r},
-			want: &memorystore.MemoryDBChunk{
-				Buffer: []datastore.Entity{
-					r,
-				},
-				Length: 1,
-			},
-		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -106,17 +92,6 @@ func TestMemoryDBChunk_Get(t *testing.T) {
 			args: args{index: 0},
 			want: r,
 		},
-		{
-			name: "Test_MemoryDBChunk_Get_OK",
-			fields: fields{
-				Buffer: []datastore.Entity{
-					r,
-				},
-				Length: 1,
-			},
-			args: args{index: 0},
-			want: r,
-		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -150,19 +125,6 @@ func TestMemoryDBChunk_Trim(t *testing.T) {
 		fields fields
 		want   *memorystore.MemoryDBChunk
 	}{
-		{
-			name: "Test_MemoryDBChunk_Trim_OK",
-			fields: fields{
-				Buffer: buff,
-				Length: 1,
-			},
-			want: &memorystore.MemoryDBChunk{
-				Buffer: []datastore.Entity{
-					r,
-				},
-				Length: 1,
-			},
-		},
 		{
 			name: "Test_MemoryDBChunk_Trim_OK",
 			fields: fields{
@@ -241,46 +203,23 @@ func TestMemoryDBChunkProcessor_Process(t *testing.T) {
 			name:      "Test_MemoryDBChunkProcessor_Process_OK",
 			wantPanic: true,
 		},
-		{
-			name: "Test_MemoryDBChunkProcessor_Process_OK",
-			fields: fields{
-				EntityMetadata: txn.GetEntityMetadata(),
-				ChunkChannel:   nil,
-			},
-			args: args{
-				ctx: context.TODO(),
-				chunk: &memorystore.MemoryDBChunk{
-					Buffer: []datastore.Entity{
-						&txn,
-					},
-				}},
-			wantPanic: false,
-		},
-		{
-			name:      "Test_MemoryDBChunkProcessor_Process_OK",
-			wantPanic: true,
-		},
 	}
 	for _, tt := range tests {
-		for i := 0; i < 2; i++ {
-			tt := tt
-			t.Run(tt.name, func(t *testing.T) {
-				t.Parallel()
-				defer func() {
-					got := recover()
-					if (got != nil) != tt.wantPanic {
-						t.Errorf("Process() want panic  = %v, but got = %v", tt.wantPanic, got)
-					}
-				}()
-
-				mcp := &memorystore.MemoryDBChunkProcessor{
-					EntityMetadata: tt.fields.EntityMetadata,
-					ChunkChannel:   tt.fields.ChunkChannel,
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				got := recover()
+				if (got != nil) != tt.wantPanic {
+					t.Errorf("Process() want panic  = %v, but got = %v", tt.wantPanic, got)
 				}
+			}()
 
-				mcp.Process(tt.args.ctx, tt.args.chunk)
-			})
-		}
+			mcp := &memorystore.MemoryDBChunkProcessor{
+				EntityMetadata: tt.fields.EntityMetadata,
+				ChunkChannel:   tt.fields.ChunkChannel,
+			}
+
+			mcp.Process(tt.args.ctx, tt.args.chunk)
+		})
 	}
 }
 
@@ -311,18 +250,9 @@ func TestMemoryDBChunkProcessor_Run(t *testing.T) {
 			},
 			args: args{ctx: context.TODO()},
 		},
-		{
-			name: "Test_MemoryDBChunkProcessor_Run_OK",
-			fields: fields{
-				EntityMetadata: transaction.Provider().GetEntityMetadata(),
-			},
-			args: args{ctx: context.TODO()},
-		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			ch := make(chan datastore.Chunk)
 
 			mcp := &memorystore.MemoryDBChunkProcessor{

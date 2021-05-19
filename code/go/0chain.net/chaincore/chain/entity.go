@@ -12,7 +12,6 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/spf13/viper"
 
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -258,13 +258,13 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	return entity.(*block.MagicBlock)
 }
 
-func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
+func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 
-	r = mbRoundOffset(r)
+	round = mbRoundOffset(round)
 
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
-	indexMB := c.MagicBlockStorage.FindRoundIndex(r)
+	indexMB := c.MagicBlockStorage.FindRoundIndex(round)
 	if indexMB <= 0 {
 		return c.PreviousMagicBlock
 	}
@@ -331,9 +331,8 @@ func NewChainFromConfig() *Chain {
 	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
-	chain.MinGenerators = viper.GetInt("server_chain.block.min_generators")
-	chain.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
-	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators+1)
+	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
 	chain.NumReplicators = viper.GetInt("server_chain.block.replicators")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
@@ -351,36 +350,36 @@ func NewChainFromConfig() *Chain {
 
 	// Health Check related counters
 	// Work on deep scan
-	conf := &chain.HCCycleScan[DeepScan]
+	c := &chain.HCCycleScan[DeepScan]
 
-	conf.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
+	c.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
+	c.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
+	c.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
+	c.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
+	c.Settle = time.Duration(c.SettleSecs) * time.Second
 
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
+	c.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
+	c.RepeatInterval = time.Duration(c.RepeatIntervalMins) * time.Minute
 
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	c.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
+	c.ReportStatus = time.Duration(c.ReportStatusMins) * time.Minute
 
 	// Work on proximity scan
-	conf = &chain.HCCycleScan[ProximityScan]
+	c = &chain.HCCycleScan[ProximityScan]
 
-	conf.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
+	c.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
+	c.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
+	c.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
+	c.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
+	c.Settle = time.Duration(c.SettleSecs) * time.Second
 
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
+	c.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	c.RepeatInterval = time.Duration(c.RepeatIntervalMins) * time.Minute
 
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	c.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
+	c.ReportStatus = time.Duration(c.ReportStatusMins) * time.Minute
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
@@ -766,46 +765,13 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
 	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()))
-	genNum := getGeneratorsNum(len(miners), c.MinGenerators, c.GeneratorsPercent)
-	if genNum > len(miners) {
+	if c.NumGenerators > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
-			zap.Any("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
+			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
 			zap.Any("round", r.GetRoundNumber()))
 		return miners
 	}
-	return miners[:genNum]
-}
-
-// GetGeneratorsNumOfMagicBlock returns the number of generators of given magic block
-func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
-	if mb == nil {
-		return c.MinGenerators
-	}
-
-	return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
-}
-
-// GetGeneratorsNumOfRound returns the number of generators of a given round
-func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
-	if mb := c.GetMagicBlock(r); mb != nil {
-		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
-	}
-
-	return c.MinGenerators
-}
-
-// GetGeneratorsNum returns the number of generators that calculated base on current magic block
-func (c *Chain) GetGeneratorsNum() int {
-	if mb := c.GetCurrentMagicBlock(); mb != nil {
-		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
-	}
-
-	return c.MinGenerators
-}
-
-// getGeneratorsNum calculates the number of generators
-func getGeneratorsNum(minersNum, minGenerators int, generatorsPercent float64) int {
-	return int(math.Max(float64(minGenerators), math.Ceil(float64(minersNum)*generatorsPercent)))
+	return miners[:c.NumGenerators]
 }
 
 /*GetMiners - get all the miners for a given round */
@@ -952,12 +918,11 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool(mb *block.MagicBlock) {
-	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	for _, nd := range mb.Miners.CopyNodes() {
 		ms := &MinerStats{}
-		ms.GenerationCountByRank = make([]int64, numGenerators)
-		ms.FinalizationCountByRank = make([]int64, numGenerators)
-		ms.VerificationTicketsByRank = make([]int64, numGenerators)
+		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
+		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
 	}
 }
@@ -1036,14 +1001,14 @@ func (c *Chain) GetCurrentRound() int64 {
 	return c.getCurrentRound()
 }
 
-func (c *Chain) SetCurrentRound(r int64) {
+func (c *Chain) SetCurrentRound(round int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	c.setCurrentRound(r)
+	c.setCurrentRound(round)
 }
 
-func (c *Chain) setCurrentRound(r int64) {
-	c.currentRound = r
+func (c *Chain) setCurrentRound(round int64) {
+	c.currentRound = round
 }
 
 func (c *Chain) getCurrentRound() int64 {
@@ -1458,16 +1423,14 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 	prevMB := c.GetPrevMagicBlockFromMB(mb)
 	if prevMB != nil {
-		numGenerators := c.GetGeneratorsNumOfMagicBlock(prevMB)
 		for key, miner := range mb.Miners.CopyNodesMap() {
 			if old := prevMB.Miners.GetNode(key); old != nil {
 				miner.SetNodeInfo(old)
 				if miner.ProtocolStats == nil {
 					ms := &MinerStats{}
-					ms.GenerationCountByRank = make([]int64, numGenerators)
-					ms.FinalizationCountByRank = make([]int64, numGenerators)
-					ms.VerificationTicketsByRank = make([]int64, numGenerators)
-					miner.ProtocolStats = ms
+					ms.GenerationCountByRank = make([]int64, c.NumGenerators)
+					ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+					ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 				}
 			}
 		}

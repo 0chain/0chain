@@ -1240,20 +1240,19 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	mb := c.GetCurrentMagicBlock()
-	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
-	c.notarizedBlockCountsStats(w, numGenerators)
+	c.notarizedBlockCountsStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><th>Generation Counts</th><th>Verification Counts</th><th>Finalization Counts</th></tr>")
 	fmt.Fprintf(w, "<tr><td>")
 	c.generationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
-	c.verificationCountStats(w, numGenerators)
+	c.verificationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
@@ -1272,19 +1271,18 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
-	generatorsNum := c.GetGeneratorsNumOfMagicBlock(mb)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < generatorsNum; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, generatorsNum)
+	totals := make([]int64, c.NumGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < generatorsNum; i++ {
+		for i := 0; i < c.NumGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
 			totals[i] += ms.GenerationCountByRank[i]
 			total += ms.GenerationCountByRank[i]
@@ -1293,7 +1291,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < generatorsNum; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1301,20 +1299,20 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int) {
+func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < numGenerators; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, numGenerators)
+	totals := make([]int64, c.NumGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < numGenerators; i++ {
+		for i := 0; i < c.NumGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
 			totals[i] += ms.VerificationTicketsByRank[i]
 			total += ms.VerificationTicketsByRank[i]
@@ -1323,7 +1321,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int)
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < numGenerators; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1333,19 +1331,18 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int)
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
-	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < numGenerators; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, numGenerators)
+	totals := make([]int64, c.NumGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < numGenerators; i++ {
+		for i := 0; i < c.NumGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
 			totals[i] += ms.FinalizationCountByRank[i]
 			total += ms.FinalizationCountByRank[i]
@@ -1354,7 +1351,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < numGenerators; i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1362,15 +1359,15 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter, numGenerators int) {
+func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<table style='width:100%%;'>")
-	fmt.Fprintf(w, "<tr><td colspan='%v'>Rounds with notarized blocks (0 to %v)</td></tr>", numGenerators+2, numGenerators)
+	fmt.Fprintf(w, "<tr><td colspan='%v'>Rounds with notarized blocks (0 to %v)</td></tr>", c.NumGenerators+2, c.NumGenerators)
 	fmt.Fprintf(w, "<tr><td>Notarized Blocks</td>")
-	for i := 0; i <= numGenerators; i++ {
+	for i := 0; i <= c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", i)
 	}
 	fmt.Fprintf(w, "</tr><tr><td>Rounds</td>")
-	for _, v := range c.NotarizedBlocksCounts {
+	for _, v := range c.NotariedBlocksCounts {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", v)
 	}
 	fmt.Fprintf(w, "</tr>")

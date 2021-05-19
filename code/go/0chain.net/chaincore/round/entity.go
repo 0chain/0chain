@@ -3,6 +3,7 @@ package round
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"math/rand"
 	"os"
 	"runtime/pprof"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -470,7 +469,14 @@ func SetupRoundSummaryDB() {
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) computeMinerRanks(minersNum int) {
-	r.minerPerm = rand.New(rand.NewSource(r.GetRandomSeed())).Perm(minersNum)
+	logging.Logger.Info("waiting to compute miner ranks",
+		zap.Any("num_miners", minersNum),
+		zap.Any("round", r.Number))
+	seed := r.GetRandomSeed()
+	logging.Logger.Info("compute miner ranks",
+		zap.Any("num_miners", minersNum),
+		zap.Any("round", r.Number))
+	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(minersNum)
 }
 
 func (r *Round) IsRanksComputed() bool {

@@ -128,33 +128,24 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	}
 }
 
-func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
+func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	roundNumber := r.GetRoundNumber()
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
 	plfb := c.GetLatestFinalizedBlock()
 	logging.Logger.Info("finalize round", zap.Int64("round", roundNumber), zap.Int64("lf_round", plfb.Round),
-		zap.Int("num_round_notarized", nbCount), zap.Int("num_chain_notarized", len(c.NotarizedBlocksCounts)))
+		zap.Int("num_round_notarized", nbCount), zap.Int("num_chain_notarized", len(c.NotariedBlocksCounts)))
 
 	if nbCount == 0 {
 		c.ZeroNotarizedBlocksCount++
 	} else if nbCount > 1 {
 		c.MultiNotarizedBlocksCount++
-	} else if nbCount > c.GetGeneratorsNum() {
+	} else if nbCount > c.NumGenerators {
 		for _, blk := range notarizedBlocks {
 			logging.Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.GetRoundRandomSeed()), zap.Int("blk_toc", blk.RoundTimeoutCount))
 		}
 	}
-
-	// expand NotarizedBlocksCount array size if generators number is greater than it
-	genNum := c.GetGeneratorsNumOfRound(roundNumber)
-	if genNum > len(c.NotarizedBlocksCounts) {
-		newCounts := make([]int64, genNum)
-		copy(newCounts, c.NotarizedBlocksCounts)
-		c.NotarizedBlocksCounts = newCounts
-	}
-
-	c.NotarizedBlocksCounts[nbCount]++
+	c.NotariedBlocksCounts[nbCount]++
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",

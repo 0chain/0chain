@@ -165,7 +165,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	c := GetMinerChain().Chain
 	var total int64
 	ms := node.Self.Underlying().ProtocolStats.(*chain.MinerStats)
-	for i := 0; i < c.GetGeneratorsNum(); i++ {
+	for i := 0; i < c.NumGenerators; i++ {
 		total += ms.FinalizationCountByRank[i]
 	}
 	cr := c.GetRound(c.GetCurrentRound())

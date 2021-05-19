@@ -63,7 +63,7 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></th></tr>")
-	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators)
+	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumReplicators)
 	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
 	fmt.Fprintf(w, "<tr><td class='tname'>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
