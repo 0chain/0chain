@@ -5,7 +5,7 @@ BASEDIR=$(pwd)
 echo "Making mocks..."
 
 cd $BASEDIR/code/go/0chain.net/core/datastore || exit
-mockery --name=Store --output=../../mocks--filename=store.go
+mockery --name=Store --output=../../mocks --filename=store.go
 
 cd $BASEDIR/code/go/0chain.net/core/persistencestore || exit
 mockery --name=BatchI --output=../../mocks --filename=batch.go
