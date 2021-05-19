@@ -292,31 +292,6 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	return string(rp.Encode()), nil
 }
 
-func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
-	err error) {
-
-	if t.Value < 0 {
-		return errors.New("negative transaction value")
-	}
-
-	var balance state.Balance
-	balance, err = balances.GetClientBalance(t.ClientID)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	if err == util.ErrValueNotPresent {
-		return errors.New("no tokens to lock")
-	}
-
-	if state.Balance(t.Value) > balance {
-		return errors.New("lock amount is greater than balance")
-	}
-
-	return
-}
-
 // lock tokens for read pool of transaction's client
 func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
