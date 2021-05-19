@@ -46,6 +46,14 @@ type writePoolConfig struct {
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
+// client pool configs
+
+type clientPoolConfig struct {
+	MinLock       int64         `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
+	MaxLockPeriod time.Duration `json:"max_lock_period"`
+}
+
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
@@ -72,6 +80,8 @@ type scConfig struct {
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
 	WritePool *writePoolConfig `json:"writepool"`
+	// ClientPool related configurations.
+	ClientPool *clientPoolConfig `json:"clientpool"`
 	// StakePool related configurations.
 	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
@@ -294,6 +304,13 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		pfx + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = scc.GetDuration(
 		pfx + "writepool.max_lock_period")
+	// client pool
+	conf.ClientPool = new(clientPoolConfig)
+	conf.ClientPool.MinLock = int64(scc.GetFloat64(pfx+"clientpool.min_lock") * 1e10)
+	conf.ClientPool.MinLockPeriod = scc.GetDuration(
+		pfx + "clientpool.min_lock_period")
+	conf.ClientPool.MaxLockPeriod = scc.GetDuration(
+		pfx + "clientpool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
@@ -441,4 +458,16 @@ func (ssc *StorageSmartContract) getReadPoolConfig(
 		return
 	}
 	return scconf.ReadPool, nil
+}
+
+// getClientPoolConfig
+func (ssc *StorageSmartContract) getClientPoolConfig(
+	balances chainState.StateContextI, setup bool) (
+	conf *clientPoolConfig, err error) {
+
+	var scconf *scConfig
+	if scconf, err = ssc.getConfig(balances, setup); err != nil {
+		return
+	}
+	return scconf.ClientPool, nil
 }
