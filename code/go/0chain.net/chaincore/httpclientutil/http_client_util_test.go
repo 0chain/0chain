@@ -27,6 +27,31 @@ import (
 func init() {
 	block.SetupEntity(&mocks.Store{})
 	logging.InitLogging("development")
+
+	startTestServer()
+}
+
+var (
+	serverURL   string
+	serverURLMu sync.Mutex
+)
+
+func startTestServer() {
+	server := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, r *http.Request) {
+			},
+		),
+	)
+	httpClient = server.Client()
+	serverURL = server.URL
+}
+
+func getTestServerURL() string {
+	serverURLMu.Lock()
+	defer serverURLMu.Unlock()
+
+	return serverURL
 }
 
 func TestTransaction_ComputeHashAndSign(t *testing.T) {
@@ -129,21 +154,27 @@ func TestTransaction_ComputeHashAndSign(t *testing.T) {
 func TestNewHTTPRequest(t *testing.T) {
 	t.Parallel()
 
+	const (
+		data = "data"
+	)
 	var (
 		url  = "/"
-		data = []byte("data")
 		id   = "id"
 		pKey = "pkey"
 	)
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
-	if err != nil {
-		t.Fatal(err)
+	makeTestReq := func() *http.Request {
+		req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer([]byte(data)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		req.Header.Set("Access-Control-Allow-Origin", "*")
+		req.Header.Set("X-App-Client-ID", id)
+		req.Header.Set("X-App-Client-Key", pKey)
+
+		return req
 	}
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("Access-Control-Allow-Origin", "*")
-	req.Header.Set("X-App-Client-ID", id)
-	req.Header.Set("X-App-Client-Key", pKey)
 
 	type args struct {
 		method string
@@ -163,11 +194,11 @@ func TestNewHTTPRequest(t *testing.T) {
 			args: args{
 				method: "",
 				url:    url,
-				data:   data,
+				data:   []byte(data),
 				ID:     id,
 				pkey:   pKey,
 			},
-			want:    req,
+			want:    makeTestReq(),
 			wantErr: false,
 		},
 		{
@@ -175,7 +206,7 @@ func TestNewHTTPRequest(t *testing.T) {
 			args: args{
 				url: string(rune(0x7f)),
 			},
-			want:    req,
+			want:    makeTestReq(),
 			wantErr: true,
 		},
 	}
@@ -200,17 +231,7 @@ func TestNewHTTPRequest(t *testing.T) {
 }
 
 func TestSendPostRequest(t *testing.T) {
-	t.Skip("need to protect global variable httpClient against concurrent access")
-
 	t.Parallel()
-
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
-	)
-	defer server.Close()
 
 	type args struct {
 		url  string
@@ -222,7 +243,6 @@ func TestSendPostRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		client  *http.Client
 		want    []byte
 		wantErr bool
 	}{
@@ -234,18 +254,16 @@ func TestSendPostRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "Client_ERR",
-			client: server.Client(),
+			name: "Client_ERR",
 			args: args{
 				url: "/",
 			},
 			wantErr: true,
 		},
 		{
-			name:   "OK",
-			client: server.Client(),
+			name: "OK",
 			args: args{
-				url: server.URL,
+				url: getTestServerURL(),
 			},
 			want:    make([]byte, 0, 512),
 			wantErr: false,
@@ -255,7 +273,6 @@ func TestSendPostRequest(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			httpClient = tt.client
 
 			got, err := SendPostRequest(tt.args.url, tt.args.data, tt.args.ID, tt.args.pkey, tt.args.wg)
 			if (err != nil) != tt.wantErr {
@@ -270,17 +287,7 @@ func TestSendPostRequest(t *testing.T) {
 }
 
 func TestSendMultiPostRequest(t *testing.T) {
-	t.Skip("need to protect global variable httpClient against concurrent access")
-
 	t.Parallel()
-
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
-	)
-	defer server.Close()
 
 	type args struct {
 		urls []string
@@ -289,16 +296,14 @@ func TestSendMultiPostRequest(t *testing.T) {
 		pkey string
 	}
 	tests := []struct {
-		name   string
-		client *http.Client
-		args   args
+		name string
+		args args
 	}{
 		{
-			name:   "OK",
-			client: server.Client(),
+			name: "OK",
 			args: args{
 				urls: []string{
-					server.URL,
+					getTestServerURL(),
 				},
 			},
 		},
@@ -307,7 +312,6 @@ func TestSendMultiPostRequest(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			httpClient = tt.client
 
 			SendMultiPostRequest(tt.args.urls, tt.args.data, tt.args.ID, tt.args.pkey)
 		})
@@ -317,14 +321,6 @@ func TestSendMultiPostRequest(t *testing.T) {
 func TestSendTransaction(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
-	)
-	defer server.Close()
-
 	type args struct {
 		txn  *Transaction
 		urls []string
@@ -332,16 +328,14 @@ func TestSendTransaction(t *testing.T) {
 		pkey string
 	}
 	tests := []struct {
-		name   string
-		args   args
-		client *http.Client
+		name string
+		args args
 	}{
 		{
-			name:   "OK",
-			client: server.Client(),
+			name: "OK",
 			args: args{
 				urls: []string{
-					server.URL,
+					getTestServerURL(),
 				},
 			},
 		},
@@ -350,7 +344,6 @@ func TestSendTransaction(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			httpClient = tt.client
 
 			SendTransaction(tt.args.txn, tt.args.urls, tt.args.ID, tt.args.pkey)
 		})
@@ -358,10 +351,6 @@ func TestSendTransaction(t *testing.T) {
 }
 
 func TestMakeGetRequest(t *testing.T) {
-	t.Parallel()
-
-	t.Skip("need to protect global variable httpClient against concurrent access")
-
 	server := httptest.NewServer(
 		http.HandlerFunc(
 			func(rw http.ResponseWriter, r *http.Request) {
@@ -388,7 +377,7 @@ func TestMakeGetRequest(t *testing.T) {
 			},
 		),
 	)
-	defer server.Close()
+	defer errServer.Close()
 
 	type args struct {
 		remoteUrl string
@@ -397,7 +386,6 @@ func TestMakeGetRequest(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		client  *http.Client
 		wantErr bool
 	}{
 		{
@@ -408,24 +396,21 @@ func TestMakeGetRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "Client_ERR",
-			client: server.Client(),
+			name: "Client_ERR",
 			args: args{
 				remoteUrl: "/",
 			},
 			wantErr: true,
 		},
 		{
-			name:   "Resp_Status_Not_Ok_ERR",
-			client: errServer.Client(),
+			name: "Resp_Status_Not_Ok_ERR",
 			args: args{
 				remoteUrl: errServer.URL,
 			},
 			wantErr: true,
 		},
 		{
-			name:   "JSON_Decoding_ERR",
-			client: server.Client(),
+			name: "JSON_Decoding_ERR",
 			args: args{
 				remoteUrl: server.URL,
 				result:    "}{",
@@ -433,8 +418,7 @@ func TestMakeGetRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:   "OK",
-			client: server.Client(),
+			name: "OK",
 			args: args{
 				remoteUrl: server.URL,
 				result:    &map[string]interface{}{},
@@ -443,11 +427,7 @@ func TestMakeGetRequest(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			httpClient = tt.client
-
 			if err := MakeGetRequest(tt.args.remoteUrl, tt.args.result); (err != nil) != tt.wantErr {
 				t.Errorf("MakeGetRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
