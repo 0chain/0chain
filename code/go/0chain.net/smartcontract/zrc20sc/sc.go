@@ -23,7 +23,7 @@ type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (zrc *ZRC20SmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewZRC20SmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
 	var zrcCopy = &ZRC20SmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}

@@ -28,7 +28,7 @@ type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (ms *MultiSigSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewMultiSigSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
 	var msCopy = &MultiSigSmartContract{
 		SmartContract: smartcontractinterface.NewSC(Address),
 	}

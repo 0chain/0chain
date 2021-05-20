@@ -21,7 +21,7 @@ type VestingSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (vsc *VestingSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewVestingSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
 	var vscCopy = &VestingSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}

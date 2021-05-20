@@ -27,7 +27,7 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (fc *FaucetSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewFaucetSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
 	var fcCopy = &FaucetSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}

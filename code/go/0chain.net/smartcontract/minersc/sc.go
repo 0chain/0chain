@@ -57,7 +57,7 @@ type MinerSmartContract struct {
 	smartContractFunctions map[string]smartContractFunction
 }
 
-func (msc *MinerSmartContract) MakeCopy() (sci.SmartContractInterface, *sci.SmartContract) {
+func NewMinerSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
 	var mscCopy = &MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 		bcContext:     &smartcontract.BCContext{},

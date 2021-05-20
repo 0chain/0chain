@@ -26,7 +26,7 @@ type StorageSmartContract struct {
 	*sci.SmartContract
 }
 
-func (ssc *StorageSmartContract) MakeCopy() (sci.SmartContractInterface, *sci.SmartContract) {
+func NewStorageSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
 	var sscCopy = &StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}

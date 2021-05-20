@@ -28,7 +28,7 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (ipsc *InterestPoolSmartContract) MakeCopy() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewInterestPoolSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
 	var ipscCopy = &InterestPoolSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
