@@ -350,26 +350,7 @@ func TestSendTransaction(t *testing.T) {
 	}
 }
 
-func TestMakeGetRequest(t *testing.T) {
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				data := map[string]interface{}{
-					"key": "value",
-				}
-				blob, err := json.Marshal(data)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if _, err := rw.Write(blob); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer server.Close()
-
+func makeErrServer() string {
 	errServer := httptest.NewServer(
 		http.HandlerFunc(
 			func(rw http.ResponseWriter, r *http.Request) {
@@ -377,58 +358,106 @@ func TestMakeGetRequest(t *testing.T) {
 			},
 		),
 	)
-	defer errServer.Close()
+	return errServer.URL
+}
 
-	type args struct {
-		remoteUrl string
-		result    interface{}
+func makeValidServer() string {
+	validServer := httptest.NewServer(
+		http.HandlerFunc(
+			func(rw http.ResponseWriter, r *http.Request) {
+			},
+		),
+	)
+	return validServer.URL
+}
+
+func TestMakeGetRequest(t *testing.T) {
+	t.Parallel()
+
+	makeValidServer := func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					data := map[string]interface{}{
+						"key": "value",
+					}
+					blob, err := json.Marshal(data)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return validServer.URL
 	}
+
+	type (
+		args struct {
+			remoteUrl string
+			result    interface{}
+		}
+		makeServer func() (URL string)
+	)
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name       string
+		args       args
+		makeServer makeServer
+		wantErr    bool
 	}{
 		{
 			name: "Request_Creating_ERR",
 			args: args{
 				remoteUrl: string(rune(0x7f)),
 			},
-			wantErr: true,
+			makeServer: makeValidServer,
+			wantErr:    true,
 		},
 		{
 			name: "Client_ERR",
 			args: args{
 				remoteUrl: "/",
 			},
-			wantErr: true,
+			makeServer: makeValidServer,
+			wantErr:    true,
 		},
 		{
-			name: "Resp_Status_Not_Ok_ERR",
-			args: args{
-				remoteUrl: errServer.URL,
-			},
-			wantErr: true,
+			name:       "Resp_Status_Not_Ok_ERR",
+			args:       args{},
+			makeServer: makeErrServer,
+			wantErr:    true,
 		},
 		{
 			name: "JSON_Decoding_ERR",
 			args: args{
-				remoteUrl: server.URL,
-				result:    "}{",
+				result: "}{",
 			},
-			wantErr: true,
+			makeServer: makeValidServer,
+			wantErr:    true,
 		},
 		{
 			name: "OK",
 			args: args{
-				remoteUrl: server.URL,
-				result:    &map[string]interface{}{},
+				result: &map[string]interface{}{},
 			},
-			wantErr: false,
+			makeServer: makeValidServer,
+			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if err := MakeGetRequest(tt.args.remoteUrl, tt.args.result); (err != nil) != tt.wantErr {
+			t.Parallel()
+
+			remoteURL := tt.makeServer()
+			if tt.args.remoteUrl != "" {
+				remoteURL = tt.args.remoteUrl
+			}
+
+			if err := MakeGetRequest(remoteURL, tt.args.result); (err != nil) != tt.wantErr {
 				t.Errorf("MakeGetRequest() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -436,65 +465,68 @@ func TestMakeGetRequest(t *testing.T) {
 }
 
 func TestMakeClientBalanceRequest(t *testing.T) {
+	t.Parallel()
+
 	balance := state.Balance(5)
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				st := &state.State{
-					Balance: balance,
-				}
-				blob, err := json.Marshal(st)
-				if err != nil {
-					t.Fatal(err)
-				}
+	makeValidServer := func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					st := &state.State{
+						Balance: balance,
+					}
+					blob, err := json.Marshal(st)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				if _, err := rw.Write(blob); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer server.Close()
-
-	invServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				if _, err := rw.Write([]byte("}{")); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer invServer.Close()
-
-	errServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				rw.WriteHeader(http.StatusInternalServerError)
-			},
-		),
-	)
-	defer invServer.Close()
-
-	type args struct {
-		clientID  string
-		urls      []string
-		consensus int
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return validServer.URL
 	}
+
+	makeInvServer := func() string {
+		invServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					if _, err := rw.Write([]byte("}{")); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return invServer.URL
+	}
+
+	type (
+		args struct {
+			clientID  string
+			urls      []string
+			consensus int
+		}
+		makeServer func() (URL string)
+	)
 	tests := []struct {
-		name    string
-		args    args
-		want    state.Balance
-		wantErr bool
+		name        string
+		args        args
+		want        state.Balance
+		makeServers []makeServer
+		wantErr     bool
 	}{
 		{
 			name: "ERR",
 			args: args{
 				urls: []string{
 					"worng url",
-					errServer.URL,
-					invServer.URL,
 				},
+			},
+			makeServers: []makeServer{
+				makeErrServer,
+				makeInvServer,
 			},
 			wantErr: true,
 		},
@@ -508,26 +540,36 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 		{
 			name: "Consensus_ERR",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:      []string{},
 				consensus: 200,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "OK",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:      []string{},
 				consensus: 0,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			want: 5,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, f := range tt.makeServers {
+				URL := f()
+				tt.args.urls = append(tt.args.urls, URL)
+			}
+
 			got, err := MakeClientBalanceRequest(tt.args.clientID, tt.args.urls, tt.args.consensus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MakeClientBalanceRequest() error = %v, wantErr %v", err, tt.wantErr)
@@ -541,113 +583,119 @@ func TestMakeClientBalanceRequest(t *testing.T) {
 }
 
 func TestGetTransactionStatus(t *testing.T) {
+	t.Parallel()
+
 	txn := Transaction{
 		Hash:      encryption.Hash("data"),
 		Signature: "signature",
 	}
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				blob, err := json.Marshal(&txn)
-				if err != nil {
-					t.Fatal(err)
-				}
+	makeValidServer := func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					blob, err := json.Marshal(&txn)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				data := map[string]interface{}{
-					"txn": json.RawMessage(blob),
-				}
-				blob, err = json.Marshal(data)
-				if err != nil {
-					t.Fatal(err)
-				}
+					data := map[string]interface{}{
+						"txn": json.RawMessage(blob),
+					}
+					blob, err = json.Marshal(data)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				if _, err := rw.Write(blob); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer server.Close()
-
-	invServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				if _, err := rw.Write([]byte("}{")); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer invServer.Close()
-
-	errServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				rw.WriteHeader(http.StatusInternalServerError)
-			},
-		),
-	)
-	defer errServer.Close()
-
-	nilTxnServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				txn := Transaction{
-					Hash: encryption.Hash("data"),
-				}
-				blob, err := json.Marshal(&txn)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				data := map[string]interface{}{
-					"txn": blob,
-				}
-				blob, err = json.Marshal(data)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if _, err := rw.Write(blob); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer nilTxnServer.Close()
-
-	type args struct {
-		txnHash string
-		urls    []string
-		sf      int
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return validServer.URL
 	}
+
+	makeInvServer := func() string {
+		invServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					if _, err := rw.Write([]byte("}{")); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return invServer.URL
+	}
+
+	makeNilTxnServer := func() string {
+		nilTxnServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					txn := Transaction{
+						Hash: encryption.Hash("data"),
+					}
+					blob, err := json.Marshal(&txn)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					data := map[string]interface{}{
+						"txn": blob,
+					}
+					blob, err = json.Marshal(data)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return nilTxnServer.URL
+	}
+
+	type (
+		args struct {
+			txnHash string
+			urls    []string
+			sf      int
+		}
+		makeServer func() (URL string)
+	)
 	tests := []struct {
-		name    string
-		args    args
-		want    *Transaction
-		wantErr bool
+		name        string
+		args        args
+		want        *Transaction
+		makeServers []makeServer
+		wantErr     bool
 	}{
 		{
 			name: "ERR",
 			args: args{
 				urls: []string{
 					"worng url",
-					errServer.URL,
-					invServer.URL,
-					nilTxnServer.URL,
 				},
+			},
+			makeServers: []makeServer{
+				makeErrServer,
+				makeInvServer,
+				makeNilTxnServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "OK",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls: []string{},
 			},
-			want:    &txn,
+			want: &txn,
+			makeServers: []makeServer{
+				makeValidServer,
+			},
 			wantErr: false,
 		},
 		{
@@ -656,7 +704,15 @@ func TestGetTransactionStatus(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, f := range tt.makeServers {
+				URL := f()
+				tt.args.urls = append(tt.args.urls, URL)
+			}
+
 			got, err := GetTransactionStatus(tt.args.txnHash, tt.args.urls, tt.args.sf)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetTransactionStatus() error = %v, wantErr %v", err, tt.wantErr)
@@ -670,6 +726,8 @@ func TestGetTransactionStatus(t *testing.T) {
 }
 
 func TestMakeSCRestAPICall(t *testing.T) {
+	t.Parallel()
+
 	errEntity := mocks.Serializable{}
 	errEntity.On("Decode", mock.AnythingOfType("[]uint8")).Return(
 		func(blob []byte) error {
@@ -684,35 +742,22 @@ func TestMakeSCRestAPICall(t *testing.T) {
 		},
 	)
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
+	type (
+		args struct {
+			scAddress    string
+			relativePath string
+			params       map[string]string
+			urls         []string
+			entity       util.Serializable
+			consensus    int
+		}
+		makeServer func() (URL string)
 	)
-	defer server.Close()
-
-	errServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				rw.WriteHeader(http.StatusInternalServerError)
-			},
-		),
-	)
-	defer errServer.Close()
-
-	type args struct {
-		scAddress    string
-		relativePath string
-		params       map[string]string
-		urls         []string
-		entity       util.Serializable
-		consensus    int
-	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
+		name        string
+		args        args
+		makeServers []makeServer
+		wantErr     bool
 	}{
 		{
 			name: "Client_ERR",
@@ -733,46 +778,58 @@ func TestMakeSCRestAPICall(t *testing.T) {
 		{
 			name: "Response_Status_Not_Ok_ERR",
 			args: args{
-				urls: []string{
-					errServer.URL,
-				},
+				urls: []string{},
+			},
+			makeServers: []makeServer{
+				makeErrServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Response_Body_Decode_ERR",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:   []string{},
 				entity: &errEntity,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Consensus_Success_OK",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:   []string{},
 				entity: &entity,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: false,
 		},
 		{
 			name: "Consensus_ERR",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:      []string{},
 				entity:    &entity,
 				consensus: 200,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, f := range tt.makeServers {
+				URL := f()
+				tt.args.urls = append(tt.args.urls, URL)
+			}
+
 			if err := MakeSCRestAPICall(tt.args.scAddress, tt.args.relativePath, tt.args.params, tt.args.urls, tt.args.entity, tt.args.consensus); (err != nil) != tt.wantErr {
 				t.Errorf("MakeSCRestAPICall() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -781,33 +838,22 @@ func TestMakeSCRestAPICall(t *testing.T) {
 }
 
 func TestGetBlockSummaryCall(t *testing.T) {
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-			},
-		),
-	)
-	defer server.Close()
+	t.Parallel()
 
-	errServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				rw.WriteHeader(http.StatusInternalServerError)
-			},
-		),
+	type (
+		args struct {
+			urls       []string
+			consensus  int
+			magicBlock bool
+		}
+		makeServer func() (URL string)
 	)
-	defer errServer.Close()
-
-	type args struct {
-		urls       []string
-		consensus  int
-		magicBlock bool
-	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *block.BlockSummary
-		wantErr bool
+		name        string
+		args        args
+		want        *block.BlockSummary
+		makeServers []makeServer
+		wantErr     bool
 	}{
 		{
 			name: "Client_ERR",
@@ -825,36 +871,47 @@ func TestGetBlockSummaryCall(t *testing.T) {
 		{
 			name: "Response_Status_Not_Ok_ERR",
 			args: args{
-				urls: []string{
-					errServer.URL,
-				},
+				urls: []string{},
+			},
+			makeServers: []makeServer{
+				makeErrServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Consensus_Success_OK",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls: []string{},
 			},
-			want:    &block.BlockSummary{},
+			want: &block.BlockSummary{},
+			makeServers: []makeServer{
+				makeValidServer,
+			},
 			wantErr: false,
 		},
 		{
 			name: "Consensus_ERR",
 			args: args{
 				magicBlock: true,
-				urls: []string{
-					server.URL,
-				},
-				consensus: 200,
+				urls:       []string{},
+				consensus:  200,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, f := range tt.makeServers {
+				URL := f()
+				tt.args.urls = append(tt.args.urls, URL)
+			}
+
 			got, err := GetBlockSummaryCall(tt.args.urls, tt.args.consensus, tt.args.magicBlock)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlockSummaryCall() error = %v, wantErr %v", err, tt.wantErr)
@@ -868,55 +925,67 @@ func TestGetBlockSummaryCall(t *testing.T) {
 }
 
 func TestGetMagicBlockCall(t *testing.T) {
+	t.Parallel()
+
 	b := block.NewBlock("", 1)
 	b.HashBlock()
 
-	server := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				blob, err := json.Marshal(b)
-				if err != nil {
-					t.Fatal(err)
-				}
+	makeValidServer := func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					blob, err := json.Marshal(b)
+					if err != nil {
+						t.Fatal(err)
+					}
 
-				if _, err := rw.Write(blob); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer server.Close()
-
-	errServer := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				rw.WriteHeader(http.StatusTooManyRequests)
-			},
-		),
-	)
-	defer errServer.Close()
-
-	errBodyEncroded := httptest.NewServer(
-		http.HandlerFunc(
-			func(rw http.ResponseWriter, r *http.Request) {
-				if _, err := rw.Write([]byte("}{")); err != nil {
-					t.Fatal(err)
-				}
-			},
-		),
-	)
-	defer errBodyEncroded.Close()
-
-	type args struct {
-		urls             []string
-		magicBlockNumber int64
-		consensus        int
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return validServer.URL
 	}
+
+	makeErrServer := func() string {
+		errServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					rw.WriteHeader(http.StatusTooManyRequests)
+				},
+			),
+		)
+		return errServer.URL
+	}
+
+	makeErrBodyEncodedServer := func() string {
+		errBodyEncroded := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					if _, err := rw.Write([]byte("}{")); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return errBodyEncroded.URL
+	}
+
+	type (
+		args struct {
+			urls             []string
+			magicBlockNumber int64
+			consensus        int
+		}
+		makeServer func() (URL string)
+	)
 	tests := []struct {
-		name    string
-		args    args
-		want    *block.Block
-		wantErr bool
+		name        string
+		args        args
+		want        *block.Block
+		makeServers []makeServer
+		wantErr     bool
 	}{
 		{
 			name: "Client_ERR",
@@ -934,27 +1003,27 @@ func TestGetMagicBlockCall(t *testing.T) {
 		{
 			name: "Response_Status_Not_Ok_ERR",
 			args: args{
-				urls: []string{
-					errServer.URL,
-				},
+				urls: []string{},
+			},
+			makeServers: []makeServer{
+				makeErrServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Decode_Block_ERR",
 			args: args{
-				urls: []string{
-					errBodyEncroded.URL,
-				},
+				urls: []string{},
+			},
+			makeServers: []makeServer{
+				makeErrBodyEncodedServer,
 			},
 			wantErr: true,
 		},
 		{
 			name: "Consensus_Success_OK",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls: []string{},
 			},
 			want: func() *block.Block {
 				b := block.NewBlock("", 1)
@@ -963,21 +1032,33 @@ func TestGetMagicBlockCall(t *testing.T) {
 
 				return b
 			}(),
+			makeServers: []makeServer{
+				makeValidServer,
+			},
 			wantErr: false,
 		},
 		{
 			name: "Consensus_ERR",
 			args: args{
-				urls: []string{
-					server.URL,
-				},
+				urls:      []string{},
 				consensus: 200,
+			},
+			makeServers: []makeServer{
+				makeValidServer,
 			},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, f := range tt.makeServers {
+				URL := f()
+				tt.args.urls = append(tt.args.urls, URL)
+			}
+
 			got, err := GetMagicBlockCall(tt.args.urls, tt.args.magicBlockNumber, tt.args.consensus)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetMagicBlockCall() error = %v, wantErr %v", err, tt.wantErr)
