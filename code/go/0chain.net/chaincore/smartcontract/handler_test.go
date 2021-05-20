@@ -16,7 +16,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/config"
+	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -25,12 +26,15 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/mocks"
 	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 )
 
 func init() {
 	viper.Set("development.smart_contract.faucet", true)
+	viper.Set("development.smart_contract.miner", true)
+	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
 	logging.InitLogging("testing")
 }
@@ -97,7 +101,7 @@ func TestExecuteRestAPI(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := smartcontract.ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
+			got, err := ExecuteRestAPI(tt.args.ctx, tt.args.scAdress, tt.args.restpath, tt.args.params, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteRestAPI() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -171,7 +175,7 @@ tr.header { background-color: #E0E0E0;  }
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			smartcontract.ExecuteStats(tt.args.ctx, tt.args.scAdress, tt.args.params, tt.args.w)
+			ExecuteStats(tt.args.ctx, tt.args.scAdress, tt.args.params, tt.args.w)
 			assert.Equal(t, tt.wantW, tt.args.w)
 		})
 	}
@@ -193,7 +197,7 @@ func TestGetSmartContract(t *testing.T) {
 			args: args{
 				scAddress: faucetsc.ADDRESS,
 			},
-			want: smartcontract.ContractMap[faucetsc.ADDRESS],
+			want: ContractMap[faucetsc.ADDRESS],
 		},
 		{
 			name: "Nil_OK",
@@ -208,7 +212,7 @@ func TestGetSmartContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := smartcontract.GetSmartContract(tt.args.scAddress); !reflect.DeepEqual(got, tt.want) {
+			if got := GetSmartContract(tt.args.scAddress); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetSmartContract() = %v, want %v", got, tt.want)
 			}
 		})
@@ -231,6 +235,22 @@ func makeTestStateContextIMock() *mocks.StateContextI {
 		},
 	)
 	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*faucetsc.GlobalNode")).Return(
+		func(_ datastore.Key, _ util.Serializable) datastore.Key {
+			return ""
+		},
+		func(_ datastore.Key, _ util.Serializable) error {
+			return nil
+		},
+	)
+	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNodes")).Return(
+		func(_ datastore.Key, _ util.Serializable) datastore.Key {
+			return ""
+		},
+		func(_ datastore.Key, _ util.Serializable) error {
+			return nil
+		},
+	)
+	stateContextI.On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*minersc.MinerNode")).Return(
 		func(_ datastore.Key, _ util.Serializable) datastore.Key {
 			return ""
 		},
@@ -307,7 +327,7 @@ func TestExecuteWithStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := smartcontract.ExecuteWithStats(tt.args.smcoi, tt.args.sc, tt.args.t, tt.args.funcName, tt.args.input, tt.args.balances)
+			got, err := ExecuteWithStats(tt.args.smcoi, tt.args.sc, tt.args.t, tt.args.funcName, tt.args.input, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteWithStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -324,13 +344,7 @@ func TestExecuteSmartContract(t *testing.T) {
 
 	t.Parallel()
 
-	smcoi := faucetsc.FaucetSmartContract{
-		SmartContract: sci.NewSC(faucetsc.ADDRESS),
-	}
-	smcoi.SmartContract.SmartContractExecutionStats["token refills"] = metrics.NewHistogram(metrics.NilSample{})
-	smcoi.SmartContract.SmartContractExecutionStats["refill"] = metrics.NewTimer()
-
-	gn := &faucetsc.GlobalNode{}
+	gn := &minersc.GlobalNode{}
 	blob := gn.Encode()
 
 	stateContextIMock := makeTestStateContextIMock()
@@ -367,19 +381,8 @@ func TestExecuteSmartContract(t *testing.T) {
 			name: "Invalid_JSON_Data_ERR",
 			args: args{
 				t: &transaction.Transaction{
-					ToClientID:      faucetsc.ADDRESS,
+					ToClientID:      minersc.ADDRESS,
 					TransactionData: "}{",
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Execute_ERR",
-			args: args{
-				balances: stateContextIMock,
-				t: &transaction.Transaction{
-					ToClientID:      faucetsc.ADDRESS,
-					TransactionData: "{}",
 				},
 			},
 			wantErr: true,
@@ -389,10 +392,10 @@ func TestExecuteSmartContract(t *testing.T) {
 			args: args{
 				balances: stateContextIMock,
 				t: &transaction.Transaction{
-					ToClientID: faucetsc.ADDRESS,
+					ToClientID: minersc.ADDRESS,
 					TransactionData: func() string {
 						smartContractData := sci.SmartContractTransactionData{
-							FunctionName: "refill",
+							FunctionName: "miner_health_check",
 						}
 
 						blob, err := json.Marshal(smartContractData)
@@ -404,7 +407,7 @@ func TestExecuteSmartContract(t *testing.T) {
 					}(),
 				},
 			},
-			want:    "{\"from\":\"\",\"to\":\"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3\",\"amount\":0}",
+			want:    "{\"simple_miner\":{\"id\":\"\",\"n2n_host\":\"\",\"host\":\"\",\"port\":0,\"path\":\"\",\"public_key\":\"\",\"short_name\":\"\",\"build_tag\":\"\",\"total_stake\":0,\"delegate_wallet\":\"\",\"service_charge\":0,\"number_of_delegates\":0,\"min_stake\":0,\"max_stake\":0,\"stat\":{},\"last_health_check\":0}}",
 			wantErr: false,
 		},
 	}
@@ -413,7 +416,7 @@ func TestExecuteSmartContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := smartcontract.ExecuteSmartContract(tt.args.ctx, tt.args.t, tt.args.balances)
+			got, err := ExecuteSmartContract(tt.args.ctx, tt.args.t, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteSmartContract() error = %v, wantErr %v", err, tt.wantErr)
 				return

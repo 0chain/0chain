@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"0chain.net/chaincore/state"
+	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"0chain.net/mocks"
@@ -38,11 +38,11 @@ func setupNodesDBMock() {
 			return nil
 		},
 	)
-	state.SetupStateNodes(&store)
+	SetupStateNodes(&store)
 }
 
-func makeTestStateNodes() *state.Nodes {
-	sn := state.NewStateNodes()
+func makeTestStateNodes() *Nodes {
+	sn := NewStateNodes()
 	sn.Nodes = make([]util.Node, 0)
 	for i := 0; i < 2; i++ {
 		value := util.SecureSerializableValue{Buffer: []byte("node" + strconv.Itoa(i))}
@@ -56,14 +56,14 @@ func makeTestStateNodes() *state.Nodes {
 func TestNewStateNodes(t *testing.T) {
 	t.Parallel()
 
-	sn, ok := datastore.GetEntityMetadata("state_nodes").Instance().(*state.Nodes)
+	sn, ok := datastore.GetEntityMetadata("state_nodes").Instance().(*Nodes)
 	if !ok {
 		t.Error("expected Nodes type")
 	}
 
 	tests := []struct {
 		name string
-		want *state.Nodes
+		want *Nodes
 	}{
 		{
 			name: "OK",
@@ -75,7 +75,7 @@ func TestNewStateNodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := state.NewStateNodes(); !reflect.DeepEqual(got, tt.want) {
+			if got := NewStateNodes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewStateNodes() = %v, want %v", got, tt.want)
 			}
 		})
@@ -110,7 +110,7 @@ func TestNodes_Read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -149,7 +149,7 @@ func TestNodes_Write(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -188,7 +188,7 @@ func TestNodes_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -249,7 +249,7 @@ func TestNodes_SaveState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -300,7 +300,7 @@ func TestNodes_MarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -367,7 +367,7 @@ func TestNodes_MartialStateNodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -406,7 +406,7 @@ func TestNodes_UnmarshalJSON(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-		want    *state.Nodes
+		want    *Nodes
 	}{
 		{
 			name: "OK",
@@ -425,7 +425,7 @@ func TestNodes_UnmarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -463,7 +463,7 @@ func TestNodes_UnmarshalStateNodes(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-		want    *state.Nodes
+		want    *Nodes
 	}{
 		{
 			name: "Invalid_Version_ERR",
@@ -513,7 +513,7 @@ func TestNodes_UnmarshalStateNodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ns := &state.Nodes{
+			ns := &Nodes{
 				IDField: tt.fields.IDField,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,

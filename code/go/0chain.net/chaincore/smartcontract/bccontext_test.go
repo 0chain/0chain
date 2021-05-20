@@ -59,26 +59,30 @@ func TestBCContext_GetNodepoolInfo(t *testing.T) {
 	bn.ID = encryption.Hash("blobber pb key")
 	node.RegisterNode(bn)
 
-	members := &PoolMembersInfo{
-		MembersInfo: []PoolMemberInfo{
-			{
-				N2NHost:   mn.N2NHost,
-				Port:      strconv.Itoa(mn.Port),
-				Type:      Miner,
-				PublicKey: mn.PublicKey,
+	makeTestMembers := func() *PoolMembersInfo {
+		members := &PoolMembersInfo{
+			MembersInfo: []PoolMemberInfo{
+				{
+					N2NHost:   mn.N2NHost,
+					Port:      strconv.Itoa(mn.Port),
+					Type:      Miner,
+					PublicKey: mn.PublicKey,
+				},
+				{
+					N2NHost:   sn.N2NHost,
+					Port:      strconv.Itoa(sn.Port),
+					Type:      Sharder,
+					PublicKey: sn.PublicKey,
+				},
+				{
+					N2NHost:   bn.N2NHost,
+					Port:      strconv.Itoa(bn.Port),
+					PublicKey: bn.PublicKey,
+				},
 			},
-			{
-				N2NHost:   sn.N2NHost,
-				Port:      strconv.Itoa(sn.Port),
-				Type:      Sharder,
-				PublicKey: sn.PublicKey,
-			},
-			{
-				N2NHost:   bn.N2NHost,
-				Port:      strconv.Itoa(bn.Port),
-				PublicKey: bn.PublicKey,
-			},
-		},
+		}
+
+		return members
 	}
 
 	tests := []struct {
@@ -87,7 +91,7 @@ func TestBCContext_GetNodepoolInfo(t *testing.T) {
 	}{
 		{
 			name: "OK",
-			want: members,
+			want: makeTestMembers(),
 		},
 	}
 	for _, tt := range tests {

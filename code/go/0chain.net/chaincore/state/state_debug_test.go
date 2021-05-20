@@ -2,23 +2,20 @@ package state
 
 import "testing"
 
+func init() {
+	SetDebugLevel(DebugLevelChain)
+}
+
 func TestDebug(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		debugState int
-		want       bool
+		name string
+		want bool
 	}{
 		{
-			name:       "TRUE",
-			debugState: DebugLevelChain,
-			want:       true,
-		},
-		{
-			name:       "FALSE",
-			debugState: DebugLevelNone,
-			want:       false,
+			name: "TRUE",
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -26,7 +23,6 @@ func TestDebug(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetDebugLevel(tt.debugState)
 			if got := Debug(); got != tt.want {
 				t.Errorf("Debug() = %v, want %v", got, tt.want)
 			}
@@ -35,24 +31,15 @@ func TestDebug(t *testing.T) {
 }
 
 func TestDebugChain(t *testing.T) {
-	t.Skip("need to protect stateDebug against parallel access")
-
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		debugState int
-		want       bool
+		name string
+		want bool
 	}{
 		{
-			name:       "TRUE",
-			debugState: DebugLevelChain,
-			want:       true,
-		},
-		{
-			name:       "FALSE",
-			debugState: DebugLevelNone,
-			want:       false,
+			name: "TRUE",
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -60,7 +47,6 @@ func TestDebugChain(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetDebugLevel(tt.debugState)
 			if got := DebugChain(); got != tt.want {
 				t.Errorf("DebugChain() = %v, want %v", got, tt.want)
 			}
@@ -69,24 +55,15 @@ func TestDebugChain(t *testing.T) {
 }
 
 func TestDebugBlock(t *testing.T) {
-	t.Skip("need to protect stateDebug against parallel access")
-
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		debugState int
-		want       bool
+		name string
+		want bool
 	}{
 		{
-			name:       "TRUE",
-			debugState: DebugLevelBlock,
-			want:       true,
-		},
-		{
-			name:       "FALSE",
-			debugState: DebugLevelChain,
-			want:       false,
+			name: "FALSE",
+			want: false,
 		},
 	}
 	for _, tt := range tests {
@@ -94,7 +71,6 @@ func TestDebugBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetDebugLevel(tt.debugState)
 			if got := DebugBlock(); got != tt.want {
 				t.Errorf("DebugBlock() = %v, want %v", got, tt.want)
 			}
@@ -103,24 +79,15 @@ func TestDebugBlock(t *testing.T) {
 }
 
 func TestDebugTxn(t *testing.T) {
-	t.Skip("need to protect stateDebug against parallel access")
-
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		debugState int
-		want       bool
+		name string
+		want bool
 	}{
 		{
-			name:       "TRUE",
-			debugState: DebugLevelTxn,
-			want:       true,
-		},
-		{
-			name:       "FALSE",
-			debugState: DebugLevelBlock,
-			want:       false,
+			name: "FALSE",
+			want: false,
 		},
 	}
 	for _, tt := range tests {
@@ -128,7 +95,6 @@ func TestDebugTxn(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetDebugLevel(tt.debugState)
 			if got := DebugTxn(); got != tt.want {
 				t.Errorf("DebugTxn() = %v, want %v", got, tt.want)
 			}
@@ -137,24 +103,15 @@ func TestDebugTxn(t *testing.T) {
 }
 
 func TestDebugNode(t *testing.T) {
-	t.Skip("need to protect stateDebug against parallel access")
-
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		debugState int
-		want       bool
+		name string
+		want bool
 	}{
 		{
-			name:       "TRUE",
-			debugState: DebugLevelNode,
-			want:       true,
-		},
-		{
-			name:       "FALSE",
-			debugState: DebugLevelChain,
-			want:       false,
+			name: "FALSE",
+			want: false,
 		},
 	}
 	for _, tt := range tests {
@@ -162,7 +119,6 @@ func TestDebugNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			SetDebugLevel(tt.debugState)
 			if got := DebugNode(); got != tt.want {
 				t.Errorf("DebugNode() = %v, want %v", got, tt.want)
 			}

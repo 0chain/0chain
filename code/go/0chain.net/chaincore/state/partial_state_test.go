@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"0chain.net/chaincore/state"
+	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
@@ -43,7 +43,7 @@ func setupPartialStateDBMocks() {
 		},
 	)
 
-	state.SetupPartialState(&store)
+	SetupPartialState(&store)
 }
 
 func TestNewPartialState(t *testing.T) {
@@ -51,7 +51,7 @@ func TestNewPartialState(t *testing.T) {
 
 	var (
 		key util.Key = []byte("key")
-		ps           = datastore.GetEntityMetadata("partial_state").Instance().(*state.PartialState)
+		ps           = datastore.GetEntityMetadata("partial_state").Instance().(*PartialState)
 	)
 	ps.Hash = key
 	ps.ComputeProperties()
@@ -62,7 +62,7 @@ func TestNewPartialState(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *state.PartialState
+		want *PartialState
 	}{
 		{
 			name: "OK",
@@ -75,7 +75,7 @@ func TestNewPartialState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := state.NewPartialState(tt.args.key); !reflect.DeepEqual(got, tt.want) {
+			if got := NewPartialState(tt.args.key); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewPartialState() = %v, want %v", got, tt.want)
 			}
 		})
@@ -105,7 +105,7 @@ func TestPartialState_GetKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -148,7 +148,7 @@ func TestPartialState_Read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -183,7 +183,7 @@ func TestPartialState_GetScore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -222,7 +222,7 @@ func TestPartialState_Write(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -261,7 +261,7 @@ func TestPartialState_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -276,7 +276,7 @@ func TestPartialState_Delete(t *testing.T) {
 func TestPartialState_GetRoot(t *testing.T) {
 	t.Parallel()
 
-	ps := state.NewPartialState([]byte("key"))
+	ps := NewPartialState([]byte("key"))
 	root := util.NewValueNode()
 	ps.AddNode(root)
 
@@ -303,7 +303,7 @@ func TestPartialState_GetRoot(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -319,7 +319,7 @@ func TestPartialState_GetRoot(t *testing.T) {
 func TestPartialState_UnmarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	ps := state.NewPartialState([]byte("key"))
+	ps := NewPartialState([]byte("key"))
 	ps.Nodes = []util.Node{}
 	blob, err := json.Marshal(ps)
 	if err != nil {
@@ -339,7 +339,7 @@ func TestPartialState_UnmarshalJSON(t *testing.T) {
 		fields  fields
 		args    args
 		wantErr bool
-		want    *state.PartialState
+		want    *PartialState
 	}{
 		{
 			name:    "OK",
@@ -359,7 +359,7 @@ func TestPartialState_UnmarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -377,7 +377,7 @@ func TestPartialState_UnmarshalJSON(t *testing.T) {
 func TestPartialState_UnmarshalPartialState(t *testing.T) {
 	t.Parallel()
 
-	ps := state.PartialState{
+	ps := PartialState{
 		Version: "1",
 	}
 	ps.SetKey(encryption.Hash("data"))
@@ -476,7 +476,7 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -491,7 +491,7 @@ func TestPartialState_UnmarshalPartialState(t *testing.T) {
 func TestPartialState_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
-	ps := state.PartialState{
+	ps := PartialState{
 		Version: "1",
 		Nodes: []util.Node{
 			util.NewValueNode(),
@@ -539,7 +539,7 @@ func TestPartialState_MarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
@@ -577,7 +577,7 @@ func TestPartialState_AddNode(t *testing.T) {
 		name   string
 		fields fields
 		args   args
-		want   *state.PartialState
+		want   *PartialState
 	}{
 		{
 			name: "OK",
@@ -585,7 +585,7 @@ func TestPartialState_AddNode(t *testing.T) {
 				Nodes: nodes,
 			},
 			args: args{node: node},
-			want: &state.PartialState{
+			want: &PartialState{
 				Nodes: append(nodes, node),
 			},
 		},
@@ -595,7 +595,7 @@ func TestPartialState_AddNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ps := &state.PartialState{
+			ps := &PartialState{
 				Hash:    tt.fields.Hash,
 				Version: tt.fields.Version,
 				Nodes:   tt.fields.Nodes,
