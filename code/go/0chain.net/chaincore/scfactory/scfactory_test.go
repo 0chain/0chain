@@ -21,7 +21,6 @@ import (
 func init() {
 	metrics.DefaultRegistry = metrics.NewRegistry()
 	config.SmartContractConfig = viper.New()
-	setupsc.SetupSmartContracts()
 	viper.Set("development.smart_contract.faucet", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.zrc20", true)
