@@ -32,4 +32,6 @@ FROM zchain_run_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 
+LABEL zchain="miner"
+
 %COPY%/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
