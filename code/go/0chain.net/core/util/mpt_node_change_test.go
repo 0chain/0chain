@@ -11,7 +11,6 @@ import (
 )
 
 func TestChangeCollector_AddChange(t *testing.T) {
-	t.Skip("need protect ChangeCollector against concurrent access")
 	t.Parallel()
 
 	var (
