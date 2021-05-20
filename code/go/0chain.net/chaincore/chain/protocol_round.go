@@ -410,6 +410,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 
 	rn = mbRoundOffset(rn) // round number with MB offset
 
+	var startingRoundsInfo []interface{}
 	if len(c.magicBlockStartingRounds) > 0 {
 		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
 		for r := range c.magicBlockStartingRounds {
@@ -418,6 +419,13 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 		sort.SliceStable(startingRounds, func(i, j int) bool {
 			return startingRounds[i] >= startingRounds[j]
 		})
+		for _, sr := range startingRounds {
+			startingRoundsInfo = append(startingRoundsInfo, map[string]interface{}{
+				"sr":  sr,
+				"b.r": c.magicBlockStartingRounds[sr].Round,
+				"b.h": c.magicBlockStartingRounds[sr].Hash,
+			})
+		}
 		foundRound := startingRounds[0]
 		for _, r := range startingRounds {
 			foundRound = r
@@ -427,6 +435,13 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 		}
 		lfmb = c.magicBlockStartingRounds[foundRound]
 	}
+
+	logging.Logger.Debug("GetLatestFinalizedMagicBlockRound",
+		zap.Int64("rn", rn),
+		zap.Int64("lfmb.Round", lfmb.Round), zap.String("lfmb.Hash", lfmb.Hash),
+		zap.Int("len(c.magicBlockStartingRounds)", len(c.magicBlockStartingRounds)),
+		zap.Any("startingRoundsInfo", startingRoundsInfo),
+	)
 
 	return lfmb
 }
