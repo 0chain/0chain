@@ -203,7 +203,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 	// return the read redeems for blobbers read pools cache
 	var respb []byte
-	respb, err = json.Marshal(&unlockResponse{Unstake: unstake})
+	respb, err = json.Marshal(redeems)
 	if err != nil {
 		panic(err) // must not happen / from the very legacy code
 	}

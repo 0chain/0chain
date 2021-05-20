@@ -30,7 +30,7 @@ type clientPool struct {
 
 // Encode pool
 // Implements util.Serializable interface.
-func (cPool *clientPool) encode() []byte {
+func (cPool *clientPool) Encode() []byte {
 	var b, err = json.Marshal(cPool)
 	if err != nil {
 		panic(err) // must never happens
@@ -51,7 +51,7 @@ func (cPool *clientPool) save(ssContractKey, clientID string, balances cstate.St
 	return
 }
 
-// todo: add description
+// todo: add description, rename it
 func (cPool *clientPool) blobberCut(aPoolID, bPoolID string, eTimestamp common.Timestamp,
 ) []*allocationPool {
 	return cPool.Allocations.blobberCut(aPoolID, bPoolID, eTimestamp)
@@ -90,16 +90,17 @@ func (cPool *clientPool) moveBlobberCharge(ssContractKey string, sPool *stakePoo
 
 	// blobber service charge
 	sPool.Rewards.Charge += value
+	return
 }
 
 // For read operations only
 // todo: better rename it, adding "Read" in
-func (cPool *clientPool) movePartToBlobber(ssContractKey string, ap *allocationPool,
+func (cPool *clientPool) movePartToBlobber(ssContractKey string, aPool *allocationPool,
 	sPool *stakePool, value state.Balance, balances cstate.StateContextI,
 ) (err error) {
 	var blobberCharge state.Balance
 	blobberCharge = state.Balance(sPool.Settings.ServiceCharge * float64(value))
-	err = cPool.moveBlobberCharge(ssContractKey, sp, ap, blobberCharge, balances)
+	err = cPool.moveBlobberCharge(ssContractKey, sPool, aPool, blobberCharge, balances)
 	if err != nil {
 		return
 	}
@@ -150,7 +151,7 @@ func (cPool *clientPool) moveToChallenge(allocID, blobID string,
 
 	var aPools = cPool.blobberCut(allocID, blobID, now)
 
-	if len(cut) == 0 {
+	if len(aPools) == 0 {
 		return fmt.Errorf("no tokens in client pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
@@ -210,7 +211,7 @@ func (cPool *clientPool) moveToBlobber(ssContractKey, allocID, blobID string,
 	sPool *stakePool, now common.Timestamp, value state.Balance,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	var cut = cPool.cutBlobber(allocID, blobID, now)
+	var cut = cPool.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
 		return "", fmt.Errorf("no tokens in client pool for allocation: %s,"+
@@ -225,12 +226,14 @@ func (cPool *clientPool) moveToBlobber(ssContractKey, allocID, blobID string,
 		if value == 0 {
 			break // all required tokens has moved to the blobber
 		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
+
+		var bIndex, ok = ap.Blobbers.getIndex(blobID)
 		if !ok {
 			continue // impossible case, but leave the check here
 		}
+
 		var (
-			bp   = ap.Blobbers[bi]
+			bp = ap.Blobbers[bIndex]
 			move state.Balance
 		)
 		if value >= bp.Balance {
@@ -239,7 +242,7 @@ func (cPool *clientPool) moveToBlobber(ssContractKey, allocID, blobID string,
 			move, bp.Balance = value, bp.Balance-value
 		}
 
-		err = cPool.movePartToBlobber(ssContractKey, ap, sp, move, balances)
+		err = cPool.movePartToBlobber(ssContractKey, ap, sPool, move, balances)
 		if err != nil {
 			return // fatal, can't move, can't continue, rollback all
 		}
@@ -252,7 +255,7 @@ func (cPool *clientPool) moveToBlobber(ssContractKey, allocID, blobID string,
 		value -= move
 		sPool.Rewards.Blobber += value
 		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
+			ap.Blobbers.removeByIndex(bIndex)
 		}
 		if ap.Balance == 0 {
 			torm = append(torm, ap) // remove the allocation pool later
@@ -264,12 +267,12 @@ func (cPool *clientPool) moveToBlobber(ssContractKey, allocID, blobID string,
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
-	// remove empty allocation pools
-	cPool.removeEmpty(allocID, torm)
+	// remove empty allocation pool(s)
+	cPool.removeEmptyAllocation(allocID, torm)
 
-	// return the read redeems for blobbers client pools cache
+	// return the read redeems for blobbers read pools cache
 	var respb []byte
-	respb, err = json.Marshal(&unlockResponse{Unstake: unstake})
+	respb, err = json.Marshal(redeems)
 	if err != nil {
 		panic(err) // must not happen / from the very legacy code
 	}
@@ -366,6 +369,7 @@ func (cPool *clientPool) allocPool(allocID string, until common.Timestamp,
 			aPool = ap
 		}
 	}
+	return
 }
 
 func (cPool *clientPool) allocUntil(allocID string, until common.Timestamp,
@@ -408,6 +412,8 @@ func (ssContract *StorageSmartContract) getClientPool(clientID datastore.Key,
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
+
+	return
 }
 
 // Create new pool for a client
@@ -576,6 +582,8 @@ func (ssContract *StorageSmartContract) lockClientPool(t *transaction.Transactio
 	if err = rp.save(ssContract.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("client_pool_lock_failed", err.Error())
 	}
+
+	return
 }
 
 // Unlock tokens the pool of transaction's client if expired (what's expired?)
@@ -652,6 +660,8 @@ func (ssContract *StorageSmartContract) unlockClientPool(t *transaction.Transact
 	if err = cPool.save(ssContract.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("client_pool_unlock_failed", err.Error())
 	}
+
+	return
 }
 
 //
