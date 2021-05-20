@@ -454,6 +454,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.LatestFinalizedMagicBlockHash = lfmbr.Hash
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
+	logging.Logger.Debug("Setting LFMB round/hash for a block",
+		zap.Int64("r", lfmbr.Round), zap.String("h", lfmbr.Hash),
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
+
 	b.MinerID = node.Self.Underlying().GetKey()
 
 	// set block round random seed
@@ -466,7 +471,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.SetRoundRandomSeed(roundSeed)
 
 	mc.SetPreviousBlock(r, b, pb)
-
+	logging.Logger.Debug("mc.SetPreviousBlock: AFTER",
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
 	var (
 		start             = time.Now()
 		generationTimeout = time.Millisecond * time.Duration(mc.GetGenerationTimeout())
@@ -494,7 +501,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		b.SetStateDB(pb)
 
+		logging.Logger.Debug("GenerateBlock: BEFORE",
+			zap.Int("generation tries", generationTries), zap.Bool("makeBlock", makeBlock),
+			zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+		)
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
+		logging.Logger.Debug("GenerateBlock: AFTER",
+			zap.Int("generation tries", generationTries), zap.Bool("makeBlock", makeBlock),
+			zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+		)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
@@ -567,8 +582,17 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 
+	logging.Logger.Debug("addToRoundVerification: BEFORE",
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
 	mc.addToRoundVerification(ctx, r, b)
+	logging.Logger.Debug("AddProposedBlock: BEFORE",
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
 	r.AddProposedBlock(b)
+	logging.Logger.Debug("mc.SendBlock: BEFORE",
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
 	go mc.SendBlock(ctx, b)
 	return b, nil
 }
