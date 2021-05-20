@@ -13,4 +13,7 @@ mockery --name=IteratorI --output=../../mocks --filename=iterator.go
 mockery --name=QueryI --output=../../mocks --filename=query.go
 mockery --name=SessionI --output=../../mocks --filename=session.go
 
+cd $BASEDIR/code/go/0chain.net/core/util || exit
+mockery --name=Serializable --output=../../mocks --filename=serializable.go
+
 echo "Mocks files are generated."
