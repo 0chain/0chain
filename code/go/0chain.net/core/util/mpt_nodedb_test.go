@@ -475,7 +475,7 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 			}
 
 			for j := 0; j < len(kvs); j++ {
-				switch (i + j) % 3 {
+				switch j % 3 {
 				case 0:
 					if _, err := lndb.GetNode(kvs[j].key); err != nil {
 						t.Fatal(err)
@@ -727,8 +727,10 @@ func TestNodeDB_parallel(t *testing.T) {
 		lndb,
 		mndb,
 	} {
+		ndb := ndb
 		t.Run(fmt.Sprintf("%T", ndb), func(t *testing.T) {
 			for i := 0; i < parallel; i++ {
+				i := i
 				t.Run("parallel access", func(t *testing.T) {
 					t.Parallel()
 					for j := 0; j < len(kvs); j++ {
