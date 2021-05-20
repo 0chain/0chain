@@ -1,4 +1,5 @@
-// +build integration_tests
+// +build !integration_tests
+// todo: it's a legacy ugly approach; refactor later
 
 package storagesc
 
@@ -6,16 +7,19 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-
-	crpc "0chain.net/conductor/conductrpc"
 )
+
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, all *StorageNodes,
 	balances cstate.StateContextI) (err error) {
+
+	// check config
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid values in request: %v", err)
+	}
 
 	// check for duplicates
 	for _, b := range all.Nodes {
@@ -50,16 +54,5 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	// statistic
 	sc.statIncr(statAddBlobber)
 	sc.statIncr(statNumberOfBlobbers)
-
-	var (
-		client = crpc.Client()
-		state  = client.State()
-		abe    crpc.AddBlobberEvent
-	)
-	abe.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
-	abe.Blobber = state.Name(crpc.NodeID(blobber.ID))
-	if err = client.AddBlobber(&abe); err != nil {
-		panic(err)
-	}
 	return
 }
