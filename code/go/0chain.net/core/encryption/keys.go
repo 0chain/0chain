@@ -25,7 +25,7 @@ func GenerateKeysBytes() ([]byte, []byte, error) {
 
 /*ReadKeys - reads a publicKey and a privateKey from a Reader.
 They are assumed to be in two separate lines one followed by the other*/
-func ReadKeys(reader io.Reader) (error bool, publicKey string, privateKey string) {
+func ReadKeys(reader io.Reader) (success bool, publicKey string, privateKey string) {
 	publicKey = ""
 	privateKey = ""
 	scanner := bufio.NewScanner(reader)
