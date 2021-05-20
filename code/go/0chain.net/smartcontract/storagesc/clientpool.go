@@ -307,7 +307,7 @@ func (cPool *clientPool) takeAllocationPool(aPoolID string, eTimestamp common.Ti
 }
 
 func (cPool *clientPool) fill(t *transaction.Transaction, alloc *StorageAllocation,
-	until common.Timestamp, balances chainState.StateContextI,
+	until common.Timestamp, balances cstate.StateContextI,
 ) (resp string, err error) {
 	var bPools blobberPools
 	if err = checkFill(t, balances); err != nil {
@@ -579,7 +579,7 @@ func (ssContract *StorageSmartContract) lockClientPool(t *transaction.Transactio
 	// add and save
 
 	cPool.Allocations.add(&aPool)
-	if err = rp.save(ssContract.ID, t.ClientID, balances); err != nil {
+	if err = cPool.save(ssContract.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("client_pool_lock_failed", err.Error())
 	}
 
@@ -636,12 +636,12 @@ func (ssContract *StorageSmartContract) unlockClientPool(t *transaction.Transact
 	// 	}
 	// }
 
-	// if ap, err = wp.take(req.PoolID, t.CreationDate); err != nil {
+	// if ap, err = wp.takeAllocationPool(req.PoolID, t.CreationDate); err != nil {
 	// 	return "", common.NewError("write_pool_unlock_failed", err.Error())
 	// }
 
 	var aPool *allocationPool
-	if aPool, err = cPool.take(uRequest.PoolID, t.CreationDate); err != nil {
+	if aPool, err = cPool.takeAllocationPool(uRequest.PoolID, t.CreationDate); err != nil {
 		return "", common.NewError("client_pool_unlock_failed", err.Error())
 	}
 
