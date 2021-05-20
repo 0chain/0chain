@@ -51,4 +51,9 @@ update settings in your `0chain/code/go/0chain.net/.vscode/launch.json`
 }
 ```
 
+## clear all things: data,log, container and images
+
+```
+./docker.rm.sh
+```
 
