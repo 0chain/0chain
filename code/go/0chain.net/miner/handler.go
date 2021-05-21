@@ -39,87 +39,94 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteStatisticsCSS(w)
 
 	self := node.Self.Underlying()
-	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<h2>%v - %v</h2>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<br>")
 
-	diagnostics.WriteConfiguration(w, c)
-	fmt.Fprintf(w, "<br>")
-	diagnostics.WriteCurrentStatus(w, c)
-	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
+
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady state)</h2>")
+	fmt.Fprintf(w, "<h3>Configuration <a href='v1/config/get'>...</a></h3>")
+	diagnostics.WriteConfiguration(w, c)
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Current Status</h3>")
+	diagnostics.WriteCurrentStatus(w, c)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h3>Block Finalization Statistics (Steady state)</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Block Finalization Statistics (Start to Finish)</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td colspan='2'>")
 	fmt.Fprintf(w, "<p>Steady state block finalization time = block generation + block processing + network time (1*large message + 2*small message)</p>")
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Txn Finalization Statistics (Start to Finish)</h2>")
+	fmt.Fprintf(w, "<h3>Txn Finalization Statistics (Start to Finish)</h3>")
 	if config.Development() {
 		diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTxnTimer, 1000000.0)
 	} else {
 		fmt.Fprintf(w, "Available only in development mode")
 	}
 	fmt.Fprintf(w, "</td><td valign='top'>")
-	fmt.Fprintf(w, "<h2>Finalization Lag Statistics</h2>")
+	fmt.Fprintf(w, "<h3>Finalization Lag Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Generation Statistics</h2>")
+	fmt.Fprintf(w, "<h3>Block Generation Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, bgTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>Round Block Generation Statistics</h2>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Round Block Generation Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, rbgTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Processing Statistics</h2>")
+	fmt.Fprintf(w, "<h3>Block Processing Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, bpTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Block Verification Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, btvTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Txns Statistics</h2>")
+	fmt.Fprintf(w, "<h3>Block Txns Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, bsHistogram)
-	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>Smart Contract Execution Statistics</h2>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>Smart Contract Execution Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.SmartContractExecutionTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
+	fmt.Fprintf(w, "<h3>State Save Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StateSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td valign='top'>")
-	fmt.Fprintf(w, "<h2>State Change Statistics</h2>")
+	fmt.Fprintf(w, "<h3>State Change Statistics</h3>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.StateChangeSizeMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
+	fmt.Fprintf(w, "<h3>State Prune Update Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h3>State Prune Delete Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>RRS Generation Statistics</h2>")
+	fmt.Fprintf(w, "<h3>RRS Generation Statistics</h3>")
 	diagnostics.WriteTimerStatistics(w, c, vrfTimer, 1000000.0)
+	if c.GetPruneStats() != nil {
+		fmt.Fprintf(w, "</td><td valign='top'>")
+		fmt.Fprintf(w, "<h3>Prune Stats</h3>")
+		diagnostics.WritePruneStats(w, c.GetPruneStats())
+	}
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "</table>")
-
-	fmt.Fprintf(w, "<br>")
-	if c.GetPruneStats() != nil {
-		diagnostics.WritePruneStats(w, c.GetPruneStats())
-	}
 }
 
 // GetWalletStats -
