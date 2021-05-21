@@ -116,7 +116,10 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.Error(t, err)
+	require.NoError(t, err)
+
+	blobbers, err = ssc.getBlobbersList(balances)
+	require.Equal(t, 1, len(blobbers.Nodes))
 }
 
 func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
