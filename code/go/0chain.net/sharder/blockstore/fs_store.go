@@ -70,14 +70,13 @@ func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	return fbs.getFileWithoutExtension(hash, round) + fileExt
 }
 
-// Write - write the block to the file system
-func (fbs *FSBlockStore) Write(b *block.Block) error {
-	fileName := fbs.getFileName(b.Hash, b.Round)
-	dir := filepath.Dir(fileName)
+func (fbs *FSBlockStore) write(hash string, round int64, v datastore.Entity) error {
+	fn := fbs.getFileName(hash, round)
+	dir := filepath.Dir(fn)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
+	f, err := os.OpenFile(fn, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,7 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	if err != nil {
 		return err
 	}
-	if err = datastore.WriteJSON(w, b); err != nil {
+	if err := datastore.WriteJSON(w, v); err != nil {
 		return err
 	}
 	if err = w.Close(); err != nil {
@@ -97,6 +96,17 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	}
 	if err = f.Close(); err != nil {
 		return err
+	}
+	return nil
+}
+
+// Write - write the block to the file system
+func (fbs *FSBlockStore) Write(b *block.Block) error {
+	if err := fbs.write(b.Hash, b.Round, b); err != nil {
+		return err
+	}
+	if b.MagicBlock != nil {
+		return fbs.write(b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
 	}
 	return nil
 }
