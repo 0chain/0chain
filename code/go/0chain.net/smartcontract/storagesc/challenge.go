@@ -29,14 +29,13 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(
 	challengeResponse *ChallengeResponse) bool {
 
 	found := false
-	idx := -1
 	if len(blobberChallengeObj.Challenges) > 0 {
 		latestOpenChallenge := blobberChallengeObj.Challenges[0]
 		if latestOpenChallenge.ID == challengeCompleted.ID {
 			found = true
 		}
 	}
-	idx = 0
+	idx := 0
 	if found && idx >= 0 && idx < len(blobberChallengeObj.Challenges) {
 		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
 		challengeCompleted.Response = challengeResponse
@@ -742,6 +741,9 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
+	if err != nil {
+		return "", fmt.Errorf("add_challenge: %v", err)
+	}
 	if blobberChallengeBytes != nil {
 		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
 		if err != nil {
