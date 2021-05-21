@@ -16,4 +16,7 @@ mockery --name=SessionI --output=../../mocks --filename=session.go
 cd $BASEDIR/code/go/0chain.net/core/util || exit
 mockery --name=Serializable --output=../../mocks --filename=serializable.go
 
+cd $BASEDIR/code/go/0chain.net/sharder || exit
+mockery --output=../mocks/sharder --all
+
 echo "Mocks files are generated."
