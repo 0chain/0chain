@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/scfactory"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -29,6 +30,7 @@ import (
 )
 
 func init() {
+	scfactory.SetUpSmartContractFactory()
 	config.SetupDefaultConfig()
 	viper.Set("development.smart_contract.faucet", true)
 	viper.Set("development.smart_contract.interest", true)

@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"fmt"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -23,6 +24,14 @@ const (
 
 type StorageSmartContract struct {
 	*sci.SmartContract
+}
+
+func NewStorageSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
+	var sscCopy = &StorageSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}
+	sscCopy.SetSC(sscCopy.SmartContract, &smartcontract.BCContext{})
+	return sscCopy, sscCopy.SmartContract
 }
 
 func (ssc *StorageSmartContract) InitSC() {}

@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"errors"
 	"fmt"
 	"net/url"
@@ -54,6 +55,16 @@ type MinerSmartContract struct {
 
 	mutexMinerMPK          sync.RWMutex
 	smartContractFunctions map[string]smartContractFunction
+}
+
+func NewMinerSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
+	var mscCopy = &MinerSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+		bcContext:     &smartcontract.BCContext{},
+	}
+	mscCopy.InitSmartContractFunctions()
+	mscCopy.SetSC(mscCopy.SmartContract, mscCopy.bcContext)
+	return mscCopy, mscCopy.SmartContract
 }
 
 func (msc *MinerSmartContract) GetName() string {

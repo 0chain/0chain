@@ -39,6 +39,10 @@ type SmartContractInterface interface {
 	InitSC()
 }
 
+type SmartContractFactoryI interface {
+	NewSmartContract(string) (SmartContractInterface, *SmartContract)
+}
+
 /*BCContextI interface for smart contracts to access blockchain.
 These functions should not modify blockchain states in anyway.
 */

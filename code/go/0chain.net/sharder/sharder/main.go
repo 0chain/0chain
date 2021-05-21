@@ -1,6 +1,7 @@
 package main
 
 import (
+	"0chain.net/chaincore/scfactory"
 	"bufio"
 	"context"
 	"errors"
@@ -142,6 +143,7 @@ func main() {
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
+	scfactory.SetUpSmartContractFactory()
 
 	if *initialStatesFile == "" {
 		*initialStatesFile = viper.GetString("network.initial_states")

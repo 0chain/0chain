@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -18,11 +17,10 @@ import (
 	"go.uber.org/zap"
 )
 
-//lock used to setup smartcontract rest handlers
-var scLock = sync.Mutex{}
-
 //ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
+
+var SmartContractFactory sci.SmartContractFactoryI
 
 //ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
@@ -54,23 +52,14 @@ func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w htt
 func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartContract) {
 	contracti, ok := ContractMap[scAddress]
 	if ok {
-		scLock.Lock()
-		defer scLock.Unlock()
-
-		sc := sci.NewSC(scAddress)
-		bc := &BCContext{}
-		contracti.SetSC(sc, bc)
-		return contracti, sc
+		return SmartContractFactory.NewSmartContract(contracti.GetName())
 	}
 	return nil, nil
 }
 
 func GetSmartContract(scAddress string) sci.SmartContractInterface {
-	contracti, ok := ContractMap[scAddress]
-	if ok {
-		return contracti
-	}
-	return nil
+	contracti, _ := getSmartContract(scAddress)
+	return contracti
 }
 
 func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {

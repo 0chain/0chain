@@ -1,6 +1,7 @@
 package zrc20sc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"fmt"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -20,6 +21,14 @@ const (
 
 type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func NewZRC20SmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+	var zrcCopy = &ZRC20SmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	zrcCopy.SetSC(zrcCopy.SmartContract, &smartcontract.BCContext{})
+	return zrcCopy, zrcCopy.SmartContract
 }
 
 func (zrc *ZRC20SmartContract) InitSC() {}

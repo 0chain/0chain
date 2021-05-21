@@ -1,6 +1,7 @@
 package interestpoolsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"fmt"
 	"time"
 
@@ -25,6 +26,14 @@ const (
 
 type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func NewInterestPoolSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+	var ipscCopy = &InterestPoolSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	ipscCopy.SetSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
+	return ipscCopy, ipscCopy.SmartContract
 }
 
 func (ipsc *InterestPoolSmartContract) InitSC() {}
