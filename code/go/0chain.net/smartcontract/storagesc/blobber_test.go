@@ -103,6 +103,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
 		tp       int64 = 100
+		blobbers *StorageNodes
 		err      error
 	)
 
