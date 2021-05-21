@@ -67,8 +67,8 @@ server_chain:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   round_timeouts:
-    softto_min: 3000 #in miliseconds
-    softto_mult: 3 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
+    softto_min: 1500 #in miliseconds
+    softto_mult: 10 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 2 #number of soft timeouts before round is restarted
     timeout_cap: 0 # 0 indicates no cap
     vrfs_timeout_mismatch_tolerance: 5
