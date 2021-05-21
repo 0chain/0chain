@@ -454,8 +454,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.LatestFinalizedMagicBlockHash = lfmbr.Hash
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
-	mc.GetLatestFinalizedMagicBlockRound(rn)
-
 	logging.Logger.Debug("Setting LFMB round/hash for a block",
 		zap.Int64("rn", r.GetRoundNumber()), zap.Int64("mc.crn", mc.GetCurrentRound()),
 		zap.Int64("rnoff", mbRoundOffset(rn)), zap.Int64("nvc", mc.NextViewChange()),

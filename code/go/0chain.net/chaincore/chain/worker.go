@@ -152,18 +152,7 @@ type MagicBlockBrief struct {
 func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-	if c.latestFinalizedMagicBlock == nil {
-		return nil
-	}
-
-	return &MagicBlockBrief{
-		MagicBlockNumber: c.latestFinalizedMagicBlock.MagicBlockNumber,
-		MagicBlockHash:   c.latestFinalizedMagicBlock.MagicBlock.Hash,
-		Round:            c.latestFinalizedMagicBlock.Round,
-		StartingRound:    c.latestFinalizedMagicBlock.MagicBlock.StartingRound,
-		MinersN2NURLs:    c.latestFinalizedMagicBlock.Miners.N2NURLs(),
-		ShardersN2NURLs:  c.latestFinalizedMagicBlock.Sharders.N2NURLs(),
-	}
+	return getMagicBlockBrief(c.latestFinalizedMagicBlock)
 }
 
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
@@ -587,8 +576,8 @@ type MagicBlockSaver interface {
 func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	mb *block.MagicBlock) (err error) {
 
-	magicBlock := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
-	if magicBlock == nil {
+	block := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+	if block == nil {
 		Logger.Warn("no new finalized magic block from sharders given",
 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
 		return nil
@@ -597,11 +586,21 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	cmb := sc.GetCurrentMagicBlock()
 
 	Logger.Info("get current magic block from sharders",
-		zap.Any("number", magicBlock.MagicBlockNumber),
-		zap.Any("sr", magicBlock.StartingRound),
-		zap.Any("hash", magicBlock.Hash))
+		zap.Any("number", block.MagicBlockNumber),
+		zap.Any("sr", block.StartingRound),
+		zap.Any("hash", block.Hash))
 
-	if magicBlock.StartingRound <= cmb.StartingRound {
+	if block.StartingRound <= cmb.StartingRound {
+		if block.StartingRound == cmb.StartingRound {
+			// updating LFMB will add block to chain.magicBlockStartRounds cache
+			sc.SetLatestFinalizedMagicBlock(block)
+			Logger.Debug(
+				"updated lfmb to add lfmb's parent block to magicBlockStartRounds cache",
+				zap.Any("block hash", block.Hash),
+				zap.Any("block round", block.Round),
+				zap.Any("lfmb starting round", block.StartingRound),
+			)
+		}
 		return nil // earlier than the current one
 	}
 
@@ -610,17 +609,17 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
 	}
 
-	err = sc.VerifyChainHistoryAndRepair(ctx, magicBlock, saveMagicBlock)
+	err = sc.VerifyChainHistoryAndRepair(ctx, block, saveMagicBlock)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
 
-	if err = sc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
 
-	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-	sc.SetLatestFinalizedMagicBlock(magicBlock)
+	sc.UpdateNodesFromMagicBlock(block.MagicBlock)
+	sc.SetLatestFinalizedMagicBlock(block)
 
 	return // ok, updated
 }

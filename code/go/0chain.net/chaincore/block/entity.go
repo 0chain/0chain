@@ -116,8 +116,8 @@ type Block struct {
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
-	stateStatusMutex      *sync.RWMutex `json:"_"`
-	StateMutex            *sync.RWMutex `json:"_"`
+	stateStatusMutex      *sync.RWMutex `json:"-"`
+	StateMutex            *sync.RWMutex `json:"-"`
 	blockState            int8
 	isNotarized           bool
 	ticketsMutex          *sync.RWMutex
@@ -405,6 +405,12 @@ func (b *Block) getHashData() string {
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
 	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	if b.MagicBlock != nil {
+		if b.MagicBlock.Hash == "" {
+			b.MagicBlock.Hash = b.MagicBlock.GetHash()
+		}
+		hashData += ":" + b.MagicBlock.Hash
+	}
 	return hashData
 }
 

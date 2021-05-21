@@ -62,7 +62,6 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 /*WriteConfiguration - write summary information */
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%'>")
-	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></th></tr>")
 	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators)
 	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
 	fmt.Fprintf(w, "<tr><td class='tname'>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
@@ -121,7 +120,6 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 /*WriteCurrentStatus - write the current status of the chain */
 func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%' >")
-	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
 	fmt.Fprintf(w, "<tr><td class='tname'>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil {
@@ -147,8 +145,7 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 
 //WritePruneStats - write the last prune stats
 func WritePruneStats(w http.ResponseWriter, ps *util.PruneStats) {
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Prune Stats</th></tr>")
+	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td>Stage</td><td>%v</td>", ps.Stage)
 	fmt.Fprintf(w, "<tr><td>Pruned Below Round</td><td class='number'>%v</td></tr>", ps.Version)
 	fmt.Fprintf(w, "<tr><td>Missing Nodes</td><td class='number'>%v</td></tr>", ps.MissingNodes)
