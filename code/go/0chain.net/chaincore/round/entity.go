@@ -159,14 +159,17 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 }
 
 func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
-	tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
-	if tolerance <= 1 {
-		return tc.count
-	}
-	if tc.count%tolerance == 0 {
-		return tc.count
-	}
-	return tolerance * (1 + tc.count/tolerance)
+	return tc.GetTimeoutCount()
+	// tc.mutex.Lock()
+	// defer tc.mutex.Unlock()
+	// tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
+	// if tolerance <= 1 {
+	// 	return tc.count
+	// }
+	// if tc.count%tolerance == 0 {
+	// 	return tc.count
+	// }
+	// return tolerance * (1 + tc.count/tolerance)
 }
 
 /*Round - data structure for the round */
