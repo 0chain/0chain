@@ -30,7 +30,7 @@ import (
 const noProgressRounds = 10
 
 func init() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
 }
 
 // type aliases
@@ -46,7 +46,7 @@ func main() {
 
 	var (
 		configFile string = "conductor.yaml"
-		testsFile  string = "conductor.view-change-1.yaml"
+		testsFile  string = "conductor.view-change.fault-tolerance.yaml"
 		verbose    bool   = true
 	)
 	flag.StringVar(&configFile, "config", configFile, "configurations file")

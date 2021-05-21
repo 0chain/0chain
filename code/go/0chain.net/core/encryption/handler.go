@@ -12,11 +12,11 @@ func HashHandler(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	if text == "" {
 		var data []byte
-		buff, err := r.Body.Read(data)
+		_, err := r.Body.Read(data)
 		if err != nil {
 			return
 		}
-		text = string(buff)
+		text = string(data)
 	}
 	fmt.Fprintf(w, Hash(text))
 }

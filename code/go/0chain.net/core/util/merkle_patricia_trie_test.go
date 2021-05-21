@@ -1,17 +1,22 @@
 package util
 
 import (
-	"0chain.net/core/logging"
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
+
+	"0chain.net/core/logging"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
+	"0chain.net/core/encryption"
 )
 
 func init() {
@@ -665,4 +670,75 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 	//mpt2.PrettyPrint(os.Stdout)
 
 	//doDelete("delete a leaf node", mpt2, "223556782", true)
+}
+
+func getRandomHexString(r *rand.Rand, n int) string {
+	b := make([]byte, (n+1)/2)
+	if _, err := r.Read(b); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(b)[:n]
+}
+
+func createTestPNodeDB() *PNodeDB {
+	err := os.RemoveAll("/tmp/mpt")
+	if err != nil {
+		panic(err)
+	}
+	err = os.MkdirAll("/tmp/mpt", 0755)
+	if err != nil {
+		panic(err)
+	}
+	db, err := NewPNodeDB("/tmp/mpt/data", "/tmp/mpt/log")
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func createTestMPT(db NodeDB, maxEntries int) (mpt MerklePatriciaTrieI) {
+	mpt = NewMerklePatriciaTrie(db, 1)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < maxEntries; i++ {
+		path := Path(encryption.Hash(getRandomHexString(r, 64)))
+		_, err := mpt.Insert(path, &SecureSerializableValue{Buffer: path})
+		if err != nil {
+			panic(err)
+		}
+	}
+	return mpt
+}
+
+func TestPNodeDBMPTIteration(t *testing.T) {
+	db := createTestPNodeDB()
+	defer db.Close()
+
+	startTime := time.Now()
+	mpt := createTestMPT(db, 100000)
+	fmt.Printf("createdTestMPT in %v\n", time.Since(startTime))
+
+	startTime = time.Now()
+	cnt := 0
+	mpt.Iterate(context.Background(), func(ctx context.Context, path Path, key Key, node Node) error {
+		if node != nil {
+			cnt++
+		}
+		return nil
+	}, NodeTypesAll)
+	fmt.Printf("iteration took %v\n", time.Since(startTime))
+}
+
+func BenchmarkPNodeDBMPTIteration(b *testing.B) {
+	db := createTestPNodeDB()
+	defer db.Close()
+	mpt := createTestMPT(db, 10000000)
+	for i := 0; i < b.N; i++ {
+		cnt := 0
+		mpt.Iterate(context.Background(), func(ctx context.Context, path Path, key Key, node Node) error {
+			if node != nil {
+				cnt++
+			}
+			return nil
+		}, NodeTypesAll)
+	}
 }

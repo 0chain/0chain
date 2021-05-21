@@ -54,12 +54,10 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		nodeID = bls.ComputeIDdkg(n.ID)
 	)
 
-	var (
-		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
-	)
+	shareOrSignSuccess := make(map[string]*bls.DKGKeyShare)
 	secShare, ok := mc.getNodeSij(nodeID)
 	if !ok {
-		return common.NewErrorf("send_dkg_share", "could not get node sij")
+		return common.NewErrorf("send_dkg_share", "could not get node sij: %s", to)
 	}
 
 	var state = crpc.Client().State()
@@ -92,7 +90,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
 			logging.Logger.Error("invalid share or sign",
-				zap.Error(err), zap.Any("sign_status", ok),
+				zap.Error(err), zap.Any("minersc/dkg.gosign_status", ok),
 				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 			return
 		}
@@ -101,7 +99,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		return
 	}
 
-	n.RequestEntityFromNode(ctx, DKGShareSender, params, handler)
+	if !n.RequestEntityFromNode(ctx, DKGShareSender, params, handler) {
+		return common.NewError("send_dkg_share", "send message failed")
+	}
 
 	if len(shareOrSignSuccess) == 0 {
 		return common.NewError("send_dkg_share", "miner returned error")
@@ -135,19 +135,18 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		return // (nil, nil)
 	}
 
+	var sos = mc.viewChangeProcess.shareOrSigns // local reference
+
 	var (
 		state      = crpc.Client().State()
 		isRevealed = state.IsRevealed
-
-		sos = mc.viewChangeProcess.shareOrSigns
 	)
 
 	for k := range mpks.Mpks {
 		if k == selfNodeKey {
 			continue
 		}
-		var _, ok = sos.ShareOrSigns[k]
-		if isRevealed || !ok {
+		if _, ok := sos.ShareOrSigns[k]; !ok || isRevealed {
 			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
 		}
 	}
@@ -161,8 +160,8 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	}
 
 	var publicKeys = make(map[string]string)
-	for _, node := range dmn.SimpleNodes {
-		publicKeys[node.ID] = node.PublicKey
+	for _, n := range dmn.SimpleNodes {
+		publicKeys[n.ID] = n.PublicKey
 	}
 
 	var _, ok = sos.Validate(mpks, publicKeys,
@@ -271,9 +270,16 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 		mc.viewChangeProcess.viewChangeDKG = vc
 	}
 
+	logging.Logger.Debug("[vc] contribute_mpk", zap.Int("T", dmn.T),
+		zap.Int("K", dmn.K), zap.Int("N", dmn.N),
+		zap.Int64("mb_number",
+			mc.viewChangeProcess.viewChangeDKG.MagicBlockNumber))
+
 	for _, v := range mc.viewChangeProcess.viewChangeDKG.GetMPKs() {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
+
+	logging.Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
 
 	var (
 		state             = crpc.Client().State()

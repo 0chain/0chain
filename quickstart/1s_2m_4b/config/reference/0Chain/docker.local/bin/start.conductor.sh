@@ -12,4 +12,4 @@ done
 # start the conductor
 ./code/go/0chain.net/conductor/conductor/conductor                     \
     -config "./docker.local/config/conductor.config.yaml"              \
-    -tests "./docker.local/config/conductor.${1:-view-change-1}.yaml"
+    -tests "./docker.local/config/conductor.${1:-view-change.fault-tolerance}.yaml"

@@ -1,5 +1,5 @@
 smart_contracts:
-  faucetsc: 
+  faucetsc:
     pour_amount: 10000000000
     max_pour_amount: 100000000000
     periodic_limit: 10000000000000
@@ -7,23 +7,24 @@ smart_contracts:
     individual_reset: 3h # in hours
     global_reset: 48h # in hours
   interestpoolsc:
-    min_lock: 10 
+    min_lock: 10
     apr: 0.1
     min_lock_period: 1m
     max_mint: 4000000.0
 
   minersc:
     # miners
-    max_n: 8 # 100
-    min_n: 2 # 3
+    max_n: 7 # 100
+    min_n: 3 # 3
     # sharders
-    max_s: 3 # 30
+    max_s: 2 # 30
     min_s: 1 # 1
     # max delegates allowed by SC
     max_delegates: 200 #
     # DKG
     t_percent: .51 # of active
     k_percent: .75 # of registered
+    x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
@@ -51,14 +52,14 @@ smart_contracts:
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
     max_mint: 4000000.0 # tokens
-    # if view change is false then reward round frequency is used to send rewards and interests 
+    # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
 
   storagesc:
     # the time_unit is a duration used as divider for a write price; a write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
-    time_unit: '720h'
+    time_unit: "720h"
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
@@ -66,11 +67,11 @@ smart_contracts:
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC
-    min_alloc_duration: '5m'
+    min_alloc_duration: "5m"
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: '30m'
+    max_challenge_completion_time: "30m"
     # min blobber's offer duration allowed by the SC
-    min_offer_duration: '10h'
+    min_offer_duration: "10h"
     # min blobber capacity allowed by the SC
     min_blobber_capacity: 1024
     # users' read pool related configurations
@@ -127,7 +128,7 @@ smart_contracts:
 
   vestingsc:
     min_lock: 0.01
-    min_duration: '2m'
-    max_duration: '2h'
+    min_duration: "2m"
+    max_duration: "2h"
     max_destinations: 3
     max_description_length: 20

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
 
@@ -23,7 +24,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -453,6 +453,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 	b.LatestFinalizedMagicBlockHash = lfmbr.Hash
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
+
+	mc.GetLatestFinalizedMagicBlockRound(rn)
+
+	logging.Logger.Debug("Setting LFMB round/hash for a block",
+		zap.Int64("rn", r.GetRoundNumber()), zap.Int64("mc.crn", mc.GetCurrentRound()),
+		zap.Int64("rnoff", mbRoundOffset(rn)), zap.Int64("nvc", mc.NextViewChange()),
+		zap.Int64("r", lfmbr.Round), zap.String("h", lfmbr.Hash),
+		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
+	)
 
 	b.MinerID = node.Self.Underlying().GetKey()
 

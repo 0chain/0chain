@@ -5,12 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"net/url"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -85,8 +89,6 @@ type (
 		gn *GlobalNode) error
 	smartContractFunction func(t *transaction.Transaction, inputData []byte,
 		gn *GlobalNode, balances cstate.StateContextI) (string, error)
-
-	SimpleNodes = map[string]*SimpleNode
 )
 
 func globalKeyHash(name string) datastore.Key {
@@ -95,6 +97,89 @@ func globalKeyHash(name string) datastore.Key {
 
 func NewSimpleNodes() SimpleNodes {
 	return make(map[string]*SimpleNode)
+}
+
+// not thread safe
+type SimpleNodes map[string]*SimpleNode
+
+func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *node.Pool) (maxNodes int) {
+
+	var pmbNodes, newNodes, selectedNodes []*SimpleNode
+
+	// separate previous mb miners and new miners from dkg miners list
+	for _, sn := range sns {
+		if pmbnp != nil && pmbnp.HasNode(sn.ID) {
+			pmbNodes = append(pmbNodes, sn)
+			continue
+		}
+		newNodes = append(newNodes, sn)
+	}
+
+	// sort pmb nodes by total stake: desc
+	sort.SliceStable(pmbNodes, func(i, j int) bool {
+		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked ||
+			pmbNodes[i].ID < pmbNodes[j].ID
+
+	})
+
+	// calculate max nodes count for next mb
+	maxNodes = min(limit, len(pmbNodes)+len(newNodes))
+
+	// get number of nodes from previous mb that are required to be part of next mb
+	x := min(len(pmbNodes), int(math.Ceil(xPercent*float64(maxNodes))))
+	y := maxNodes - x
+
+	// select first x nodes from pmb miners
+	selectedNodes = pmbNodes[:x]
+
+	// add rest of the pmb miners into new miners list
+	newNodes = append(newNodes, pmbNodes[x:]...)
+	sort.SliceStable(newNodes, func(i, j int) bool {
+		return newNodes[i].TotalStaked > newNodes[j].TotalStaked ||
+			newNodes[i].ID < newNodes[j].ID
+	})
+
+	if len(newNodes) <= y {
+		// less than allowed nodes remaining
+		selectedNodes = append(selectedNodes, newNodes...)
+
+	} else if y > 0 {
+		// more than allowed nodes remaining
+
+		// find the range of nodes with equal stakes, start (s), end (e)
+		s, e := 0, len(newNodes)
+		stake := newNodes[y-1].TotalStaked
+		for i, sn := range newNodes {
+			if s == 0 && sn.TotalStaked == stake {
+				s = i
+			} else if sn.TotalStaked < stake {
+				e = i
+				break
+			}
+		}
+
+		// select nodes that don't have equal stake
+		selectedNodes = append(selectedNodes, newNodes[:s]...)
+
+		// resolve equal stake condition by randomly selecting nodes with equal stake
+		newNodes = newNodes[s:e]
+		for _, j := range rand.New(rand.NewSource(pmbrss)).Perm(len(newNodes)) {
+			if len(selectedNodes) < maxNodes {
+				selectedNodes = append(selectedNodes, newNodes[j])
+			}
+		}
+
+	}
+
+	// update map with selected nodes
+	for k := range sns {
+		delete(sns, k)
+	}
+	for _, sn := range selectedNodes {
+		sns[sn.ID] = sn
+	}
+
+	return maxNodes
 }
 
 //
@@ -122,6 +207,7 @@ type GlobalNode struct {
 	MaxDelegates int     `json:"max_delegates"` // } limited by the SC
 	TPercent     float64 `json:"t_percent"`
 	KPercent     float64 `json:"k_percent"`
+	XPercent     float64 `json:"x_percent"`
 	LastRound    int64   `json:"last_round"`
 	// MaxStake boundary of SC.
 	MaxStake state.Balance `json:"max_stake"`
@@ -869,6 +955,7 @@ type DKGMinerNodes struct {
 	MaxN     int     `json:"max_n"`
 	TPercent float64 `json:"t_percent"`
 	KPercent float64 `json:"k_percent"`
+	XPercent float64 `json:"x_percent"`
 
 	SimpleNodes    `json:"simple_nodes"`
 	T              int             `json:"t"`
@@ -886,6 +973,7 @@ func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
 	dkgmn.MaxN = gn.MaxN
 	dkgmn.TPercent = gn.TPercent
 	dkgmn.KPercent = gn.KPercent
+	dkgmn.XPercent = gn.XPercent
 }
 
 func min(a, b int) int {
@@ -893,6 +981,13 @@ func min(a, b int) int {
 		return b
 	}
 	return a
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // The min_n is checked before the calculateTKN call, so, the n >= min_n.
@@ -905,34 +1000,6 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }
 
-func (dkgmn *DKGMinerNodes) reduce(n int, gn *GlobalNode,
-	balances cstate.StateContextI) int {
-
-	var list []*SimpleNode
-	for _, node := range dkgmn.SimpleNodes {
-		list = append(list, node)
-	}
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].TotalStaked > list[j].TotalStaked ||
-			list[i].ID < list[j].ID
-	})
-
-	if !gn.hasPrevDKGMinerInList(list[:n], balances) {
-		var prev = gn.rankedPrevDKGMiners(list, balances)
-		if len(prev) == 0 {
-			panic("must not happen")
-		}
-		list[n-1] = prev[0]
-	}
-
-	list = list[:n]
-	dkgmn.SimpleNodes = make(SimpleNodes)
-	for _, node := range list {
-		dkgmn.SimpleNodes[node.ID] = node
-	}
-	return dkgmn.MaxN
-}
-
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	ks = make([]string, 0, len(sns))
 	for k := range sns {
@@ -941,14 +1008,15 @@ func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	return
 }
 
-// The recalculateTKN reconstructs and checks current DKG list. It never affects
-// T, K, and N.
-func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
+// reduce method checks boundaries and if final, reduces the
+// list to adhere to the limits (min_n, max_n) and conditions
+func (dkgmn *DKGMinerNodes) reduceNodes(
+	final bool,
+	gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	var n = len(dkgmn.SimpleNodes)
 
-	// check the lower boundary
 	if n < dkgmn.MinN {
 		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
@@ -958,17 +1026,24 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 			n, simpleNodesKeys(dkgmn.SimpleNodes))
 	}
 
-	// check upper boundary for a final recalculation
-	if final && n > dkgmn.MaxN {
-		dkgmn.reduce(dkgmn.MaxN, gn, balances)
+	if final {
+		simpleNodes := make(SimpleNodes)
+		for k, v := range dkgmn.SimpleNodes {
+			simpleNodes[k] = v
+		}
+		var pmbrss int64
+		var pmbnp *node.Pool
+		pmb := balances.GetLastestFinalizedMagicBlock()
+		if pmb != nil {
+			pmbrss = pmb.RoundRandomSeed
+			if pmb.MagicBlock != nil {
+				pmbnp = pmb.MagicBlock.Miners
+			}
+		}
+		simpleNodes.reduce(gn.MaxN, gn.XPercent, pmbrss, pmbnp)
+		dkgmn.SimpleNodes = simpleNodes
 	}
 
-	// Note: don't recalculate anything here.
-
-	// var m = min(dkgmn.MaxN, n)
-	// dkgmn.N = m
-	// dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
-	// dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 	return
 }
 
@@ -1152,4 +1227,29 @@ func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes
 	}
 
 	return nodesList, nil
+}
+
+// quick fix: localhost check + duplicate check
+// TODO: remove this after more robust challenge based node addtion/health_check is added
+func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
+	localhost := regexp.MustCompile(`^(?:(?:https|http)\:\/\/)?(?:localhost|127\.0\.0\.1)(?:\:\d+)?(?:\/.*)?$`)
+	host := strings.TrimSpace(nn.Host)
+	n2nhost := strings.TrimSpace(nn.N2NHost)
+	port := nn.Port
+	if n2nhost == "" || localhost.MatchString(n2nhost) {
+		return fmt.Errorf("invalid n2nhost: %v", n2nhost)
+	}
+	if host == "" || localhost.MatchString(host) {
+		host = n2nhost
+	}
+	for _, n := range allNodes {
+		if n2nhost == n.N2NHost && n.Port == port {
+			return fmt.Errorf("n2nhost:port already exists: %v:%v", n2nhost, port)
+		}
+		if host == n.Host && n.Port == port {
+			return fmt.Errorf("host:port already exists: %v:%v", host, port)
+		}
+	}
+	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port
+	return nil
 }
