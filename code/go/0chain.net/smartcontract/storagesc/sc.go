@@ -27,11 +27,16 @@ type StorageSmartContract struct {
 }
 
 func NewStorageSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
+	var sscCopy = newStorageSmartContract()
+	return sscCopy, sscCopy.SmartContract
+}
+
+func newStorageSmartContract() *StorageSmartContract {
 	var sscCopy = &StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	sscCopy.SetSC(sscCopy.SmartContract, &smartcontract.BCContext{})
-	return sscCopy, sscCopy.SmartContract
+	return sscCopy
 }
 
 func (ssc *StorageSmartContract) InitSC() {}
