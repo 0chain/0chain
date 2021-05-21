@@ -592,7 +592,7 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	if block.StartingRound <= cmb.StartingRound {
 		if block.StartingRound == cmb.StartingRound {
-			// updating LFMB will add block to sc.magicBlockStartRounds cache
+			// updating LFMB will add block to chain.magicBlockStartRounds cache
 			sc.SetLatestFinalizedMagicBlock(block)
 			Logger.Debug(
 				"updated lfmb to add lfmb's parent block to magicBlockStartRounds cache",
