@@ -52,19 +52,15 @@ var (
 
 //SetupSmartContracts initialize smartcontract addresses
 func SetupSmartContracts() {
-	var factory = smartContractFactorys{}
 	for _, name := range SCNames {
 		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
-			var sci = factory.NewSmartContract(name)
+			var sci = newSmartContract(name)
 			smartcontract.ContractMap[sci.GetAddress()] = sci
 		}
 	}
 }
 
-type smartContractFactorys struct {
-}
-
-func (scf smartContractFactorys) NewSmartContract(name string) sci.SmartContractInterface {
+func newSmartContract(name string) sci.SmartContractInterface {
 	code, ok := SCCode[name]
 	if !ok {
 		return nil
