@@ -21,15 +21,17 @@ type VestingSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewVestingSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewVestingSmartContract() smartcontractinterface.SmartContractInterface {
 	var vscCopy = &VestingSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	vscCopy.SetSC(vscCopy.SmartContract, &smartcontract.BCContext{})
-	return vscCopy, vscCopy.SmartContract
+	vscCopy.setSC(vscCopy.SmartContract, &smartcontract.BCContext{})
+	return vscCopy
 }
 
-func (vsc *VestingSmartContract) InitSC() {}
+func (fc *VestingSmartContract) GetSC() *smartcontractinterface.SmartContract {
+	return fc.SmartContract
+}
 
 func (vsc *VestingSmartContract) GetName() string {
 	return "vesting"
@@ -43,7 +45,7 @@ func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
 	return vsc.RestHandlers
 }
 
-func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
+func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	bcContext smartcontractinterface.BCContextI) {
 
 	vsc.SmartContract = sc

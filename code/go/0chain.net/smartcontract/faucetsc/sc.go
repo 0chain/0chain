@@ -27,15 +27,17 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewFaucetSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
 	var fcCopy = &FaucetSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	fcCopy.SetSC(fcCopy.SmartContract, &smartcontract.BCContext{})
-	return fcCopy, fcCopy.SmartContract
+	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
+	return fcCopy
 }
 
-func (fc *FaucetSmartContract) InitSC() {}
+func (fc *FaucetSmartContract) GetSC() *smartcontractinterface.SmartContract {
+	return fc.SmartContract
+}
 
 func (fc *FaucetSmartContract) GetName() string {
 	return name
@@ -49,7 +51,7 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 	return fc.SmartContract.RestHandlers
 }
 
-func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
 	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit

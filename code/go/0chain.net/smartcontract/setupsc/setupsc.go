@@ -16,32 +16,47 @@ import (
 	"0chain.net/smartcontract/zrc20sc"
 )
 
-type SCName string
+type SCName int
 
 const (
-	Faucet   SCName = "faucet"
-	Storage  SCName = "storage"
-	Zrc20    SCName = "zrc20"
-	Interest SCName = "interest"
-	Multisig SCName = "multisig"
-	Miner    SCName = "miner"
-	Vesting  SCName = "vesting"
+	Faucet SCName = iota
+	Storage
+	Zrc20
+	Interest
+	Multisig
+	Miner
+	Vesting
 )
 
-var scs = []sci.SmartContractInterface{
-	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
-	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
-	&multisigsc.MultiSigSmartContract{},
-	&minersc.MinerSmartContract{},
-	&vestingsc.VestingSmartContract{},
-}
+var (
+	SCNames = []string{
+		"faucet",
+		"storage",
+		"zrc20",
+		"interest",
+		"multisig",
+		"miner",
+		"vesting",
+	}
+
+	SCCode = map[string]SCName{
+		"faucet":   Faucet,
+		"storage":  Storage,
+		"zrc20":    Zrc20,
+		"interest": Interest,
+		"multisig": Multisig,
+		"miner":    Miner,
+		"vesting":  Vesting,
+	}
+)
 
 //SetupSmartContracts initialize smartcontract addresses
 func SetupSmartContracts() {
-	for _, sc := range scs {
-		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", sc.GetName())) {
-			sc.InitSC()
-			smartcontract.ContractMap[sc.GetAddress()] = sc
+	var factory = smartContractFactorys{}
+	for _, name := range SCNames {
+		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
+			var sci = factory.NewSmartContract(name)
+			smartcontract.ContractMap[sci.GetAddress()] = sci
 		}
 	}
 }
@@ -49,12 +64,12 @@ func SetupSmartContracts() {
 type smartContractFactorys struct {
 }
 
-func NewSmartContractFactory() sci.SmartContractFactoryI {
-	return &smartContractFactorys{}
-}
-
-func (scf smartContractFactorys) NewSmartContract(name string) (sci.SmartContractInterface, *sci.SmartContract) {
-	switch SCName(name) {
+func (scf smartContractFactorys) NewSmartContract(name string) sci.SmartContractInterface {
+	code, ok := SCCode[name]
+	if !ok {
+		return nil
+	}
+	switch code {
 	case Faucet:
 		return faucetsc.NewFaucetSmartContract()
 	case Storage:
@@ -70,6 +85,6 @@ func (scf smartContractFactorys) NewSmartContract(name string) (sci.SmartContrac
 	case Vesting:
 		return vestingsc.NewVestingSmartContract()
 	default:
-		return nil, nil
+		return nil
 	}
 }

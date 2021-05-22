@@ -57,14 +57,18 @@ type MinerSmartContract struct {
 	smartContractFunctions map[string]smartContractFunction
 }
 
-func NewMinerSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
+func NewMinerSmartContract() sci.SmartContractInterface {
 	var mscCopy = &MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 		bcContext:     &smartcontract.BCContext{},
 	}
-	mscCopy.InitSmartContractFunctions()
-	mscCopy.SetSC(mscCopy.SmartContract, mscCopy.bcContext)
-	return mscCopy, mscCopy.SmartContract
+	mscCopy.initSC()
+	mscCopy.setSC(mscCopy.SmartContract, mscCopy.bcContext)
+	return mscCopy
+}
+
+func (fc *MinerSmartContract) GetSC() *sci.SmartContract {
+	return fc.SmartContract
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -79,8 +83,8 @@ func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestH
 	return msc.RestHandlers
 }
 
-//SetSC setting up smartcontract. implementing the interface
-func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+//setSC setting up smartcontract. implementing the interface
+func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler

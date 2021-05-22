@@ -28,15 +28,17 @@ type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewMultiSigSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewMultiSigSmartContract() smartcontractinterface.SmartContractInterface {
 	var msCopy = &MultiSigSmartContract{
 		SmartContract: smartcontractinterface.NewSC(Address),
 	}
-	msCopy.SetSC(msCopy.SmartContract, &smartcontract.BCContext{})
-	return msCopy, msCopy.SmartContract
+	msCopy.setSC(msCopy.SmartContract, &smartcontract.BCContext{})
+	return msCopy
 }
 
-func (ms *MultiSigSmartContract) InitSC() {}
+func (fc *MultiSigSmartContract) GetSC() *smartcontractinterface.SmartContract {
+	return fc.SmartContract
+}
 
 func (ms *MultiSigSmartContract) GetName() string {
 	return name
@@ -50,7 +52,7 @@ func (ms *MultiSigSmartContract) GetRestPoints() map[string]smartcontractinterfa
 	return ms.SmartContract.RestHandlers
 }
 
-func (ms *MultiSigSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {
+func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {
 	ms.SmartContract = sc
 }
 

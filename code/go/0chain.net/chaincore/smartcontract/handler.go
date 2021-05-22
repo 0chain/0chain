@@ -20,8 +20,6 @@ import (
 //ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
-var SmartContractFactory sci.SmartContractFactoryI
-
 //ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	_, sc := getSmartContract(scAdress)
@@ -52,7 +50,7 @@ func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w htt
 func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartContract) {
 	contracti, ok := ContractMap[scAddress]
 	if ok {
-		return SmartContractFactory.NewSmartContract(contracti.GetName())
+		return contracti, contracti.GetSC()
 	}
 	return nil, nil
 }

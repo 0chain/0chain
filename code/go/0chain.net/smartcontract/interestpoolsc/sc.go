@@ -28,15 +28,17 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewInterestPoolSmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
 	var ipscCopy = &InterestPoolSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	ipscCopy.SetSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
-	return ipscCopy, ipscCopy.SmartContract
+	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
+	return ipscCopy
 }
 
-func (ipsc *InterestPoolSmartContract) InitSC() {}
+func (fc *InterestPoolSmartContract) GetSC() *smartcontractinterface.SmartContract {
+	return fc.SmartContract
+}
 
 func (ipsc *InterestPoolSmartContract) GetName() string {
 	return name
@@ -50,7 +52,7 @@ func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontracti
 	return ipsc.RestHandlers
 }
 
-func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
 	ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig

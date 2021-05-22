@@ -6,7 +6,7 @@ import (
 	"0chain.net/chaincore/config"
 )
 
-func (msc *MinerSmartContract) InitSC() {
+func (msc *MinerSmartContract) initSC() {
 	msc.InitSmartContractFunctions()
 
 	phaseFuncs[Start] = msc.createDKGMinersForContribute

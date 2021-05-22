@@ -23,17 +23,19 @@ type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewZRC20SmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewZRC20SmartContract() smartcontractinterface.SmartContractInterface {
 	var zrcCopy = &ZRC20SmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	zrcCopy.SetSC(zrcCopy.SmartContract, &smartcontract.BCContext{})
-	return zrcCopy, zrcCopy.SmartContract
+	zrcCopy.setSC(zrcCopy.SmartContract, &smartcontract.BCContext{})
+	return zrcCopy
 }
 
-func (zrc *ZRC20SmartContract) InitSC() {}
+func (fc *ZRC20SmartContract) GetSC() *smartcontractinterface.SmartContract {
+	return fc.SmartContract
+}
 
-func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (zrc *ZRC20SmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zrc.SmartContract = sc
 	zrc.SmartContractExecutionStats["createToken"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "createToken"), nil)
 	zrc.SmartContractExecutionStats["digPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "digPool"), nil)
