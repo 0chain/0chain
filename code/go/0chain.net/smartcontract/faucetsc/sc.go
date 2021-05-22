@@ -2,7 +2,9 @@ package faucetsc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"fmt"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -35,8 +37,12 @@ func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
 	return fcCopy
 }
 
-func (fc *FaucetSmartContract) GetSC() *smartcontractinterface.SmartContract {
-	return fc.SmartContract
+func (ipsc *FaucetSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *FaucetSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
 }
 
 func (fc *FaucetSmartContract) GetName() string {

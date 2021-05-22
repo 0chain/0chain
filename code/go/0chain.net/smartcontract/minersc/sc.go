@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -67,16 +68,20 @@ func NewMinerSmartContract() sci.SmartContractInterface {
 	return mscCopy
 }
 
-func (fc *MinerSmartContract) GetSC() *sci.SmartContract {
-	return fc.SmartContract
-}
-
 func (msc *MinerSmartContract) GetName() string {
 	return name
 }
 
 func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
+}
+
+func (ipsc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
 }
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {

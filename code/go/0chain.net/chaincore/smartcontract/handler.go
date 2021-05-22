@@ -22,10 +22,10 @@ var ContractMap = map[string]sci.SmartContractInterface{}
 
 //ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	_, sc := getSmartContract(scAdress)
-	if sc != nil {
+	scI := getSmartContract(scAdress)
+	if scI != nil {
 		//add bc context here
-		handler, restpathok := sc.RestHandlers[restpath]
+		handler, restpathok := scI.GetRestPoints()[restpath]
 		if !restpathok {
 			return nil, common.NewError("invalid_path", "Invalid path")
 		}
@@ -35,9 +35,9 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 }
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
-	_, sc := getSmartContract(scAdress)
-	if sc != nil {
-		i, err := sc.HandlerStats(ctx, params)
+	scI := getSmartContract(scAdress)
+	if scI != nil {
+		i, err := scI.GetHandlerStats(ctx, params)
 		if err != nil {
 			logging.Logger.Warn("unexpected error", zap.Error(err))
 		}
@@ -47,24 +47,23 @@ func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w htt
 	fmt.Fprintf(w, "invalid_sc: Invalid Smart contract address")
 }
 
-func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartContract) {
+func getSmartContract(scAddress string) sci.SmartContractInterface {
 	contracti, ok := ContractMap[scAddress]
 	if ok {
-		return contracti, contracti.GetSC()
+		return contracti
 	}
-	return nil, nil
+	return nil
 }
 
 func GetSmartContract(scAddress string) sci.SmartContractInterface {
-	contracti, _ := getSmartContract(scAddress)
-	return contracti
+	return getSmartContract(scAddress)
 }
 
-func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
 	inter, err := smcoi.Execute(t, funcName, input, balances)
 	if err == nil {
-		if tm := sc.SmartContractExecutionStats[funcName]; tm != nil {
+		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(ts))
 			}
@@ -75,7 +74,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances c_state.StateContextI) (string, error) {
-	contractObj, contract := getSmartContract(t.ToClientID)
+	contractObj := getSmartContract(t.ToClientID)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -85,7 +84,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balan
 			return "", err
 		}
 		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
-		transactionOutput, err := ExecuteWithStats(contractObj, contract, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
 		if err != nil {
 			return "", err
 		}

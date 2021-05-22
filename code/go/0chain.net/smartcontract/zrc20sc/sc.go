@@ -2,7 +2,9 @@ package zrc20sc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"fmt"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -31,8 +33,12 @@ func NewZRC20SmartContract() smartcontractinterface.SmartContractInterface {
 	return zrcCopy
 }
 
-func (fc *ZRC20SmartContract) GetSC() *smartcontractinterface.SmartContract {
-	return fc.SmartContract
+func (ipsc *ZRC20SmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *ZRC20SmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
 }
 
 func (zrc *ZRC20SmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {

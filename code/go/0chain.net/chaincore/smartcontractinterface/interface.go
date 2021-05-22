@@ -33,9 +33,10 @@ type SmartContractTransactionData struct {
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
 	GetRestPoints() map[string]SmartContractRestHandler
+	GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error)
+	GetExecutionStats() map[string]interface{}
 	GetName() string
 	GetAddress() string
-	GetSC() *SmartContract
 }
 
 /*BCContextI interface for smart contracts to access blockchain.

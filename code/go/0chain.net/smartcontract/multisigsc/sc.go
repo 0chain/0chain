@@ -2,8 +2,10 @@ package multisigsc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"0chain.net/chaincore/chain/state"
@@ -36,8 +38,12 @@ func NewMultiSigSmartContract() smartcontractinterface.SmartContractInterface {
 	return msCopy
 }
 
-func (fc *MultiSigSmartContract) GetSC() *smartcontractinterface.SmartContract {
-	return fc.SmartContract
+func (ipsc *MultiSigSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *MultiSigSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
 }
 
 func (ms *MultiSigSmartContract) GetName() string {
