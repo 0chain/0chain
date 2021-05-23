@@ -413,10 +413,6 @@ func testBlobberReward(
 		wpBalances, otherWritePools, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	blobber, err := ssc.getStakePool(blobberId, ctx)
-	require.NoError(t, err)
-	blobber = blobber
-
 	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {
 		return err
