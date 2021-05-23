@@ -26,11 +26,12 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 				defer cancel()
 
 				go func() {
-					if mc.isRegistered(cctx) {
-						isRegisteredC <- true
-						return
+					isRegistered := mc.isRegistered(cctx)
+
+					select {
+					case isRegisteredC <- isRegistered:
+					default:
 					}
-					isRegisteredC <- false
 				}()
 
 				select {

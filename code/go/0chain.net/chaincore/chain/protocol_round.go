@@ -149,7 +149,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	// expand NotarizedBlocksCount array size if generators number is greater than it
 	genNum := c.GetGeneratorsNumOfRound(roundNumber)
 	if genNum > len(c.NotarizedBlocksCounts) {
-		newCounts := make([]int64, genNum)
+		newCounts := make([]int64, genNum+1)
 		copy(newCounts, c.NotarizedBlocksCounts)
 		c.NotarizedBlocksCounts = newCounts
 	}
@@ -272,9 +272,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 	params.Add("round", fmt.Sprintf("%v", rn))
 
-	var (
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-	)
+	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -283,6 +281,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 		logging.Logger.Info("get notarized block for round", zap.Int64("round", rn),
 			zap.String("block", entity.GetKey()))
 
+		// cancel further requests and return when a notarized block is acquired
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
 			cancel()
 			return b, nil
