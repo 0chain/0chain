@@ -1401,6 +1401,13 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 			mc.startNextRoundInRestartRound(ctx, i)
 			return // <============================================= [exit loop]
 		}
+		if i == round {
+			xr.Restart()
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
+			mc.RedoVrfShare(ctx, xr)
+			return // the round has restarted <===================== [exit loop]
+		}
+
 		if xr.IsFinalized() || xr.IsFinalizing() {
 			continue // skip rounds finalizing or finalized <=== [continue loop]
 		}
@@ -1414,8 +1421,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 		// (previous round random seed required for it)
 		if xrhnb == nil {
 			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1),
-				mc.GetMiners(i))
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
@@ -1527,7 +1533,9 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb")
+		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb",
+			zap.Int64("sharder lfmb number", rcvd.MagicBlockNumber),
+			zap.Int64("local lfmb number", lfmb.MagicBlockNumber))
 		return
 	}
 
