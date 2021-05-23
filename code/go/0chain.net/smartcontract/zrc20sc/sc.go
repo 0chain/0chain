@@ -2,7 +2,9 @@ package zrc20sc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"fmt"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -23,17 +25,23 @@ type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewZRC20SmartContract() (smartcontractinterface.SmartContractInterface, *smartcontractinterface.SmartContract) {
+func NewZRC20SmartContract() smartcontractinterface.SmartContractInterface {
 	var zrcCopy = &ZRC20SmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	zrcCopy.SetSC(zrcCopy.SmartContract, &smartcontract.BCContext{})
-	return zrcCopy, zrcCopy.SmartContract
+	zrcCopy.setSC(zrcCopy.SmartContract, &smartcontract.BCContext{})
+	return zrcCopy
 }
 
-func (zrc *ZRC20SmartContract) InitSC() {}
+func (ipsc *ZRC20SmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
 
-func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ipsc *ZRC20SmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
+
+func (zrc *ZRC20SmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zrc.SmartContract = sc
 	zrc.SmartContractExecutionStats["createToken"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "createToken"), nil)
 	zrc.SmartContractExecutionStats["digPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "digPool"), nil)
