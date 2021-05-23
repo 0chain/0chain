@@ -213,8 +213,14 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 
 			if resp.StatusCode != http.StatusOK {
 				data := string(getDataAndClose(resp.Body))
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
-					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode),
+				logging.N2n.Error("requesting",
+					zap.Int("from", selfNode.SetIndex),
+					zap.Int("to", provider.SetIndex),
+					zap.Duration("duration", duration),
+					zap.String("handler", uri),
+					zap.String("entity", eName),
+					zap.Any("params", params),
+					zap.Any("status_code", resp.StatusCode),
 					zap.String("response", data))
 				return false
 			}
