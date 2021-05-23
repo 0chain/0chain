@@ -2,7 +2,6 @@ package smartcontract_test
 
 import (
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/scfactory"
 	. "0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
@@ -19,7 +18,6 @@ import (
 )
 
 func init() {
-	scfactory.SetUpSmartContractFactory()
 	metrics.DefaultRegistry = metrics.NewRegistry()
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()

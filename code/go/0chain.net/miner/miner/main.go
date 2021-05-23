@@ -1,7 +1,6 @@
 package main
 
 import (
-	"0chain.net/chaincore/scfactory"
 	"bufio"
 	"context"
 	"errors"
@@ -81,7 +80,6 @@ func main() {
 	reader.Close()
 
 	node.Self.SetSignatureScheme(signatureScheme)
-	scfactory.SetUpSmartContractFactory()
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()

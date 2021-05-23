@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"0chain.net/chaincore/smartcontract"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -57,14 +58,14 @@ type MinerSmartContract struct {
 	smartContractFunctions map[string]smartContractFunction
 }
 
-func NewMinerSmartContract() (sci.SmartContractInterface, *sci.SmartContract) {
+func NewMinerSmartContract() sci.SmartContractInterface {
 	var mscCopy = &MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 		bcContext:     &smartcontract.BCContext{},
 	}
-	mscCopy.InitSmartContractFunctions()
-	mscCopy.SetSC(mscCopy.SmartContract, mscCopy.bcContext)
-	return mscCopy, mscCopy.SmartContract
+	mscCopy.initSC()
+	mscCopy.setSC(mscCopy.SmartContract, mscCopy.bcContext)
+	return mscCopy
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -75,12 +76,20 @@ func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
+func (ipsc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
+
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
 }
 
-//SetSC setting up smartcontract. implementing the interface
-func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+//setSC setting up smartcontract. implementing the interface
+func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
