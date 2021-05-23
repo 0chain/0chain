@@ -121,7 +121,7 @@ func TestAddChallenge(t *testing.T) {
 			},
 		},
 		{
-			name: "OK dataShars > validaors",
+			name: "OK dataShards > validators",
 			parameters: parameters{
 				numBlobbers:   6,
 				numValidators: 6,
@@ -151,7 +151,10 @@ func TestAddChallenge(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			args := parametersToArgs(tt.parameters)
-			ssc := newStorageSmartContract()
+			var ssc = &StorageSmartContract{
+				SmartContract: sci.NewSC(ADDRESS),
+			}
+
 			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
 				args.creationDate, args.r, args.challengeSeed, args.balances)
 			validate(t, resp, err, tt.parameters, tt.want)
