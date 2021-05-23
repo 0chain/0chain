@@ -101,7 +101,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						ts := time.Now()
 						go func() {
 							protocol.HandleRoundTimeout(cctx, cround)
-							rc <- struct{}{}
+							close(rc)
 						}()
 
 						select {
