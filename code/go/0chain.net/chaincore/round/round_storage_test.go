@@ -1,8 +1,11 @@
 package round
 
 import (
-	"github.com/stretchr/testify/assert"
+	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRoundStartingStore(t *testing.T) {
@@ -57,12 +60,11 @@ func TestRoundStartingStore(t *testing.T) {
 		err = storage.Put(entity3, 2001)
 		assert.NoError(t, err)
 
-
 		assert.Equal(t, 3, storage.Count())
 		assert.EqualValues(t, []int64{501, 1001, 2001}, storage.GetRounds())
-		assert.Equal(t,int64(501),storage.GetRounds()[0])
-		assert.Equal(t,int64(1001),storage.GetRounds()[1])
-		assert.Equal(t,int64(2001),storage.GetRounds()[2])
+		assert.Equal(t, int64(501), storage.GetRounds()[0])
+		assert.Equal(t, int64(1001), storage.GetRounds()[1])
+		assert.Equal(t, int64(2001), storage.GetRounds()[2])
 
 	})
 
@@ -91,11 +93,16 @@ func TestRoundStartingStore(t *testing.T) {
 		assert.Nil(t, storage.Get(0))
 		assert.Nil(t, storage.Get(10))
 
-		storage.Put(entity0, 0)
-		storage.Put(entity3, 151)
-		storage.Put(entity1, 5)
-		storage.Put(entity4, 251)
-		storage.Put(entity2, 51)
+		err := storage.Put(entity0, 0)
+		require.NoError(t, err)
+		err = storage.Put(entity3, 151)
+		require.NoError(t, err)
+		err = storage.Put(entity1, 5)
+		require.NoError(t, err)
+		err = storage.Put(entity4, 251)
+		require.NoError(t, err)
+		err = storage.Put(entity2, 51)
+		require.NoError(t, err)
 		assert.Equal(t, entity4, storage.GetLatest())
 
 		// 0,5,51,151,251
@@ -117,13 +124,18 @@ func TestRoundStartingStore(t *testing.T) {
 
 	t.Run("Prune", func(t *testing.T) {
 		storage := NewRoundStartingStorage()
-		storage.Put(entity0, 0)
-		storage.Put(entity3, 151)
-		storage.Put(entity1, 5)
-		storage.Put(entity4, 251)
-		storage.Put(entity2, 51)
+		err := storage.Put(entity0, 0)
+		require.NoError(t, err)
+		err = storage.Put(entity3, 151)
+		require.NoError(t, err)
+		err = storage.Put(entity1, 5)
+		require.NoError(t, err)
+		err = storage.Put(entity4, 251)
+		require.NoError(t, err)
+		err = storage.Put(entity2, 51)
+		require.NoError(t, err)
 
-		err := storage.Prune(150)
+		err = storage.Prune(150)
 		assert.EqualError(t, err, ErrRoundEntityNotFound.Error())
 
 		err = storage.Prune(0)
@@ -137,7 +149,6 @@ func TestRoundStartingStore(t *testing.T) {
 		got := storage.Get(0)
 		assert.Nil(t, got)
 
-
 		got = storage.Get(5)
 		assert.NotNil(t, got)
 
@@ -146,11 +157,67 @@ func TestRoundStartingStore(t *testing.T) {
 		assert.Equal(t, 1, storage.Count())
 		assert.EqualValues(t, []int64{251}, storage.GetRounds())
 
-
 		err = storage.Prune(251)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, storage.Count())
 		assert.Empty(t, storage.GetRounds())
 
 	})
+}
+
+func Test_roundStartingStorage_FindRoundIndex(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		max    int64
+		items  map[int64]RoundStorageEntity
+		rounds []int64
+	}
+	type args struct {
+		round int64
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   int
+	}{
+		{
+			name: "Round_Greater_Than_Max_OK",
+			fields: fields{
+				max:    1,
+				rounds: make([]int64, 5),
+			},
+			args: args{round: 5},
+			want: 4,
+		},
+		{
+			name: "OK",
+			fields: fields{
+				max: 3,
+				rounds: []int64{
+					2,
+					3,
+				},
+			},
+			args: args{round: 2},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := &roundStartingStorage{
+				mu:     &sync.RWMutex{},
+				max:    tt.fields.max,
+				items:  tt.fields.items,
+				rounds: tt.fields.rounds,
+			}
+			if got := s.FindRoundIndex(tt.args.round); got != tt.want {
+				t.Errorf("FindRoundIndex() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

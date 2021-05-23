@@ -5,9 +5,10 @@ import (
 	"encoding/binary"
 	"strconv"
 
+	"github.com/0chain/gorocksdb"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"github.com/0chain/gorocksdb"
 )
 
 var storageAPI = &Store{}
@@ -35,11 +36,14 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
 		data, err = c.Conn.Get(c.ReadOptions, key)
+		if err != nil {
+			return err
+		}
 	} else {
-		data, err = c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(key)))
-	}
-	if err != nil {
-		return err
+		data, err = c.Conn.Get(c.ReadOptions, []byte(key))
+		if err != nil {
+			return err
+		}
 	}
 	defer data.Free()
 	err = datastore.FromJSON(data.Data(), entity)
@@ -53,7 +57,6 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
 	data := datastore.ToJSON(entity).Bytes()
-	var err error
 	if emd.GetName() == "round" {
 		rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
 		if err != nil {
@@ -61,12 +64,13 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 		}
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
-		err = c.Conn.Put(key, data)
+		if err := c.Conn.Put(key, data); err != nil {
+			return err
+		}
 	} else {
-		err = c.Conn.Put([]byte(datastore.ToString(entity.GetKey())), data)
-	}
-	if err != nil {
-		return err
+		if err := c.Conn.Put([]byte(datastore.ToString(entity.GetKey())), data); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -75,9 +79,7 @@ func (ems *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
 	_, err := c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(entity.GetKey())))
-	if err != nil {
-
-	} else {
+	if err == nil {
 		return common.NewError("entity_already_exists", "Entity already exists")
 	}
 	ems.Write(ctx, entity)

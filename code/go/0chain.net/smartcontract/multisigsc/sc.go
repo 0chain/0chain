@@ -1,8 +1,11 @@
 package multisigsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"0chain.net/chaincore/chain/state"
@@ -27,7 +30,21 @@ type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (ms *MultiSigSmartContract) InitSC() {}
+func NewMultiSigSmartContract() smartcontractinterface.SmartContractInterface {
+	var msCopy = &MultiSigSmartContract{
+		SmartContract: smartcontractinterface.NewSC(Address),
+	}
+	msCopy.setSC(msCopy.SmartContract, &smartcontract.BCContext{})
+	return msCopy
+}
+
+func (ipsc *MultiSigSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *MultiSigSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
 
 func (ms *MultiSigSmartContract) GetName() string {
 	return name
@@ -41,7 +58,7 @@ func (ms *MultiSigSmartContract) GetRestPoints() map[string]smartcontractinterfa
 	return ms.SmartContract.RestHandlers
 }
 
-func (ms *MultiSigSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {
+func (ms *MultiSigSmartContract) setSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {
 	ms.SmartContract = sc
 }
 
