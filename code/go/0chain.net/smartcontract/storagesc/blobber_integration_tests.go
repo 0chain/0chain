@@ -17,6 +17,20 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, all *StorageNodes,
 	balances cstate.StateContextI) (err error) {
 
+	// check for duplicates
+	for _, b := range all.Nodes {
+		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
+			var existingBytes util.Serializable
+			existingBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
+
+			if err = blobber.validate(conf); err != nil {
+				return fmt.Errorf("invalid values in request: %v", err)
+			}
+
+			return sc.updateBlobber(t, existingBytes, blobber, all)
+		}
+	}
+
 	blobber.LastHealthCheck = t.CreationDate // set to now
 
 	// the stake pool can be created by related validator

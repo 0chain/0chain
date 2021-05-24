@@ -6,11 +6,8 @@ import (
 	"0chain.net/chaincore/config"
 )
 
-func (msc *MinerSmartContract) InitSC() {
-
-	if msc.smartContractFunctions == nil {
-		msc.smartContractFunctions = make(map[string]smartContractFunction)
-	}
+func (msc *MinerSmartContract) initSC() {
+	msc.InitSmartContractFunctions()
 
 	phaseFuncs[Start] = msc.createDKGMinersForContribute
 	phaseFuncs[Contribute] = msc.widdleDKGMinersForShare
@@ -30,7 +27,12 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Share] = msc.moveToShareOrPublish
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
+}
 
+func (msc *MinerSmartContract) InitSmartContractFunctions() {
+	if msc.smartContractFunctions == nil {
+		msc.smartContractFunctions = make(map[string]smartContractFunction)
+	}
 	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 	msc.smartContractFunctions["update_miner_settings"] = msc.UpdateMinerSettings
