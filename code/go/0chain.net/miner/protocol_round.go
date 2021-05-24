@@ -1408,12 +1408,6 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 			mc.startNextRoundInRestartRound(ctx, i)
 			return // <============================================= [exit loop]
 		}
-		if i == round {
-			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
-			mc.RedoVrfShare(ctx, xr)
-			return // the round has restarted <===================== [exit loop]
-		}
 
 		if xr.IsFinalized() || xr.IsFinalizing() {
 			continue // skip rounds finalizing or finalized <=== [continue loop]
