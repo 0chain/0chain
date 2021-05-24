@@ -302,7 +302,6 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
 
-	mc.UpdateNodesFromMagicBlock(mb)
 	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 

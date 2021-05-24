@@ -885,7 +885,6 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 		}
 		mc.UpdateMagicBlock(mb.MagicBlock)
 		mc.SetLatestFinalizedMagicBlock(mb)
-		mc.UpdateNodesFromMagicBlock(mb.MagicBlock)
 	}
 }
 

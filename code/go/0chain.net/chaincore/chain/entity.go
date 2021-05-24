@@ -549,7 +549,6 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
 	c.UpdateMagicBlock(gb.MagicBlock)
-	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
@@ -1338,13 +1337,14 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
 	}
 
+	// initialize magicblock nodepools
+	c.UpdateNodesFromMagicBlock(newMagicBlock)
+
 	mb := c.GetCurrentMagicBlock()
 
-	pmb := mb.Miners.Size()
-	nmb := newMagicBlock.Miners.Size()
 	logging.Logger.Info("update magic block",
-		zap.Int("old magic block miners num", pmb),
-		zap.Int("new magic block miners num", nmb),
+		zap.Int("old magic block miners num", mb.Miners.Size()),
+		zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
 		zap.Int64("old mb starting round", mb.StartingRound),
 		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
