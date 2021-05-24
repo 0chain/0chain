@@ -1581,7 +1581,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
 		return false, err
 	}
-	mc.UpdateNodesFromMagicBlock(rcvd.MagicBlock)
+
 	mc.ensureDKG(ctx, rcvd)
 	mc.SetLatestFinalizedMagicBlock(rcvd)
 
@@ -1667,11 +1667,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 }
 
 func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
-	if err = mc.UpdateMagicBlock(mb); err != nil {
-		return
-	}
-	mc.UpdateNodesFromMagicBlock(mb)
-	return
+	return mc.UpdateMagicBlock(mb)
 }
 
 // LoadMagicBlocksAndDKG from store to start working. It loads MB and previous
