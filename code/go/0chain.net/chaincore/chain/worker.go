@@ -519,8 +519,6 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
-		} else {
-			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		}
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)
@@ -590,9 +588,9 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 		zap.Any("sr", block.StartingRound),
 		zap.Any("hash", block.Hash))
 
-	if block.StartingRound <= cmb.StartingRound {
-		if block.StartingRound == cmb.StartingRound {
-			// updating LFMB will add block to chain.magicBlockStartRounds cache
+	if block.MagicBlock.StartingRound <= cmb.StartingRound {
+		if block.MagicBlock.StartingRound == cmb.StartingRound && block.MagicBlock.Hash == cmb.Hash {
+			block.MagicBlock = cmb
 			sc.SetLatestFinalizedMagicBlock(block)
 			Logger.Debug(
 				"updated lfmb to add lfmb's parent block to magicBlockStartRounds cache",
@@ -617,8 +615,6 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
-
-	sc.UpdateNodesFromMagicBlock(block.MagicBlock)
 	sc.SetLatestFinalizedMagicBlock(block)
 
 	return // ok, updated
