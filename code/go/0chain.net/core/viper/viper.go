@@ -3,7 +3,7 @@ package viper
 import (
 	"bytes"
 	"io"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 	"sync"
 	"time"
@@ -258,7 +258,7 @@ func (v *Viper) ReadConfigFile(path string) error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
-	blob, err := os.ReadFile(path)
+	blob, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
