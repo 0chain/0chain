@@ -304,6 +304,11 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
 	}
 
+	// diversify blobber nodes
+	if len(blobberNodes) > size {
+		blobberNodes = sa.diversifyBlobbers(blobberNodes, size)
+	}
+
 	blobberNodes = blobberNodes[:size]
 
 	var gbSize = sizeInGB(bsize) // size in gigabytes

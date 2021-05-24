@@ -519,6 +519,7 @@ type StorageAllocation struct {
 	Owner             string                        `json:"owner_id"`
 	OwnerPublicKey    string                        `json:"owner_public_key"`
 	Stats             *StorageAllocationStats       `json:"stats"`
+	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
@@ -647,6 +648,74 @@ List:
 	}
 
 	return list[:i]
+}
+
+func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) []*StorageNode {
+	if !sa.DiverseBlobbers {
+		return list
+	}
+
+	if len(blobberNodes) <= size {
+		return list
+	}
+
+	// thanks to @shenwei356
+	combinations := func(set []int, n int) (subsets [][]int) {
+		length := uint(len(set))
+
+		if n > len(set) {
+			n = len(set)
+		}
+
+		for subsetBits := 1; subsetBits < (1 << length); subsetBits++ {
+			if n > 0 && bits.OnesCount(uint(subsetBits)) != n {
+				continue
+			}
+
+			var subset []int
+
+			for object := uint(0); object < length; object++ {
+				if (subsetBits >> object) & 1 == 1 {
+					subset = append(subset, set[object])
+				}
+			}
+			subsets = append(subsets, subset)
+		}
+		return subsets
+	}
+
+	var maxD float64 // distance
+	var maxDIndex int
+
+	// create [1, ..., N] slice
+	n := make([]int, len(list))
+	for i := range n {
+		n[i] = i
+	}
+
+	// get all combinations of s "size" elements from n "nodes"
+	combs := combinations(n, size)
+
+	// find out the max distance among combs of nodes
+	for i, comb := range combs {
+		var d float64 // distance
+
+		// calculate distance for the combination
+		combPairs := combinations(comb, 2)
+		for _, combPair := range(combPairs) {
+			// todo
+			// https://gist.github.com/cdipaolo/d3f8db3848278b49db68
+			d += float64(combPair[1] - combPair[0]) // replace with distance calcs
+		}
+
+		// update the max distance value
+		if (d > maxD) {
+			maxD = d
+			maxDIndex = i
+		}
+	}
+
+	return list
 }
 
 // Until returns allocation expiration.
