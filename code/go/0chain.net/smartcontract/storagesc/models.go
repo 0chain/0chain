@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"math/bits"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -269,17 +270,25 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	return // nil
 }
 
+// Move to the core, in case of multi-entity use of geo data
+type StorageNodeGeolocation struct {
+	Latitude float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	// reserved / Accuracy float64 `mapstructure:"accuracy"`
+}
+
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID              string           `json:"id"`
-	BaseURL         string           `json:"url"`
-	Terms           Terms            `json:"terms"`    // terms
-	Capacity        int64            `json:"capacity"` // total blobber capacity
-	Used            int64            `json:"used"`     // allocated capacity
-	LastHealthCheck common.Timestamp `json:"last_health_check"`
-	PublicKey       string           `json:"-"`
+	ID              string                 `json:"id"`
+	BaseURL         string                 `json:"url"`
+	Geolocation     StorageNodeGeolocation `json:"geolocation"`
+	Terms           Terms                  `json:"terms"`    // terms
+	Capacity        int64                  `json:"capacity"` // total blobber capacity
+	Used            int64                  `json:"used"`     // allocated capacity
+	LastHealthCheck common.Timestamp       `json:"last_health_check"`
+	PublicKey       string                 `json:"-"`
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	StakePoolSettings stakePoolSettings    `json:"stake_pool_settings"`
 }
 
 // validate the blobber configurations
@@ -655,7 +664,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) []
 		return list
 	}
 
-	if len(blobberNodes) <= size {
+	if len(list) <= size {
 		return list
 	}
 
