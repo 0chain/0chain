@@ -328,8 +328,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	}
 	defer reader.Close()
 	scanner := bufio.NewScanner(reader)
-	scanner.Scan() // throw away the publickey
-	scanner.Scan() // throw away the secretkey
+	scanner.Scan() //throw away the publickey
+	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
 		return "", "", 0, "", "", errors.New("error reading Host")

@@ -49,7 +49,7 @@ var (
 	}
 )
 
-// SetupSmartContracts initialize smartcontract addresses
+//SetupSmartContracts initialize smartcontract addresses
 func SetupSmartContracts() {
 	for _, name := range SCNames {
 		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {

@@ -79,7 +79,7 @@ func TransactionGenerator(c *chain.Chain) {
 	collectionName := txn.GetCollectionName()
 	sc := chain.GetServerChain()
 
-	// Ensure the initial set of transactions succeed or become invalid
+	//Ensure the initial set of transactions succeed or become invalid
 	txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 	for txnCount > blockSize {
 		time.Sleep(20 * time.Millisecond)
@@ -228,12 +228,12 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
 	for i := 0; i < numClients; i++ {
-		// client side code
+		//client side code
 		w := &wallet.Wallet{}
 		w.Initialize(c.ClientSignatureScheme)
 		wallets = append(wallets, w)
 
-		// Server side code bypassing REST for speed
+		//Server side code bypassing REST for speed
 		err := w.Register(ctx)
 		if err != nil {
 			panic(err)
@@ -241,7 +241,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	}
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
-		// generous airdrop in dev/test mode :)
+		//generous airdrop in dev/test mode :)
 		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {

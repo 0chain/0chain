@@ -1,14 +1,13 @@
 package viper
 
 import (
+	"bytes"
 	"io"
 	"os"
-	"strings"
+	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -25,6 +24,10 @@ type (
 // New returns constructed viper instance.
 func New() *Viper {
 	return &Viper{viper: viper.New()}
+}
+
+func (v *Viper) Instance() *viper.Viper {
+	return v.viper
 }
 
 // AddConfigPath wraps viper's method.
@@ -56,24 +59,6 @@ func (v *Viper) AllSettings() map[string]interface{} {
 	defer v.mutex.RUnlock()
 
 	return v.viper.AllSettings()
-}
-
-// AllowEmptyEnv wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) AllowEmptyEnv(allow bool) {
-	v.viper.AllowEmptyEnv(allow)
-}
-
-// AutomaticEnv wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) AutomaticEnv() {
-	v.viper.AutomaticEnv()
-}
-
-// ConfigFileUsed wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) ConfigFileUsed() string {
-	return v.viper.ConfigFileUsed()
 }
 
 // BindPFlags wraps viper's method.
@@ -260,12 +245,6 @@ func (v *Viper) MergeInConfig() error {
 	return v.viper.MergeInConfig()
 }
 
-// OnConfigChange wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) OnConfigChange(run func(in fsnotify.Event)) {
-	v.viper.OnConfigChange(run)
-}
-
 // ReadConfig wraps viper's method.
 func (v *Viper) ReadConfig(in io.Reader) error {
 	v.mutex.Lock()
@@ -274,12 +253,19 @@ func (v *Viper) ReadConfig(in io.Reader) error {
 	return v.viper.ReadConfig(in)
 }
 
-// ReadInConfig wraps viper's method.
-func (v *Viper) ReadInConfig() error {
+// ReadConfigFile wraps viper's method.
+func (v *Viper) ReadConfigFile(path string) error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
-	return v.viper.ReadInConfig()
+	blob, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	v.viper.SetConfigType(filepath.Ext(path)[1:])
+
+	return v.viper.ReadConfig(bytes.NewReader(blob))
 }
 
 // ReadRemoteConfig wraps viper's method.
@@ -322,60 +308,12 @@ func (v *Viper) Set(key string, val interface{}) {
 	v.viper.Set(key, val)
 }
 
-// SetConfigFile wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetConfigFile(in string) {
-	v.viper.SetConfigFile(in)
-}
-
-// SetConfigName wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetConfigName(in string) {
-	v.viper.SetConfigName(in)
-}
-
-// SetConfigPermissions wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetConfigPermissions(perm os.FileMode) {
-	v.viper.SetConfigPermissions(perm)
-}
-
-// SetConfigType wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetConfigType(in string) {
-	v.viper.SetConfigType(in)
-}
-
 // SetDefault wraps viper's method.
 func (v *Viper) SetDefault(key string, val interface{}) {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
 	v.viper.SetDefault(key, val)
-}
-
-// SetEnvPrefix wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetEnvPrefix(in string) {
-	v.viper.SetEnvPrefix(in)
-}
-
-// SetEnvKeyReplacer wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetEnvKeyReplacer(r *strings.Replacer) {
-	v.viper.SetEnvKeyReplacer(r)
-}
-
-// SetFs wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetFs(fs afero.Fs) {
-	v.viper.SetFs(fs)
-}
-
-// SetTypeByDefaultValue wraps viper's method.
-// NOTE that this method is not thread safe.
-func (v *Viper) SetTypeByDefaultValue(enable bool) {
-	v.viper.SetTypeByDefaultValue(enable)
 }
 
 // Sub wraps viper's method.
@@ -432,16 +370,16 @@ func (v *Viper) WatchRemoteConfigOnChannel() error {
 
 // WriteConfig wraps viper's method.
 func (v *Viper) WriteConfig() error {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 
 	return v.viper.WriteConfig()
 }
 
-// WriteConfigAs wraps viper's method.
-func (v *Viper) WriteConfigAs(filename string) error {
-	v.mutex.RLock()
-	defer v.mutex.RUnlock()
+// WriteConfigFile wraps viper's method.
+func (v *Viper) WriteConfigFile(filename string) error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 
 	return v.viper.WriteConfigAs(filename)
 }

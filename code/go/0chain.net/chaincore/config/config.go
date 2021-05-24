@@ -8,7 +8,11 @@ import (
 	"0chain.net/core/viper"
 )
 
-var SmartContractConfig *viper.Viper
+var (
+	// SmartContractConfig stores the wrapper Viper global instance
+	// for the blockchain smart contracts configuration system.
+	SmartContractConfig = viper.New()
+)
 
 //SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
@@ -71,12 +75,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 }
 
-/*SetupConfig - setup the configuration system */
+// SetupConfig setups the main configuration system.
 func SetupConfig() {
-	viper.SetConfigName("0chain")
-	viper.AddConfigPath("./config")
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
+	file := filepath.Join(".", "config", "0chain.yaml")
+	if err := viper.ReadConfigFile(file); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 	setupDevConfig()
@@ -96,40 +98,21 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
 }
 
-/*SetupConfig - setup the configuration system */
+// SetupSmartContractConfig setups the smart contracts configuration system.
 func SetupSmartContractConfig() {
-	SmartContractConfig = viper.New()
-	SmartContractConfig.SetConfigName("sc")
-	SmartContractConfig.AddConfigPath("./config")
-	err := SmartContractConfig.ReadInConfig() // Find and read the config file
-	if err != nil {                           // Handle errors reading the config file
+	file := filepath.Join(".", "config", "sc.yaml")
+	if err := SmartContractConfig.ReadConfigFile(file); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 }
 
-//ReadConfig - read a configuration from a file given as path/to/config/dir/config.configtype
+// ReadConfig reads a configuration from given file path.
 func ReadConfig(file string) *viper.Viper {
-	dir, fileName := filepath.Split(file)
-	ext := filepath.Ext(fileName)
-	if ext == "" {
-		ext = ".yaml"
-	} else {
-		fileName = fileName[:len(fileName)-len(ext)]
-	}
-	format := ext[1:]
-	if dir == "" {
-		dir = "."
-	} else if dir[0] != '.' {
-		dir = "." + string(filepath.Separator) + dir
-	}
 	nodeConfig := viper.New()
-	nodeConfig.AddConfigPath(dir)
-	nodeConfig.SetConfigName(fileName)
-	nodeConfig.SetConfigType(format)
-	err := nodeConfig.ReadInConfig()
-	if err != nil {
+	if err := nodeConfig.ReadConfigFile(file); err != nil {
 		panic(fmt.Sprintf("error reading config file %v - %v\n", file, err))
 	}
+
 	return nodeConfig
 }
 

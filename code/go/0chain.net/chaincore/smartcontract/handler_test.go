@@ -1,8 +1,14 @@
 package smartcontract_test
 
 import (
+	"testing"
+
+	"github.com/rcrowley/go-metrics"
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/chaincore/config"
 	. "0chain.net/chaincore/smartcontract"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
@@ -11,10 +17,6 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zrc20sc"
-	"github.com/rcrowley/go-metrics"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func init() {

@@ -70,7 +70,7 @@ func init() {
 		return
 	}
 
-	// startBlocksInfoLogs(sc)
+	//startBlocksInfoLogs(sc)
 
 	common.ConfigRateLimits()
 
@@ -117,7 +117,7 @@ func initEntities() {
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
-	// persistencestore.InitSession()
+	//persistencestore.InitSession()
 	persistenceStorage := persistencestore.GetStorageProvider()
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)

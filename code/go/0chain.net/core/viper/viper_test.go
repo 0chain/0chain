@@ -14,63 +14,69 @@ import (
 func Test_Viper_IsThreadSafe(t *testing.T) {
 	t.Parallel()
 
-	path := os.TempDir()
-	viper.AddConfigPath(path)
-	viper.SetConfigType("yaml")
+	type (
+		testCase struct {
+			name    string
+			format  string
+			threads int
+			viper   *viper.Viper
+		}
+		testList []testCase
+	)
 
-	tests := []struct {
-		name  string
-		iters int
-		viper *viper.Viper
-	}{
-		{
-			name:  "Viper is thread safe",
-			iters: 10,
-		},
+	threads := 5
+	path := os.TempDir()
+	tests := make(testList, len(viper.SupportedExts))
+
+	for _, format := range viper.SupportedExts {
+		tests = append(tests, testCase{
+			name:    format + "_VIPER_IS_THREAD_SAFE_OK",
+			format:  format,
+			threads: threads,
+			viper:   viper.New(),
+		})
 	}
 
 	for idx := range tests {
 		test := tests[idx]
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			var wg sync.WaitGroup
 
-			for i := 0; i < test.iters; i++ {
+			var wg sync.WaitGroup
+			for i := 0; i < test.threads; i++ {
 				wg.Add(1)
+
 				go func(i int) {
 					defer wg.Done()
 
-					viper.Set("test.Bool", false)
-					viper.Set("test.Duration", time.Second)
-					viper.Set("test.Float64", 1.00)
-					viper.Set("test.Int", 1)
-					viper.Set("test.String", "string")
-					viper.Set("test.Time", time.Now())
+					flag := i != 0
+					iter := strconv.Itoa(i)
+					duration := time.Duration(i) * time.Second
+					timestamp := time.Now()
+					filepath := paths.Join(path, "viper_test_"+iter+"."+test.format)
 
-					_ = viper.GetBool("test.Bool")
-					_ = viper.GetDuration("test.Duration")
-					_ = viper.GetFloat64("test.Float64")
-					_ = viper.GetInt("test.Int")
-					_ = viper.GetString("test.String")
-					_ = viper.GetTime("test.Time")
+					test.viper.Set("test.Bool", flag)
+					test.viper.Set("test.Duration", duration)
+					test.viper.Set("test.Float64", float64(i))
+					test.viper.Set("test.Int", i)
+					test.viper.Set("test.String", iter)
+					test.viper.Set("test.Time", timestamp)
 
-					filename := "viper_test_" + strconv.Itoa(i)
-					filepath := paths.Join(path, filename+".yaml")
-
-					if err := viper.WriteConfigAs(filepath); err != nil {
-						t.Errorf("can't write '%s.yaml' in path: '%s'", filename, path)
+					if err := test.viper.WriteConfigFile(filepath); err != nil {
+						t.Errorf("can't write file path: '%s'", filepath)
 					}
 					defer func() { _ = os.Remove(filepath) }()
 
-					file, err := os.Open(filepath)
-					if err != nil {
-						t.Errorf("can't open '%s.yaml' in path: '%s'", filename, path)
+					if err := test.viper.ReadConfigFile(filepath); err != nil {
+						t.Errorf("can't read file path: '%s'", filepath)
 					}
-					defer func() { _ = file.Close() }()
 
-					if err = viper.ReadConfig(file); err != nil {
-						t.Errorf("can't read '%s.yaml' in path: '%s'", filename, path)
-					}
+					_ = test.viper.GetBool("test.Bool")
+					_ = test.viper.GetDuration("test.Duration")
+					_ = test.viper.GetFloat64("test.Float64")
+					_ = test.viper.GetInt("test.Int")
+					_ = test.viper.GetString("test.String")
+					_ = test.viper.GetTime("test.Time")
 				}(i)
 			}
 			wg.Wait()

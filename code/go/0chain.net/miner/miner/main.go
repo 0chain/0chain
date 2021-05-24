@@ -479,6 +479,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	// miner.SetupWorkers(ctx)
+	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }

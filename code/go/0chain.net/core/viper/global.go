@@ -2,18 +2,22 @@ package viper
 
 import (
 	"io"
-	"os"
-	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/afero"
 	"github.com/spf13/cast"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 var (
+	// SupportedExts describes the supported configuration formats
+	// for the wrapper to avoid importing the spf13/viper package.
+	// NOTE: This is a copy of spf13/viper.SupportedExts,
+	// with the exception of the "ini" format, since its marshaller
+	// does not have a thread-safe implementation.
+	SupportedExts = []string{"dotenv", "env", "hcl", "json", "properties", "props", "prop", "toml", "yaml", "yml"}
+
+	// vi stores the Viper global instance.
 	vi = &Viper{viper: viper.GetViper()}
 )
 
@@ -40,21 +44,6 @@ func AllKeys() []string {
 // AllSettings wraps viper's method.
 func AllSettings() map[string]interface{} {
 	return vi.AllSettings()
-}
-
-// AllowEmptyEnv wraps viper's method.
-func AllowEmptyEnv(allow bool) {
-	vi.AllowEmptyEnv(allow)
-}
-
-// AutomaticEnv wraps viper's method.
-func AutomaticEnv() {
-	vi.AutomaticEnv()
-}
-
-// ConfigFileUsed wraps viper's method.
-func ConfigFileUsed() string {
-	return vi.ConfigFileUsed()
 }
 
 // BindPFlags wraps viper's method.
@@ -207,19 +196,14 @@ func MergeInConfig() error {
 	return vi.MergeInConfig()
 }
 
-// OnConfigChange wraps viper's method.
-func OnConfigChange(run func(in fsnotify.Event)) {
-	vi.OnConfigChange(run)
-}
-
 // ReadConfig wraps viper's method.
 func ReadConfig(in io.Reader) error {
 	return vi.ReadConfig(in)
 }
 
-// ReadInConfig wraps viper's method.
-func ReadInConfig() error {
-	return vi.ReadInConfig()
+// ReadConfigFile wraps viper's method.
+func ReadConfigFile(path string) error {
+	return vi.ReadConfigFile(path)
 }
 
 // ReadRemoteConfig wraps viper's method.
@@ -247,49 +231,9 @@ func Set(key string, val interface{}) {
 	vi.Set(key, val)
 }
 
-// SetConfigFile wraps viper's method.
-func SetConfigFile(in string) {
-	vi.SetConfigFile(in)
-}
-
-// SetConfigName wraps viper's method.
-func SetConfigName(in string) {
-	vi.SetConfigName(in)
-}
-
-// SetConfigPermissions wraps viper's method.
-func SetConfigPermissions(perm os.FileMode) {
-	vi.SetConfigPermissions(perm)
-}
-
-// SetConfigType wraps viper's method.
-func SetConfigType(in string) {
-	vi.SetConfigType(in)
-}
-
 // SetDefault wraps viper's method.
 func SetDefault(key string, val interface{}) {
 	vi.SetDefault(key, val)
-}
-
-// SetEnvPrefix wraps viper's method.
-func SetEnvPrefix(in string) {
-	vi.SetEnvPrefix(in)
-}
-
-// SetEnvKeyReplacer wraps viper's method.
-func SetEnvKeyReplacer(r *strings.Replacer) {
-	vi.SetEnvKeyReplacer(r)
-}
-
-// SetFs wraps viper's method.
-func SetFs(fs afero.Fs) {
-	vi.SetFs(fs)
-}
-
-// SetTypeByDefaultValue wraps viper's method.
-func SetTypeByDefaultValue(enable bool) {
-	vi.SetTypeByDefaultValue(enable)
 }
 
 // Sub wraps viper's method.
@@ -332,7 +276,7 @@ func WriteConfig() error {
 	return vi.WriteConfig()
 }
 
-// WriteConfigAs wraps viper's method.
-func WriteConfigAs(filename string) error {
-	return vi.WriteConfigAs(filename)
+// WriteConfigFile wraps viper's method.
+func WriteConfigFile(filename string) error {
+	return vi.WriteConfigFile(filename)
 }
