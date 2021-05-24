@@ -505,8 +505,10 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		}
 	}
 
-	// recalculate final TKN values
-	dkgMinersList.calculateTKN(gn, len(dkgMinersList.SimpleNodes))
+	if len(dkgMinersList.SimpleNodes) < dkgMinersList.K {
+		return common.NewErrorf("create_magic_block_failed",
+			"len(dkgMinersList.SimpleNodes) [%d] < dkgMinersList.K [%d]", len(dkgMinersList.SimpleNodes), dkgMinersList.K)
+	}
 
 	magicBlock, err := msc.createMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
