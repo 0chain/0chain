@@ -1,10 +1,7 @@
 package faucetsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
-	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -30,21 +27,7 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
-	var fcCopy = &FaucetSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
-	}
-	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
-	return fcCopy
-}
-
-func (ipsc *FaucetSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
-}
-
-func (ipsc *FaucetSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
-}
+func (fc *FaucetSmartContract) InitSC() {}
 
 func (fc *FaucetSmartContract) GetName() string {
 	return name
@@ -58,7 +41,7 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 	return fc.SmartContract.RestHandlers
 }
 
-func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
+func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
 	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit

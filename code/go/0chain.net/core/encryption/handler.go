@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -12,11 +11,12 @@ import (
 func HashHandler(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	if text == "" {
-		data, err := ioutil.ReadAll(r.Body)
+		var data []byte
+		buff, err := r.Body.Read(data)
 		if err != nil {
 			return
 		}
-		text = string(data)
+		text = string(buff)
 	}
 	fmt.Fprintf(w, Hash(text))
 }

@@ -1,10 +1,7 @@
 package interestpoolsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
-	"context"
 	"fmt"
-	"net/url"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -30,13 +27,7 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
-	var ipscCopy = &InterestPoolSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
-	}
-	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
-	return ipscCopy
-}
+func (ipsc *InterestPoolSmartContract) InitSC() {}
 
 func (ipsc *InterestPoolSmartContract) GetName() string {
 	return name
@@ -46,19 +37,11 @@ func (ipsc *InterestPoolSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ipsc *InterestPoolSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
-}
-
-func (ipsc *InterestPoolSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
-}
-
 func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
 	return ipsc.RestHandlers
 }
 
-func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
 	ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -17,15 +18,18 @@ import (
 	"go.uber.org/zap"
 )
 
+//lock used to setup smartcontract rest handlers
+var scLock = sync.Mutex{}
+
 //ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
 //ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	scI := getSmartContract(scAdress)
-	if scI != nil {
+	_, sc := getSmartContract(scAdress)
+	if sc != nil {
 		//add bc context here
-		handler, restpathok := scI.GetRestPoints()[restpath]
+		handler, restpathok := sc.RestHandlers[restpath]
 		if !restpathok {
 			return nil, common.NewError("invalid_path", "Invalid path")
 		}
@@ -35,9 +39,9 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 }
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
-	scI := getSmartContract(scAdress)
-	if scI != nil {
-		i, err := scI.GetHandlerStats(ctx, params)
+	_, sc := getSmartContract(scAdress)
+	if sc != nil {
+		i, err := sc.HandlerStats(ctx, params)
 		if err != nil {
 			logging.Logger.Warn("unexpected error", zap.Error(err))
 		}
@@ -47,7 +51,21 @@ func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w htt
 	fmt.Fprintf(w, "invalid_sc: Invalid Smart contract address")
 }
 
-func getSmartContract(scAddress string) sci.SmartContractInterface {
+func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartContract) {
+	contracti, ok := ContractMap[scAddress]
+	if ok {
+		scLock.Lock()
+		defer scLock.Unlock()
+
+		sc := sci.NewSC(scAddress)
+		bc := &BCContext{}
+		contracti.SetSC(sc, bc)
+		return contracti, sc
+	}
+	return nil, nil
+}
+
+func GetSmartContract(scAddress string) sci.SmartContractInterface {
 	contracti, ok := ContractMap[scAddress]
 	if ok {
 		return contracti
@@ -55,15 +73,11 @@ func getSmartContract(scAddress string) sci.SmartContractInterface {
 	return nil
 }
 
-func GetSmartContract(scAddress string) sci.SmartContractInterface {
-	return getSmartContract(scAddress)
-}
-
-func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
 	inter, err := smcoi.Execute(t, funcName, input, balances)
 	if err == nil {
-		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
+		if tm := sc.SmartContractExecutionStats[funcName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(ts))
 			}
@@ -74,7 +88,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances c_state.StateContextI) (string, error) {
-	contractObj := getSmartContract(t.ToClientID)
+	contractObj, contract := getSmartContract(t.ToClientID)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -84,7 +98,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balan
 			return "", err
 		}
 		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
-		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, contract, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
 		if err != nil {
 			return "", err
 		}

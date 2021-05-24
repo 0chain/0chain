@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -15,20 +14,16 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 	"encoding/json"
 	"fmt"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 )
@@ -40,8 +35,6 @@ func init() {
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.vesting", true)
-	viper.Set("development.smart_contract.zrc20", true)
-	viper.Set("development.smart_contract.multisig", true)
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
 	logging.InitLogging("development")
@@ -3334,76 +3327,5 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode)
 			},
 		)
-	}
-}
-
-func TestGetSCRestOutput(t *testing.T) {
-	chain := chain.NewChainFromConfig()
-
-	getRequest := func(adress string) *http.Request {
-		tar := fmt.Sprintf("%v%v", "/v1/screst/", adress)
-		req := httptest.NewRequest(http.MethodGet, tar, nil)
-		return req
-	}
-
-	tests := []struct {
-		name    string
-		address string
-		empty   bool
-	}{
-		{
-			name:    "faucetsc",
-			address: faucetsc.ADDRESS,
-		},
-		{
-			name:    "faucetsc",
-			address: interestpoolsc.ADDRESS,
-		},
-		{
-			name:    "miner",
-			address: minersc.ADDRESS,
-		},
-		{
-			name:    "miner",
-			address: minersc.ADDRESS,
-		},
-		{
-			name:    "multisig",
-			address: multisigsc.Address,
-		},
-		{
-			name:    "storage",
-			address: storagesc.ADDRESS,
-		},
-		{
-			name:    "vesting",
-			address: vestingsc.ADDRESS,
-		},
-		{
-			name:    "zrc20sc",
-			address: zrc20sc.ADDRESS,
-		},
-		{
-			name:    "invalid",
-			address: "not_an_address",
-			empty:   true,
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			w := httptest.NewRecorder()
-			chain.HandleSCRest(w, getRequest(test.address))
-
-			body := w.Body.String()
-			sc := smartcontract.ContractMap[test.address]
-			if test.empty {
-				require.EqualValues(t, body, "")
-				return
-			}
-			restPoints := sc.GetRestPoints()
-			require.EqualValues(t, len(restPoints), strings.Count(body, "/v1/screst/*/"))
-		})
 	}
 }
