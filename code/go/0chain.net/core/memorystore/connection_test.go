@@ -1,18 +1,20 @@
 package memorystore
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"context"
 	"fmt"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/gomodule/redigo/redis"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 )
 
 func init() {
@@ -204,7 +206,7 @@ func TestAddPool(t *testing.T) {
 			args: args{dbid: dbid, pool: pool},
 			want: func() map[string]*dbpool {
 				p := make(map[string]*dbpool)
-				for key, value := range pools {
+				for key, value := range pools.list {
 					p[key] = value
 				}
 
@@ -217,7 +219,7 @@ func TestAddPool(t *testing.T) {
 			args: args{dbid: dbid, pool: pool},
 			want: func() map[string]*dbpool {
 				p := make(map[string]*dbpool)
-				for key, value := range pools {
+				for key, value := range pools.list {
 					p[key] = value
 				}
 
@@ -231,8 +233,8 @@ func TestAddPool(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			AddPool(tt.args.dbid, tt.args.pool)
-			if !reflect.DeepEqual(pools, tt.want) {
-				t.Errorf("AddPool() got = %v, want = %v", pools, tt.want)
+			if !reflect.DeepEqual(pools.list, tt.want) {
+				t.Errorf("AddPool() got = %v, want = %v", pools.list, tt.want)
 			}
 		})
 	}
@@ -241,7 +243,7 @@ func TestAddPool(t *testing.T) {
 func TestGetConnectionCount(t *testing.T) {
 	dbid := "dbid"
 	pool := NewPool("", 8080)
-	pools[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
+	pools.list[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
 
 	type args struct {
 		entityMetadata datastore.EntityMetadata
@@ -301,7 +303,7 @@ func TestGetConnectionCount(t *testing.T) {
 func Test_getdbpool(t *testing.T) {
 	dbid := "dbid"
 	pool := NewPool("", 8080)
-	pools[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
+	pools.list[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
 
 	type args struct {
 		entityMetadata datastore.EntityMetadata
@@ -785,7 +787,10 @@ func TestGetEntityCon(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := GetEntityCon(tt.args.ctx, tt.args.entityMetadata)
-			if got == nil && tt.want == nil {
+			if got == nil {
+				if tt.want != nil {
+					t.Errorf("GetEntityCon() = %v, want %v", got, tt.want)
+				}
 				return
 			}
 			if !reflect.DeepEqual(got.Pool, tt.want) {

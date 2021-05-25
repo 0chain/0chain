@@ -2,35 +2,36 @@ package memorystore
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"regexp"
+	"strconv"
+	"sync"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	log "0chain.net/core/logging"
 )
 
-/* Redis host environment variables
+// Redis host environment variables.
+var (
+	// DefaultPool - the default redis pool against a service (host) named redis.
+	DefaultPool *redis.Pool
 
+	connID atomic.Int64
+)
 
- */
-/*DefaultPool - the default redis pool against a service (host) named redis */
-var DefaultPool *redis.Pool
-
-var connID atomic.Int64
-
-/*NewPool - create a new redis pool accessible at the given address */
+// NewPool - create a new redis pool accessible at the given address.
 func NewPool(host string, port int) *redis.Pool {
 	var address string
 	if os.Getenv("DOCKER") != "" {
-		address = fmt.Sprintf("%v:6379", host)
+		address = host + ":6379"
 	} else {
-		address = fmt.Sprintf("127.0.0.1:%v", port)
+		address = "127.0.0.1:" + strconv.Itoa(port)
 	}
 	return &redis.Pool{
 		MaxIdle:   80,
@@ -38,80 +39,101 @@ func NewPool(host string, port int) *redis.Pool {
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", address)
 			if err != nil {
-				panic(err.Error())
+				log.Logger.Panic(err.Error())
 			}
 			return c, err
 		},
 	}
 }
 
-type dbpool struct {
-	ID     string
-	CtxKey common.ContextKey
-	Pool   *redis.Pool
-}
+type (
+	dbpool struct {
+		ID     string
+		CtxKey common.ContextKey
+		Pool   *redis.Pool
+	}
 
-var pools = make(map[string]*dbpool)
+	poolList struct {
+		list  map[string]*dbpool
+		mutex sync.RWMutex
+	}
+)
+
+var pools = poolList{list: make(map[string]*dbpool)}
 
 func InitDefaultPool(host string, port int) {
+	pools.mutex.Lock()
+	defer pools.mutex.Unlock()
+
 	DefaultPool = NewPool(host, port)
-	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
+	pools.list[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 }
 
-func getConnectionCtxKey(dbid string) common.ContextKey {
-	if dbid == "" {
-		return CONNECTION
+func getConnectionCtxKey(id string) common.ContextKey {
+	key := CONNECTION
+	if id != "" {
+		key += common.ContextKey(id)
 	}
-	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
+
+	return key
 }
 
-/*AddPool - add a database pool to the repository of db pools */
-func AddPool(dbid string, pool *redis.Pool) {
-	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-	pools[dbid] = dbpool
+// AddPool - add a database pool to the repository of db pools.
+func AddPool(id string, pool *redis.Pool) {
+	pools.mutex.Lock()
+	defer pools.mutex.Unlock()
+
+	pools.list[id] = &dbpool{ID: id, CtxKey: getConnectionCtxKey(id), Pool: pool}
 }
 
 func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
+	pools.mutex.Lock()
+	defer pools.mutex.Unlock()
+
+	id := entityMetadata.GetDB()
+	pool, ok := pools.list[id]
 	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+		log.Logger.Panic("Invalid entity metadata setup, unknown dbpool: " + id)
 	}
-	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
+
+	return pool.Pool.ActiveCount(), pool.Pool.IdleCount()
 }
 
 func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
+	pools.mutex.RLock()
+	defer pools.mutex.RUnlock()
+
+	id := entityMetadata.GetDB()
+	pool, ok := pools.list[id]
 	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+		log.Logger.Panic("Invalid entity metadata setup, unknown dbpool: " + id)
 	}
-	return dbpool
+
+	return pool
 }
 
-/*GetConnection - returns a connection from the Pool
-* Should always use right after getting the connection to avoid leaks
-* defer c.Close()
- */
+// GetConnection - returns a connection from the Pool should always use right
+// after getting the connection to avoid leaks defer c.Close()
 func GetConnection() *Conn {
 	id := connID.Add(1)
 	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now(), ID: id, Pool: DefaultPool}
 }
 
-/*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
- */
+// GetInfo - returns a connection from the Pool
+// and will do info persistence on Redis to see the status of redis.
 func GetInfo() {
 	conn := DefaultPool.Get()
-	defer conn.Close()
+	defer func(conn redis.Conn) { _ = conn.Close() }(conn)
+
 	delay := 10 * time.Second
 	re := regexp.MustCompile("loading:1")
 	for tries := 0; true; tries++ {
 		info, err := redis.String(conn.Do("INFO", "persistence"))
 		if err != nil {
-			panic("invalid setup")
+			log.Logger.Panic("invalid setup")
 		}
 		if re.MatchString(info) {
-			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
+			log.Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
 			time.Sleep(delay)
 		} else {
 			break
@@ -119,7 +141,7 @@ func GetInfo() {
 	}
 }
 
-/*GetEntityConnection - returns a connection from the pool configured for the entity */
+// GetEntityConnection - returns a connection from the pool configured for the entity.
 func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	dbid := entityMetadata.GetDB()
 	if dbid == "" {
@@ -130,7 +152,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	return &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), Pool: dbpool.Pool, ID: id}
 }
 
-/*CONNECTION - key used to get the connection object from the context */
+// CONNECTION - key used to get the connection object from the context.
 const CONNECTION common.ContextKey = "connection."
 
 type Conn struct {
@@ -142,7 +164,7 @@ type Conn struct {
 
 type connections map[common.ContextKey]*Conn
 
-/*WithConnection takes a context and adds a connection value to it */
+// WithConnection takes a context and adds a connection value to it.
 func WithConnection(ctx context.Context) context.Context {
 	cons := ctx.Value(CONNECTION)
 	if cons == nil {
@@ -152,7 +174,7 @@ func WithConnection(ctx context.Context) context.Context {
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
-		panic("invalid setup")
+		log.Logger.Panic("invalid setup")
 	}
 	_, ok = cMap[CONNECTION]
 	if !ok {
@@ -162,7 +184,8 @@ func WithConnection(ctx context.Context) context.Context {
 
 }
 
-/*GetCon returns a connection stored in the context which got created via WithConnection */
+// GetCon returns a connection stored in the context
+// which got created via WithConnection.
 func GetCon(ctx context.Context) *Conn {
 	if ctx == nil {
 		return GetConnection()
@@ -176,7 +199,7 @@ func GetCon(ctx context.Context) *Conn {
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
-		panic("invalid setup")
+		log.Logger.Panic("invalid setup")
 	}
 	con, ok := cMap[CONNECTION]
 	if !ok {
@@ -186,36 +209,38 @@ func GetCon(ctx context.Context) *Conn {
 	return con
 }
 
-/*WithEntityConnection - returns a connection as per the configuration of the entity */
+// WithEntityConnection - returns a connection
+// as per the configuration of the entity.
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
-	dbpool := getdbpool(entityMetadata)
-	if dbpool.Pool == DefaultPool {
+	db := getdbpool(entityMetadata)
+	if db.Pool == DefaultPool {
 		return WithConnection(ctx)
 	}
 	c := ctx.Value(CONNECTION)
 	if c == nil {
 		cMap := make(connections)
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap[db.CtxKey] = &Conn{Conn: db.Pool.Get(), Tm: time.Now(), ID: id, Pool: db.Pool}
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
-	_, ok = cMap[dbpool.CtxKey]
+	_, ok = cMap[db.CtxKey]
 	if !ok {
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap[db.CtxKey] = &Conn{Conn: db.Pool.Get(), Tm: time.Now(), ID: id, Pool: db.Pool}
 	}
 	return ctx
 
 }
 
-/*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
+// GetEntityCon returns a connection stored in the context
+// which got created via WithEntityConnection.
 func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) *Conn {
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
-	dbpool := getdbpool(entityMetadata)
-	if dbpool.Pool == DefaultPool {
+	db := getdbpool(entityMetadata)
+	if db.Pool == DefaultPool {
 		return GetCon(ctx)
 	}
 	c := ctx.Value(CONNECTION)
@@ -224,26 +249,27 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	}
 	cMap, ok := c.(connections)
 
-	con, ok := cMap[dbpool.CtxKey]
+	con, ok := cMap[db.CtxKey]
 	if !ok {
 		con = GetEntityConnection(entityMetadata)
-		cMap[dbpool.CtxKey] = con
+		cMap[db.CtxKey] = con
 	}
 	return con
 }
 
-/*Close - Close takes care of maintaining the closing of connection(s) stored in the context */
+// Close - Close takes care of maintaining the closing of connection(s)
+// stored in the context.
 func Close(ctx context.Context) {
 	c := ctx.Value(CONNECTION)
 	if c == nil {
-		Logger.Error("Connection is nil while closing")
+		log.Logger.Error("Connection is nil while closing")
 		return
 	}
 	cMap := c.(connections)
 	for _, con := range cMap {
 		err := con.Close()
 		if err != nil {
-			Logger.Error("Connection not closed", zap.Error(err))
+			log.Logger.Error("Connection not closed", zap.Error(err))
 		}
 	}
 }
