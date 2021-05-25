@@ -700,7 +700,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 			return math.Pow(math.Sin(theta / 2), 2)
 		}
 
-		var la1, lo1, la2, lo2, r float64
+		var la1, lo1, la2, lo2 float64
 		la1 = geoloc1.Latitude * math.Pi / 180
 		lo1 = geoloc1.Longitude * math.Pi / 180
 		la2 = geoloc2.Latitude * math.Pi / 180
