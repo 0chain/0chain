@@ -660,7 +660,7 @@ List:
 	return list[:i]
 }
 
-func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (diversified []*StorageNode {
+func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (diversified []*StorageNode) {
 	if !sa.DiverseBlobbers {
 		return list
 	}
