@@ -5,24 +5,11 @@ import (
 	"time"
 
 	configpkg "0chain.net/chaincore/config"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func assertErrMsg(t *testing.T, err error, msg string) {
-	t.Helper()
-
-	if msg == "" {
-		assert.Nil(t, err)
-		return
-	}
-
-	if assert.NotNil(t, err) {
-		assert.Equal(t, msg, err.Error())
-	}
-}
 
 func getGlobalNodeTest() (gn *GlobalNode) {
 	const pfx = "smart_contracts.faucetsc."
@@ -47,159 +34,193 @@ func Test_getConfig(t *testing.T) {
 		fsc        = newTestFaucetSC()
 		balances   = newTestBalances()
 		tp         = common.Timestamp(0)
-		tx         = newTransaction(owner, fsc.ID, 0, tp)
+		ownerTxn   = newTransaction(owner, fsc.ID, 0, tp)
 		configured = getGlobalNodeTest()
-		gn         = fsc.getGlobalVariables(tx, balances)
+		gn         = fsc.getGlobalVariables(ownerTxn, balances)
 	)
-	assert.EqualValues(t, configured, gn)
+	require.Equal(t, configured, gn)
 }
 
 func TestFaucetSmartContractUpdate(t *testing.T) {
 	var (
-		fsc        = newTestFaucetSC()
-		balances   = newTestBalances()
-		tp         = common.Timestamp(0)
-		tx         = newTransaction(owner, fsc.ID, 0, tp)
-		originalGn = getGlobalNodeTest()
-		gn         = fsc.getGlobalVariables(tx, balances)
-		lr         = &limitRequest{}
-		err        error
+		fsc         = newTestFaucetSC()
+		balances    = newTestBalances()
+		tp          = common.Timestamp(0)
+		ownerTxn    = newTransaction(owner, fsc.ID, 0, tp)
+		nonOwnerTxn = newTransaction(randString(32), fsc.ID, 0, tp)
+		originalGn  = getGlobalNodeTest()
+		gn          = fsc.getGlobalVariables(ownerTxn, balances)
+		err         error
 	)
 
-	balances.txn = tx
+	//test cases that produce errors
+	errorTestCases := []struct {
+		title string
+		txn   *transaction.Transaction
+		bytes []byte
+		err   string
+	}{
+		{"malformed request", ownerTxn, []byte("} malformed {"), "bad_request: limit request not formated correctly"},
+		{"non owner account", nonOwnerTxn, []byte("} malformed {"), "unauthorized_access: only the owner can update the limits"},
+	}
+	for _, tc := range errorTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = tc.txn
+			_, err = fsc.updateLimits(tc.txn, tc.bytes, balances, gn)
+			require.Error(t, err)
+			require.EqualError(t, err, tc.err)
+		})
+	}
 
-	// 1. Malformed limit request
-	t.Run("malformed request", func(t *testing.T) {
-		_, err = fsc.updateLimits(tx, []byte("} malformed {"), balances, gn)
-		assertErrMsg(t, err, "bad_request: limit request not formated correctly")
-	})
+	//test cases that fail to update
+	deniedTestCases := []struct {
+		title       string
+		request     *limitRequest
+		requireFunc func(gn, originalGn *GlobalNode)
+	}{
+		{
+			"all variables denied",
+			&limitRequest{
+				PourAmount:      -1,
+				MaxPourAmount:   -1,
+				PeriodicLimit:   -1,
+				GlobalLimit:     -1,
+				IndividualReset: 1000000000,
+				GlobalReset:     1000000000,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.PourAmount, originalGn.PourAmount)
+				require.Equal(t, gn.MaxPourAmount, originalGn.MaxPourAmount)
+				require.Equal(t, gn.PeriodicLimit, originalGn.PeriodicLimit)
+				require.Equal(t, gn.GlobalLimit, originalGn.GlobalLimit)
+				require.Equal(t, gn.IndividualReset, originalGn.IndividualReset)
+				require.Equal(t, gn.GlobalReset, originalGn.GlobalReset)
+			},
+		},
+		{
+			"max pour amount fail",
+			&limitRequest{
+				PourAmount:    5,
+				MaxPourAmount: 4,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.MaxPourAmount, originalGn.MaxPourAmount)
+			},
+		},
+		{
+			"periodic limit fail",
+			&limitRequest{
+				PeriodicLimit: 5,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.PeriodicLimit, originalGn.PeriodicLimit)
+			},
+		},
+		{
+			"global limit fail",
+			&limitRequest{
+				GlobalLimit: 7,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.GlobalLimit, originalGn.GlobalLimit)
+			},
+		},
+		{
+			"individual reset fail",
+			&limitRequest{
+				IndividualReset: 0,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.IndividualReset, originalGn.IndividualReset)
+			},
+		},
+		{
+			"global reset fail",
+			&limitRequest{
+				GlobalReset: 0,
+			},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn.GlobalReset, originalGn.GlobalReset)
+			},
+		},
+	}
+	for _, tc := range deniedTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err = fsc.updateLimits(ownerTxn, mustEncode(t, tc.request), balances, gn)
+			require.NoError(t, err)
+			gn = fsc.getGlobalVariables(ownerTxn, balances)
+			tc.requireFunc(gn, originalGn)
+		})
+	}
 
-	// 2. Non owner account tries to update
-	t.Run("non owner account", func(t *testing.T) {
-		tx.ClientID = randString(32)
-		_, err = fsc.updateLimits(tx, []byte("} malformed {"), balances, gn)
-		assertErrMsg(t, err, "unauthorized_access: only the owner can update the limits")
-	})
-
-	// 3. All variables are request shall be denied
-	t.Run("all variables denied", func(t *testing.T) {
-		lr.PourAmount = -1
-		lr.MaxPourAmount = -1
-		lr.PeriodicLimit = -1
-		lr.GlobalLimit = -1
-		lr.IndividualReset = 1000000000
-		lr.GlobalReset = 1000000000
-		tx.ClientID = owner
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.PourAmount, originalGn.PourAmount)
-		assert.EqualValues(t, gn.MaxPourAmount, originalGn.MaxPourAmount)
-		assert.EqualValues(t, gn.PeriodicLimit, originalGn.PeriodicLimit)
-		assert.EqualValues(t, gn.GlobalLimit, originalGn.GlobalLimit)
-		assert.EqualValues(t, gn.IndividualReset, originalGn.IndividualReset)
-		assert.EqualValues(t, gn.GlobalReset, originalGn.GlobalReset)
-	})
-
-	// 4. Pour amount will be the only one updated
-	t.Run("pour amount update", func(t *testing.T) {
-		lr.PourAmount = 1
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.PourAmount, lr.PourAmount)
-	})
-
-	// 5. Max pour amount too small for update
-	t.Run("max pour amount fail", func(t *testing.T) {
-		lr.PourAmount = 5
-		lr.MaxPourAmount = 4
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.MaxPourAmount, originalGn.MaxPourAmount)
-	})
-
-	// 6. Max pour amount accepted
-	t.Run("max pour amount update", func(t *testing.T) {
-		lr.MaxPourAmount = 6
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.MaxPourAmount, lr.MaxPourAmount)
-	})
-
-	// 7. Periodic limit too small for update
-	t.Run("periodic limit fail", func(t *testing.T) {
-		lr.PeriodicLimit = 5
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.PeriodicLimit, originalGn.PeriodicLimit)
-	})
-
-	// 8. Periodic limit accepted
-	t.Run("period limit update", func(t *testing.T) {
-		lr.PeriodicLimit = 7
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.PeriodicLimit, lr.PeriodicLimit)
-	})
-
-	// 9. Global limit too small for update
-	t.Run("global limit fail", func(t *testing.T) {
-		lr.GlobalLimit = 7
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.GlobalLimit, originalGn.GlobalLimit)
-	})
-
-	// 10. Global limit accepted
-	t.Run("global limit update", func(t *testing.T) {
-		lr.GlobalLimit = 8
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.GlobalLimit, lr.GlobalLimit)
-	})
-
-	// 11. Individual reset too small for update
-	t.Run("individual reset fail", func(t *testing.T) {
-		lr.IndividualReset = 0
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.IndividualReset, originalGn.IndividualReset)
-	})
-
-	// 12. Individual reset accepted
-	t.Run("individual reset update", func(t *testing.T) {
-		lr.IndividualReset = 2000000000
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.IndividualReset, lr.IndividualReset)
-	})
-
-	// 13. Global reset too small for update
-	t.Run("global reset fail", func(t *testing.T) {
-		lr.GlobalReset = 0
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.GlobalReset, originalGn.GlobalReset)
-	})
-
-	// 14. Global reset accepted
-	t.Run("global reset update", func(t *testing.T) {
-		lr.GlobalReset = 3000000000
-		_, err = fsc.updateLimits(tx, mustEncode(t, lr), balances, gn)
-		require.NoError(t, err)
-		gn = fsc.getGlobalVariables(tx, balances)
-		assert.EqualValues(t, gn.GlobalReset, lr.GlobalReset)
-	})
+	updateTestCases := []struct {
+		title       string
+		request     *limitRequest
+		requireFunc func(gn *GlobalNode, request *limitRequest)
+	}{
+		{
+			"pour amount update",
+			&limitRequest{
+				PourAmount: 1,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.PourAmount, request.PourAmount)
+			},
+		},
+		{
+			"max pour amount update",
+			&limitRequest{
+				MaxPourAmount: 6,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.MaxPourAmount, request.MaxPourAmount)
+			},
+		},
+		{
+			"period limit update",
+			&limitRequest{
+				PeriodicLimit: 7,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.PeriodicLimit, request.PeriodicLimit)
+			},
+		},
+		{
+			"global limit update",
+			&limitRequest{
+				GlobalLimit: 8,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.GlobalLimit, request.GlobalLimit)
+			},
+		},
+		{
+			"individual reset update",
+			&limitRequest{
+				IndividualReset: 2000000000,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.IndividualReset, request.IndividualReset)
+			},
+		},
+		{
+			"global reset update",
+			&limitRequest{
+				GlobalReset: 3000000000,
+			},
+			func(gn *GlobalNode, request *limitRequest) {
+				require.Equal(t, gn.GlobalReset, request.GlobalReset)
+			},
+		},
+	}
+	for _, tc := range updateTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err = fsc.updateLimits(ownerTxn, mustEncode(t, tc.request), balances, gn)
+			require.NoError(t, err)
+			gn = fsc.getGlobalVariables(ownerTxn, balances)
+			tc.requireFunc(gn, tc.request)
+		})
+	}
 }
 
 func TestFaucetSmartContractValidateGlobalNode(t *testing.T) {
@@ -222,6 +243,8 @@ func TestFaucetSmartContractValidateGlobalNode(t *testing.T) {
 		{GlobalNode{"", 2, 3, 4, 5, 2000000000, 1000000000, 0, now}, "failed to validate global node: global reset(1s) is less than individual reset(2s)"},
 	} {
 		t.Log(i)
-		assertErrMsg(t, tt.node.validate(), tt.err)
+		err := tt.node.validate()
+		require.Error(t, err)
+		require.EqualError(t, err, tt.err)
 	}
 }

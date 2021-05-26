@@ -14,17 +14,31 @@ import (
 	"0chain.net/core/util"
 )
 
+type SimpleGlobalNode struct {
+	MaxMint     state.Balance `json:"max_mint"`
+	TotalMinted state.Balance `json:"total_minted"`
+	MinLock     state.Balance `json:"min_lock"`
+	APR         float64       `json:"apr"`
+}
+
+func (sgn *SimpleGlobalNode) Encode() []byte {
+	buff, _ := json.Marshal(sgn)
+	return buff
+}
+
+func (sgn *SimpleGlobalNode) Decode(input []byte) error {
+	err := json.Unmarshal(input, sgn)
+	return err
+}
+
 type GlobalNode struct {
-	ID            datastore.Key
-	MaxMint       state.Balance `json:"max_mint"`
-	TotalMinted   state.Balance `json:"total_minted"`
-	MinLock       state.Balance `json:"min_lock"`
-	APR           float64       `json:"apr"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
+	ID                datastore.Key
+	*SimpleGlobalNode `json:"simple_global_node"`
+	MinLockPeriod     time.Duration `json:"min_lock_period"`
 }
 
 func newGlobalNode() *GlobalNode {
-	return &GlobalNode{ID: ADDRESS}
+	return &GlobalNode{ID: ADDRESS, SimpleGlobalNode: &SimpleGlobalNode{}}
 }
 
 func (gn *GlobalNode) Encode() []byte {
@@ -33,7 +47,32 @@ func (gn *GlobalNode) Encode() []byte {
 }
 
 func (gn *GlobalNode) Decode(input []byte) error {
-	return json.Unmarshal(input, gn)
+	var objMap map[string]*json.RawMessage
+	err := json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+	sgn, ok := objMap["simple_global_node"]
+	if ok {
+		err = gn.SimpleGlobalNode.Decode(*sgn)
+		if err != nil {
+			return err
+		}
+	}
+	var min string
+	minlp, ok := objMap["min_lock_period"]
+	if ok {
+		err = json.Unmarshal(*minlp, &min)
+		if err != nil {
+			return err
+		}
+		dur, err := time.ParseDuration(min)
+		if err != nil {
+			return err
+		}
+		gn.MinLockPeriod = dur
+	}
+	return nil
 }
 
 func (gn *GlobalNode) GetHash() string {
@@ -50,7 +89,7 @@ func (gn *GlobalNode) getKey() datastore.Key {
 
 // canMint more tokens
 func (gn *GlobalNode) canMint() bool {
-	return gn.TotalMinted < gn.MaxMint
+	return gn.SimpleGlobalNode.TotalMinted < gn.SimpleGlobalNode.MaxMint
 }
 
 func (gn *GlobalNode) validate() error {

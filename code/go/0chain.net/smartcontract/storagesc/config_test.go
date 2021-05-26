@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/transaction"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -33,358 +35,383 @@ func Test_getConfig(t *testing.T) {
 
 func TestMinerSmartContractUpdate(t *testing.T) {
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tx             = newTransaction(owner, ssc.ID, 0, 0)
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
+		tx       = newTransaction(owner, ssc.ID, 0, 0)
+
+		ownerTxn    = newTransaction(owner, ssc.ID, 0, 0)
+		nonOwnerTxn = newTransaction(randString(32), ssc.ID, 0, 0)
+
 		originalConfig = setConfig(t, balances)
 		err            error
 		config         = new(scConfig)
-		update         = new(scConfig)
 	)
 
 	balances.txn = tx
 
-	// 1. Malformed update
-	t.Run("malformed update", func(t *testing.T) {
-		_, err = ssc.updateConfig(tx, []byte("} malformed {"), balances)
-		assertErrMsg(t, err, "update_config: invalid character '}' looking for beginning of value")
-	})
+	//test cases that produce errors
+	errorTestCases := []struct {
+		title string
+		txn   *transaction.Transaction
+		bytes []byte
+		err   string
+	}{
+		{"malformed update", ownerTxn, []byte("} malformed {"), "update_config: invalid character '}' looking for beginning of value"},
+		{"non owner account", nonOwnerTxn, []byte("} malformed {"), "update_config: unauthorized access - only the owner can update the variables"},
+	}
+	for _, tc := range errorTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = tc.txn
+			_, err = ssc.updateConfig(tc.txn, tc.bytes, balances)
+			require.Error(t, err)
+			require.EqualError(t, err, tc.err)
+		})
+	}
 
-	// 2. Non owner account tries to update
-	t.Run("non owner account", func(t *testing.T) {
-		tx.ClientID = randString(32)
-		_, err = ssc.updateConfig(tx, []byte("} malformed {"), balances)
-		assertErrMsg(t, err, "update_config: unauthorized access - only the owner can update the variables")
-	})
+	balances.txn = ownerTxn
 
-	// 3. All variables requested shall be denied
-	t.Run("all variables denied", func(t *testing.T) {
-		update.ChallengeEnabled = true
-		tx.ClientID = owner
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config, originalConfig)
-	})
+	//test cases that will be denied
+	deniedTestCases := []struct {
+		title       string
+		request     *scConfig
+		requireFunc func(config, request *scConfig)
+	}{
+		{"all variables denied",
+			&scConfig{
+				ChallengeEnabled: true,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config, request)
+			},
+		},
+		{"read pool config fail",
+			&scConfig{
+				ReadPool: &readPoolConfig{},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ReadPool, request.ReadPool)
+			},
+		},
+		{"write pool config fail",
+			&scConfig{
+				WritePool: &writePoolConfig{},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.WritePool, request.WritePool)
+			},
+		},
+		{"stake pool config fail",
+			&scConfig{
+				StakePool: &stakePoolConfig{},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.StakePool, request.StakePool)
+			},
+		},
+	}
+	for _, tc := range deniedTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err = ssc.updateConfig(ownerTxn, tc.request.Encode(), balances)
+			require.NoError(t, err)
+			config, err = ssc.getConfig(balances, false)
+			require.NoError(t, err)
+			tc.requireFunc(config, originalConfig)
+		})
+	}
 
-	// 4. Time unit will update
-	t.Run("time unit update", func(t *testing.T) {
-		update.TimeUnit = time.Second * 5
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.TimeUnit, update.TimeUnit)
-	})
-
-	// 5. Max mint will update
-	t.Run("max mint update", func(t *testing.T) {
-		update.MaxMint = 123456789
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxMint, update.MaxMint)
-	})
-
-	// 6. Min allocation size will update
-	t.Run("min allocation size update", func(t *testing.T) {
-		update.MinAllocSize = 1024
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MinAllocSize, update.MinAllocSize)
-	})
-
-	// 7. Min allocation duration will update
-	t.Run("min allocation duration update", func(t *testing.T) {
-		update.MinAllocDuration = time.Hour * 7
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MinAllocDuration, update.MinAllocDuration)
-	})
-
-	// 8. Max challenge completion time will update
-	t.Run("max challenge completion time update", func(t *testing.T) {
-		update.MaxChallengeCompletionTime = time.Minute * 33
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxChallengeCompletionTime, update.MaxChallengeCompletionTime)
-	})
-
-	// 9. Min offer duration will update
-	t.Run("min offer duration update", func(t *testing.T) {
-		update.MinOfferDuration = time.Hour * 72
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MinOfferDuration, update.MinOfferDuration)
-	})
-
-	// 10. Min blobber capacity will update
-	t.Run("min blobber capacity update", func(t *testing.T) {
-		update.MinBlobberCapacity = 2048
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MinBlobberCapacity, update.MinBlobberCapacity)
-	})
-
-	// 11. Validator reward will update
-	t.Run("validator reward update", func(t *testing.T) {
-		update.ValidatorReward = .19
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ValidatorReward, update.ValidatorReward)
-	})
-
-	// 12. Blobber slash will update
-	t.Run("blobber slash update", func(t *testing.T) {
-		update.BlobberSlash = .81
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.BlobberSlash, update.BlobberSlash)
-	})
-
-	// 13. Max read price will update
-	t.Run("max read price update", func(t *testing.T) {
-		update.MaxReadPrice = 13579
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxReadPrice, update.MaxReadPrice)
-	})
-
-	// 14. Max write price will update
-	t.Run("max write price update", func(t *testing.T) {
-		update.MaxWritePrice = 35791
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxWritePrice, update.MaxWritePrice)
-	})
-
-	// 15. Failed challenges to cancel will update
-	t.Run("failed challenges to cancel update", func(t *testing.T) {
-		update.FailedChallengesToCancel = 17
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.FailedChallengesToCancel, update.FailedChallengesToCancel)
-	})
-
-	// 16. Failed challenges to revoke min lock will update
-	t.Run("failed challenges to revoke min lock update", func(t *testing.T) {
-		update.FailedChallengesToRevokeMinLock = 21
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.FailedChallengesToRevokeMinLock, update.FailedChallengesToRevokeMinLock)
-	})
-
-	// 17. Challenge enabled will update
-	t.Run("challenge enabled update", func(t *testing.T) {
-		update.ChallengeEnabled = false
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ChallengeEnabled, update.ChallengeEnabled)
-	})
-
-	// 18. Max challenges per generation will update
-	t.Run("max challenges per generation update", func(t *testing.T) {
-		update.MaxChallengesPerGeneration = 51
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxChallengesPerGeneration, update.MaxChallengesPerGeneration)
-	})
-
-	// 19. Challenge generation rate will update
-	t.Run("challenge generation update", func(t *testing.T) {
-		update.ChallengeGenerationRate = 0.77
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ChallengeGenerationRate, update.ChallengeGenerationRate)
-	})
-
-	// 20. Min stake will update
-	t.Run("min stake update", func(t *testing.T) {
-		update.MinStake = 3000000000
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MinStake, update.MinStake)
-	})
-
-	// 21. Max stake will update
-	t.Run("max stake update", func(t *testing.T) {
-		update.MaxStake = 3000000000000
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxStake, update.MaxStake)
-	})
-
-	// 22. Max delegates will update
-	t.Run("max delegates update", func(t *testing.T) {
-		update.MaxDelegates = 99
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxDelegates, update.MaxDelegates)
-	})
-
-	// 23. Max charge will update
-	t.Run("max charge update", func(t *testing.T) {
-		update.MaxCharge = .87
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.MaxCharge, update.MaxCharge)
-	})
-
-	// 24. Read pool config won't update
-	t.Run("read pool config fail", func(t *testing.T) {
-		update.ReadPool = &readPoolConfig{}
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ReadPool, originalConfig.ReadPool)
-	})
-
-	// 25. Read pool config min lock will update
-	t.Run("read pool config min lock update", func(t *testing.T) {
-		update.ReadPool.MinLock = 7000000000
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ReadPool.MinLock, update.ReadPool.MinLock)
-	})
-
-	// 26. Read pool config min lock period will update
-	t.Run("read pool config min lock period update", func(t *testing.T) {
-		update.ReadPool.MinLockPeriod = time.Hour * 24
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ReadPool.MinLockPeriod, update.ReadPool.MinLockPeriod)
-	})
-
-	// 27. Read pool config max lock period will update
-	t.Run("read pool config max lock period update", func(t *testing.T) {
-		update.ReadPool.MaxLockPeriod = time.Hour * 240
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.ReadPool.MaxLockPeriod, update.ReadPool.MaxLockPeriod)
-	})
-
-	// 28. Write pool config won't update
-	t.Run("write pool config fail", func(t *testing.T) {
-		update.WritePool = &writePoolConfig{}
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.WritePool, originalConfig.WritePool)
-	})
-
-	// 29. Write pool config min lock will update
-	t.Run("write pool config min lock update", func(t *testing.T) {
-		update.WritePool.MinLock = 9100000000
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.WritePool.MinLock, update.WritePool.MinLock)
-	})
-
-	// 30. Write pool config min lock period will update
-	t.Run("write pool config min lock period update", func(t *testing.T) {
-		update.WritePool.MinLockPeriod = time.Hour * 36
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.WritePool.MinLockPeriod, update.WritePool.MinLockPeriod)
-	})
-
-	// 31. Write pool config max lock period will update
-	t.Run("write pool config max lock period update", func(t *testing.T) {
-		update.WritePool.MaxLockPeriod = time.Hour * 360
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.WritePool.MaxLockPeriod, update.WritePool.MaxLockPeriod)
-	})
-
-	// 32. Stake pool config won't update
-	t.Run("read pool config fail", func(t *testing.T) {
-		update.StakePool = &stakePoolConfig{}
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.StakePool, originalConfig.StakePool)
-	})
-
-	// 33. Stake pool config min lock will update
-	t.Run("write pool config min lock update", func(t *testing.T) {
-		update.StakePool.MinLock = 17700000000
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.StakePool.MinLock, update.StakePool.MinLock)
-	})
-
-	// 34. Stake pool config interest rate will update
-	t.Run("write pool config interest rate update", func(t *testing.T) {
-		update.StakePool.InterestRate = 0.09
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.StakePool.InterestRate, update.StakePool.InterestRate)
-	})
-
-	// 35. Stake pool config interest interval will update
-	t.Run("write pool config interest interval update", func(t *testing.T) {
-		update.StakePool.InterestInterval = time.Hour * 8760
-		_, err = ssc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		config, err = ssc.getConfig(balances, false)
-		require.NoError(t, err)
-		assert.EqualValues(t, config.StakePool.InterestInterval, update.StakePool.InterestInterval)
-	})
+	updateTestCases := []struct {
+		title       string
+		request     *scConfig
+		requireFunc func(config, request *scConfig)
+	}{
+		{
+			"time unit update",
+			&scConfig{
+				TimeUnit: time.Second * 5,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.TimeUnit, request.TimeUnit)
+			},
+		},
+		{
+			"max mint update",
+			&scConfig{
+				MaxMint: 123456789,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxMint, request.MaxMint)
+			},
+		},
+		{
+			"min allocation size update",
+			&scConfig{
+				MinAllocSize: 1024,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MinAllocSize, request.MinAllocSize)
+			},
+		},
+		{
+			"min allocation duration update",
+			&scConfig{
+				MinAllocDuration: time.Hour * 7,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MinAllocDuration, request.MinAllocDuration)
+			},
+		},
+		{
+			"max challenge completion time update",
+			&scConfig{
+				MaxChallengeCompletionTime: time.Minute * 33,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxChallengeCompletionTime, request.MaxChallengeCompletionTime)
+			},
+		},
+		{
+			"min offer duration update",
+			&scConfig{
+				MinOfferDuration: time.Hour * 72,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MinOfferDuration, request.MinOfferDuration)
+			},
+		},
+		{
+			"min blobber capacity update",
+			&scConfig{
+				MinBlobberCapacity: 2048,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MinBlobberCapacity, request.MinBlobberCapacity)
+			},
+		},
+		{
+			"validator reward update",
+			&scConfig{
+				ValidatorReward: 0.19,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ValidatorReward, request.ValidatorReward)
+			},
+		},
+		{
+			"blobber slash update",
+			&scConfig{
+				BlobberSlash: 0.81,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.BlobberSlash, request.BlobberSlash)
+			},
+		},
+		{
+			"max read price update",
+			&scConfig{
+				MaxReadPrice: 13579,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxReadPrice, request.MaxReadPrice)
+			},
+		},
+		{
+			"max write price update",
+			&scConfig{
+				MaxWritePrice: 35791,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxWritePrice, request.MaxWritePrice)
+			},
+		},
+		{
+			"failed challenges to cancel update",
+			&scConfig{
+				FailedChallengesToCancel: 17,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.FailedChallengesToCancel, request.FailedChallengesToCancel)
+			},
+		},
+		{
+			"failed challenges to revoke min lock update",
+			&scConfig{
+				FailedChallengesToRevokeMinLock: 21,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.FailedChallengesToRevokeMinLock, request.FailedChallengesToRevokeMinLock)
+			},
+		},
+		{
+			"challenge enabled update",
+			&scConfig{
+				ChallengeEnabled: false,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ChallengeEnabled, request.ChallengeEnabled)
+			},
+		},
+		{
+			"max challenges per generation update",
+			&scConfig{
+				MaxChallengesPerGeneration: 51,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxChallengesPerGeneration, request.MaxChallengesPerGeneration)
+			},
+		},
+		{
+			"challenge generation update",
+			&scConfig{
+				ChallengeGenerationRate: 0.77,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ChallengeGenerationRate, request.ChallengeGenerationRate)
+			},
+		},
+		{
+			"min stake update",
+			&scConfig{
+				MinStake: 3000000000,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MinStake, request.MinStake)
+			},
+		},
+		{
+			"max stake update",
+			&scConfig{
+				MaxStake: 3000000000000,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxStake, request.MaxStake)
+			},
+		},
+		{
+			"max delegates update",
+			&scConfig{
+				MaxDelegates: 99,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxDelegates, request.MaxDelegates)
+			},
+		},
+		{
+			"max charge update",
+			&scConfig{
+				MaxCharge: 0.87,
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.MaxCharge, request.MaxCharge)
+			},
+		},
+		{
+			"read pool config min lock update",
+			&scConfig{
+				ReadPool: &readPoolConfig{
+					MinLock: 7000000000,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ReadPool.MinLock, request.ReadPool.MinLock)
+			},
+		},
+		{
+			"read pool config min lock period update",
+			&scConfig{
+				ReadPool: &readPoolConfig{
+					MinLockPeriod: time.Hour * 24,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ReadPool.MinLockPeriod, request.ReadPool.MinLockPeriod)
+			},
+		},
+		{
+			"read pool config max lock period update",
+			&scConfig{
+				ReadPool: &readPoolConfig{
+					MaxLockPeriod: time.Hour * 240,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.ReadPool.MaxLockPeriod, request.ReadPool.MaxLockPeriod)
+			},
+		},
+		{
+			"write pool config min lock update",
+			&scConfig{
+				WritePool: &writePoolConfig{
+					MinLock: 9100000000,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.WritePool.MinLock, request.WritePool.MinLock)
+			},
+		},
+		{
+			"write pool config min lock period update",
+			&scConfig{
+				WritePool: &writePoolConfig{
+					MinLockPeriod: time.Hour * 36,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.WritePool.MinLockPeriod, request.WritePool.MinLockPeriod)
+			},
+		},
+		{
+			"write pool config max lock period update",
+			&scConfig{
+				WritePool: &writePoolConfig{
+					MaxLockPeriod: time.Hour * 360,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.WritePool.MaxLockPeriod, request.WritePool.MaxLockPeriod)
+			},
+		},
+		{
+			"stake pool config min lock update",
+			&scConfig{
+				StakePool: &stakePoolConfig{
+					MinLock: 17700000000,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.StakePool.MinLock, request.StakePool.MinLock)
+			},
+		},
+		{
+			"stake pool config interest rate update",
+			&scConfig{
+				StakePool: &stakePoolConfig{
+					InterestRate: 0.09,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.StakePool.InterestRate, request.StakePool.InterestRate)
+			},
+		},
+		{
+			"stake pool config interest interval update",
+			&scConfig{
+				StakePool: &stakePoolConfig{
+					InterestInterval: time.Hour * 8760,
+				},
+			},
+			func(config, request *scConfig) {
+				require.Equal(t, config.StakePool.InterestInterval, request.StakePool.InterestInterval)
+			},
+		},
+	}
+	for _, tc := range updateTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = ownerTxn
+			_, err = ssc.updateConfig(ownerTxn, tc.request.Encode(), balances)
+			require.NoError(t, err)
+			config, err = ssc.getConfig(balances, false)
+			require.NoError(t, err)
+			tc.requireFunc(config, tc.request)
+		})
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	configpkg "0chain.net/chaincore/config"
+	"0chain.net/chaincore/transaction"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -52,238 +53,243 @@ func getGlobalNodeTest() (gn *GlobalNode) {
 	}
 }
 
-func Test_getConfig(t *testing.T) {
-	var (
-		msc        = newTestMinerSC()
-		balances   = newTestBalances()
-		configured = getGlobalNodeTest()
-		gn, _      = msc.getGlobalNode(balances)
-	)
-	assert.EqualValues(t, configured, gn)
-}
-
 func TestMinerSmartContractUpdate(t *testing.T) {
 	var (
-		msc        = newTestMinerSC()
-		balances   = newTestBalances()
-		tx         = newTransaction(owner, msc.ID, 0, 0)
+		msc         = newTestMinerSC()
+		balances    = newTestBalances()
+		ownerTxn    = newTransaction(owner, msc.ID, 0, 0)
+		nonOwnerTxn = newTransaction(randString(32), msc.ID, 0, 0)
+
 		originalGn = getGlobalNodeTest()
 		gn, err    = msc.getGlobalNode(balances)
-		update     = &GlobalNode{}
 	)
 
-	balances.txn = tx
+	//test cases that produce errors
+	errorTestCases := []struct {
+		title string
+		txn   *transaction.Transaction
+		bytes []byte
+		err   string
+	}{
+		{"malformed update", ownerTxn, []byte("} malformed {"), "failed to update smart contract settings: error decoding input data: invalid character '}' looking for beginning of value"},
+		{"non owner account", nonOwnerTxn, []byte("} malformed {"), "failed to update smart contract settings: unauthorized access - only the owner can update the settings"},
+	}
+	for _, tc := range errorTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = tc.txn
+			_, err = msc.UpdateSettings(tc.txn, tc.bytes, gn, balances)
+			require.Error(t, err)
+			require.EqualError(t, err, tc.err)
+		})
+	}
 
-	// 1. Malformed update
-	t.Run("malformed update", func(t *testing.T) {
-		_, err = msc.UpdateSettings(tx, []byte("} malformed {"), gn, balances)
-		assertErrMsg(t, err, "failed to update smart contract settings: error decoding input data: invalid character '}' looking for beginning of value")
-	})
+	balances.txn = ownerTxn
 
-	// 2. Non owner account tries to update
-	t.Run("non owner account", func(t *testing.T) {
-		tx.ClientID = randString(32)
-		_, err = msc.UpdateSettings(tx, []byte("} malformed {"), gn, balances)
-		assertErrMsg(t, err, "failed to update smart contract settings: unauthorized access - only the owner can update the settings")
-	})
+	//test cases that will be denied
+	deniedTestCases := []struct {
+		title       string
+		request     *GlobalNode
+		requireFunc func(gn, originalGn *GlobalNode)
+	}{
+		{"all variables denied",
+			&GlobalNode{},
+			func(gn, originalGn *GlobalNode) {
+				require.Equal(t, gn, originalGn)
+			},
+		},
+	}
+	for _, tc := range deniedTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err = msc.UpdateSettings(ownerTxn, tc.request.Encode(), gn, balances)
+			tc.requireFunc(gn, originalGn)
+		})
+	}
 
-	// 3. All variables requested shall be denied
-	t.Run("all variables denied", func(t *testing.T) {
-		tx.ClientID = owner
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn, originalGn)
-	})
-
-	// 4. Max N will updated
-	t.Run("max n update", func(t *testing.T) {
-		update.MaxN = 99
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxN, update.MaxN)
-	})
-
-	// 5. Min N will updated
-	t.Run("min n update", func(t *testing.T) {
-		update.MinN = 11
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MinN, update.MinN)
-	})
-
-	// 6. Max S will updated
-	t.Run("max s update", func(t *testing.T) {
-		update.MaxS = 22
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxS, update.MaxS)
-	})
-
-	// 7. Min S will updated
-	t.Run("min s update", func(t *testing.T) {
-		update.MinS = 9
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MinS, update.MinS)
-	})
-
-	// 8. Max delegates will updated
-	t.Run("max delegates update", func(t *testing.T) {
-		update.MaxDelegates = 111
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxDelegates, update.MaxDelegates)
-	})
-
-	// 9. T percent will updated
-	t.Run("t percent update", func(t *testing.T) {
-		update.TPercent = .57
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.TPercent, update.TPercent)
-	})
-
-	// 10. K percent will updated
-	t.Run("k percent update", func(t *testing.T) {
-		update.KPercent = .81
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.KPercent, update.KPercent)
-	})
-
-	// 11. Max stake will updated
-	t.Run("max stake update", func(t *testing.T) {
-		update.MaxStake = 987654321
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxStake, update.MaxStake)
-	})
-
-	// 12. Min stake will updated
-	t.Run("min stake update", func(t *testing.T) {
-		update.MinStake = 123456
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MinStake, update.MinStake)
-	})
-
-	// 13. Interest rate will updated
-	t.Run("interest rate update", func(t *testing.T) {
-		update.InterestRate = .09
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.InterestRate, update.InterestRate)
-	})
-
-	// 14. Reward rate will updated
-	t.Run("reward rate update", func(t *testing.T) {
-		update.RewardRate = .55
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.RewardRate, update.RewardRate)
-	})
-
-	// 15. Share ratio will updated
-	t.Run("share ratio update", func(t *testing.T) {
-		update.ShareRatio = .39
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.ShareRatio, update.ShareRatio)
-	})
-
-	// 16. Block reward will updated
-	t.Run("block reward update", func(t *testing.T) {
-		update.BlockReward = 757575
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.BlockReward, update.BlockReward)
-	})
-
-	// 17. Max charge will updated
-	t.Run("max charge update", func(t *testing.T) {
-		update.MaxCharge = .47
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxCharge, update.MaxCharge)
-	})
-
-	// 18. Epoch will updated
-	t.Run("epoch update", func(t *testing.T) {
-		update.Epoch = 90000
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.Epoch, update.Epoch)
-	})
-
-	// 19. Reward decline rate will updated
-	t.Run("reward decline rate update", func(t *testing.T) {
-		update.RewardDeclineRate = .66
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.RewardDeclineRate, update.RewardDeclineRate)
-	})
-
-	// 20. Interest decline rate will updated
-	t.Run("interest decline rate update", func(t *testing.T) {
-		update.InterestDeclineRate = .47
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.InterestDeclineRate, update.InterestDeclineRate)
-	})
-
-	// 21. Max mint will updated
-	t.Run("max mint update", func(t *testing.T) {
-		update.MaxMint = 7531
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.MaxMint, update.MaxMint)
-	})
-
-	// 22. Reward round frequency will updated
-	t.Run("reward round frequency update", func(t *testing.T) {
-		update.RewardRoundFrequency = 300
-		_, err = msc.UpdateSettings(tx, mustEncode(t, update), gn, balances)
-		require.NoError(t, err)
-		gn, err = msc.getGlobalNode(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, gn.RewardRoundFrequency, update.RewardRoundFrequency)
-	})
+	updateTestCases := []struct {
+		title       string
+		request     *GlobalNode
+		requireFunc func(gn *GlobalNode, request *GlobalNode)
+	}{
+		{
+			"max n update",
+			&GlobalNode{
+				MaxN: 99,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxN, request.MaxN)
+			},
+		},
+		{
+			"min n update",
+			&GlobalNode{
+				MinN: 11,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MinN, request.MinN)
+			},
+		},
+		{
+			"max s update",
+			&GlobalNode{
+				MaxS: 22,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxS, request.MaxS)
+			},
+		},
+		{
+			"min s update",
+			&GlobalNode{
+				MinS: 19,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MinS, request.MinS)
+			},
+		},
+		{
+			"max delegates update",
+			&GlobalNode{
+				MaxDelegates: 111,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxDelegates, request.MaxDelegates)
+			},
+		},
+		{
+			"t percent update",
+			&GlobalNode{
+				TPercent: 0.57,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.TPercent, request.TPercent)
+			},
+		},
+		{
+			"k percent update",
+			&GlobalNode{
+				KPercent: 0.81,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.KPercent, request.KPercent)
+			},
+		},
+		{
+			"max stake update",
+			&GlobalNode{
+				MaxStake: 987654321,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxStake, request.MaxStake)
+			},
+		},
+		{
+			"min stake update",
+			&GlobalNode{
+				MinStake: 123456,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MinStake, request.MinStake)
+			},
+		},
+		{
+			"interest rate update",
+			&GlobalNode{
+				InterestRate: 0.09,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.InterestRate, request.InterestRate)
+			},
+		},
+		{
+			"reward rate update",
+			&GlobalNode{
+				RewardRate: 0.55,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.RewardRate, request.RewardRate)
+			},
+		},
+		{
+			"share ratio update",
+			&GlobalNode{
+				ShareRatio: 0.39,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.ShareRatio, request.ShareRatio)
+			},
+		},
+		{
+			"block reward update",
+			&GlobalNode{
+				BlockReward: 757575,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.BlockReward, request.BlockReward)
+			},
+		},
+		{
+			"max charge update",
+			&GlobalNode{
+				MaxCharge: 0.47,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxCharge, request.MaxCharge)
+			},
+		},
+		{
+			"epoch update",
+			&GlobalNode{
+				Epoch: 90000,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.Epoch, request.Epoch)
+			},
+		},
+		{
+			"reward decline rate update",
+			&GlobalNode{
+				RewardDeclineRate: 0.66,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.RewardDeclineRate, request.RewardDeclineRate)
+			},
+		},
+		{
+			"interest decline rate update",
+			&GlobalNode{
+				InterestDeclineRate: 0.47,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.InterestDeclineRate, request.InterestDeclineRate)
+			},
+		},
+		{
+			"max mint update",
+			&GlobalNode{
+				MaxMint: 7531,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.MaxMint, request.MaxMint)
+			},
+		},
+		{
+			"reward round frequency update",
+			&GlobalNode{
+				RewardRoundFrequency: 300,
+			},
+			func(gn, request *GlobalNode) {
+				require.Equal(t, gn.RewardRoundFrequency, request.RewardRoundFrequency)
+			},
+		},
+	}
+	for _, tc := range updateTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = ownerTxn
+			_, err = msc.UpdateSettings(ownerTxn, tc.request.Encode(), gn, balances)
+			require.NoError(t, err)
+			gn, err = msc.getGlobalNode(balances)
+			require.NoError(t, err)
+			tc.requireFunc(gn, tc.request)
+		})
+	}
 }

@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -456,7 +457,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
+	if (config.DevConfiguration.ViewChange && block.Round == gn.ViewChange) || (!config.DevConfiguration.ViewChange && gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0) {
 		var mb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if mb != nil {
 			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)

@@ -23,107 +23,112 @@ func Test_DeleteNode(t *testing.T) {
 		sharders []*sharder
 	)
 
-	t.Run("delete miner pending pool", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 252, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
-		// delete miner at index 0
-		deleteMiner(t, balances, msc, miners, sharders, "", 251, 252, now, 0)
-		// check that the balance for the stakers of miner 0 are back to the stake value
-		checkStakersBalances(t, miners[0].stakers, balances, stakeVal, "checking after delete")
-	})
+	updateTestCases := []struct {
+		title     string
+		testFuncs func(t *testing.T)
+	}{
+		{
+			"delete miner pending pool",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 252, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
+				// delete miner at index 0
+				deleteMiner(t, balances, msc, miners, sharders, "", 251, 252, now, 0)
+				// check that the balance for the stakers of miner 0 are back to the stake value
+				checkStakersBalances(t, miners[0].stakers, balances, stakeVal, "checking after delete")
+			},
+		},
 
-	t.Run("delete miner active pool", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 251, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
-		// delete miner at index 0
-		deleteMiner(t, balances, msc, miners, sharders, "", 252, 501, now, 0)
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after delete started")
-		msc.setDKGMinersTestHelper(t, miners, balances)
-		payFees(t, balances, msc, miners, sharders, 501, 501, now)
-		// check that the balance for the stakers of miner 0 are back to the stake value along with the interest and rewards
-		interest := getMinerStakerInterest(t, balances, msc, miners[0])
-		reward := getMinerStakerReward(t, balances, msc, miners[0], 1)
-		checkStakersBalances(t, miners[0].stakers, balances, interest+reward+stakeVal, "checking after delete completed")
-	})
+		{
+			"delete miner active pool",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 251, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
+				// delete miner at index 0
+				deleteMiner(t, balances, msc, miners, sharders, "", 252, 501, now, 0)
+				checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after delete started")
+				msc.setDKGMinersTestHelper(t, miners, balances)
+				payFees(t, balances, msc, miners, sharders, 501, 501, now)
+				// check that the balance for the stakers of miner 0 are back to the stake value along with the interest and rewards
+				interest := getMinerStakerInterest(t, balances, msc, miners[0])
+				reward := getMinerStakerReward(t, balances, msc, miners[0], 1)
+				checkStakersBalances(t, miners[0].stakers, balances, interest+reward+stakeVal, "checking after delete completed")
+			},
+		},
+		{
+			"delete miner in wait phase",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 251, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
+				// set phasers to stun
+				pn := &PhaseNode{Phase: Wait, StartRound: 251, CurrentRound: 252, Restarts: 0}
+				_, err := balances.InsertTrieNode(pn.GetKey(), pn)
+				require.NoError(t, err, "setting_phasers error")
+				// delete miner at index 0
+				deleteMiner(t, balances, msc, miners, sharders,
+					"failed to delete from view change: magic block has already been created for next view change",
+					252, 501, now, 0)
+			},
+		},
+		{
+			"delete sharder pending pool",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 252, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, sharders[0].stakers, balances, 0, "checking after staking")
+				// delete miner at index 0
+				deleteSharder(t, balances, msc, miners, sharders, "", 251, 252, now, 0)
+				// check that the balance for the stakers of miner 0 are back to the stake value
+				checkStakersBalances(t, sharders[0].stakers, balances, stakeVal, "checking after delete")
+			},
+		},
+		{
+			"delete sharder active pool",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 251, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, sharders[0].stakers, balances, 0, "checking after staking")
+				// delete miner at index 0
+				deleteSharder(t, balances, msc, miners, sharders, "", 252, 501, now, 0)
+				checkStakersBalances(t, sharders[0].stakers, balances, 0, "checking after delete started")
+				msc.setDKGMinersTestHelper(t, miners, balances)
+				payFees(t, balances, msc, miners, sharders, 501, 501, now)
+				// check that the balance for the stakers of miner 0 are back to the stake value along with the interest and rewards
+				interest := getSharderStakerInterest(t, balances, msc, sharders[0])
+				reward := getSharderStakerReward(t, balances, msc, sharders[0], 1)
+				checkStakersBalances(t, sharders[0].stakers, balances, interest+reward+stakeVal, "checking after delete completed")
+			},
+		},
+		{
+			"delete sharder in wait phase",
+			func(t *testing.T) {
+				payFees(t, balances, msc, miners, sharders, 251, 251, now)
+				// check that the balance for the stakers of miner 0 are 0
+				checkStakersBalances(t, sharders[0].stakers, balances, 0, "checking after staking")
+				// set phasers to stun
+				pn := &PhaseNode{Phase: Wait, StartRound: 251, CurrentRound: 252, Restarts: 0}
+				_, err := balances.InsertTrieNode(pn.GetKey(), pn)
+				require.NoError(t, err, "setting_phasers error")
+				// delete miner at index 0
+				deleteSharder(t, balances, msc, miners, sharders,
+					"failed to delete from view change: magic block has already been created for next view change",
+					252, 501, now, 0)
+			},
+		},
+	}
+	for _, tc := range updateTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances = newTestBalances()
+			setConfig(t, balances)
+			miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
+			setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
 
-	t.Run("delete miner in wait phase", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 251, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
-		// set phasers to stun
-		pn := &PhaseNode{Phase: Wait, StartRound: 251, CurrentRound: 252, Restarts: 0}
-		_, err := balances.InsertTrieNode(pn.GetKey(), pn)
-		require.NoError(t, err, "setting_phasers error")
-		// delete miner at index 0
-		deleteMiner(t, balances, msc, miners, sharders,
-			"failed to delete from view change: magic block has already been created for next view change",
-			252, 501, now, 0)
-	})
-
-	t.Run("delete sharder pending pool", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 252, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, sharders[0].stakers, balances, 0, "checking after staking")
-		// delete miner at index 0
-		deleteSharder(t, balances, msc, miners, sharders, "", 251, 252, now, 0)
-		// check that the balance for the stakers of miner 0 are back to the stake value
-		checkStakersBalances(t, sharders[0].stakers, balances, stakeVal, "checking after delete")
-	})
-
-	t.Run("delete sharder active pool", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 251, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, sharders[0].stakers, balances, 0, "")
-		// delete miner at index 0
-		deleteSharder(t, balances, msc, miners, sharders, "", 252, 501, now, 0)
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "")
-		msc.setDKGMinersTestHelper(t, miners, balances)
-		payFees(t, balances, msc, miners, sharders, 501, 501, now)
-		// check that the balance for the stakers of miner 0 are back to the stake value along with the interest and rewards
-		interest := getSharderStakerInterest(t, balances, msc, sharders[0])
-		reward := getSharderStakerReward(t, balances, msc, sharders[0], 1)
-		checkStakersBalances(t, sharders[0].stakers, balances, interest+reward+stakeVal, "")
-	})
-
-	t.Run("delete sharder in wait phase", func(t *testing.T) {
-		balances = newTestBalances()
-		setConfig(t, balances)
-		miners, sharders = setupChain(t, miners, sharders, balances, msc, now)
-		setMagicBlock(t, extractMiners(miners), extractSharders(sharders), balances)
-		payFees(t, balances, msc, miners, sharders, 251, 251, now)
-		// check that the balance for the stakers of miner 0 are 0
-		checkStakersBalances(t, miners[0].stakers, balances, 0, "checking after staking")
-		// set phasers to stun
-		pn := &PhaseNode{Phase: Wait, StartRound: 251, CurrentRound: 252, Restarts: 0}
-		_, err := balances.InsertTrieNode(pn.GetKey(), pn)
-		require.NoError(t, err, "setting_phasers error")
-		// delete miner at index 0
-		deleteSharder(t, balances, msc, miners, sharders,
-			"failed to delete from view change: magic block has already been created for next view change",
-			252, 501, now, 0)
-	})
+			tc.testFuncs(t)
+		})
+	}
 }
 
 func payFees(t *testing.T, balances *testBalances, msc *MinerSmartContract, miners []*miner, sharders []*sharder, round, vc, now int64) {
@@ -187,7 +192,7 @@ func getSharderStakerReward(t *testing.T, balances *testBalances, msc *MinerSmar
 		blockReward := state.Balance(float64(gn.BlockReward) * gn.RewardRate)
 		sharderSplit := blockReward - state.Balance(float64(blockReward)*(gn.ShareRatio))
 		stakersSplit := sharderSplit - state.Balance(float64(sharderSplit)*sn.ServiceCharge)
-		rewards = state.Balance(float64(stakersSplit)/float64(len(sharder.stakers))) * state.Balance(roundsPaid)
+		rewards = state.Balance(float64(stakersSplit)/float64(len(sharder.stakers))/float64(len(balances.blockSharders))) * state.Balance(roundsPaid)
 	})
 	return rewards
 }

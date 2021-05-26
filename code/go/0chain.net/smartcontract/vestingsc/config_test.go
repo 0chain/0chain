@@ -6,6 +6,7 @@ import (
 	"time"
 
 	configpkg "0chain.net/chaincore/config"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
@@ -100,83 +101,115 @@ func TestVestingSmartContractUpdate(t *testing.T) {
 	var (
 		vsc            = newTestVestingSC()
 		balances       = newTestBalances()
-		tx             = newTransaction(owner, vsc.ID, 0, common.Now())
+		ownerTxn       = newTransaction(owner, vsc.ID, 0, common.Now())
+		nonOwnerTxn    = newTransaction(randString(32), vsc.ID, 0, common.Now())
 		originalConfig = configureConfig()
 		err            error
 		currentConfig  *config
-		update         = &config{}
 	)
 
-	// 1. Malformed update
-	t.Run("malformed update", func(t *testing.T) {
-		_, err = vsc.updateConfig(tx, []byte("} malformed {"), balances)
-		assertErrMsg(t, err, "update_config: invalid character '}' looking for beginning of value")
-	})
+	//test cases that produce errors
+	errorTestCases := []struct {
+		title string
+		txn   *transaction.Transaction
+		bytes []byte
+		err   string
+	}{
+		{"malformed update", ownerTxn, []byte("} malformed {"), "update_config: invalid character '}' looking for beginning of value"},
+		{"non owner account", nonOwnerTxn, []byte("} malformed {"), "update_config: unauthorized access - only the owner can update the variables"},
+	}
+	for _, tc := range errorTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = tc.txn
+			_, err = vsc.updateConfig(tc.txn, tc.bytes, balances)
+			require.Error(t, err)
+			require.EqualError(t, err, tc.err)
+		})
+	}
 
-	// 2. Non owner account tries to update
-	t.Run("non owner account", func(t *testing.T) {
-		tx.ClientID = randString(32)
-		_, err = vsc.updateConfig(tx, []byte("} malformed {"), balances)
-		assertErrMsg(t, err, "update_config: unauthorized access - only the owner can update the variables")
-	})
+	//test cases that will be denied
+	deniedTestCases := []struct {
+		title       string
+		request     *config
+		requireFunc func(config, request *config)
+	}{
+		{"all variables denied",
+			&config{},
+			func(config, request *config) {
+				require.Equal(t, config, request)
+			},
+		},
+	}
+	for _, tc := range deniedTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			_, err = vsc.updateConfig(ownerTxn, tc.request.Encode(), balances)
+			require.NoError(t, err)
+			currentConfig, err = vsc.getConfig(balances)
+			require.NoError(t, err)
+			tc.requireFunc(currentConfig, originalConfig)
+		})
+	}
 
-	// 3. All variables requested shall be denied
-	t.Run("all variables denied", func(t *testing.T) {
-		tx.ClientID = owner
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig, originalConfig)
-	})
-
-	// 4. Min lock will update
-	t.Run("min lock update", func(t *testing.T) {
-		update.MinLock = 987654321
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig.MinLock, update.MinLock)
-	})
-
-	// 5. Min duration will update
-	t.Run("min duration update", func(t *testing.T) {
-		update.MinDuration = time.Hour * 10
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig.MinDuration, update.MinDuration)
-	})
-
-	// 6. Max duration will update
-	t.Run("max duration update", func(t *testing.T) {
-		update.MaxDuration = time.Hour * 87600
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig.MaxDuration, update.MaxDuration)
-	})
-
-	// 7. Max destinations will update
-	t.Run("max destinations update", func(t *testing.T) {
-		update.MaxDestinations = 57
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig.MaxDestinations, update.MaxDestinations)
-	})
-
-	// 8. Max description length will update
-	t.Run("max description length update", func(t *testing.T) {
-		update.MaxDescriptionLength = 32
-		_, err = vsc.updateConfig(tx, mustEncode(t, update), balances)
-		require.NoError(t, err)
-		currentConfig, err = vsc.getConfig(balances)
-		require.NoError(t, err)
-		assert.EqualValues(t, currentConfig.MaxDescriptionLength, update.MaxDescriptionLength)
-	})
+	//test cases that will be updated
+	updateTestCases := []struct {
+		title       string
+		request     *config
+		requireFunc func(config, request *config)
+	}{
+		{
+			"min lock update",
+			&config{
+				MinLock: 987654321,
+			},
+			func(config, request *config) {
+				require.Equal(t, config.MinLock, request.MinLock)
+			},
+		},
+		{
+			"min duration update",
+			&config{
+				MinDuration: time.Hour * 10,
+			},
+			func(config, request *config) {
+				require.Equal(t, config.MinDuration, request.MinDuration)
+			},
+		},
+		{
+			"max duration update",
+			&config{
+				MaxDuration: time.Hour * 87600,
+			},
+			func(config, request *config) {
+				require.Equal(t, config.MaxDuration, request.MaxDuration)
+			},
+		},
+		{
+			"max destinations update",
+			&config{
+				MaxDestinations: 57,
+			},
+			func(config, request *config) {
+				require.Equal(t, config.MaxDestinations, request.MaxDestinations)
+			},
+		},
+		{
+			"max description length update",
+			&config{
+				MaxDescriptionLength: 32,
+			},
+			func(config, request *config) {
+				require.Equal(t, config.MaxDescriptionLength, request.MaxDescriptionLength)
+			},
+		},
+	}
+	for _, tc := range updateTestCases {
+		t.Run(tc.title, func(t *testing.T) {
+			balances.txn = ownerTxn
+			_, err = vsc.updateConfig(ownerTxn, tc.request.Encode(), balances)
+			require.NoError(t, err)
+			currentConfig, err = vsc.getConfig(balances)
+			require.NoError(t, err)
+			tc.requireFunc(currentConfig, tc.request)
+		})
+	}
 }

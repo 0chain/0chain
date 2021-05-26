@@ -130,7 +130,7 @@ func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction,
 	if t.ClientID != owner {
 		return "", common.NewError("failed to update variables", "unauthorized access - only the owner can update the variables")
 	}
-	newGn := &GlobalNode{}
+	newGn := newGlobalNode()
 	err := newGn.Decode(inputData)
 	if err != nil {
 		return "", common.NewError("failed to update variables", "request not formatted correctly")
