@@ -441,7 +441,8 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash))
-			return
+			// Temporary disable returning on mint error: TODO: revert back @bbist
+			// return
 		}
 	}
 
