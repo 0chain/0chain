@@ -1391,12 +1391,14 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	)
 
 	// initialize rrs for lfb round
-	lfbr := mc.GetMinerRound(lfb.Round)
-	if lfbr == nil {
-		lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
-	}
-	if lfbr.RandomSeed != lfb.RoundRandomSeed {
-		lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
+	if lfb.Round > 0 {
+		lfbr := mc.GetMinerRound(lfb.Round)
+		if lfbr == nil {
+			lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
+		}
+		if lfbr.RandomSeed != lfb.RoundRandomSeed {
+			lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
+		}
 	}
 
 	// kick new round from the new LFB from sharders, if it's newer
