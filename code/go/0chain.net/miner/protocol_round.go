@@ -1355,23 +1355,23 @@ func (mc *Chain) startNextRoundInRestartRound(ctx context.Context, i int64) {
 	mc.StartNextRound(ctx, pr)
 }
 
-func (mc *Chain) restartRound(ctx context.Context, round int64) {
+func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
-	var r = mc.GetMinerRound(round)
+	var r = mc.GetMinerRound(rn)
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Error("restartRound - round timeout occurred",
-			zap.Any("round", round), zap.Int64("count", crt),
+			zap.Any("round", rn), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 	case crt == 10:
 		logging.Logger.Error("restartRound - round timeout occurred (no further"+
 			" timeout messages will be displayed)",
-			zap.Any("round", round), zap.Int64("count", crt),
+			zap.Any("round", rn), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 		// TODO: should have a means to send an email/SMS to someone or
@@ -1386,14 +1386,23 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 	}
 
 	var (
-		isAhead = mc.isAheadOfSharders(ctx, round)
+		isAhead = mc.isAheadOfSharders(ctx, rn)
 		lfb     = mc.GetLatestFinalizedBlock()
 	)
+
+	// initialize rrs for lfb round
+	lfbr := mc.GetMinerRound(lfb.Round)
+	if lfbr == nil {
+		lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
+	}
+	if lfbr.RandomSeed != lfb.RoundRandomSeed {
+		lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
+	}
 
 	// kick new round from the new LFB from sharders, if it's newer
 	// than the current one
 	if updated {
-		if lfb.Round > round {
+		if lfb.Round > rn {
 			mc.kickRoundByLFB(ctx, lfb) // and continue
 			//round = mc.GetCurrentRound()
 		}
