@@ -4,66 +4,97 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/datastore"
 	"fmt"
 )
 
-func moveServiceCharge(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
-	value state.Balance, balances cstate.StateContextI) (err error) {
-
-	if value == 0 {
-		return // avoid insufficient transfer
-	}
-
-	var (
-		dw       = sp.Settings.DelegateWallet
-		transfer *state.Transfer
-	)
-	transfer, _, err = zcnPool.DrainPool(sscKey, dw, value, nil)
-	if err != nil {
-		return fmt.Errorf("transferring tokens challenge_pool() -> "+
-			"blobber_charge(%s): %v", dw, err)
-	}
-	if err = balances.AddTransfer(transfer); err != nil {
-		return fmt.Errorf("adding transfer: %v", err)
-	}
-
-	// blobber service charge
-	sp.Rewards.Charge += value
-	return
+type payment struct {
+	to     datastore.Key
+	amount state.Balance
 }
 
-// moveToBlobber moves tokens to blobber or validator
-func moveReward(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
-	value state.Balance, balances cstate.StateContextI) (moved state.Balance, err error) {
-
-	if value == 0 {
-		return // nothing to move
-	}
-
+func transferReward(
+	sscKey string,
+	zcnPool tokenpool.ZcnPool,
+	sp *stakePool,
+	value state.Balance,
+	balances cstate.StateContextI,
+) (state.Balance, error) {
 	if zcnPool.Balance < value {
 		return 0, fmt.Errorf("not enough tokens in pool %s: %d < %d",
 			zcnPool.ID, zcnPool.Balance, value)
 	}
 
-	var serviceCharge state.Balance
-	serviceCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
-
-	err = moveServiceCharge(sscKey, zcnPool, sp, serviceCharge, balances)
+	payments, err := getPayments(sp, float64(value))
 	if err != nil {
-		return
+		return 0, err
 	}
+	var moved state.Balance
+	for _, payment := range payments {
+		var transfer *state.Transfer
+		transfer, _, err = zcnPool.DrainPool(sscKey, payment.to, payment.amount, nil)
+		if err != nil {
+			return 0, fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
+				"stake_pool_holder(%s): %v", zcnPool.ID, payment.to, err)
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return 0, fmt.Errorf("adding transfer: %v", err)
+		}
+		moved += payment.amount
+	}
+	return moved, nil
+}
 
-	value = value - serviceCharge
+func mintReward(
+	sp *stakePool,
+	value float64,
+	balances cstate.StateContextI,
+) error {
+	payments, err := getPayments(sp, value)
+	if err != nil {
+		return err
+	}
+	for _, payment := range payments {
+		if err := balances.AddMint(&state.Mint{
+			Minter:     ADDRESS,        // storage SC
+			ToClientID: payment.to,     // delegate wallet
+			Amount:     payment.amount, // move total mints at once
+		}); err != nil {
+			return fmt.Errorf("minting rewards: %v", err)
+		}
+	}
+	return nil
+}
+
+// moveToBlobber moves tokens to blobber or validator
+func getPayments(sp *stakePool, value float64) ([]payment, error) {
+	var payments []payment
 
 	if value == 0 {
-		return // nothing to move
+		return nil, nil // nothing to move
+	}
+
+	var serviceCharge float64
+	serviceCharge = sp.Settings.ServiceCharge * value
+	if state.Balance(serviceCharge) > 0 {
+		sp.Rewards.Charge += state.Balance(serviceCharge)
+		payments = append(payments, payment{
+			to:     sp.Settings.DelegateWallet,
+			amount: state.Balance(serviceCharge),
+		})
+	}
+
+	if state.Balance(value-serviceCharge) == 0 {
+		return nil, nil // nothing to move
 	}
 
 	if len(sp.Pools) == 0 {
-		return 0, fmt.Errorf("no stake pools to move tokens to %s", zcnPool.ID)
+		return nil, fmt.Errorf("no stake pools to move tokens to")
 	}
 
+	valueLeft := float64(value) - serviceCharge
 	var stake = float64(sp.stake())
+
 	for _, dp := range sp.orderedPools() {
 		var ratio float64
 
@@ -72,23 +103,18 @@ func moveReward(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,
 		} else {
 			ratio = float64(dp.Balance) / stake
 		}
-		var move = state.Balance(float64(value) * ratio)
+		var move = valueLeft * ratio
 		if move == 0 {
 			continue
 		}
-		var transfer *state.Transfer
-		transfer, _, err = zcnPool.DrainPool(sscKey, dp.DelegateID, move, nil)
-		if err != nil {
-			return 0, fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
-				"stake_pool_holder(%s): %v", zcnPool.ID, dp.DelegateID, err)
-		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return 0, fmt.Errorf("adding transfer: %v", err)
-		}
-		// stat
-		dp.Rewards += move // add to stake_pool_holder rewards
-		moved += move
-	}
 
-	return
+		payments = append(payments, payment{
+			to:     dp.DelegateID,
+			amount: state.Balance(move),
+		})
+
+		// stat
+		dp.Rewards += state.Balance(move)
+	}
+	return payments, nil
 }

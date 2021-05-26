@@ -140,7 +140,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var movedReward state.Balance
-	if movedReward, err = moveReward(sc.ID, *cp.ZcnPool, sp, reward, balances); err != nil {
+	if movedReward, err = transferReward(sc.ID, *cp.ZcnPool, sp, reward, balances); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 	sp.Rewards.Blobber += movedReward
