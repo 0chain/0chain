@@ -436,7 +436,10 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		}
 	}
 
+	logging.Logger.Debug("update_state: all mints",
+		zap.Int("mints", len(sctx.GetMints())), zap.String("miner_id", b.MinerID))
 	for _, mint := range sctx.GetMints() {
+		logging.Logger.Debug("get_mints: mint", zap.Int("len(toClientID)", len(mint.ToClientID)), zap.Any("mint", mint))
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
