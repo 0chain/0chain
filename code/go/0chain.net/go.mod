@@ -13,6 +13,7 @@ require (
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/go-ini/ini v1.55.0 // indirect
+	github.com/go-playground/validator/v10 v10.6.1
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
@@ -21,6 +22,7 @@ require (
 	github.com/herumi/mcl v0.0.0-20190422075523-7f408a29acdc
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.1
@@ -33,9 +35,10 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.7.0
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.6.1
 	github.com/valyala/gozstd v1.5.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
+	go.etcd.io/bbolt v1.3.5
 	go.uber.org/atomic v1.4.0
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20200323165209-0ec3e9974c59
