@@ -24,8 +24,15 @@ import (
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
+
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+}
 
 // Phase number.
 type Phase int
@@ -664,7 +671,7 @@ type Stat struct {
 }
 
 type SimpleNode struct {
-	ID          string `json:"id"`
+	ID          string `json:"id" validate:"hexadecimal,len=64"`
 	N2NHost     string `json:"n2n_host"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
@@ -679,7 +686,7 @@ type SimpleNode struct {
 	// DelegateWallet grabs node rewards (excluding stake rewards) and
 	// controls the node setting. If the DelegateWallet hasn't been provided,
 	// then node ID used (for genesis nodes, for example).
-	DelegateWallet string `json:"delegate_wallet"` // ID
+	DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
 	// ServiceChange is % that miner node grabs where it's generator.
 	ServiceCharge float64 `json:"service_charge"` // %
 	// NumberOfDelegates is max allowed number of delegate pools.
@@ -706,6 +713,10 @@ func (smn *SimpleNode) Encode() []byte {
 
 func (smn *SimpleNode) Decode(input []byte) error {
 	return json.Unmarshal(input, smn)
+}
+
+func (smn *SimpleNode) Validate() error {
+	return validate.Struct(smn)
 }
 
 type MinerNodes struct {

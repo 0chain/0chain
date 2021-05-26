@@ -37,6 +37,10 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"decoding request: %v", err)
 	}
 
+	if err = newMiner.Validate(); err != nil {
+		return "", common.NewErrorf("add_miner", "invalid input: %v", err)
+	}
+
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
