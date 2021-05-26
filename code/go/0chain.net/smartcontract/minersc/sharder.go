@@ -23,6 +23,16 @@ func (msc *MinerSmartContract) AddSharder(
 
 	logging.Logger.Info("add_sharder", zap.Any("txn", t))
 
+	var newSharder = NewMinerNode()
+	if err = newSharder.Decode(input); err != nil {
+		logging.Logger.Error("Error in decoding the input", zap.Error(err))
+		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
+	}
+
+	if err = newSharder.Validate(); err != nil {
+		return "", common.NewErrorf("add_sharder", "invalid input: %v", err)
+	}
+
 	allSharders, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_sharder: failed to get sharders list", zap.Error(err))
@@ -30,12 +40,6 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
-
-	var newSharder = NewMinerNode()
-	if err = newSharder.Decode(input); err != nil {
-		logging.Logger.Error("Error in decoding the input", zap.Error(err))
-		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
-	}
 
 	if newSharder.DelegateWallet == "" {
 		newSharder.DelegateWallet = newSharder.ID

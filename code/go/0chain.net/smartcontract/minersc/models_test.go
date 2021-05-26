@@ -108,3 +108,29 @@ func TestQuickFixDuplicateHosts(t *testing.T) {
 	assert.NoError(t, quickFixDuplicateHosts(node("lmn.com", "", 1), nodes()))
 
 }
+
+func TestValidateSimpleNode(t *testing.T) {
+	sn := &SimpleNode{ID: ""}
+	assert.Error(t, sn.Validate(), "id is empty")
+
+	sn = &SimpleNode{ID: "66dfd72"}
+	assert.Error(t, sn.Validate(), "len(id) < 64")
+
+	sn = &SimpleNode{ID: "g6dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214"}
+	assert.Error(t, sn.Validate(), "invalid hexadecimal")
+
+	sn = &SimpleNode{ID: "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214"}
+	assert.NoError(t, sn.Validate(), "len(id) == 64")
+
+	sn = &SimpleNode{
+		ID:             "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
+		DelegateWallet: "66dfd72",
+	}
+	assert.Error(t, sn.Validate(), "len(id) != 64")
+
+	sn = &SimpleNode{
+		ID:             "66dfd726644496052930658c565e02b1528a0eff832b991fdab4fd265034b214",
+		DelegateWallet: "aadfd7266324d6052930658c565e011e528a0eff832b991fdab4fd265034b23e",
+	}
+	assert.NoError(t, sn.Validate(), "len(id) == 64")
+}
