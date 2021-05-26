@@ -1265,7 +1265,7 @@ func (sc *StorageSmartContract) finishAllocation(
 		var fctrml = conf.FailedChallengesToRevokeMinLock
 		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
 			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				if _, err := moveReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
+				if _, err := transferReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
 					return common.NewError("alloc_cancel_failed",
 						"paying min_lock for "+d.BlobberID+": "+err.Error())
 				}
@@ -1284,7 +1284,7 @@ func (sc *StorageSmartContract) finishAllocation(
 				move  = state.Balance(float64(cpLeft) * ratio * passRates[i])
 			)
 			var reward state.Balance
-			if reward, err = moveReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
+			if reward, err = transferReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
 				return common.NewError("fini_alloc_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())

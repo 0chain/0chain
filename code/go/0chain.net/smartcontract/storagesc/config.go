@@ -46,6 +46,30 @@ type writePoolConfig struct {
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
+type blockReward struct {
+	BlockReward           state.Balance `json:"block_reward"`
+	QualifyingStake       state.Balance `json:"qualifying_stake"`
+	SharderWeight         float64       `json:"sharder_weight"`
+	MinerWeight           float64       `json:"miner_weight"`
+	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
+	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
+}
+
+// Returns float64 to help reduce casts to state.Balance and hence rounding errors
+func (br blockReward) getBlockPayments() (sharder, miner, blobbeCapacity, blobberUsage float64) {
+	total := br.SharderWeight + br.MinerWeight + br.BlobberCapacityWeight + br.BlobberUsageWeight
+	if total == 0 {
+		return 0, 0, 0, 0
+	}
+
+	sharder = float64(br.BlockReward) * float64(br.SharderWeight) / total
+	miner = float64(br.BlockReward) * br.MinerWeight / total
+	blobbeCapacity = float64(br.BlockReward) * br.BlobberCapacityWeight / total
+	blobberUsage = float64(br.BlockReward) * br.BlobberUsageWeight / total
+	return sharder, miner, blobbeCapacity, blobberUsage
+
+}
+
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
@@ -120,6 +144,8 @@ type scConfig struct {
 
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
 	MaxCharge float64 `json:"max_charge"`
+
+	BlockReward *blockReward `json:"block_reward"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -206,6 +232,30 @@ func (sc *scConfig) validate() (err error) {
 	if sc.MaxCharge > 1.0 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
 			sc.MaxCharge)
+	}
+	if sc.BlockReward.BlockReward < 0 {
+		return fmt.Errorf("negative block_reward.block_reward: %v",
+			sc.BlockReward.BlockReward)
+	}
+	if sc.BlockReward.QualifyingStake < 0 {
+		return fmt.Errorf("negative block_reward.qualifying_stake: %v",
+			sc.BlockReward.QualifyingStake)
+	}
+	if sc.BlockReward.SharderWeight < 0 {
+		return fmt.Errorf("negative block_reward.sharder_weight: %v",
+			sc.BlockReward.SharderWeight)
+	}
+	if sc.BlockReward.MinerWeight < 0 {
+		return fmt.Errorf("negative block_reward.miner_weight: %v",
+			sc.BlockReward.MinerWeight)
+	}
+	if sc.BlockReward.BlobberCapacityWeight < 0 {
+		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
+			sc.BlockReward.BlobberCapacityWeight)
+	}
+	if sc.BlockReward.BlobberUsageWeight < 0 {
+		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
+			sc.BlockReward.BlobberUsageWeight)
 	}
 	return
 }
@@ -315,6 +365,15 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
+
+	conf.BlockReward = new(blockReward)
+	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
+	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
+	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
+	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_slash")
+	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber__capacity_weight")
+	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward." +
+		"blobber_usage_weight")
 
 	err = conf.validate()
 	return

@@ -115,59 +115,6 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	return
 }
 
-/*
-func (wp *writePool) moveToStake(sscKey, allocID, blobID string, zcnPool tokenpool.ZcnPool,
-	sp *stakePool, now common.Timestamp, value state.Balance,
-	balances chainState.StateContextI) (err error) {
-
-	var cut = wp.blobberCut(allocID, blobID, now)
-
-	if len(cut) == 0 {
-		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	var torm []*allocationPool // to remove later (empty allocation pools)
-	for _, ap := range cut {
-		if value == 0 {
-			break // all required tokens has moved to the blobber
-		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
-		var (
-			bp   = ap.Blobbers[bi]
-			move state.Balance
-		)
-		if value >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
-		} else {
-			move, bp.Balance = value, bp.Balance-value
-		}
-		if _, err := moveReward(sscKey, zcnPool, sp, move, balances); err != nil {
-			return err
-		}
-		sp.Rewards.Blobber += move
-		value -= move
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
-		if ap.Balance == 0 {
-			torm = append(torm, ap) // remove the allocation pool later
-		}
-	}
-
-	if value != 0 {
-		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	// remove empty allocation pools
-	wp.removeEmpty(allocID, torm)
-	return nil
-}
-*/
 // take write pool by ID to unlock (the take is get and remove)
 func (wp *writePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
