@@ -69,6 +69,14 @@ smart_contracts:
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
     max_challenges_per_generation: 100
+    # reward paid out every block
+    block_reward:
+      block_reward: 1
+      qualifying_stake: 1
+      sharder_weight: 1
+      miner_weight: 1
+      blobber_capacity_weight: 1
+      blobber_usage_weight: 1
   vestingsc:
     min_lock: 0.01
     min_duration: '2m'

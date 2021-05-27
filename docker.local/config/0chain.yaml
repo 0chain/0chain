@@ -10,6 +10,7 @@ development:
   state: true
   dkg: true
   view_change: false
+  block_rewards: false
   smart_contract:
     storage: true
     faucet: true
