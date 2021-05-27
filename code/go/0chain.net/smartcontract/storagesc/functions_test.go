@@ -133,8 +133,6 @@ func TestMintReward(t *testing.T) {
 	}
 
 	type args struct {
-		sscKey   string
-		zcnPool  tokenpool.ZcnPool
 		sp       *stakePool
 		value    float64
 		balances cstate.StateContextI
