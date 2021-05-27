@@ -35,17 +35,6 @@ func TestGetBlockPayments(t *testing.T) {
 				blobberUsage:   40,
 			},
 		},
-		{
-			name: "too low",
-			blockReward: blockReward{
-				BlockReward:           100,
-				QualifyingStake:       51.0,
-				SharderWeight:         5.0,
-				MinerWeight:           10.0,
-				BlobberCapacityWeight: 15.0,
-				BlobberUsageWeight:    20.0,
-			},
-		},
 	}
 
 	for _, tt := range tests {
