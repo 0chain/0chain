@@ -3,6 +3,7 @@
 package miner
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"errors"
 	"fmt"
@@ -263,7 +264,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		etxns = etxns[:blockSize]
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processFeeTxn(ctx, mc.createFeeTxn(b), b, clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
 		if err != nil {
 			return err
 		}
