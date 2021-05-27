@@ -93,7 +93,7 @@ const (
 	blobberId        = "bob"
 	transactionHash  = "12345678"
 	clientId         = "sally"
-	errDelta         = 5 // for testing values with rounding errors
+	errDelta         = 6 // for testing values with rounding errors
 	offerId          = "offer"
 	errStakePoolLock = "stake_pool_lock_failed: "
 	errStakeTooSmall = "too small stake to lock"

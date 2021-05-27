@@ -25,11 +25,10 @@ func transferReward(
 			zcnPool.ID, zcnPool.Balance, value)
 	}
 
-	payments, err := getPayments(sp, float64(value))
+	payments, moved, err := getPayments(sp, float64(value))
 	if err != nil {
 		return 0, err
 	}
-	var moved state.Balance
 	for _, payment := range payments {
 		var transfer *state.Transfer
 		transfer, _, err = zcnPool.DrainPool(sscKey, payment.to, payment.amount, nil)
@@ -40,9 +39,8 @@ func transferReward(
 		if err = balances.AddTransfer(transfer); err != nil {
 			return 0, fmt.Errorf("adding transfer: %v", err)
 		}
-		moved += payment.amount
 	}
-	return moved, nil
+	return state.Balance(moved), nil
 }
 
 func mintReward(
@@ -50,7 +48,7 @@ func mintReward(
 	value float64,
 	balances cstate.StateContextI,
 ) error {
-	payments, err := getPayments(sp, value)
+	payments, _, err := getPayments(sp, value)
 	if err != nil {
 		return err
 	}
@@ -67,11 +65,11 @@ func mintReward(
 }
 
 // moveToBlobber moves tokens to blobber or validator
-func getPayments(sp *stakePool, value float64) ([]payment, error) {
+func getPayments(sp *stakePool, value float64) ([]payment, float64, error) {
 	var payments []payment
 
 	if value == 0 {
-		return nil, nil // nothing to move
+		return nil, 0, nil // nothing to move
 	}
 
 	var serviceCharge float64
@@ -85,16 +83,17 @@ func getPayments(sp *stakePool, value float64) ([]payment, error) {
 	}
 
 	if state.Balance(value-serviceCharge) == 0 {
-		return nil, nil // nothing to move
+		return nil, 0, nil // nothing to move
 	}
 
 	if len(sp.Pools) == 0 {
-		return nil, fmt.Errorf("no stake pools to move tokens to")
+		return nil, 0, fmt.Errorf("no stake pools to move tokens to")
 	}
 
 	valueLeft := float64(value) - serviceCharge
 	var stake = float64(sp.stake())
 
+	var moved = 0.0
 	for _, dp := range sp.orderedPools() {
 		var ratio float64
 
@@ -115,6 +114,7 @@ func getPayments(sp *stakePool, value float64) ([]payment, error) {
 
 		// stat
 		dp.Rewards += state.Balance(move)
+		moved += move
 	}
-	return payments, nil
+	return payments, moved, nil
 }
