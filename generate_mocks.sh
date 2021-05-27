@@ -19,10 +19,10 @@ mockery --name=Serializable --output=../../mocks --filename=serializable.go
 cd $BASEDIR/code/go/0chain.net/core || exit
 mockery --output=../mocks/core --all
 
-cd $BASEDIR/code/go/0chain.net/miner
+cd $BASEDIR/code/go/0chain.net/miner || exit
 mockery --output=../mocks/miner --all
 
-cd $BASEDIR/code/go/0chain.net/chaincore
+cd $BASEDIR/code/go/0chain.net/chaincore || exit
 mockery --output=../mocks/chaincore --all
 
 cd $BASEDIR/code/go/0chain.net/conductor || exit
