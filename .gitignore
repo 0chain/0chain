@@ -56,3 +56,7 @@ docker.local/log_dumps
 
 # tar archives
 *.tar.gz
+
+code/go/0chain.net/mocks/*
+# exception to the rule
+!code/go/0chain.net/mocks/.gitkeep
