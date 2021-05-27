@@ -82,7 +82,7 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"payBlobberBlockRewards","input":{}}`
+	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
 	brTxn.Fee = 0
 	brTxn.Sign(node.Self.GetSignatureScheme())
 	return brTxn
