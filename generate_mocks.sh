@@ -16,4 +16,22 @@ mockery --name=SessionI --output=../../mocks --filename=session.go
 cd $BASEDIR/code/go/0chain.net/core/util || exit
 mockery --name=Serializable --output=../../mocks --filename=serializable.go
 
+cd $BASEDIR/code/go/0chain.net/core || exit
+mockery --output=../mocks/core --all
+
+cd $BASEDIR/code/go/0chain.net/miner
+mockery --output=../mocks/miner --all
+
+cd $BASEDIR/code/go/0chain.net/chaincore
+mockery --output=../mocks/chaincore --all
+
+cd $BASEDIR/code/go/0chain.net/conductor || exit
+mockery --output=../mocks/conductor --all
+
+cd $BASEDIR/code/go/0chain.net/sharder || exit
+mockery --output=../mocks/sharder --all
+
+cd $BASEDIR/code/go/0chain.net/smartcontract || exit
+mockery --output=../mocks/smartcontract --all
+
 echo "Mocks files are generated."
