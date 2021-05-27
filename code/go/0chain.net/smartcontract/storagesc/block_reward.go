@@ -10,7 +10,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	balances cstate.StateContextI,
 ) (err error) {
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, false); err != nil {
+	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return common.NewError("blobber_block_rewards_failed",
 			"cannot get smart contract configurations: "+err.Error())
 	}
