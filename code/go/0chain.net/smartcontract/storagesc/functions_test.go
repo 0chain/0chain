@@ -102,7 +102,7 @@ func TestTransferReward(t *testing.T) {
 				seviceCharge: 0.1,
 			},
 			want: want{
-				moved: 100,
+				moved: zcnToBalance(90),
 			},
 		},
 	}
@@ -118,7 +118,7 @@ func TestTransferReward(t *testing.T) {
 				require.EqualValues(t, tt.want.errorMsg, err.Error())
 				return
 			}
-			require.EqualValues(t, args.value, moved)
+			require.EqualValues(t, tt.want.moved, moved)
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
