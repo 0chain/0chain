@@ -1,6 +1,18 @@
 package chain_test
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
@@ -12,6 +24,7 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
@@ -20,17 +33,6 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zrc20sc"
-	"encoding/json"
-	"fmt"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"strings"
-	"testing"
-	"time"
 )
 
 func init() {

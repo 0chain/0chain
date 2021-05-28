@@ -6,8 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+
+	"0chain.net/core/viper"
 )
 
 func init() {

@@ -9,12 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -22,13 +20,12 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
-
-	"github.com/spf13/viper"
-
-	"go.uber.org/zap"
 )
 
 //PreviousBlockUnavailable - to indicate an error condition when the previous
