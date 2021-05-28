@@ -959,16 +959,19 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
+
+	mc.UpdateNodeState(b)
+
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		go mc.ComputeState(ctx, b)
+		mc.ComputeState(ctx, b)
 	}
+
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
 	}
 	b.SetBlockState(block.StateNotarized)
-	mc.UpdateNodeState(b)
 	return true
 }
 
