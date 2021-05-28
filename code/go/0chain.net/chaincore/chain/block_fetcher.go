@@ -388,12 +388,16 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 
 	// request from ticket sender, or. if the sender is missing,
 	// try to fetch from all other sharders from the current MB
-	if sh := sharders.GetNode(ticket.SharderID); sh != nil {
-		sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
-	} else {
-		sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
+	if node.Self.Underlying().GetKey() != ticket.SharderID {
+		if sh := sharders.GetNode(ticket.SharderID); sh != nil {
+			sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
+			if fb != nil {
+				return
+			}
+		}
 	}
 
+	sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 	if fb == nil {
 		return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 	}
