@@ -1248,17 +1248,17 @@ func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	n2nhost := strings.TrimSpace(nn.N2NHost)
 	port := nn.Port
 	if n2nhost == "" || localhost.MatchString(n2nhost) {
-		return fmt.Errorf("invalid n2nhost: %v", n2nhost)
+		return fmt.Errorf("invalid n2nhost: '%v'", n2nhost)
 	}
 	if host == "" || localhost.MatchString(host) {
 		host = n2nhost
 	}
 	for _, n := range allNodes {
-		if n2nhost == n.N2NHost && n.Port == port {
-			return fmt.Errorf("n2nhost:port already exists: %v:%v", n2nhost, port)
+		if n.ID != nn.ID && n2nhost == n.N2NHost && n.Port == port {
+			return fmt.Errorf("n2nhost:port already exists: '%v:%v'", n2nhost, port)
 		}
-		if host == n.Host && n.Port == port {
-			return fmt.Errorf("host:port already exists: %v:%v", host, port)
+		if n.ID != nn.ID && host == n.Host && n.Port == port {
+			return fmt.Errorf("host:port already exists: '%v:%v'", host, port)
 		}
 	}
 	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port
