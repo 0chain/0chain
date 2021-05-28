@@ -1,5 +1,8 @@
 # docker.local
 FROM golang:1.13.1-alpine3.10
+
+LABEL zchain="base:build"
+
 RUN apk add bash build-base grep git
 
 # Install RocksDB

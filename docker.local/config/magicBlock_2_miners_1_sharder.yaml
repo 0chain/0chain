@@ -1,0 +1,34 @@
+miners:
+- id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
+  public_key: 255452b9f49ebb8c8b8fcec9f0bd8a4284e540be1286bd562578e7e59765e41a7aada04c9e2ad3e28f79aacb0f1be66715535a87983843fea81f23d8011e728b
+  private_key: 8a3f56841f7fd5feb058cae8d16ab87e1c682fd53cfc1204a80c5d0ceb15f509
+  n2n_ip: 198.18.0.71
+  public_ip: localhost
+  port: 7071
+  description: localhost.m0
+  set_index: 0
+
+- id: 585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2
+  public_key: 17dd0eb10c2567899e34f368e1da2744c9cd3beb2e3babaa4e3350d950bad91dd4ed03d751d49e1f6c1b25c6ec8d1cc8db4ca2da72683d2958fb23843cc6a480
+  private_key: 6587a27fbc132345dec9cd70305cd106c29613908e39a8a41cb085d4a026140e
+  n2n_ip: 198.18.0.72
+  public_ip: localhost
+  port: 7072
+  description: localhost.m1
+  set_index: 1
+
+
+sharders:
+- id: 57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4
+  public_key: b9b236311a623be9d1999fb6dd30eb223cbe16639a9d5502e28879c67aa41915a0b100ce8248360ec73dd2d822087d1c19a8aabc5262a475d8553a35c90dd217
+  n2n_ip: 198.18.0.81
+  public_ip: localhost
+  port: 7171
+  description: localhost.s0
+
+magic_block_number: 1
+starting_round: 0
+t_percent: 67
+k_percent: 75
+magic_block_filename: "b0magicBlock_2_miners_1_sharder"
+dkg_summary_filename: "2_miners_1_sharder"
