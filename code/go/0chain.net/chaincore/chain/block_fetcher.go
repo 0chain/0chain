@@ -377,8 +377,19 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	params.Add("hash", ticket.LFBHash)
 	params.Add("round", strconv.FormatInt(ticket.Round, 10))
 
-	c.requestEntityFromSharderOrAll(lctx, ticket.SharderID, FBRequestor, &params, handler)
+	// request from ticket sender, or. if the sender is missing,
+	// try to fetch from all other sharders from the current MB
+	sharders := c.getLatestFinalizedMagicBlock().Sharders
+	if node.Self.Underlying().GetKey() != ticket.SharderID {
+		if sh := sharders.GetNode(ticket.SharderID); sh != nil {
+			sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
+			if fb != nil {
+				return
+			}
+		}
+	}
 
+	sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 	if fb == nil {
 		return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 	}
@@ -487,18 +498,6 @@ func (c *Chain) getLatestFinalizedMagicBlock() *block.MagicBlock {
 	c.lfmbMutex.Lock()
 	defer c.lfmbMutex.Unlock()
 	return c.latestFinalizedMagicBlock.MagicBlock
-}
-
-func (c *Chain) requestEntityFromSharderOrAll(ctx context.Context, sharderID string,
-	requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	sharders := c.getLatestFinalizedMagicBlock().Sharders
-
-	if sh := sharders.GetNode(sharderID); sh != nil {
-		sh.RequestEntityFromNode(ctx, requestor, params, handler)
-		return
-	}
-
-	sharders.RequestEntityFromAll(ctx, FBRequestor, params, handler)
 }
 
 //
