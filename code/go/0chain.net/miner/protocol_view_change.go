@@ -924,8 +924,10 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	// load from sharders
-	pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
-		lfmb.MagicBlockNumber-1, 1)
+	// pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
+	// 	lfmb.MagicBlockNumber-1, 1)
+	pfmb, err = httpclientutil.FetchMagicBlockFromSharders(
+		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1)
 	if err != nil || pfmb.MagicBlock == nil {
 		logging.Logger.Error("getting previous FMB from sharder", zap.Error(err),
 			zap.Int64("num", lfmb.MagicBlockNumber-1),
