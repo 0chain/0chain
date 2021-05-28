@@ -526,6 +526,50 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 
 }
 
+// TODO: Don't use this function. It doesn't to block validation. Just used for testing.
+func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64) (*block.Block, error) {
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+	}
+	blockChan := make(chan *block.Block, 1)
+
+	for _, url := range sharderURLs {
+		go func(url string) {
+			resp, err := httpClient.Get(url)
+			if err != nil || resp.StatusCode != http.StatusOK {
+				return
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return
+			}
+			b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+			if err := b.Decode(body); err != nil {
+				return
+			}
+			if b.MagicBlock != nil &&
+				b.MagicBlockNumber == number {
+				select {
+				case blockChan <- b:
+				default:
+				}
+			}
+		}(fmt.Sprintf("%v/%v%v", url, specificMagicBlockURL, number))
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("failed to fetch MB from sharders: n=%d, err=%v", number, ctx.Err())
+		case b := <-blockChan:
+			return b, nil
+		}
+	}
+}
+
 //GetMagicBlockCall for smart contract to get magic block
 func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
 	var retObj interface{}

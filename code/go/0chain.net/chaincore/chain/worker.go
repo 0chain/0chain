@@ -500,7 +500,8 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		requestMBNum := currentLFMB.MagicBlockNumber + 1
 		Logger.Debug("verify_chain_history", zap.Int64("get_mb_number", requestMBNum))
 
-		magicBlock, err = httpclientutil.GetMagicBlockCall(sharders, requestMBNum, 1)
+		// magicBlock, err = httpclientutil.GetMagicBlockCall(sharders, requestMBNum, 1)
+		magicBlock, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharders, requestMBNum)
 
 		if err != nil {
 			return common.NewError("get_lfmb_from_sharders",
