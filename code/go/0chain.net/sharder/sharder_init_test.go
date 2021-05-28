@@ -6,8 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
@@ -21,6 +19,7 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
