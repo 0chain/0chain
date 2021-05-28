@@ -7,7 +7,7 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 
 	"0chain.net/core/logging"
-	mocks "0chain.net/mocks/core/encryption"
+	mocks "0chain.net/mocks/core"
 )
 
 func init() {
