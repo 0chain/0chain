@@ -7,32 +7,34 @@ import (
 
 func TestGetBlockPayments(t *testing.T) {
 	type want struct {
-		sharder, miner, blobbeCapacity, blobberUsage int64
+		reward blockReward
 	}
 
 	tests := []struct {
-		name        string
-		blockReward blockReward
-		want        want
+		name                 string
+		SharderRatio         float64
+		MinerRatio           float64
+		BlobberCapacityRatio float64
+		BlobberUsageRatio    float64
+		want                 want
 	}{
 		{
 			name: "zeros",
 		},
 		{
-			name: "equal",
-			blockReward: blockReward{
-				BlockReward:           100,
-				QualifyingStake:       50.0,
-				SharderWeight:         5.0,
-				MinerWeight:           10.0,
-				BlobberCapacityWeight: 15.0,
-				BlobberUsageWeight:    20.0,
-			},
+			name:                 "equal",
+			SharderRatio:         5.0,
+			MinerRatio:           10.0,
+			BlobberCapacityRatio: 15.0,
+			BlobberUsageRatio:    20.0,
+
 			want: want{
-				sharder:        10,
-				miner:          20,
-				blobbeCapacity: 30,
-				blobberUsage:   40,
+				blockReward{
+					SharderWeight:         0.1,
+					MinerWeight:           0.2,
+					BlobberCapacityWeight: 0.3,
+					BlobberUsageWeight:    0.4,
+				},
 			},
 		},
 	}
@@ -41,11 +43,10 @@ func TestGetBlockPayments(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			s, m, bc, bu := tt.blockReward.getBlockPayments()
-			require.EqualValues(t, tt.want.sharder, s)
-			require.EqualValues(t, tt.want.miner, m)
-			require.EqualValues(t, tt.want.blobbeCapacity, bc)
-			require.EqualValues(t, tt.want.blobberUsage, bu)
+
+			var br = blockReward{}
+			br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio, tt.BlobberUsageRatio)
+			require.EqualValues(t, br, tt.want.reward)
 		})
 	}
 }

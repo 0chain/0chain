@@ -55,18 +55,19 @@ type blockReward struct {
 	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
 }
 
-// Returns float64 to help reduce casts to state.Balance and hence rounding errors
-func (br blockReward) getBlockPayments() (sharder, miner, blobbeCapacity, blobberUsage float64) {
-	total := br.SharderWeight + br.MinerWeight + br.BlobberCapacityWeight + br.BlobberUsageWeight
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
+	total := sharderRatio + minerRatio + bCapcacityRatio + bUsageRatio
 	if total == 0 {
-		return 0, 0, 0, 0
+		br.SharderWeight = 0
+		br.MinerWeight = 0
+		br.BlobberCapacityWeight = 0
+		br.BlobberUsageWeight = 0
+	} else {
+		br.SharderWeight = sharderRatio / total
+		br.MinerWeight = minerRatio / total
+		br.BlobberCapacityWeight = bCapcacityRatio / total
+		br.BlobberUsageWeight = bUsageRatio / total
 	}
-
-	sharder = float64(br.BlockReward) * float64(br.SharderWeight) / total
-	miner = float64(br.BlockReward) * br.MinerWeight / total
-	blobbeCapacity = float64(br.BlockReward) * br.BlobberCapacityWeight / total
-	blobberUsage = float64(br.BlockReward) * br.BlobberUsageWeight / total
-	return sharder, miner, blobbeCapacity, blobberUsage
 
 }
 
@@ -369,11 +370,18 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlockReward = new(blockReward)
 	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
 	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
+
 	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
 	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
 	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
 	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight" +
 		"blobber_usage_weight")
+	conf.BlockReward.setWeightsFromRatio(
+		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
+		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
+		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
+		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
+	)
 
 	err = conf.validate()
 	return

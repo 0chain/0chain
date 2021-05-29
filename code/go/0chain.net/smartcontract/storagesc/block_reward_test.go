@@ -1,10 +1,10 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain/mocks"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
+	"0chain.net/mocks/chaincore/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"strconv"
@@ -14,14 +14,14 @@ import (
 
 func TestPayBlobberBlockRewards(t *testing.T) {
 	type parameters struct {
-		blobberStakes         [][]float64
-		blobberServiceCharge  []float64
-		blockReward           float64
-		qualifyingStake       float64
-		blobberCapacityWeight float64
-		blobberUsageWeight    float64
-		minerWeight           float64
-		sharderWeight         float64
+		blobberStakes        [][]float64
+		blobberServiceCharge []float64
+		blockReward          float64
+		qualifyingStake      float64
+		blobberCapacityRato  float64
+		blobberUsageRatio    float64
+		minerRatio           float64
+		sharderRatio         float64
 	}
 
 	type blockRewards struct {
@@ -47,10 +47,10 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			}
 		}
 
-		var capacityRewardTotal = p.blockReward * p.blobberCapacityWeight /
-			(p.blobberCapacityWeight + p.blobberUsageWeight + p.minerWeight + p.sharderWeight)
-		var usageRewardTotal = p.blockReward * p.blobberUsageWeight /
-			(p.blobberCapacityWeight + p.blobberUsageWeight + p.minerWeight + p.sharderWeight)
+		var capacityRewardTotal = p.blockReward * p.blobberCapacityRato /
+			(p.blobberCapacityRato + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
+		var usageRewardTotal = p.blockReward * p.blobberUsageRatio /
+			(p.blobberCapacityRato + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
 
 		for i, bStake := range blobberStakes {
 			var reward blockRewards
@@ -90,16 +90,13 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 
 		var conf = &scConfig{
 			BlockReward: &blockReward{
-				BlockReward:           zcnToBalance(p.blockReward),
-				QualifyingStake:       zcnToBalance(p.qualifyingStake),
-				SharderWeight:         p.sharderWeight,
-				MinerWeight:           p.minerWeight,
-				BlobberCapacityWeight: p.blobberCapacityWeight,
-				BlobberUsageWeight:    p.blobberUsageWeight,
+				BlockReward:     zcnToBalance(p.blockReward),
+				QualifyingStake: zcnToBalance(p.qualifyingStake),
 			},
 		}
+		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRato, p.blobberUsageRatio)
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
-		if _, _, bc, bu := conf.BlockReward.getBlockPayments(); bu+bc == 0 {
+		if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 {
 			return ssc, balances
 		}
 
@@ -204,66 +201,66 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		{
 			name: "1 blobbers",
 			parameters: parameters{
-				blobberStakes:         [][]float64{{10}},
-				blobberServiceCharge:  []float64{0.1},
-				blockReward:           100,
-				qualifyingStake:       10.0,
-				blobberCapacityWeight: 5,
-				blobberUsageWeight:    10,
-				minerWeight:           2,
-				sharderWeight:         3,
+				blobberStakes:        [][]float64{{10}},
+				blobberServiceCharge: []float64{0.1},
+				blockReward:          100,
+				qualifyingStake:      10.0,
+				blobberCapacityRato:  5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
 		},
 		{
 			name: "3 blobbers",
 			parameters: parameters{
-				blobberStakes:         [][]float64{{10}, {5, 5, 10}, {2, 2}},
-				blobberServiceCharge:  []float64{0.1, 0.2, 0.3},
-				blockReward:           100,
-				qualifyingStake:       10.0,
-				blobberCapacityWeight: 5,
-				blobberUsageWeight:    10,
-				minerWeight:           2,
-				sharderWeight:         3,
+				blobberStakes:        [][]float64{{10}, {5, 5, 10}, {2, 2}},
+				blobberServiceCharge: []float64{0.1, 0.2, 0.3},
+				blockReward:          100,
+				qualifyingStake:      10.0,
+				blobberCapacityRato:  5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
 		},
 		{
 			name: "no blobbers",
 			parameters: parameters{
-				blobberStakes:         [][]float64{},
-				blobberServiceCharge:  []float64{},
-				blockReward:           100,
-				qualifyingStake:       10.0,
-				blobberCapacityWeight: 5,
-				blobberUsageWeight:    10,
-				minerWeight:           2,
-				sharderWeight:         3,
+				blobberStakes:        [][]float64{},
+				blobberServiceCharge: []float64{},
+				blockReward:          100,
+				qualifyingStake:      10.0,
+				blobberCapacityRato:  5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
 		},
 		{
 			name: "3 blobbers no qualifiers",
 			parameters: parameters{
-				blobberStakes:         [][]float64{{10}, {5, 5, 10}, {2, 2}},
-				blobberServiceCharge:  []float64{0.1, 0.2, 0.3},
-				blockReward:           100,
-				qualifyingStake:       1000.0,
-				blobberCapacityWeight: 5,
-				blobberUsageWeight:    10,
-				minerWeight:           2,
-				sharderWeight:         3,
+				blobberStakes:        [][]float64{{10}, {5, 5, 10}, {2, 2}},
+				blobberServiceCharge: []float64{0.1, 0.2, 0.3},
+				blockReward:          100,
+				qualifyingStake:      1000.0,
+				blobberCapacityRato:  5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
 		},
 		{
 			name: "zero block reward",
 			parameters: parameters{
-				blobberStakes:         [][]float64{{10}},
-				blobberServiceCharge:  []float64{0.1},
-				blockReward:           0,
-				qualifyingStake:       10.0,
-				blobberCapacityWeight: 5,
-				blobberUsageWeight:    10,
-				minerWeight:           2,
-				sharderWeight:         3,
+				blobberStakes:        [][]float64{{10}},
+				blobberServiceCharge: []float64{0.1},
+				blockReward:          0,
+				qualifyingStake:      10.0,
+				blobberCapacityRato:  5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
 		},
 	}
