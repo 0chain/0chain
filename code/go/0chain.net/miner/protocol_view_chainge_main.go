@@ -129,7 +129,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 
 		if _, ok := sos.ShareOrSigns[k]; !ok {
-			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			if share != nil {
+				sos.ShareOrSigns[k] = share
+			}
 		}
 	}
 
