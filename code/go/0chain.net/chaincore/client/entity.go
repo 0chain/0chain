@@ -46,10 +46,22 @@ func (c *Client) Clone() *Client {
 		return nil
 	}
 
-	clone := *c
-	clone.CollectionMemberField = *(c.CollectionMemberField.Clone())
-	clone.PublicKeyBytes = make([]byte, len(c.PublicKeyBytes))
+	clone := Client{
+		IDField:           c.IDField,
+		VersionField:      c.VersionField,
+		CreationDateField: c.CreationDateField,
+		PublicKey:         c.PublicKey,
+		PublicKeyBytes:    make([]byte, len(c.PublicKeyBytes)),
+		CollectionMemberField: datastore.CollectionMemberField{
+			CollectionScore: c.CollectionMemberField.CollectionScore,
+		},
+	}
+
 	copy(clone.PublicKeyBytes, c.PublicKeyBytes)
+
+	if c.EntityCollection != nil {
+		clone.EntityCollection = &(*c.EntityCollection)
+	}
 
 	return &clone
 }
