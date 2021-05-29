@@ -487,7 +487,9 @@ func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare)
 	defer mc.viewChangeProcess.Unlock()
 
 	for id, share := range shareOrSignSuccess {
-		mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
+		if share != nil {
+			mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
+		}
 	}
 }
 
