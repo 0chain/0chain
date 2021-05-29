@@ -98,11 +98,6 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 
 // RegisterClient registers client on BC.
 func (mc *Chain) RegisterClient() {
-	var (
-		thresholdByCount = config.GetThresholdCount()
-		err              error
-	)
-
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var (
 			clientMetadataProvider = datastore.GetEntityMetadata("client")
@@ -111,18 +106,23 @@ func (mc *Chain) RegisterClient() {
 		)
 		defer memorystore.Close(ctx)
 		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
+		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
 		if err != nil {
 			panic(err)
 		}
 	}
 
+	nodeBytes, err := json.Marshal(node.Self.Underlying().Client.Clone())
+	if err != nil {
+		logging.Logger.DPanic("Encode self node failed", zap.Error(err))
+	}
+
 	var (
-		mb           = mc.GetCurrentMagicBlock()
-		nodeBytes, _ = json.Marshal(node.Self.Underlying().Client)
-		miners       = mb.Miners.CopyNodesMap()
-		registered   = 0
-		consensus    = int(math.Ceil((float64(thresholdByCount) / 100) *
+		mb               = mc.GetCurrentMagicBlock()
+		miners           = mb.Miners.CopyNodesMap()
+		registered       = 0
+		thresholdByCount = config.GetThresholdCount()
+		consensus        = int(math.Ceil((float64(thresholdByCount) / 100) *
 			float64(len(miners))))
 	)
 
