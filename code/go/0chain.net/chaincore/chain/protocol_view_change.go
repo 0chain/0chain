@@ -529,16 +529,21 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 	highFunc func(seri util.Serializable) int64) (
 	got util.Serializable) {
 
+	wg := &sync.WaitGroup{}
 	var collect = make(chan util.Serializable, len(sharders))
 	for _, sharder := range sharders {
-		go makeSCRESTAPICall(ctx, address, relative, sharder,
-			newFunc(), collect)
+		wg.Add(1)
+		go func(sh string) {
+			defer wg.Done()
+			makeSCRESTAPICall(ctx, address, relative, sh, newFunc(), collect)
+		}(sharder)
 	}
 
+	wg.Wait()
+	close(collect)
 	var list = make([]seriHigh, 0, len(sharders))
-	for range sharders {
-		// don't add zero values, don't add rejected values
-		if val := <-collect; !isZero(val) && !rejectFunc(val) {
+	for val := range collect {
+		if !isZero(val) && !rejectFunc(val) {
 			list = append(list, seriHigh{
 				seri: val,
 				high: highFunc(val),
@@ -546,9 +551,7 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 		}
 	}
 
-	list = getHighestOnly(list)
-
-	return mostConsensus(list)
+	return mostConsensus(getHighestOnly(list))
 }
 
 // PhaseEvents notifications channel.
