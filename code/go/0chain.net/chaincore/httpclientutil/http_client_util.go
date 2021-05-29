@@ -533,27 +533,30 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 	}
-	blockChan := make(chan *block.Block, 1)
+
+	done := false
+	recv := make(chan *block.Block)
 
 	for _, url := range sharderURLs {
 		go func(url string) {
 			resp, err := httpClient.Get(url)
-			if err != nil || resp.StatusCode != http.StatusOK {
+			if done || err != nil || resp.StatusCode != http.StatusOK {
 				return
 			}
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
+			if done || err != nil {
 				return
 			}
 			b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-			if err := b.Decode(body); err != nil {
+			err = b.Decode(body)
+			if done || err != nil {
 				return
 			}
 			if b.MagicBlock != nil &&
 				b.MagicBlockNumber == number {
 				select {
-				case blockChan <- b:
+				case recv <- b:
 				default:
 				}
 			}
@@ -564,7 +567,8 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("failed to fetch MB from sharders: n=%d, err=%v", number, ctx.Err())
-		case b := <-blockChan:
+		case b := <-recv:
+			done = true
 			return b, nil
 		}
 	}
