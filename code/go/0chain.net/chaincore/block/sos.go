@@ -37,6 +37,9 @@ func (sos *ShareOrSigns) Hash() string {
 func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, scheme encryption.SignatureScheme) ([]string, bool) {
 	var shares []string
 	for key, share := range sos.ShareOrSigns {
+		if share == nil {
+			continue
+		}
 		if share.Sign != "" {
 			signatureScheme := scheme
 			pk, ok := publicKeys[key]
