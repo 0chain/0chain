@@ -19,17 +19,6 @@ type (
 	Order int8
 )
 
-// Clone returns a clone of this collection
-func (cf *CollectionMemberField) Clone() *CollectionMemberField {
-	cmf := &CollectionMemberField{
-		CollectionScore: cf.CollectionScore,
-	}
-	if cf.EntityCollection != nil {
-		cmf.EntityCollection = &(*cf.EntityCollection)
-	}
-	return cmf
-}
-
 /*GetCollectionScore - Get collection score */
 func GetCollectionScore(ts time.Time) int64 {
 	// time.Now().Unix() returns amount of seconds followed by 1e9
