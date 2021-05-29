@@ -8,6 +8,7 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -43,17 +44,19 @@ const (
 
 func (mc *Chain) SetupSC(ctx context.Context) {
 	logging.Logger.Info("SetupSC start...")
-	tm := time.NewTicker(5 * time.Second)
+	// create timer with 0 duration to start it immediately
+	tm := time.NewTimer(0)
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Debug("SetupSC is done")
 			return
 		case <-tm.C:
+			tm.Reset(30 * time.Second)
 			logging.Logger.Debug("SetupSC - check if node is registered")
 			func() {
 				isRegisteredC := make(chan bool)
-				cctx, cancel := context.WithCancel(ctx)
+				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 				defer cancel()
 
 				go func() {
@@ -71,7 +74,7 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 						logging.Logger.Debug("SetupSC - node is already registered")
 						return
 					}
-				case <-time.NewTimer(3 * time.Second).C:
+				case <-cctx.Done():
 					logging.Logger.Debug("SetupSC - check node registered timeout")
 					cancel()
 				}
@@ -90,7 +93,6 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 				}
 
 				logging.Logger.Debug("Register node transaction not confirmed yet")
-
 			}()
 		}
 	}
