@@ -15,7 +15,8 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 {
+	if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 ||
+		conf.BlockReward.BlockReward == 0 {
 		return nil
 	}
 
@@ -50,11 +51,11 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 	for i, qsp := range stakePools {
 		ratio := stakeTotals[i] / totalQStake
-		capacityReward := conf.BlockReward.BlobberCapacityWeight * ratio
-		usageReward := conf.BlockReward.BlobberUsageWeight * ratio
+		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
 		if err := mintReward(qsp, capacityReward, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "mintting capacity reward"+err.Error())
 		}
+		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
 		if err := mintReward(qsp, usageReward, balances); err != nil {
 			return common.NewError("blobber_block_rewards_failed", "mintting usage reward"+err.Error())
 		}

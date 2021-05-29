@@ -2,9 +2,9 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
-	"0chain.net/mocks/chaincore/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"strconv"
@@ -96,7 +96,8 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		}
 		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRato, p.blobberUsageRatio)
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
-		if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 {
+		if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 ||
+			conf.BlockReward.BlockReward == 0 {
 			return ssc, balances
 		}
 
