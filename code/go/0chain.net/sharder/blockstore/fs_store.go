@@ -105,7 +105,7 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	if err := fbs.write(b.Hash, b.Round, b); err != nil {
 		return err
 	}
-	if b.MagicBlock != nil {
+	if b.MagicBlock != nil && b.Round == b.MagicBlock.StartingRound {
 		return fbs.write(b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
 	}
 	return nil

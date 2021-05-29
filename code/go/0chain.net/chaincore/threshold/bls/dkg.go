@@ -57,7 +57,7 @@ var dkgSummaryMetadata *datastore.EntityMetadataImpl
 
 /* init -  To initialize a point on the curve */
 func init() {
-	err := bls.Init(bls.CurveFp254BNb)
+	err := bls.Init(int(bls.CurveFp254BNb))
 	if err != nil {
 		panic(fmt.Errorf("bls initialization error: %v", err))
 	}

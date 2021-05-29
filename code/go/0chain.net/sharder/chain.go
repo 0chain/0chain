@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"0chain.net/core/cache"
@@ -126,13 +127,23 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 
 /*GetBlockHash - get the block hash for a given round */
 func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
+	var err error
+	var fromStore bool
 	r := sc.GetSharderRound(roundNumber)
 	if r == nil {
-		sr, err := sc.GetRoundFromStore(ctx, roundNumber)
+		r, err = sc.GetRoundFromStore(ctx, roundNumber)
 		if err != nil {
 			return "", err
 		}
-		r = sr
+		fromStore = true
+	}
+	if r.BlockHash == "" {
+		err = fmt.Errorf("round %d has empty block hash", roundNumber)
+		Logger.Error("get_block_hash",
+			zap.Int64("round", roundNumber),
+			zap.Bool("from_store", fromStore),
+			zap.Error(err))
+		return "", err
 	}
 	return r.BlockHash, nil
 }
@@ -176,7 +187,6 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		return common.NewErrorf("load_lfb",
 			"can't update magic block: %v", err) // fatal
 	}
-	sc.UpdateNodesFromMagicBlock(bl.lfmb.MagicBlock)
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
 	bl.r.Block = bl.lfb
@@ -202,8 +212,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 			return common.NewErrorf("load_lfb",
 				"can't update newer magic block: %v", err) // fatal
 		}
-		sc.UpdateNodesFromMagicBlock(bl.nlfmb.MagicBlock) //
-		sc.SetLatestFinalizedMagicBlock(bl.nlfmb)         // the real latest
+		sc.SetLatestFinalizedMagicBlock(bl.nlfmb) // the real latest
 	}
 
 	return // everything is ok

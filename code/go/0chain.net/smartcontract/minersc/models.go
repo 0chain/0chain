@@ -25,8 +25,15 @@ import (
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
+	"github.com/go-playground/validator/v10"
 	"go.uber.org/zap"
 )
+
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+}
 
 // Phase number.
 type Phase int
@@ -668,7 +675,7 @@ type Stat struct {
 }
 
 type SimpleNode struct {
-	ID          string `json:"id"`
+	ID          string `json:"id" validate:"hexadecimal,len=64"`
 	N2NHost     string `json:"n2n_host"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
@@ -683,7 +690,7 @@ type SimpleNode struct {
 	// DelegateWallet grabs node rewards (excluding stake rewards) and
 	// controls the node setting. If the DelegateWallet hasn't been provided,
 	// then node ID used (for genesis nodes, for example).
-	DelegateWallet string `json:"delegate_wallet"` // ID
+	DelegateWallet string `json:"delegate_wallet" validate:"omitempty,hexadecimal,len=64"` // ID
 	// ServiceChange is % that miner node grabs where it's generator.
 	ServiceCharge float64 `json:"service_charge"` // %
 	// NumberOfDelegates is max allowed number of delegate pools.
@@ -710,6 +717,10 @@ func (smn *SimpleNode) Encode() []byte {
 
 func (smn *SimpleNode) Decode(input []byte) error {
 	return json.Unmarshal(input, smn)
+}
+
+func (smn *SimpleNode) Validate() error {
+	return validate.Struct(smn)
 }
 
 type MinerNodes struct {
@@ -1237,17 +1248,17 @@ func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	n2nhost := strings.TrimSpace(nn.N2NHost)
 	port := nn.Port
 	if n2nhost == "" || localhost.MatchString(n2nhost) {
-		return fmt.Errorf("invalid n2nhost: %v", n2nhost)
+		return fmt.Errorf("invalid n2nhost: '%v'", n2nhost)
 	}
 	if host == "" || localhost.MatchString(host) {
 		host = n2nhost
 	}
 	for _, n := range allNodes {
-		if n2nhost == n.N2NHost && n.Port == port {
-			return fmt.Errorf("n2nhost:port already exists: %v:%v", n2nhost, port)
+		if n.ID != nn.ID && n2nhost == n.N2NHost && n.Port == port {
+			return fmt.Errorf("n2nhost:port already exists: '%v:%v'", n2nhost, port)
 		}
-		if host == n.Host && n.Port == port {
-			return fmt.Errorf("host:port already exists: %v:%v", host, port)
+		if n.ID != nn.ID && host == n.Host && n.Port == port {
+			return fmt.Errorf("host:port already exists: '%v:%v'", host, port)
 		}
 	}
 	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port

@@ -966,16 +966,19 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
+
+	mc.UpdateNodeState(b)
+
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		go mc.ComputeState(ctx, b)
+		mc.ComputeState(ctx, b)
 	}
+
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
 	}
 	b.SetBlockState(block.StateNotarized)
-	mc.UpdateNodeState(b)
 	return true
 }
 
@@ -1355,23 +1358,23 @@ func (mc *Chain) startNextRoundInRestartRound(ctx context.Context, i int64) {
 	mc.StartNextRound(ctx, pr)
 }
 
-func (mc *Chain) restartRound(ctx context.Context, round int64) {
+func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
-	var r = mc.GetMinerRound(round)
+	var r = mc.GetMinerRound(rn)
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Error("restartRound - round timeout occurred",
-			zap.Any("round", round), zap.Int64("count", crt),
+			zap.Any("round", rn), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 	case crt == 10:
 		logging.Logger.Error("restartRound - round timeout occurred (no further"+
 			" timeout messages will be displayed)",
-			zap.Any("round", round), zap.Int64("count", crt),
+			zap.Any("round", rn), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
 		// TODO: should have a means to send an email/SMS to someone or
@@ -1386,14 +1389,25 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 	}
 
 	var (
-		isAhead = mc.isAheadOfSharders(ctx, round)
+		isAhead = mc.isAheadOfSharders(ctx, rn)
 		lfb     = mc.GetLatestFinalizedBlock()
 	)
+
+	// initialize rrs for lfb round
+	if lfb.Round > 0 {
+		lfbr := mc.GetMinerRound(lfb.Round)
+		if lfbr == nil {
+			lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
+		}
+		if lfbr.RandomSeed != lfb.RoundRandomSeed {
+			lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
+		}
+	}
 
 	// kick new round from the new LFB from sharders, if it's newer
 	// than the current one
 	if updated {
-		if lfb.Round > round {
+		if lfb.Round > rn {
 			mc.kickRoundByLFB(ctx, lfb) // and continue
 			//round = mc.GetCurrentRound()
 		}
@@ -1408,6 +1422,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 			mc.startNextRoundInRestartRound(ctx, i)
 			return // <============================================= [exit loop]
 		}
+
 		if xr.IsFinalized() || xr.IsFinalizing() {
 			continue // skip rounds finalizing or finalized <=== [continue loop]
 		}
@@ -1421,8 +1436,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 		// (previous round random seed required for it)
 		if xrhnb == nil {
 			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1),
-				mc.GetMiners(i))
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
@@ -1534,7 +1548,9 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb")
+		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb",
+			zap.Int64("sharder lfmb number", rcvd.MagicBlockNumber),
+			zap.Int64("local lfmb number", lfmb.MagicBlockNumber))
 		return
 	}
 
@@ -1544,7 +1560,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
 		return false, err
 	}
-	mc.UpdateNodesFromMagicBlock(rcvd.MagicBlock)
+
 	mc.ensureDKG(ctx, rcvd)
 	mc.SetLatestFinalizedMagicBlock(rcvd)
 
@@ -1630,11 +1646,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 }
 
 func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
-	if err = mc.UpdateMagicBlock(mb); err != nil {
-		return
-	}
-	mc.UpdateNodesFromMagicBlock(mb)
-	return
+	return mc.UpdateMagicBlock(mb)
 }
 
 // LoadMagicBlocksAndDKG from store to start working. It loads MB and previous

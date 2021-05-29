@@ -20,6 +20,7 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 			logging.Logger.Debug("SetupSC is done")
 			return
 		case <-tm.C:
+
 			if crpc.Client().State().IsLock {
 				continue
 			}
@@ -31,11 +32,12 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 				defer cancel()
 
 				go func() {
-					if mc.isRegistered(cctx) {
-						isRegisteredC <- true
-						return
+					isRegistered := mc.isRegistered(cctx)
+
+					select {
+					case isRegisteredC <- isRegistered:
+					default:
 					}
-					isRegisteredC <- false
 				}()
 
 				select {

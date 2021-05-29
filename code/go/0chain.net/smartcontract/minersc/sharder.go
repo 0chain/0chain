@@ -23,6 +23,16 @@ func (msc *MinerSmartContract) AddSharder(
 
 	logging.Logger.Info("add_sharder", zap.Any("txn", t))
 
+	var newSharder = NewMinerNode()
+	if err = newSharder.Decode(input); err != nil {
+		logging.Logger.Error("Error in decoding the input", zap.Error(err))
+		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
+	}
+
+	if err = newSharder.Validate(); err != nil {
+		return "", common.NewErrorf("add_sharder", "invalid input: %v", err)
+	}
+
 	allSharders, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_sharder: failed to get sharders list", zap.Error(err))
@@ -30,12 +40,6 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
-
-	var newSharder = NewMinerNode()
-	if err = newSharder.Decode(input); err != nil {
-		logging.Logger.Error("Error in decoding the input", zap.Error(err))
-		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
-	}
 
 	if newSharder.DelegateWallet == "" {
 		newSharder.DelegateWallet = newSharder.ID
@@ -188,25 +192,29 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		return "", err
 	}
 	if pn.Phase != Contribute {
-		return "", common.NewError("sharder_keep_failed",
+		return "", common.NewError("sharder_keep",
 			"this is not the correct phase to contribute (sharder keep)")
 	}
-
-	sharderKeepList, err := getShardersKeepList(balances)
-	if err != nil {
-		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", common.NewErrorf("sharder_keep_failed",
-			"Failed to get miner list: %v", err)
-	}
-	verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
 
 	newSharder := NewMinerNode()
 	err = newSharder.Decode(input)
 	if err != nil {
 		logging.Logger.Error("Error in decoding the input", zap.Error(err))
-
 		return "", err
 	}
+
+	if err = newSharder.Validate(); err != nil {
+		return "", common.NewErrorf("sharder_keep", "invalid input: %v", err)
+	}
+
+	sharderKeepList, err := getShardersKeepList(balances)
+	if err != nil {
+		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
+		return "", common.NewErrorf("sharder_keep",
+			"Failed to get miner list: %v", err)
+	}
+	verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
+
 	logging.Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
@@ -222,15 +230,15 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	allShardersList, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", common.NewErrorf("sharder_keep_failed",
+		return "", common.NewErrorf("sharder_keep",
 			"Failed to get miner list: %v", err)
 	}
 	if allShardersList.FindNodeById(newSharder.ID) == nil {
-		return "", common.NewErrorf("failed to add sharder", "unknown sharder: %v", newSharder.ID)
+		return "", common.NewErrorf("sharder_keep", "unknown sharder: %v", newSharder.ID)
 	}
 
 	if sharderKeepList.FindNodeById(newSharder.ID) != nil {
-		return "", common.NewErrorf("failed to add sharder", "sharder already exists: %v", newSharder.ID)
+		return "", common.NewErrorf("sharder_keep", "sharder already exists: %v", newSharder.ID)
 	}
 
 	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder)

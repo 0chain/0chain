@@ -1,7 +1,10 @@
 package vestingsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
+	"context"
 	"fmt"
+	"net/url"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -20,7 +23,21 @@ type VestingSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (vsc *VestingSmartContract) InitSC() {}
+func NewVestingSmartContract() smartcontractinterface.SmartContractInterface {
+	var vscCopy = &VestingSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	vscCopy.setSC(vscCopy.SmartContract, &smartcontract.BCContext{})
+	return vscCopy
+}
+
+func (ipsc *VestingSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *VestingSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
 
 func (vsc *VestingSmartContract) GetName() string {
 	return "vesting"
@@ -34,7 +51,7 @@ func (vsc *VestingSmartContract) GetRestPoints() RestPoints {
 	return vsc.RestHandlers
 }
 
-func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
+func (vsc *VestingSmartContract) setSC(sc *smartcontractinterface.SmartContract,
 	bcContext smartcontractinterface.BCContextI) {
 
 	vsc.SmartContract = sc

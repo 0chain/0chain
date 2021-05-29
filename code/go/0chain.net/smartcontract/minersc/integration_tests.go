@@ -11,7 +11,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 )
 
-func (msc *MinerSmartContract) InitSC() {
+func (msc *MinerSmartContract) initSC() {
 	if msc.smartContractFunctions == nil {
 		msc.smartContractFunctions = make(map[string]smartContractFunction)
 	}
