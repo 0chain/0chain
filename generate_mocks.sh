@@ -2,7 +2,7 @@
 
 BASEDIR=$(pwd)
 
-go get github.com/vektra/mockery/v2/.../
+go get "github.com/vektra/mockery/v2/.../"
 
 echo "Making mocks..."
 
