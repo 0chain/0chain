@@ -2,8 +2,7 @@
 
 BASEDIR=$(pwd)
 
-docker pull vektra/mockery
-alias mockery='docker run -v "$PWD":/src -w /src vektra/mockery'
+go get github.com/vektra/mockery/v2/.../
 
 echo "Making mocks..."
 
