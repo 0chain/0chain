@@ -54,7 +54,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		}
 
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
-
 	} else {
 		if !mr.IsVRFComplete() {
 			logging.Logger.Info("handle verify block - got block proposal before VRF is complete",
@@ -98,9 +97,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			}
 		}
 	}
-
+	// reassign the 'mr' variable, the miner should not be nil, but somehow
+	//, this happened!! how could it happen?
+	mr = mc.GetMinerRound(b.Round)
 	if mr == nil {
-		logging.Logger.Error("this should not happen %v", zap.Int64("round", b.Round),
+		logging.Logger.Error("this should not happen", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int64("cround", mc.GetCurrentRound()))
 		return

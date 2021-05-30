@@ -43,28 +43,30 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			if !mc.isStarted() {
 				break
 			}
-			if msg.Sender != nil {
-				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
-			} else {
-				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
-			}
-			switch msg.Type {
-			case MessageVRFShare:
-				protocol.HandleVRFShare(ctx, msg)
-			case MessageVerify:
-				protocol.HandleVerifyBlockMessage(ctx, msg)
-			case MessageVerificationTicket:
-				protocol.HandleVerificationTicketMessage(ctx, msg)
-			case MessageNotarization:
-				protocol.HandleNotarizationMessage(ctx, msg)
-			case MessageNotarizedBlock:
-				protocol.HandleNotarizedBlockMessage(ctx, msg)
-			}
-			if msg.Sender != nil {
-				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
-			} else {
-				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
-			}
+			go func(bmsg *BlockMessage) {
+				if bmsg.Sender != nil {
+					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+				} else {
+					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+				}
+				switch bmsg.Type {
+				case MessageVRFShare:
+					protocol.HandleVRFShare(ctx, bmsg)
+				case MessageVerify:
+					protocol.HandleVerifyBlockMessage(ctx, bmsg)
+				case MessageVerificationTicket:
+					protocol.HandleVerificationTicketMessage(ctx, bmsg)
+				case MessageNotarization:
+					protocol.HandleNotarizationMessage(ctx, bmsg)
+				case MessageNotarizedBlock:
+					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
+				}
+				if bmsg.Sender != nil {
+					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+				} else {
+					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+				}
+			}(msg)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -43,11 +44,6 @@ const (
 
 // RegisterClient registers client on BC.
 func (mc *Chain) RegisterClient() {
-	var (
-		thresholdByCount = config.GetThresholdCount()
-		err              error
-	)
-
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var (
 			clientMetadataProvider = datastore.GetEntityMetadata("client")
@@ -56,18 +52,23 @@ func (mc *Chain) RegisterClient() {
 		)
 		defer memorystore.Close(ctx)
 		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
+		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
 		if err != nil {
 			panic(err)
 		}
 	}
 
+	nodeBytes, err := json.Marshal(node.Self.Underlying().Client.Clone())
+	if err != nil {
+		logging.Logger.DPanic("Encode self node failed", zap.Error(err))
+	}
+
 	var (
-		mb           = mc.GetCurrentMagicBlock()
-		nodeBytes, _ = json.Marshal(node.Self.Underlying().Client)
-		miners       = mb.Miners.CopyNodesMap()
-		registered   = 0
-		consensus    = int(math.Ceil((float64(thresholdByCount) / 100) *
+		mb               = mc.GetCurrentMagicBlock()
+		miners           = mb.Miners.CopyNodesMap()
+		registered       = 0
+		thresholdByCount = config.GetThresholdCount()
+		consensus        = int(math.Ceil((float64(thresholdByCount) / 100) *
 			float64(len(miners))))
 	)
 
@@ -474,16 +475,21 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 	highFunc func(seri util.Serializable) int64) (
 	got util.Serializable) {
 
+	wg := &sync.WaitGroup{}
 	var collect = make(chan util.Serializable, len(sharders))
 	for _, sharder := range sharders {
-		go makeSCRESTAPICall(ctx, address, relative, sharder,
-			newFunc(), collect)
+		wg.Add(1)
+		go func(sh string) {
+			defer wg.Done()
+			makeSCRESTAPICall(ctx, address, relative, sh, newFunc(), collect)
+		}(sharder)
 	}
 
+	wg.Wait()
+	close(collect)
 	var list = make([]seriHigh, 0, len(sharders))
-	for range sharders {
-		// don't add zero values, don't add rejected values
-		if val := <-collect; !isZero(val) && !rejectFunc(val) {
+	for val := range collect {
+		if !isZero(val) && !rejectFunc(val) {
 			list = append(list, seriHigh{
 				seri: val,
 				high: highFunc(val),
@@ -491,9 +497,7 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 		}
 	}
 
-	list = getHighestOnly(list)
-
-	return mostConsensus(list)
+	return mostConsensus(getHighestOnly(list))
 }
 
 // PhaseEvents notifications channel.
