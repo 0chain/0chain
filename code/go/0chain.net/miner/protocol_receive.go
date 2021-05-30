@@ -97,8 +97,8 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			}
 		}
 	}
-	// reassign the 'mr' variable, the miner should not be nil, but in the
-	// testings, this happened!! how could it happen?
+	// reassign the 'mr' variable, the miner should not be nil, but somehow
+	//, this happened!! how could it happen?
 	mr = mc.GetMinerRound(b.Round)
 	if mr == nil {
 		logging.Logger.Error("this should not happen", zap.Int64("round", b.Round),
