@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/mocks"
+	"0chain.net/core/mocks/persistencestore"
 	"0chain.net/core/persistencestore"
 )
 

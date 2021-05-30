@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"0chain.net/core/datastore"
-	"0chain.net/core/mocks"
+	"0chain.net/core/mocks/datastore"
 )
 
 func TestMagicBlockMap_GetEntityMetadata(t *testing.T) {

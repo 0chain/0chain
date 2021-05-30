@@ -10,7 +10,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
-	"0chain.net/core/mocks"
+	"0chain.net/core/mocks/persistencestore"
 	"0chain.net/core/persistencestore"
 )
 

@@ -20,7 +20,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"0chain.net/core/mocks"
+	"0chain.net/core/mocks/datastore"
+	cc "0chain.net/core/mocks/util"
 	"0chain.net/core/util"
 )
 
@@ -728,14 +729,14 @@ func TestGetTransactionStatus(t *testing.T) {
 func TestMakeSCRestAPICall(t *testing.T) {
 	t.Parallel()
 
-	errEntity := mocks.Serializable{}
+	errEntity := cc.Serializable{}
 	errEntity.On("Decode", mock.AnythingOfType("[]uint8")).Return(
 		func(blob []byte) error {
 			return errors.New("")
 		},
 	)
 
-	entity := mocks.Serializable{}
+	entity := cc.Serializable{}
 	entity.On("Decode", mock.AnythingOfType("[]uint8")).Return(
 		func(blob []byte) error {
 			return nil
