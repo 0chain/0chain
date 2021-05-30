@@ -145,16 +145,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
 
-		resp = string(newMiner.Encode())
 		update = true
 	}
 
 	if !update {
-		return "", common.NewErrorf("add_miner", "miner already exists, "+
-			"l_all_miners: %d, state DB version: %d", len(allMiners.Nodes), balances.GetState().GetVersion())
+		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
 	}
 
-	return resp, nil
+	return string(newMiner.Encode()), nil
 }
 
 func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
