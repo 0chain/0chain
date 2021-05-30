@@ -125,20 +125,28 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 	type args struct {
 		params []int
-		size   int
+		size int
 	}
 
-	var params = []StorageNodeGeolocation{
-		{Latitude: 37.773972, Longitude: -122.431297}, // San Francisco
-		{Latitude: -33.918861, Longitude: 18.423300}, // Cape Town
-		{Latitude: 59.937500, Longitude: 30.308611}, // St Petersburg
-		{Latitude: 22.633333, Longitude: 120.266670}, // Kaohsiung City
+	type want struct {
+		params []int
+	}
+
+	var params = []*StorageNode{
+		&StorageNode{Geolocation:
+			StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
+		&StorageNode{Geolocation:
+			StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}}, // Cape Town
+		&StorageNode{Geolocation:
+			StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}}, // St Petersburg
+		&StorageNode{Geolocation:
+			StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}}, // Kaohsiung City
 	}
 
 	tests := []struct {
 		name string
 		args args
-		want []int
+		want want
 	}{
 		{
 			name: "OK optimal geo diversification (2 of 3)",
@@ -146,7 +154,9 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 				params: []int{0, 1, 2},
 				size: 2,
 			},
-			want: []int{0, 1},
+			want: want{
+				params: []int{0, 1},
+			},
 		},
 		{
 			name: "OK optimal geo diversification (3 of 4)",
@@ -154,38 +164,39 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 				params: []int{0, 1, 2, 3},
 				size: 3,
 			},
-			want: []int{1, 2, 3},
+			want: want{
+				params: []int{0, 1, 3},
+			},
 		},
 		{
-			name: "Error non optimal geo diversification",
+			name: "OK optimal geo diversification not applied",
 			args: args{
-				params: []int{1, 2, 3},
+				params: []int{1},
 				size: 2,
 			},
-			want: []int{1, 2},
+			want: want{
+				params: []int{1},
+			},
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
 			var sa = &StorageAllocation{
-				DiverseBlobbers: true,
+				DiverseBlobbers: len(tt.args.params) > len(tt.want.params),
 			}
 
 			var argsBlobbers []*StorageNode
 			for _, v := range tt.args.params {
-				argsBlobbers = append(argsBlobbers, &StorageNode{
-					Geolocation: params[v],
-				})
+				argsBlobbers = append(argsBlobbers, params[v])
 			}
 
 			var wantBlobbers []*StorageNode
-			for _, v := range tt.want {
-				wantBlobbers = append(wantBlobbers, &StorageNode{
-					Geolocation: params[v],
-				})
+			for _, v := range tt.want.params {
+				wantBlobbers = append(wantBlobbers, params[v])
 			}
 
 			got := sa.diversifyBlobbers(argsBlobbers, tt.args.size)
