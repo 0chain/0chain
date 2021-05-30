@@ -125,7 +125,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 	type args struct {
 		geolocationParams []int
-		size     int64
+		size     int
 	}
 
 	var params = []*StorageNodeGeolocation{
