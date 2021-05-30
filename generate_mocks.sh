@@ -2,6 +2,9 @@
 
 BASEDIR=$(pwd)
 
+docker pull vektra/mockery
+alias mockery='docker run -v "$PWD":/src -w /src vektra/mockery'
+
 echo "Making mocks..."
 
 cd $BASEDIR/code/go/0chain.net/core || exit

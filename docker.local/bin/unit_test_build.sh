@@ -5,9 +5,6 @@ set -e
 # of code/go/0chain.net.
 # Returns 0 if all of the tests pass and 1 if any one of the tests fail.
 
-docker pull vektra/mockery
-alias mockery='docker run -v "$PWD":/src -w /src vektra/mockery'
-
 ./generate_mocks.sh
 
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
