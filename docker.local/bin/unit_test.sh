@@ -5,8 +5,6 @@ set -e
 INTERACTIVE="-it"
 PACKAGE=""
 
-./generate_mocks.sh
-
 if [[ "$1" == *"--ci"* ]]
 then
     # We need non-interactive mode for CI

@@ -2,8 +2,6 @@
 
 BASEDIR=$(pwd)
 
-go get "github.com/vektra/mockery/v2/.../"
-
 echo "Making mocks..."
 
 cd $BASEDIR/code/go/0chain.net/core || exit
