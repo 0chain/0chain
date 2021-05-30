@@ -1440,8 +1440,14 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
-		if xr.GetRandomSeed() != xrhnb.GetRoundRandomSeed() {
-			mc.AddNotarizedBlockToRound(xr, xrhnb)
+		xrhnb, _ = mc.AddNotarizedBlockToRound(xr, xrhnb)
+		if !xrhnb.IsStateComputed() {
+			lfmb := mc.GetLatestFinalizedMagicBlockRound(xr.GetRoundNumber())
+			if lfmb != nil && lfmb.Miners.HasNode(node.Self.GetKey()) {
+				if err := mc.ComputeOrSyncState(ctx, xrhnb); err != nil {
+					logging.Logger.Debug("restartRound: Notarized block ComputeOrSyncState", zap.Error(err))
+				}
+			}
 		}
 	}
 }
