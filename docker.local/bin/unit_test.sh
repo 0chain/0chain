@@ -5,6 +5,9 @@ set -e
 INTERACTIVE="-it"
 PACKAGE=""
 
+docker pull vektra/mockery
+alias mockery='docker run -v "$PWD":/src -w /src vektra/mockery'
+
 ./generate_mocks.sh
 
 if [[ "$1" == *"--ci"* ]]
