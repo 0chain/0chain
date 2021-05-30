@@ -128,7 +128,7 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 		size   int
 	}
 
-	var params = []*StorageNodeGeolocation{
+	var params = []StorageNodeGeolocation{
 		{Latitude: 37.773972, Longitude: -122.431297}, // San Francisco
 		{Latitude: -33.918861, Longitude: 18.423300}, // Cape Town
 		{Latitude: 59.937500, Longitude: 30.308611}, // St Petersburg
