@@ -176,12 +176,16 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 
 			var argsBlobbers []*StorageNode
 			for _, v := range tt.args.params {
-				argsBlobbers = append(argsBlobbers, params[v])
+				argsBlobbers = append(argsBlobbers, &StorageNode{
+					Geolocation: params[v],
+				})
 			}
 
 			var wantBlobbers []*StorageNode
 			for _, v := range tt.want {
-				wantBlobbers = append(wantBlobbers, params[v])
+				wantBlobbers = append(wantBlobbers, &StorageNode{
+					Geolocation: params[v],
+				})
 			}
 
 			got := sa.diversifyBlobbers(argsBlobbers, tt.args.size)
