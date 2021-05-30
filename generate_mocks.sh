@@ -5,21 +5,21 @@ BASEDIR=$(pwd)
 echo "Making mocks..."
 
 cd $BASEDIR/code/go/0chain.net/core || exit
-mockery --output=../core/mocks --all --keeptree
+mockery --output=../core/mocks --all
 
 cd $BASEDIR/code/go/0chain.net/miner || exit
-mockery --output=../miner/mocks --all --keeptree
+mockery --output=../miner/mocks --all
 
 cd $BASEDIR/code/go/0chain.net/chaincore || exit
-mockery --output=../chaincore/mocks --all --keeptree
+mockery --output=../chaincore/mocks --all
 
 cd $BASEDIR/code/go/0chain.net/conductor || exit
-mockery --output=../conductor/mocks --all --keeptree
+mockery --output=../conductor/mocks --all
 
 cd $BASEDIR/code/go/0chain.net/sharder || exit
-mockery --output=../sharder/mocks --all --keeptree
+mockery --output=../sharder/mocks --all
 
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
-mockery --output=../smartcontract/mocks --all --keeptree
+mockery --output=../smartcontract/mocks --all
 
 echo "Mocks files are generated."

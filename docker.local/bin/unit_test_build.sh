@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -e
 
 # Runs each unit test in batches corresponding to each subdirectory
 # of code/go/0chain.net.
@@ -8,4 +9,3 @@
 
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
-
