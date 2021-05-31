@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -188,21 +189,20 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 			rrs = cr.GetRandomSeed()
 		}
 
-		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
-		if shares >= consensus {
+		vrfThreshold := mb.T
+		if shares >= vrfThreshold {
 			check = "&#x2714;"
 		}
-		vrfMsg = fmt.Sprintf("(%v/%v)%s", shares, consensus, check)
+		vrfMsg = fmt.Sprintf("(%v/%v)%s", shares, vrfThreshold, check)
 	}
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "Current Round")
+	fmt.Fprintf(w, "Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", c.GetCurrentRound())
+	fmt.Fprintf(w, "<a style='display:flex;' href='/_diagnostics/round_info'><span style='flex:1;'></span>%d</a>", rn)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -489,14 +489,17 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 	// formats
 	const (
 		row  = "<tr%s><td>%s</td><td class='number'>%s</td></tr>"
-		info = "%.10s %s -> %.5s"
+		info = "<span style='display:flex;'>%.10s -> %.5s<span style='flex:1;'></span>%s</span>"
 		lkmb = "<tr class='grey'><td>LFMB</td><td class='number'>%d %.10s</td></tr>"
 	)
 
 	var (
 		ctx  = r.Context()
+		rn   = c.GetCurrentRound()
+		cr   = c.GetRound(rn)
 		lfb  = c.GetLatestFinalizedBlock()
 		plfb = c.GetLocalPreviousBlock(ctx, lfb)
+		lfmb = c.GetLatestMagicBlock()
 
 		next [4]*block.Block // blocks after LFB
 	)
@@ -525,7 +528,7 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	for _, bn := range []blockName{
+	for i, bn := range []blockName{
 		{itoa(lfb.Round - 1), " class='green'", plfb},
 		{"LFB", " class='green'", lfb},
 		{itoa(lfb.Round + 1), "", next[0]},
@@ -533,17 +536,37 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 		{itoa(lfb.Round + 3), "", next[2]},
 		{itoa(lfb.Round + 4), "", next[3]},
 	} {
+		if i == 5 && node.Self.Underlying().Type == node.NodeTypeMiner {
+			continue
+		}
 		var hash = "-"
 		if bn.block != nil {
 			hash = fmt.Sprintf(info, bn.block.Hash,
-				boolString(bn.block.IsBlockNotarized()),
-				bn.block.PrevHash)
+				bn.block.PrevHash,
+				boolString(bn.block.IsBlockNotarized()))
 		}
 		fmt.Fprintf(w, row, bn.style, bn.name, hash)
 	}
 
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		var blockHash string
+		var numVerificationTickets int
+		if cr != nil {
+			b := cr.GetBestRankedProposedBlock()
+			if b != nil {
+				blockHash = b.Hash
+				numVerificationTickets = len(b.GetVerificationTickets())
+			}
+		}
+		consensus := int(math.Ceil((float64(config.GetThresholdCount()) / 100) * float64(lfmb.Miners.Size())))
+
+		bvts := fmt.Sprintf("<span style='display:flex;'>%.10s<span style='flex:1;'></span>(%v/%v)%s</span>", blockHash,
+			numVerificationTickets, consensus, boolString(numVerificationTickets > consensus))
+		fmt.Fprintf(w, "<tr class='green'><td>CRB</td><td>%v</td></tr>", bvts)
+
+	}
+
 	// latest known magic block (finalized)
-	var lfmb = c.GetLatestMagicBlock()
 	fmt.Fprintf(w, lkmb, lfmb.StartingRound, lfmb.Hash)
 	fmt.Fprintf(w, "</table>")
 }
@@ -1197,43 +1220,156 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 //RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
-	PrintCSS(w)
+	roundParamQuery := ""
+
 	sc := GetServerChain()
-	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.GetCurrentRound())
+	rn := sc.GetCurrentRound()
+	roundParam := r.URL.Query().Get("round")
+	if roundParam != "" {
+		roundParamQuery = "?" + r.URL.RawQuery
+		_rn, err := strconv.ParseInt(roundParam, 10, 64)
+		if err != nil {
+			http.Redirect(w, r, "/_diagnostics/round_info", http.StatusTemporaryRedirect)
+			return
+		}
+		rn = _rn
+	}
+
+	round := sc.GetRound(rn)
+	if rn == 0 || round == nil {
+		http.Error(w, fmt.Sprintf("Round not found: round=%d", rn), http.StatusNotFound)
+		return
+	}
+
+	PrintCSS(w)
+	fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		//ToDo: Add Sharder related round info
 		return
 	}
-	cr := sc.GetRound(sc.GetCurrentRound())
-	mb := sc.GetCurrentMagicBlock()
-	if sc.GetCurrentRound() > 0 && cr != nil {
 
-		rrs := int64(0)
-		if cr.HasRandomSeed() {
-			rrs = cr.GetRandomSeed()
+	mb := sc.GetMagicBlock(rn)
+	if mb == nil {
+		lfmb := sc.GetLatestFinalizedMagicBlockRound(rn)
+		if lfmb != nil {
+			mb = lfmb.MagicBlock
 		}
-		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
-
-		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)
-		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-		fmt.Fprintf(w, "<tr><th>Node</th><th>VRF</th></tr>")
-
-		shares := cr.GetVRFShares()
-		for _, share := range shares {
-			n := share.GetParty()
-			fmt.Fprintf(w, "<tr>")
-			fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
-			fmt.Fprintf(w, n.GetPseudoName())
-			fmt.Fprintf(w, "</td>")
-			fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
-			fmt.Fprintf(w, "%v", share.Share)
-			fmt.Fprintf(w, "</td>")
-			fmt.Fprintf(w, "</tr>")
-		}
-		//ToDo: Add more RoundInfo
 	}
+	if mb == nil {
+		fmt.Fprintf(w, fmt.Sprintf("<h3>MagicBlock not found for round %d</h3>", rn))
+		return
+	}
+
+	rrs := int64(0)
+	if round.HasRandomSeed() {
+		rrs = round.GetRandomSeed()
+	}
+	thresholdByCount := config.GetThresholdCount()
+	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
+
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td class='active'>Consensus</td><td class='number'>%d</td>", consensus)
+	fmt.Fprintf(w, "<tr><td class='active'>Random Seed</td><td class='number'>%d</td>", rrs)
+	fmt.Fprintf(w, "</table>")
+
+	roundHasRanks := round != nil && round.HasRandomSeed()
+
+	getNodeLink := func(n *node.Node) string {
+		if node.Self.IsEqual(n) {
+			return fmt.Sprintf("%v", n.GetPseudoName())
+		}
+		if len(n.Path) > 0 {
+			return fmt.Sprintf("<a href='https://%v/%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Path, roundParamQuery, n.GetPseudoName())
+		}
+		return fmt.Sprintf("<a href='http://%v:%v/_diagnostics/round_info%s'>%v</a>", n.Host, n.Port, roundParamQuery, n.GetPseudoName())
+	}
+
+	// VRFS
+	fmt.Fprintf(w, "<h3>VRF Shares</h3>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Node</th><th>VRFS</th></tr>")
+	shares := round.GetVRFShares()
+	for _, share := range shares {
+		fmt.Fprintf(w, "<tr><td>")
+		n := share.GetParty()
+		if n != nil {
+			fmt.Fprintf(w, "%d", n.SetIndex)
+			if roundHasRanks && sc.IsRoundGenerator(round, n) {
+				fmt.Fprintf(w, "<sup>%d</sup>", round.GetMinerRank(n))
+			}
+			fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n))
+
+		} else {
+			fmt.Fprintf(w, "-</td><td>-</td>")
+		}
+		fmt.Fprintf(w, "<td>%v</td></tr>", share.Share)
+	}
+	fmt.Fprintf(w, "</table>")
+
+	// Verification and Notarization
+	blocksMap := make(map[string]*block.Block)
+	for _, b := range round.GetProposedBlocks() {
+		blocksMap[b.Hash] = b
+	}
+	for _, b := range round.GetNotarizedBlocks() {
+		blocksMap[b.Hash] = b
+	}
+
+	blocks := make([]*block.Block, 0, len(blocksMap))
+	for _, b := range blocksMap {
+		blocks = append(blocks, b)
+	}
+
+	sort.SliceStable(blocks, func(i, j int) bool {
+		b1, b2 := blocks[i], blocks[j]
+		rank1, rank2 := math.MaxInt64, math.MaxInt64
+		if m1 := mb.Miners.GetNode(b1.MinerID); m1 != nil {
+			rank1 = round.GetMinerRank(m1)
+		}
+		if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
+			rank2 = round.GetMinerRank(m2)
+		}
+		return rank1 < rank2
+	})
+
+	fmt.Fprintf(w, "<h3>Block Verification and Notarization</h3>")
+
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Generator</th><th>Block</th><th>Verification</th><th>Notarization</th></tr>")
+	for _, b := range blocks {
+		fmt.Fprintf(w, "<tr><td>")
+
+		n := mb.Miners.GetNode(b.MinerID)
+		if n != nil {
+			fmt.Fprintf(w, "%d", n.SetIndex)
+			fmt.Fprintf(w, "</td><td>%s</td>", getNodeLink(n))
+		} else {
+			fmt.Fprintf(w, "-</td><td>-</td>")
+		}
+
+		fmt.Fprintf(w, "<td title='%s'>%.8s...</td>", b.Hash, b.Hash)
+
+		tickets := b.GetVerificationTickets()
+		fmt.Fprintf(w, "<td style='padding: 0px;'><table style='margin: -1px;'>")
+		fmt.Fprintf(w, "<td style='text-align: center;'>%d (%s)</td>", len(tickets), boolString(len(tickets) >= consensus))
+		if len(tickets) >= 0 {
+			for _, ticket := range tickets {
+				n := mb.Miners.GetNode(ticket.VerifierID)
+				if n != nil {
+					fmt.Fprintf(w, "<td style='display:flex;'>%.8s...<span style='flex:1;'></span>(%s)</td>", ticket.VerifierID, getNodeLink(n))
+					continue
+				}
+				fmt.Fprintf(w, "<td style='display:flex;'>%.8s...<span style='flex:1;'></span></td>", ticket.VerifierID)
+			}
+		}
+		fmt.Fprintf(w, "</table></td>")
+
+		fmt.Fprintf(w, "<td>")
+		fmt.Fprintf(w, "-")
+		fmt.Fprintf(w, "</td></tr>")
+	}
+	fmt.Fprintf(w, "</table>")
 
 }
 
