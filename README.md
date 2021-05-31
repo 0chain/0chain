@@ -325,7 +325,7 @@ Now run the script containing unit tests .
 The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages .
 
 ```
-./docker.local/bin/unit_test.sh
+./docker.local/bin/unit_test.sh [<packages>]
 ```
 
 ###  Testing Steps
