@@ -1,9 +1,18 @@
 # Unit tests
 
+## Table of Contents
+
+- [Intorduction](#introduction)
+- [0chain style](#0chain-style)
+- [Mocks](mocks)
+   - [Simple mock example](simple-mock-example)
+   - [vektra mockery](vekra-mockery)
+   - [0chain example](0chain-example)  
+
 ## Introduction
 
-Unit tests are important, especially for an agile continual integration project.
-Some advantages of unit tests;
+Unit tests importance for an agile and continual integration project cannot
+be overemphasised. Unit tests -
 1. Confirm that the code works to specification. 
    By performing test that fail when we discover an error in the code.
 2. Help developers in finding errors in their own code.
@@ -25,18 +34,30 @@ the code changes, then the unit test can be developed alongside their code
 changes. Not only does it help the developer, but it helps anyone 
 to review or study your changes.
 
-## `Ochain` style
+## Ochain style
 
 Unit tests can be written using different styles. Here we aim to standardise
 how to write unit tests in the `0chain` project.
 
-### Table-driven tests using subtests
+[PR3210(https://github.com/0chain/0chain/pull/321) introduced a new mocks package
+to `0chain`. Here we intend to give guidance to using these mock.
+
+GitHub does not house these mock files, instead they will be auto-generated as
+ part of the continuous integration unit test checks. To build the mock files
+for yourself run from the `0chain` repository root directory
+```shell
+./generate_mocks.sh
+```
+These will should be ignored when you commit to `git`.
+
+#### Table-driven tests using subtests
 
 The [Go blog](https://blog.golang.org/subtests#TOC_4.) outlines how to write 
-table-driven tests using subtests. A simple tests might look roughly like
+table-driven tests using subtests. We should be using this same style.
+A simple tests might look roughly like
 ```go
 func TestSomething(t *testing.T) {
-	t.Parallel()
+    t.Parallel()
     testCases := []struct {
       name  string
       arg  string
@@ -57,16 +78,14 @@ func TestSomething(t *testing.T) {
 }
 ```
 
-### Use require not assert
+#### Use require not assert
 
-
-Use
-[require](https://pkg.go.dev/github.com/stretchr/testify/require), to report
+Use [require](https://pkg.go.dev/github.com/stretchr/testify/require), to report
 errors not `assert`. Immediately the test reports an error we want the test stopped; 
 This speeds up continuous integration checks that rely on running  unit test.
 `Require` does this, while `assert` does not.
 
-### Avoid comments and log outputs
+#### Avoid comments and log outputs
 
 Do not have comments in finalised unit tests. When viewing unit test results we
 mainly look for test pass or failure, In some circumstances unit test coverage.
@@ -74,7 +93,7 @@ Comments or log outputs just obscures the information.
 
 By all means use comments or logs while developing code, but remove them in the final draft.
 
-### Use t.Parallel were appropriate
+#### Use t.Parallel were appropriate
 
 For the `-race` option to be effective in finding concurrency errors, we need to run
 concurrent goroutines. Adding `t.Parallel()` forces all the tests to run in parallel,
@@ -82,6 +101,17 @@ this allows the race detector to alert us to concurrency issues between the test
 
 `t.Parallel` Should sometimes be avoided, plus care should be taken to avoid confounding 
 race errors from the unit test itself.
+
+It can require some judgement to distinguish between object that should be common to
+all tests, and those that should be constructed anew for each test. Copy by value
+for a new object each test, by pointer to share objects between tests.
+
+When writing unit test think
+
+> Can this function run in a multi goroutine environment?
+
+If so the test should allow the function to prove it can handle 
+any concurrency issues.
 
 #### Avoid t.Parallel when testing one use functions
 
@@ -153,7 +183,7 @@ We should endeavor to separate objets that form part of the test conditions, tha
 need to be independent between different test, and objects global to the tests that
 should be shared.
 
-## Mocks and hidden parameters
+## Mocks
 
 The test style described in the previous section work well enough for 
 simple functions, however our functions can often have input and output data
@@ -162,8 +192,8 @@ example would be a database object which our test function might access
 using database `get` and `set` functions.
 
 Unit tests typically concern themselves only with the code of the `tested 
-function`, ideally we want to avoid testing functions called internally by our  
-`tested function`; such as the database `get` and `set` of the previous paragraph.
+function`, ideally we want to avoid running functions called internally;
+such as the database `get` and `set` of the previous paragraph.
 
 Issues with including these function might include:
 1. Someone has tested them elsewhere. No point in repeating the test.
@@ -239,14 +269,15 @@ The key calls:
    thigsToDo.On("Buys", "bus ticket").Returns(200).Twice()
    thigsToDo.On("Buys", "groceries").Returns(5000).Once()
 ```
-These set up our mock object with expectations of what `goestToTown` will call.`
-and 
+These set up our mock object with expectations of what `goestToTown` will call; 
+these can put these in the `t.Run` or earlier when setting each test's data.
+At the end of the `t.Run` block call:
 ```go
    require.True(t, mock.AssertExpectationsForObjects(t, thigsTodo))
 ```
-Checks that `goesToTown` met our expectations. 
+This Checks that `goesToTown` met our expectations. 
 
-### `vektra` mockery
+### Vektra mockery
 
 To help with our unit tests, in `0chain`, we autogenerate mock object for all our
 interface objects using the
