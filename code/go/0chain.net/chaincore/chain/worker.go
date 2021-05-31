@@ -375,8 +375,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			}
 		case <-tk.C:
 			// last round could be 0 when miners or sharders start
+			lfb := c.GetLatestFinalizedBlock()
 			if lastRound.round == 0 {
-				lfb := c.GetLatestFinalizedBlock()
 				lastRound.round = lfb.Round
 				lastRound.stateHash = lfb.ClientStateHash
 				lastRound.tm = time.Now()
@@ -386,7 +386,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			// time since the last finalized round arrived
 			ts := time.Since(lastRound.tm)
 			if ts <= c.bcStuckTimeThreshold {
-				// reset synching state and continue as the BC is not stuck
+				// reset sync state and continue as the BC is not stuck
 				isSynching = false
 				continue
 			}
@@ -401,28 +401,40 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				zap.String("state_hash", util.ToHex(lastRound.stateHash)),
 				zap.Any("stuck time", ts))
 
-			r := lastRound.round
-			stateHash := lastRound.stateHash
 			cctx, cancel = context.WithCancel(ctx)
-
 			isSynching = true
 			go func() {
-				c.syncRoundState(cctx, r, stateHash)
-				synchingStopC <- struct{}{}
+				defer func() {
+					synchingStopC <- struct{}{}
+				}()
+				if lfb == nil || lfb.ClientState == nil {
+					return
+				}
+
+				mpt, err := c.syncRoundState(cctx, lfb.ClientState, lfb.Round)
+				if err != nil {
+					Logger.Error("sync round state failed", zap.Error(err))
+					return
+				}
+				if err := c.UpdateLatestFinalizedBlockState(mpt); err != nil {
+					Logger.Error("update latest finalized block state failed", zap.Error(err))
+				}
 			}()
 		case <-synchingStopC:
 			isSynching = false
 		case <-ctx.Done():
 			Logger.Info("Context done, stop SyncLFBStateWorker")
+			cancel()
 			return
 		}
 	}
 }
 
-func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash util.Key) {
-	Logger.Info("Sync round state from network...")
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
-	mpt.SetRoot(stateRootHash)
+func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTrieI, round int64) (util.MerklePatriciaTrieI, error) {
+	Logger.Info("Sync round state from network...", zap.Int64("round", round))
+	mpt := util.NewMerklePatriciaTrie(state.GetNodeDB(), util.Sequence(round))
+	rootState := state.GetRoot()
+	mpt.SetRoot(rootState)
 
 	Logger.Info("Finding missing nodes")
 	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
@@ -432,32 +444,34 @@ func (c *Chain) syncRoundState(ctx context.Context, round int64, stateRootHash u
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
-			return
+			return nil, common.NewError("sync_round_state_abort", "context is canceled, suppose the BC is moving")
 		case context.DeadlineExceeded:
-			Logger.Error("Sync round state abort, context timed out for checking missing nodes")
-			return
+			return nil, common.NewError("sync round state abort", "context timed out for checking missing nodes")
 		default:
-			Logger.Error("Sync round state abort, failed to get missing nodes",
-				zap.Int64("round", round),
-				zap.String("client state hash", util.ToHex(stateRootHash)),
-				zap.Error(err))
-			return
+			return nil, common.NewError("sync round state abort",
+				fmt.Sprintf("failed to get missing nodes, round: %d, client state hash: %s, err: %v",
+					round, util.ToHex(rootState), err))
 		}
 	}
 
 	if len(keys) == 0 {
 		Logger.Debug("Found no missing node",
 			zap.Int64("round", round),
-			zap.String("state hash", util.ToHex(stateRootHash)))
-		return
+			zap.String("state hash", util.ToHex(rootState)))
+		return mpt, nil
 	}
 
 	Logger.Info("Sync round state, found missing nodes",
 		zap.Int64("round", round),
 		zap.Int("missing_node_num", len(keys)))
 
-	c.GetStateNodes(ctx, keys)
+	if err := c.UpdateStateFromNetwork(ctx, mpt, keys); err != nil {
+		return nil, common.NewError("update state from network failed",
+			fmt.Sprintf("round: %d, client state hash: %s, err: %v",
+				round, util.ToHex(rootState), err))
+	}
+
+	return mpt, nil
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
