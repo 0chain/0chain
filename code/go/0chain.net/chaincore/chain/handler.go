@@ -1330,7 +1330,10 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		if m2 := mb.Miners.GetNode(b2.MinerID); m2 != nil {
 			rank2 = round.GetMinerRank(m2)
 		}
-		return rank1 < rank2 || b1.CreationDate > b2.CreationDate
+		if rank1 == rank2 {
+			return b1.CreationDate > b2.CreationDate
+		}
+		return rank1 < rank2
 	})
 
 	fmt.Fprintf(w, "<h3>Block Verification and Notarization</h3>")
