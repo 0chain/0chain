@@ -1,7 +1,11 @@
 package zcnsc
 
 import (
+	"context"
+	"net/url"
+
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -19,11 +23,19 @@ type ZCNSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func NewZCNSmartContract() smartcontractinterface.SmartContractInterface {
+	var zcnCopy = &ZCNSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	zcnCopy.setSC(zcnCopy.SmartContract, &smartcontract.BCContext{})
+	return zcnCopy
+}
+
 // InitSC ...
 func (zcn *ZCNSmartContract) InitSC() {}
 
 // SetSC ...
-func (zcn *ZCNSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
 	zcn.SmartContract.RestHandlers["/globalPerodicLimit"] = zcn.globalPerodicLimit
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.getAuthorizerNodes
@@ -42,6 +54,14 @@ func (zcn *ZCNSmartContract) GetAddress() string {
 // GetRestPoints ...
 func (zcn *ZCNSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
 	return zcn.RestHandlers
+}
+
+func (zcn *ZCNSmartContract) GetExecutionStats() map[string]interface{} {
+	return zcn.SmartContractExecutionStats
+}
+
+func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return zcn.SmartContract.HandlerStats(ctx, params)
 }
 
 // Execute ...

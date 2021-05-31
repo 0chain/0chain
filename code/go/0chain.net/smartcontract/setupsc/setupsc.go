@@ -26,6 +26,7 @@ const (
 	Multisig
 	Miner
 	Vesting
+	Zcn
 )
 
 var (
@@ -37,6 +38,7 @@ var (
 		"multisig",
 		"miner",
 		"vesting",
+		"zcn",
 	}
 
 	SCCode = map[string]SCName{
@@ -47,6 +49,7 @@ var (
 		"multisig": Multisig,
 		"miner":    Miner,
 		"vesting":  Vesting,
+		"zcn":      Zcn,
 	}
 )
 
@@ -80,6 +83,8 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return minersc.NewMinerSmartContract()
 	case Vesting:
 		return vestingsc.NewVestingSmartContract()
+	case Zcn:
+		return zcnsc.NewZCNSmartContract()
 	default:
 		return nil
 	}
