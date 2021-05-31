@@ -1229,7 +1229,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		roundParamQuery = "?" + r.URL.RawQuery
 		_rn, err := strconv.ParseInt(roundParam, 10, 64)
 		if err != nil {
-			http.Redirect(w, r, "/_diagnostics/round_info", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, "_diagnostics/round_info", http.StatusTemporaryRedirect)
 			return
 		}
 		rn = _rn
@@ -1351,19 +1351,21 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td title='%s'>%.8s...</td>", b.Hash, b.Hash)
 
 		tickets := b.GetVerificationTickets()
-		fmt.Fprintf(w, "<td style='padding: 0px;'><table style='margin: -1px;'>")
-		fmt.Fprintf(w, "<td style='text-align: center;'>%d (%s)</td>", len(tickets), boolString(len(tickets) >= consensus))
-		if len(tickets) >= 0 {
+		fmt.Fprintf(w, "<td style='padding: 0px;'><div style='display:flex;flex-direction:row;'>")
+		fmt.Fprintf(w, "<div style='flex:1;display:flex;flex-direction:column;padding:5px;min-width:60px;'><div style='flex:1;'></div>%d (%s)<div style='flex:1;'></div></div>", len(tickets), boolString(len(tickets) >= consensus))
+		if len(tickets) > 0 {
+			fmt.Fprintf(w, "<div style='display:flex;flex-direction:column;padding:5px;border-left:1px solid black;'>")
 			for _, ticket := range tickets {
 				n := mb.Miners.GetNode(ticket.VerifierID)
 				if n != nil {
-					fmt.Fprintf(w, "<td style='display:flex;'>%.8s...<span style='flex:1;'></span>(%s)</td>", ticket.VerifierID, getNodeLink(n))
+					fmt.Fprintf(w, "<div style='display:flex;'>%.8s...<span style='flex:1;'></span>(%s)</div>", ticket.VerifierID, getNodeLink(n))
 					continue
 				}
-				fmt.Fprintf(w, "<td style='display:flex;'>%.8s...<span style='flex:1;'></span></td>", ticket.VerifierID)
+				fmt.Fprintf(w, "<div style='display:flex;'>%.8s...<span style='flex:1;'></span></div>", ticket.VerifierID)
 			}
+			fmt.Fprintf(w, "</div>")
 		}
-		fmt.Fprintf(w, "</table></td>")
+		fmt.Fprintf(w, "</div></td>")
 
 		fmt.Fprintf(w, "<td>")
 		fmt.Fprintf(w, "-")
