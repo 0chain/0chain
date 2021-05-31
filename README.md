@@ -770,7 +770,7 @@ Run blobber tests
 
 ```
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
-(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) (edited)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) 
 ```
 
 ### Adding new Tests
