@@ -3,6 +3,7 @@ package chain
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -19,12 +20,15 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/metric"
+	"go.uber.org/zap"
 
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
+
+	"0chain.net/core/logging"
 
 	"0chain.net/smartcontract/minersc"
 )
@@ -46,6 +50,7 @@ func SetupHandlers() {
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
+	http.HandleFunc("/_diagnostics/current_mb_nodes", common.UserRateLimit(DiagnosticsNodesHandler))
 	http.HandleFunc("/_diagnostics/dkg_process", common.UserRateLimit(DiagnosticsDKGHandler))
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
 
@@ -55,6 +60,18 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
 
 	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.N2NRateLimit(common.ToJSONResponse(LFBTicketHandler)))
+}
+
+func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
+	sc := GetServerChain()
+	mb := sc.GetCurrentMagicBlock()
+	d, err := json.MarshalIndent(append(mb.Sharders.CopyNodes(), mb.Miners.CopyNodes()...), "", "\t")
+	if err != nil {
+		fmt.Fprintf(w, err.Error())
+		return
+	}
+
+	fmt.Fprintf(w, string(d))
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -371,6 +388,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			collectionName := txn.GetCollectionName()
 			ctx := common.GetRootContext()
 			cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+			defer memorystore.Close(cctx)
 			mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
@@ -418,7 +436,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		if config.DevConfiguration.ViewChange == false {
+		if !config.DevConfiguration.ViewChange {
 			fmt.Fprint(w, "DKG process disabled")
 		} else {
 			fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
@@ -565,50 +583,50 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
 	if selfNodeType == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='/v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='/v1/config/update_all'>/v1/config/update_all</a></li>")
+		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
+		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='_chain_stats'>/_chain_stats</a></li>")
 	if selfNodeType == node.NodeTypeSharder {
-		fmt.Fprintf(w, "<li><a href='/_health_check'>/_health_check</a></li>")
+		fmt.Fprintf(w, "<li><a href='_health_check'>/_health_check</a></li>")
 	}
 
-	fmt.Fprintf(w, "<li><a href='/_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
+	fmt.Fprintf(w, "<li><a href='_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
 	if selfNodeType == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+		fmt.Fprintf(w, "<li><a href='_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
-	fmt.Fprintf(w, "<li><a href='/_smart_contract_stats'>/_smart_contract_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a> (with <a href='/_diagnostics/info?ts=1'>ts</a>)</li>")
-	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
+	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
+	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if selfNodeType == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
+		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
-	fmt.Fprintf(w, "<li><a href='/_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
+	fmt.Fprintf(w, "<li><a href='_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li>/_diagnostics/mem_logs [Level <a href='/_diagnostics/mem_logs?detail=1'>1</a>, <a href='/_diagnostics/mem_logs?detail=2'>2</a>, <a href='/_diagnostics/mem_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='_diagnostics/logs?detail=1'>1</a>, <a href='_diagnostics/logs?detail=2'>2</a>, <a href='_diagnostics/logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='_diagnostics/n2n_logs?detail=1'>1</a>, <a href='_diagnostics/n2n_logs?detail=2'>2</a>, <a href='_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/mem_logs [Level <a href='_diagnostics/mem_logs?detail=1'>1</a>, <a href='_diagnostics/mem_logs?detail=2'>2</a>, <a href='_diagnostics/mem_logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li><a href='debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 
 	mb := sc.GetCurrentMagicBlock()
 	if selfNodeType == node.NodeTypeMiner {
-		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000.)
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f - current MB start round: (%v)</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000., mb.StartingRound)
 	} else {
-		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", mb.Miners.Size())
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div> - current MB starting round: (%v)", mb.Miners.Size(), mb.StartingRound)
 	}
 	sc.printNodePool(w, mb.Miners)
 	fmt.Fprintf(w, "</div>")
@@ -649,7 +667,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		if node.Self.IsEqual(nd) {
 			fmt.Fprintf(w, "<td>%v</td>", nd.GetPseudoName())
 		} else {
-			fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
+			if len(nd.Path) > 0 {
+				fmt.Fprintf(w, "<td><a href='https://%v/%v/_diagnostics'>%v</a></td>", nd.Host, nd.Path, nd.GetPseudoName())
+			} else {
+				fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
+			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
@@ -800,7 +822,7 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 
 func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
-	if config.DevConfiguration.ViewChange == false {
+	if !config.DevConfiguration.ViewChange {
 		w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 		w.Write([]byte(`<doctype html><html><head>
 <title>DKG process informations</title></head><body>
@@ -1218,19 +1240,20 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	mb := c.GetCurrentMagicBlock()
+	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
-	c.notarizedBlockCountsStats(w)
+	c.notarizedBlockCountsStats(w, numGenerators)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><th>Generation Counts</th><th>Verification Counts</th><th>Finalization Counts</th></tr>")
 	fmt.Fprintf(w, "<tr><td>")
 	c.generationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
-	c.verificationCountStats(w)
+	c.verificationCountStats(w, numGenerators)
 	fmt.Fprintf(w, "</td><td>")
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
@@ -1249,18 +1272,19 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
+	generatorsNum := c.GetGeneratorsNumOfMagicBlock(mb)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < generatorsNum; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, c.NumGenerators)
+	totals := make([]int64, generatorsNum)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < c.NumGenerators; i++ {
+		for i := 0; i < generatorsNum; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
 			totals[i] += ms.GenerationCountByRank[i]
 			total += ms.GenerationCountByRank[i]
@@ -1269,7 +1293,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < generatorsNum; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1277,20 +1301,20 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func (c *Chain) verificationCountStats(w http.ResponseWriter) {
+func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int) {
 	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < numGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, c.NumGenerators)
+	totals := make([]int64, numGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < c.NumGenerators; i++ {
+		for i := 0; i < numGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
 			totals[i] += ms.VerificationTicketsByRank[i]
 			total += ms.VerificationTicketsByRank[i]
@@ -1299,7 +1323,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < numGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1309,18 +1333,19 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	mb := c.GetCurrentMagicBlock()
+	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < numGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
-	totals := make([]int64, c.NumGenerators)
+	totals := make([]int64, numGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
-		for i := 0; i < c.NumGenerators; i++ {
+		for i := 0; i < numGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
 			totals[i] += ms.FinalizationCountByRank[i]
 			total += ms.FinalizationCountByRank[i]
@@ -1329,7 +1354,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
-	for i := 0; i < c.NumGenerators; i++ {
+	for i := 0; i < numGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
@@ -1337,15 +1362,15 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
+func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter, numGenerators int) {
 	fmt.Fprintf(w, "<table style='width:100%%;'>")
-	fmt.Fprintf(w, "<tr><td colspan='%v'>Rounds with notarized blocks (0 to %v)</td></tr>", c.NumGenerators+2, c.NumGenerators)
+	fmt.Fprintf(w, "<tr><td colspan='%v'>Rounds with notarized blocks (0 to %v)</td></tr>", numGenerators+2, numGenerators)
 	fmt.Fprintf(w, "<tr><td>Notarized Blocks</td>")
-	for i := 0; i <= c.NumGenerators; i++ {
+	for i := 0; i <= numGenerators; i++ {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", i)
 	}
 	fmt.Fprintf(w, "</tr><tr><td>Rounds</td>")
-	for _, v := range c.NotariedBlocksCounts {
+	for _, v := range c.NotarizedBlocksCounts {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", v)
 	}
 	fmt.Fprintf(w, "</tr>")
@@ -1359,6 +1384,7 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".fixed-text { overflow:hidden;white-space: nowrap;word-break: break-all;word-wrap: break-word; text-overflow: ellipsis; }\n")
 	fmt.Fprintf(w, ".menu li { list-style-type: none; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black;  border-collapse: collapse;}\n")
+	fmt.Fprintf(w, ".tname { width: 70%%}\n")
 	fmt.Fprintf(w, "tr.header { background-color: #E0E0E0;  }\n")
 	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
 	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
@@ -1376,6 +1402,22 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 	lfb := c.GetLatestFinalizedBlock()
 	contract := r.FormValue("smart_contract")
 	mpt := lfb.ClientState
+	if mpt == nil {
+		errMsg := struct {
+			Err string `json:"error"`
+		}{
+			Err: fmt.Sprintf("last finalized block with nil state, round: %d", lfb.Round),
+		}
+
+		out, err := json.MarshalIndent(errMsg, "", "    ")
+		if err != nil {
+			logging.Logger.Error("Dump state failed", zap.Error(err))
+			return
+		}
+		fmt.Fprintf(w, string(out))
+		return
+	}
+
 	if contract == "" {
 		contract = "global"
 	} else {

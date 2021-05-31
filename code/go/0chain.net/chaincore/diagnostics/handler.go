@@ -63,16 +63,16 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></th></tr>")
-	fmt.Fprintf(w, "<tr><td>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumReplicators)
-	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
-	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
+	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators)
+	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
+	fmt.Fprintf(w, "<tr><td class='tname'>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
 	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
 		proposalMode = "static"
 	}
-	fmt.Fprintf(w, "<tr><td>Block Proposal Wait Time</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+	fmt.Fprintf(w, "<tr><td class='tname'>Block Proposal Wait Time</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
 
-	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
+	fmt.Fprintf(w, "<tr><td class='tname'>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "</table>")
 }
 
@@ -122,13 +122,13 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%' >")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
-	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
+	fmt.Fprintf(w, "<tr><td class='tname'>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil {
-		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.UniqueBlockExtensions))
+		fmt.Fprintf(w, "<tr><td class='tname'>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.UniqueBlockExtensions))
 	}
 	if c.LatestDeterministicBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
+		fmt.Fprintf(w, "<tr><td class='tname'>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
 		if c.LatestDeterministicBlock != lfb {
 			var maxUBE int
 			var maxUBERound int64
@@ -139,7 +139,7 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 					maxUBERound = b.Round
 				}
 			}
-			fmt.Fprintf(w, "<tr><td>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
+			fmt.Fprintf(w, "<tr><td class='tname'>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
 		}
 	}
 	fmt.Fprintf(w, "</table>")

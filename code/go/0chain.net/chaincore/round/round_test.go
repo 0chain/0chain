@@ -1,38 +1,46 @@
 package round
 
 import (
-	"fmt"
+	"encoding/hex"
 	"reflect"
 	"testing"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/core/logging"
 )
+
+func init() {
+	logging.InitLogging("testing")
+}
 
 func TestRoundStableRandomization(t *testing.T) {
 	r := Round{Number: 1234}
-	r.SetRandomSeed(2009)
 	pool := node.NewPool(node.NodeTypeMiner)
 	nd := &node.Node{Type: node.NodeTypeMiner, SetIndex: 0}
-	nd.SetID("0")
+	if err := nd.SetID(hex.EncodeToString([]byte("0"))); err != nil {
+		t.Fatal(err)
+	}
 	pool.AddNode(nd)
 	nd = &node.Node{Type: node.NodeTypeMiner, SetIndex: 1}
-	nd.SetID("1")
+	if err := nd.SetID(hex.EncodeToString([]byte("1"))); err != nil {
+		t.Fatal(err)
+	}
 	pool.AddNode(nd)
 	nd = &node.Node{Type: node.NodeTypeMiner, SetIndex: 2}
-	nd.SetID("2")
+	if err := nd.SetID(hex.EncodeToString([]byte("2"))); err != nil {
+		t.Fatal(err)
+	}
 	pool.AddNode(nd)
 	pool.ComputeProperties()
 	numElements := pool.Size()
-	fmt.Printf("pool size %v\n", numElements)
-	r.ComputeMinerRanks(pool)
+	r.SetRandomSeed(2009, numElements)
+
 	p1 := make([]int, numElements)
 	copy(p1, r.minerPerm)
 	p2 := make([]int, numElements)
-	r.ComputeMinerRanks(pool)
+	r.computeMinerRanks(pool.Size())
 	copy(p2, r.minerPerm)
 	if !reflect.DeepEqual(p1, p2) {
 		t.Errorf("Permutations are not the same: %v %v\n", p1, p2)
-	} else {
-		t.Logf("Permutations are the same: %v\n", p1)
 	}
 }

@@ -1,6 +1,7 @@
 package vestingsc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -93,7 +94,7 @@ func (d *destination) move(now common.Timestamp, moved state.Balance) {
 
 // The unlock returns amount of tokens to vest for current period.
 // The dry argument leave all inside the destination as it was and
-// used to obtain pool statistic. The now must not be later then the
+// used to obtain pool statistic. The now must not be later than the
 // end. Also, the now must be greater or equal to start time of related
 // vesting pool.
 func (d *destination) unlock(now, end common.Timestamp, dry bool) (
@@ -536,7 +537,7 @@ func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
 
 	vp = newVestingPool()
 	if err = vp.Decode(poolb); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 
 	return
@@ -840,7 +841,7 @@ func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
 	)
 
 	if vp, err = vsc.getPool(poolID, balances); err != nil {
-		return
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pool")
 	}
 
 	return vp.info(common.Now()), nil

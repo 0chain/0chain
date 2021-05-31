@@ -21,7 +21,7 @@ import (
 
 	"0chain.net/smartcontract/minersc"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -54,7 +54,7 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
 	if err := mc.UpdateState(b, feeTxn); err != nil {
-		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash),
+		logging.Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash),
 			zap.String("txn_object", datastore.ToJSON(feeTxn).String()),
 			zap.Error(err))
 		return err
@@ -105,7 +105,7 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 		if txn.TransactionType == transaction.TxnTypeSmartContract {
 			err := txn.VerifyOutputHash(ctx)
 			if err != nil {
-				Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
+				logging.Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
 				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
 			}
 		}
@@ -118,14 +118,14 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 
 	var (
-		rn    = b.Round
-		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn)
+		round = b.Round
+		lfmbr = mc.GetLatestFinalizedMagicBlockRound(round)
 
-		rnoff = mbRoundOffset(rn)
-		nvc   = mc.NextViewChange()
+		offsetRound = mbRoundOffset(round)
+		nextVCRound = mc.NextViewChange()
 	)
 
-	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
+	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
 		return common.NewError("verify_block_mb_reference",
 			"required MB missing or still not finalized")
 	}
@@ -178,7 +178,7 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 			"can't get NVC of the block %d: %v", b.Round, err)
 	}
 
-	Logger.Debug("verify_block_mb", zap.Int64("round", b.Round),
+	logging.Logger.Debug("verify_block_mb", zap.Int64("round", b.Round),
 		zap.Int64("mb_sr", mb.StartingRound), zap.Int64("nvc", nvc))
 
 	if mb.StartingRound != b.Round {
@@ -238,7 +238,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if err = mc.ComputeState(ctx, b); err != nil {
-		Logger.Error("verify block - error computing state",
+		logging.Logger.Error("verify block - error computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("state_hash", util.ToHex(b.ClientStateHash)),
@@ -259,7 +259,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 	bpTimer.UpdateSince(start)
 
-	Logger.Info("verify block successful", zap.Any("round", b.Round),
+	logging.Logger.Info("verify block successful", zap.Any("round", b.Round),
 		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
 		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
@@ -300,14 +300,14 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			}
 			if txn.OutputHash == "" {
 				cancel = true
-				Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+				logging.Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
 				validChannel <- false
 				return
 			}
 			err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
 			if err != nil {
 				cancel = true
-				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+				logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 				validChannel <- false
 				return
 			}
@@ -321,7 +321,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
 			if ok || err != nil {
 				if err != nil {
-					Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 				}
 				cancel = true
 				validChannel <- false
@@ -341,11 +341,10 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	count := 0
 	for result := range validChannel {
 		if roundMismatch {
-			Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
+			logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
 			return common.NewError(RoundMismatch, "current round different from generation round")
 		}
 		if !result {
-			//Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
 			return common.NewError("txn_validation_failed", "Transaction validation failed")
 		}
 		count++
@@ -385,13 +384,13 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
 				continue
 			}
-			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
+			logging.Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
 		}
 	}
 	mc.FinalizeBlock(ctx, b)
@@ -415,14 +414,14 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
 	mb := mc.GetCurrentMagicBlock()
-	mb.Sharders.OneTimeStatusMonitor(ctx)
+	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	if len(lfBlocks) > 0 {
-		Logger.Info("bc-1 latest finalized Block",
+		logging.Logger.Info("bc-1 latest finalized Block",
 			zap.Int64("lfb_round", lfBlocks[0].Round))
 		return lfBlocks[0].Block
 	}
-	Logger.Info("bc-1 sharders returned no lfb.")
+	logging.Logger.Info("bc-1 sharders returned no lfb.")
 	return nil
 }
 

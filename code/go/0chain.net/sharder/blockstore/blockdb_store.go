@@ -11,33 +11,43 @@ import (
 	"0chain.net/sharder/blockdb"
 )
 
-//BlockDBStore is a block store backed by blockdb
+// BlockDBStore is a block store backed by blockdb.
 type BlockDBStore struct {
 	*FSBlockStore
 	txnMetadataProvider datastore.EntityMetadata
 	compress            bool
 }
 
-//NewBlockDBStore - create a new blockdb store
-func NewBlockDBStore(rootDir string) BlockStore {
-	store := &BlockDBStore{}
-	store.compress = true
-	store.FSBlockStore = NewFSBlockStore(rootDir)
-	store.txnMetadataProvider = datastore.GetEntityMetadata("txn")
-	return store
+var (
+	// Make sure BlockDBStore implements BlockStore.
+	_ BlockStore = (*BlockDBStore)(nil)
+)
+
+// NewBlockDBStore - create a new blockdb store
+func NewBlockDBStore(fsbs *FSBlockStore) BlockStore {
+	return &BlockDBStore{
+		FSBlockStore:        fsbs,
+		txnMetadataProvider: datastore.GetEntityMetadata("txn"),
+		compress:            true,
+	}
 }
 
 type blockHeader struct {
 	*block.Block
 }
 
-//Encode - implement interface
+var (
+	// MakeSure blockHeader implements blockdb.SerDe interface.
+	_ blockdb.SerDe = (*blockHeader)(nil)
+)
+
+// Encode is a part of blockdb.SerDe interface implementation.
 func (bh *blockHeader) Encode(writer io.Writer) error {
 	_, err := datastore.ToMsgpack(bh.Block).WriteTo(writer)
 	return err
 }
 
-//Decode - implement interface
+// Decode is a part of blockdb.SerDe interface implementation.
 func (bh *blockHeader) Decode(reader io.Reader) error {
 	return datastore.FromMsgpack(reader, bh.Block)
 }
@@ -46,18 +56,23 @@ type txnRecord struct {
 	*transaction.Transaction
 }
 
-//GetKey - implement interface
+var (
+	// MakeSure txnRecord implements blockdb.Record interface.
+	_ blockdb.Record = (*txnRecord)(nil)
+)
+
+// GetKey is a part of blockdb.Record interface implementation.
 func (tr *txnRecord) GetKey() blockdb.Key {
 	return blockdb.Key(tr.Transaction.GetKey())
 }
 
-//Encode - implement interface
+// Encode is a part of blockdb.Record interface implementation.
 func (tr *txnRecord) Encode(writer io.Writer) error {
 	_, err := datastore.ToMsgpack(tr.Transaction).WriteTo(writer)
 	return err
 }
 
-//Decode - implement interface
+// Decode is a part of blockdb.Record interface implementation.
 func (tr *txnRecord) Decode(reader io.Reader) error {
 	return datastore.FromMsgpack(reader, tr.Transaction)
 }
@@ -96,7 +111,7 @@ func (bdbs *BlockDBStore) Write(b *block.Block) error {
 	return db.Save()
 }
 
-//ReadWithBlockSummary - implement interface
+// ReadWithBlockSummary - implement interface
 func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
 	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(bs.Hash, bs.Round), 64, bdbs.compress)
 	block := bdbs.blockMetadataProvider.Instance().(*block.Block)
@@ -120,7 +135,7 @@ func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 	return block, nil
 }
 
-//DeleteBlock - implement interface
+// DeleteBlock - implement interface
 func (bdbs *BlockDBStore) DeleteBlock(b *block.Block) error {
 	db, err := blockdb.NewBlockDB(bdbs.getFileWithoutExtension(b.Hash, b.Round), 64, false)
 	if err != nil {

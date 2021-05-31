@@ -144,7 +144,6 @@ func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
 }
 
 func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
-
 	if wr.Round == 0 {
 		if wr.Name != "" {
 			// by a named round
@@ -258,10 +257,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 //
 
 func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set VRFS of %s: good %s, bad %s", vrfs.By,
-			vrfs.Good, vrfs.Bad)
-	}
+	r.verbosePrintByGoodBad("VRFS", vrfs)
 
 	err = r.server.UpdateStates(vrfs.By, func(state *conductrpc.State) {
 		state.VRFS = vrfs
@@ -273,11 +269,8 @@ func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
 }
 
 func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong round timeout", rt)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong round timeout' "+
-			"of %s: good %s, bad %s", rt.By, rt.Good, rt.Bad)
-	}
 	err = r.server.UpdateStates(rt.By, func(state *conductrpc.State) {
 		state.RoundTimeout = rt
 	})
@@ -288,11 +281,8 @@ func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
 }
 
 func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("competing block", cb)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'competing block' "+
-			"of %s: good %s, bad %s", cb.By, cb.Good, cb.Bad)
-	}
 	err = r.server.UpdateStates(cb.By, func(state *conductrpc.State) {
 		state.CompetingBlock = cb
 	})
@@ -303,11 +293,8 @@ func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
 }
 
 func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("sign only competing block", socb)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'sign only competing block' "+
-			"of %s: good %s, bad %s", socb.By, socb.Good, socb.Bad)
-	}
 	err = r.server.UpdateStates(socb.By, func(state *conductrpc.State) {
 		state.SignOnlyCompetingBlocks = socb
 	})
@@ -318,11 +305,8 @@ func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
 }
 
 func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("double spend transaction", dst)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'double spend transaction' "+
-			"of %s: good %s, bad %s", dst.By, dst.Good, dst.Bad)
-	}
 	err = r.server.UpdateStates(dst.By, func(state *conductrpc.State) {
 		state.DoubleSpendTransaction = dst
 	})
@@ -333,11 +317,8 @@ func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block sign hash", wbsh)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong block sign hash' "+
-			"of %s: good %s, bad %s", wbsh.By, wbsh.Good, wbsh.Bad)
-	}
 	err = r.server.UpdateStates(wbsh.By, func(state *conductrpc.State) {
 		state.WrongBlockSignHash = wbsh
 	})
@@ -348,11 +329,8 @@ func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block sign key", wbsk)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong block sign key' "+
-			"of %s: good %s, bad %s", wbsk.By, wbsk.Good, wbsk.Bad)
-	}
 	err = r.server.UpdateStates(wbsk.By, func(state *conductrpc.State) {
 		state.WrongBlockSignKey = wbsk
 	})
@@ -363,11 +341,8 @@ func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong block hash", wbh)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong block hash' "+
-			"of %s: good %s, bad %s", wbh.By, wbh.Good, wbh.Bad)
-	}
 	err = r.server.UpdateStates(wbh.By, func(state *conductrpc.State) {
 		state.WrongBlockHash = wbh
 	})
@@ -378,10 +353,8 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 }
 
 func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("verification ticket group", vtg)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'verification_ticket_group' of %s", vtg.By)
-	}
 	err = r.server.UpdateStates(vtg.By, func(state *conductrpc.State) {
 		state.VerificationTicketGroup = vtg
 	})
@@ -392,11 +365,8 @@ func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong verification ticket hash", wvth)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong verification ticket hash' "+
-			"of %s: good %s, bad %s", wvth.By, wvth.Good, wvth.Bad)
-	}
 	err = r.server.UpdateStates(wvth.By, func(state *conductrpc.State) {
 		state.WrongVerificationTicketHash = wvth
 	})
@@ -407,11 +377,8 @@ func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong verification ticket key", wvtk)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong verification ticket key' "+
-			"of %s: good %s, bad %s", wvtk.By, wvtk.Good, wvtk.Bad)
-	}
 	err = r.server.UpdateStates(wvtk.By, func(state *conductrpc.State) {
 		state.WrongVerificationTicketKey = wvtk
 	})
@@ -422,11 +389,8 @@ func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong notarized block hash", wnbh)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong notarized block hash' "+
-			"of %s: good %s, bad %s", wnbh.By, wnbh.Good, wnbh.Bad)
-	}
 	err = r.server.UpdateStates(wnbh.By, func(state *conductrpc.State) {
 		state.WrongNotarizedBlockHash = wnbh
 	})
@@ -437,11 +401,8 @@ func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
 }
 
 func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("wrong notarized block key", wnbk)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'wrong notarized block key' "+
-			"of %s: good %s, bad %s", wnbk.By, wnbk.Good, wnbk.Bad)
-	}
 	err = r.server.UpdateStates(wnbk.By, func(state *conductrpc.State) {
 		state.WrongNotarizedBlockKey = wnbk
 	})
@@ -452,11 +413,8 @@ func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
 }
 
 func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("notarize only competing block", ncb)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'notarize only competing block' "+
-			"of %s: good %s, bad %s", ncb.By, ncb.Good, ncb.Bad)
-	}
 	err = r.server.UpdateStates(ncb.By, func(state *conductrpc.State) {
 		state.NotarizeOnlyCompetingBlock = ncb
 	})
@@ -467,11 +425,8 @@ func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
 }
 
 func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
+	r.verbosePrintByGoodBad("notarized block", nb)
 
-	if r.verbose {
-		log.Printf(" [INF] set 'notarized block' of %s: good %s, bad %s", nb.By,
-			nb.Good, nb.Bad)
-	}
 	err = r.server.UpdateStates(nb.By, func(state *conductrpc.State) {
 		state.NotarizedBlock = nb
 	})
@@ -502,10 +457,8 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 }
 
 func (r *Runner) MPK(mpk *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'MPK' of %s: good %s, bad %s", mpk.By,
-			mpk.Good, mpk.Bad)
-	}
+	r.verbosePrintByGoodBad("MPK", mpk)
+
 	err = r.server.UpdateStates(mpk.By, func(state *conductrpc.State) {
 		state.MPK = mpk
 	})
@@ -516,10 +469,8 @@ func (r *Runner) MPK(mpk *config.Bad) (err error) {
 }
 
 func (r *Runner) Shares(s *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'shares' of %s: good %s, bad %s", s.By,
-			s.Good, s.Bad)
-	}
+	r.verbosePrintByGoodBad("shares", s)
+
 	err = r.server.UpdateStates(s.By, func(state *conductrpc.State) {
 		state.Shares = s
 	})
@@ -530,10 +481,8 @@ func (r *Runner) Shares(s *config.Bad) (err error) {
 }
 
 func (r *Runner) Signatures(s *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'signatures' of %s: good %s, bad %s", s.By,
-			s.Good, s.Bad)
-	}
+	r.verbosePrintByGoodBad("signatures", s)
+
 	err = r.server.UpdateStates(s.By, func(state *conductrpc.State) {
 		state.Signatures = s
 	})
@@ -544,10 +493,7 @@ func (r *Runner) Signatures(s *config.Bad) (err error) {
 }
 
 func (r *Runner) Publish(p *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'publish' of %s: good %s, bad %s", p.By,
-			p.Good, p.Bad)
-	}
+	r.verbosePrintByGoodBad("publish", p)
 
 	err = r.server.UpdateStates(p.By, func(state *conductrpc.State) {
 		state.Publish = p
@@ -563,10 +509,7 @@ func (r *Runner) Publish(p *config.Bad) (err error) {
 //
 
 func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'finalized block' of %s: good %s, bad %s", fb.By,
-			fb.Good, fb.Bad)
-	}
+	r.verbosePrintByGoodBad("finalized block", fb)
 
 	err = r.server.UpdateStates(fb.By, func(state *conductrpc.State) {
 		state.FinalizedBlock = fb
@@ -578,10 +521,7 @@ func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
 }
 
 func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set 'magic block' of %s: good %s, bad %s", mb.By,
-			mb.Good, mb.Bad)
-	}
+	r.verbosePrintByGoodBad("magic block", mb)
 
 	err = r.server.UpdateStates(mb.By, func(state *conductrpc.State) {
 		state.MagicBlock = mb
@@ -593,10 +533,7 @@ func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
 }
 
 func (r *Runner) VerifyTransaction(vt *config.Bad) (err error) {
-	if r.verbose {
-		log.Printf(" [INF] set bad 'verify transaction' of %s to clients",
-			vt.By)
-	}
+	r.verbosePrintByGoodBad("verify transaction", vt)
 
 	err = r.server.UpdateStates(vt.By, func(state *conductrpc.State) {
 		state.VerifyTransaction = vt
@@ -688,4 +625,11 @@ func (r *Runner) Challenges(cs *config.Bad) (err error) {
 		return fmt.Errorf("setting bad 'challenges': %v", err)
 	}
 	return
+}
+
+func (r *Runner) verbosePrintByGoodBad(label string, bad *config.Bad) {
+	if r.verbose {
+		log.Printf(" [INF] set '%s' of %s: good %s, bad %s",
+			label, bad.By, bad.Good, bad.Bad)
+	}
 }

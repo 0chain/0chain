@@ -1,0 +1,133 @@
+{
+ "hash": "a420dbb995d6a03709dd53fb72c1121314efcf464855600490b58dcf646ceb71",
+ "previous_hash": "",
+ "magic_block_number": 1,
+ "starting_round": 0,
+ "miners": {
+  "type": 0,
+  "nodes": {
+   "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929": {
+    "id": "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929",
+    "version": "",
+    "creation_date": 1615745137,
+    "public_key": "255452b9f49ebb8c8b8fcec9f0bd8a4284e540be1286bd562578e7e59765e41a7aada04c9e2ad3e28f79aacb0f1be66715535a87983843fea81f23d8011e728b",
+    "n2n_host": "198.18.0.71",
+    "host": "localhost",
+    "port": 7071,
+    "path": "",
+    "type": 0,
+    "description": "localhost.m0",
+    "set_index": 0,
+    "status": 0,
+    "info": {
+     "build_tag": "",
+     "state_missing_nodes": 0,
+     "miners_median_network_time": 0,
+     "avg_block_txns": 0
+    }
+   },
+   "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2": {
+    "id": "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2",
+    "version": "",
+    "creation_date": 1615745137,
+    "public_key": "17dd0eb10c2567899e34f368e1da2744c9cd3beb2e3babaa4e3350d950bad91dd4ed03d751d49e1f6c1b25c6ec8d1cc8db4ca2da72683d2958fb23843cc6a480",
+    "n2n_host": "198.18.0.72",
+    "host": "localhost",
+    "port": 7072,
+    "path": "",
+    "type": 0,
+    "description": "localhost.m1",
+    "set_index": 1,
+    "status": 0,
+    "info": {
+     "build_tag": "",
+     "state_missing_nodes": 0,
+     "miners_median_network_time": 0,
+     "avg_block_txns": 0
+    }
+   }
+  }
+ },
+ "sharders": {
+  "type": 1,
+  "nodes": {
+   "57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4": {
+    "id": "57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4",
+    "version": "",
+    "creation_date": 1615745137,
+    "public_key": "b9b236311a623be9d1999fb6dd30eb223cbe16639a9d5502e28879c67aa41915a0b100ce8248360ec73dd2d822087d1c19a8aabc5262a475d8553a35c90dd217",
+    "n2n_host": "198.18.0.81",
+    "host": "localhost",
+    "port": 7171,
+    "path": "",
+    "type": 1,
+    "description": "localhost.s0",
+    "set_index": 0,
+    "status": 0,
+    "info": {
+     "build_tag": "",
+     "state_missing_nodes": 0,
+     "miners_median_network_time": 0,
+     "avg_block_txns": 0
+    }
+   }
+  }
+ },
+ "share_or_signs": {
+  "shares": {
+   "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929": {
+    "id": "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929",
+    "share_or_sign": {
+     "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929": {
+      "id": "",
+      "message": "Tis but a scratch",
+      "share": "1ee2ec0960d893a643bda2bb3e949cf21391fdf7ffb5161a6a48b47fab45816a",
+      "sign": "f5d06c606b9b1898899a07f2c144633c2fc476c0e062a68548aa970ec3392397"
+     },
+     "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2": {
+      "id": "",
+      "message": "Tis but a scratch",
+      "share": "1ee2ec0960d893a643bda2bb3e949cf21391fdf7ffb5161a6a48b47fab45816a",
+      "sign": "f5d06c606b9b1898899a07f2c144633c2fc476c0e062a68548aa970ec3392397"
+     }
+    }
+   },
+   "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2": {
+    "id": "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2",
+    "share_or_sign": {
+     "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929": {
+      "id": "",
+      "message": "Tis but a scratch",
+      "share": "105e6f57edddf9b71fed7e484779ffb9ca07798940d163d1d07b61aed0913cff",
+      "sign": "42b612f6ca91f05e21ca823f0bca1e4311ac1f0d8180e0a6f42fa04dfb044680"
+     },
+     "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2": {
+      "id": "",
+      "message": "Tis but a scratch",
+      "share": "105e6f57edddf9b71fed7e484779ffb9ca07798940d163d1d07b61aed0913cff",
+      "sign": "42b612f6ca91f05e21ca823f0bca1e4311ac1f0d8180e0a6f42fa04dfb044680"
+     }
+    }
+   }
+  }
+ },
+ "mpks": {
+  "Mpks": {
+   "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929": {
+    "ID": "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929",
+    "Mpk": [
+     "1c05d9ace8cd22075407ee8737d6488085a7d80e82d3f6556fd6be52cee94b1dc636167e9641fcc8817dad1d01f7946bf98f060d1e88621432fcf3cfa48f3a1f"
+    ]
+   },
+   "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2": {
+    "ID": "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2",
+    "Mpk": [
+     "d311dd0ac9ea2d30f761c428201a2ab9d0879c263759381322928ad2cbba4a23618c34499150279d1a0857fe83165033f0f29ce1d536e96cb694ec37fdd7498e"
+    ]
+   }
+  }
+ },
+ "t": 1,
+ "k": 1,
+ "n": 2
+}

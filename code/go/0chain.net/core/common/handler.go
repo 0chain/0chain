@@ -1,10 +1,10 @@
 package common
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -36,13 +36,24 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 		w.Header().Set("Content-Type", "application/json")
 		data := make(map[string]interface{}, 2)
 		data["error"] = err.Error()
-		if cerr, ok := err.(*Error); ok {
-			data["code"] = cerr.Code
+		if cErr, ok := err.(*Error); ok {
+			data["code"] = cErr.Code
 		}
-		buf := bytes.NewBuffer(nil)
-		json.NewEncoder(buf).Encode(data)
-		w.WriteHeader(http.StatusBadRequest)
-		buf.WriteTo(w)
+
+		switch {
+		case errors.Is(err, ErrBadRequest):
+			w.WriteHeader(http.StatusBadRequest)
+		case errors.Is(err, ErrInternal):
+			w.WriteHeader(http.StatusInternalServerError)
+		case errors.Is(err, ErrNoResource):
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 	if data != nil {
@@ -68,8 +79,11 @@ func getContext(r *http.Request) (context.Context, error) {
 var domainRE = regexp.MustCompile(`^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)`)
 
 func getHost(origin string) (string, error) {
-	url, err := url.Parse(origin)
-	return url.Hostname(), err
+	u, err := url.Parse(origin)
+	if err != nil {
+		return "", err
+	}
+	return u.Hostname(), nil
 }
 
 func validOrigin(origin string) bool {
@@ -80,7 +94,7 @@ func validOrigin(origin string) bool {
 	if host == "localhost" || strings.HasPrefix(host, "file") {
 		return true
 	}
-	if host == "0chain.net" ||
+	if host == "0chain.net" || host == "0box.io" ||
 		strings.HasSuffix(host, ".0chain.net") ||
 		strings.HasSuffix(host, ".alphanet-0chain.net") ||
 		strings.HasSuffix(host, ".testnet-0chain.net") ||

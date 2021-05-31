@@ -70,7 +70,7 @@ func (p Phase) String() string {
 // A Case represents a test case.
 type Case struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
-	Flow Flows  `json:"flow" yaml:"flow" mapstructure:"flow"`
+	Flow Flow   `json:"flow" yaml:"flow" mapstructure:"flow"`
 }
 
 // Set of tests.

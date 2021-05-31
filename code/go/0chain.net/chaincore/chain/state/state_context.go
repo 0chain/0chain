@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -32,6 +31,7 @@ var (
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
+	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetBlock() *block.Block
 	SetMagicBlock(block *block.MagicBlock)
 	GetState() util.MerklePatriciaTrieI
@@ -63,6 +63,7 @@ type StateContext struct {
 	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
+	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 }
 
@@ -73,6 +74,7 @@ func NewStateContext(
 	csd state.DeserializerI, t *transaction.Transaction,
 	getSharderFunc func(*block.Block) []string,
 	getLastestFinalizedMagicBlock func() *block.Block,
+	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
 ) (
 	balances *StateContext,
@@ -84,6 +86,7 @@ func NewStateContext(
 		txn:                           t,
 		getSharders:                   getSharderFunc,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
+		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 	}
 }
@@ -223,30 +226,28 @@ func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.getLastestFinalizedMagicBlock()
 }
 
+func (sc *StateContext) GetChainCurrentMagicBlock() *block.MagicBlock {
+	return sc.getChainCurrentMagicBlock()
+}
+
 func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return sc.getSignature()
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
-	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node", "key is too short")
-	}
-	return sc.state.GetNodeValue(util.Path(encryption.Hash(key)))
+	key_hash := encryption.Hash(key)
+	return sc.state.GetNodeValue(util.Path(key_hash))
 }
 
 func (sc *StateContext) InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
-	if encryption.IsHash(key) {
-		return "", common.NewError("failed to get trie node", "key is too short")
-	}
-	byteKey, err := sc.state.Insert(util.Path(encryption.Hash(key)), node)
+	key_hash := encryption.Hash(key)
+	byteKey, err := sc.state.Insert(util.Path(key_hash), node)
 	return datastore.Key(byteKey), err
 }
 
 func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error) {
-	if encryption.IsHash(key) {
-		return "", common.NewError("failed to get trie node", "key is too short")
-	}
-	byteKey, err := sc.state.Delete(util.Path(encryption.Hash(key)))
+	key_hash := encryption.Hash(key)
+	byteKey, err := sc.state.Delete(util.Path(key_hash))
 	return datastore.Key(byteKey), err
 }
 

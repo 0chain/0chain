@@ -42,7 +42,7 @@ type MerklePatriciaTrieI interface {
 
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
-	SaveChanges(ndb NodeDB, includeDeletes bool) error
+	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
 
 	// useful for syncing up
 	GetPathNodes(path Path) ([]Node, error)
@@ -50,6 +50,8 @@ type MerklePatriciaTrieI interface {
 	// useful for pruning the state below a certain origin number
 	UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error // mark
 
+	// FindMissingNodes find all missing nodes in a MPT tree
+	FindMissingNodes(ctx context.Context) ([]Path, []Key, error)
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
 

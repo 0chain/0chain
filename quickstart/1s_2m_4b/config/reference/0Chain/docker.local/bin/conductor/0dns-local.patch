@@ -1,0 +1,129 @@
+diff --git a/docker.local/bin/docker-clean.sh b/docker.local/bin/docker-clean.sh
+new file mode 100755
+index 0000000..ddefbe1
+--- /dev/null
++++ b/docker.local/bin/docker-clean.sh
+@@ -0,0 +1,11 @@
++#!/bin/sh
++
++#
++# clean up without sudo being a member of the docker group
++#
++
++set -e
++
++docker-compose                                                \
++    -f ./docker.local/docker-clean/docker-clean-compose.yml   \
++    up --build docker-clean
+diff --git a/docker.local/bin/start-no-daemon.sh b/docker.local/bin/start-no-daemon.sh
+new file mode 100755
+index 0000000..a8f93c2
+--- /dev/null
++++ b/docker.local/bin/start-no-daemon.sh
+@@ -0,0 +1,9 @@
++#!/bin/sh
++
++set -e
++
++PWD=`pwd`
++
++echo Starting 0dns ...
++
++docker-compose -p 0dns -f ./docker.local/docker-compose-no-daemon.yml up
+diff --git a/docker.local/docker-clean/Dockerfile b/docker.local/docker-clean/Dockerfile
+new file mode 100644
+index 0000000..a7f2f87
+--- /dev/null
++++ b/docker.local/docker-clean/Dockerfile
+@@ -0,0 +1,7 @@
++
++#
++# clean up without sudo being a member of the docker group
++#
++
++FROM alpine:latest
++COPY docker-clean.sh ./docker-clean.sh
+diff --git a/docker.local/docker-clean/docker-clean-compose.yml b/docker.local/docker-clean/docker-clean-compose.yml
+new file mode 100644
+index 0000000..c4b3da7
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean-compose.yml
+@@ -0,0 +1,14 @@
++version: "3"
++services:
++  docker-clean:
++    build:
++      context: '.'
++      dockerfile: Dockerfile
++    volumes:
++      - ../0dns/mongodata:/data/db
++      - ../0dns/log:/0dns/log
++    command: /bin/sh docker-clean.sh
++
++volumes:
++  mongodata: {}
++  log: {}
+diff --git a/docker.local/docker-clean/docker-clean.sh b/docker.local/docker-clean/docker-clean.sh
+new file mode 100644
+index 0000000..77fad1d
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean.sh
+@@ -0,0 +1,10 @@
++#!/bin/sh
++
++set -e
++
++echo "cleaning up..."
++
++rm -rf /0dns/log/*
++rm -rf /data/db/*
++
++echo "cleaned up"
+diff --git a/docker.local/docker-compose-no-daemon.yml b/docker.local/docker-compose-no-daemon.yml
+new file mode 100644
+index 0000000..ad144d9
+--- /dev/null
++++ b/docker.local/docker-compose-no-daemon.yml
+@@ -0,0 +1,42 @@
++version: "3"
++services:
++  mongodb:
++    image: mongo
++    volumes:
++      - ./0dns/mongodata:/data/db
++    networks:
++      default:
++      testnet0:
++    ports:
++      - "27017:27017"
++
++  0dns:
++    environment:
++      - DOCKER=true
++    build:
++      context: ./
++      dockerfile: ./docker.local/Dockerfile
++    depends_on:
++      - mongodb
++    links:
++      - mongodb:mongodb
++    volumes:
++      - ./config:/0dns/config
++      - ./0dns/log:/0dns/log
++    ports:
++      - "9091:9091"
++    networks:
++      default:
++      testnet0:
++        ipv4_address: 198.18.0.98
++    command: ./bin/zdns --deployment_mode 0 --magic_block /0dns/config/magic_block.json
++
++networks:
++  default:
++    driver: bridge
++  testnet0:
++    external: true
++
++volumes:
++  config:
++  mongodata:

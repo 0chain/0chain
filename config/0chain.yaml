@@ -46,6 +46,8 @@ server_chain:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0
     generators: 10
+    min_generators: 10
+    generators_percent: 0.2
     replicators: 4
     proposal:
       max_wait_time: 200
@@ -73,6 +75,12 @@ server_chain:
     verification_tickets_to: all_miners # generator or all_miners
   state:
     prune_below_count: 100 # rounds
+    sync:
+      timeout: 10 # seconds
+  stuck:
+    check_interval: 10 # seconds
+    time_threshold: 60 #seconds
+
   health_check:
     show_counters: true
     deep_scan:
@@ -112,8 +120,8 @@ service_charge: 0.10      # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC
 number_of_delegates: 10   # max number of delegate pools
 # min stake pool amount allowed by node; should not conflict with
-# SC min_stake 
+# SC min_stake
 min_stake: 10.0    # tokens
 # max stake pool amount allowed by node; should not conflict with
-# SC max_stake 
+# SC max_stake
 max_stake: 1000.0  # tokens

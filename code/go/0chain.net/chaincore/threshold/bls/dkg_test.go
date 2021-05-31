@@ -1,14 +1,14 @@
 package bls
 
 import (
+	"0chain.net/chaincore/wallet"
+	"0chain.net/core/logging"
 	"fmt"
+	"github.com/herumi/bls/ffi/go/bls"
 	"math"
 	"math/rand"
 	"testing"
 	"time"
-
-	"0chain.net/chaincore/wallet"
-	"github.com/herumi/bls/ffi/go/bls"
 )
 
 type DKGID = bls.ID
@@ -54,21 +54,20 @@ var dkgShares []*DKGKeyShareImpl
 //GenerateWallets - generate the wallets used to participate in DKG
 func GenerateWallets(n int) {
 	for i := 0; i < n; i++ {
-		wallet := &wallet.Wallet{}
-		if err := wallet.Initialize("bls0chain"); err != nil {
+		w := &wallet.Wallet{}
+		if err := w.Initialize("bls0chain"); err != nil {
 			panic(err)
 		}
-		wallets = append(wallets, wallet)
+		wallets = append(wallets, w)
 	}
 }
 
 //InitializeDKGShares - initialize DKG Share structures
-func InitializeDKGShares(t int) {
+func InitializeDKGShares() {
 	dkgShares = dkgShares[:0]
-	for _, wallet := range wallets {
-		dkgShare := &DKGKeyShareImpl{wallet: wallet}
-		if err := dkgShare.id.SetHexString("1" + wallet.ClientID[:31]); err != nil {
-			fmt.Printf("client id: %v\n", wallet.ClientID)
+	for _, w := range wallets {
+		dkgShare := &DKGKeyShareImpl{wallet: w}
+		if err := dkgShare.id.SetHexString("1" + w.ClientID[:31]); err != nil {
 			panic(err)
 		}
 		dkgShare.sij = make(map[bls.ID]bls.SecretKey)
@@ -132,7 +131,9 @@ func (dkgs *DKGKeyShareImpl) ComputePublicKeyShare(qual []DKGID, dkgShares map[b
 			panic("no share")
 		}
 		var pkj bls.PublicKey
-		pkj.Set(dkgsj.mpk, &dkgs.id)
+		if err := pkj.Set(dkgsj.mpk, &dkgs.id); err != nil {
+			panic(err)
+		}
 		pk.Add(&pkj)
 	}
 	return pk
@@ -188,6 +189,10 @@ func (dkgs *DKGKeyShareImpl) Recover(dkgSigShares []DKGSignatureShare) (*bls.Sig
 	return &aggSig, nil
 }
 
+func init() {
+	logging.InitLogging("development")
+}
+
 func TestGenerateDKG(tt *testing.T) {
 	n := 20                                 //total participants at the beginning
 	t := int(math.Round(0.67 * float64(n))) // threshold number of parties required to create aggregate signature
@@ -195,12 +200,8 @@ func TestGenerateDKG(tt *testing.T) {
 	if q == t && t < n {
 		q++
 	}
-	fmt.Printf("n=%v t=%v q=%v\n", n, t, q)
-	start := time.Now()
 	GenerateWallets(n)
-	fmt.Printf("time to generate wallets: %v\n", time.Since(start))
-	InitializeDKGShares(t)
-	fmt.Printf("time to initialize dkg shares: %v\n", time.Since(start))
+	InitializeDKGShares()
 
 	var ids []DKGID
 	var qualIDs []DKGID
@@ -214,13 +215,11 @@ func TestGenerateDKG(tt *testing.T) {
 	for _, dkgs := range dkgShares {
 		dkgs.GenerateDKGKeyShare(t)
 	}
-	fmt.Printf("time to generate dkg key shares: %v\n", time.Since(start))
 
 	//Generate Sij for each party (the p(id) value for a given id)
 	for _, dkgs := range dkgShares {
 		dkgs.GenerateSij(ids)
 	}
-	fmt.Printf("time to generate dkg key share sij: %v\n", time.Since(start))
 
 	//Validate Sij shares received fromm others using P(x)
 	for _, dkgsi := range dkgShares {
@@ -228,12 +227,10 @@ func TestGenerateDKG(tt *testing.T) {
 			sij := dkgsj.sij[dkgsi.id]
 			valid := dkgsi.ValidateShare(dkgsj.mpk, sij)
 			if !valid {
-				fmt.Printf("%v -> %v share valid = %v\n", dkgsi.wallet.ClientID[:7], dkgsj.wallet.ClientID[:7], valid)
+				tt.Errorf("%v -> %v share valid = %v\n", dkgsi.wallet.ClientID[:7], dkgsj.wallet.ClientID[:7], valid)
 			}
 		}
-		//fmt.Printf("time to dkg key share validate: %v\n", time.Since(start))
 	}
-	fmt.Printf("time to dkg key share validate all: %v\n", time.Since(start))
 
 	//Simulate Qual Set
 	shuffled := make([]*DKGKeyShareImpl, n)
@@ -252,7 +249,6 @@ func TestGenerateDKG(tt *testing.T) {
 		dkgsi.AggregateSecretKeyShares(qualIDs, qualDKGSharesMap)
 		dkgsi.AggregatePublicKeyShares(qualIDs, qualDKGSharesMap)
 	}
-	fmt.Printf("time to aggregate secret/public key shares: %v\n", time.Since(start))
 	for _, dkgsi := range qualDKGSharesMap {
 		for _, dkgsj := range qualDKGSharesMap {
 			if dkgsi == dkgsj {
@@ -264,7 +260,6 @@ func TestGenerateDKG(tt *testing.T) {
 			}
 		}
 	}
-	fmt.Printf("time to compute public key share: %v\n", time.Since(start))
 
 	msg := fmt.Sprintf("Hello 0Chain World %v", time.Now())
 	falseMsg := fmt.Sprintf("Hello 0Chain World %v", time.Now())
@@ -293,8 +288,6 @@ func TestGenerateDKG(tt *testing.T) {
 		signature := DKGSignatureShare{signature: blsSig, id: dkgsi.id}
 		signatures = append(signatures, signature)
 	}
-	fmt.Printf("time to sign: %v\n", time.Since(start))
-	fmt.Printf("Signatures: Correct: %v False: %v Total:%v\n", q-falseCount, falseCount, q)
 	//Aggregate Signatures
 	count := 0
 	for _, id := range qualIDs {
@@ -315,14 +308,12 @@ func TestGenerateDKG(tt *testing.T) {
 					panic("no share")
 				}
 				if !dkgsj.VerifySignature(msg, &signature.signature) {
-					fmt.Printf("\tInvalid signature from: %v\n", signature.id)
 					continue
 				}
 			}
 			dkgSignature.shares = append(dkgSignature.shares, signature)
 		}
 		if len(dkgSignature.shares) < t {
-			fmt.Printf("signature %v %v(%3d): insufficient signature shares\n", count, dkgsi.wallet.ClientID[:7], dkgsi.id)
 			continue
 		}
 		shuffled := make([]DKGSignatureShare, len(dkgSignature.shares))
@@ -331,13 +322,10 @@ func TestGenerateDKG(tt *testing.T) {
 		for i, v := range perm {
 			shuffled[v] = dkgSignature.shares[i]
 		}
-		asign, err := dkgsi.Recover(shuffled)
+		_, err := dkgsi.Recover(shuffled)
 		if err != nil {
 			fmt.Printf("Error recovering signature %v\n", err)
 			continue
 		}
-		gsigValid := dkgsi.VerifyGroupSignature(msg, asign)
-		fmt.Printf("signature %v %v(%3d): %v %v\n", count, dkgsi.wallet.ClientID[:7], dkgsi.id, asign.GetHexString()[:32], gsigValid)
 	}
-	fmt.Printf("time to finish: %v\n", time.Since(start))
 }

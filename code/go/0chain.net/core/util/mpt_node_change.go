@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
 )
 
 /*NodeChange - track a change to the node */
@@ -25,12 +26,14 @@ type ChangeCollectorI interface {
 	PrintChanges(w io.Writer)
 
 	Validate() error
+	Clone() ChangeCollectorI
 }
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
 	Changes map[string]*NodeChange
 	Deletes map[string]Node
+	mutex   sync.RWMutex
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
@@ -43,10 +46,10 @@ func NewChangeCollector() ChangeCollectorI {
 
 /*AddChange - implement interface */
 func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
 	nhash := newNode.GetHash()
-	if _, ok := cc.Deletes[nhash]; ok {
-		delete(cc.Deletes, nhash)
-	}
+	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
 		change.New = newNode
@@ -58,7 +61,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	if ok {
 		delete(cc.Changes, ohash)
 		if prevChange.Old != nil {
-			if bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
+			if bytes.Equal(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) {
 				return
 			}
 		}
@@ -75,6 +78,8 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 
 /*DeleteChange - implement interface */
 func (cc *ChangeCollector) DeleteChange(oldNode Node) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
@@ -85,6 +90,8 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 
 /*GetChanges - implement interface */
 func (cc *ChangeCollector) GetChanges() []*NodeChange {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	changes := make([]*NodeChange, len(cc.Changes))
 	idx := 0
 	for _, v := range cc.Changes {
@@ -96,6 +103,8 @@ func (cc *ChangeCollector) GetChanges() []*NodeChange {
 
 /*GetDeletes - implement interface */
 func (cc *ChangeCollector) GetDeletes() []Node {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	deletes := make([]Node, len(cc.Deletes))
 	idx := 0
 	for _, v := range cc.Deletes {
@@ -107,6 +116,8 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	keys := make([]Key, len(cc.Changes))
 	nodes := make([]Node, len(cc.Changes))
 	idx := 0
@@ -139,6 +150,8 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 
 //PrintChanges - implement interface
 func (cc *ChangeCollector) PrintChanges(w io.Writer) {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	for idx, c := range cc.Changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
@@ -150,10 +163,40 @@ func (cc *ChangeCollector) PrintChanges(w io.Writer) {
 
 //Validate - validate if this change collector is valid
 func (cc *ChangeCollector) Validate() error {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
 			return errors.New("key present in both add and delete")
 		}
 	}
 	return nil
+}
+
+// Clone returns a copy of the change collector
+func (cc *ChangeCollector) Clone() ChangeCollectorI {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
+
+	c := &ChangeCollector{
+		Changes: make(map[string]*NodeChange),
+		Deletes: make(map[string]Node),
+	}
+
+	for k, v := range cc.Changes {
+		change := &NodeChange{
+			New: v.New.Clone(),
+		}
+		if v.Old != nil {
+			change.Old = v.Old.Clone()
+		}
+
+		c.Changes[k] = change
+	}
+
+	for k, v := range cc.Deletes {
+		c.Deletes[k] = v.Clone()
+	}
+
+	return c
 }

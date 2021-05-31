@@ -6,11 +6,12 @@ import (
 	"time"
 )
 
-// The Flow represents single value map.
-type Flow map[string]interface{}
+type Directive map[string]interface{}
 
-func (f Flow) getFirst() (name string, val interface{}, ok bool) {
-	for name, val = range f {
+type Flow []Directive
+
+func (d Directive) unwrap() (name string, val interface{}, ok bool) {
+	for name, val = range d {
 		ok = true
 		return
 	}
@@ -41,42 +42,49 @@ func getNodeNames(val interface{}) (ss []NodeName, ok bool) {
 	return // nil, false
 }
 
-func (f Flow) execute(name string, ex Executor, val interface{},
-	tm time.Duration) (err error) {
+func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
+	var tm = 2 * time.Minute // default timeout is 2 minute
+
+	var name, val, ok = d.unwrap()
+	if !ok {
+		return errors.New("invalid empty flow"), false
+	}
+
+	var mf bool = false
+	if msi, ok := val.(map[interface{}]interface{}); ok {
+		// extract timeout
+		if tmsi, ok := msi["timeout"]; ok {
+			tms, ok := tmsi.(string)
+			if !ok {
+				return fmt.Errorf("invalid 'timeout' type: %T", tmsi), false
+			}
+			if tm, err = time.ParseDuration(tms); err != nil {
+				return fmt.Errorf("paring 'timeout' %q: %v", tms, err), false
+			}
+			delete(msi, "timeout")
+		}
+
+		// extract must_fail
+		if mfmsi, ok := msi["must_fail"]; ok {
+			mf, ok = mfmsi.(bool)
+			if !ok {
+				return fmt.Errorf("invalid 'must_fail' type: %T", mfmsi), false
+			}
+			delete(msi, "must_fail")
+		}
+	}
+
+	err = execute(name, ex, val, tm)
+	return err, mf
+}
+
+func execute(name string, ex Executor, val interface{}, tm time.Duration) (
+    err error) {
 
 	var fn, ok = flowRegistry[name]
 	if !ok {
 		return fmt.Errorf("unknown flow directive: %q", name)
 	}
 
-	return fn(f, name, ex, val, tm)
+	return fn(name, ex, val, tm)
 }
-
-// Execute the flow directive.
-func (f Flow) Execute(ex Executor) (err error) {
-	var name, val, ok = f.getFirst()
-	if !ok {
-		return errors.New("invalid empty flow")
-	}
-
-	var tm = 2 * time.Minute // default timeout is 2 minute
-
-	// extract timeout
-	if msi, ok := val.(map[interface{}]interface{}); ok {
-		if tmsi, ok := msi["timeout"]; ok {
-			tms, ok := tmsi.(string)
-			if !ok {
-				return fmt.Errorf("invalid 'timeout' type: %T", tmsi)
-			}
-			if tm, err = time.ParseDuration(tms); err != nil {
-				return fmt.Errorf("paring 'timeout' %q: %v", tms, err)
-			}
-			delete(msi, "timeout")
-		}
-	}
-
-	return f.execute(name, ex, val, tm)
-}
-
-// Flows represents order of start/stop miners/sharder and other BC events.
-type Flows []Flow

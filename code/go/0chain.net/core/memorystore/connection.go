@@ -11,14 +11,18 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
 /* Redis host environment variables
 
 
+ */
 /*DefaultPool - the default redis pool against a service (host) named redis */
 var DefaultPool *redis.Pool
+
+var connID atomic.Int64
 
 /*NewPool - create a new redis pool accessible at the given address */
 func NewPool(host string, port int) *redis.Pool {
@@ -49,8 +53,8 @@ type dbpool struct {
 
 var pools = make(map[string]*dbpool)
 
-func init() {
-	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
+func InitDefaultPool(host string, port int) {
+	DefaultPool = NewPool(host, port)
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 }
 
@@ -89,8 +93,9 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 * Should always use right after getting the connection to avoid leaks
 * defer c.Close()
  */
-func GetConnection() redis.Conn {
-	return DefaultPool.Get()
+func GetConnection() *Conn {
+	id := connID.Add(1)
+	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now(), ID: id, Pool: DefaultPool}
 }
 
 /*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
@@ -115,19 +120,27 @@ func GetInfo() {
 }
 
 /*GetEntityConnection - returns a connection from the pool configured for the entity */
-func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
+func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	dbid := entityMetadata.GetDB()
 	if dbid == "" {
 		return GetConnection()
 	}
 	dbpool := getdbpool(entityMetadata)
-	return dbpool.Pool.Get()
+	id := connID.Add(1)
+	return &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), Pool: dbpool.Pool, ID: id}
 }
 
 /*CONNECTION - key used to get the connection object from the context */
 const CONNECTION common.ContextKey = "connection."
 
-type connections map[common.ContextKey]redis.Conn
+type Conn struct {
+	redis.Conn
+	Tm   time.Time
+	ID   int64
+	Pool *redis.Pool
+}
+
+type connections map[common.ContextKey]*Conn
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
@@ -150,7 +163,7 @@ func WithConnection(ctx context.Context) context.Context {
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
-func GetCon(ctx context.Context) redis.Conn {
+func GetCon(ctx context.Context) *Conn {
 	if ctx == nil {
 		return GetConnection()
 	}
@@ -182,20 +195,22 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	c := ctx.Value(CONNECTION)
 	if c == nil {
 		cMap := make(connections)
-		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+		id := connID.Add(1)
+		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
 	_, ok = cMap[dbpool.CtxKey]
 	if !ok {
-		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+		id := connID.Add(1)
+		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
 	}
 	return ctx
 
 }
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
-func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) redis.Conn {
+func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) *Conn {
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}

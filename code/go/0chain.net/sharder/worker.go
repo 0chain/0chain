@@ -4,25 +4,22 @@ import (
 	"context"
 	"time"
 
+	"github.com/remeh/sizedwaitgroup"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/sharder/blockstore"
-
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/smartcontract/minersc"
-
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
-
-	"github.com/remeh/sizedwaitgroup"
-	"github.com/spf13/viper"
-
 	. "0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/persistencestore"
+	"0chain.net/core/viper"
+	"0chain.net/sharder/blockstore"
+	"0chain.net/smartcontract/minersc"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"
@@ -31,7 +28,7 @@ const minerScSharderHealthCheck = "sharder_health_check"
 func SetupWorkers(ctx context.Context) {
 	sc := GetSharderChain()
 	go sc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
-	go sc.FinalizeRoundWorker(ctx, sc)  // 2) sequentially finalize the rounds
+	go sc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go sc.FinalizedBlockWorker(ctx, sc) // 3) sequentially processes finalized blocks
 
 	// Setup the deep and proximity scan
@@ -55,6 +52,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	for true {
 		select {
 		case <-ctx.Done():
+			Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
 		case b := <-sc.GetBlockChannel():
 			sc.processBlock(ctx, b)
@@ -206,7 +204,7 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 		case <-ticker.C:
 			if !iterInprogress {
 				iterInprogress = true
-				roundToProcess := sc.CurrentRound - oldBlockRoundRange
+				roundToProcess := sc.GetCurrentRound() - oldBlockRoundRange
 				fs := blockstore.GetStore()
 				swg := sizedwaitgroup.New(numWorkers)
 				for roundToProcess > 0 {

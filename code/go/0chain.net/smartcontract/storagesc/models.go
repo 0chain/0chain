@@ -257,14 +257,14 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 		return errors.New("negative challenge_completion_time")
 	}
 	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge_completion_time is greater then max " +
+		return errors.New("challenge_completion_time is greater than max " +
 			"allowed by SC")
 	}
 	if t.ReadPrice > conf.MaxReadPrice {
-		return errors.New("read_price is greater then max_read_price allowed")
+		return errors.New("read_price is greater than max_read_price allowed")
 	}
 	if t.WritePrice > conf.MaxWritePrice {
-		return errors.New("write_price is greater then max_write_price allowed")
+		return errors.New("write_price is greater than max_write_price allowed")
 	}
 	return // nil
 }
@@ -382,7 +382,7 @@ type BlobberAllocation struct {
 	// ChallengeReward of the blobber.
 	ChallengeReward state.Balance `json:"challenge_reward"`
 	// FinalReward is number of tokens moved to the blobber on finalization.
-	// It can be greater then zero, if user didn't spent the min lock demand
+	// It can be greater than zero, if user didn't spent the min lock demand
 	// during the allocation.
 	FinalReward state.Balance `json:"final_reward"`
 

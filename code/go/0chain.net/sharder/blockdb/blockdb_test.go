@@ -1,8 +1,8 @@
 package blockdb
 
 import (
-	"fmt"
 	"io"
+	"sync"
 	"testing"
 
 	"0chain.net/core/common"
@@ -63,12 +63,20 @@ func TestDBWrite(t *testing.T) {
 	students[0] = &Student{Name: "Bitcoin - the first cryptocurrency", ID: "2009"}
 	students[1] = &Student{Name: "Linux - the most popular open source operating system", ID: "1991"}
 	students[2] = &Student{Name: "Apache - the first open source web server", ID: "1995"}
+
+	var wg sync.WaitGroup
 	for _, s := range students {
-		err = db.WriteData(s)
-		if err != nil {
-			panic(err)
-		}
+		wg.Add(1)
+		go func(s *Student, wg *sync.WaitGroup) {
+			defer wg.Done()
+			err := db.WriteData(s)
+			if err != nil {
+				panic(err)
+			}
+		}(s, &wg)
 	}
+	wg.Wait()
+
 	err = db.Save()
 	if err != nil {
 		panic(err)
@@ -83,15 +91,12 @@ func TestDBWrite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("class: %v\n", cls2)
 	for _, s := range students {
 		var s2 Student
-		fmt.Printf("reading the key: %v\n", s.GetKey())
 		err = db.Read(s.GetKey(), &s2)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("student: %v\n", s2)
 	}
 	db.Close()
 
@@ -105,12 +110,9 @@ func TestDBWrite(t *testing.T) {
 		panic(err)
 	}
 	var sp StudentProvider
-	srecs, err := db.ReadAll(&sp)
+	_, err = db.ReadAll(&sp)
 	if err != nil {
 		panic(err)
-	}
-	for _, s := range srecs {
-		fmt.Printf("student: %v\n", s)
 	}
 	db.Close()
 }

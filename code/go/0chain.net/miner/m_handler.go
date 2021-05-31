@@ -4,6 +4,7 @@ package miner
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -13,9 +14,9 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 
-	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -106,7 +107,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
-		Logger.Info("VRFShare: returning invalid Entity")
+		logging.Logger.Info("VRFShare: returning invalid Entity")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
@@ -124,7 +125,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		bound = lfb.Round // use lower one
 	}
 	if vrfs.GetRoundNumber() < bound {
-		Logger.Info("Rejecting VRFShare: old round",
+		logging.Logger.Info("Rejecting VRFShare: old round",
 			zap.Int64("vrfs_round", vrfs.GetRoundNumber()),
 			zap.Int64("lfb_ticket_round", tk.Round),
 			zap.Int64("lfb_round", lfb.Round),
@@ -136,12 +137,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	if vrfs.Round < mc.GetCurrentRound() {
 		var mr = mc.GetMinerRound(vrfs.Round)
 		if mr == nil {
-			Logger.Info("Rejecting VRFShare: missing miner round",
+			logging.Logger.Info("Rejecting VRFShare: missing miner round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if mr.Block == nil || !mr.Block.IsBlockNotarized() {
-			Logger.Info("Rejecting VRFShare: missing HNB for the round"+
+			logging.Logger.Info("Rejecting VRFShare: missing HNB for the round"+
 				" or it's not notarized",
 				zap.Bool("is_not_notarized", mr.Block != nil),
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
@@ -150,7 +151,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		// var hnb = mr.GetHeaviestNotarizedBlock()
 		var hnb = mr.Block
 		if hnb.GetStateStatus() != block.StateSuccessful {
-			Logger.Info("Rejecting VRFShare: HNB state is not successful",
+			logging.Logger.Info("Rejecting VRFShare: HNB state is not successful",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 				zap.String("hash", hnb.Hash))
 			return nil, nil
@@ -160,12 +161,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			party = node.GetSender(ctx)
 		)
 		if mb == nil {
-			Logger.Info("Rejecting VRFShare: missing MB for the round",
+			logging.Logger.Info("Rejecting VRFShare: missing MB for the round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if party == nil {
-			Logger.Info("Rejecting VRFShare: missing party",
+			logging.Logger.Info("Rejecting VRFShare: missing party",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
@@ -177,7 +178,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			}
 		}
 		if found == nil {
-			Logger.Info("Rejecting VRFShare: missing party in MB",
+			logging.Logger.Info("Rejecting VRFShare: missing party in MB",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
@@ -188,7 +189,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
 		}()
 
-		Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
+		logging.Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 			zap.String("to_miner_id", found.ID),
 			zap.String("to_miner_url", found.GetN2NURLBase()))
@@ -217,13 +218,13 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
-		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
+		logging.Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
 
 	var err error
 	if err = b.Validate(ctx); err != nil {
-		Logger.Debug("verify block handler -- can't validate",
+		logging.Logger.Debug("verify block handler -- can't validate",
 			zap.Int64("round", b.Round), zap.Error(err))
 		return nil, err
 	}
@@ -261,7 +262,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 	)
 
 	if notarization.Round < lfb.Round {
-		Logger.Debug("notarization receipt handler",
+		logging.Logger.Debug("notarization receipt handler",
 			zap.Int64("round", notarization.Round),
 			zap.Int64("lf_round", lfb.Round))
 		return nil, nil
@@ -284,7 +285,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 	var mc = GetMinerChain()
 	if b.Round < mc.GetCurrentRound()-1 {
-		Logger.Debug("notarized block handler (round older than the current round)",
+		logging.Logger.Debug("notarized block handler (round older than the current round)",
 			zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return
 	}
@@ -292,7 +293,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	var r = mc.getOrStartRoundNotAhead(ctx, b.Round)
 	if r == nil {
 		if mc.isAheadOfSharders(ctx, b.Round) {
-			Logger.Debug("notarized block handler -- is ahead or no pr",
+			logging.Logger.Debug("notarized block handler -- is ahead or no pr",
 				zap.String("block", b.Hash), zap.Any("round", b.Round),
 				zap.Bool("has_pr", mc.GetMinerRound(b.Round-1) != nil))
 			return
@@ -310,7 +311,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 
 	if mc.GetMinerRound(b.Round-1) == nil {
-		Logger.Error("not. block handler -- no previous round (ignore)",
+		logging.Logger.Error("not. block handler -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
 		return nil, nil // no previous round
 	}
@@ -353,7 +354,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 	var bsc = block.NewBlockStateChange(b)
 	if state.Debug() {
-		Logger.Info("block state change handler", zap.Int64("round", b.Round),
+		logging.Logger.Info("block state change handler", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())),
 			zap.Int("sc_nodes", len(bsc.Nodes)))
@@ -364,57 +365,64 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 // PartialStateHandler - return the partial state from a given root.
 func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	node := r.FormValue("node")
+	n := r.FormValue("node")
 	mc := GetMinerChain()
-	nodeKey, err := hex.DecodeString(node)
+	nodeKey, err := hex.DecodeString(n)
 	if err != nil {
 		return nil, err
 	}
 	ps, err := mc.GetStateFrom(ctx, nodeKey)
 	if err != nil {
-		Logger.Error("partial state handler", zap.String("key", node), zap.Error(err))
+		logging.Logger.Error("partial state handler", zap.String("key", n), zap.Error(err))
 		return nil, err
 	}
 	return ps, nil
 }
 
-func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
+func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
 
 	var (
-		round = r.FormValue("round")
-		hash  = r.FormValue("block")
+		r = req.FormValue("round")
+		hash  = req.FormValue("block")
 
 		mc = GetMinerChain()
 	)
 
-	if round != "" {
-		roundN, err := strconv.ParseInt(round, 10, 63)
-		if err != nil {
-			return nil, err
-		}
-		var r = mc.GetRound(roundN)
-		if r != nil {
-			b := r.GetHeaviestNotarizedBlock()
-			if b != nil {
-				return b, nil
-			}
-		}
-	} else if hash != "" {
+	errBlockNotAvailable := common.NewError("block_not_available",
+		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
+			mc.GetCurrentRound(), r, hash))
+
+	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
 		if err != nil {
 			return nil, err
 		}
+
 		if b.IsBlockNotarized() {
 			return b, nil
 		}
+		return nil, errBlockNotAvailable
 	}
-	// else {
-	//	for r := mc.GetRound(mc.GetCurrentRound()); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
-	//		b := r.GetHeaviestNotarizedBlock()
-	//		if b != nil {
-	//			return b, nil
-	//		}
-	//	}
-	// }
-	return nil, common.NewError("block_not_available", "Requested block is not available")
+
+	if r == "" {
+		return nil, common.NewError("none_round_or_hash_provided",
+			"no block hash or round number is provided")
+	}
+
+	roundN, err := strconv.ParseInt(r, 10, 63)
+	if err != nil {
+		return nil, err
+	}
+
+	rd := mc.GetRound(roundN)
+	if rd == nil {
+		return nil, errBlockNotAvailable
+	}
+
+	b := rd.GetHeaviestNotarizedBlock()
+	if b == nil {
+		return nil, errBlockNotAvailable
+	}
+
+	return b, nil
 }

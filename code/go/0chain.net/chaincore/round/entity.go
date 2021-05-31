@@ -11,13 +11,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const (
@@ -81,7 +82,6 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 
 // IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
-
 	if prrs == 0 {
 		return // no PRRS, no timeout incrementation
 	}
@@ -92,6 +92,7 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 		tc.count++
+		tc.checkCap()
 		return
 	}
 
@@ -123,6 +124,14 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	// increase if has not increased
 	if tc.count == from {
 		tc.count++
+	}
+	tc.checkCap()
+}
+
+func (tc *timeoutCounter) checkCap() {
+	timeoutCap := viper.GetInt("server_chain.round_timeouts.timeout_cap")
+	if timeoutCap > 0 && tc.count > timeoutCap {
+		tc.count = timeoutCap
 	}
 }
 
@@ -206,39 +215,37 @@ func (r *Round) GetRoundNumber() int64 {
 }
 
 //SetRandomSeed - set the random seed of the round
-func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, miners *node.Pool) {
+func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 	r.setRandomSeed(seed)
-	//r.setState(RoundVRFComplete) RoundStateFinalizing??
-	r.setHasRandomSeed(true)
 	r.mutex.Lock()
-	r.computeMinerRanks(miners)
+	r.computeMinerRanks(minersNum)
 	r.mutex.Unlock()
 }
 
 //SetRandomSeed - set the random seed of the round
-func (r *Round) SetRandomSeed(seed int64, miners *node.Pool) {
+func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
 		return
 	}
 	r.setRandomSeed(seed)
 	r.setState(RoundVRFComplete)
-	r.setHasRandomSeed(true)
 
 	r.mutex.Lock()
-	r.computeMinerRanks(miners)
+	r.computeMinerRanks(minersNum)
 	r.mutex.Unlock()
 }
 
 func (r *Round) setRandomSeed(seed int64) {
+	value := uint32(0)
+	if seed != 0 {
+		value = 1
+	}
+
+	atomic.StoreUint32(&r.hasRandomSeed, value)
 	atomic.StoreInt64(&r.RandomSeed, seed)
 }
 
 func (r *Round) setHasRandomSeed(b bool) {
-	value := uint32(0)
-	if b {
-		value = 1
-	}
-	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
 // GetRandomSeed - returns the random seed of the round.
@@ -283,7 +290,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 
 	if found > -1 {
 		fb := r.notarizedBlocks[found]
-		Logger.Info("Removing the old notarized block with the same rank",
+		logging.Logger.Info("Removing the old notarized block with the same rank",
 			zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
 			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()),
 			zap.Int("fb_toc", fb.RoundTimeoutCount),
@@ -421,8 +428,7 @@ func (r *Round) initialize() {
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
-	//when we restart a round we call this. So, explicitly, set them to default
-	r.setHasRandomSeed(false)
+	// when we restart a round we call this. So, explicitly, set them to default
 	r.setRandomSeed(0)
 }
 
@@ -462,11 +468,8 @@ func SetupRoundSummaryDB() {
 }
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
-func (r *Round) computeMinerRanks(miners *node.Pool) {
-	Logger.Info("waiting to compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
-	seed := r.GetRandomSeed()
-	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
-	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(miners.Size())
+func (r *Round) computeMinerRanks(minersNum int) {
+	r.minerPerm = rand.New(rand.NewSource(r.GetRandomSeed())).Perm(minersNum)
 }
 
 func (r *Round) IsRanksComputed() bool {
@@ -482,13 +485,13 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
+		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
-	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
+	logging.Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
 		zap.Any("miner", miner), zap.Any("round", r.Number),
 		zap.Any("miner_set_index", miner.SetIndex))
 	if miner.SetIndex >= len(r.minerPerm) {
-		Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
+		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
 			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),
 			zap.Any("node", miner))
 		return -1
@@ -501,21 +504,21 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	nodes := miners.CopyNodes()
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
+	logging.Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
 		zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
 		if nodes[i].SetIndex < len(r.minerPerm) {
 			idxi = r.minerPerm[nodes[i].SetIndex]
 		} else {
-			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
 				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[i].SetIndex),
 				zap.Any("node", nodes[i]))
 		}
 		if nodes[j].SetIndex < len(r.minerPerm) {
 			idxj = r.minerPerm[nodes[j].SetIndex]
 		} else {
-			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+			logging.Logger.Warn("get miner by rank -- the node index in the permutation is missing",
 				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[j].SetIndex),
 				zap.Any("node", nodes[j]))
 		}
@@ -544,7 +547,7 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	defer r.mutex.Unlock()
 
 	if _, ok := r.shares[share.party.GetKey()]; ok {
-		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
 	r.setState(RoundShareVRF)
@@ -558,11 +561,11 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	defer r.mutex.Unlock()
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
-		Logger.Info("AddVRFShare Already at threshold. Returning false.")
+		logging.Logger.Info("AddVRFShare Already at threshold. Returning false.")
 		return false
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
-		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
 	r.setState(RoundShareVRF)

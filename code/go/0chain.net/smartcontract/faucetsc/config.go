@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/core/common"
 	"context"
 	"net/url"
 	"time"
@@ -12,6 +13,7 @@ import (
 
 type faucetConfig struct {
 	PourAmount      state.Balance `json:"pour_amount"`
+	MaxPourAmount   state.Balance `json:"max_pour_amount"`
 	PeriodicLimit   state.Balance `json:"periodic_limit"`
 	GlobalLimit     state.Balance `json:"global_limit"`
 	IndividualReset time.Duration `json:"individual_reset"` //in hours
@@ -22,6 +24,7 @@ type faucetConfig struct {
 func getConfig() (conf *faucetConfig, err error) {
 	conf = new(faucetConfig)
 	conf.PourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_amount"))
+	conf.MaxPourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.max_pour_amount"))
 	conf.PeriodicLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.periodic_limit"))
 	conf.GlobalLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.global_limit"))
 	conf.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
@@ -33,7 +36,13 @@ func getConfig() (conf *faucetConfig, err error) {
 // REST-handler
 //
 
+const cantGetConfig = "can't get config"
+
 func (fc *FaucetSmartContract) getConfigHandler(context.Context,
 	url.Values, chainstate.StateContextI) (interface{}, error) {
-	return getConfig()
+	res, err := getConfig()
+	if err != nil {
+		return nil, common.NewErrNoResource(cantGetConfig, err.Error())
+	}
+	return res, nil
 }

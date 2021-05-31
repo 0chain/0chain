@@ -46,7 +46,6 @@ func TestDigPoolInsufficentFundsForExchange(t *testing.T) {
 	if err == nil {
 		t.Error("The error shouldn't be nil")
 	}
-	t.Logf("error: %v\n", err.Error())
 }
 
 func TestFillPool(t *testing.T) {
@@ -75,7 +74,6 @@ func TestFillPoolInsufficentFunds(t *testing.T) {
 	if err == nil {
 		t.Error("The error shouldn't be nil")
 	}
-	t.Logf("error: %v\n", err.Error())
 }
 
 func TestTransferTo(t *testing.T) {
@@ -128,7 +126,6 @@ func TestInterPoolTransferInsufficentFundsFromPool(t *testing.T) {
 	if err == nil {
 		t.Error("The error shouldn't be nil")
 	}
-	t.Logf("error: %v\n", err.Error())
 }
 
 func TestInterPoolTransferInsufficentFundsToPool(t *testing.T) {
@@ -142,7 +139,6 @@ func TestInterPoolTransferInsufficentFundsToPool(t *testing.T) {
 	if err == nil {
 		t.Error("The error shouldn't be nil")
 	}
-	t.Logf("error: %v\n", err.Error())
 }
 
 func TestDrainPool(t *testing.T) {
@@ -163,7 +159,6 @@ func TestDrainPoolInsufficentFunds(t *testing.T) {
 	if err == nil {
 		t.Error("The error shouldn't be nil")
 	}
-	t.Logf("error: %v\n", err.Error())
 }
 
 func TestEmptyPool(t *testing.T) {

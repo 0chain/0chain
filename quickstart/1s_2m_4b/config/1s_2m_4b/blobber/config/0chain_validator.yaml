@@ -1,0 +1,30 @@
+version: 1.0
+
+# delegate wallet (must be set)
+delegate_wallet: '1e57000b20dcf40f3a63111027e45e0e713304d68506e863c26493991b546586'
+# min stake allowed, tokens
+min_stake: 1.0
+# max stake allowed, tokens
+max_stake: 100.0
+# maximum allowed number of stake holders
+num_delegates: 50
+# service charge of related blobber
+service_charge: 0.30
+
+block_worker: http://198.18.0.98:9091
+
+handlers:
+  rate_limit: 10 # 10 per second
+
+logging:
+  level: "info"
+  console: false # printing log to console is only supported in development mode
+
+server_chain:
+  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
+  owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
+  genesis_block:
+    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
+  network:
+    relay_time: 100 # milliseconds
+  signature_scheme: "bls0chain"

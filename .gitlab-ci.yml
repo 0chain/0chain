@@ -9,6 +9,16 @@ stages:
   - hostname && hostname -I
   - env | grep -e CI_COMMIT -e CI_PIPELINE
 
+.template: &only-protected
+  only:
+    variables:
+    - $CI_COMMIT_REF_PROTECTED == "true"
+
+.template: &only-unprotected
+  only:
+    variables:
+    - $CI_COMMIT_REF_PROTECTED == "false"
+
 build-base:
   <<: *env-info
   stage: prepare
@@ -17,7 +27,7 @@ build-base:
   script:
   - ./docker.local/bin/build.base.sh
 
-unit-tests:
+run-unit-tests:
   <<: *env-info
   stage: check
   allow_failure: true
@@ -26,8 +36,50 @@ unit-tests:
   script:
   - ./docker.local/bin/unit_test.sh --ci
 
+measure-copy-paste:
+  <<: *env-info
+  stage: check
+  tags:
+  - normal
+  script:
+  - go get -u github.com/mibk/dupl
+  - cd code/go/0chain.net
+  - dupl -t 30
+  - dupl -t 30 -html > ../../../dupl.html
+  artifacts:
+    paths:
+    - dupl.html
+    expire_in: 1 month
+
+build-magic-block:
+  <<: *env-info
+  stage: build
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.magic_block.sh
+
 build-miners:
   <<: *env-info
+  <<: *only-unprotected
+  stage: build
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.miners.sh
+
+build-sharders:
+  <<: *env-info
+  <<: *only-unprotected
+  stage: build
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.sharders.sh
+
+build-miners-integration:
+  <<: *env-info
+  <<: *only-protected
   stage: build
   tags:
   - normal
@@ -39,8 +91,9 @@ build-miners:
   - docker push www.0chain-ci.net:5050/root/0chain:miner-$CI_COMMIT_SHORT_SHA
   - docker push www.0chain-ci.net:5050/root/0chain:miner-latest
 
-build-sharders:
+build-sharders-integration:
   <<: *env-info
+  <<: *only-protected
   stage: build
   tags:
   - normal
@@ -66,7 +119,8 @@ build-sharders:
   - ./docker.local/bin/setup_network.sh || true
   - ./docker.local/bin/sync_clock.sh
 
-run-view-change-1:
+test-view-change-1:
+  <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
@@ -74,7 +128,8 @@ run-view-change-1:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-1
 
-run-view-change-2:
+test-view-change-2:
+  <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
@@ -82,7 +137,8 @@ run-view-change-2:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-2
 
-run-view-change-3:
+test-view-change-3:
+  <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
@@ -90,18 +146,20 @@ run-view-change-3:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-3
 
-run-blockchain-1:
+test-miners:
+  <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh blockchain-1
+  - ./docker.local/bin/start.conductor.sh miners
 
-run-blockchain-2:
+test-sharders:
+  <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh blockchain-2
+  - ./docker.local/bin/start.conductor.sh sharders

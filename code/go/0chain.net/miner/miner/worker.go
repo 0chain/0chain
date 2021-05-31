@@ -6,20 +6,19 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/chain"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"0chain.net/miner"
-
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
+	"0chain.net/miner"
 	"0chain.net/smartcontract/faucetsc"
 )
 
@@ -74,6 +73,7 @@ func TransactionGenerator(c *chain.Chain) {
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	defer memorystore.Close(ctx)
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
@@ -86,7 +86,7 @@ func TransactionGenerator(c *chain.Chain) {
 		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 	}
 
-	numGenerators := sc.NumGenerators
+	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
 	numMiners := mb.Miners.Size()
 	var timerCount int64
@@ -110,17 +110,17 @@ func TransactionGenerator(c *chain.Chain) {
 		waitTime := time.Millisecond * time.Duration(1000./1.05/blocksPerMiner)
 		timer := time.NewTimer(waitTime)
 		if sc.GetCurrentRound()%100 == 0 {
-			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
+			logging.Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
 		}
 		select {
 		case <-ctx.Done():
-			Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
+			logging.Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
 			return
 		case <-timer.C:
 			timerCount++
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 			if timerCount%300 == 0 {
-				Logger.Info("transaction generation", zap.Any("txn_count", txnCount), zap.Any("blocks_per_miner", blocksPerMiner), zap.Any("num_txns", numTxns))
+				logging.Logger.Info("transaction generation", zap.Any("txn_count", txnCount), zap.Any("blocks_per_miner", blocksPerMiner), zap.Any("num_txns", numTxns))
 			}
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
@@ -144,7 +144,7 @@ func TransactionGenerator(c *chain.Chain) {
 						}
 						_, err := transaction.PutTransaction(ctx, txn)
 						if err != nil {
-							Logger.Info("transaction generator", zap.Any("error", err))
+							logging.Logger.Info("transaction generator", zap.Any("error", err))
 						}
 					}
 					wg.Done()
@@ -245,15 +245,15 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
-			Logger.Info("client generator", zap.Any("error", err))
+			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
 	if config.DevConfiguration.FaucetEnabled {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
-			Logger.Info("client generator - faucet refill", zap.Any("error", err))
+			logging.Logger.Info("client generator - faucet refill", zap.Any("error", err))
 		}
 	}
-	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
+	logging.Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }

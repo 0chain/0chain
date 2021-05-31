@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
+	"0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const updateConfigURL = "/v1/config/update"
@@ -37,7 +38,7 @@ func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		Logger.Error("failed to parse update config form", zap.Any("error", err))
+		logging.Logger.Error("failed to parse update config form", zap.Any("error", err))
 		return
 	}
 	mb := chain.GetServerChain().GetCurrentMagicBlock()
@@ -47,7 +48,7 @@ func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 			go func(miner *node.Node) {
 				resp, err := http.PostForm(miner.GetN2NURLBase()+updateConfigURL, r.Form)
 				if err != nil {
-					Logger.Error("failed to update other miner's config", zap.Any("miner", miner.GetKey()), zap.Any("response", resp), zap.Any("error", err))
+					logging.Logger.Error("failed to update other miner's config", zap.Any("miner", miner.GetKey()), zap.Any("response", resp), zap.Any("error", err))
 					return
 				}
 				defer resp.Body.Close()

@@ -113,7 +113,8 @@ min/max_stake out of this SC boundary.
 #### Interest rate.
 
 Interest rate is % (value in [0; 1) range) that used to calculate interests of
-stake holders. The interests payed every view change.
+stake holders. The interest is payed periodically, on rounds that are a multiple of
+the `sc.yaml minersc.reward_round_frequency` settings.
 
 The formula
 ```
@@ -146,17 +147,17 @@ share_ratio.
 
 The formula
 ```
-generator_reward_service_charge = block_reward * service_charge
-generator_fee_service_charge    = block_fees * service_charge
+generator_rewards = block_reward * share_ratio
+sharders_rewards  = block_reward - generator_rewards
 
-rest_reward = block_reward - generator_reward_service_charge
-rest_fees = block_fees - generator_fee_service_charge
+generator_reward_service_charge = generator_rewards * service_charge
+sharder_reward_service_charge = sharders_rewards * service_charge
 
-generator_rewards = rest_reward * share_ratio
-sharders_rewards  = rest_reward - generator_rewards
+generator_fees = block_fees * share_ratio
+sharders_fees  = block_fees - generator_fees
 
-generator_fees = rest_fees * share_ratio
-sharders_fees  = rest_fees - generator_fees
+generator_fee_service_charge = generator_fees * service_charge
+sharder_fee_service_charge = sharders_fees * service_charge
 ```
 
 The _generator_rewards_ and _generator_fees_ divided between generator's stake
@@ -255,12 +256,12 @@ of all offline nodes returning tokens back.
     ```
     for run in {1..10}; do ./zwallet faucet --methodName pour --input “{Pay day}”; done
     ```
-    This takes a while.
+   This takes a while.
 4. Determine ID of the wallet
     ```
     cat ~/.zcn/wallet.json
     ```
-    The "client_id" field is the wallet ID.
+   The "client_id" field is the wallet ID.
 5. Check out Miner SC configurations to determine min_stake and max_sake of SC.
 6. Configure 5th miner (file `docker.local/config/0chain.yaml`)
     ```
@@ -271,16 +272,16 @@ of all offline nodes returning tokens back.
     max_stake: 10.0
     ```
 7. Start the 5th miner and wait some time to let the miner register in Miner SC.
-    Export the miner 5 ID to use in the commands
+   Export the miner 5 ID to use in the commands
     ```
     export MINER5=53add50ff9501014df2cbd698c673f85e5785281cebba8772a64a6e74057d328
     ```
-    Wait view change to let the 5th miner join blockchain.
+   Wait view change to let the 5th miner join blockchain.
 8. Stake 10 tokens for the 5th miner
     ```
     ./zwallet mn-lock --id $MINER5 --tokens 10.0
     ```
-    end export returned pool id
+   end export returned pool id
     ```
     export POOL=<the returned pool ID>
     ```

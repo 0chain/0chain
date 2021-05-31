@@ -12,6 +12,7 @@ import (
 
 type limitRequest struct {
 	PourAmount      state.Balance `json:"pour_amount"`
+	MaxPourAmount   state.Balance `json:"max_pour_amount"`
 	PeriodicLimit   state.Balance `json:"periodic_limit"`
 	GlobalLimit     state.Balance `json:"global_limit"`
 	IndividualReset time.Duration `json:"individual_reset"` //in hours
@@ -48,6 +49,7 @@ func (pr *periodicResponse) decode(input []byte) error {
 type GlobalNode struct {
 	ID              string        `json:"id"`
 	PourAmount      state.Balance `json:"pour_amount"`
+	MaxPourAmount   state.Balance `json:"max_pour_amount"`
 	PeriodicLimit   state.Balance `json:"periodic_limit"`
 	GlobalLimit     state.Balance `json:"global_limit"`
 	IndividualReset time.Duration `json:"individual_reset"` //in hours

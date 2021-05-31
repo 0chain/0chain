@@ -1,6 +1,6 @@
 package config
 
-import "github.com/spf13/viper"
+import "0chain.net/core/viper"
 
 /*DevConfig - these are to control features in development*/
 type DevConfig struct {
@@ -23,5 +23,5 @@ func setupDevConfig() {
 	DevConfiguration.IsDkgEnabled = viper.GetBool("development.dkg")
 	DevConfiguration.FaucetEnabled = viper.GetBool("development.smart_contract.faucet")
 	DevConfiguration.IsFeeEnabled = viper.GetBool("development.smart_contract.miner")
-	DevConfiguration.ViewChange = viper.GetBool("development.view_change")
+	DevConfiguration.ViewChange = DevConfiguration.IsFeeEnabled && viper.GetBool("development.view_change")
 }

@@ -15,9 +15,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -73,14 +74,14 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 		}
 		if bsc != nil {
 			if err = c.applyBlockStateChange(b, bsc); err != nil {
-				Logger.Error("compute state - applying state change",
+				logging.Logger.Error("compute state - applying state change",
 					zap.Any("round", b.Round), zap.Any("block", b.Hash),
 					zap.Error(err))
 				return err
 			}
 		}
 		if !b.IsStateComputed() {
-			Logger.Error("compute state - state change error",
+			logging.Logger.Error("compute state - state change error",
 				zap.Any("round", b.Round), zap.Any("block", b.Hash),
 				zap.Error(err))
 			return err
@@ -89,7 +90,25 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
+func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) error {
+	if b.IsStateComputed() {
+		return nil
+	}
+
+	// get block state changes from network
+	return c.GetBlockStateChange(b)
+
+	return nil
+}
+
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
+	select {
+	case <-ctx.Done():
+		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
+		return ctx.Err()
+	default:
+	}
+
 	if b.IsStateComputed() {
 		return nil
 	}
@@ -101,7 +120,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - previous block not available",
+			logging.Logger.Error("compute state - previous block not available",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("prev_block", b.PrevHash))
 			return ErrPreviousBlockUnavailable
@@ -109,19 +128,26 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	if pb == b || pb.StateMutex == b.StateMutex {
 		b.PrevBlock = nil // reset (a real case, may be unexpected)
-		Logger.Error("computing block state", zap.String("error",
+		logging.Logger.Error("computing block state", zap.String("error",
 			"block_prev points to itself, or its state mutex does it"))
 		return common.NewError("computing block state",
 			"prev_block points to itself, or its state mutex does it")
 	}
 	if !pb.IsStateComputed() {
 		if pb.GetStateStatus() == block.StateFailed {
-			c.GetBlockStateChange(pb)
+			if err := c.updateStateFromNetwork(ctx, pb); err != nil {
+				logging.Logger.Error("fetchMissingStates failed", zap.Error(err))
+				return err
+			}
 			if !pb.IsStateComputed() {
 				return ErrPreviousStateUnavailable
 			}
+			logging.Logger.Debug("fetch previous block state from network successfully",
+				zap.Int64("prev_round", pb.Round),
+				zap.Any("hash", pb.Hash),
+				zap.Any("prev_state", util.ToHex(pb.ClientStateHash)))
 		} else {
-			Logger.Info("compute state - previous block state not ready",
+			logging.Logger.Info("compute state - previous block state not ready",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("prev_block", b.PrevHash),
 				zap.Int8("prev_block_state", pb.GetBlockState()),
@@ -130,12 +156,12 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			if err != nil {
 				pb.SetStateStatus(block.StateFailed)
 				if state.DebugBlock() {
-					Logger.Error("compute state - error computing previous state",
+					logging.Logger.Error("compute state - error computing previous state",
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
 						zap.String("prev_block", b.PrevHash), zap.Error(err))
 				} else {
-					Logger.Error("compute state - error computing previous state",
+					logging.Logger.Error("compute state - error computing previous state",
 						zap.Int64("round", b.Round),
 						zap.String("block", b.Hash),
 						zap.String("prev_block", b.PrevHash), zap.Error(err))
@@ -145,7 +171,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 	}
 	if pb.ClientState == nil {
-		Logger.Error("compute state - previous state nil",
+		logging.Logger.Error("compute state - previous state nil",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
@@ -155,7 +181,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	// Before continue the the following state update for transactions, the previous
 	// block's state must be computed successfully.
 	if !pb.IsStateComputed() {
-		Logger.Error("previous state not compute successfully",
+		logging.Logger.Error("previous state not compute successfully",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Any("state status", pb.GetStateStatus()))
@@ -163,7 +189,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	b.SetStateDB(pb)
 
-	Logger.Info("compute state", zap.Int64("round", b.Round),
+	logging.Logger.Info("compute state", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("client_state", util.ToHex(b.ClientStateHash)),
 		zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())),
@@ -176,7 +202,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 		if err := c.UpdateState(b, txn); err != nil {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - update state failed",
+			logging.Logger.Error("compute state - update state failed",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.String("client_state", util.ToHex(b.ClientStateHash)),
@@ -188,7 +214,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(block.StateFailed)
-		Logger.Error("compute state - state hash mismatch",
+		logging.Logger.Error("compute state - state hash mismatch",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
 			zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
@@ -198,7 +224,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	c.StateSanityCheck(ctx, b)
 	b.SetStateStatus(block.StateSuccessful)
-	Logger.Info("compute state successful", zap.Int64("round", b.Round),
+	logging.Logger.Info("compute state successful", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)),
 		zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
@@ -209,17 +235,18 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 //SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
-		err := c.ComputeOrSyncState(ctx, b)
-		if err != nil {
-			Logger.Error("save changes - save state not successful", zap.Int64("round", b.Round), zap.String("hash", b.Hash), zap.Int8("state", b.GetBlockState()), zap.Error(err))
-			if state.Debug() {
-				Logger.DPanic("save changes - state not successful")
-			}
-		}
+		err := errors.New("block state not computed")
+		logging.Logger.Error("save changes failed", zap.Error(err),
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash))
+		return err
 	}
+
 	if b.ClientState == nil {
-		Logger.Error("save changes - client state is null", zap.Int64("round", b.Round), zap.String("hash", b.Hash))
-		return nil
+		logging.Logger.Error("save changes - client state is nil",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash))
+		return errors.New("save changes - client state is nil")
 	}
 
 	lock := b.StateMutex
@@ -229,7 +256,11 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	ts := time.Now()
 	switch b.GetStateStatus() {
 	case block.StateSynched, block.StateSuccessful:
-		err = b.ClientState.SaveChanges(c.stateDB, false)
+		err = b.ClientState.SaveChanges(ctx, c.stateDB, false)
+		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
+		if ok {
+			c.stateDB.(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
+		}
 	default:
 		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
 	}
@@ -241,12 +272,12 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 		StateChangeSizeMetric.Update(int64(len(changes)))
 	}
 	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		Logger.Error("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		logging.Logger.Info("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	} else {
-		Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
+		logging.Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
 	}
 	if err != nil {
-		Logger.Error("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
+		logging.Logger.Info("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
 	}
 
 	return err
@@ -260,16 +291,22 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.stateDB {
+		logging.Logger.Debug("finalize round - rebasing current state db",
+			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		lfb.ClientState.SetNodeDB(c.stateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
-			Logger.Debug("finalize round - rebasing current state db",
+			logging.Logger.Debug("finalize round - rebasing current state db",
 				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
 				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 			lndb.RebaseCurrentDB(c.stateDB)
-			Logger.Debug("finalize round - rebased current state db",
+			logging.Logger.Debug("finalize round - rebased current state db",
 				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
 				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
+		logging.Logger.Debug("finalize round - rebased current state db",
+			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 	}
 }
 
@@ -317,8 +354,11 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 	txn *transaction.Transaction) (balances *bcstate.StateContext) {
 
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer, txn,
-		c.GetBlockSharders, c.GetLatestFinalizedMagicBlock,
+	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
+		txn,
+		c.GetBlockSharders,
+		c.GetLatestFinalizedMagicBlock,
+		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme)
 }
 
@@ -336,12 +376,12 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	case transaction.TxnTypeSmartContract:
 		var output string
 		if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
-			Logger.Error("Error executing the SC", zap.Any("txn", txn),
+			logging.Logger.Error("Error executing the SC", zap.Any("txn", txn),
 				zap.Error(err))
 			return
 		}
 		txn.TransactionOutput = output
-		Logger.Info("SC executed with output",
+		logging.Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash))
 
@@ -354,7 +394,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 			return
 		}
 	default:
-		Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
+		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
 		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
@@ -389,7 +429,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	for _, mint := range sctx.GetMints() {
 		err = c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
 		if err != nil {
-			Logger.Error("mint error", zap.Any("error", err),
+			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash))
 			return
 		}
@@ -398,24 +438,24 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	// commit transaction
 	if err = b.ClientState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {
-			Logger.DPanic("update state - merge mpt error",
+			logging.Logger.DPanic("update state - merge mpt error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.Any("txn", txn), zap.Error(err))
 		}
 
-		Logger.Error("error committing txn", zap.Any("error", err))
+		logging.Logger.Error("error committing txn", zap.Any("error", err))
 		return
 	}
 
 	if state.DebugTxn() {
 		if err = c.validateState(context.TODO(), b, startRoot); err != nil {
-			Logger.DPanic("update state - state validation failure",
+			logging.Logger.DPanic("update state - state validation failure",
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
 		os, err = c.getState(b.ClientState, c.OwnerID)
 		if err != nil || os == nil || os.Balance == 0 {
-			Logger.DPanic("update state - owner account",
+			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
 		}
@@ -443,7 +483,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	fs, err := c.getState(clientState, fromClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
-			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			logging.Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -452,7 +492,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			}
 			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", fromClient, txn, err)
 			printStates(clientState, b.ClientState)
-			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", fromClient, err))
+			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", fromClient, err))
 		}
 		return err
 	}
@@ -462,7 +502,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
-			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -471,14 +511,14 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 			}
 			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 			printStates(clientState, b.ClientState)
-			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
+			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
 		return err
 	}
 	sctx.SetStateContext(fs)
 	fs.Balance -= amount
 	if fs.Balance == 0 {
-		Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
+		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
 		_, err = clientState.Delete(util.Path(fromClient))
 	} else {
 		_, err = clientState.Insert(util.Path(fromClient), fs)
@@ -486,10 +526,10 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
-				Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 			if state.Debug() {
-				Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+				logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 		}
 		return err
@@ -500,10 +540,10 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
-				Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 			if state.Debug() {
-				Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+				logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 		}
 		return err
@@ -521,7 +561,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
-			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -530,10 +570,10 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 			}
 			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 			printStates(clientState, b.ClientState)
-			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
+			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
 		if state.Debug() {
-			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		return err
 	}
@@ -543,7 +583,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
-				Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+				logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 				for _, txn := range b.Txns {
 					if txn == nil {
 						break
@@ -552,11 +592,11 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 				}
 				fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 				printStates(clientState, b.ClientState)
-				Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 		}
 		if state.Debug() {
-			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		return err
 	}

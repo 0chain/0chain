@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"reflect"
 	"sort"
 	"time"
+
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
@@ -18,15 +21,11 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
-
-	"github.com/spf13/viper"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 const (
@@ -40,18 +39,50 @@ const (
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-func (mc *Chain) InitSetupSC() {
-	registered := mc.isRegistered()
-	for !registered {
-		txn, err := mc.RegisterNode()
-		if err != nil {
-			Logger.Warn("failed to register node in SC -- init_setup_sc",
-				zap.Error(err))
-		} else if txn != nil && mc.ConfirmTransaction(txn) {
+func (mc *Chain) SetupSC(ctx context.Context) {
+	logging.Logger.Info("SetupSC start...")
+	tm := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			logging.Logger.Debug("SetupSC is done")
 			return
+		case <-tm.C:
+			logging.Logger.Debug("SetupSC - check if node is registered")
+			isRegisteredC := make(chan bool)
+			go func() {
+				if mc.isRegistered() {
+					logging.Logger.Debug("SetupSC - node is already registered")
+					isRegisteredC <- true
+					return
+				}
+				isRegisteredC <- false
+			}()
+
+			select {
+			case reg := <-isRegisteredC:
+				if reg {
+					continue
+				}
+			case <-time.NewTimer(3 * time.Second).C:
+				logging.Logger.Debug("SetupSC - check node registered timeout")
+			}
+
+			logging.Logger.Debug("Request to register node")
+			txn, err := mc.RegisterNode()
+			if err != nil {
+				logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
+					zap.Error(err))
+				continue
+			}
+
+			if txn != nil && mc.ConfirmTransaction(txn) {
+				logging.Logger.Debug("Register node transaction confirmed")
+				continue
+			}
+
+			logging.Logger.Debug("Register node transaction not confirmed yet")
 		}
-		time.Sleep(5 * time.Second)
-		registered = mc.isRegistered()
 	}
 }
 
@@ -86,7 +117,7 @@ func (mc *Chain) RegisterClient() {
 	)
 
 	if consensus > len(miners) {
-		Logger.DPanic(fmt.Sprintf("number of miners %d is not enough"+
+		logging.Logger.DPanic(fmt.Sprintf("number of miners %d is not enough"+
 			" relative to the threshold parameter %d%%(%d)", len(miners),
 			thresholdByCount, consensus))
 	}
@@ -98,8 +129,11 @@ func (mc *Chain) RegisterClient() {
 				"", "", nil,
 			)
 			if err != nil {
-				Logger.Error("error in register client", zap.Error(err),
-					zap.Any("body", body))
+				logging.Logger.Error("error in register client",
+					zap.Error(err),
+					zap.Any("body", body),
+					zap.Int("registered", registered),
+					zap.Int("consensus", consensus))
 			} else {
 				delete(miners, key)
 				registered++
@@ -147,7 +181,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 		)
 
 		if err != nil {
-			Logger.Error("failed to get block state node",
+			logging.Logger.Error("failed to get block state node",
 				zap.Any("error", err), zap.String("path", sp))
 			return false
 		}
@@ -157,7 +191,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 		}
 
 		if err = allNodesList.Decode(list.Encode()); err != nil {
-			Logger.Error("failed to decode block state node",
+			logging.Logger.Error("failed to decode block state node",
 				zap.Any("error", err))
 			return false
 		}
@@ -174,12 +208,16 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil,
 			sharders, allNodesList, 1)
 		if err != nil {
-			Logger.Error("is registered", zap.Any("error", err))
+			logging.Logger.Error("is registered", zap.Any("error", err))
 			return false
 		}
 	}
 
 	for _, miner := range allNodesList.Nodes {
+		if miner == nil {
+			continue
+		}
+
 		if miner.ID == selfNodeKey {
 			return true
 		}
@@ -211,7 +249,7 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 		} else {
 			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 			if err != nil {
-				Logger.Info("confirm transaction", zap.Any("confirmation", false))
+				logging.Logger.Info("confirm transaction", zap.Any("confirmation", false))
 				return false
 			}
 			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
@@ -234,6 +272,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.N2NHost = selfNode.N2NHost
 	mn.Host = selfNode.Host
 	mn.Port = selfNode.Port
+	mn.Path = selfNode.Path
 	mn.PublicKey = selfNode.PublicKey
 	mn.ShortName = selfNode.Description
 	mn.BuildTag = selfNode.Info.BuildTag
@@ -440,7 +479,7 @@ func makeSCRESTAPICall(address, relative, sharder string,
 	var err = httpclientutil.MakeSCRestAPICall(address, relative, nil,
 		[]string{sharder}, seri, 1)
 	if err != nil {
-		Logger.Error("requesting phase node from sharder",
+		logging.Logger.Error("requesting phase node from sharder",
 			zap.String("sharder", sharder),
 			zap.Error(err))
 	}
@@ -553,11 +592,11 @@ func (c *Chain) GetPhaseFromSharders() {
 
 	var phase, ok = got.(*minersc.PhaseNode)
 	if !ok {
-		Logger.Error("get_dkg_phase_from_sharders -- no phases given")
+		logging.Logger.Error("get_dkg_phase_from_sharders -- no phases given")
 		return
 	}
 
-	Logger.Debug("dkg_process -- phase from sharders",
+	logging.Logger.Debug("dkg_process -- phase from sharders",
 		zap.String("phase", phase.Phase.String()),
 		zap.Int64("start_round", phase.StartRound),
 		zap.Int64("restarts", phase.Restarts))

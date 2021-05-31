@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -123,7 +124,7 @@ type scConfig struct {
 
 func (sc *scConfig) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less then 1s: %s", sc.TimeUnit)
+		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
@@ -353,10 +354,12 @@ func (ssc *StorageSmartContract) getConfig(
 	}
 
 	if err = conf.Decode(confb); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return
 }
+
+const cantGetConfigErrMsg = "can't get config"
 
 func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
@@ -366,12 +369,16 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	conf, err = ssc.getConfig(balances, false)
 
 	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	// return configurations from sc.yaml not saving them
 	if err == util.ErrValueNotPresent {
-		return getConfiguredConfig()
+		res, err := getConfiguredConfig()
+		if err != nil {
+			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
+		}
+		return res, nil
 	}
 
 	return conf, nil // actual value

@@ -2,96 +2,65 @@ package blockstore
 
 import (
 	"bufio"
-	"bytes"
 	"compress/zlib"
-	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
+	"github.com/minio/minio-go"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	. "0chain.net/core/logging"
-	"github.com/minio/minio-go"
-	"github.com/spf13/viper"
-
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const fileExt = ".dat.zlib"
 
-/*FSBlockStore - a block store implementation using file system */
-type FSBlockStore struct {
-	RootDirectory         string
-	blockMetadataProvider datastore.EntityMetadata
-	Minio                 *minio.Client
-}
-
-type MinioConfiguration struct {
-	StorageServiceURL string
-	AccessKeyID       string
-	SecretAccessKey   string
-	BucketName        string
-	BucketLocation    string
-	DeleteLocal       bool
-}
-
-var MinioConfig MinioConfiguration
-
-/*NewFSBlockStore - return a new fs block store */
-func NewFSBlockStore(rootDir string) *FSBlockStore {
-	store := &FSBlockStore{RootDirectory: rootDir}
-	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
-	store.intializeMinio()
-	return store
-}
-
-func (fbs *FSBlockStore) intializeMinio() {
-	if !viper.GetBool("minio.enabled") {
-		return
+type (
+	// FSBlockStore - a block store implementation using file system.
+	FSBlockStore struct {
+		RootDirectory         string
+		blockMetadataProvider datastore.EntityMetadata
+		Minio                 MinioClient
 	}
-	minioClient, err := minio.New(
-		MinioConfig.StorageServiceURL,
-		MinioConfig.AccessKeyID,
-		MinioConfig.SecretAccessKey,
-		viper.GetBool("minio.use_ssl"),
-	)
-	if err != nil {
-		Logger.Error("Unable to initiaze minio cliet", zap.Error(err))
-		panic(err)
-	}
-	fbs.Minio = minioClient
-	fbs.checkBucket(MinioConfig.BucketName)
-	MinioConfig.DeleteLocal = viper.GetBool("minio.delete_local_copy")
-}
+)
 
-func (fbs *FSBlockStore) checkBucket(bucketName string) {
-	err := fbs.Minio.MakeBucket(bucketName, MinioConfig.BucketLocation)
-	if err != nil {
-		Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
-		exists, errBucketExists := fbs.Minio.BucketExists(bucketName)
-		if errBucketExists == nil && exists {
-			Logger.Info("We already own ", zap.Any("bucket_name", bucketName))
-		} else {
-			Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", bucketName))
-			panic(errBucketExists)
-		}
-	} else {
-		Logger.Info(bucketName + " bucket successfully created")
+var (
+	// Make sure FSBlockStore implements BlockStore.
+	_ BlockStore = (*FSBlockStore)(nil)
+)
+
+// NewFSBlockStore - return a new fs block store.
+func NewFSBlockStore(rootDir string, minio MinioClient) *FSBlockStore {
+	return &FSBlockStore{
+		RootDirectory:         rootDir,
+		blockMetadataProvider: datastore.GetEntityMetadata("block"),
+		Minio:                 minio,
 	}
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
-	var file bytes.Buffer
+	var file strings.Builder
 	var dirRoundRange = chain.GetServerChain().RoundRange
-	fmt.Fprintf(&file, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), round/dirRoundRange)
+
+	file.WriteString(fbs.RootDirectory)
+	file.WriteString(string(os.PathSeparator))
+	file.WriteString(strconv.Itoa(int(round / dirRoundRange)))
+
 	for i := 0; i < 3; i++ {
-		fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
+		file.WriteString(string(os.PathSeparator))
+		file.WriteString(hash[3*i : 3*i+3]) // FIXME panics if hash size < 9
 	}
-	fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[9:])
+
+	file.WriteString(string(os.PathSeparator))
+	file.WriteString(hash[9:])
+
 	return file.String()
 }
 
@@ -99,11 +68,13 @@ func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	return fbs.getFileWithoutExtension(hash, round) + fileExt
 }
 
-/*Write - write the block to the file system */
+// Write - write the block to the file system
 func (fbs *FSBlockStore) Write(b *block.Block) error {
 	fileName := fbs.getFileName(b.Hash, b.Round)
 	dir := filepath.Dir(fileName)
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -128,7 +99,7 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	return nil
 }
 
-/*ReadWithBlockSummary - read the block given the block summary */
+// ReadWithBlockSummary - read the block given the block summary
 func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
 	return fbs.read(bs.Hash, bs.Round)
 }
@@ -228,12 +199,12 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	return b, nil
 }
 
-/*Delete - delete from the hash of the block*/
+// Delete - delete from the hash of the block
 func (fbs *FSBlockStore) Delete(hash string) error {
 	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
 }
 
-/*DeleteBlock - delete the given block from the file system */
+// DeleteBlock - delete the given block from the file system
 func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 	fileName := fbs.getFileName(b.Hash, b.Round)
 	err := os.Remove(fileName)
@@ -245,12 +216,12 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 
 func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	_, err := fbs.Minio.FPutObject(MinioConfig.BucketName, hash, filePath, minio.PutObjectOptions{})
+	_, err := fbs.Minio.FPutObject(fbs.Minio.BucketName(), hash, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
 
-	if MinioConfig.DeleteLocal {
+	if fbs.Minio.DeleteLocal() {
 		err = os.Remove(filePath)
 		if err != nil {
 			Logger.Error("Failed to delete block which is moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
@@ -262,11 +233,11 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	return fbs.Minio.FGetObject(MinioConfig.BucketName, hash, filePath, minio.GetObjectOptions{})
+	return fbs.Minio.FGetObject(fbs.Minio.BucketName(), hash, filePath, minio.GetObjectOptions{})
 }
 
 func (fbs *FSBlockStore) CloudObjectExists(hash string) bool {
-	_, err := fbs.Minio.StatObject(MinioConfig.BucketName, hash, minio.StatObjectOptions{})
+	_, err := fbs.Minio.StatObject(fbs.Minio.BucketName(), hash, minio.StatObjectOptions{})
 	if err != nil {
 		return false
 	}

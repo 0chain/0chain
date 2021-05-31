@@ -7,7 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -26,17 +26,17 @@ type Round struct {
 func (r *Round) AddBlockToVerify(b *block.Block) {
 	roundNumber := r.GetRoundNumber()
 	if r.IsVerificationComplete() {
-		Logger.Debug("block proposal - verification complete", zap.Int64("round", roundNumber), zap.String("block", b.Hash))
+		logging.Logger.Debug("block proposal - verification complete", zap.Int64("round", roundNumber), zap.String("block", b.Hash))
 		return
 	}
 	if roundNumber != b.Round {
-		Logger.Error("block proposal - round mismatch", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+		logging.Logger.Error("block proposal - round mismatch", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
 		return
 	}
-	Logger.Debug("Adding block to verifyChannel")
+	logging.Logger.Debug("Adding block to verifyChannel")
 	r.blocksToVerifyChannel <- b
 }
 

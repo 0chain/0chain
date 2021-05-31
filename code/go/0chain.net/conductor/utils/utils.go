@@ -20,8 +20,8 @@ func Sign(hash string) (sign string, err error) {
 	return signature.Sign(hash)
 }
 
-// Split nodes list by given IsGoodBader.
-func Split(s *crpc.State, igb crpc.IsGoodBader, nodes []*node.Node) (
+// Split nodes list by given IsGoodOrBad.
+func Split(s *crpc.State, igb crpc.IsGoodOrBad, nodes []*node.Node) (
 	good, bad []*node.Node) {
 
 	for _, n := range nodes {
@@ -35,7 +35,7 @@ func Split(s *crpc.State, igb crpc.IsGoodBader, nodes []*node.Node) (
 }
 
 // Filter return IsBy nodes only.
-func Filter(s *crpc.State, ib crpc.IsByer, nodes []*node.Node) (
+func Filter(s *crpc.State, ib crpc.IsBy, nodes []*node.Node) (
 	rest []*node.Node) {
 
 	for _, n := range nodes {

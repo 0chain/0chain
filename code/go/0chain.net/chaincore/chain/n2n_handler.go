@@ -8,7 +8,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -95,12 +95,12 @@ func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error
 	ns, err := c.GetStateNodesFrom(ctx, keys)
 	if err != nil {
 		if ns != nil {
-			Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
+			logging.Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
 			return ns, nil
 		}
-		Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
+		logging.Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
 		return nil, err
 	}
-	Logger.Info("state nodes handler", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+	logging.Logger.Info("state nodes handler", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
 	return ns, nil
 }

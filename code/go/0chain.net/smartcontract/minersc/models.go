@@ -154,6 +154,9 @@ type GlobalNode struct {
 
 	// Minted tokens by SC.
 	Minted state.Balance `json:"minted"`
+
+	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
+	RewardRoundFrequency int64 `json:"reward_round_frequency"`
 }
 
 // The prevMagicBlock from the global node (saved on previous VC) or LFMB of
@@ -186,6 +189,11 @@ func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
 func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 	balances cstate.StateContextI) (has bool) {
 
+	if len(mpks.Mpks) == 0 {
+		Logger.Error("empty miners mpks keys")
+		return
+	}
+
 	var pmb = gn.prevMagicBlock(balances)
 
 	for id := range mpks.Mpks {
@@ -194,12 +202,18 @@ func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
 		}
 	}
 
+	Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
 	return // false, hasn't
 }
 
 // has previous miner in given GSoS
 func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 	balances cstate.StateContextI) (has bool) {
+
+	if len(gsos.Shares) == 0 {
+		Logger.Error("empty sharder or sign keys")
+		return
+	}
 
 	var pmb = gn.prevMagicBlock(balances)
 
@@ -209,6 +223,10 @@ func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
 		}
 	}
 
+	Logger.Debug("has no prev miner in GSoS",
+		zap.Int64("prev_mb_round", pmb.StartingRound),
+		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
+	)
 	return // false, hasn't
 }
 
@@ -414,11 +432,21 @@ func (mn *MinerNode) numDelegates() int {
 	return len(mn.Pending) + len(mn.Active)
 }
 
-func (mn *MinerNode) save(balances cstate.StateContextI) (err error) {
-	if _, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+func (mn *MinerNode) numActiveDelegates() int {
+	return len(mn.Active)
+}
+
+func (mn *MinerNode) save(balances cstate.StateContextI) error {
+	//var key datastore.Key
+	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+	if _, err := balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
-	return
+
+	//Logger.Debug("MinerNode save successfully",
+	//	zap.String("path", encryption.Hash(mn.getKey())),
+	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
+	return nil
 }
 
 func (mn *MinerNode) Encode() []byte {
@@ -558,6 +586,7 @@ type SimpleNode struct {
 	N2NHost     string `json:"n2n_host"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
+	Path        string `json:"path"`
 	PublicKey   string `json:"public_key"`
 	ShortName   string `json:"short_name"`
 	BuildTag    string `json:"build_tag"`

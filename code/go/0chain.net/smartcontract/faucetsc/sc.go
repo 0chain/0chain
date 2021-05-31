@@ -1,7 +1,10 @@
 package faucetsc
 
 import (
+	"0chain.net/chaincore/smartcontract"
+	"context"
 	"fmt"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -26,7 +29,21 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (fc *FaucetSmartContract) InitSC() {}
+func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
+	var fcCopy = &FaucetSmartContract{
+		smartcontractinterface.NewSC(ADDRESS),
+	}
+	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
+	return fcCopy
+}
+
+func (ipsc *FaucetSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *FaucetSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
 
 func (fc *FaucetSmartContract) GetName() string {
 	return name
@@ -40,7 +57,7 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 	return fc.SmartContract.RestHandlers
 }
 
-func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
 	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit
@@ -86,6 +103,10 @@ func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputDat
 	if newRequest.PourAmount > 0 {
 		gn.PourAmount = newRequest.PourAmount
 	}
+
+	if newRequest.MaxPourAmount > 0 {
+		gn.MaxPourAmount = newRequest.MaxPourAmount
+	}
 	if newRequest.PeriodicLimit > 0 {
 		gn.PeriodicLimit = newRequest.PeriodicLimit
 	}
@@ -109,8 +130,12 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	user := fc.getUserVariables(t, gn, balances)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
+		var pourAmount = gn.PourAmount
+		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
+			pourAmount = state.Balance(t.Value)
+		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
-		transfer := state.NewTransfer(t.ToClientID, t.ClientID, gn.PourAmount)
+		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
@@ -153,7 +178,9 @@ func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances
 	if err != nil {
 		return un, err
 	}
-	un.Decode(us.Encode())
+	if err := un.Decode(us.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return un, err
 }
 
@@ -176,8 +203,10 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	if err != nil {
 		return gn, err
 	}
-	gn.Decode(gv.Encode())
-	return gn, err
+	if err := gn.Decode(gv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) *GlobalNode {
@@ -190,6 +219,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, ba
 		return gn
 	}
 	gn.PourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_amount"))
+	gn.MaxPourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.max_pour_amount"))
 	gn.PeriodicLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.periodic_limit"))
 	gn.GlobalLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.global_limit"))
 	gn.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
