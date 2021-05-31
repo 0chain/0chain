@@ -360,6 +360,20 @@ func (r *Round) GetProposedBlocks() []*block.Block {
 	return r.proposedBlocks
 }
 
+func (r *Round) GetBestRankedProposedBlock() *block.Block {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	pbs := r.proposedBlocks
+	if len(pbs) == 0 {
+		return nil
+	}
+	if len(pbs) == 1 {
+		return pbs[0]
+	}
+	pbs = r.GetBlocksByRank(pbs)
+	return pbs[0]
+}
+
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
 func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
 	r.mutex.RLock()
