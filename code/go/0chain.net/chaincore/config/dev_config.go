@@ -1,6 +1,6 @@
 package config
 
-import "github.com/spf13/viper"
+import "0chain.net/core/viper"
 
 /*DevConfig - these are to control features in development*/
 type DevConfig struct {

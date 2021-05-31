@@ -10,8 +10,8 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"0chain.net/core/mocks"
 	"0chain.net/core/persistencestore"
-	"0chain.net/mocks"
 )
 
 func init() {

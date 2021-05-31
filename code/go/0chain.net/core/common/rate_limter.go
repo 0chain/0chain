@@ -6,7 +6,8 @@ import (
 
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth/limiter"
-	"github.com/spf13/viper"
+
+	"0chain.net/core/viper"
 )
 
 type ratelimit struct {

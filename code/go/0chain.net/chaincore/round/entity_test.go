@@ -16,7 +16,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/mocks"
+	"0chain.net/core/mocks"
 )
 
 func init() {

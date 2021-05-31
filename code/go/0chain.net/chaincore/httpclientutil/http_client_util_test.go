@@ -20,8 +20,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
+	"0chain.net/core/mocks"
 	"0chain.net/core/util"
-	"0chain.net/mocks"
 )
 
 func init() {
