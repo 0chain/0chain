@@ -107,6 +107,7 @@ func (r *Round) CancelVerification() {
 
 /*Clear - clear any pending state before deleting this round */
 func (r *Round) Clear() {
+	logging.Logger.Debug("Rond clear - cancel verification")
 	r.CancelVerification()
 }
 

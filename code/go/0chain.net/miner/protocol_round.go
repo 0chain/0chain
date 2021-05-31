@@ -166,6 +166,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 }
 
 func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
+	logging.Logger.Debug("finalizedRound - cancel round verification")
 	mc.CancelRoundVerification(ctx, r)
 	go mc.FinalizeRound(ctx, r.Round, mc)
 }
@@ -969,6 +970,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	}
 
 	if !r.IsVerificationComplete() {
+		logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
 		mc.CancelRoundVerification(ctx, r)
 	}
 	b.SetBlockState(block.StateNotarized)

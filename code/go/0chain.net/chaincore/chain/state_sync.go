@@ -86,6 +86,18 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	return
 }
 
+// UpdateStateFromNetwork get a bunch of state nodes from the network
+func (c *Chain) UpdateStateFromNetwork(ctx context.Context, mpt util.MerklePatriciaTrieI, keys []util.Key) error {
+	ns, err := c.getStateNodes(ctx, keys)
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("UpdateStateFromNetwork get state nodes", zap.Int("num", len(ns.Nodes)))
+
+	return ns.SaveState(ctx, mpt.GetNodeDB())
+}
+
 //GetStateNodesSharders - get a bunch of state nodes from the network
 func (c *Chain) GetStateNodesFromSharders(ctx context.Context, keys []util.Key) {
 	ns, err := c.getStateNodesFromSharders(ctx, keys)
