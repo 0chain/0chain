@@ -39,8 +39,8 @@ to review or study your changes.
 Unit tests can be written using different styles. Here we aim to standardise
 how to write unit tests in the `0chain` project.
 
-[PR3210(https://github.com/0chain/0chain/pull/321) introduced a new mocks package
-to `0chain`. Here we intend to give guidance to using these mock.
+[PR3210](https://github.com/0chain/0chain/pull/321) introduces a new mocks package
+to `0chain`. Here we intend to give guidance to using these mocks.
 
 GitHub does not house these mock files, instead they will be auto-generated as
  part of the continuous integration unit test checks. To build the mock files
@@ -78,7 +78,20 @@ func TestSomething(t *testing.T) {
 }
 ```
 
-#### Use require not assert
+#### Minimisation
+
+Adopt a minimalistic approach when writing tests. Use just enough setup for your test
+to give results. This helps to make the tests more time efficient and easier for the 
+reader to follow.
+
+#### Do use nonsense input text
+
+You do not need to use realistic test data unless its necessary. In fact, I would
+recommend using nonsense text strings when they have no effect. Giving a hash a value
+like`"my hash"`, makes it clear that the function makes does not use this value.
+Further, when debugging its clear the source of any hash values encountered.
+
+#### Use require
 
 Use [require](https://pkg.go.dev/github.com/stretchr/testify/require), to report
 errors not `assert`. Immediately the test reports an error we want the test stopped; 
@@ -113,14 +126,38 @@ When writing unit test think
 If so the test should allow the function to prove it can handle 
 any concurrency issues.
 
-#### Avoid t.Parallel when testing one use functions
+#### You do not need t.Parallel when testing one use functions
 
 Functions called only once per execution, often initialise 
 'logical constant' global objects. Initialising these 'logically constant' objects
-requires no concurrency checks, hence no necessity exist for our unit tests these
+involves no concurrency checks, hence no necessity exist for our unit tests these
 functions in parallel.
 
-#### Avoid reusing input data between tests
+#### Avoid using external data
+
+Wherever possible define test data inside `*.go` files, do not use the less
+reliable and efficient external file system. 
+Maybe if you need to prove your function can handle various 
+types of multimedia file formats, or similar, you might have to consider it, 
+but even then try mock it.
+
+#### Keep databases in memory
+
+Use in-memory databases and avoid using the file system. As well as time 
+efficiency, database on the file system tend to leave oddly named files
+lying around to confuse the user. 
+
+If you have no alternative, just remember to delete the files both before and after the test.
+Use a `defer` block to delete the database files after the test 
+to handle the case when your tests panics.
+
+#### Do not send real http requests
+
+Mock http requests. You can use the `httptest` package, or [create
+an interface](https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/) 
+to support the `http.Clientg.Do` method. If not currently possible then change that.
+
+#### Cearful reusing input data between tests
 
 Spot the problem with this test.
 ```go
@@ -191,11 +228,11 @@ other than the obvious input arguments and return values. An obvious
 example would be a database object which our test function might access 
 using database `get` and `set` functions.
 
-Unit tests typically concern themselves only with the code of the `tested 
+Unit tests should concern themselves only with the code of the `tested 
 function`, ideally we want to avoid running functions called internally;
 such as the database `get` and `set` of the previous paragraph.
 
-Issues with including these function might include:
+Issues with testing these function might include:
 1. Someone has tested them elsewhere. No point in repeating the test.
 2. They use complicated runtime objects that setting up 
    would needlessly complicate our test.
@@ -275,7 +312,7 @@ At the end of the `t.Run` block call:
 ```go
    require.True(t, mock.AssertExpectationsForObjects(t, thigsTodo))
 ```
-This Checks that `goesToTown` met our expectations. 
+This Checks that `fredy.goesToTown` met our expectations. 
 
 ### Vektra mockery
 
@@ -286,7 +323,7 @@ interface objects using the
 As we autogenerate these mock object, we avoid keeping them under
 version control. Instead, we generate them when we run unit tests during 
 continuous integration. Developers can generate them using the 
-[0chain\generate_mcoks.sh](https://github.com/0chain/0chain/blob/master/generate_mocks.sh) script.
+[0chain\generate_mocks.sh](https://github.com/0chain/0chain/blob/master/generate_mocks.sh) script.
 
 To take advantage of autogenerating these `mocks` developers will need to install `vektra mockery` on
 their machines with `go get github.com/vektra/mockery/v2/.../` or otherwise
@@ -373,7 +410,7 @@ var setExpectations = func(t *testing.T, p parameters) (*StorageSmartContract, c
    balances.On("InsertTrieNode", scConfigKey(ssc.ID), conf).Return("", nil).Once()    
 }
 ```
-The `mocks` package tests for equality of the mock object parameters using 
+> The `mocks` package tests for equality of the mock object parameters using 
 deep equality, which expects pointer values to be equal. 
 This can cause a problem in some complicated situations. 
 To handle this, the mock package allow you to use your own function 
@@ -429,7 +466,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
          ssc, balances := setExpectations(t, tt.parameters)
          
          // call the method being tested
-         err := ssc.payBlobberBlockRewards(balances)
+         err := ssc.runTestedFunction(balances)
          
          require.EqualValues(t, tt.want.error, err != nil)
          if err != nil {
