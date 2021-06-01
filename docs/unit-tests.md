@@ -4,10 +4,10 @@
 
 - [Intorduction](#introduction)
 - [0chain style](#0chain-style)
-- [Mocks](mocks)
-   - [Simple mock example](simple-mock-example)
-   - [vektra mockery](vekra-mockery)
-   - [0chain example](0chain-example)  
+- [Mocks](#mocks)
+   - [Simple mock example](#simple-mock-example)
+   - [vektra mockery](#vekra-mockery)
+   - [0chain example](#0chain-example)  
 
 ## Introduction
 
