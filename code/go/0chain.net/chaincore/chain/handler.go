@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -1223,6 +1224,12 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 //RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if recover() != nil {
+			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+		}
+	}()
+
 	roundParamQuery := ""
 
 	sc := GetServerChain()
@@ -1367,11 +1374,20 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 			fmt.Fprintf(w, "<div style='display:flex;flex-direction:column;padding:5px;border-left:1px solid black;'>")
 			for i, ticket := range tickets {
+				if i%4 == 0 {
+					if i > 0 {
+						fmt.Fprintf(w, "</div>")
+					}
+					fmt.Fprintf(w, "<div style='display:flex;flex-direction:row;'>")
+				}
 				if n := verifiers[i]; n != nil {
-					fmt.Fprintf(w, "<div title='%s'>%s</div>", ticket.VerifierID, getNodeLink(n))
+					fmt.Fprintf(w, "<div title='%s'>%s</div>,", ticket.VerifierID, getNodeLink(n))
 					continue
 				}
-				fmt.Fprintf(w, "<div title='%s'>%.8s</div>", ticket.VerifierID, ticket.VerifierID)
+				fmt.Fprintf(w, "<div title='%s'>%.8s</div>,", ticket.VerifierID, ticket.VerifierID)
+				if i == len(tickets)-1 {
+					fmt.Fprintf(w, "</div>")
+				}
 			}
 			fmt.Fprintf(w, "</div>")
 		}
@@ -1384,10 +1400,6 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 
 	// VRFS
-	fmt.Fprintf(w, "<h3>VRF Shares</h3>")
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Node</th><th>VRFS</th></tr>")
-
 	vrfSharesMap := rnd.GetVRFShares()
 	vrfShares := make([]*round.VRFShare, 0, len(vrfSharesMap))
 	for _, share := range vrfSharesMap {
@@ -1396,6 +1408,9 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	sort.SliceStable(vrfShares, func(i, j int) bool {
 		return vrfShares[i].GetParty().SetIndex < vrfShares[j].GetParty().SetIndex
 	})
+	fmt.Fprintf(w, "<h3>VRF Shares</h3>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr class='header'><th>Set Index</th><th>Node</th><th>VRFS (%d/%d)</th></tr>", len(vrfShares), mb.Miners.Size())
 	for _, share := range vrfShares {
 		fmt.Fprintf(w, "<tr><td>")
 		n := share.GetParty()
@@ -1416,6 +1431,11 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if recover() != nil {
+			http.Error(w, fmt.Sprintf("<pre>%s</pre>", string(debug.Stack())), http.StatusInternalServerError)
+		}
+	}()
 	mb := c.GetCurrentMagicBlock()
 	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	PrintCSS(w)
