@@ -149,7 +149,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	// expand NotarizedBlocksCount array size if generators number is greater than it
 	genNum := c.GetGeneratorsNumOfRound(roundNumber)
 	if genNum > len(c.NotarizedBlocksCounts) {
-		newCounts := make([]int64, genNum)
+		newCounts := make([]int64, genNum+1)
 		copy(newCounts, c.NotarizedBlocksCounts)
 		c.NotarizedBlocksCounts = newCounts
 	}
