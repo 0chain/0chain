@@ -6,7 +6,7 @@
 - [0chain style](#0chain-style)
 - [Mocks](#mocks)
    - [Simple mock example](#simple-mock-example)
-   - [vektra mockery](#vekra-mockery)
+   - [vektra mockery](#vektra-mockery)
    - [0chain example](#0chain-example)  
 
 ## Introduction
@@ -34,7 +34,7 @@ the code changes, then the unit test can be developed alongside their code
 changes. Not only does it help the developer, but it helps anyone 
 to review or study your changes.
 
-## Ochain style
+## 0chain style
 
 Unit tests can be written using different styles. Here we aim to standardise
 how to write unit tests in the `0chain` project.
