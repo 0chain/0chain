@@ -6,7 +6,10 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
+
+	"0chain.net/miner/minerGRPC"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -15,17 +18,28 @@ import (
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
-	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
+	svc := newGRPCMinerNodeService()
+	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler(svc)))
 	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
 	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
 //WhoAmIHandler - who am i?
-func WhoAmIHandler(w http.ResponseWriter, r *http.Request) {
-	if Self == nil {
-		return
+func WhoAmIHandler(svc *minerNodeGRPCService) common.ReqRespHandlerf {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp, err := svc.WhoAmI(context.Background(), &minerGRPC.WhoAmIRequest{})
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("Error - " + err.Error()))
+			return
+		}
+
+		if resp.Data != "" {
+			w.WriteHeader(http.StatusOK)
+			reader := strings.NewReader(resp.Data)
+			_, _ = io.Copy(w, reader)
+		}
 	}
-	Self.Underlying().Print(w)
 }
 
 func scale(val int64) float64 {

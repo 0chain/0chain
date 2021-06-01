@@ -7,12 +7,16 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
+
+	"0chain.net/miner/minerGRPC"
+	"google.golang.org/grpc"
 
 	"go.uber.org/zap"
 
@@ -38,6 +42,7 @@ import (
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
+	grpcPortString := flag.String("grpc_port", "", "grpc_port")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	dkgFile := flag.String("dkg_file", "", "dkg_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
@@ -259,6 +264,19 @@ func main() {
 
 	initHandlers()
 
+	grpcServer := minerGRPC.NewServerWithMiddlewares(common.NewGRPCRateLimiter())
+	registerGRPCServices(grpcServer)
+	go func(grpcPort string) {
+		if grpcPort == "" {
+			log.Fatal("grpc port not provided, cannot create grpc server, grpc port - " + grpcPort)
+		}
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+		log.Fatal(grpcServer.Serve(lis))
+	}(*grpcPortString)
+
 	go func() {
 		logging.Logger.Info("Ready to listen to the requests")
 		log.Fatal(server.ListenAndServe())
@@ -297,6 +315,10 @@ func main() {
 	defer done(ctx)
 	<-ctx.Done()
 	time.Sleep(time.Second * 5)
+}
+
+func registerGRPCServices(server *grpc.Server) {
+	node.RegisterGRPCMinerNodeService(server)
 }
 
 func done(ctx context.Context) {
