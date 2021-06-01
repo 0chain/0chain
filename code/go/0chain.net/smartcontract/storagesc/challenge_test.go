@@ -9,8 +9,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,6 +26,141 @@ const (
 	errRewardBlobber       = "can't move tokens to blobber"
 	errRewardValidator     = "rewarding validators"
 )
+
+func TestAddChallenge(t *testing.T) {
+	type parameters struct {
+		numBlobbers   int
+		numValidators int
+		dataShards    int
+		randomSeed    int
+	}
+
+	type args struct {
+		alloc         *StorageAllocation
+		validators    *ValidatorNodes
+		challengeID   string
+		creationDate  common.Timestamp
+		r             *rand.Rand
+		challengeSeed int64
+		balances      cstate.StateContextI
+	}
+
+	type want struct {
+		validators []int
+		error      bool
+		errorMsg   string
+	}
+
+	parametersToArgs := func(p parameters) args {
+		var blobbers = []*StorageNode{}
+		var blobberMap = make(map[string]*BlobberAllocation)
+		for i := 0; i < p.numBlobbers; i++ {
+			var sn = StorageNode{
+				ID: strconv.Itoa(i),
+			}
+			blobbers = append(blobbers, &sn)
+			blobberMap[sn.ID] = &BlobberAllocation{
+				AllocationRoot: "root " + sn.ID,
+				Stats:          &StorageAllocationStats{},
+			}
+		}
+		var validators = ValidatorNodes{}
+		for i := 0; i < p.numValidators; i++ {
+			validators.Nodes = append(validators.Nodes, &ValidationNode{
+				ID: strconv.Itoa(i),
+			})
+		}
+		return args{
+			alloc: &StorageAllocation{
+				Blobbers:   blobbers,
+				BlobberMap: blobberMap,
+				DataShards: p.dataShards,
+				Stats:      &StorageAllocationStats{},
+			},
+			validators: &validators,
+			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
+			balances: &mockStateContext{
+				store: make(map[datastore.Key]util.Serializable),
+			},
+		}
+	}
+
+	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
+		require.EqualValues(t, want.error, err != nil)
+		if want.error {
+			require.EqualValues(t, want.errorMsg, err.Error())
+			return
+		}
+		challenge := &StorageChallenge{}
+		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
+		if p.numValidators > p.dataShards {
+			require.EqualValues(t, len(challenge.Validators), p.dataShards)
+		} else {
+			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
+		}
+		for i, v := range want.validators {
+			require.EqualValues(t, strconv.Itoa(v), challenge.Validators[i].ID)
+		}
+	}
+
+	tests := []struct {
+		name       string
+		parameters parameters
+		want       want
+	}{
+		{
+			name: "OK validators > dataShards",
+			parameters: parameters{
+				numBlobbers:   10,
+				numValidators: 10,
+				dataShards:    4,
+				randomSeed:    1,
+			},
+			want: want{
+				validators: []int{6, 3, 8, 4},
+			},
+		},
+		{
+			name: "OK dataShards > validators",
+			parameters: parameters{
+				numBlobbers:   6,
+				numValidators: 6,
+				dataShards:    10,
+				randomSeed:    1,
+			},
+			want: want{
+				validators: []int{3, 0, 1, 4, 2},
+			},
+		},
+		{
+			name: "Error no blobbers",
+			parameters: parameters{
+				numBlobbers:   0,
+				numValidators: 6,
+				dataShards:    10,
+				randomSeed:    1,
+			},
+			want: want{
+				error:    true,
+				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			args := parametersToArgs(tt.parameters)
+			var ssc = &StorageSmartContract{
+				SmartContract: sci.NewSC(ADDRESS),
+			}
+
+			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
+				args.creationDate, args.r, args.challengeSeed, args.balances)
+			validate(t, resp, err, tt.parameters, tt.want)
+		})
+	}
+}
 
 func TestBlobberReward(t *testing.T) {
 	var stakes = []int64{200, 234234, 100000}
@@ -275,10 +412,6 @@ func testBlobberReward(
 	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 		wpBalances, otherWritePools, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
-
-	blobber, err := ssc.getStakePool(blobberId, ctx)
-	require.NoError(t, err)
-	blobber = blobber
 
 	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {

@@ -21,6 +21,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 )
 
 func init() {
@@ -199,7 +200,10 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -281,7 +285,10 @@ func TestFSBlockStore_Read(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -384,7 +391,10 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
@@ -470,7 +480,10 @@ func TestFSBlockStore_read(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			fbs := &FSBlockStore{
 				RootDirectory:         tt.fields.RootDirectory,
 				blockMetadataProvider: tt.fields.blockMetadataProvider,

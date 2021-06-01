@@ -4,16 +4,15 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/smartcontract/minersc"
-	"github.com/spf13/viper"
-
 	"0chain.net/core/logging"
-
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
+	"0chain.net/smartcontract/minersc"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -23,7 +22,7 @@ func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
-	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
+	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
