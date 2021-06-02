@@ -5,13 +5,15 @@ import (
 	"net/http"
 	"strings"
 
+	"0chain.net/core/encryption"
+
 	"0chain.net/miner/minerGRPC"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )
 
 func RegisterGRPCMinerNodeService(server *grpc.Server) {
-	minerNodeService := newGRPCMinerNodeService()
+	minerNodeService := NewGRPCMinerNodeService(Self)
 	grpcGatewayHandler := runtime.NewServeMux()
 
 	minerGRPC.RegisterMinerServer(server, minerNodeService)
@@ -21,7 +23,24 @@ func RegisterGRPCMinerNodeService(server *grpc.Server) {
 	http.Handle("/", grpcGatewayHandler)
 }
 
+type ISelfNode interface {
+	Underlying() *Node
+	GetSignatureScheme() encryption.SignatureScheme
+	SetSignatureScheme(signatureScheme encryption.SignatureScheme)
+	Sign(hash string) (string, error)
+	TimeStampSignature() (string, string, string, error)
+	IsEqual(node *Node) bool
+	SetNodeIfPublicKeyIsEqual(node *Node)
+}
+
+func NewGRPCMinerNodeService(self ISelfNode) *minerNodeGRPCService {
+	return &minerNodeGRPCService{
+		self: self,
+	}
+}
+
 type minerNodeGRPCService struct {
+	self ISelfNode
 	minerGRPC.UnimplementedMinerServer
 }
 
@@ -29,15 +48,11 @@ func (m *minerNodeGRPCService) WhoAmI(ctx context.Context, req *minerGRPC.WhoAmI
 
 	var resp = &minerGRPC.WhoAmIResponse{}
 
-	if Self != nil {
+	if m.self != nil {
 		var data = &strings.Builder{}
-		Self.Underlying().Print(data)
+		m.self.Underlying().Print(data)
 		resp.Data = data.String()
 	}
 
 	return resp, nil
-}
-
-func newGRPCMinerNodeService() *minerNodeGRPCService {
-	return &minerNodeGRPCService{}
 }

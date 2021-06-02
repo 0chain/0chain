@@ -18,7 +18,7 @@ import (
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
-	svc := newGRPCMinerNodeService()
+	svc := NewGRPCMinerNodeService(Self)
 	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler(svc)))
 	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
 	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))

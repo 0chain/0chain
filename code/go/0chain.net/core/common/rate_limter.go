@@ -53,7 +53,7 @@ func (g *GRPCRateLimiter) Limit() bool {
 }
 
 func NewGRPCRateLimiter() *GRPCRateLimiter {
-	return &GRPCRateLimiter{ratelimit2.New(int(viper.GetFloat64("network.user_handlers.rate_limit")))}
+	return &GRPCRateLimiter{ratelimit2.New(int(viper.GetFloat64("network.n2n_handlers.rate_limit")))}
 }
 
 //UserRateLimit - rate limiting for end user handlers
