@@ -7,10 +7,14 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/sharder"
 )
+
+func init() {
+	common.ConfigRateLimits()
+}
 
 func makeTestURL(url url.URL, values map[string]string) string {
 	q := url.Query()
@@ -24,15 +28,17 @@ func makeTestURL(url url.URL, values map[string]string) string {
 }
 
 func TestBlockHandler(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/v1/block/get"
 
-	b := block.NewBlock("", 1)
-	b.HashBlock()
+	b := block.NewBlock("", 10)
+	b.Hash = encryption.Hash("data")
 
-	chain.ServerChain = chain.Provider().(*chain.Chain)
-	chain.ServerChain.AddBlock(b)
+	sc := makeTestChain(t)
+	sc.AddBlock(b)
+	sc.SetLatestFinalizedBlock(b)
+
+	cl := initDBs(t)
+	defer cl()
 
 	type test struct {
 		name       string
@@ -76,10 +82,7 @@ func TestBlockHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockHandler)))
 
@@ -93,8 +96,6 @@ func TestBlockHandler(t *testing.T) {
 }
 
 func TestChainStatsWriter(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/_chain_stats"
 
 	type test struct {
@@ -119,59 +120,9 @@ func TestChainStatsWriter(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(sharder.ChainStatsWriter))
-
-			handler.ServeHTTP(rr, tt.request)
-
-			if status := rr.Code; status != tt.wantStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
-			}
-		})
-	}
-}
-
-func TestSharderStatsHandler(t *testing.T) {
-	t.Parallel()
-
-	const baseUrl = "/v1/sharder/get/stats"
-
-	type test struct {
-		name       string
-		request    *http.Request
-		wantStatus int
-	}
-
-	tests := []test{
-		{
-			name: "Test_SharderStatsHandler_OK",
-			request: func() *http.Request {
-				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				return req
-			}(),
-			wantStatus: http.StatusOK,
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.SharderStatsHandler)))
-
-			// setting lfb because return handler function is panic with nil lfb
-			b := block.NewBlock("", 132)
-			sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 
 			handler.ServeHTTP(rr, tt.request)
 

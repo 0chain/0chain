@@ -287,6 +287,7 @@ func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
 		logging.Logger.Error("failed to put magic block", zap.Error(err))
 	}
+
 }
 
 /*GetEntityMetadata - implementing the interface */
