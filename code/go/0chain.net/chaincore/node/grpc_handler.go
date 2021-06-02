@@ -16,8 +16,8 @@ func RegisterGRPCMinerNodeService(server *grpc.Server) {
 	minerNodeService := NewGRPCMinerNodeService(Self)
 	grpcGatewayHandler := runtime.NewServeMux()
 
-	minerGRPC.RegisterNodeServer(server, minerNodeService)
-	_ = minerGRPC.RegisterNodeHandlerServer(context.Background(), grpcGatewayHandler, minerNodeService)
+	minerGRPC.RegisterMinerNodeServer(server, minerNodeService)
+	_ = minerGRPC.RegisterMinerNodeHandlerServer(context.Background(), grpcGatewayHandler, minerNodeService)
 
 	// TODO i dont think this works, all requests will come to grpc gateway - check blobber
 	http.Handle("/", grpcGatewayHandler)
@@ -41,7 +41,7 @@ func NewGRPCMinerNodeService(self ISelfNode) *minerNodeGRPCService {
 
 type minerNodeGRPCService struct {
 	self ISelfNode
-	minerGRPC.UnimplementedNodeServer
+	minerGRPC.UnimplementedMinerNodeServer
 }
 
 func (m *minerNodeGRPCService) WhoAmI(ctx context.Context, req *minerGRPC.WhoAmIRequest) (*minerGRPC.WhoAmIResponse, error) {

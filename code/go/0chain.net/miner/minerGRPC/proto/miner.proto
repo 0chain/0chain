@@ -6,7 +6,7 @@ option go_package = "code/go/0chain.net/miner/minerGRPC";
 import "google/api/annotations.proto";
 
 
-service Node {
+service MinerNode {
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {
     option (google.api.http) = {
       get: "/v2/_nh/whoami"
@@ -22,7 +22,7 @@ message WhoAmIResponse {
   string data = 1;
 }
 
-service Chain {
+service MinerChain {
   rpc GetLatestFinalizedBlockSummary(GetLatestFinalizedBlockSummaryRequest) returns (GetLatestFinalizedBlockSummaryResponse) {
     option (google.api.http) = {
       get: "/v2/block/get/latest_finalized"
@@ -35,5 +35,102 @@ message GetLatestFinalizedBlockSummaryRequest {
 }
 
 message GetLatestFinalizedBlockSummaryResponse {
+  BlockSummary block_summary = 1;
+}
 
+message BlockSummary {
+  string hash  = 1;
+  string miner_id = 2;
+  int64 round = 3;
+  int64 round_random_seed  = 4;
+  string merkle_tree_root  = 5;
+  string client_state_hash  = 6;
+  string receipt_merkle_tree_root  = 7;
+  int64  num_txns = 8;
+  string version = 9;
+  int64 creation_date = 10;
+  MagicBlock magic_block = 11;
+}
+
+message MagicBlock {
+  string hash = 1;
+  string previous_magic_block_hash = 2;
+  int64 magic_block_number = 3;
+  int64 starting_round = 4;
+  NodePool miners = 5;
+  NodePool sharders = 6;
+  repeated StringMapShareOrSigns share_or_signs = 7;
+  repeated StringMapMPK mpks = 8;
+  int64 t = 9;
+  int64 k = 10;
+  int64 n = 11;
+}
+
+message StringMapMPK {
+  string key = 1;
+  MPK mpk = 2;
+}
+
+message MPK {
+  string id = 1;
+  repeated string mpk = 2;
+}
+
+message NodePool {
+  int64 type = 1;
+  repeated StringMapNode nodes = 2;
+}
+
+message StringMapNode {
+  string key = 1;
+  Node node = 2;
+}
+
+message Node {
+  Client client = 1;
+  string n2n_host = 2;
+  string host = 3;
+  int64 port = 4;
+  string path = 5;
+  int64 type = 6;
+  string description = 7;
+  int64 set_index = 8;
+  int64 status = 9;
+  Info info = 10;
+}
+
+message Info {
+  string build_tag = 1;
+  int64 state_missing_nodes = 2;
+  int64 miners_median_network_time = 3;
+  int64 avg_block_txns = 4;
+}
+
+message Client {
+  string id = 1;
+  string version = 2;
+  int64 creation_date = 3;
+  string pub_key = 4;
+}
+
+message StringMapShareOrSigns {
+  string key = 1;
+  ShareOrSigns share = 2;
+}
+
+message ShareOrSigns {
+  string id = 1;
+  repeated StringMapDKGKeyShare share_or_sign =  2;
+}
+
+message StringMapDKGKeyShare {
+  string key = 1;
+  DKGKeyShare dkg_key_share = 2;
+}
+
+message DKGKeyShare {
+ string id = 1;
+ string message = 2;
+ string share = 3;
+ string sign = 4;
 }

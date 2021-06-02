@@ -6,10 +6,10 @@
   },
   "tags": [
     {
-      "name": "Node"
+      "name": "MinerNode"
     },
     {
-      "name": "Chain"
+      "name": "MinerChain"
     }
   ],
   "consumes": [
@@ -21,7 +21,7 @@
   "paths": {
     "/v2/_nh/whoami": {
       "get": {
-        "operationId": "Node_WhoAmI",
+        "operationId": "MinerNode_WhoAmI",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -37,13 +37,13 @@
           }
         },
         "tags": [
-          "Node"
+          "MinerNode"
         ]
       }
     },
     "/v2/block/get/latest_finalized": {
       "get": {
-        "operationId": "Chain_GetLatestFinalizedBlockSummary",
+        "operationId": "MinerChain_GetLatestFinalizedBlockSummary",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -59,7 +59,7 @@
           }
         },
         "tags": [
-          "Chain"
+          "MinerChain"
         ]
       }
     }
@@ -95,8 +95,285 @@
         }
       }
     },
+    "v1BlockSummary": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "minerId": {
+          "type": "string"
+        },
+        "round": {
+          "type": "string",
+          "format": "int64"
+        },
+        "roundRandomSeed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "merkleTreeRoot": {
+          "type": "string"
+        },
+        "clientStateHash": {
+          "type": "string"
+        },
+        "receiptMerkleTreeRoot": {
+          "type": "string"
+        },
+        "numTxns": {
+          "type": "string",
+          "format": "int64"
+        },
+        "version": {
+          "type": "string"
+        },
+        "creationDate": {
+          "type": "string",
+          "format": "int64"
+        },
+        "magicBlock": {
+          "$ref": "#/definitions/v1MagicBlock"
+        }
+      }
+    },
+    "v1Client": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "creationDate": {
+          "type": "string",
+          "format": "int64"
+        },
+        "pubKey": {
+          "type": "string"
+        }
+      }
+    },
+    "v1DKGKeyShare": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "share": {
+          "type": "string"
+        },
+        "sign": {
+          "type": "string"
+        }
+      }
+    },
     "v1GetLatestFinalizedBlockSummaryResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "blockSummary": {
+          "$ref": "#/definitions/v1BlockSummary"
+        }
+      }
+    },
+    "v1Info": {
+      "type": "object",
+      "properties": {
+        "buildTag": {
+          "type": "string"
+        },
+        "stateMissingNodes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "minersMedianNetworkTime": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgBlockTxns": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1MPK": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "mpk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1MagicBlock": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "previousMagicBlockHash": {
+          "type": "string"
+        },
+        "magicBlockNumber": {
+          "type": "string",
+          "format": "int64"
+        },
+        "startingRound": {
+          "type": "string",
+          "format": "int64"
+        },
+        "miners": {
+          "$ref": "#/definitions/v1NodePool"
+        },
+        "sharders": {
+          "$ref": "#/definitions/v1NodePool"
+        },
+        "shareOrSigns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1StringMapShareOrSigns"
+          }
+        },
+        "mpks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1StringMapMPK"
+          }
+        },
+        "t": {
+          "type": "string",
+          "format": "int64"
+        },
+        "k": {
+          "type": "string",
+          "format": "int64"
+        },
+        "n": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1Node": {
+      "type": "object",
+      "properties": {
+        "client": {
+          "$ref": "#/definitions/v1Client"
+        },
+        "n2nHost": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string",
+          "format": "int64"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "format": "int64"
+        },
+        "description": {
+          "type": "string"
+        },
+        "setIndex": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string",
+          "format": "int64"
+        },
+        "info": {
+          "$ref": "#/definitions/v1Info"
+        }
+      }
+    },
+    "v1NodePool": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "format": "int64"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1StringMapNode"
+          }
+        }
+      }
+    },
+    "v1ShareOrSigns": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "shareOrSign": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/v1StringMapDKGKeyShare"
+          }
+        }
+      }
+    },
+    "v1StringMapDKGKeyShare": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "dkgKeyShare": {
+          "$ref": "#/definitions/v1DKGKeyShare"
+        }
+      }
+    },
+    "v1StringMapMPK": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "mpk": {
+          "$ref": "#/definitions/v1MPK"
+        }
+      }
+    },
+    "v1StringMapNode": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "node": {
+          "$ref": "#/definitions/v1Node"
+        }
+      }
+    },
+    "v1StringMapShareOrSigns": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "share": {
+          "$ref": "#/definitions/v1ShareOrSigns"
+        }
+      }
     },
     "v1WhoAmIResponse": {
       "type": "object",
