@@ -2,12 +2,16 @@ package blockstore
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/minio/minio-go"
-	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -16,6 +20,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
 )
 
 func init() {
@@ -29,6 +34,8 @@ func init() {
 	block.SetupBlockSummaryEntity(ememorystore.GetStorageProvider())
 
 	logging.InitLogging("testing")
+
+	viper.Set("minio.enabled", true)
 }
 
 type (
@@ -71,9 +78,19 @@ func (mock minioClientMock) DeleteLocal() bool {
 	return true
 }
 
-func makeTestFSBlockStore(dir string) *FSBlockStore {
-	bs := NewFSBlockStore(dir, &minioClientMock{})
-	return bs
+func makeTestFSBlockStore(t *testing.T) (*FSBlockStore, func()) {
+	currDir, err := os.Getwd()
+	require.NoError(t, err)
+	randUniqFolder := fmt.Sprintf("%d", time.Now().Unix())
+
+	storeDir := filepath.Join(currDir, "tmp", randUniqFolder)
+	bs := NewFSBlockStore(storeDir, &minioClientMock{})
+	cleanUp := func() {
+		err := os.RemoveAll(filepath.Join(storeDir))
+		require.NoError(t, err)
+	}
+
+	return bs, cleanUp
 }
 
 // checkFile returns true if file exist.
@@ -127,10 +144,8 @@ func TestFSBlockStore_Delete(t *testing.T) {
 }
 
 func TestFSBlockStore_DeleteBlock(t *testing.T) {
-	t.Parallel()
-
 	var (
-		bs = makeTestFSBlockStore("tmp/test/fsblockstore")
+		bs, cleanUp = makeTestFSBlockStore(t)
 
 		b = block.Block{
 			HashIDField: datastore.HashIDField{
@@ -138,6 +153,7 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 			},
 		}
 	)
+	defer cleanUp()
 
 	type fields struct {
 		RootDirectory         string
@@ -212,10 +228,8 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 }
 
 func TestFSBlockStore_Read(t *testing.T) {
-	t.Parallel()
-
 	var (
-		bs = makeTestFSBlockStore("tmp/test/fsblockstore/Read")
+		bs, cleanUp = makeTestFSBlockStore(t)
 
 		b = block.Block{
 			HashIDField: datastore.HashIDField{
@@ -223,6 +237,8 @@ func TestFSBlockStore_Read(t *testing.T) {
 			},
 		}
 	)
+	defer cleanUp()
+
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
@@ -295,11 +311,8 @@ func TestFSBlockStore_Read(t *testing.T) {
 }
 
 func TestFSBlockStore_getFileName(t *testing.T) {
-	t.Parallel()
-
-	var (
-		fbs = makeTestFSBlockStore("tmp/test/fsblockstore")
-	)
+	fbs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 
 	type fields struct {
 		RootDirectory         string
@@ -327,7 +340,7 @@ func TestFSBlockStore_getFileName(t *testing.T) {
 				hash:  encryption.Hash("data"),
 				round: 1,
 			},
-			want: "tmp/test/fsblockstore/1/efd/a89/3aa/850b0c0e61f33325615b9d93bcf6b42d60d8f5d37ebc720fd4e3daf.dat.zlib",
+			want: filepath.Join(fbs.RootDirectory, "1/efd/a89/3aa/850b0c0e61f33325615b9d93bcf6b42d60d8f5d37ebc720fd4e3daf.dat.zlib"),
 		},
 	}
 	for _, tt := range tests {
@@ -337,19 +350,16 @@ func TestFSBlockStore_getFileName(t *testing.T) {
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
 				Minio:                 tt.fields.Minio,
 			}
-			if got := fbs.getFileName(tt.args.hash, tt.args.round); got != tt.want {
-				t.Errorf("getFileName() = %v, want %v", got, tt.want)
-			}
+			got := fbs.getFileName(tt.args.hash, tt.args.round)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
-	t.Parallel()
+	fbs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 
-	var (
-		fbs = makeTestFSBlockStore("tmp/test/fsblockstore")
-	)
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
@@ -376,7 +386,7 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 				hash:  encryption.Hash("data"),
 				round: 1,
 			},
-			want: "tmp/test/fsblockstore/1/efd/a89/3aa/850b0c0e61f33325615b9d93bcf6b42d60d8f5d37ebc720fd4e3daf",
+			want: filepath.Join(fbs.RootDirectory, "1/efd/a89/3aa/850b0c0e61f33325615b9d93bcf6b42d60d8f5d37ebc720fd4e3daf"),
 		},
 	}
 	for _, tt := range tests {
@@ -389,18 +399,15 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
 				Minio:                 tt.fields.Minio,
 			}
-			if got := fbs.getFileWithoutExtension(tt.args.hash, tt.args.round); got != tt.want {
-				t.Errorf("getFileWithoutExtension() = %v, want %v", got, tt.want)
-			}
+			got := fbs.getFileWithoutExtension(tt.args.hash, tt.args.round)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestFSBlockStore_read(t *testing.T) {
-	t.Parallel()
-
 	var (
-		bs = makeTestFSBlockStore("tmp/test/fsblockstore/read")
+		bs, cleanUp = makeTestFSBlockStore(t)
 
 		b = block.Block{
 			HashIDField: datastore.HashIDField{
@@ -408,6 +415,8 @@ func TestFSBlockStore_read(t *testing.T) {
 			},
 		}
 	)
+	defer cleanUp()
+
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
@@ -479,7 +488,6 @@ func TestFSBlockStore_read(t *testing.T) {
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
 				Minio:                 tt.fields.Minio,
 			}
-			viper.Set("minio.enabled", true)
 
 			if tt.write {
 				if err := fbs.Write(&b); err != nil {
@@ -502,7 +510,8 @@ func TestFSBlockStore_read(t *testing.T) {
 func TestFSBlockStore_UploadToCloud(t *testing.T) {
 	t.Parallel()
 
-	fsbs := makeTestFSBlockStore("tmp/test/fsblockstore")
+	fsbs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 
 	type fields struct {
 		RootDirectory         string
@@ -566,7 +575,8 @@ func TestFSBlockStore_UploadToCloud(t *testing.T) {
 func TestFSBlockStore_DownloadFromCloud(t *testing.T) {
 	t.Parallel()
 
-	fsbs := makeTestFSBlockStore("tmp/test/fsblockstore")
+	fsbs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
@@ -632,7 +642,8 @@ func TestFSBlockStore_DownloadFromCloud(t *testing.T) {
 func TestFSBlockStore_CloudObjectExists(t *testing.T) {
 	t.Parallel()
 
-	fsbs := makeTestFSBlockStore("tmp/test/fsblockstore")
+	fsbs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
@@ -692,7 +703,8 @@ func TestFSBlockStore_CloudObjectExists(t *testing.T) {
 func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 	t.Parallel()
 
-	bs := makeTestFSBlockStore("tmp/test/fsblockstore/read")
+	bs, cleanUp := makeTestFSBlockStore(t)
+	defer cleanUp()
 	b := block.Block{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("bs data"),
