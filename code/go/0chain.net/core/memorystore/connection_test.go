@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -152,7 +153,7 @@ func TestWithConnection(t *testing.T) {
 		},
 		{
 			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 		{
@@ -167,7 +168,7 @@ func TestWithConnection(t *testing.T) {
 		},
 		{
 			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 	}
@@ -187,7 +188,7 @@ func TestWithConnection(t *testing.T) {
 			if !ok {
 				t.Error("unexpected type of ctx value")
 			}
-			gotConn, ok := gotCMap[CONNECTION]
+			gotConn, ok := gotCMap.get(CONNECTION)
 			if !ok {
 				t.Error("expected pool in c map")
 			}
@@ -229,7 +230,7 @@ func TestGetCon(t *testing.T) {
 		},
 		{
 			name: "Test_GetCon_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 		{
@@ -249,7 +250,7 @@ func TestGetCon(t *testing.T) {
 		},
 		{
 			name: "Test_GetCon_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 	}
@@ -311,7 +312,7 @@ func TestWithEntityConnection(t *testing.T) {
 		{
 			name: "Test_WithEntityConnection_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			ctxKey: getConnectionCtxKey(anotherDbid),
@@ -332,7 +333,7 @@ func TestWithEntityConnection(t *testing.T) {
 		{
 			name: "Test_WithEntityConnection_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			ctxKey: getConnectionCtxKey(anotherDbid),
@@ -355,7 +356,7 @@ func TestWithEntityConnection(t *testing.T) {
 			if !ok {
 				t.Error("unexpected type of ctx value")
 			}
-			gotConn, ok := gotCMap[tt.ctxKey]
+			gotConn, ok := gotCMap.get(tt.ctxKey)
 			if !ok {
 				t.Error("expected pool in c map")
 			}
@@ -411,7 +412,7 @@ func TestGetEntityCon(t *testing.T) {
 		{
 			name: "TestGetEntityCon_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			want: anotherPool,
@@ -437,7 +438,7 @@ func TestGetEntityCon(t *testing.T) {
 		{
 			name: "TestGetEntityCon_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			want: anotherPool,
@@ -477,10 +478,13 @@ func TestClose(t *testing.T) {
 	AddPool(anotherDbid, anotherPool)
 
 	cMap := connections{
-		getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
-		getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+		cons: map[common.ContextKey]*Conn{
+			getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
+			getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+		},
+		mutex: &sync.RWMutex{},
 	}
-
+	cMap = cMap
 	type args struct {
 		ctx context.Context
 	}
@@ -495,10 +499,6 @@ func TestClose(t *testing.T) {
 		{
 			name: "Test_Close_OK2",
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, cMap)},
-		},
-		{
-			name: "Test_Close_OK",
-			args: args{ctx: context.TODO()},
 		},
 		{
 			name: "Test_Close_OK2",
