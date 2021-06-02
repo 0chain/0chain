@@ -1,4 +1,4 @@
-package blockstore
+package mocks
 
 import (
 	"errors"

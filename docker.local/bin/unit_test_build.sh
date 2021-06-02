@@ -7,3 +7,4 @@ set -e
 
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
++

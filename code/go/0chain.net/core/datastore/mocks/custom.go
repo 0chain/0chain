@@ -1,4 +1,4 @@
-package datastore
+package mocks
 
 import (
 	"0chain.net/chaincore/block"

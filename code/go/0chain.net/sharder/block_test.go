@@ -15,12 +15,12 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	dmocks "0chain.net/core/datastore/mocks"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
-	dmocks "0chain.net/mocks/core/datastore"
-	bsmocks "0chain.net/mocks/sharder/blockstore"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
+	bsmocks "0chain.net/sharder/blockstore/mocks"
 )
 
 func init() {

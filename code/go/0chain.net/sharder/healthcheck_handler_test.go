@@ -1,6 +1,8 @@
 package sharder
 
 import (
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,6 +21,10 @@ func makeTestChain(t *testing.T) *Chain {
 	ch.BlockSize = 1024
 	SetupSharderChain(ch)
 	chain.SetServerChain(ch)
+	mb := block.NewMagicBlock()
+	mb.Miners = node.NewPool(node.NodeTypeMiner)
+	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+	ch.SetMagicBlock(mb)
 	return GetSharderChain()
 }
 

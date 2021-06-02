@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/minio/minio-go"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
