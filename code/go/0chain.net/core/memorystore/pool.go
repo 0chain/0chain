@@ -12,7 +12,7 @@ import (
 
 var DefaultPool *redis.Pool
 
-/*NewPool - create a new redis pool accessible at the given address */
+// NewPool - create a new redis pool accessible at the given address
 func NewPool(host string, port int) *redis.Pool {
 	var address string
 	if os.Getenv("DOCKER") != "" {
@@ -41,59 +41,37 @@ func AddPool(dbid string, pool *redis.Pool) {
 	pools.addPool(dbid, pool)
 }
 
-func getConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
-	return pools.getConnectionCount(entityMetadata)
-}
-
-func getDbPool(entityMetadata datastore.EntityMetadata) *dbpool {
-	return pools.getDbPool(entityMetadata)
-}
-
 type (
-	dbpool struct {
+	dbPool struct {
 		ID     string
 		CtxKey common.ContextKey
 		Pool   *redis.Pool
 	}
 
 	poolList struct {
-		list  map[string]*dbpool
+		list  map[string]*dbPool
 		mutex sync.RWMutex
 	}
 )
 
-var pools = poolList{list: make(map[string]*dbpool)}
+var pools = poolList{list: make(map[string]*dbPool)}
 
 func (p *poolList) initDefaultPool(host string, port int) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
 	DefaultPool = NewPool(host, port)
-	p.list[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
+	p.list[""] = &dbPool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 }
 
-// AddPool - add a database pool to the repository of db pools.
 func (p *poolList) addPool(id string, pool *redis.Pool) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	p.list[id] = &dbpool{ID: id, CtxKey: getConnectionCtxKey(id), Pool: pool}
+	p.list[id] = &dbPool{ID: id, CtxKey: getConnectionCtxKey(id), Pool: pool}
 }
 
-func (p *poolList) getConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-
-	id := entityMetadata.GetDB()
-	pool, ok := p.list[id]
-	if !ok {
-		logging.Logger.Panic("Invalid entity metadata setup, unknown db pool: " + id)
-	}
-
-	return pool.Pool.ActiveCount(), pool.Pool.IdleCount()
-}
-
-func (p *poolList) getDbPool(entityMetadata datastore.EntityMetadata) *dbpool {
+func (p *poolList) getDbPool(entityMetadata datastore.EntityMetadata) *dbPool {
 	p.mutex.RLock()
 	defer p.mutex.RUnlock()
 

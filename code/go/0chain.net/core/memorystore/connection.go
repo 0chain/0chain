@@ -59,7 +59,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	if dbid == "" {
 		return GetConnection()
 	}
-	dbpool := getDbPool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	id := connID.Add(1)
 	return &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), Pool: dbpool.Pool, ID: id}
 }
@@ -122,7 +122,7 @@ func GetCon(ctx context.Context) *Conn {
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
-	dbpool := getDbPool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return WithConnection(ctx)
 	}
@@ -148,7 +148,7 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
-	dbpool := getDbPool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return GetCon(ctx)
 	}

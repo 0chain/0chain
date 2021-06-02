@@ -195,18 +195,18 @@ func TestAddPool(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want map[string]*dbpool
+		want map[string]*dbPool
 	}{
 		{
 			name: "Test_AddPool_OK",
 			args: args{dbid: dbid, pool: pool},
-			want: func() map[string]*dbpool {
-				p := make(map[string]*dbpool)
+			want: func() map[string]*dbPool {
+				p := make(map[string]*dbPool)
 				for key, value := range pools.list {
 					p[key] = value
 				}
 
-				p[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
+				p[dbid] = &dbPool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
 				return p
 			}(),
 		},
@@ -221,10 +221,10 @@ func TestAddPool(t *testing.T) {
 	}
 }
 
-func TestGetConnectionCount(t *testing.T) {
+func Test_getDbPool(t *testing.T) {
 	dbid := "dbid"
 	pool := NewPool("", 8080)
-	pools.list[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
+	pools.list[dbid] = &dbPool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
 
 	type args struct {
 		entityMetadata datastore.EntityMetadata
@@ -232,86 +232,26 @@ func TestGetConnectionCount(t *testing.T) {
 	tests := []struct {
 		name      string
 		args      args
-		want      int
-		want1     int
+		want      *dbPool
 		wantPanic bool
 	}{
 		{
-			name:  "Test_GetConnectionCount_OK",
-			args:  args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want:  pool.ActiveCount(),
-			want1: pool.IdleCount(),
-		},
-		{
-			name:      "Test_GetConnectionCount_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-		{
-			name:  "Test_GetConnectionCount_OK",
-			args:  args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want:  pool.ActiveCount(),
-			want1: pool.IdleCount(),
-		},
-		{
-			name:      "Test_GetConnectionCount_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			defer func() {
-				got := recover()
-				if (got != nil) != tt.wantPanic {
-					t.Errorf("getConnectionCount() want panic  = %v, but got = %v", tt.wantPanic, got)
-				}
-			}()
-
-			got, got1 := getConnectionCount(tt.args.entityMetadata)
-			if got != tt.want {
-				t.Errorf("getConnectionCount() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("getConnectionCount() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func Test_getdbpool(t *testing.T) {
-	dbid := "dbid"
-	pool := NewPool("", 8080)
-	pools.list[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-
-	type args struct {
-		entityMetadata datastore.EntityMetadata
-	}
-	tests := []struct {
-		name      string
-		args      args
-		want      *dbpool
-		wantPanic bool
-	}{
-		{
-			name: "Test_getdbpool_OK",
+			name: "Test_getDbPool_OK",
 			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
+			want: &dbPool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
 		},
 		{
-			name:      "Test_getdbpool_Panic",
+			name:      "Test_getDbPool_Panic",
 			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
 			wantPanic: true,
 		},
 		{
-			name: "Test_getdbpool_OK",
+			name: "Test_getDbPool_OK",
 			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
+			want: &dbPool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
 		},
 		{
-			name:      "Test_getdbpool_Panic",
+			name:      "Test_getDbPool_Panic",
 			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
 			wantPanic: true,
 		},
@@ -324,12 +264,12 @@ func Test_getdbpool(t *testing.T) {
 			defer func() {
 				got := recover()
 				if (got != nil) != tt.wantPanic {
-					t.Errorf("getDbPool() want panic  = %v, but got = %v", tt.wantPanic, got)
+					t.Errorf("pools.getDbPool() want panic  = %v, but got = %v", tt.wantPanic, got)
 				}
 			}()
 
-			if got := getDbPool(tt.args.entityMetadata); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getDbPool() = %v, want %v", got, tt.want)
+			if got := pools.getDbPool(tt.args.entityMetadata); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("pools.getDbPool() = %v, want %v", got, tt.want)
 			}
 		})
 	}
