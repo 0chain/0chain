@@ -13,8 +13,8 @@ import (
 
 	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
+	"0chain.net/core/mocks"
 	"0chain.net/core/util"
-	"0chain.net/mocks"
 )
 
 func init() {

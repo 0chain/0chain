@@ -1,22 +1,28 @@
 package smartcontract_test
 
 import (
+	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zrc20sc"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
 
+	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/mocks"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -24,7 +30,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/mocks"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/setupsc"
@@ -32,16 +37,20 @@ import (
 )
 
 func init() {
+	metrics.DefaultRegistry = metrics.NewRegistry()
 	viper.Set("development.smart_contract.faucet", true)
+	viper.Set("development.smart_contract.storage", true)
+	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.interest", true)
+	viper.Set("development.smart_contract.multisig", true)
 	viper.Set("development.smart_contract.miner", true)
+	viper.Set("development.smart_contract.vesting", true)
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
 	logging.InitLogging("testing")
 }
 
 func TestExecuteRestAPI(t *testing.T) {
-	t.Skip("smart contract aren't protected against parallel access")
-
 	t.Parallel()
 
 	gn := &faucetsc.GlobalNode{}
@@ -126,7 +135,6 @@ tr.header { background-color: #E0E0E0;  }
 .optimal { color: #1B5E20; }
 .slow { font-style: italic; }
 .bold {font-weight:bold;}</style><table width='100%'><tr><td><h2>pour</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td><td><h2>refill</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td></tr><tr><td><h2>token refills</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td><td><h2>tokens Poured</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td></tr><tr><td><h2>updateLimits</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></body></html>`
-
 	type args struct {
 		ctx      context.Context
 		scAdress string
@@ -158,7 +166,7 @@ tr.header { background-color: #E0E0E0;  }
 			name: "Nil_OK",
 			args: args{
 				w:        httptest.NewRecorder(),
-				scAdress: storagesc.ADDRESS,
+				scAdress: "",
 			},
 			wantW: func() http.ResponseWriter {
 				w := httptest.NewRecorder()
@@ -184,37 +192,65 @@ tr.header { background-color: #E0E0E0;  }
 func TestGetSmartContract(t *testing.T) {
 	t.Parallel()
 
-	type args struct {
-		scAddress string
-	}
 	tests := []struct {
-		name string
-		args args
-		want sci.SmartContractInterface
+		name       string
+		address    string
+		restpoints int
+		null       bool
 	}{
 		{
-			name: "OK",
-			args: args{
-				scAddress: faucetsc.ADDRESS,
-			},
-			want: ContractMap[faucetsc.ADDRESS],
+			name:       "faucet",
+			address:    faucetsc.ADDRESS,
+			restpoints: 4,
 		},
 		{
-			name: "Nil_OK",
-			args: args{
-				scAddress: storagesc.ADDRESS,
-			},
-			want: nil,
+			name:       "storage",
+			address:    storagesc.ADDRESS,
+			restpoints: 16,
+		},
+		{
+			name:       "zrc20",
+			address:    zrc20sc.ADDRESS,
+			restpoints: 0,
+		},
+		{
+			name:       "interest",
+			address:    interestpoolsc.ADDRESS,
+			restpoints: 2,
+		},
+		{
+			name:       "multisig",
+			address:    multisigsc.Address,
+			restpoints: 0,
+		},
+		{
+			name:       "miner",
+			address:    minersc.ADDRESS,
+			restpoints: 13,
+		},
+		{
+			name:       "vesting",
+			address:    vestingsc.ADDRESS,
+			restpoints: 3,
+		},
+		{
+			name:    "Nil_OK",
+			address: "not an address",
+			null:    true,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			if got := GetSmartContract(tt.args.scAddress); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetSmartContract() = %v, want %v", got, tt.want)
+			got := GetSmartContract(tt.address)
+			require.True(t, tt.null == (got == nil))
+			if got == nil {
+				return
 			}
+			require.EqualValues(t, tt.name, got.GetName())
+			require.EqualValues(t, tt.address, got.GetAddress())
+			require.EqualValues(t, tt.restpoints, len(got.GetRestPoints()))
 		})
 	}
 }
@@ -327,7 +363,7 @@ func TestExecuteWithStats(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ExecuteWithStats(tt.args.smcoi, tt.args.sc, tt.args.t, tt.args.funcName, tt.args.input, tt.args.balances)
+			got, err := ExecuteWithStats(tt.args.smcoi, tt.args.t, tt.args.funcName, tt.args.input, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecuteWithStats() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -340,8 +376,6 @@ func TestExecuteWithStats(t *testing.T) {
 }
 
 func TestExecuteSmartContract(t *testing.T) {
-	t.Skip("smart contract aren't protected against parallel access")
-
 	t.Parallel()
 
 	gn := &minersc.GlobalNode{}
