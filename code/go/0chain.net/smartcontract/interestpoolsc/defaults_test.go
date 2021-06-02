@@ -20,7 +20,6 @@ const (
 	clientID2 = "client_2"
 
 	globalNode1Ok = "global_node1"
-	globalNode2Ok = "global_node2"
 )
 
 var (
@@ -37,17 +36,6 @@ func testPoolRequest(d time.Duration) []byte {
 		"duration": &durRawMsg,
 	})
 	return jm
-}
-
-// TEST FUNCTION
-// testSimpleNode creates a new instance of SimpleGlobalNode using incoming parameters
-func testSimpleNode(maxInt, totalMinted, minLock state.Balance) *SimpleGlobalNode {
-	return &SimpleGlobalNode{
-		MaxMint:     10,
-		TotalMinted: 10,
-		MinLock:     minLock,
-		APR:         10,
-	}
 }
 
 // TEST FUNCTION

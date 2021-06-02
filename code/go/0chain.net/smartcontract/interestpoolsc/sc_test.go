@@ -587,7 +587,6 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 		fields fields
 		args   args
 		want   *GlobalNode
-		before func(test) test
 	}
 
 	notEmptyBlnc := func() *testBalances {

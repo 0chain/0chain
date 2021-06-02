@@ -20,7 +20,6 @@ var (
 )
 
 const (
-	encodedUserNodeWithClient1String             = "{\"client_id\":\"client_1\",\"pools\":{}}"
 	encodedUserNodeWithClient1StringWthPool      = "{\"client_id\":\"client_1\"}"
 	encodedUserNodeWithClient1StringWthCId       = "{\"client_id\":\"client_1\"}"
 	encodedUserNodeWithClient1StringWthWrongPool = "{\"client_id\":\"client_1\",\"pools\":123}"
@@ -428,7 +427,7 @@ func TestUserNode_addPool(t *testing.T) {
 					name: &interestPool{
 						ZcnLockingPool: &tokenpool.ZcnLockingPool{
 							ZcnPool: tokenpool.ZcnPool{
-								tokenpool.TokenPool{ID: name},
+								TokenPool: tokenpool.TokenPool{ID: name},
 							},
 							TokenLockInterface: nil,
 						},
@@ -441,7 +440,7 @@ func TestUserNode_addPool(t *testing.T) {
 				ip: &interestPool{
 					ZcnLockingPool: &tokenpool.ZcnLockingPool{
 						ZcnPool: tokenpool.ZcnPool{
-							tokenpool.TokenPool{ID: name},
+							TokenPool: tokenpool.TokenPool{ID: name},
 						},
 						TokenLockInterface: nil,
 					},
@@ -460,7 +459,7 @@ func TestUserNode_addPool(t *testing.T) {
 			args: args{ip: &interestPool{
 				ZcnLockingPool: &tokenpool.ZcnLockingPool{
 					ZcnPool: tokenpool.ZcnPool{
-						tokenpool.TokenPool{ID: name},
+						TokenPool: tokenpool.TokenPool{ID: name},
 					},
 					TokenLockInterface: nil,
 				},
