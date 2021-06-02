@@ -27,51 +27,8 @@ func NewStoreMock() StoreCustom {
 	}
 }
 
-func (s StoreCustom) Read(_ context.Context, key datastore.Key, entity datastore.Entity) error {
-	name := entity.GetEntityMetadata().GetName()
-
-	if (name == "block_summary" || name == "txn_summary") && len(key) != 64 {
-		return errors.New("key length must be 64")
-	}
-
-	if name == "round" || name == "magic_block_map" {
-		n, err := strconv.ParseInt(key, 10, 64)
-		if err != nil {
-			return err
-		}
-		if n < 0 {
-			return errors.New("key can not be negative")
-		}
-	}
-
-	switch name {
-	case "block_summary":
-		v, ok := s.blockSummaries[key]
-		if !ok {
-			return errors.New("unknown block summary")
-		}
-
-		bs := entity.(*block.BlockSummary)
-		*bs = *v
-	case "round":
-		v, ok := s.rounds[key]
-		if !ok {
-			return errors.New("unknown round")
-		}
-
-		r := entity.(*round.Round)
-		*r = *v
-	case "magic_block_map":
-		v, ok := s.magicBlockMaps[key]
-		if !ok {
-			return errors.New("unknown magic block map")
-		}
-		mb := entity.(*block.MagicBlockMap)
-		*mb = *v
-
-	}
-
-	return nil
+func (s StoreCustom) Read(_ context.Context, _ datastore.Key, _ datastore.Entity) error {
+	panic("not implemented")
 }
 
 func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
@@ -107,39 +64,39 @@ func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
 }
 
 func (s StoreCustom) InsertIfNE(_ context.Context, _ datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) Delete(_ context.Context, _ datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) MultiRead(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Key, _ []datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) MultiWrite(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) MultiDelete(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) AddToCollection(_ context.Context, _ datastore.CollectionEntity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) MultiAddToCollection(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) DeleteFromCollection(_ context.Context, _ datastore.CollectionEntity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) MultiDeleteFromCollection(_ context.Context, _ datastore.EntityMetadata, _ []datastore.Entity) error {
-	return nil
+	panic("not implemented")
 }
 
 func (s StoreCustom) GetCollectionSize(_ context.Context, _ datastore.EntityMetadata, _ string) int64 {
@@ -147,5 +104,5 @@ func (s StoreCustom) GetCollectionSize(_ context.Context, _ datastore.EntityMeta
 }
 
 func (s StoreCustom) IterateCollection(_ context.Context, _ datastore.EntityMetadata, _ string, _ datastore.CollectionIteratorHandler) error {
-	return nil
+	panic("not implemented")
 }
