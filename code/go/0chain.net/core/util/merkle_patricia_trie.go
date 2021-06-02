@@ -901,7 +901,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	return err
 }
 
-// GetMissingNodes returns the paths and keys of missing nodes
+// FindMissingNodes returns the paths and keys of missing nodes
 func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []Key, error) {
 	paths := make([]Path, 0, BatchSize)
 	keys := make([]Key, 0, BatchSize)

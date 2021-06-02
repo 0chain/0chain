@@ -1,5 +1,5 @@
-# Compile the sharder in an un-tagged image so the final, tagged image can be smaller:
-FROM zchain_build_base as sharder_build
+# Compile the miner in an un-tagged image so the final, tagged image can be smaller:
+FROM zchain_build_base as miner_build
 ENV GO111MODULE=on
 
 # Add the source code:
@@ -12,7 +12,7 @@ WORKDIR /0chain.net
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
 # FIXME: Also, is there a way we can move this to zchain_build_base?
 
-RUN [[ -d /0chain.net/vendor ]] || ( \
+RUN [[ -d vendor ]] || ( \
     go mod download && \
     go mod vendor -v && \
     dir=github.com/valyala/gozstd && \
@@ -24,7 +24,7 @@ RUN cd vendor/github.com/valyala/gozstd* && \
     make clean libzstd.a
 
 # Set workdir
-WORKDIR /0chain.net/sharder/sharder
+WORKDIR /0chain.net/miner/miner
 
 # Build it:
 ARG GIT_COMMIT
@@ -35,4 +35,4 @@ RUN go build -mod vendor -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain
 FROM zchain_run_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
-COPY --from=sharder_build /0chain.net/sharder/sharder/sharder $APP_DIR/bin/
+COPY --from=miner_build /0chain.net/miner/miner/miner $APP_DIR/bin/

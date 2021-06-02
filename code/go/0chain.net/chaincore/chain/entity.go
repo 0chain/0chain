@@ -1,8 +1,10 @@
 package chain
 
 import (
+	"bytes"
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -1295,6 +1297,19 @@ func (c *Chain) GetLatestFinalizedBlock() *block.Block {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()
 	return c.LatestFinalizedBlock
+}
+
+// UpdateLatestFinalizedBlockState updates the latest finalized block's state
+func (c *Chain) UpdateLatestFinalizedBlockState(state util.MerklePatriciaTrieI) error {
+	c.lfbMutex.Lock()
+	defer c.lfbMutex.Unlock()
+	if bytes.Compare(c.LatestFinalizedBlock.ClientStateHash, state.GetRoot()) != 0 {
+		return errors.New("latest finalized block state hash mismatch")
+	}
+
+	c.LatestFinalizedBlock.CreateState(state.GetNodeDB(), state.GetRoot())
+	c.LatestFinalizedBlock.SetStateStatus(block.StateSuccessful)
+	return nil
 }
 
 // GetLatestFinalizedBlockSummary - get the latest finalized block summary.
