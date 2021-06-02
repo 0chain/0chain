@@ -99,7 +99,7 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 				SmartContract: tt.fields.SmartContract,
 			}
 
-			ipsc.SetSC(tt.args.sc, tt.args.bcContext)
+			ipsc.setSC(tt.args.sc, tt.args.bcContext)
 
 			getPoolsStats := ipsc.RestHandlers["/getPoolsStats"]
 			if reflect.ValueOf(getPoolsStats).Pointer() != reflect.ValueOf(ipsc.getPoolsStats).Pointer() {
@@ -278,7 +278,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			if tt.args.wantTransferPool {
 				tt.want = testTokenPoolTransferResponse(tt.args.t)
 			}
-			ip.SetSC(sc, nil)
+			ip.setSC(sc, nil)
 			got, err := ip.lock(tt.args.t, tt.args.un, tt.args.gn, tt.args.inputData, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("lock() error = %v, wantErr %v", err, tt.wantErr)
@@ -411,7 +411,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}
-			ip.SetSC(sc, nil)
+			ip.setSC(sc, nil)
 			got, err := ip.unlock(tt.args.t, tt.args.un, tt.args.gn, tt.args.inputData, tt.args.balances)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("unlock() error = %v, wantErr %v", err, tt.wantErr)
@@ -489,9 +489,6 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := &InterestPoolSmartContract{
 				SmartContract: tt.fields.SmartContract,
-			}
-			if tt.shouldBeOk {
-				config.SetupSmartContractConfig()
 			}
 			got, err := ip.updateVariables(tt.args.t, tt.args.gn, tt.args.inputData, tt.args.balances)
 			if (err != nil) != tt.wantErr {

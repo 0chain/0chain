@@ -36,6 +36,10 @@ func (tb *testBalances) GetBlock() *block.Block {
 	return tb.block
 }
 
+func (sc *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
+	return nil
+}
+
 func (tb *testBalances) SetMagicBlock(mb *block.MagicBlock) {
 	if tb.block != nil {
 		tb.block.MagicBlock = mb
@@ -53,7 +57,7 @@ func (tb *testBalances) Validate() error                          { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
+func (tb *testBalances) AddSignedTransfer(_ *state.SignedTransfer) {
 }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
