@@ -6,7 +6,10 @@
   },
   "tags": [
     {
-      "name": "Miner"
+      "name": "Node"
+    },
+    {
+      "name": "Chain"
     }
   ],
   "consumes": [
@@ -18,7 +21,7 @@
   "paths": {
     "/v2/_nh/whoami": {
       "get": {
-        "operationId": "Miner_WhoAmI",
+        "operationId": "Node_WhoAmI",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -34,7 +37,29 @@
           }
         },
         "tags": [
-          "Miner"
+          "Node"
+        ]
+      }
+    },
+    "/v2/block/get/latest_finalized": {
+      "get": {
+        "operationId": "Chain_GetLatestFinalizedBlockSummary",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1GetLatestFinalizedBlockSummaryResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "Chain"
         ]
       }
     }
@@ -69,6 +94,9 @@
           }
         }
       }
+    },
+    "v1GetLatestFinalizedBlockSummaryResponse": {
+      "type": "object"
     },
     "v1WhoAmIResponse": {
       "type": "object",

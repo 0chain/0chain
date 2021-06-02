@@ -31,7 +31,7 @@ var _ = runtime.String
 var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
-func request_Miner_WhoAmI_0(ctx context.Context, marshaler runtime.Marshaler, client MinerClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Node_WhoAmI_0(ctx context.Context, marshaler runtime.Marshaler, client NodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq WhoAmIRequest
 	var metadata runtime.ServerMetadata
 
@@ -40,7 +40,7 @@ func request_Miner_WhoAmI_0(ctx context.Context, marshaler runtime.Marshaler, cl
 
 }
 
-func local_request_Miner_WhoAmI_0(ctx context.Context, marshaler runtime.Marshaler, server MinerServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Node_WhoAmI_0(ctx context.Context, marshaler runtime.Marshaler, server NodeServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq WhoAmIRequest
 	var metadata runtime.ServerMetadata
 
@@ -49,24 +49,42 @@ func local_request_Miner_WhoAmI_0(ctx context.Context, marshaler runtime.Marshal
 
 }
 
-// RegisterMinerHandlerServer registers the http handlers for service Miner to "mux".
-// UnaryRPC     :call MinerServer directly.
-// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterMinerHandlerFromEndpoint instead.
-func RegisterMinerHandlerServer(ctx context.Context, mux *runtime.ServeMux, server MinerServer) error {
+func request_Chain_GetLatestFinalizedBlockSummary_0(ctx context.Context, marshaler runtime.Marshaler, client ChainClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetLatestFinalizedBlockSummaryRequest
+	var metadata runtime.ServerMetadata
 
-	mux.Handle("GET", pattern_Miner_WhoAmI_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	msg, err := client.GetLatestFinalizedBlockSummary(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_Chain_GetLatestFinalizedBlockSummary_0(ctx context.Context, marshaler runtime.Marshaler, server ChainServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetLatestFinalizedBlockSummaryRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.GetLatestFinalizedBlockSummary(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+// RegisterNodeHandlerServer registers the http handlers for service Node to "mux".
+// UnaryRPC     :call NodeServer directly.
+// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterNodeHandlerFromEndpoint instead.
+func RegisterNodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, server NodeServer) error {
+
+	mux.Handle("GET", pattern_Node_WhoAmI_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/miner.service.v1.Miner/WhoAmI")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/miner.service.v1.Node/WhoAmI")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Miner_WhoAmI_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Node_WhoAmI_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -74,16 +92,48 @@ func RegisterMinerHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 			return
 		}
 
-		forward_Miner_WhoAmI_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Node_WhoAmI_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
 	return nil
 }
 
-// RegisterMinerHandlerFromEndpoint is same as RegisterMinerHandler but
+// RegisterChainHandlerServer registers the http handlers for service Chain to "mux".
+// UnaryRPC     :call ChainServer directly.
+// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
+// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterChainHandlerFromEndpoint instead.
+func RegisterChainHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ChainServer) error {
+
+	mux.Handle("GET", pattern_Chain_GetLatestFinalizedBlockSummary_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/miner.service.v1.Chain/GetLatestFinalizedBlockSummary")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Chain_GetLatestFinalizedBlockSummary_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_Chain_GetLatestFinalizedBlockSummary_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	return nil
+}
+
+// RegisterNodeHandlerFromEndpoint is same as RegisterNodeHandler but
 // automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterMinerHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+func RegisterNodeHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
 	conn, err := grpc.Dial(endpoint, opts...)
 	if err != nil {
 		return err
@@ -103,39 +153,39 @@ func RegisterMinerHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux
 		}()
 	}()
 
-	return RegisterMinerHandler(ctx, mux, conn)
+	return RegisterNodeHandler(ctx, mux, conn)
 }
 
-// RegisterMinerHandler registers the http handlers for service Miner to "mux".
+// RegisterNodeHandler registers the http handlers for service Node to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterMinerHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterMinerHandlerClient(ctx, mux, NewMinerClient(conn))
+func RegisterNodeHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterNodeHandlerClient(ctx, mux, NewNodeClient(conn))
 }
 
-// RegisterMinerHandlerClient registers the http handlers for service Miner
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "MinerClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "MinerClient"
+// RegisterNodeHandlerClient registers the http handlers for service Node
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "NodeClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "NodeClient"
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "MinerClient" to call the correct interceptors.
-func RegisterMinerHandlerClient(ctx context.Context, mux *runtime.ServeMux, client MinerClient) error {
+// "NodeClient" to call the correct interceptors.
+func RegisterNodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, client NodeClient) error {
 
-	mux.Handle("GET", pattern_Miner_WhoAmI_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Node_WhoAmI_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/miner.service.v1.Miner/WhoAmI")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/miner.service.v1.Node/WhoAmI")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Miner_WhoAmI_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Node_WhoAmI_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Miner_WhoAmI_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Node_WhoAmI_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -143,9 +193,78 @@ func RegisterMinerHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Miner_WhoAmI_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v2", "_nh", "whoami"}, ""))
+	pattern_Node_WhoAmI_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"v2", "_nh", "whoami"}, ""))
 )
 
 var (
-	forward_Miner_WhoAmI_0 = runtime.ForwardResponseMessage
+	forward_Node_WhoAmI_0 = runtime.ForwardResponseMessage
+)
+
+// RegisterChainHandlerFromEndpoint is same as RegisterChainHandler but
+// automatically dials to "endpoint" and closes the connection when "ctx" gets done.
+func RegisterChainHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
+	conn, err := grpc.Dial(endpoint, opts...)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Infof("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+			return
+		}
+		go func() {
+			<-ctx.Done()
+			if cerr := conn.Close(); cerr != nil {
+				grpclog.Infof("Failed to close conn to %s: %v", endpoint, cerr)
+			}
+		}()
+	}()
+
+	return RegisterChainHandler(ctx, mux, conn)
+}
+
+// RegisterChainHandler registers the http handlers for service Chain to "mux".
+// The handlers forward requests to the grpc endpoint over "conn".
+func RegisterChainHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+	return RegisterChainHandlerClient(ctx, mux, NewChainClient(conn))
+}
+
+// RegisterChainHandlerClient registers the http handlers for service Chain
+// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "ChainClient".
+// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "ChainClient"
+// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
+// "ChainClient" to call the correct interceptors.
+func RegisterChainHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ChainClient) error {
+
+	mux.Handle("GET", pattern_Chain_GetLatestFinalizedBlockSummary_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/miner.service.v1.Chain/GetLatestFinalizedBlockSummary")
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Chain_GetLatestFinalizedBlockSummary_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_Chain_GetLatestFinalizedBlockSummary_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	return nil
+}
+
+var (
+	pattern_Chain_GetLatestFinalizedBlockSummary_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v2", "block", "get", "latest_finalized"}, ""))
+)
+
+var (
+	forward_Chain_GetLatestFinalizedBlockSummary_0 = runtime.ForwardResponseMessage
 )

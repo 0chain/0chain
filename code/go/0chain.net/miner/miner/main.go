@@ -319,6 +319,7 @@ func main() {
 
 func registerGRPCServices(server *grpc.Server) {
 	node.RegisterGRPCMinerNodeService(server)
+	chain.RegisterGRPCMinerChainServer(server)
 }
 
 func done(ctx context.Context) {
