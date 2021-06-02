@@ -1510,7 +1510,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				b := NewBlock("", 1)
 				pndb := util.NewMemoryNodeDB()
 				rootHash := prevB.ClientStateHash
-				b.CreateState(pndb)
+				b.CreateState(pndb, rootHash)
 				b.ClientState.SetRoot(rootHash)
 
 				return b
@@ -1549,7 +1549,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				b := NewBlock("", 1)
 				pndb := cs.GetNodeDB()
 				rootHash := prevB.ClientStateHash
-				b.CreateState(pndb)
+				b.CreateState(pndb, rootHash)
 				b.ClientState.SetRoot(rootHash)
 
 				return b
@@ -1582,7 +1582,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				b := NewBlock("", 1)
 				pndb := util.NewMemoryNodeDB()
 				rootHash := prevB.ClientStateHash
-				b.CreateState(pndb)
+				b.CreateState(pndb, rootHash)
 				b.ClientState.SetRoot(rootHash)
 
 				return b
@@ -1621,7 +1621,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				b := NewBlock("", 1)
 				pndb := cs.GetNodeDB()
 				rootHash := prevB.ClientStateHash
-				b.CreateState(pndb)
+				b.CreateState(pndb, rootHash)
 				b.ClientState.SetRoot(rootHash)
 
 				return b
