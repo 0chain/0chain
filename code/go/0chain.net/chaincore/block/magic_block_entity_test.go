@@ -9,11 +9,11 @@ import (
 	"sync"
 	"testing"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/node"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 func TestNewMagicBlock(t *testing.T) {

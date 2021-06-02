@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"math/rand"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 /*Register - register a wallet using the server side api */

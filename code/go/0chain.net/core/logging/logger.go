@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 var (

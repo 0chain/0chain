@@ -1,10 +1,11 @@
 package block
 
 import (
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
 	"context"
 	"strconv"
+
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/ememorystore"
 )
 
 type MagicBlockData struct {

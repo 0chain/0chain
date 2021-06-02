@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"0chain.net/sharder"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder"
 )
 
 func TestHealthCheckWriter(t *testing.T) {

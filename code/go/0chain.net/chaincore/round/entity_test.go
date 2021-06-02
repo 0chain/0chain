@@ -11,12 +11,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/mocks"
 )
 
 func init() {

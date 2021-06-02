@@ -7,13 +7,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 const updateConfigURL = "/v1/config/update"

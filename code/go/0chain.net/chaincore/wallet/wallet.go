@@ -3,7 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 /*Wallet - a struct representing the client's wallet */

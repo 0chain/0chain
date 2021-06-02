@@ -1,17 +1,18 @@
 package zrc20sc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 	metrics "github.com/rcrowley/go-metrics"
 )
 

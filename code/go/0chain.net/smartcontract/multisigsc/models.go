@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 const (

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/transaction"
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
 )
 
 const Seperator = ":"

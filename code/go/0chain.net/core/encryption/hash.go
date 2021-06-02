@@ -3,7 +3,7 @@ package encryption
 import (
 	"encoding/hex"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 	"golang.org/x/crypto/sha3"
 )
 

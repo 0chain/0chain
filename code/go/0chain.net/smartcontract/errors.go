@@ -1,11 +1,12 @@
 package smartcontract
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/util"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 // NewErrNoResourceOrErrInternal wraps err, passed in args, in common.ErrInternal or in common.ErrNoResource, depending on

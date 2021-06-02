@@ -3,8 +3,8 @@ package block
 import (
 	"context"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 /*BlockVerificationTicket - verification ticket with the block id.

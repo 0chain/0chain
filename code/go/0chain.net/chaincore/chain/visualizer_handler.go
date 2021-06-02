@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"sort"
 
-	"0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
 
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 )
 
 type bNode struct {

@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"errors"
 	"fmt"
@@ -9,18 +8,20 @@ import (
 	"strconv"
 	"sync"
 
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	sci "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/rcrowley/go-metrics"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 )
 
 const (

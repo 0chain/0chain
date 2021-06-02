@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ratelimit "github.com/grpc-ecosystem/go-grpc-middleware/ratelimit"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"

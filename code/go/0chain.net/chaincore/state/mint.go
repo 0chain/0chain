@@ -3,8 +3,8 @@ package state
 import (
 	"encoding/json"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")

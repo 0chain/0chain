@@ -3,9 +3,9 @@ package smartcontract
 import (
 	"strconv"
 
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

@@ -13,11 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/ememorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 const dataDir = "data"

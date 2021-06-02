@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +40,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 	}
 	cli, err := txn.GetClient(ctx)
-	if err != nil || cli == nil  || cli.PublicKey == "" {
+	if err != nil || cli == nil || cli.PublicKey == "" {
 		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
 	if datastore.DoAsync(ctx, txn) {

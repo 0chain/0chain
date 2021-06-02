@@ -7,8 +7,8 @@ import (
 	"sort"
 	"testing"
 
-	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 func TestNewShareOrSigns(t *testing.T) {

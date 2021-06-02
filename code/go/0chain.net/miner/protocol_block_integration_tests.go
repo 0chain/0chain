@@ -10,19 +10,20 @@ import (
 	"math/rand"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	"go.uber.org/zap"
 
-	crpc "0chain.net/conductor/conductrpc"
-	crpcutils "0chain.net/conductor/utils"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
+	crpcutils "github.com/0chain/0chain/code/go/0chain.net/conductor/utils"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (

@@ -3,8 +3,7 @@ package cache
 import (
 	"sync"
 
-	"0chain.net/core/common"
-	"github.com/hashicorp/golang-lru"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 //LRU - LRU cache

@@ -10,13 +10,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/state"
-	mptwallet "0chain.net/chaincore/wallet"
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/httpclientutil"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	mptwallet "github.com/0chain/0chain/code/go/0chain.net/chaincore/wallet"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 const (

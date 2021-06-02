@@ -6,7 +6,7 @@ import (
 	"context"
 	"net/http"
 
-	crpc "0chain.net/conductor/conductrpc"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
 )
 
 func revertString(s string) string {

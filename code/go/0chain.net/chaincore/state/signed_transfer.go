@@ -3,8 +3,8 @@ package state
 import (
 	"encoding/hex"
 
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 // A SignedTransfer is a balance transfer from one client to another that has
@@ -12,8 +12,8 @@ import (
 type SignedTransfer struct {
 	Transfer
 	SchemeName string
-	PublicKey string
-	Sig string
+	PublicKey  string
+	Sig        string
 }
 
 func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {

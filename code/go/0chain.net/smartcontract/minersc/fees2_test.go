@@ -1,22 +1,23 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/block"
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
-	"github.com/rcrowley/go-metrics"
-	"github.com/stretchr/testify/require"
 	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	sci "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
+	"github.com/rcrowley/go-metrics"
+	"github.com/stretchr/testify/require"
 )
 
 const (

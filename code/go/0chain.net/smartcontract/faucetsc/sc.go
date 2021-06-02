@@ -1,19 +1,20 @@
 package faucetsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )

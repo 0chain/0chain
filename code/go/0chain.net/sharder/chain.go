@@ -4,20 +4,20 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/core/cache"
-	"0chain.net/core/ememorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/cache"
+	"github.com/0chain/0chain/code/go/0chain.net/core/ememorystore"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/sharder/blockstore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder/blockstore"
 
 	"github.com/0chain/gorocksdb"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

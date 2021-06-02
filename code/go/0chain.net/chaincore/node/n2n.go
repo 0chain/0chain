@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 /*

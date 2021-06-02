@@ -6,10 +6,10 @@ import (
 	"context"
 	"net/http"
 
-	"0chain.net/core/datastore"
-	"0chain.net/core/persistencestore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/persistencestore"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

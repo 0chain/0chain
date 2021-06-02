@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
+	chainState "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

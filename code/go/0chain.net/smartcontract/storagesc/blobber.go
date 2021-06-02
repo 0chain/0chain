@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/util"
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour

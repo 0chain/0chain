@@ -3,7 +3,7 @@ package zrc20sc
 import (
 	"testing"
 
-	"0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
 )
 
 const (

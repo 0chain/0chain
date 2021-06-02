@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 /*MagicBlockSummary - the summary of the transaction */

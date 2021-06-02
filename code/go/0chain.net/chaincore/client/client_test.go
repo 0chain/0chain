@@ -1,16 +1,17 @@
 package client
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
 	"context"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/gomodule/redigo/redis"
 	"testing"
 	"time"
+
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
 )
 
 func init() {

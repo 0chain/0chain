@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 func TestAllocateEntities(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"0chain.net/chaincore/diagnostics"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/diagnostics"
 	"github.com/rcrowley/go-metrics"
 )
 

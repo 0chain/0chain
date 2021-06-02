@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"0chain.net/conductor/conductrpc"
-	"0chain.net/conductor/config"
+	"github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
+	"github.com/0chain/0chain/code/go/0chain.net/conductor/config"
 )
 
 //

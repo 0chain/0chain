@@ -3,9 +3,9 @@ package block
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 type MPK struct {

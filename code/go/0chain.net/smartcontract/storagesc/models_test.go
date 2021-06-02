@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"sync"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 	"go.uber.org/atomic"
 
 	"reflect"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

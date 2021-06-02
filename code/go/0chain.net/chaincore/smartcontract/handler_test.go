@@ -6,17 +6,17 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/require"
 
-	"0chain.net/chaincore/config"
-	. "0chain.net/chaincore/smartcontract"
-	"0chain.net/core/viper"
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/interestpoolsc"
-	"0chain.net/smartcontract/minersc"
-	"0chain.net/smartcontract/multisigsc"
-	"0chain.net/smartcontract/setupsc"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	. "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/faucetsc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/interestpoolsc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/minersc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/multisigsc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/setupsc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/storagesc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/vestingsc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/zrc20sc"
 )
 
 func init() {

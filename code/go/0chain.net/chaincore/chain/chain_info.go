@@ -3,10 +3,10 @@ package chain
 import (
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/metric"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/metric"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 /*Info - a struct to capture the chain info at runtime */

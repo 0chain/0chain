@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/util"
+	chainstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 // getAllocation by ID

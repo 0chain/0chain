@@ -1,12 +1,13 @@
 package state
 
 import (
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 //Balance - any quantity that is represented as an integer in the lowest denomination

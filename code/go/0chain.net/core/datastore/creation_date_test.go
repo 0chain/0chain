@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 func TestCreationDateField_GetCreationTime(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 const MB = 1024 * 1024

@@ -3,9 +3,9 @@
 package main
 
 import (
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 
-	crpc "0chain.net/conductor/conductrpc" // integration tests
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc" // integration tests
 )
 
 // start lock, where the miner is ready to connect to blockchain (BC)

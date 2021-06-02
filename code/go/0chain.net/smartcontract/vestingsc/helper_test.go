@@ -11,17 +11,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	chainstate "0chain.net/chaincore/chain/state"
-	configpkg "0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	chainstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	configpkg "github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 const x10 = 10 * 1000 * 1000 * 1000

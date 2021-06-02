@@ -1,20 +1,21 @@
 package multisigsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
 
-	"0chain.net/chaincore/chain/state"
-	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	"go.uber.org/zap"
 )
 

@@ -3,12 +3,12 @@
 package minersc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
 
-	crpc "0chain.net/conductor/conductrpc"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
 )
 
 func (msc *MinerSmartContract) initSC() {

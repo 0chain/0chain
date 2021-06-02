@@ -1,14 +1,15 @@
 package memorystore_test
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"context"
 	"testing"
 	"time"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
 )
 
 func init() {

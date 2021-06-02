@@ -6,11 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/common"
-	"0chain.net/sharder"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder"
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {

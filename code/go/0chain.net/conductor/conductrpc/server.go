@@ -7,7 +7,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	"0chain.net/conductor/config"
+	"github.com/0chain/0chain/code/go/0chain.net/conductor/config"
 )
 
 var ErrShutdown = errors.New("server shutdown")

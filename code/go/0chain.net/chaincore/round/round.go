@@ -1,8 +1,8 @@
 package round
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 )
 
 //RoundI - an interface that represents a blockchain round

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 /*EntityProvider - returns an entity */

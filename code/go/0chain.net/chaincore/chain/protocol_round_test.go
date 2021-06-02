@@ -1,12 +1,13 @@
 package chain
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/datastore"
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {

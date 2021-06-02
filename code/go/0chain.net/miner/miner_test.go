@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/chaincore/state"
 	"bytes"
 	"context"
 	"flag"
@@ -13,19 +12,21 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/sharder/blockstore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder/blockstore"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"
 

@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"

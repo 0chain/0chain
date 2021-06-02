@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 
-	crpc "0chain.net/conductor/conductrpc"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
 )
 
 var signature = encryption.NewBLS0ChainScheme()

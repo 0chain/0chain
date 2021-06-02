@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 func Test_Viper_IsThreadSafe(t *testing.T) {

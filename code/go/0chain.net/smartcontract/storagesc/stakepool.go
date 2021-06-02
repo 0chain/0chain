@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,14 +8,16 @@ import (
 	"net/url"
 	"sort"
 
-	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract"
+
+	chainstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 // A userStakePools collects stake pools references for a user.

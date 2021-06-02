@@ -3,9 +3,9 @@ package miner
 import (
 	"context"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 // SendBlock - send the block proposal to the network.

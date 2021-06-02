@@ -8,18 +8,18 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/chaincore/wallet"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/viper"
-	"0chain.net/miner"
-	"0chain.net/smartcontract/faucetsc"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/wallet"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/miner"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/faucetsc"
 )
 
 var (

@@ -7,21 +7,21 @@ import (
 	"net/http"
 	"net/url"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/httpclientutil"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 
-	crpc "0chain.net/conductor/conductrpc" // integration tests
-	crpcutils "0chain.net/conductor/utils"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc" // integration tests
+	crpcutils "github.com/0chain/0chain/code/go/0chain.net/conductor/utils"
 )
 
 func revertString(s string) string {
@@ -274,8 +274,8 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 	}
 
 	var (
-		state     = crpc.Client().State()
-		good, bad = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
+		state             = crpc.Client().State()
+		good, bad         = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
 	)

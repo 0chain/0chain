@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 
-	"0chain.net/miner/minerGRPC"
+	"github.com/0chain/0chain/code/go/0chain.net/miner/minerGRPC"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 )

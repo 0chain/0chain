@@ -1,9 +1,9 @@
 package storagesc
 
 import (
-	"0chain.net/core/common"
-	c_state "0chain.net/chaincore/chain/state"
-	. "0chain.net/core/logging"
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 )
 
 func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSize int64) {
@@ -17,7 +17,7 @@ func (sc *StorageSmartContract) newWrite(statectx c_state.StateContextI, writeSi
 			return
 		}
 	}
-	
+
 	stats.Stats.NumWrites++
 	stats.Stats.UsedSize += writeSize
 	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
@@ -38,8 +38,8 @@ func (sc *StorageSmartContract) newRead(statectx c_state.StateContextI, numReads
 			return
 		}
 	}
-	
-	stats.Stats.NumReads+=numReads
+
+	stats.Stats.NumReads += numReads
 	statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 }
 
@@ -57,7 +57,7 @@ func (sc *StorageSmartContract) newChallenge(statectx c_state.StateContextI, cha
 			return
 		}
 	}
-	
+
 	stats.Stats.OpenChallenges++
 	stats.Stats.TotalChallenges++
 	stats.LastChallengedSize = stats.Stats.UsedSize
@@ -79,7 +79,7 @@ func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI
 			return
 		}
 	}
-	
+
 	stats.Stats.OpenChallenges--
 	if challengedPassed {
 		stats.Stats.SuccessChallenges++

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/diagnostics"
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/diagnostics"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 )
 
 // HealthCheckWriter - a handler to provide block statistics

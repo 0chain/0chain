@@ -13,13 +13,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/node"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/mocks"
 )
 
 func init() {

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"os"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	"go.uber.org/zap"
 )
 

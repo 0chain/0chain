@@ -9,10 +9,10 @@ import (
 	"github.com/gocql/gocql"
 	"go.uber.org/zap"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 //KeySpace - the keyspace usef for the 0chain data

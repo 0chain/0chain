@@ -1,6 +1,6 @@
 package util
 
-import "0chain.net/core/encryption"
+import "github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 
 /*MerkleTreeI - a merkle tree interface required for constructing and providing verification */
 type MerkleTreeI interface {

@@ -1,14 +1,15 @@
 package bls
 
 import (
-	"0chain.net/chaincore/wallet"
-	"0chain.net/core/logging"
 	"fmt"
-	"github.com/herumi/bls/ffi/go/bls"
 	"math"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/wallet"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/herumi/bls/ffi/go/bls"
 )
 
 type DKGID = bls.ID

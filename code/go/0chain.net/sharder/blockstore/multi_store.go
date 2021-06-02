@@ -1,8 +1,8 @@
 package blockstore
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 //MultiBlockStore - a block store backed by multiple other block stores - useful to experiment different block stores

@@ -6,10 +6,10 @@ import (
 	"errors"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/round"
-	. "0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

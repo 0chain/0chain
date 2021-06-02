@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
+	chainState "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -111,7 +111,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 
 	var blob = newClient(0, balances)
 	blob.terms = avgTerms
-	blob.cap = 2*GB
+	blob.cap = 2 * GB
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)

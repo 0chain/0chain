@@ -5,13 +5,13 @@ package miner
 import (
 	"context"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
 
-	crpc "0chain.net/conductor/conductrpc"
-	crpcutils "0chain.net/conductor/utils"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
+	crpcutils "github.com/0chain/0chain/code/go/0chain.net/conductor/utils"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {

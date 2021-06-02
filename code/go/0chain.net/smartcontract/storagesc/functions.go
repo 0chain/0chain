@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"fmt"
+
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
 )
 
 func moveServiceCharge(sscKey string, zcnPool tokenpool.ZcnPool, sp *stakePool,

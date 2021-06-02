@@ -7,16 +7,16 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/threshold/bls"
 
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	metrics "github.com/rcrowley/go-metrics"

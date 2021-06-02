@@ -1,4 +1,4 @@
-module 0chain.net
+module github.com/0chain/0chain
 
 go 1.15
 

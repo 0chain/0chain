@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 /*WithConnectionHandler - a json response handler that adds a persistencestore connection to the Context

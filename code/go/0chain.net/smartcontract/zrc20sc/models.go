@@ -3,11 +3,11 @@ package zrc20sc
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 type tokenNode struct {

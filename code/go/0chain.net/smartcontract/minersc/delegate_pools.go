@@ -1,14 +1,14 @@
 package minersc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/util"
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	sci "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

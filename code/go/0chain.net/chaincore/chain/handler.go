@@ -14,23 +14,23 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/metric"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/metric"
 	"go.uber.org/zap"
 
-	"0chain.net/core/build"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/core/build"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 
-	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/minersc"
 )
 
 /*SetupHandlers sets up the necessary API end points */

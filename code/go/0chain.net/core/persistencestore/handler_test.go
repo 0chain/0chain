@@ -7,11 +7,11 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/mocks"
-	"0chain.net/core/persistencestore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/core/persistencestore"
 )
 
 func TestWithConnectionHandler(t *testing.T) {

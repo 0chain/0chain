@@ -1,14 +1,15 @@
 package memorystore_test
 
 import (
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"context"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
 )
 
 func TestMemoryDBChunk_Add(t *testing.T) {

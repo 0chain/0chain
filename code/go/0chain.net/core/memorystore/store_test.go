@@ -1,21 +1,22 @@
 package memorystore_test
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"context"
 	"fmt"
-	"github.com/alicebob/miniredis/v2"
-	"github.com/gomodule/redigo/redis"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
 )
 
 func init() {

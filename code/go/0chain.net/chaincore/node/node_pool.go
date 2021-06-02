@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool

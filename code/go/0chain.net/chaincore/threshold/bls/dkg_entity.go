@@ -3,7 +3,7 @@ package bls
 import (
 	"encoding/json"
 
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 type DKGKeyShare struct {

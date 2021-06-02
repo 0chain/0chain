@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 func (zrc *ZRC20SmartContract) totalSupply(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {

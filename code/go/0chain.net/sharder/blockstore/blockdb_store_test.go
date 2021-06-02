@@ -6,12 +6,12 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/memorystore"
-	"0chain.net/sharder/blockdb"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder/blockdb"
 )
 
 func init() {

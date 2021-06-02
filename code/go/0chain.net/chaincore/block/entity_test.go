@@ -10,19 +10,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	crpcutils "0chain.net/conductor/utils"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
-	"0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	crpcutils "github.com/0chain/0chain/code/go/0chain.net/conductor/utils"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 func init() {

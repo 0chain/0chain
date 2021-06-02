@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
-	. "0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/httpclientutil"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	"go.uber.org/zap"
 )
 

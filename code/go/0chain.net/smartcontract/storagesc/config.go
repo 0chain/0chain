@@ -1,20 +1,21 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
 
-	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract"
+
+	chainState "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 func scConfigKey(scKey string) datastore.Key {

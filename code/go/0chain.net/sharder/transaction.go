@@ -6,16 +6,16 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
-	"0chain.net/core/persistencestore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/ememorystore"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/persistencestore"
 )
 
 var txnSaveTimer metrics.Timer

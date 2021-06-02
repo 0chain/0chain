@@ -6,13 +6,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/logging"
-	"0chain.net/core/viper"
-	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/httpclientutil"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/minersc"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"

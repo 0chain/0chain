@@ -3,10 +3,10 @@
 package chain
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
 
-	crpc "0chain.net/conductor/conductrpc"
+	crpc "github.com/0chain/0chain/code/go/0chain.net/conductor/conductrpc"
 )
 
 func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {

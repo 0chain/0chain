@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"testing"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
-	"0chain.net/sharder"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/sharder"
 )
 
 func makeTestURL(url url.URL, values map[string]string) string {

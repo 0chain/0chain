@@ -10,7 +10,7 @@ import (
 	"github.com/herumi/mcl/ffi/go/mcl"
 	"github.com/stretchr/testify/require"
 
-	"0chain.net/chaincore/threshold/bls"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/threshold/bls"
 )
 
 func TestMiraclToHerumiPK(t *testing.T) {

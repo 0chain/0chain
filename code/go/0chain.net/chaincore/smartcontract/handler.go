@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"time"
 
-	c_state "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	c_state "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	sci "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )

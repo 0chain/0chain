@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -158,7 +158,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	if nbCount < len(c.NotarizedBlocksCounts) {
 		c.NotarizedBlocksCounts[nbCount]++
 	}
-	
+
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",

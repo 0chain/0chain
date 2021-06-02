@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 )
 
 type yamlNode struct {

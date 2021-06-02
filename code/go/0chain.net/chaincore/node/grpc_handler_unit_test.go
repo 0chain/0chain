@@ -5,13 +5,13 @@ import (
 	"strings"
 	"testing"
 
-	"0chain.net/chaincore/client"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/client"
 
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 
-	"0chain.net/chaincore/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/mocks"
 
-	"0chain.net/miner/minerGRPC"
+	"github.com/0chain/0chain/code/go/0chain.net/miner/minerGRPC"
 )
 
 func TestWhoAmIHandler(t *testing.T) {

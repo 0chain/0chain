@@ -9,10 +9,10 @@ import (
 
 	"github.com/vmihailenco/msgpack"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
 )
 
 func init() {

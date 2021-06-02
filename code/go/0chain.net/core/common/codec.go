@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	. "0chain.net/core/logging"
+	. "github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack"
 	"go.uber.org/zap"
 )

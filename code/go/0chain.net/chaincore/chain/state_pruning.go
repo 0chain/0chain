@@ -1,13 +1,14 @@
 package chain
 
 import (
-	"0chain.net/chaincore/node"
 	"context"
 	"time"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"

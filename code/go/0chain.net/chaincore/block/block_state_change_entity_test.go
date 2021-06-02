@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/state"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/mocks"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 func init() {

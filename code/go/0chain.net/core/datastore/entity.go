@@ -3,7 +3,7 @@ package datastore
 import (
 	"context"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 var ErrInvalidEntity = common.NewError("invalid_entity", "Invalid entity")

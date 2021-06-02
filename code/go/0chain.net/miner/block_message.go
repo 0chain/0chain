@@ -3,12 +3,12 @@ package miner
 import (
 	"time"
 
-	"0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/node"
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 // MessageVRFShare -

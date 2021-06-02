@@ -1,9 +1,9 @@
 package minersc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,

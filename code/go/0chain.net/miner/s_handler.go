@@ -1,7 +1,7 @@
 package miner
 
 import (
-	"0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
 )
 
 /*This file contains the Miner To Sharder send/receive messages */

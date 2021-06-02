@@ -1,21 +1,22 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"encoding/json"
-	"github.com/stretchr/testify/require"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	cstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	sci "github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
+	"github.com/stretchr/testify/require"
 )
 
 const (

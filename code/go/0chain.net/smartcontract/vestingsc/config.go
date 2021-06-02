@@ -1,15 +1,16 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
 	"context"
 	"errors"
 	"net/url"
 	"time"
 
-	chainstate "0chain.net/chaincore/chain/state"
-	configpkg "0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+
+	chainstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	configpkg "github.com/0chain/0chain/code/go/0chain.net/chaincore/config"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
 )
 
 type config struct {

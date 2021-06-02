@@ -8,14 +8,14 @@ import (
 
 	"github.com/minio/minio-go"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	"0chain.net/core/viper"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/ememorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/viper"
 )
 
 func init() {

@@ -3,8 +3,8 @@ package smartcontractinterface
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
 )
 
 type PoolStats struct {

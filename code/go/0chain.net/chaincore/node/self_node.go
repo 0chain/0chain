@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"0chain.net/core/build"
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/build"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 /*Self represents the node of this instance */

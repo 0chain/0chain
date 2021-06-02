@@ -3,8 +3,8 @@ package transaction
 import (
 	"context"
 
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/util"
 )
 
 /*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */

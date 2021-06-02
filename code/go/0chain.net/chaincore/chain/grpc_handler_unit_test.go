@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"0chain.net/chaincore/chain"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/chain"
 
-	"0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
 
-	"0chain.net/chaincore/mocks"
-	"0chain.net/miner/minerGRPC"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/mocks"
+	"github.com/0chain/0chain/code/go/0chain.net/miner/minerGRPC"
 )
 
 func TestChain_GetLatestFinalizedBlockSummary(t *testing.T) {

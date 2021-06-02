@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 func main() {

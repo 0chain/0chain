@@ -1,15 +1,16 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 
-	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontract"
+
+	chainstate "github.com/0chain/0chain/code/go/0chain.net/chaincore/chain/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/transaction"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 	metrics "github.com/rcrowley/go-metrics"
 )
 

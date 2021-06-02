@@ -1,10 +1,11 @@
 package state
 
 import (
-	"0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+
+	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 // InitStates is a slice of InitState used for all the initial states in the genesis block.

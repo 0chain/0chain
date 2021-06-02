@@ -8,14 +8,14 @@ import (
 	"net/http"
 	"strconv"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/block"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/memorystore"
 
 	"go.uber.org/zap"
 )
@@ -382,8 +382,8 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
 
 	var (
-		r = req.FormValue("round")
-		hash  = req.FormValue("block")
+		r    = req.FormValue("round")
+		hash = req.FormValue("block")
 
 		mc = GetMinerChain()
 	)

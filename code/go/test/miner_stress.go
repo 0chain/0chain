@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
 )
 
 func GetClient(maxConnections int) *http.Client {
@@ -69,7 +69,7 @@ func GetURL(uri string) string {
 func CreateClients(numClients int) []Client {
 	clients := make([]Client, numClients)
 	for i := 0; i < numClients; i++ {
-		publicKey, privateKey := encryption.GenerateKeys()
+		publicKey, privateKey, _ := encryption.GenerateKeys()
 		client := make(map[string]string)
 		client["public_key"] = publicKey
 		clientID := encryption.Hash(publicKey)

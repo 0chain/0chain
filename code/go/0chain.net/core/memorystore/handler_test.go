@@ -1,12 +1,13 @@
 package memorystore
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"context"
 	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/datastore"
 )
 
 func TestWithConnectionHandler(t *testing.T) {

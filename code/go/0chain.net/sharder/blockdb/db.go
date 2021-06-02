@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"0chain.net/core/common"
+	"github.com/0chain/0chain/code/go/0chain.net/core/common"
 )
 
 var compDe common.CompDe

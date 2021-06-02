@@ -3,8 +3,8 @@
 package chain
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/node"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/round"
 )
 
 //IsRoundGenerator - is this miner a generator for this round

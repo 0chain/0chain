@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"sort"
 
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"github.com/0chain/0chain/code/go/0chain.net/core/encryption"
+	"github.com/0chain/0chain/code/go/0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

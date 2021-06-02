@@ -7,10 +7,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/smartcontract/minersc"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/state"
+	"github.com/0chain/0chain/code/go/0chain.net/chaincore/tokenpool"
+	"github.com/0chain/0chain/code/go/0chain.net/smartcontract/minersc"
 )
 
 func makeTestPoolStats() *smartcontractinterface.PoolStats {
