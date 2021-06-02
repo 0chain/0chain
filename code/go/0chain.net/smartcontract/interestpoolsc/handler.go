@@ -1,26 +1,26 @@
 package interestpoolsc
 
 import (
+	"0chain.net/core/common"
 	"context"
-	"time"
-	// "encoding/json"
+	"fmt"
 	"net/url"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 )
 
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	un := ip.getUserNode(params.Get("client_id"), balances)
 	if len(un.Pools) == 0 {
-		return nil, common.NewError("failed to get stats", "no pools exist")
+		return nil, common.NewErrNoResource("can't find user node")
 	}
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
 		stat, err := ip.getPoolStats(pool, t)
 		if err != nil {
-			return nil, common.NewError("failed to get stats", "crap this shouldn't happen")
+			return nil, common.NewErrInternal("can't get pool stats", err.Error())
 		}
 		stats.addStat(stat)
 	}
@@ -32,7 +32,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	statBytes := pool.LockStats(t)
 	err := stat.decode(statBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	stat.ID = pool.ID
 	stat.Locked = pool.IsLocked(t)

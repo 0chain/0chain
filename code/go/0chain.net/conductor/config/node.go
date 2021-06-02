@@ -21,6 +21,8 @@ type Node struct {
 	Env string `json:"env" yaml:"env" mapstructure:"env"`
 	// StartCommand to start the node.
 	StartCommand string `json:"start_command" yaml:"start_command" mapstructure:"start_command"`
+	// StopCommand to start the node.
+	StopCommand string `json:"stop_command" yaml:"stop_command" mapstructure:"stop_command"`
 
 	// internals
 	Command *exec.Cmd `json:"-" yaml:"-" mapstructure:"-"`
@@ -104,24 +106,38 @@ func killAfterTimeout(cmd *exec.Cmd, tm time.Duration, done chan struct{}) {
 // Stop interrupts command and waits it. Then it closes STDIN and STDOUT
 // files (logs).
 func (n *Node) Stop() (err error) {
-	// SIGINT and wait
-	if err = n.Interrupt(); err != nil {
-		return fmt.Errorf("interrupting: %v", err)
+	if n.Command == nil {
+		return fmt.Errorf("command %v not started", n.Name)
 	}
-	// kill it if it is stall
-	var done = make(chan struct{})
-	go killAfterTimeout(n.Command, 20*time.Second, done)
-	//
-	if err = n.Command.Wait(); err != nil {
-		err = fmt.Errorf("waiting the command: %v", err) // don't return
+	if err = n.Kill(); err != nil {
+		return fmt.Errorf("command %v: kill: %v", n.Name, err)
 	}
-	close(done)
-	// close logs
 	if stdin, ok := n.Command.Stdin.(*os.File); ok {
 		stdin.Close() // ignore error
 	}
 	if stderr, ok := n.Command.Stderr.(*os.File); ok {
 		stderr.Close() // ignore error
+	}
+
+	if n.WorkDir == "" {
+		n.WorkDir = "."
+	}
+	var (
+		ss      = strings.Fields(n.StopCommand)
+		command string
+	)
+	command = ss[0]
+	var cmd = exec.Command(command, ss[1:]...)
+	cmd.Dir = n.WorkDir
+	if n.Env != "" {
+		cmd.Env = append(os.Environ(), n.Env)
+	}
+
+	if err = cmd.Start(); err != nil {
+		return fmt.Errorf("stop command %v: run: %v", n.Name, err)
+	}
+	if err = cmd.Wait(); err != nil {
+		return fmt.Errorf("stop command %v: wait: %v", n.Name, err)
 	}
 	return // nil or error
 }

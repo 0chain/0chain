@@ -15,12 +15,13 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -171,8 +172,8 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
-func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
-	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
+func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
+	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can't be null")
 	}
@@ -193,7 +194,7 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
 	mr.Round = r
-	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
+	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(r.GetRoundNumber()))
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	return &mr
 }
@@ -370,29 +371,29 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 	return false
 }
 
-func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	nodeID := r.Header.Get(node.HeaderNodeID)
+func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface{}, error) {
+	nodeID := req.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
 
-	round, err := strconv.Atoi(r.FormValue("round"))
+	r, err := strconv.Atoi(req.FormValue("round"))
 	if err != nil {
-		Logger.Error("failed to send start chain", zap.Any("error", err))
+		logging.Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
 
-	mb := mc.GetMagicBlock(int64(round))
+	mb := mc.GetMagicBlock(int64(r))
 	if mb == nil || !mb.Miners.HasNode(nodeID) {
-		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		logging.Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}
 
-	if mc.GetCurrentRound() != int64(round) {
-		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
-		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
+	if mc.GetCurrentRound() != int64(r) {
+		logging.Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", r))
+		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
 	message.Start = !mc.isStarted()
-	message.ID = r.FormValue("round")
+	message.ID = req.FormValue("round")
 	return message, nil
 }
 
@@ -410,7 +411,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 		startChain, ok := entity.(*StartChain)
 		if !ok {
 			err := common.NewError("invalid object", fmt.Sprintf("entity: %v", entity))
-			Logger.Error("failed to request start chain", zap.Any("error", err))
+			logging.Logger.Error("failed to request start chain", zap.Any("error", err))
 			return nil, err
 		}
 		if startChain.Start {
@@ -429,7 +430,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 
 func (mc *Chain) SetStarted() {
 	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
-		Logger.Warn("chain already started")
+		logging.Logger.Warn("chain already started")
 	}
 }
 

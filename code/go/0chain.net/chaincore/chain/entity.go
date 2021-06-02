@@ -9,11 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -21,14 +20,12 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
-
-	"github.com/spf13/viper"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 //PreviousBlockUnavailable - to indicate an error condition when the previous
@@ -110,7 +107,7 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound int64 `json:"-"`
+	currentRound int64 `json:"-"`
 
 	FeeStats transaction.TransactionFeeStats `json:"fee_stats"`
 
@@ -211,8 +208,8 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 			"client state is nil, round %d", block.Round)
 	}
 
-	state := CreateTxnMPT(block.ClientState)
-	return state.GetNodeValue(getNodePath(path))
+	s := CreateTxnMPT(block.ClientState)
+	return s.GetNodeValue(getNodePath(path))
 }
 
 func mbRoundOffset(rn int64) int64 {
@@ -229,7 +226,6 @@ func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 		return c.GetLatestMagicBlock()
 	}
 
-	rn = mbRoundOffset(rn)
 	return c.GetMagicBlock(rn)
 }
 
@@ -238,7 +234,7 @@ func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.GetLatest()
 	if entity == nil {
-		Logger.Panic("failed to get magic block from mb storage")
+		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
 	return entity.(*block.MagicBlock)
 }
@@ -254,18 +250,18 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
-		Logger.Panic("failed to get magic block from mb storage")
+		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
 	return entity.(*block.MagicBlock)
 }
 
-func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
+func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 
-	round = mbRoundOffset(round)
+	r = mbRoundOffset(r)
 
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
-	indexMB := c.MagicBlockStorage.FindRoundIndex(round)
+	indexMB := c.MagicBlockStorage.FindRoundIndex(r)
 	if indexMB <= 0 {
 		return c.PreviousMagicBlock
 	}
@@ -280,17 +276,18 @@ func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	var round = mbRoundOffset(mb.StartingRound)
+	var r = mbRoundOffset(mb.StartingRound)
 
-	return c.GetPrevMagicBlock(round)
+	return c.GetPrevMagicBlock(r)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
 	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
-		Logger.Error("failed to put magic block", zap.Error(err))
+		logging.Logger.Error("failed to put magic block", zap.Error(err))
 	}
+
 }
 
 /*GetEntityMetadata - implementing the interface */
@@ -332,8 +329,9 @@ func NewChainFromConfig() *Chain {
 	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
-	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
-	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
+	chain.MinGenerators = viper.GetInt("server_chain.block.min_generators")
+	chain.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
+	chain.NotarizedBlocksCounts = make([]int64, chain.MinGenerators+1)
 	chain.NumReplicators = viper.GetInt("server_chain.block.replicators")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
@@ -351,36 +349,36 @@ func NewChainFromConfig() *Chain {
 
 	// Health Check related counters
 	// Work on deep scan
-	config := &chain.HCCycleScan[DeepScan]
+	conf := &chain.HCCycleScan[DeepScan]
 
-	config.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
-	config.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
-	config.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
+	conf.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
+	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
+	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
 
-	config.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
-	config.Settle = time.Duration(config.SettleSecs) * time.Second
+	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
+	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
 
-	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
-	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
+	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
+	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
 
-	config.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
-	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
+	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
+	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
 
 	// Work on proximity scan
-	config = &chain.HCCycleScan[ProximityScan]
+	conf = &chain.HCCycleScan[ProximityScan]
 
-	config.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
-	config.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
-	config.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
+	conf.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
+	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
+	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
 
-	config.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
-	config.Settle = time.Duration(config.SettleSecs) * time.Second
+	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
+	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
 
-	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
+	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
 
-	config.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
-	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
+	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
+	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
@@ -446,13 +444,13 @@ func Provider() datastore.Entity {
 
 /*Initialize - intializes internal datastructures to start again */
 func (c *Chain) Initialize() {
-	c.CurrentRound = 0
+	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
-	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
-	c.finalizedBlocksChannel = make(chan *block.Block, 128)
+	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
+	c.finalizedBlocksChannel = make(chan *block.Block, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
@@ -505,33 +503,32 @@ func (c *Chain) GetConfigInfoStore() datastore.Store {
 	return c.configInfoStore
 }
 
-func (c *Chain) getInitialState() util.Serializable {
-	tokens := viper.GetInt64("server_chain.tokens")
+func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 	balance := &state.State{}
 	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-	var cents int64 = 1
-	for i := int8(0); i < c.Decimals; i++ {
-		cents *= 10
-	}
-	balance.Balance = state.Balance(tokens * cents)
+	balance.Balance = state.Balance(tokens)
 	return balance
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
+func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0))
-	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
-	pmt.SaveChanges(c.stateDB, false)
-	Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
+	for _, v := range initStates.States {
+		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
+	}
+	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
+		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
+	}
+	logging.Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock) (round.RoundI, *block.Block) {
+func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.ClientState = c.setupInitialState()
+	gb.ClientState = c.setupInitialState(initStates)
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
@@ -593,14 +590,14 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	b = c.addBlock(b)
 
 	if b.Round == c.GetCurrentRound() {
-		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
+		logging.Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
 	// Only for blocks with greater RTC (elder blocks)
 	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
 		r.GetTimeoutCount() <= b.RoundTimeoutCount {
 
-		Logger.Info("AddNotarizedBlockToRound round and block random seed different",
+		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
@@ -724,14 +721,14 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	lfb := c.GetLatestFinalizedBlock()
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round),
+			logging.Logger.Debug("found block to delete", zap.Int64("round", round),
 				zap.Int64("block_round", b.Round),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("lf_round", lfb.Round))
 			blocks = append(blocks, b)
 		}
 	}
-	Logger.Info("delete blocks below round",
+	logging.Logger.Info("delete blocks below round",
 		zap.Int64("round", c.GetCurrentRound()),
 		zap.Int64("below_round", round), zap.Any("before", ts),
 		zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
@@ -767,19 +764,52 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
 	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()))
-	if c.NumGenerators > len(miners) {
-		Logger.Warn("get generators -- the number of generators is greater than the number of miners",
-			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
+	genNum := getGeneratorsNum(len(miners), c.MinGenerators, c.GeneratorsPercent)
+	if genNum > len(miners) {
+		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
+			zap.Any("num_generators", genNum), zap.Int("miner_by_rank", len(miners)),
 			zap.Any("round", r.GetRoundNumber()))
 		return miners
 	}
-	return miners[:c.NumGenerators]
+	return miners[:genNum]
+}
+
+// GetGeneratorsNumOfMagicBlock returns the number of generators of given magic block
+func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
+	if mb == nil {
+		return c.MinGenerators
+	}
+
+	return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+}
+
+// GetGeneratorsNumOfRound returns the number of generators of a given round
+func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
+	if mb := c.GetMagicBlock(r); mb != nil {
+		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+	}
+
+	return c.MinGenerators
+}
+
+// GetGeneratorsNum returns the number of generators that calculated base on current magic block
+func (c *Chain) GetGeneratorsNum() int {
+	if mb := c.GetCurrentMagicBlock(); mb != nil {
+		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators, c.GeneratorsPercent)
+	}
+
+	return c.MinGenerators
+}
+
+// getGeneratorsNum calculates the number of generators
+func getGeneratorsNum(minersNum, minGenerators int, generatorsPercent float64) int {
+	return int(math.Max(float64(minGenerators), math.Ceil(float64(minersNum)*generatorsPercent)))
 }
 
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
 	mb := c.GetMagicBlock(round)
-	Logger.Debug("get miners -- current magic block",
+	logging.Logger.Debug("get miners -- current magic block",
 		zap.Any("miners", mb.Miners.N2NURLs()), zap.Any("round", round))
 
 	return mb.Miners
@@ -838,12 +868,12 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	isGen := c.IsRoundGenerator(r, miner)
 	if !isGen {
 		//This is a Byzantine condition?
-		Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
+		logging.Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
 		gens := c.GetGenerators(r)
 
-		Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
+		logging.Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
 		for _, n := range gens {
-			Logger.Info("generator", zap.Int("Node", n.SetIndex))
+			logging.Logger.Info("generator", zap.Int("Node", n.SetIndex))
 		}
 	}
 	return isGen
@@ -874,15 +904,15 @@ func (c *Chain) CanStartNetwork() bool {
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
 	nodeConfig := config.ReadConfig(configFile)
-	config := nodeConfig.Get("miners")
+	conf := nodeConfig.Get("miners")
 	mb := c.GetCurrentMagicBlock()
-	if miners, ok := config.([]interface{}); ok {
+	if miners, ok := conf.([]interface{}); ok {
 		mb.Miners.AddNodes(miners)
 		mb.Miners.ComputeProperties()
 		c.InitializeMinerPool(mb)
 	}
-	config = nodeConfig.Get("sharders")
-	if sharders, ok := config.([]interface{}); ok {
+	conf = nodeConfig.Get("sharders")
+	if sharders, ok := conf.([]interface{}); ok {
 		mb.Sharders.AddNodes(sharders)
 		mb.Sharders.ComputeProperties()
 	}
@@ -903,7 +933,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		}
 	}
 	if false {
-		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	}
 	return false, ErrInsufficientChain
 }
@@ -920,11 +950,12 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool(mb *block.MagicBlock) {
+	numGenerators := c.GetGeneratorsNumOfMagicBlock(mb)
 	for _, nd := range mb.Miners.CopyNodes() {
 		ms := &MinerStats{}
-		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
-		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
-		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
+		ms.GenerationCountByRank = make([]int64, numGenerators)
+		ms.FinalizationCountByRank = make([]int64, numGenerators)
+		ms.VerificationTicketsByRank = make([]int64, numGenerators)
 		nd.ProtocolStats = ms
 	}
 }
@@ -946,11 +977,11 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 	c.roundsMutex.RLock()
 	defer c.roundsMutex.RUnlock()
-	round, ok := c.rounds[roundNumber]
+	r, ok := c.rounds[roundNumber]
 	if !ok {
 		return nil
 	}
-	return round
+	return r
 }
 
 /*DeleteRound - delete a round and associated block data */
@@ -981,15 +1012,16 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
+		logging.Logger.Debug("SetRandomSeed round already has the seed")
 		return false
 	}
 	if randomSeed == 0 {
-		Logger.Error("SetRandomSeed -- seed is 0")
+		logging.Logger.Error("SetRandomSeed -- seed is 0")
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
-	if roundNumber > c.CurrentRound {
-		c.CurrentRound = roundNumber
+	if roundNumber > c.getCurrentRound() {
+		c.setCurrentRound(roundNumber)
 	}
 	return true
 }
@@ -999,13 +1031,21 @@ func (c *Chain) GetCurrentRound() int64 {
 	c.roundsMutex.RLock()
 	defer c.roundsMutex.RUnlock()
 
-	return c.CurrentRound
+	return c.getCurrentRound()
 }
 
-func (c *Chain) SetCurrentRound(round int64) {
+func (c *Chain) SetCurrentRound(r int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	c.CurrentRound = round
+	c.setCurrentRound(r)
+}
+
+func (c *Chain) setCurrentRound(r int64) {
+	c.currentRound = r
+}
+
+func (c *Chain) getCurrentRound() int64 {
+	return c.currentRound
 }
 
 func (c *Chain) getBlocks() []*block.Block {
@@ -1022,17 +1062,17 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.MapSize() == 0 {
-		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
+		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
 	if bNode == nil {
-		Logger.Warn("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
+		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
 			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
 	//TODO: Remove this log
-	Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), b.RoundRank))
+	logging.Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), b.RoundRank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
@@ -1113,6 +1153,12 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
+	logging.Logger.Debug("CanShareBlocks",
+		zap.Int("active sharders", mb.Sharders.GetActiveCount()),
+		zap.Int("sharders size", mb.Sharders.Size()),
+		zap.Int("min active sharders", c.MinActiveSharders),
+		zap.Int("left", mb.Sharders.GetActiveCount()*100),
+		zap.Int("right", mb.Sharders.Size()*c.MinActiveSharders))
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
@@ -1189,12 +1235,39 @@ func (c *Chain) HasClientStateStored(clientStateHash util.Key) bool {
 // InitBlockState - initialize the block's state with the database state.
 func (c *Chain) InitBlockState(b *block.Block) (err error) {
 	if err = b.InitStateDB(c.stateDB); err != nil {
-		Logger.Error("init block state", zap.Int64("round", b.Round),
+		logging.Logger.Error("init block state", zap.Int64("round", b.Round),
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
+
+		if err == util.ErrNodeNotFound {
+			// get state from network
+			logging.Logger.Info("init block state by synching block state from network")
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			doneC := make(chan struct{})
+			errC := make(chan error)
+			go func() {
+				defer close(doneC)
+				if err := c.GetBlockStateChange(b); err != nil {
+					errC <- err
+				}
+			}()
+
+			select {
+			case <-ctx.Done():
+				logging.Logger.Error("init block state failed",
+					zap.Int64("round", b.Round),
+					zap.Error(err))
+			case err := <-errC:
+				logging.Logger.Error("init block state failed", zap.Error(err))
+			case <-doneC:
+				logging.Logger.Info("init block state by synching block state from network successfully",
+					zap.Int64("round", b.Round))
+			}
+		}
 		return
 	}
-	Logger.Info("init block state successful", zap.Int64("round", b.Round),
+	logging.Logger.Info("init block state successful", zap.Int64("round", b.Round),
 		zap.String("state", util.ToHex(b.ClientStateHash)))
 	return
 }
@@ -1253,15 +1326,21 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		lfmb.MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
 		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 
-		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
+		logging.Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}
 	mb := c.GetCurrentMagicBlock()
 
-	Logger.Info("update magic block", zap.Any("old block", mb), zap.Any("new block", newMagicBlock))
+	pmb := mb.Miners.Size()
+	nmb := newMagicBlock.Miners.Size()
+	logging.Logger.Info("update magic block",
+		zap.Int("old magic block miners num", pmb),
+		zap.Int("new magic block miners num", nmb),
+		zap.Int64("old mb starting round", mb.StartingRound),
+		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
 	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
-		Logger.Info("update magic block -- hashes match ",
+		logging.Logger.Info("update magic block -- hashes match ",
 			zap.Any("LFMB previous MB hash", mb.Hash),
 			zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 		c.PreviousMagicBlock = mb
@@ -1349,7 +1428,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
 		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
 
-		Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
+		logging.Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
 			"hashes don't match up: chain's finalized block hash %v, block's"+
 			" magic block previous hash %v",
 			c.LatestFinalizedMagicBlock.Hash,
@@ -1377,14 +1456,16 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 	prevMB := c.GetPrevMagicBlockFromMB(mb)
 	if prevMB != nil {
+		numGenerators := c.GetGeneratorsNumOfMagicBlock(prevMB)
 		for key, miner := range mb.Miners.CopyNodesMap() {
 			if old := prevMB.Miners.GetNode(key); old != nil {
 				miner.SetNodeInfo(old)
 				if miner.ProtocolStats == nil {
 					ms := &MinerStats{}
-					ms.GenerationCountByRank = make([]int64, c.NumGenerators)
-					ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
-					ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
+					ms.GenerationCountByRank = make([]int64, numGenerators)
+					ms.FinalizationCountByRank = make([]int64, numGenerators)
+					ms.VerificationTicketsByRank = make([]int64, numGenerators)
+					miner.ProtocolStats = ms
 				}
 			}
 		}
@@ -1409,20 +1490,20 @@ func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage
 	for _, storage := range storages {
 		targetCount := getTargetCount(storage)
 		if targetCount == 0 {
-			Logger.Debug("prune storage -- skip. disabled")
+			logging.Logger.Debug("prune storage -- skip. disabled")
 			continue
 		}
 		countRounds := storage.Count()
 		if countRounds > targetCount {
-			round := storage.GetRounds()[countRounds-targetCount-1]
-			if err := storage.Prune(round); err != nil {
-				Logger.Error("failed to prune storage",
+			r := storage.GetRounds()[countRounds-targetCount-1]
+			if err := storage.Prune(r); err != nil {
+				logging.Logger.Error("failed to prune storage",
 					zap.Int("count_rounds", countRounds),
 					zap.Int("count_dest_prune", targetCount),
-					zap.Int64("round", round),
+					zap.Int64("round", r),
 					zap.Error(err))
 			} else {
-				Logger.Debug("prune storage", zap.Int64("round", round))
+				logging.Logger.Debug("prune storage", zap.Int64("round", r))
 			}
 		}
 	}
@@ -1465,7 +1546,7 @@ func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
 	select {
 	case c.syncLFBStateC <- bs:
 	case <-time.NewTimer(notifySyncLFRStateTimeout).C:
-		Logger.Error("Send sync state for finalized round timeout")
+		logging.Logger.Error("Send sync state for finalized round timeout")
 	}
 }
 

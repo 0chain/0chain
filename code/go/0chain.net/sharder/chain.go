@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
@@ -25,8 +26,8 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
-	sharderChain.BlockChannel = make(chan *block.Block, 128)
-	sharderChain.RoundChannel = make(chan *round.Round, 128)
+	sharderChain.BlockChannel = make(chan *block.Block, 1)
+	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
@@ -74,8 +75,8 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock)
+func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock, initStates)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can not be null")
 	}
@@ -330,10 +331,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 // iterate over rounds from latest to zero looking for LFB and ignoring
 // missing blocks in blockstore
-func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
-	bl *blocksLoaded) {
-
-	bl = new(blocksLoaded)
+func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
+	bl := new(blocksLoaded)
 
 	var (
 		remd = datastore.GetEntityMetadata("round")
@@ -377,7 +376,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 		return nil // the nil is 'use genesis'
 	}
 
-	// but the lfmb can be less then real latest finalized magic block,
+	// but the lfmb can be less than real latest finalized magic block,
 	// the lfmb is just magic block related to the lfb, for example for
 	// 502 round lfmb is 251, but lfmb of 501 round we already have and
 	// it is the latest magic block, we have to load it and setup
@@ -389,7 +388,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 		err = nil // reset this error and exit
 	}
 
-	return // got them all (or excluding the nlfmb)
+	return bl // got them all (or excluding the nlfmb)
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them

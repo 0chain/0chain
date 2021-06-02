@@ -60,7 +60,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
 		if count == 0 {
-			Logger.Error("Redis returned 0 rows after seclect")
+			Logger.Info("Redis returned 0 rows after seclect")
 			return nil
 		}
 		offset += count

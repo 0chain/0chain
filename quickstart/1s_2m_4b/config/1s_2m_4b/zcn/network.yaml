@@ -1,0 +1,10 @@
+# 0dns/docker.local/config/magic_block.json
+# 0Chain/docker.local/config/magicBlock.json
+# 0Chain/docker.local/config/b0magicBlock_2_miners_1_sharder.json
+
+miners:
+  - http://localhost:7071
+  - http://localhost:7072
+
+sharders:
+  - http://localhost:7171

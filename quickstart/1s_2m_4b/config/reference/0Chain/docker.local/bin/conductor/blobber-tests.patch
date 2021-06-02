@@ -1,0 +1,30 @@
+diff --git a/docker.local/b0docker-compose.yml b/docker.local/b0docker-compose.yml
+index c661507..e3949d0 100644
+--- a/docker.local/b0docker-compose.yml
++++ b/docker.local/b0docker-compose.yml
+@@ -6,6 +6,7 @@ services:
+       POSTGRES_PORT: 5432
+       POSTGRES_HOST: postgres
+       POSTGRES_USER: postgres
++      POSTGRES_PASSWORD: secret
+     volumes:
+       - ./blobber${BLOBBER}/data/postgresql:/var/lib/postgresql/data
+     networks:
+@@ -18,6 +19,7 @@ services:
+       POSTGRES_PORT: 5432
+       POSTGRES_HOST: postgres
+       POSTGRES_USER: postgres
++      POSTGRES_PASSWORD: secret
+     volumes:
+       - ../bin:/blobber/bin
+       - ../sql:/blobber/sql
+diff --git a/docker.local/bin/blobber.start_bls.sh b/docker.local/bin/blobber.start_bls.sh
+index 091c96b..f368657 100755
+--- a/docker.local/bin/blobber.start_bls.sh
++++ b/docker.local/bin/blobber.start_bls.sh
+@@ -8,4 +8,4 @@ echo Starting blobber$BLOBBER_ID ...
+ 
+ # echo blobber$i
+ 
+-BLOBBER=$BLOBBER_ID docker-compose -p blobber$BLOBBER_ID -f ../b0docker-compose.yml up -d
++BLOBBER=$BLOBBER_ID docker-compose -p blobber$BLOBBER_ID -f ../b0docker-compose.yml up

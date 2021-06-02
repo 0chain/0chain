@@ -11,10 +11,7 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/smartcontract"
-	sci "0chain.net/chaincore/smartcontractinterface"
-
 	"0chain.net/chaincore/transaction"
-	// "0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -163,8 +160,6 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	PrintCSS(w)
-	sc := sci.NewSC(key)
-	scInt.SetSC(sc, nil)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 	restPoints := scInt.GetRestPoints()

@@ -8,7 +8,9 @@ do
   rm -rf docker.local/miner$i/data/redis/state/*
   rm -rf docker.local/miner$i/data/redis/transactions/*
   echo "deleting miner$i rocksdb db"
-  rm -rf docker.local/miner$i/data/rocksdb/*
+  rm -rf docker.local/miner$i/data/rocksdb/config*
+  rm -rf docker.local/miner$i/data/rocksdb/mb*
+  rm -rf docker.local/miner$i/data/rocksdb/state*
 done
 
 for i in $(seq 1 3)

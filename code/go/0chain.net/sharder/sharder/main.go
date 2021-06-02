@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -35,6 +34,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
@@ -87,6 +87,7 @@ func main() {
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	minioFile := flag.String("minio_file", "", "minio_file")
+	initialStatesFile := flag.String("initial_states", "", "initial_states")
 	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -142,6 +143,13 @@ func main() {
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
+	if *initialStatesFile == "" {
+		*initialStatesFile = viper.GetString("network.initial_states")
+	}
+
+	initStates := state.NewInitStates()
+	initStateErr := initStates.Read(*initialStatesFile)
+
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
 		*magicBlockFile = viper.GetString("network.magic_block_file")
@@ -169,7 +177,7 @@ func main() {
 
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
-		magicBlock)
+		magicBlock, initStates)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
 
 	var selfNode = node.Self.Underlying()
@@ -179,7 +187,7 @@ func main() {
 
 	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
-		hostName, n2nHost, portNum, path, err := readNonGenesisHostAndPort(keysFile)
+		hostName, n2nHost, portNum, path, description, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
@@ -189,6 +197,11 @@ func main() {
 		selfNode.Port = portNum
 		selfNode.Type = node.NodeTypeSharder
 		selfNode.Path = path
+		selfNode.Description = description
+	} else {
+		if initStateErr != nil {
+			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		}
 	}
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
@@ -262,7 +275,7 @@ func main() {
 
 	go sc.RegisterClient()
 	if config.DevConfiguration.IsFeeEnabled {
-		go sc.InitSetupSC()
+		go sc.SetupSC(ctx)
 	}
 
 	// Do a deep scan from finalized block till DeepWindow
@@ -308,7 +321,7 @@ func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
 }
 
-func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, error) {
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, string, error) {
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
@@ -319,7 +332,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, "", errors.New("error reading Host")
+		return "", "", 0, "", "", errors.New("error reading Host")
 	}
 
 	h := scanner.Text()
@@ -327,7 +340,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, "", errors.New("error reading n2n host")
+		return "", "", 0, "", "", errors.New("error reading n2n host")
 	}
 
 	n2nh := scanner.Text()
@@ -337,17 +350,25 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, e
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
 	p := int(po)
 	if err != nil {
-		return "", "", 0, "", err
+		return "", "", 0, "", "", err
 	}
 
 	result = scanner.Scan()
 	if result == false {
-		return h, n2nh, p, "", nil
+		return h, n2nh, p, "", "", nil
 	}
 
 	path := scanner.Text()
 	Logger.Info("Path inside", zap.String("path", path))
-	return h, n2nh, p, path, nil
+
+	result = scanner.Scan()
+	if result == false {
+		return h, n2nh, p, path, "", nil
+	}
+
+	description := scanner.Text()
+	Logger.Info("Description inside", zap.String("description", description))
+	return h, n2nh, p, path, description, nil
 }
 
 func initHandlers() {

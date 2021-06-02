@@ -7,8 +7,8 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
 )
 
 // MessageVRFShare -
@@ -44,7 +44,11 @@ func NewBlockMessage(messageType int, sender *node.Node, round *Round, block *bl
 	return bm
 }
 
-var messageLookups = common.CreateLookups("vrf_share", "VRF Share", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization", "notarized_block", "Notarized Block")
+var messageLookups = common.CreateLookups("vrf_share", "VRF Share",
+	"verify_block", "Verify Block",
+	"verification_ticket", "Verification Ticket",
+	"notarization", "Notarization",
+	"notarized_block", "Notarized Block")
 
 /*GetMessageLookup - get the message type lookup */
 func GetMessageLookup(msgType int) *common.Lookup {

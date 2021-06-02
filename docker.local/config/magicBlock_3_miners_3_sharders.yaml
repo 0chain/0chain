@@ -46,9 +46,9 @@ sharders:
   public_ip: localhost
   port: 7173
 
-message: "Tis but a scratch"
 magic_block_number: 1
 starting_round: 0
 t_percent: 67
 k_percent: 75
 magic_block_filename: "b0magicBlock_3_miners_3_sharders"
+dkg_summary_filename: "3_miners_3_sharders"

@@ -4,17 +4,15 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/smartcontract/minersc"
-	"github.com/spf13/viper"
-
 	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
-
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
+	"0chain.net/smartcontract/minersc"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -24,7 +22,7 @@ func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
-	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
+	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
@@ -45,9 +43,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				break
 			}
 			if msg.Sender != nil {
-				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
+				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
-				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
+				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 			switch msg.Type {
 			case MessageVRFShare:
@@ -62,9 +60,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				protocol.HandleNotarizedBlockMessage(ctx, msg)
 			}
 			if msg.Sender != nil {
-				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
+				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
-				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
+				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 		}
 	}
@@ -88,15 +86,36 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				break
 			}
 			if cround == mc.GetCurrentRound() {
-				round := mc.GetMinerRound(cround)
+				r := mc.GetMinerRound(cround)
 
-				if round != nil {
+				if r != nil {
 					logging.Logger.Info("Round timeout",
-						zap.Any("Number", round.Number),
-						zap.Int("VRF_shares", len(round.GetVRFShares())),
-						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
-						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-					protocol.HandleRoundTimeout(ctx, cround)
+						zap.Any("Number", r.Number),
+						zap.Int("VRF_shares", len(r.GetVRFShares())),
+						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
+						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
+					func(ctx context.Context) {
+						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						defer cancel()
+						rc := make(chan struct{})
+						ts := time.Now()
+						go func() {
+							protocol.HandleRoundTimeout(cctx, cround)
+							rc <- struct{}{}
+						}()
+						select {
+						case <-cctx.Done():
+							logging.Logger.Error("protocol.HandleRoundTimeout timeout",
+								zap.Error(cctx.Err()),
+								zap.Int64("round", cround))
+						case <-rc:
+							logging.Logger.Info("protocol.HandleRoundTimeout finished",
+								zap.Int64("round", cround),
+								zap.Any("duration", time.Since(ts)))
+						}
+					}(ctx)
+				} else {
+					logging.Logger.Debug("Round timeout, nil miner round", zap.Int64("round", cround))
 				}
 			} else {
 				cround = mc.GetCurrentRound()
@@ -104,7 +123,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			}
 		}
 		var next = mc.GetNextRoundTimeoutTime(ctx)
-		Logger.Info("got_timeout", zap.Int("next", next))
+		logging.Logger.Info("got_timeout", zap.Int("next", next))
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }

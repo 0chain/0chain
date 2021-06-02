@@ -1,0 +1,33 @@
+version: '3'
+services:
+  docker-clean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # 1-5 miners
+      - ../miner1/:/miner1
+      - ../miner2/:/miner2
+      - ../miner3/:/miner3
+      - ../miner4/:/miner4
+      - ../miner5/:/miner5
+      - ../miner6/:/miner6
+      - ../miner7/:/miner7
+      # 1-3 sharders
+      - ../sharder1/:/sharder1
+      - ../sharder2/:/sharder2
+      - ../sharder3/:/sharder3
+      # remove all config/data/logs
+    command: /bin/sh docker-clean.sh
+
+volumes:
+  miner1:
+  miner2:
+  miner3:
+  miner4:
+  miner5:
+  miner6:
+  miner7:
+  sharder1:
+  sharder2:
+  sharder3:

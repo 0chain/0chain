@@ -2,20 +2,113 @@ package sharder_test
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	dmocks "0chain.net/core/datastore/mocks"
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
 	"0chain.net/sharder"
+	"0chain.net/sharder/blockstore"
+	bsmocks "0chain.net/sharder/blockstore/mocks"
 )
 
+func init() {
+	store := dmocks.NewStoreMock()
+	sharder.SetupBlockSummaries()
+	block.SetupBlockSummaryEntity(store)
+	block.SetupEntity(store)
+	block.SetupMagicBlockMapEntity(store)
+	blockstore.SetupStore(bsmocks.NewBlockStoreMock())
+	round.SetupEntity(store)
+	common.SetupRootContext(context.TODO())
+}
+
+const (
+	roundDataDir    = "tmp/round"
+	blockDataDir    = "tmp/block"
+	roundSummaryDir = "tmp/roundSummary"
+	blockSummaryDir = "tmp/blockSummary"
+)
+
+func initDBs(t *testing.T) (closeAndClear func()) {
+	cd, err := os.Getwd()
+	require.NoError(t, err)
+
+	err = os.RemoveAll(cd + "/tmp")
+	require.NoError(t, err)
+	err = os.MkdirAll(blockDataDir, 0700)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(roundDataDir, 0700)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(roundSummaryDir, 0700)
+	require.NoError(t, err)
+
+	err = os.MkdirAll(blockSummaryDir, 0700)
+	require.NoError(t, err)
+
+	rDB, err := ememorystore.CreateDB(roundDataDir)
+	require.NoError(t, err)
+
+	ememorystore.AddPool(round.Provider().GetEntityMetadata().GetDB(), rDB)
+
+	bDB, err := ememorystore.CreateDB(blockDataDir)
+	require.NoError(t, err)
+
+	ememorystore.AddPool(block.Provider().GetEntityMetadata().GetDB(), bDB)
+
+	rsDB, err := ememorystore.CreateDB(roundSummaryDir)
+	require.NoError(t, err)
+
+	ememorystore.AddPool("roundsummarydb", rsDB)
+
+	bsDB, err := ememorystore.CreateDB(blockSummaryDir)
+	require.NoError(t, err)
+
+	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
+
+	closeAndClear = func() {
+		err = os.RemoveAll(cd + "/tmp")
+		require.NoError(t, err)
+
+		rDB.Close()
+		bDB.Close()
+		rsDB.Close()
+		bsDB.Close()
+	}
+
+	return
+}
+
+func makeTestChain(t *testing.T) *sharder.Chain {
+	ch, ok := chain.Provider().(*chain.Chain)
+	if !ok {
+		t.Fatal("types missmatching")
+	}
+	ch.Initialize()
+	ch.BlockSize = 1024
+	sharder.SetupSharderChain(ch)
+	chain.SetServerChain(ch)
+	return sharder.GetSharderChain()
+}
+
 func TestNewBlockSummaries(t *testing.T) {
-	t.Parallel()
+	want, ok := datastore.GetEntityMetadata("block_summaries").Instance().(*sharder.BlockSummaries)
+	if !ok {
+		t.Fatal("types missmatching")
+	}
 
 	tests := []struct {
 		name string
@@ -23,14 +116,12 @@ func TestNewBlockSummaries(t *testing.T) {
 	}{
 		{
 			name: "Test_NewBlockSummaries_OK",
-			want: datastore.GetEntityMetadata("block_summaries").Instance().(*sharder.BlockSummaries),
+			want: want,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			if got := sharder.NewBlockSummaries(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewBlockSummaries() = %v, want %v", got, tt.want)
 			}
@@ -39,8 +130,6 @@ func TestNewBlockSummaries(t *testing.T) {
 }
 
 func TestBlockSummariesProvider(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name string
 		want datastore.Entity
@@ -53,8 +142,6 @@ func TestBlockSummariesProvider(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			if got := sharder.BlockSummariesProvider(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BlockSummariesProvider() = %v, want %v", got, tt.want)
 			}
@@ -63,11 +150,10 @@ func TestBlockSummariesProvider(t *testing.T) {
 }
 
 func TestChain_GetBlockBySummary(t *testing.T) {
-	t.Parallel()
-
 	b := block.NewBlock("", 1)
 	b.HashBlock()
 
+	makeTestChain(t)
 	chain.GetServerChain().AddBlock(b)
 
 	type fields struct {
@@ -100,10 +186,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
@@ -119,7 +202,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 				t.Errorf("GetBlockBySummary() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if !tt.wantErr && got != nil && !reflect.DeepEqual(got.Hash, tt.want.Hash) {
 				t.Errorf("GetBlockBySummary() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -127,8 +210,6 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 }
 
 func TestChain_GetBlockFromHash(t *testing.T) {
-	t.Parallel()
-
 	b := block.NewBlock("", 1)
 	b.HashBlock()
 
@@ -167,8 +248,6 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
@@ -192,7 +271,10 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 }
 
 func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
-	t.Parallel()
+	cl := initDBs(t)
+	defer cl()
+
+	ctx := context.WithValue(context.TODO(), node.SelfNodeKey, node.Self)
 
 	b := block.NewBlock("", 1)
 	b.HashBlock()
@@ -219,15 +301,13 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 	}{
 		{
 			name:    "Test_Chain_StoreBlockSummaryFromBlock_OK",
-			args:    args{ctx: common.GetRootContext(), b: b},
+			args:    args{ctx: ctx, b: b},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
@@ -246,9 +326,11 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 }
 
 func TestChain_StoreBlockSummary(t *testing.T) {
-	t.Parallel()
+	cl := initDBs(t)
+	defer cl()
 
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*block.BlockSummary)
+	bs.Hash = encryption.Hash("data")
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -279,8 +361,6 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,

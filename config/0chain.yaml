@@ -46,6 +46,8 @@ server_chain:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0
     generators: 10
+    min_generators: 10
+    generators_percent: 0.2
     replicators: 4
     proposal:
       max_wait_time: 200

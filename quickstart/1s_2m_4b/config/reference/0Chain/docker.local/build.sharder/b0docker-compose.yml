@@ -1,0 +1,68 @@
+version: '3'
+services:
+  cassandra:
+    image: cassandra:3.11.4
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 1500M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 100M
+    networks:
+      default:
+    #ports:
+    #- "9042:9042"
+    volumes:
+    - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra/data
+
+  cassandra-init:
+    image: cassandra:latest
+    volumes:
+      - ../../bin:/0chain/bin
+      - ../../sql:/0chain/sql
+    command: bash /0chain/bin/cassandra-init.sh
+    links:
+      - cassandra:cassandra
+    restart: on-failure
+
+  sharder:
+    image: "sharder"
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 500M
+    #     reservations:
+    #       cpus: '0.1'
+    #       memory: 100M
+    environment:
+      - DOCKER=true
+      - CASSANDRA_CLUSTER=cassandra
+    depends_on:
+      - cassandra-init
+    links:
+      - cassandra-init:cassandra-init
+    volumes:
+      - ../config:/0chain/config
+      - ../sharder${SHARDER}/log:/0chain/log
+      - ../sharder${SHARDER}/data:/0chain/data
+    ports:
+      - "717${SHARDER}:717${SHARDER}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.8${SHARDER}
+    command: ./bin/sharder --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt --minio_file config/minio_config.txt
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:
+  bin:

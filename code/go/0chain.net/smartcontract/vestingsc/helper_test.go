@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
@@ -18,11 +21,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
-
-	"github.com/stretchr/testify/require"
+	"0chain.net/core/viper"
 )
 
 const x10 = 10 * 1000 * 1000 * 1000
