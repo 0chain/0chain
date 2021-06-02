@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/datastore"
-	"0chain.net/mocks"
+	"0chain.net/core/mocks"
 )
 
 func init() {

@@ -140,7 +140,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		c.ZeroNotarizedBlocksCount++
 	} else if nbCount > 1 {
 		c.MultiNotarizedBlocksCount++
-	} else if nbCount > c.GetGeneratorsNum() {
+	}
+	if nbCount > c.GetGeneratorsNumOfRound(roundNumber) {
 		for _, blk := range notarizedBlocks {
 			logging.Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.GetRoundRandomSeed()), zap.Int("blk_toc", blk.RoundTimeoutCount))
 		}
@@ -149,12 +150,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	// expand NotarizedBlocksCount array size if generators number is greater than it
 	genNum := c.GetGeneratorsNumOfRound(roundNumber)
 	if genNum > len(c.NotarizedBlocksCounts) {
-		newCounts := make([]int64, genNum)
+		newCounts := make([]int64, genNum+1)
 		copy(newCounts, c.NotarizedBlocksCounts)
 		c.NotarizedBlocksCounts = newCounts
 	}
 
-	c.NotarizedBlocksCounts[nbCount]++
+	if nbCount < len(c.NotarizedBlocksCounts) {
+		c.NotarizedBlocksCounts[nbCount]++
+	}
+	
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",

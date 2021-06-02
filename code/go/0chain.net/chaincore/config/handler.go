@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
+
+	"0chain.net/core/viper"
 )
 
 /*SetupHandlers - setup config related handlers */

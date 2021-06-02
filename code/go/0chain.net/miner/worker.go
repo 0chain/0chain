@@ -4,16 +4,15 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/smartcontract/minersc"
-	"github.com/spf13/viper"
-
 	"0chain.net/core/logging"
-
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
+	"0chain.net/smartcontract/minersc"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"

@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
 )
 
 const updateConfigURL = "/v1/config/update"
