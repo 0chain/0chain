@@ -26,6 +26,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/rafaeljusto/redigomock v2.4.0+incompatible
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	github.com/spf13/afero v1.2.2 // indirect
