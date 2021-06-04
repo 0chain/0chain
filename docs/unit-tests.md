@@ -4,6 +4,7 @@
 
 - [Intorduction](#introduction)
 - [0chain style](#0chain-style)
+- [Writing a test](#writing-a-test)  
 - [Mocks](#mocks)
    - [Simple mock example](#simple-mock-example)
    - [vektra mockery](#vektra-mockery)
@@ -219,6 +220,179 @@ access.
 We should endeavor to separate objets that form part of the test conditions, that 
 need to be independent between different test, and objects global to the tests that
 should be shared.
+
+## Writing a test
+
+Numerous approaches to writing unit tests can be devised, bellow we describe
+on approach that works well. It focuses on maximising code coverage while
+minimising setup.
+ 
+Unit tests check a function outputs match its inputs. Ideally we want as little
+setup as we can get away with. How our function works in the global scope
+of the project does not interest us; we use integration tests for that. Many 
+developers do too much work here, making their unit tests look more like integration
+tests.
+
+### Write template TestMyTestFunction
+
+Start off with a basic template
+
+```go
+func TestMyTestFunction(t *testing.T) {
+    testCases := []struct {
+    	name string
+   }{
+      {""},
+   }
+   for _, tt := range testCases {
+      t.Run(tt.name, func(t *testing.T) {
+         myTestFunction()
+      })
+   }
+}
+```
+
+### Compile
+
+The step involves getting `TestMyTestFunction` to compile. For example some
+input parameters will be required. If   Just define whatever objects the compiler
+asks for. 
+
+You might as well add a variable for `myTestFunction`'s return values.
+
+Remember be minimalistic. You should only need to create default objects
+at this point.
+
+### Run
+
+Get the test to run without errors. 
+
+Single step though the function. Make any necessary change to prevent
+an error. This will likely involve adding more default objects, and
+setting any values needed to avoid returning an error. Remember by 
+minimalistic.
+
+### Code coverage
+
+Devise test to cover all code paths.
+
+Single step though your function again, and this time focus on which code you
+`do not` step through.
+
+##### Skipped blocks
+
+Add code to prevent skipping blocks. The typical situation will be an `if` 
+statement. Make whoever changes to the test setup you need to get the code
+to pass though skipped blocks.
+
+Note Branches or forks. For each branch or fork we will need a separate test
+to insure complete code coverage.
+
+
+If we have
+```go
+  if input.Thing != nil {
+  	doSomthing()
+  }
+```
+then add
+```go
+    input.Thing:  Thing{}
+```
+to the setup.
+
+##### Error messages
+
+A special case of skipped blocks.
+```go
+if err != nil {
+	return err
+}
+```
+A familiar go construct. We should build a test that forces each error
+generated. Make a note of them. 
+
+Often there will be unachievable errors. The error conditions can never be
+satisfied due to the logic of the situation. You don't need to bother with 
+those, just focus on the errors that can be generated on normal execution of
+the test function.
+
+##### Skipped loops
+
+`For loops` with empty ranges; We need to give them a range to loop though.
+
+So
+```go
+  for i, val := range input.List {
+      doSomething(i, val)
+  }   
+```
+We need to give input.List some values:
+```go
+  input.List: []string{"", ""} 
+```
+
+##### Branches
+
+```go
+if input.path < 10 {
+    doSomething()
+} else {
+    doSomethingElse()
+`}
+```
+When the code branches into two paths, it signifies that we need two
+tests. Investigate the conditions that trigger each branch and build a test
+for each branch.
+```go
+{
+    name: "use top path"
+    input { path: 9}
+},
+{
+    name: "use bottom path"
+    input{ path: 10}
+}
+```
+
+#### External function calls
+ 
+Only our test function needs testing, not any external functions that
+it might call. 
+
+We should mock out external function calls. Check that our function passes
+though the correct parameters and return the correct response.
+
+If the function forms part of an interface then we can use [Mocks](#mocks), 
+as in the next section.
+```go
+  if iFace.Method(7) == 10 {
+    everyThinkIsOk()	
+  }
+```
+Then somewhere in the pre-function setup:
+```go
+    mockIFace.On("Method", 7).Return(10)
+```
+
+Otherwise, we should fine a way of handling the external call smoothly. Try to
+do the minimal necessary.
+
+Usually unit tests should not have any effect on the production code. However,
+one possibility exception might be to make problem methods part of an interface
+so that we can mock them.
+
+### Configure test setup
+
+Having done the preliminary steps, we have a pile object definitions, 
+and a list of test we wish to run. However, everything we need should be
+already be there. We need to shuffle everything around so all our tests
+work.
+
+Remember that care needs to be taken to avoid sharing memory between tests.
+Copy by value not pointer. 
+
+Idiot check the function's purpose. Yuo should know by now, but just make sure.
 
 ## Mocks
 
