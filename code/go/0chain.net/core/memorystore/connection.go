@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
 	"0chain.net/core/common"
@@ -74,23 +75,57 @@ type Conn struct {
 	Pool *redis.Pool
 }
 
-type connections map[common.ContextKey]*Conn
+type connections struct {
+	cons  map[common.ContextKey]*Conn
+	mutex *sync.RWMutex
+}
+
+func newConnections() connections {
+	return connections{
+		cons:  make(map[common.ContextKey]*Conn),
+		mutex: &sync.RWMutex{},
+	}
+}
+
+func (c *connections) set(key common.ContextKey, conn *Conn) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.cons[key] = conn
+}
+
+func (c *connections) get(key common.ContextKey) (*Conn, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	conn, ok := c.cons[key]
+	return conn, ok
+}
+
+func (c *connections) iterateCons(f func(*Conn)) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, conn := range c.cons {
+		f(conn)
+	}
+}
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
 	cons := ctx.Value(CONNECTION)
 	if cons == nil {
-		cMap := make(connections)
-		cMap[CONNECTION] = GetConnection()
+		cMap := newConnections()
+		cMap.set(CONNECTION, GetConnection())
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
 		panic("invalid setup")
 	}
-	_, ok = cMap[CONNECTION]
+	_, ok = cMap.get(CONNECTION)
 	if !ok {
-		cMap[CONNECTION] = GetConnection()
+		cMap.set(CONNECTION, GetConnection())
 	}
 	return ctx
 
@@ -104,18 +139,18 @@ func GetCon(ctx context.Context) *Conn {
 	cons := ctx.Value(CONNECTION)
 	if cons == nil {
 		con := GetConnection()
-		cMap := make(connections)
-		cMap[CONNECTION] = con
+		cMap := newConnections()
+		cMap.set(CONNECTION, con)
 		return con
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
 		panic("invalid setup")
 	}
-	con, ok := cMap[CONNECTION]
+	con, ok := cMap.get(CONNECTION)
 	if !ok {
 		con = GetConnection()
-		cMap[CONNECTION] = con
+		cMap.set(CONNECTION, con)
 	}
 	return con
 }
@@ -128,16 +163,16 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	}
 	c := ctx.Value(CONNECTION)
 	if c == nil {
-		cMap := make(connections)
+		cMap := newConnections()
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
-	_, ok = cMap[dbpool.CtxKey]
+	_, ok = cMap.get(dbpool.CtxKey)
 	if !ok {
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
 	}
 	return ctx
 
@@ -158,10 +193,10 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	}
 	cMap, ok := c.(connections)
 
-	con, ok := cMap[dbpool.CtxKey]
+	con, ok := cMap.get(dbpool.CtxKey)
 	if !ok {
 		con = GetEntityConnection(entityMetadata)
-		cMap[dbpool.CtxKey] = con
+		cMap.set(dbpool.CtxKey, con)
 	}
 	return con
 }
@@ -174,10 +209,10 @@ func Close(ctx context.Context) {
 		return
 	}
 	cMap := c.(connections)
-	for _, con := range cMap {
+	cMap.iterateCons(func(con *Conn) {
 		err := con.Close()
 		if err != nil {
 			Logger.Error("Connection not closed", zap.Error(err))
 		}
-	}
+	})
 }
