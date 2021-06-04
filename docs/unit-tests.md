@@ -158,7 +158,7 @@ Mock http requests. You can use the `httptest` package, or [create
 an interface](https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/) 
 to support the `http.Clientg.Do` method. If not currently possible then change that.
 
-#### Cearful reusing input data between tests
+#### Careful reusing input data between tests
 
 Spot the problem with this test.
 ```go
@@ -224,10 +224,10 @@ should be shared.
 ## Writing a test
 
 Numerous approaches to writing unit tests can be devised, bellow we describe
-on approach that works well. It focuses on maximising code coverage while
+an approach that works well. It focuses on maximising code coverage while
 minimising setup.
  
-Unit tests check a function outputs match its inputs. Ideally we want as little
+Unit tests check a function's outputs match its inputs. Ideally we want as little
 setup as we can get away with. How our function works in the global scope
 of the project does not interest us; we use integration tests for that. Many 
 developers do too much work here, making their unit tests look more like integration
@@ -255,10 +255,10 @@ func TestMyTestFunction(t *testing.T) {
 ### Compile
 
 The step involves getting `TestMyTestFunction` to compile. For example some
-input parameters will be required. If   Just define whatever objects the compiler
+input parameters will be required. Just define whatever objects the compiler
 asks for. 
 
-You might as well add a variable for `myTestFunction`'s return values.
+You might as well add a variables for `myTestFunction`'s return values.
 
 Remember be minimalistic. You should only need to create default objects
 at this point.
@@ -269,7 +269,7 @@ Get the test to run without errors.
 
 Single step though the function. Make any necessary change to prevent
 an error. This will likely involve adding more default objects, and
-setting any values needed to avoid returning an error. Remember by 
+setting any values needed to avoid returning an error. Remember be
 minimalistic.
 
 ### Code coverage
@@ -285,10 +285,6 @@ Add code to prevent skipping blocks. The typical situation will be an `if`
 statement. Make whoever changes to the test setup you need to get the code
 to pass though skipped blocks.
 
-Note Branches or forks. For each branch or fork we will need a separate test
-to insure complete code coverage.
-
-
 If we have
 ```go
   if input.Thing != nil {
@@ -303,10 +299,10 @@ to the setup.
 
 ##### Error messages
 
-A special case of skipped blocks.
+A special case of `skipped blocks`.
 ```go
 if err != nil {
-	return err
+    return err
 }
 ```
 A familiar go construct. We should build a test that forces each error
@@ -358,10 +354,9 @@ for each branch.
 #### External function calls
  
 Only our test function needs testing, not any external functions that
-it might call. 
-
-We should mock out external function calls. Check that our function passes
-though the correct parameters and return the correct response.
+it might call. We need to mock these out external function calls. 
+Check that our function passes though the correct parameters 
+and handles the response correctly.
 
 If the function forms part of an interface then we can use [Mocks](#mocks), 
 as in the next section.
@@ -385,7 +380,7 @@ so that we can mock them.
 ### Configure test setup
 
 Having done the preliminary steps, we have a pile object definitions, 
-and a list of test we wish to run. However, everything we need should be
+and a list of tests we wish to run. However, everything we need should be
 already be there. We need to shuffle everything around so all our tests
 work. 
 
@@ -396,7 +391,7 @@ If you feel tempted to set up a working environment for your test
 function to work in, then don't. Really don't. Strive to minimise the
 amount of setup you need.
 
-Idiot check the function's purpose. Yuo should know by now, but just make sure.
+Idiot check the function's purpose. You should know by now, but just make sure.
 Do your tests align with these purposes.
 
 ## Mocks
