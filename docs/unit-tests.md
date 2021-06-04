@@ -387,12 +387,17 @@ so that we can mock them.
 Having done the preliminary steps, we have a pile object definitions, 
 and a list of test we wish to run. However, everything we need should be
 already be there. We need to shuffle everything around so all our tests
-work.
+work. 
 
 Remember that care needs to be taken to avoid sharing memory between tests.
 Copy by value not pointer. 
 
+If you feel tempted to set up a working environment for your test
+function to work in, then don't. Really don't. Strive to minimise the
+amount of setup you need.
+
 Idiot check the function's purpose. Yuo should know by now, but just make sure.
+Do your tests align with these purposes.
 
 ## Mocks
 
