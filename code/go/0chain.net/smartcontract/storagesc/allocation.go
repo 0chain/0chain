@@ -109,7 +109,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving client allocations list (client: %s): %v",
 			alloc.Owner, err)
 	}
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	
+	err = sc.saveAllocation(alloc, balances)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
@@ -117,6 +118,13 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 
 	buff := alloc.Encode()
 	return string(buff), nil
+}
+
+func (sc *StorageSmartContract) saveAllocation(alloc *StorageAllocation,
+	balances chainstate.StateContextI,
+) (err error) {
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	return
 }
 
 type newAllocationRequest struct {
@@ -464,8 +472,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	}
 
 	// save allocation
-
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = sc.saveAllocation(alloc, balances)
 	if err != nil {
 		return "", common.NewError("allocation_closing_failed",
 			"can't save allocation: "+err.Error())
@@ -474,9 +481,10 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	return string(alloc.Encode()), nil // closing
 }
 
-func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
+func (sc *StorageSmartContract) saveAllocationAndBlobbers(all *StorageNodes,
 	alloc *StorageAllocation, blobbers []*StorageNode,
-	balances chainstate.StateContextI) (err error) {
+	balances chainstate.StateContextI,
+) (err error) {
 
 	// save all
 	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
@@ -490,12 +498,7 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 		}
 	}
 
-	// save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return
-	}
-
+	err = sc.saveAllocation(alloc, balances)
 	return
 }
 
@@ -725,8 +728,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	}
 
 	// save all
-
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
+	err = sc.saveAllocationAndBlobbers(all, alloc, blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
@@ -796,8 +798,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	}
 
 	// save all
-
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
+	err = sc.saveAllocationAndBlobbers(all, alloc, blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
@@ -939,7 +940,7 @@ func (tar *transferAllocationRequest) validate(conf *scConfig,
 }
 
 func (sc *StorageSmartContract) transferAllocation(t *transaction.Transaction,
-	alloc *StorageAllocation, uar *transferAllocationRequest,
+	alloc *StorageAllocation, tar *transferAllocationRequest,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
 	// get related write pool
@@ -949,7 +950,21 @@ func (sc *StorageSmartContract) transferAllocation(t *transaction.Transaction,
 			"can't get write pool: %v", err)
 	}
 
+	// update read pool and allocation fields
 	// wp.transfer()
+
+	// enable if PayerID will be added to StorageAllocation one day
+	// if alloc.Payer == alloc.OwnerID {
+	// 	alloc.Payer = tar.NewOwnerID
+	// }
+
+	alloc.Owner = tar.NewOwnerID
+
+	// save allocation
+	err = sc.saveAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_transfer_failed", "%v", err)
+	}
 
 	return string(alloc.Encode()), nil
 }
@@ -1230,7 +1245,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	}
 
 	alloc.Finalized, alloc.Canceled = true, true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = sc.saveAllocation(alloc, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
@@ -1304,7 +1319,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	}
 
 	alloc.Finalized = true
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	err = sc.saveAllocation(alloc, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
