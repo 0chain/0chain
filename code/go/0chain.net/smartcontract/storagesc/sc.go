@@ -202,6 +202,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.newAllocationRequest(t, input, balances)
 	case "update_allocation_request":
 		resp, err = sc.updateAllocationRequest(t, input, balances)
+	case "transfer_allocation_request":
+		resp, err = sc.transferAllocationRequest(t, input, balances)
 	case "finalize_allocation":
 		resp, err = sc.finalizeAllocation(t, input, balances)
 	case "cancel_allocation":

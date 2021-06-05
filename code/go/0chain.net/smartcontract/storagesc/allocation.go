@@ -916,6 +916,104 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	return sc.reduceAllocation(t, all, alloc, blobbers, &request, balances)
 }
 
+// transfer allocation request
+type transferAllocationRequest struct {
+	ID         string `json:"id"`           // allocation id
+	OwnerID    string `json:"owner_id"`     // owner of the allocation
+	NewOwnerID string `json:"new_owner_id"` // new owner of the allocation
+}
+
+func (tar *transferAllocationRequest) decode(b []byte) error {
+	return json.Unmarshal(b, tar)
+}
+
+// validate request
+func (tar *transferAllocationRequest) validate(conf *scConfig,
+	alloc *StorageAllocation,
+) (err error) {
+	if tar.OwnerID == tar.NewOwnerID {
+		return errors.New("transfer allocation changes nothing")
+	}
+
+	return
+}
+
+func (sc *StorageSmartContract) transferAllocation(t *transaction.Transaction,
+	alloc *StorageAllocation, uar *transferAllocationRequest,
+	balances chainstate.StateContextI,
+) (resp string, err error) {
+	// get related write pool
+	var wp *writePool
+	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+		return "", common.NewErrorf("allocation_transfer_failed",
+			"can't get write pool: %v", err)
+	}
+
+	// wp.transfer()
+
+	return string(alloc.Encode()), nil
+}
+
+// transfer allocation and related stuff (such as, write allocation pool) to new owner
+func (sc *StorageSmartContract) transferAllocationRequest(
+	t *transaction.Transaction, input []byte,
+	balances chainstate.StateContextI,
+) (resp string, err error) {
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return "", common.NewError("allocation_transfer_failed",
+			"can't get SC configurations: " + err.Error())
+	}
+
+	if t.ClientID == "" {
+		return "", common.NewError("allocation_transfer_failed",
+			"missing client_id in transaction")
+	}
+
+	var request transferAllocationRequest
+	if err = request.decode(input); err != nil {
+		return "", common.NewError("allocation_transfer_failed",
+			"invalid request: "+err.Error())
+	}
+
+	if request.OwnerID == "" {
+		request.OwnerID = t.ClientID
+	}
+
+	var clist *Allocations // client allocations list
+	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
+		return "", common.NewError("allocation_transfer_failed",
+			"can't get client's allocations list: "+err.Error())
+	}
+
+	if !clist.has(request.ID) {
+		return "", common.NewErrorf("allocation_transfer_failed",
+			"can't find allocation in client's allocations list: %s (%d)",
+			request.ID, len(clist.List))
+	}
+
+	var alloc *StorageAllocation
+	if alloc, err = sc.getAllocation(request.ID, balances); err != nil {
+		return "", common.NewError("allocation_transfer_failed",
+			"can't get existing allocation: " + err.Error())
+	}
+
+	if err = request.validate(conf, alloc); err != nil {
+		return "", common.NewError("allocation_transfer_failed", err.Error())
+	}
+
+	// // can't transfer expired allocation
+	if alloc.Expiration < t.CreationDate {
+		return "", common.NewError("allocation_transfer_failed",
+			"can't transfer expired allocation")
+	}
+
+	// update allocation transaction hash
+	alloc.Tx = t.Hash
+
+	return sc.transferAllocation(t, alloc, &request, balances)
+}
+
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {
