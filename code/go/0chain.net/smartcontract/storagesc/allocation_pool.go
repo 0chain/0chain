@@ -138,8 +138,8 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 type allocationPool struct {
 	tokenpool.ZcnPool `json:"pool"`
 	ExpireAt          common.Timestamp `json:"expire_at"`     // inclusive
-	AllocationID      datastore.Key    `json:"allocation_id"` //
-	Blobbers          blobberPools     `json:"blobbers"`      //
+	AllocationID      datastore.Key    `json:"allocation_id"` // could be empty, for generic allocation pools
+	Blobbers          blobberPools     `json:"blobbers"`
 }
 
 //
