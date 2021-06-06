@@ -943,17 +943,14 @@ func (sc *StorageSmartContract) transferAllocation(t *transaction.Transaction,
 	alloc *StorageAllocation, tar *transferAllocationRequest,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	// get related write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return "", common.NewErrorf("allocation_transfer_failed",
-			"can't get write pool: %v", err)
+	// transfer write pool
+	err = sc.transferWritePool(t, alloc, tar.NewOwnerID, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_transfer_failed", "%v", err)
 	}
 
-	// update read pool and allocation fields
-	// wp.transfer()
-
-	// enable if PayerID will be added to StorageAllocation one day
+	// set allocation fields
+	// enable if Payer will be added to StorageAllocation one day
 	// if alloc.Payer == alloc.OwnerID {
 	// 	alloc.Payer = tar.NewOwnerID
 	// }

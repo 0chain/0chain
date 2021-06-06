@@ -168,6 +168,7 @@ func (wp *writePool) moveToStake(sscKey, allocID, blobID string, zcnPool tokenpo
 	return nil
 }
 */
+
 // take write pool by ID to unlock (the take is get and remove)
 func (wp *writePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
@@ -328,6 +329,71 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
 		return fmt.Errorf("saving write pool: %v", err)
+	}
+
+	return
+}
+
+func (ssc *StorageSmartContract) transferWritePool(t *transaction.Transaction,
+	alloc *StorageAllocation, newAllocOwner string, balances chainState.StateContextI,
+) (err error) {
+	// get write pool
+	var wp *writePool
+	wp, err = ssc.getWritePool(alloc.Owner, balances)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil // nothing to transfer. cancel silently
+	}
+
+	// get or create write pool for new owner
+	var nwp *writePool
+	nwp, err = ssc.getWritePool(newAllocOwner, balances)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return fmt.Errorf("getting new client write pool: %v", err)
+	}
+
+	if err == util.ErrValueNotPresent {
+		nwp = new(writePool)
+	}
+
+	// check all allocation pools, to transfer tokens
+	for _, ap := range wp.Pools {
+		if (ap.AllocationID != alloc.ID || // is it for the same allocation
+			ap.Balance == 0 || // is it non-empty
+			ap.ExpireAt < t.CreationDate) { // is it non-expired
+			continue
+		}
+
+		// create a copy of allocation pool for new owner
+		nap := &allocationPool{
+			AllocationID: ap.AllocationID,
+			ExpireAt:     ap.ExpireAt,
+			Blobbers:     blobberPools{},
+		}
+
+		for _, bp := range ap.Blobbers {
+			nap.Blobbers.add(&blobberPool{
+				BlobberID: bp.BlobberID,
+				Balance: state.Balance(bp.Balance),
+			})
+		}
+
+		// transfer tokens to newly created allocation pool
+		if _, _, err = ap.TransferTo(nap, ap.Balance, nil); err != nil {
+			return common.NewError("write_pool_transfer_failed", err.Error())
+		}
+
+		nwp.Pools.add(nap)
+	}
+
+	// save pools
+	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
+		return common.NewError("transfer_write_pool_failed", err.Error())
+	}
+
+	if err = nwp.save(ssc.ID, newAllocOwner, balances); err != nil {
+		return common.NewError("transfer_write_pool_failed", err.Error())
 	}
 
 	return
