@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -65,14 +65,14 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 }
 
 // Execute ...
-func (zcn *ZCNSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances cstate.StateContextI) (string, error) {
 	switch funcName {
 	case "mint":
 		return zcn.mint(t, inputData, balances)
 	case "burn":
 		return zcn.burn(t, inputData, balances)
-	case "addAutorizer":
-		return zcn.addAutorizer(t, inputData, balances)
+	case "addAuthorizer":
+		return zcn.addAuthorizer(t, inputData, balances)
 	case "deleteAuthorizer":
 		return zcn.deleteAuthorizer(t, inputData, balances)
 	default:
