@@ -142,6 +142,10 @@ type allocationPool struct {
 	Blobbers          blobberPools     `json:"blobbers"`
 }
 
+func (ap allocationPool) isGeneric() bool {
+	return ap.AllocationID == ""
+}
+
 //
 // allocation read/write pools (list)
 //
@@ -237,11 +241,20 @@ func (aps allocationPools) allocationCut(allocID string) (
 	return
 }
 
+// filter out allocation pools by specific blobber
 func (aps allocationPools) blobberCut(allocID, blobberID string,
-	now common.Timestamp) (cut []*allocationPool) {
-
+	now common.Timestamp,
+) (cut []*allocationPool) {
 	cut = aps.allocationCut(allocID)
 	cut = removeBlobberExpired(cut, blobberID, now)
+	sortExpireAt(cut)
+	return
+}
+
+// filter out generic allocaton pools
+func (aps allocationPools) genericCut(now common.Timestamp) (cut []*allocationPool) {
+	cut = aps.allocationCut("")
+	cut = removeExpired(cut, now)
 	sortExpireAt(cut)
 	return
 }

@@ -1,16 +1,26 @@
 package state
 
 import (
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
-	"0chain.net/core/util"
+	"math"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
 )
 
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
+
+func (b Balance) Min(v Balance) Balance {
+	return Balance(math.Min(float64(b), float64(v)))
+}
+
+func (b Balance) Max(v Balance) Balance {
+	return Balance(math.Max(float64(b), float64(v)))
+}
 
 //State - state that needs consensus within the blockchain.
 type State struct {

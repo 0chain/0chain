@@ -1,12 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/url"
+	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -14,6 +13,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract"
 )
 
 //
@@ -29,10 +29,15 @@ type readPool struct {
 	Pools allocationPools `json:"pools"`
 }
 
+// filter out allocation pools by specific blobber
 func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
 ) []*allocationPool {
-
 	return rp.Pools.blobberCut(allocID, blobberID, now)
+}
+
+// filter out generic allocaton pools
+func (rp *readPool) genericCut(now common.Timestamp) []*allocationPool {
+	return rp.Pools.genericCut(now)
 }
 
 func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
@@ -152,7 +157,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	sp *stakePool, now common.Timestamp, value state.Balance,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var cut = rp.blobberCut(allocID, blobID, now)
+	var cut = append(rp.blobberCut(allocID, blobID, now), rp.genericCut(now)...)
 
 	if len(cut) == 0 {
 		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
@@ -167,18 +172,25 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		if value == 0 {
 			break // all required tokens has moved to the blobber
 		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
-		var (
-			bp   = ap.Blobbers[bi]
-			move state.Balance
-		)
-		if value >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
+
+		var move state.Balance
+
+		// is generic or regular allocation pool?
+		if ap.isGeneric() {
+			move = ap.Balance.Min(value)
 		} else {
-			move, bp.Balance = value, bp.Balance-value
+			var bi, ok = ap.Blobbers.getIndex(blobID)
+			if !ok {
+				continue // impossible case, but leave the check here
+			}
+
+			bp := ap.Blobbers[bi]
+			move = bp.Balance.Min(value)
+			bp.Balance -= move
+
+			if bp.Balance == 0 {
+				ap.Blobbers.removeByIndex(bi)
+			}
 		}
 
 		err = rp.movePartToBlobber(sscKey, ap, sp, move, balances)
@@ -192,10 +204,8 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 		})
 
 		value -= move
-		sp.Rewards.Blobber += value
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
+		sp.Rewards.Blobber += value // todo: seriously??? maybe "+= move"?
+
 		if ap.Balance == 0 {
 			torm = append(torm, ap) // remove the allocation pool later
 		}
@@ -346,12 +356,6 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	}
 
 	// check
-
-	if lr.AllocationID == "" {
-		return "", common.NewError("read_pool_lock_failed",
-			"missing allocation ID in request")
-	}
-
 	if t.Value < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
 			"insufficient amount to lock")
@@ -374,41 +378,47 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// get the allocation object
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
-	if err != nil {
-		return "", common.NewError("read_pool_lock_failed",
-			"can't get allocation: "+err.Error())
-	}
+	// create blobber pools for generic or regular allocation pool
 
 	var bps blobberPools
 
-	// lock for allocation -> blobber (particular blobber locking)
-	if lr.BlobberID != "" {
-		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
-			return "", common.NewError("read_pool_lock_failed",
-				fmt.Sprintf("no such blobber %s in allocation %s",
-					lr.BlobberID, lr.AllocationID))
-		}
-		bps = append(bps, &blobberPool{
-			Balance:   state.Balance(t.Value),
-			BlobberID: lr.BlobberID,
-		})
+	if lr.AllocationID == "" {
+		// keep empty blobber pool list for generic blobbers
 	} else {
-		// divide depending read price range for all blobbers of the
-		// allocation
-		var total float64 // total read price
-		for _, b := range alloc.BlobberDetails {
-			total += float64(b.Terms.ReadPrice)
+		// get the allocation object
+		var alloc *StorageAllocation
+		alloc, err = ssc.getAllocation(lr.AllocationID, balances)
+		if err != nil {
+			return "", common.NewError("read_pool_lock_failed",
+				"can't get allocation: "+err.Error())
 		}
-		// calculate (divide)
-		for _, b := range alloc.BlobberDetails {
-			var ratio = float64(b.Terms.ReadPrice) / total
-			bps.add(&blobberPool{
-				Balance:   state.Balance(float64(t.Value) * ratio),
-				BlobberID: b.BlobberID,
+
+		// lock for allocation -> blobber (particular blobber locking)
+		if lr.BlobberID != "" {
+			if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
+				return "", common.NewError("read_pool_lock_failed",
+					fmt.Sprintf("no such blobber %s in allocation %s",
+						lr.BlobberID, lr.AllocationID))
+			}
+			bps = append(bps, &blobberPool{
+				Balance:   state.Balance(t.Value),
+				BlobberID: lr.BlobberID,
 			})
+		} else {
+			// divide depending read price range for all blobbers of the
+			// allocation
+			var total float64 // total read price
+			for _, b := range alloc.BlobberDetails {
+				total += float64(b.Terms.ReadPrice)
+			}
+			// calculate (divide)
+			for _, b := range alloc.BlobberDetails {
+				var ratio = float64(b.Terms.ReadPrice) / total
+				bps.add(&blobberPool{
+					Balance:   state.Balance(float64(t.Value) * ratio),
+					BlobberID: b.BlobberID,
+				})
+			}
 		}
 	}
 
