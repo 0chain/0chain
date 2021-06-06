@@ -25,6 +25,9 @@ func NewSC(id string) *SmartContract {
 	return &SmartContract{ID: id, RestHandlers: restHandlers, SmartContractExecutionStats: scExecStats}
 }
 
+// SmartContractTransactionData is passed in Transaction.TransactionData
+// InputData may contain Public Key in some cases
+// FunctionName is user to invoke SC API function
 type SmartContractTransactionData struct {
 	FunctionName string          `json:"name"`
 	InputData    json.RawMessage `json:"input"`

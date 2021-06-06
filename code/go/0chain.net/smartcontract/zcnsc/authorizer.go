@@ -3,14 +3,20 @@ package zcnsc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
-func (zcn *ZCNSmartContract) addAutorizer(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
-	//check for authorizer already there
+// addAuthorizer sc API function
+// Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
+// inputData is a publicKey in case public key in Tx is missing. Either PK or inputData must be present
+// balances have `GetTriedNode` implemented to get nodes
+// ContractMap contains all the SC addresses
+// ToClient is a SC address
+func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+	// check for authorizer already there
 	ans := getAuthorizerNodes(balances)
 	if ans.NodeMap[t.ClientID] != nil {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("authorizer(id: %v) already exists", t.ClientID))
@@ -58,7 +64,7 @@ func (zcn *ZCNSmartContract) addAutorizer(t *transaction.Transaction, inputData 
 	return
 }
 
-func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	//check for authorizer
 	ans := getAuthorizerNodes(balances)
 	if ans.NodeMap[t.ClientID] == nil {
@@ -67,7 +73,7 @@ func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, inputD
 	}
 	gn := getGlobalNode(balances)
 
-	//empty the authroizer's pool
+	//empty the authorizer's pool
 	var transfer *state.Transfer
 	transfer, resp, err = ans.NodeMap[t.ClientID].Staking.EmptyPool(gn.ID, t.ClientID, nil)
 	if err != nil {
