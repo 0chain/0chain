@@ -23,3 +23,5 @@ check-commit:
 	@echo "Start testing..."
 	@cd $(root_path)/code/go/0chain.net && go test ./...
 	@echo "Tests completed."
+test:
+	sh docker.local/bin/unit_test.sh
