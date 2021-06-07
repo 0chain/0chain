@@ -384,6 +384,23 @@ and a list of tests we wish to run. However, everything we need should be
 already be there. We need to shuffle everything around so all our tests
 work. 
 
+1. Create a test for each branch identified in [branches](#branches).
+2. Create test entry for each input. For population the direct
+    inputs to the function, and the return values for any  mocked out internal calls.
+3. Create a `want` test entry for each output. For both the directly returned
+    objects, and the input parameters for any mocked out internal calls.
+4. Add a local function to set the mock expectations. So for every mocked out
+    internal call, create a `mockedObject.On("functionName", inParms).Return(outParms)`
+    call for each mocked out internal call. Use the test input and want parters
+    to configure the `On` method` calls. The mock boiler code will panic for any mock
+    calls that do not match one of the `On` calls.
+5. In the `t.Run` block you will want to do at least some of:
+    * Call the test function to set mock expectations.
+    * Prepare the functions input paramters.
+    * Confirm the functions output match the test wants.
+    * Call [AssertExpectationsForObjects](https://pkg.go.dev/github.com/stretchr/testify/mock#AssertExpectationsForObjects)
+    to confirm the internal mocked out calls proceeded as expected.
+
 Remember that care needs to be taken to avoid sharing memory between tests.
 Copy by value not pointer. 
 
