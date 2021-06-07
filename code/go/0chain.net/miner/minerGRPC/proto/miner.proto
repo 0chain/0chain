@@ -6,10 +6,16 @@ option go_package = "code/go/0chain.net/miner/minerGRPC";
 import "google/api/annotations.proto";
 
 
-service MinerNode {
+service Miner {
   rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {
     option (google.api.http) = {
       get: "/v2/_nh/whoami"
+    };
+  }
+
+  rpc GetLatestFinalizedBlockSummary(GetLatestFinalizedBlockSummaryRequest) returns (GetLatestFinalizedBlockSummaryResponse) {
+    option (google.api.http) = {
+      get: "/v2/block/get/latest_finalized"
     };
   }
 }
@@ -20,14 +26,6 @@ message WhoAmIRequest {
 
 message WhoAmIResponse {
   string data = 1;
-}
-
-service MinerChain {
-  rpc GetLatestFinalizedBlockSummary(GetLatestFinalizedBlockSummaryRequest) returns (GetLatestFinalizedBlockSummaryResponse) {
-    option (google.api.http) = {
-      get: "/v2/block/get/latest_finalized"
-    };
-  }
 }
 
 message GetLatestFinalizedBlockSummaryRequest {

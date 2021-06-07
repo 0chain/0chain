@@ -15,9 +15,9 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/miner/minerGRPC"
-	"google.golang.org/grpc"
+	"0chain.net/miner/minerGRPC/minerGRPCHandlers"
 
+	"0chain.net/miner/minerGRPC"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -265,7 +265,7 @@ func main() {
 	initHandlers()
 
 	grpcServer := minerGRPC.NewServerWithMiddlewares(common.NewGRPCRateLimiter())
-	registerGRPCServices(grpcServer)
+	minerGRPCHandlers.RegisterGRPCMinerService(grpcServer)
 	go func(grpcPort string) {
 		if grpcPort == "" {
 			log.Fatal("grpc port not provided, cannot create grpc server, grpc port - " + grpcPort)
@@ -315,11 +315,6 @@ func main() {
 	defer done(ctx)
 	<-ctx.Done()
 	time.Sleep(time.Second * 5)
-}
-
-func registerGRPCServices(server *grpc.Server) {
-	node.RegisterGRPCMinerNodeService(server)
-	chain.RegisterGRPCMinerChainServer(server)
 }
 
 func done(ctx context.Context) {

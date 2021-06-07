@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"0chain.net/core/common"
@@ -20,19 +19,7 @@ import (
 	"0chain.net/chaincore/block"
 
 	"0chain.net/miner/minerGRPC"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"google.golang.org/grpc"
 )
-
-func RegisterGRPCMinerChainServer(server *grpc.Server) {
-	minerChainService := NewGRPCMinerChainService(GetServerChain())
-	grpcGatewayHandler := runtime.NewServeMux()
-
-	minerGRPC.RegisterMinerChainServer(server, minerChainService)
-	_ = minerGRPC.RegisterMinerChainHandlerServer(context.Background(), grpcGatewayHandler, minerChainService)
-
-	http.Handle("/", grpcGatewayHandler)
-}
 
 func NewGRPCMinerChainService(chain IChain) *minerChainGRPCService {
 	return &minerChainGRPCService{
@@ -46,7 +33,6 @@ type IChain interface {
 
 type minerChainGRPCService struct {
 	ServerChain IChain
-	minerGRPC.UnimplementedMinerChainServer
 }
 
 func (m *minerChainGRPCService) GetLatestFinalizedBlockSummary(ctx context.Context, req *minerGRPC.GetLatestFinalizedBlockSummaryRequest) (*minerGRPC.GetLatestFinalizedBlockSummaryResponse, error) {

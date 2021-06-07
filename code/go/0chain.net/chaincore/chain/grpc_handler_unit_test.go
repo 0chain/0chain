@@ -31,7 +31,7 @@ func TestChain_GetLatestFinalizedBlockSummary(t *testing.T) {
 				MerkleTreeRoot:        "something2",
 				ReceiptMerkleTreeRoot: "something3",
 			},
-			ExpectedResponse: `block_summary:{hash:"something" miner_id:"something1" merkle_tree_root:"something2" receipt_merkle_tree_root:"something3"}`,
+			ExpectedResponse: `block_summary:{hash:"something"  miner_id:"something1"  merkle_tree_root:"something2"  receipt_merkle_tree_root:"something3"}`,
 		},
 	}
 

@@ -13,166 +13,119 @@ import (
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion7
 
-// MinerNodeClient is the client API for MinerNode service.
+// MinerClient is the client API for Miner service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MinerNodeClient interface {
+type MinerClient interface {
 	WhoAmI(ctx context.Context, in *WhoAmIRequest, opts ...grpc.CallOption) (*WhoAmIResponse, error)
+	GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error)
 }
 
-type minerNodeClient struct {
+type minerClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMinerNodeClient(cc grpc.ClientConnInterface) MinerNodeClient {
-	return &minerNodeClient{cc}
+func NewMinerClient(cc grpc.ClientConnInterface) MinerClient {
+	return &minerClient{cc}
 }
 
-func (c *minerNodeClient) WhoAmI(ctx context.Context, in *WhoAmIRequest, opts ...grpc.CallOption) (*WhoAmIResponse, error) {
+func (c *minerClient) WhoAmI(ctx context.Context, in *WhoAmIRequest, opts ...grpc.CallOption) (*WhoAmIResponse, error) {
 	out := new(WhoAmIResponse)
-	err := c.cc.Invoke(ctx, "/miner.service.v1.MinerNode/WhoAmI", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/miner.service.v1.Miner/WhoAmI", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// MinerNodeServer is the server API for MinerNode service.
-// All implementations must embed UnimplementedMinerNodeServer
+func (c *minerClient) GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error) {
+	out := new(GetLatestFinalizedBlockSummaryResponse)
+	err := c.cc.Invoke(ctx, "/miner.service.v1.Miner/GetLatestFinalizedBlockSummary", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MinerServer is the server API for Miner service.
+// All implementations must embed UnimplementedMinerServer
 // for forward compatibility
-type MinerNodeServer interface {
+type MinerServer interface {
 	WhoAmI(context.Context, *WhoAmIRequest) (*WhoAmIResponse, error)
-	mustEmbedUnimplementedMinerNodeServer()
+	GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error)
+	mustEmbedUnimplementedMinerServer()
 }
 
-// UnimplementedMinerNodeServer must be embedded to have forward compatible implementations.
-type UnimplementedMinerNodeServer struct {
+// UnimplementedMinerServer must be embedded to have forward compatible implementations.
+type UnimplementedMinerServer struct {
 }
 
-func (UnimplementedMinerNodeServer) WhoAmI(context.Context, *WhoAmIRequest) (*WhoAmIResponse, error) {
+func (UnimplementedMinerServer) WhoAmI(context.Context, *WhoAmIRequest) (*WhoAmIResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WhoAmI not implemented")
 }
-func (UnimplementedMinerNodeServer) mustEmbedUnimplementedMinerNodeServer() {}
+func (UnimplementedMinerServer) GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLatestFinalizedBlockSummary not implemented")
+}
+func (UnimplementedMinerServer) mustEmbedUnimplementedMinerServer() {}
 
-// UnsafeMinerNodeServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MinerNodeServer will
+// UnsafeMinerServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MinerServer will
 // result in compilation errors.
-type UnsafeMinerNodeServer interface {
-	mustEmbedUnimplementedMinerNodeServer()
+type UnsafeMinerServer interface {
+	mustEmbedUnimplementedMinerServer()
 }
 
-func RegisterMinerNodeServer(s *grpc.Server, srv MinerNodeServer) {
-	s.RegisterService(&_MinerNode_serviceDesc, srv)
+func RegisterMinerServer(s *grpc.Server, srv MinerServer) {
+	s.RegisterService(&_Miner_serviceDesc, srv)
 }
 
-func _MinerNode_WhoAmI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Miner_WhoAmI_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WhoAmIRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MinerNodeServer).WhoAmI(ctx, in)
+		return srv.(MinerServer).WhoAmI(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/miner.service.v1.MinerNode/WhoAmI",
+		FullMethod: "/miner.service.v1.Miner/WhoAmI",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinerNodeServer).WhoAmI(ctx, req.(*WhoAmIRequest))
+		return srv.(MinerServer).WhoAmI(ctx, req.(*WhoAmIRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _MinerNode_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "miner.service.v1.MinerNode",
-	HandlerType: (*MinerNodeServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "WhoAmI",
-			Handler:    _MinerNode_WhoAmI_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "miner.proto",
-}
-
-// MinerChainClient is the client API for MinerChain service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MinerChainClient interface {
-	GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error)
-}
-
-type minerChainClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewMinerChainClient(cc grpc.ClientConnInterface) MinerChainClient {
-	return &minerChainClient{cc}
-}
-
-func (c *minerChainClient) GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error) {
-	out := new(GetLatestFinalizedBlockSummaryResponse)
-	err := c.cc.Invoke(ctx, "/miner.service.v1.MinerChain/GetLatestFinalizedBlockSummary", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// MinerChainServer is the server API for MinerChain service.
-// All implementations must embed UnimplementedMinerChainServer
-// for forward compatibility
-type MinerChainServer interface {
-	GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error)
-	mustEmbedUnimplementedMinerChainServer()
-}
-
-// UnimplementedMinerChainServer must be embedded to have forward compatible implementations.
-type UnimplementedMinerChainServer struct {
-}
-
-func (UnimplementedMinerChainServer) GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLatestFinalizedBlockSummary not implemented")
-}
-func (UnimplementedMinerChainServer) mustEmbedUnimplementedMinerChainServer() {}
-
-// UnsafeMinerChainServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MinerChainServer will
-// result in compilation errors.
-type UnsafeMinerChainServer interface {
-	mustEmbedUnimplementedMinerChainServer()
-}
-
-func RegisterMinerChainServer(s *grpc.Server, srv MinerChainServer) {
-	s.RegisterService(&_MinerChain_serviceDesc, srv)
-}
-
-func _MinerChain_GetLatestFinalizedBlockSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Miner_GetLatestFinalizedBlockSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetLatestFinalizedBlockSummaryRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MinerChainServer).GetLatestFinalizedBlockSummary(ctx, in)
+		return srv.(MinerServer).GetLatestFinalizedBlockSummary(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/miner.service.v1.MinerChain/GetLatestFinalizedBlockSummary",
+		FullMethod: "/miner.service.v1.Miner/GetLatestFinalizedBlockSummary",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MinerChainServer).GetLatestFinalizedBlockSummary(ctx, req.(*GetLatestFinalizedBlockSummaryRequest))
+		return srv.(MinerServer).GetLatestFinalizedBlockSummary(ctx, req.(*GetLatestFinalizedBlockSummaryRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _MinerChain_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "miner.service.v1.MinerChain",
-	HandlerType: (*MinerChainServer)(nil),
+var _Miner_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "miner.service.v1.Miner",
+	HandlerType: (*MinerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "WhoAmI",
+			Handler:    _Miner_WhoAmI_Handler,
+		},
+		{
 			MethodName: "GetLatestFinalizedBlockSummary",
-			Handler:    _MinerChain_GetLatestFinalizedBlockSummary_Handler,
+			Handler:    _Miner_GetLatestFinalizedBlockSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
