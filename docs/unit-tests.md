@@ -396,7 +396,7 @@ work.
     calls that do not match one of the `On` calls.
 5. In the `t.Run` block you will want to do at least some of:
     * Call the test function to set mock expectations.
-    * Prepare the functions input paramters.
+    * Prepare the functions input parameters.
     * Confirm the functions output match the test wants.
     * Call [AssertExpectationsForObjects](https://pkg.go.dev/github.com/stretchr/testify/mock#AssertExpectationsForObjects)
     to confirm the internal mocked out calls proceeded as expected.
