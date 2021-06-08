@@ -2,8 +2,10 @@ package interestpoolsc
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
@@ -80,4 +82,18 @@ func (gn *GlobalNode) getKey() datastore.Key {
 // canMint more tokens
 func (gn *GlobalNode) canMint() bool {
 	return gn.SimpleGlobalNode.TotalMinted < gn.SimpleGlobalNode.MaxMint
+}
+
+func (gn *GlobalNode) validate() error {
+	switch {
+	case gn.APR < 0:
+		return common.NewError("failed to validate global node", fmt.Sprintf("apr(%v) is too low", gn.APR))
+	case gn.MinLockPeriod < 0:
+		return common.NewError("failed to validate global node", fmt.Sprintf("min lock period(%v) is too short", gn.MinLockPeriod))
+	case gn.MinLock < 0:
+		return common.NewError("failed to validate global node", fmt.Sprintf("min lock(%v) is too low", gn.MinLock))
+	case gn.MaxMint < 0:
+		return common.NewError("failed to validate global node", fmt.Sprintf("max mint(%v) is too low", gn.MaxMint))
+	}
+	return nil
 }

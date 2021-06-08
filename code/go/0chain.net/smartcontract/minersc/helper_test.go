@@ -11,6 +11,7 @@ import (
 	// "0chain.net/chaincore/chain"
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -19,6 +20,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 
 	"github.com/rcrowley/go-metrics"
 
@@ -44,6 +46,8 @@ func init() {
 
 	// node.Self.Node = node.Provider() // stub
 	logging.Logger = zap.NewNop() // /dev/null
+	configpkg.SmartContractConfig = viper.New()
+	configpkg.DevConfiguration.ViewChange = true
 
 	moveFunctions[Start] = moveTrue
 	moveFunctions[Contribute] = moveTrue

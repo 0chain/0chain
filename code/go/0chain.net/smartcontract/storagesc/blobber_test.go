@@ -98,31 +98,6 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(t, false)
-		tp       int64 = 100
-		blobbers *StorageNodes
-		err      error
-	)
-
-	setConfig(t, balances)
-
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2*GB
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
-
-	blobbers, err = ssc.getBlobbersList(balances)
-	require.Equal(t, 1, len(blobbers.Nodes))
-}
-
 func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
 	allocID, clientID string, toks int64, tp int64, dur time.Duration,
 	balances *testBalances) {

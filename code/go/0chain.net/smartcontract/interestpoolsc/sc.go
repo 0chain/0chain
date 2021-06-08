@@ -21,7 +21,7 @@ import (
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner     = "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
 	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
 	name      = "interest"
 	YEAR      = time.Duration(time.Hour * 8784)
@@ -35,9 +35,11 @@ func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterfac
 	var ipscCopy = &InterestPoolSmartContract{
 		smartcontractinterface.NewSC(ADDRESS),
 	}
-	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
+	ipscCopy.SetSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
 	return ipscCopy
 }
+
+func (ipsc *InterestPoolSmartContract) InitSC() {}
 
 func (ipsc *InterestPoolSmartContract) GetName() string {
 	return name
@@ -59,7 +61,7 @@ func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontracti
 	return ipsc.RestHandlers
 }
 
-func (ipsc *InterestPoolSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
 	ipsc.SmartContract.RestHandlers["/getLockConfig"] = ipsc.getLockConfig

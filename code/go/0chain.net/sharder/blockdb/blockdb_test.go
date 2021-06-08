@@ -69,7 +69,7 @@ func TestDBWrite(t *testing.T) {
 		wg.Add(1)
 		go func(s *Student, wg *sync.WaitGroup) {
 			defer wg.Done()
-			err := db.WriteData(s)
+			err = db.WriteData(s)
 			if err != nil {
 				panic(err)
 			}

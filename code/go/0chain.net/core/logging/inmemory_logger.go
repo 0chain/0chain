@@ -47,7 +47,8 @@ func NewMemLogger(enc zapcore.Encoder, enab zapcore.LevelEnabler) *MemLogger {
 	}
 	mc := logger.core
 	for r := mc.r; r.Value == nil; r = r.Next() {
-		r.Value = &observer.LoggedEntry{}
+		entry := &observer.LoggedEntry{}
+		r.Value = entry
 	}
 	return logger
 }

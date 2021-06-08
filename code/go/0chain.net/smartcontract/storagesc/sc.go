@@ -1,10 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontract"
-	"context"
 	"fmt"
-	"net/url"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -15,7 +12,7 @@ import (
 )
 
 const (
-	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner   = "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 	name    = "storage"
 
@@ -28,23 +25,9 @@ type StorageSmartContract struct {
 	*sci.SmartContract
 }
 
-func NewStorageSmartContract() sci.SmartContractInterface {
-	var sscCopy = &StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}
-	sscCopy.setSC(sscCopy.SmartContract, &smartcontract.BCContext{})
-	return sscCopy
-}
+func (ssc *StorageSmartContract) InitSC() {}
 
-func (ipsc *StorageSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
-}
-
-func (ipsc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
-}
-
-func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	ssc.SmartContract = sc
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler

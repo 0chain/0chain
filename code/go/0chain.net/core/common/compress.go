@@ -133,14 +133,12 @@ func (zlibcd *ZLibCompDe) Compress(data []byte) []byte {
 func (zlibcd *ZLibCompDe) Decompress(data []byte) ([]byte, error) {
 	reader := bytes.NewBuffer(data)
 	r, err := zlib.NewReader(reader)
+	defer r.Close()
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
 	bf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(bf, r); err != nil {
-		return nil, err
-	}
+	io.Copy(bf, r)
 	return bf.Bytes(), nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	mocks "0chain.net/mocks/core/persistencestore"
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
 

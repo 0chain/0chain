@@ -39,6 +39,9 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
 	}
+	if mn.Delete {
+		return "", common.NewError("delegate_pool_add", "can't add delegate pool for miner being deleted")
+	}
 
 	if err == util.ErrValueNotPresent {
 		return "", common.NewErrorf("delegate_pool_add",

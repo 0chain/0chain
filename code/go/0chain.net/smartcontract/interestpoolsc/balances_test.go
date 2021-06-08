@@ -24,6 +24,13 @@ type testBalances struct {
 	lfmb          *block.Block
 }
 
+func newTestBalances() *testBalances {
+	return &testBalances{
+		balances: make(map[datastore.Key]state.Balance),
+		tree:     make(map[datastore.Key]util.Serializable),
+	}
+}
+
 func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 	tb.balances[key] = b
 }

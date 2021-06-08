@@ -79,11 +79,8 @@ func getContext(r *http.Request) (context.Context, error) {
 var domainRE = regexp.MustCompile(`^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)`)
 
 func getHost(origin string) (string, error) {
-	u, err := url.Parse(origin)
-	if err != nil {
-		return "", err
-	}
-	return u.Hostname(), nil
+	url, err := url.Parse(origin)
+	return url.Hostname(), err
 }
 
 func validOrigin(origin string) bool {

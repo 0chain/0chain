@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"sort"
-	"sync"
 )
 
 type keyo struct {
@@ -17,7 +16,6 @@ type keyo struct {
 //mapIndex - an implementation of the db index
 type mapIndex struct {
 	index map[Key]int64
-	mutex sync.RWMutex
 }
 
 func newMapIndex() *mapIndex {
@@ -28,16 +26,12 @@ func newMapIndex() *mapIndex {
 
 //SetOffset - set the offset of the given record
 func (mi *mapIndex) SetOffset(key Key, offset int64) error {
-	mi.mutex.Lock()
-	defer mi.mutex.Unlock()
 	mi.index[key] = offset
 	return nil
 }
 
 //GetOffset - get the offset of the given record */
 func (mi *mapIndex) GetOffset(key Key) (int64, error) {
-	mi.mutex.RLock()
-	defer mi.mutex.RUnlock()
 	offset, ok := mi.index[key]
 	if !ok {
 		return -1, ErrKeyNotFound
@@ -46,8 +40,6 @@ func (mi *mapIndex) GetOffset(key Key) (int64, error) {
 }
 
 func (mi *mapIndex) Encode(writer io.Writer) error {
-	mi.mutex.RLock()
-	defer mi.mutex.RUnlock()
 	numKeys := int32(len(mi.index))
 	err := binary.Write(writer, binary.LittleEndian, numKeys)
 	if err != nil {
@@ -85,8 +77,6 @@ func (mi *mapIndex) Encode(writer io.Writer) error {
 }
 
 func (mi *mapIndex) Decode(reader io.Reader) error {
-	mi.mutex.Lock()
-	defer mi.mutex.Unlock()
 	var numKeys int32
 	err := binary.Read(reader, binary.LittleEndian, &numKeys)
 	if err != nil {
@@ -119,8 +109,6 @@ func (mi *mapIndex) Decode(reader io.Reader) error {
 }
 
 func (mi *mapIndex) GetKeys() []Key {
-	mi.mutex.RLock()
-	defer mi.mutex.RUnlock()
 	keyos := make([]keyo, 0, len(mi.index))
 	for k, o := range mi.index {
 		keyos = append(keyos, keyo{k: k, o: o})
@@ -150,7 +138,7 @@ func (fkai *fixedKeyArrayIndex) getKeySize() int8 {
 }
 
 //SetOffset - set the offset of the given record
-func (fkai *fixedKeyArrayIndex) SetOffset(_ Key, _ int64) error {
+func (fkai *fixedKeyArrayIndex) SetOffset(key Key, offset int64) error {
 	return errors.New("method not supported for this implementation")
 }
 
@@ -199,7 +187,7 @@ func (fkai *fixedKeyArrayIndex) GetKeys() []Key {
 	return keys
 }
 
-func (fkai *fixedKeyArrayIndex) Encode(_ io.Writer) error {
+func (fkai *fixedKeyArrayIndex) Encode(writer io.Writer) error {
 	//TODO
 	return nil
 }

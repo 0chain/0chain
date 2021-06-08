@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/0chain/gorocksdb"
-
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gorocksdb"
 )
 
 func panicf(format string, args ...interface{}) {
