@@ -130,6 +130,7 @@ type newAllocationRequest struct {
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
+	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
 }
 
 // storageAllocation from the request
@@ -145,6 +146,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
+	sa.DiverseBlobbers = nar.DiversifyBlobbers
 	return
 }
 
@@ -292,11 +294,20 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 			return "", common.NewError("allocation_creation_failed",
 				err.Error())
 		}
+		// removed pre selected blobbers from list
+		for _, preferredBlobber := range blobberNodes {
+			for i, blobber := range list {
+				if blobber.BaseURL == preferredBlobber.BaseURL {
+					list = append(list[:i], list[i+1:]...)
+					break
+				}
+			}
+		}
 	}
 
-	if len(blobberNodes) > size {
+	if len(blobberNodes) < size {
 		if sa.DiverseBlobbers {
-			blobberNodes = sa.diversifyBlobbers(blobberNodes, size)
+			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
 		} else {
 			var seed int64
 			if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
