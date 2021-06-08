@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 	"math"
 	"math/bits"
+	"strings"
+	"time"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -271,11 +271,30 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	return // nil
 }
 
+const (
+	MaxLatitude  = 90
+	MinLatitude  = -90
+	MaxLongitude = 180
+	MinLongitude = -180
+)
+
 // Move to the core, in case of multi-entity use of geo data
 type StorageNodeGeolocation struct {
-	Latitude float64 `json:"latitude"`
+	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	// reserved / Accuracy float64 `mapstructure:"accuracy"`
+}
+
+func (sng StorageNodeGeolocation) validate() error {
+	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
+		return common.NewErrorf("out_of_range_geolocation",
+			"latitude %f should be in range [-90, 90]", sng.Latitude)
+	}
+	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
+		return common.NewErrorf("out_of_range_geolocation",
+			"latitude %f should be in range [-180, 180]", sng.Longitude)
+	}
+	return nil
 }
 
 // StorageNode represents Blobber configurations.
@@ -289,7 +308,7 @@ type StorageNode struct {
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
 	PublicKey       string                 `json:"-"`
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakePoolSettings    `json:"stake_pool_settings"`
+	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
 }
 
 // validate the blobber configurations
@@ -305,6 +324,11 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		node.Self.Host != "localhost" {
 		return errors.New("invalid blobber base url")
 	}
+
+	if err := sn.Geolocation.validate(); err != nil {
+		return err
+	}
+
 	return
 }
 
@@ -685,7 +709,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 			var subset []int
 
 			for object := uint(0); object < length; object++ {
-				if (subsetBits >> object) & 1 == 1 {
+				if (subsetBits>>object)&1 == 1 {
 					subset = append(subset, set[object])
 				}
 			}
@@ -697,7 +721,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 	// thanks to @cdipaolo
 	distance := func(geoloc1, geoloc2 StorageNodeGeolocation) float64 {
 		hsin := func(theta float64) float64 {
-			return math.Pow(math.Sin(theta / 2), 2)
+			return math.Pow(math.Sin(theta/2), 2)
 		}
 
 		var la1, lo1, la2, lo2 float64
@@ -706,7 +730,7 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 		la2 = geoloc2.Latitude * math.Pi / 180
 		lo2 = geoloc2.Longitude * math.Pi / 180
 
-		h := hsin(la2 - la1) + math.Cos(la1) * math.Cos(la2) * hsin(lo2 - lo1)
+		h := hsin(la2-la1) + math.Cos(la1)*math.Cos(la2)*hsin(lo2-lo1)
 
 		return math.Asin(math.Sqrt(h))
 	}
@@ -729,12 +753,12 @@ func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (d
 
 		// calculate distance for the combination
 		combPairs := combinations(comb, 2)
-		for _, combPair := range(combPairs) {
+		for _, combPair := range combPairs {
 			d += distance(list[combPair[0]].Geolocation, list[combPair[1]].Geolocation)
 		}
 
 		// update the max distance value
-		if (d > maxD) {
+		if d > maxD {
 			maxD = d
 			maxDIndex = i
 		}

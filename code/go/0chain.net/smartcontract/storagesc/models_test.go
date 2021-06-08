@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
@@ -124,23 +125,19 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 	type args struct {
-		params []int
-		size int
+		params []*StorageNode
+		size   int
 	}
 
 	type want struct {
-		params []int
+		params []*StorageNode
 	}
 
-	var params = []*StorageNode{
-		&StorageNode{Geolocation:
-			StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
-		&StorageNode{Geolocation:
-			StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}}, // Cape Town
-		&StorageNode{Geolocation:
-			StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}}, // St Petersburg
-		&StorageNode{Geolocation:
-			StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}}, // Kaohsiung City
+	var locations = []*StorageNode{
+		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
+		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}},  // Cape Town
+		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}},   // St Petersburg
+		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}},  // Kaohsiung City
 	}
 
 	tests := []struct {
@@ -151,31 +148,49 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 		{
 			name: "OK optimal geo diversification (2 of 3)",
 			args: args{
-				params: []int{0, 1, 2},
-				size: 2,
+				params: []*StorageNode{locations[0], locations[1], locations[2]},
+				size:   2,
 			},
 			want: want{
-				params: []int{0, 1},
+				params: []*StorageNode{locations[0], locations[1]},
 			},
 		},
 		{
 			name: "OK optimal geo diversification (3 of 4)",
 			args: args{
-				params: []int{0, 1, 2, 3},
-				size: 3,
+				params: []*StorageNode{locations[0], locations[1], locations[2], locations[3]},
+				size:   3,
 			},
 			want: want{
-				params: []int{0, 1, 3},
+				params: []*StorageNode{locations[0], locations[1], locations[3]},
 			},
 		},
 		{
 			name: "OK optimal geo diversification not applied",
 			args: args{
-				params: []int{1},
+				params: []*StorageNode{locations[1]},
+				size:   2,
+			},
+			want: want{
+				params: []*StorageNode{locations[1]},
+			},
+		},
+		{
+			name: "OK zero nodes",
+			args: args{
+				params: []*StorageNode{
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+				},
 				size: 2,
 			},
 			want: want{
-				params: []int{1},
+				params: []*StorageNode{
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+					{Geolocation: StorageNodeGeolocation{Latitude: 0.0, Longitude: 0.0}},
+				},
 			},
 		},
 	}
@@ -189,18 +204,10 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 				DiverseBlobbers: len(tt.args.params) > len(tt.want.params),
 			}
 
-			var argsBlobbers []*StorageNode
-			for _, v := range tt.args.params {
-				argsBlobbers = append(argsBlobbers, params[v])
+			got := sa.diversifyBlobbers(tt.args.params, tt.args.size)
+			for i, blobber := range got {
+				require.EqualValues(t, *tt.want.params[i], *blobber)
 			}
-
-			var wantBlobbers []*StorageNode
-			for _, v := range tt.want.params {
-				wantBlobbers = append(wantBlobbers, params[v])
-			}
-
-			got := sa.diversifyBlobbers(argsBlobbers, tt.args.size)
-			assert.Equal(t, got, wantBlobbers)
 		})
 	}
 }

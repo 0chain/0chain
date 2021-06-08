@@ -294,19 +294,17 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		}
 	}
 
-	// randomize blobber nodes
-	if len(blobberNodes) < size {
-		var seed int64
-		if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
-			return "", common.NewError("allocation_creation_failed",
-				"Failed to create seed for randomizeNodes")
-		}
-		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
-	}
-
-	// diversify blobber nodes
 	if len(blobberNodes) > size {
-		blobberNodes = sa.diversifyBlobbers(blobberNodes, size)
+		if sa.DiverseBlobbers {
+			blobberNodes = sa.diversifyBlobbers(blobberNodes, size)
+		} else {
+			var seed int64
+			if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
+				return "", common.NewError("allocation_creation_failed",
+					"Failed to create seed for randomizeNodes")
+			}
+			blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
+		}
 	}
 
 	blobberNodes = blobberNodes[:size]
