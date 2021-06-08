@@ -3,7 +3,6 @@ package memorystore
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"time"
 
@@ -15,79 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/* Redis host environment variables
-
-
- */
-/*DefaultPool - the default redis pool against a service (host) named redis */
-var DefaultPool *redis.Pool
-
 var connID atomic.Int64
-
-/*NewPool - create a new redis pool accessible at the given address */
-func NewPool(host string, port int) *redis.Pool {
-	var address string
-	if os.Getenv("DOCKER") != "" {
-		address = fmt.Sprintf("%v:6379", host)
-	} else {
-		address = fmt.Sprintf("127.0.0.1:%v", port)
-	}
-	return &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", address)
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	}
-}
-
-type dbpool struct {
-	ID     string
-	CtxKey common.ContextKey
-	Pool   *redis.Pool
-}
-
-var pools = make(map[string]*dbpool)
-
-func InitDefaultPool(host string, port int) {
-	DefaultPool = NewPool(host, port)
-	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
-}
-
-func getConnectionCtxKey(dbid string) common.ContextKey {
-	if dbid == "" {
-		return CONNECTION
-	}
-	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
-}
-
-/*AddPool - add a database pool to the repository of db pools */
-func AddPool(dbid string, pool *redis.Pool) {
-	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-	pools[dbid] = dbpool
-}
-
-func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
-	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
-	}
-	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
-}
-
-func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
-	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
-	}
-	return dbpool
-}
 
 /*GetConnection - returns a connection from the Pool
 * Should always use right after getting the connection to avoid leaks
@@ -96,6 +23,13 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 func GetConnection() *Conn {
 	id := connID.Add(1)
 	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now(), ID: id, Pool: DefaultPool}
+}
+
+func getConnectionCtxKey(dbid string) common.ContextKey {
+	if dbid == "" {
+		return CONNECTION
+	}
+	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
 }
 
 /*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
@@ -125,7 +59,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	if dbid == "" {
 		return GetConnection()
 	}
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	id := connID.Add(1)
 	return &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), Pool: dbpool.Pool, ID: id}
 }
@@ -188,7 +122,7 @@ func GetCon(ctx context.Context) *Conn {
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return WithConnection(ctx)
 	}
@@ -214,7 +148,7 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return GetCon(ctx)
 	}

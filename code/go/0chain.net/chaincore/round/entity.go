@@ -11,15 +11,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
 )
 
 const (

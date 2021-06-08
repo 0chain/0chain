@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 //KeySpace - the keyspace usef for the 0chain data
