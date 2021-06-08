@@ -287,7 +287,7 @@ This gives the start timestamps that can be used to correlate the events and the
 
 ### Prerequisites
 
-Docker and Git must be installed in order to run the tests .
+Docker and Git must be installed to run the tests .
 
 Install Git using the following command:
 
@@ -381,15 +381,15 @@ ok      0chain.net/chaincore/chain      0.254s  coverage: 6.0% of statements
 ok      0chain.net/chaincore/client     0.328s  coverage: 30.8% of statements
 ?       0chain.net/chaincore/config     [no test files]
 ?       0chain.net/chaincore/diagnostics        [no test files]
-ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of state                                                                              ments
+ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of statements
 ok      0chain.net/chaincore/node       0.011s  coverage: 8.9% of statements
 ok      0chain.net/chaincore/round      0.048s  coverage: 97.1% of statements
-ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statem                                                                              ents
-ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%                                                                               of statements
+ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements                                                                             
+ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%                                                                               
 ?       0chain.net/chaincore/state      [no test files]
-ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem                                                                              ents
+ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem                                                                             
 ok      0chain.net/chaincore/tokenpool  10.034s coverage: 100.0% of statements
-ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statem                                                                              ents [no tests to run]
+ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statements [no tests to run]
 ok      0chain.net/chaincore/wallet     6.600s  coverage: 40.0% of statements
 ?       0chain.net/conductor    [no test files]
 ?       0chain.net/conductor/conductor  [no test files]
@@ -408,7 +408,7 @@ ok      0chain.net/core/encryption      1.290s  coverage: 95.3% of statements
 ok      0chain.net/core/logging 0.069s  coverage: 96.5% of statements
 ok      0chain.net/core/memorystore     0.281s  coverage: 93.8% of statements
 ?       0chain.net/core/metric  [no test files]
-ok      0chain.net/core/persistencestore        0.036s  coverage: 73.5% of state                                                                              ments
+ok      0chain.net/core/persistencestore        0.036s  coverage: 73.5% of statements
 ok      0chain.net/core/util    22.237s coverage: 76.5% of statements
 ok      0chain.net/miner        0.303s  coverage: 8.0% of statements
 ?       0chain.net/miner/miner  [no test files]
@@ -422,14 +422,14 @@ ok      0chain.net/sharder/blockstore   0.045s  coverage: 79.7% of statements
 ?       0chain.net/sharder/sharder      [no test files]
 ?       0chain.net/smartcontract        [no test files]
 ?       0chain.net/smartcontract/faucetsc       [no test files]
-ok      0chain.net/smartcontract/interestpoolsc 0.030s  coverage: 45.0% of state                                                                              ments
-ok      0chain.net/smartcontract/minersc        0.104s  coverage: 30.9% of state                                                                              ments
+ok      0chain.net/smartcontract/interestpoolsc 0.030s  coverage: 45.0% of statements
+ok      0chain.net/smartcontract/minersc        0.104s  coverage: 30.9% of statements
 ?       0chain.net/smartcontract/multisigsc     [no test files]
 ?       0chain.net/smartcontract/multisigsc/test        [no test files]
 ?       0chain.net/smartcontract/setupsc        [no test files]
-ok      0chain.net/smartcontract/storagesc      1.877s  coverage: 58.8% of state                                                                              ments
-ok      0chain.net/smartcontract/vestingsc      0.034s  coverage: 81.8% of state                                                                              ments
-ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of state                                                                              ments
+ok      0chain.net/smartcontract/storagesc      1.877s  coverage: 58.8% of statements
+ok      0chain.net/smartcontract/vestingsc      0.034s  coverage: 81.8% of statements
+ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of statements
 
 ```
 
@@ -613,7 +613,7 @@ tests:
 
 ### Prerequisites
 
-Docker and Git must be installed in order to run the tests .
+Docker and Git must be installed to run the tests .
 
 Install Git using the following command:
 
@@ -712,7 +712,7 @@ git clone https://github.com/0chain/zwalletcli.git
 git clone https://github.com/0chain/0dns.git
 ```
 
-Confirm the directories
+Confirm whether all the cloned directories exists.
 
 ```
 0chain/
@@ -734,16 +734,16 @@ Install zwalletcli
 (cd zwalletcli && make install)
 ```
 
-Patch 0dns
+Patch 0dns for the latest 0chain network configuration .  
 
 ```
 (cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
 (cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
 ```
 
-Patch blobbers
+Patch blobbers for the latest blobber tests
 
-```
+ ```
 (cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
 (cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
 ```
