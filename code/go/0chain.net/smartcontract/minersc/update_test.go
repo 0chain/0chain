@@ -6,22 +6,8 @@ import (
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func assertErrMsg(t *testing.T, err error, msg string) {
-	t.Helper()
-
-	if msg == "" {
-		assert.Nil(t, err)
-		return
-	}
-
-	if assert.NotNil(t, err) {
-		assert.Equal(t, msg, err.Error())
-	}
-}
 
 func getGlobalNodeTest() (gn *GlobalNode) {
 	const pfx = "smart_contracts.minersc."

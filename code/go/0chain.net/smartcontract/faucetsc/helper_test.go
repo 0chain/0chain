@@ -13,8 +13,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-
-	"github.com/spf13/viper"
+	"0chain.net/core/viper"
 
 	"github.com/stretchr/testify/require"
 )

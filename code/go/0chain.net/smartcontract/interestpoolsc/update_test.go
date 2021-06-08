@@ -95,6 +95,7 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			balances.txn = ownerTxn
 			_, err = ipsc.updateVariables(ownerTxn, gn, tc.request.Encode(), balances)
+			require.NoError(t, err)
 			tc.requireFunc(gn, originalGn)
 		})
 	}
@@ -112,7 +113,7 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 				},
 			},
 			func(gn, request *GlobalNode) {
-				require.Equal(t, gn.MaxMint, originalGn.MaxMint)
+				require.Equal(t, gn.MaxMint, request.MaxMint)
 			},
 		},
 		{
@@ -123,7 +124,7 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 				},
 			},
 			func(gn, request *GlobalNode) {
-				require.Equal(t, gn.MinLock, originalGn.MinLock)
+				require.Equal(t, gn.MinLock, request.MinLock)
 			},
 		},
 		{
@@ -134,7 +135,7 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 				},
 			},
 			func(gn, request *GlobalNode) {
-				require.Equal(t, gn.APR, originalGn.APR)
+				require.Equal(t, gn.APR, request.APR)
 			},
 		},
 		{
@@ -144,7 +145,7 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 				MinLockPeriod:    7 * time.Hour,
 			},
 			func(gn, request *GlobalNode) {
-				require.Equal(t, gn.MinLockPeriod, originalGn.MinLockPeriod)
+				require.Equal(t, gn.MinLockPeriod, request.MinLockPeriod)
 			},
 		},
 	}
@@ -152,14 +153,16 @@ func TestInterestPoolSmartContractUpdate(t *testing.T) {
 		t.Run(tc.title, func(t *testing.T) {
 			balances.txn = ownerTxn
 			_, err = ipsc.updateVariables(ownerTxn, gn, tc.request.Encode(), balances)
-			tc.requireFunc(gn, originalGn)
+			require.NoError(t, err)
+			gn = ipsc.getGlobalNode(balances, "")
+			tc.requireFunc(gn, tc.request)
 		})
 	}
 
 }
 
 func TestInterestPoolSmartContractValidateGlobalNode(t *testing.T) {
-	for i, tt := range []struct {
+	for _, tt := range []struct {
 		node GlobalNode
 		err  string
 	}{
@@ -172,7 +175,6 @@ func TestInterestPoolSmartContractValidateGlobalNode(t *testing.T) {
 		// max mint too low
 		{GlobalNode{"", &SimpleGlobalNode{-1, 0, 1, 0.1}, 1}, "failed to validate global node: max mint(-1) is too low"},
 	} {
-		t.Log(i)
 		err := tt.node.validate()
 		require.Error(t, err)
 		require.EqualError(t, err, tt.err)

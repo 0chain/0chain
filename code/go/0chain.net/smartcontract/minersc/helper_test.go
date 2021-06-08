@@ -20,11 +20,11 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/core/logging"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/require"

@@ -6,22 +6,8 @@ import (
 
 	"0chain.net/chaincore/transaction"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func assertErrMsg(t *testing.T, err error, msg string) {
-	t.Helper()
-
-	if msg == "" {
-		assert.Nil(t, err)
-		return
-	}
-
-	if assert.NotNil(t, err) {
-		assert.Equal(t, msg, err.Error())
-	}
-}
 
 func Test_getConfig(t *testing.T) {
 	var (
@@ -30,7 +16,7 @@ func Test_getConfig(t *testing.T) {
 		configured = setConfig(t, balances)
 		gn, _      = ssc.getConfig(balances, false)
 	)
-	assert.EqualValues(t, configured, gn)
+	require.Equal(t, configured, gn)
 }
 
 func TestMinerSmartContractUpdate(t *testing.T) {

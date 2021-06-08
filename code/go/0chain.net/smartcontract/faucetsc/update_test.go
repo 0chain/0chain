@@ -225,7 +225,7 @@ func TestFaucetSmartContractUpdate(t *testing.T) {
 
 func TestFaucetSmartContractValidateGlobalNode(t *testing.T) {
 	now := time.Now()
-	for i, tt := range []struct {
+	for _, tt := range []struct {
 		node GlobalNode
 		err  string
 	}{
@@ -242,7 +242,6 @@ func TestFaucetSmartContractValidateGlobalNode(t *testing.T) {
 		// global periodic limit too low
 		{GlobalNode{"", 2, 3, 4, 5, 2000000000, 1000000000, 0, now}, "failed to validate global node: global reset(1s) is less than individual reset(2s)"},
 	} {
-		t.Log(i)
 		err := tt.node.validate()
 		require.Error(t, err)
 		require.EqualError(t, err, tt.err)

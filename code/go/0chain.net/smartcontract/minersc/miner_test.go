@@ -156,7 +156,8 @@ func deleteMiner(t *testing.T, balances *testBalances, msc *MinerSmartContract, 
 		if errMessage == "" {
 			require.NoError(t, err, "delete_miner error")
 		} else {
-			assertErrMsg(t, err, errMessage)
+			require.Error(t, err)
+			require.EqualError(t, err, errMessage)
 		}
 
 	})
@@ -176,7 +177,8 @@ func deleteSharder(t *testing.T, balances *testBalances, msc *MinerSmartContract
 		if errMessage == "" {
 			require.NoError(t, err, "delete_sharder error")
 		} else {
-			assertErrMsg(t, err, errMessage)
+			require.Error(t, err)
+			require.EqualError(t, err, errMessage)
 		}
 	})
 }
