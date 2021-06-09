@@ -1252,6 +1252,10 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		lfb = mc.GetLatestFinalizedBlock()
 		tk  = mc.GetLatestLFBTicket(ctx)
 	)
+	
+	if lfb == nil || tk == nil {
+		return
+	}
 
 	if lfb.Round <= tk.Round {
 		mc.kickFinalization(ctx)
