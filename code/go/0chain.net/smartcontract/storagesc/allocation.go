@@ -347,11 +347,10 @@ func (sc *StorageSmartContract) selectBlobbers(
 	// number of blobbers required
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
-	var bsize = (sa.Size + int64(size-1)) / int64(size)
-	// filtered list
+	var bSize = (sa.Size + int64(size-1)) / int64(size)
 	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-		bsize, filterHealthyBlobbers(creationDate),
-		sc.filterBlobbersByFreeSpace(creationDate, bsize, balances))
+		bSize, filterHealthyBlobbers(creationDate),
+		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
 		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
@@ -361,33 +360,32 @@ func (sc *StorageSmartContract) selectBlobbers(
 	sa.Stats = &StorageAllocationStats{}
 
 	var blobberNodes []*StorageNode
-	preferredBlobbersSize := len(sa.PreferredBlobbers)
-	if preferredBlobbersSize > 0 {
+	if len(sa.PreferredBlobbers) > 0 {
 		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
 		if err != nil {
 			return nil, 0, common.NewError("allocation_creation_failed",
 				err.Error())
 		}
-		// removed pre selected blobbers from list
-		for _, preferredBlobber := range blobberNodes {
-			for i, blobber := range list {
-				if blobber.BaseURL == preferredBlobber.BaseURL {
-					list = append(list[:i], list[i+1:]...)
-					break
-				}
-			}
-		}
 	}
 
 	if len(blobberNodes) < size {
 		if sa.DiverseBlobbers {
+			// removed pre selected blobbers from list
+			for _, preferredBlobber := range blobberNodes {
+				for i, blobber := range list {
+					if blobber.BaseURL == preferredBlobber.BaseURL {
+						list = append(list[:i], list[i+1:]...)
+						break
+					}
+				}
+			}
 			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
 		} else {
 			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
 		}
 	}
 
-	return blobberNodes[:size], bsize, nil
+	return blobberNodes[:size], bSize, nil
 }
 
 // update allocation request

@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,13 +20,200 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//
-// use:
-//
-//      go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
-//
-// to test and generate coverage html page
-//
+func TestSelectBlobbers(t *testing.T) {
+	const (
+		randomSeed           = 1
+		mockURL              = "mock_url"
+		mockOwner            = "mock owner"
+		mockPublicKey        = "mock public key"
+		mockBlobberId        = "mock_blobber_id"
+		mockPoolId           = "mock pool id"
+		mockMinPrice         = 0
+		confTimeUnit         = 720 * time.Hour
+		confMinAllocSize     = 1024
+		confMinAllocDuration = 5 * time.Minute
+		mockMaxOffDuration   = 744 * time.Hour
+	)
+	var mockStatke = zcnToBalance(100)
+	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
+	var mockMaxPrice = zcnToBalance(100.0)
+	var mockReadPrice = zcnToBalance(0.01)
+	var mockWritePrice = zcnToBalance(0.10)
+	var now = common.Timestamp(1000000)
+
+	type args struct {
+		diverseBlobbers      bool
+		numBlobbers          int
+		numPreferredBlobbers int
+		dataShards           int
+		parityShards         int
+		allocSize            int64
+		expiration           common.Timestamp
+	}
+	type want struct {
+		blobberIds []int
+		err        bool
+		errMsg     string
+	}
+
+	makeMockBlobber := func(index int) *StorageNode {
+		return &StorageNode{
+			ID:              mockBlobberId + strconv.Itoa(index),
+			BaseURL:         mockURL + strconv.Itoa(index),
+			Capacity:        mockBlobberCapacity,
+			LastHealthCheck: now - blobberHealthTime + 1,
+			Terms: Terms{
+				ReadPrice:        mockReadPrice,
+				WritePrice:       mockWritePrice,
+				MaxOfferDuration: mockMaxOffDuration,
+			},
+		}
+	}
+
+	setup := func(
+		t *testing.T, args args,
+	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
+		var balances = &mocks.StateContextI{}
+		var ssc = StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		var sa = StorageAllocation{
+			PreferredBlobbers: []string{},
+			DataShards:        args.dataShards,
+			ParityShards:      args.parityShards,
+			Owner:             mockOwner,
+			OwnerPublicKey:    mockPublicKey,
+			Expiration:        args.expiration,
+			Size:              args.allocSize,
+			ReadPriceRange:    PriceRange{mockMinPrice, mockMaxPrice},
+			WritePriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
+			DiverseBlobbers:   args.diverseBlobbers,
+		}
+		for i := 0; i < args.numPreferredBlobbers; i++ {
+			sa.PreferredBlobbers = append(sa.PreferredBlobbers, mockURL+strconv.Itoa(i))
+		}
+		var sNodes = StorageNodes{}
+		for i := 0; i < args.numBlobbers; i++ {
+			sNodes.Nodes.add(makeMockBlobber(i))
+			sp := stakePool{
+				Pools: map[string]*delegatePool{
+					mockPoolId: {},
+				},
+			}
+			sp.Pools[mockPoolId].Balance = mockStatke
+			balances.On(
+				"GetTrieNode",
+				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)),
+			).Return(&sp, nil).Once()
+		}
+
+		var conf = &scConfig{
+			TimeUnit:         confTimeUnit,
+			MinAllocSize:     confMinAllocSize,
+			MinAllocDuration: confMinAllocDuration,
+		}
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+
+		return ssc, sa, sNodes, balances
+	}
+
+	testCases := []struct {
+		name string
+		args args
+		want want
+	}{
+		{
+			name: "test_diverse_blobbers",
+			args: args{
+				diverseBlobbers:      true,
+				numBlobbers:          6,
+				numPreferredBlobbers: 2,
+				dataShards:           5,
+				allocSize:            confMinAllocSize,
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
+			},
+			want: want{
+				blobberIds: []int{0, 1, 2, 3, 4},
+			},
+		},
+		{
+			name: "test_randomised_blobbers",
+			args: args{
+				diverseBlobbers:      false,
+				numBlobbers:          6,
+				numPreferredBlobbers: 2,
+				dataShards:           5,
+				allocSize:            confMinAllocSize,
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
+			},
+			want: want{
+				blobberIds: []int{0, 1, 5, 3, 2},
+			},
+		},
+		{
+			name: "test_excess_preferred_blobbers",
+			args: args{
+				diverseBlobbers:      false,
+				numBlobbers:          6,
+				numPreferredBlobbers: 8,
+				dataShards:           5,
+				allocSize:            confMinAllocSize,
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
+			},
+			want: want{
+				err:    true,
+				errMsg: "allocation_creation_failed: invalid preferred blobber URL",
+			},
+		},
+		{
+			name: "test_all_preferred_blobbers",
+			args: args{
+				diverseBlobbers:      false,
+				numBlobbers:          6,
+				numPreferredBlobbers: 6,
+				dataShards:           4,
+				allocSize:            confMinAllocSize,
+				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
+			},
+			want: want{
+				blobberIds: []int{0, 1, 2, 3},
+			},
+		},
+	}
+	for _, tt := range testCases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ssc, sa, blobbers, balances := setup(t, tt.args)
+
+			outBlobbers, outSize, err := ssc.selectBlobbers(
+				now, blobbers, &sa, randomSeed, balances,
+			)
+
+			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
+			require.EqualValues(t, tt.want.err, err != nil)
+			if err != nil {
+				require.EqualValues(t, tt.want.errMsg, err.Error())
+				return
+			}
+
+			size := int64(sa.DataShards + sa.ParityShards)
+			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
+
+			for _, blobber := range outBlobbers {
+				found := false
+				for _, index := range tt.want.blobberIds {
+					if mockBlobberId+strconv.Itoa(index) == blobber.ID {
+						require.EqualValues(t, makeMockBlobber(index), blobber)
+						found = true
+						break
+					}
+				}
+				require.True(t, found)
+			}
+		})
+	}
+}
 
 func TestStorageSmartContract_getAllocation(t *testing.T) {
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
