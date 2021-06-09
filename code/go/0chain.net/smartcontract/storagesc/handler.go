@@ -85,58 +85,21 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
-	}
-
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = ssc.getBlobbersList(balances)
 	if err != nil || len(allBlobbersList.Nodes) == 0 {
 		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
 	}
 
-	var sa = request.storageAllocation() // (set fields, including expiration)
-	sa.TimeUnit = conf.TimeUnit          // keep the initial time unit
+	var sa = request.storageAllocation()
 
-	if err = sa.validate(creationDate, conf); err != nil {
-		return "", common.NewErrBadRequest("allocation min lock failed", err.Error())
+	blobberNodes, bSize, err := ssc.selectBlobbers(
+		creationDate, *allBlobbersList, sa, int64(creationDate), balances)
+	if err != nil {
+		return "", common.NewErrInternal("selecting blobbers", err.Error())
 	}
 
-	var (
-		// number of blobbers required
-		size = sa.DataShards + sa.ParityShards
-		// size of allocation for a blobber
-		bsize = (sa.Size + int64(size-1)) / int64(size)
-		// filtered list
-		list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-			bsize, filterHealthyBlobbers(creationDate),
-			ssc.filterBlobbersByFreeSpace(creationDate, bsize, balances))
-	)
-
-	if len(list) < size {
-		return "", common.NewErrNoResource("not enough blobbers to honor the allocation")
-	}
-
-	sa.BlobberDetails = make([]*BlobberAllocation, 0)
-
-	var blobberNodes []*StorageNode
-	preferredBlobbersSize := len(sa.PreferredBlobbers)
-	if preferredBlobbersSize > 0 {
-		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
-		if err != nil {
-			return "", common.NewErrNoResource("can't get preferred blobbers", err.Error())
-		}
-	}
-
-	// randomize blobber nodes
-	if len(blobberNodes) < size {
-		blobberNodes = randomizeNodes(list, blobberNodes, size, int64(creationDate))
-	}
-
-	blobberNodes = blobberNodes[:size]
-
-	var gbSize = sizeInGB(bsize) // size in gigabytes
+	var gbSize = sizeInGB(bSize)
 	var minLockDemand state.Balance
 	for _, b := range blobberNodes {
 		minLockDemand += b.Terms.minLockDemand(gbSize,
