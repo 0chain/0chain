@@ -3,8 +3,8 @@ package memorystore
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"0chain.net/core/common"
@@ -15,79 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/* Redis host environment variables
-
-
- */
-/*DefaultPool - the default redis pool against a service (host) named redis */
-var DefaultPool *redis.Pool
-
 var connID atomic.Int64
-
-/*NewPool - create a new redis pool accessible at the given address */
-func NewPool(host string, port int) *redis.Pool {
-	var address string
-	if os.Getenv("DOCKER") != "" {
-		address = fmt.Sprintf("%v:6379", host)
-	} else {
-		address = fmt.Sprintf("127.0.0.1:%v", port)
-	}
-	return &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", address)
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	}
-}
-
-type dbpool struct {
-	ID     string
-	CtxKey common.ContextKey
-	Pool   *redis.Pool
-}
-
-var pools = make(map[string]*dbpool)
-
-func InitDefaultPool(host string, port int) {
-	DefaultPool = NewPool(host, port)
-	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
-}
-
-func getConnectionCtxKey(dbid string) common.ContextKey {
-	if dbid == "" {
-		return CONNECTION
-	}
-	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
-}
-
-/*AddPool - add a database pool to the repository of db pools */
-func AddPool(dbid string, pool *redis.Pool) {
-	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-	pools[dbid] = dbpool
-}
-
-func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
-	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
-	}
-	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
-}
-
-func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
-	dbid := entityMetadata.GetDB()
-	dbpool, ok := pools[dbid]
-	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
-	}
-	return dbpool
-}
 
 /*GetConnection - returns a connection from the Pool
 * Should always use right after getting the connection to avoid leaks
@@ -96,6 +24,13 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 func GetConnection() *Conn {
 	id := connID.Add(1)
 	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now(), ID: id, Pool: DefaultPool}
+}
+
+func getConnectionCtxKey(dbid string) common.ContextKey {
+	if dbid == "" {
+		return CONNECTION
+	}
+	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
 }
 
 /*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
@@ -125,7 +60,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	if dbid == "" {
 		return GetConnection()
 	}
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	id := connID.Add(1)
 	return &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), Pool: dbpool.Pool, ID: id}
 }
@@ -140,23 +75,57 @@ type Conn struct {
 	Pool *redis.Pool
 }
 
-type connections map[common.ContextKey]*Conn
+type connections struct {
+	cons  map[common.ContextKey]*Conn
+	mutex *sync.RWMutex
+}
+
+func newConnections() connections {
+	return connections{
+		cons:  make(map[common.ContextKey]*Conn),
+		mutex: &sync.RWMutex{},
+	}
+}
+
+func (c *connections) set(key common.ContextKey, conn *Conn) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.cons[key] = conn
+}
+
+func (c *connections) get(key common.ContextKey) (*Conn, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	conn, ok := c.cons[key]
+	return conn, ok
+}
+
+func (c *connections) iterateCons(f func(*Conn)) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, conn := range c.cons {
+		f(conn)
+	}
+}
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
 	cons := ctx.Value(CONNECTION)
 	if cons == nil {
-		cMap := make(connections)
-		cMap[CONNECTION] = GetConnection()
+		cMap := newConnections()
+		cMap.set(CONNECTION, GetConnection())
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
 		panic("invalid setup")
 	}
-	_, ok = cMap[CONNECTION]
+	_, ok = cMap.get(CONNECTION)
 	if !ok {
-		cMap[CONNECTION] = GetConnection()
+		cMap.set(CONNECTION, GetConnection())
 	}
 	return ctx
 
@@ -170,40 +139,40 @@ func GetCon(ctx context.Context) *Conn {
 	cons := ctx.Value(CONNECTION)
 	if cons == nil {
 		con := GetConnection()
-		cMap := make(connections)
-		cMap[CONNECTION] = con
+		cMap := newConnections()
+		cMap.set(CONNECTION, con)
 		return con
 	}
 	cMap, ok := cons.(connections)
 	if !ok {
 		panic("invalid setup")
 	}
-	con, ok := cMap[CONNECTION]
+	con, ok := cMap.get(CONNECTION)
 	if !ok {
 		con = GetConnection()
-		cMap[CONNECTION] = con
+		cMap.set(CONNECTION, con)
 	}
 	return con
 }
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return WithConnection(ctx)
 	}
 	c := ctx.Value(CONNECTION)
 	if c == nil {
-		cMap := make(connections)
+		cMap := newConnections()
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
-	_, ok = cMap[dbpool.CtxKey]
+	_, ok = cMap.get(dbpool.CtxKey)
 	if !ok {
 		id := connID.Add(1)
-		cMap[dbpool.CtxKey] = &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool}
+		cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
 	}
 	return ctx
 
@@ -214,7 +183,7 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
-	dbpool := getdbpool(entityMetadata)
+	dbpool := pools.getDbPool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return GetCon(ctx)
 	}
@@ -224,10 +193,10 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	}
 	cMap, ok := c.(connections)
 
-	con, ok := cMap[dbpool.CtxKey]
+	con, ok := cMap.get(dbpool.CtxKey)
 	if !ok {
 		con = GetEntityConnection(entityMetadata)
-		cMap[dbpool.CtxKey] = con
+		cMap.set(dbpool.CtxKey, con)
 	}
 	return con
 }
@@ -240,10 +209,10 @@ func Close(ctx context.Context) {
 		return
 	}
 	cMap := c.(connections)
-	for _, con := range cMap {
+	cMap.iterateCons(func(con *Conn) {
 		err := con.Close()
 		if err != nil {
 			Logger.Error("Connection not closed", zap.Error(err))
 		}
-	}
+	})
 }
