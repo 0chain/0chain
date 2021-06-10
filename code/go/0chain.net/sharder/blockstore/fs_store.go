@@ -8,18 +8,16 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/minio/minio-go"
 	"go.uber.org/zap"
 
-	"github.com/minio/minio-go"
-	"github.com/spf13/viper"
-
-	"0chain.net/chaincore/chain"
-	. "0chain.net/core/logging"
-
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const fileExt = ".dat.zlib"

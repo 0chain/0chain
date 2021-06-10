@@ -198,7 +198,7 @@ func (msc *MinerSmartContract) configsHandler(ctx context.Context,
 
 	var gn *GlobalNode
 	if gn, err = getGlobalNode(balances); err != nil {
-		return
+		return nil, common.NewErrInternal(err.Error())
 	}
 
 	var conf = new(Config)

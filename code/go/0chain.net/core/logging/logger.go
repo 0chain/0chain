@@ -3,11 +3,11 @@ package logging
 import (
 	"os"
 
-	"go.uber.org/zap/zapcore"
-
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
+
+	"0chain.net/core/viper"
 )
 
 var (

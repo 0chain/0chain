@@ -21,8 +21,8 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/mocks"
 	"0chain.net/core/util"
-	"0chain.net/mocks"
 )
 
 func init() {
@@ -162,14 +162,15 @@ func TestNewBlock(t *testing.T) {
 			want: func() *Block {
 				b := datastore.GetEntityMetadata("block").Instance().(*Block)
 				b.Round = r
+				b.ChainID = ""
 				return b
 			}(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBlock(tt.args.chainID, tt.args.round); !assert.Equal(t, got, tt.want) {
-				t.Errorf("NewBlock() = %v, want %v", got, tt.want)
+			if got := NewBlock(tt.args.chainID, tt.args.round); !assert.Equal(t, tt.want, got) {
+				t.Errorf("NewBlock() = %v, want %v", tt.want, got)
 			}
 		})
 	}
@@ -1315,7 +1316,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 				if len(b.PrevBlockVerificationTickets) == 0 {
 					b.PrevBlockVerificationTickets = prevB.GetVerificationTickets()
 				}
-
 				return b
 			}(),
 		},
@@ -1511,7 +1511,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				pndb := util.NewMemoryNodeDB()
 				rootHash := prevB.ClientStateHash
 				b.CreateState(pndb, rootHash)
-				b.ClientState.SetRoot(rootHash)
 
 				return b
 			}(),
@@ -1550,7 +1549,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				pndb := cs.GetNodeDB()
 				rootHash := prevB.ClientStateHash
 				b.CreateState(pndb, rootHash)
-				b.ClientState.SetRoot(rootHash)
 
 				return b
 			}(),
@@ -1583,7 +1581,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				pndb := util.NewMemoryNodeDB()
 				rootHash := prevB.ClientStateHash
 				b.CreateState(pndb, rootHash)
-				b.ClientState.SetRoot(rootHash)
 
 				return b
 			}(),
@@ -1622,7 +1619,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				pndb := cs.GetNodeDB()
 				rootHash := prevB.ClientStateHash
 				b.CreateState(pndb, rootHash)
-				b.ClientState.SetRoot(rootHash)
 
 				return b
 			}(),

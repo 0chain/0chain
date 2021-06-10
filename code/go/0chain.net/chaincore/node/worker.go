@@ -8,10 +8,11 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
 )
 
 const (

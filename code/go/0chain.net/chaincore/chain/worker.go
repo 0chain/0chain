@@ -432,7 +432,7 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTrieI, round int64) (util.MerklePatriciaTrieI, error) {
 	Logger.Info("Sync round state from network...", zap.Int64("round", round))
-	mpt := util.NewMerklePatriciaTrie(state.GetNodeDB(), util.Sequence(round))
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
 	rootState := state.GetRoot()
 	mpt.SetRoot(rootState)
 

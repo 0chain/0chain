@@ -6,350 +6,14 @@ import (
 	"0chain.net/core/logging"
 	"context"
 	"fmt"
-	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
-	"os"
 	"reflect"
-	"strconv"
-	"strings"
+	"sync"
 	"testing"
 )
 
 func init() {
 	logging.InitLogging("development")
-}
-
-func initDefaultPool() error {
-	mr, err := miniredis.Run()
-	if err != nil {
-		return err
-	}
-
-	DefaultPool = &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", mr.Addr())
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	}
-
-	return nil
-}
-
-func TestNewPool(t *testing.T) {
-	mr, err := miniredis.Run()
-	if err != nil {
-		t.Fatal(err)
-	}
-	portPos := strings.Index(mr.Addr(), ":")
-	portInt, err := strconv.Atoi(mr.Addr()[portPos+1:])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	type args struct {
-		host string
-		port int
-	}
-	tests := []struct {
-		name          string
-		args          args
-		want          *redis.Pool
-		wantPanic     bool
-		wantDialCheck bool
-	}{
-		{
-			name: "Test_NewPool_OK",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-		},
-		{
-			name: "Test_NewPool_Panic",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantPanic:     true,
-			wantDialCheck: true,
-		},
-		{
-			name: "Test_NewPool_Dial_Check_OK",
-			args: args{port: portInt},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantDialCheck: true,
-		},
-		{
-			name: "Test_NewPool_OK",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-		},
-		{
-			name: "Test_NewPool_Panic",
-			args: args{port: 8080},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantPanic:     true,
-			wantDialCheck: true,
-		},
-		{
-			name: "Test_NewPool_Dial_Check_OK",
-			args: args{port: portInt},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000,
-			},
-			wantDialCheck: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			defer func() {
-				got := recover()
-				if (got != nil) != tt.wantPanic {
-					t.Errorf("GetConnectionCount() want panic  = %v, but got = %v", tt.wantPanic, got)
-				}
-			}()
-
-			got := NewPool(tt.args.host, tt.args.port)
-			if tt.wantDialCheck {
-				if _, err := got.Dial(); err != nil {
-					t.Fatal(err)
-				}
-			}
-			got.Dial = nil
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewPool() = %#v, want %#v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestNewPool_Docker(t *testing.T) {
-	if err := os.Setenv("DOCKER", "docker"); err != nil {
-		t.Fatal(err)
-	}
-
-	type args struct {
-		host string
-		port int
-	}
-	tests := []struct {
-		name string
-		args args
-		want *redis.Pool
-	}{
-		{
-			name: "Test_NewPool_OK",
-			args: args{host: "host"},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000, // max number of connections
-			},
-		},
-		{
-			name: "Test_NewPool_OK",
-			args: args{host: "host"},
-			want: &redis.Pool{
-				MaxIdle:   80,
-				MaxActive: 1000, // max number of connections
-			},
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := NewPool(tt.args.host, tt.args.port)
-			got.Dial = nil
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewPool() = %#v, want %#v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestAddPool(t *testing.T) {
-	dbid := "dbid"
-	pool := NewPool("", 8080)
-
-	type args struct {
-		dbid string
-		pool *redis.Pool
-	}
-	tests := []struct {
-		name string
-		args args
-		want map[string]*dbpool
-	}{
-		{
-			name: "Test_AddPool_OK",
-			args: args{dbid: dbid, pool: pool},
-			want: func() map[string]*dbpool {
-				p := make(map[string]*dbpool)
-				for key, value := range pools {
-					p[key] = value
-				}
-
-				p[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-				return p
-			}(),
-		},
-		{
-			name: "Test_AddPool_OK",
-			args: args{dbid: dbid, pool: pool},
-			want: func() map[string]*dbpool {
-				p := make(map[string]*dbpool)
-				for key, value := range pools {
-					p[key] = value
-				}
-
-				p[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-				return p
-			}(),
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			AddPool(tt.args.dbid, tt.args.pool)
-			if !reflect.DeepEqual(pools, tt.want) {
-				t.Errorf("AddPool() got = %v, want = %v", pools, tt.want)
-			}
-		})
-	}
-}
-
-func TestGetConnectionCount(t *testing.T) {
-	dbid := "dbid"
-	pool := NewPool("", 8080)
-	pools[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-
-	type args struct {
-		entityMetadata datastore.EntityMetadata
-	}
-	tests := []struct {
-		name      string
-		args      args
-		want      int
-		want1     int
-		wantPanic bool
-	}{
-		{
-			name:  "Test_GetConnectionCount_OK",
-			args:  args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want:  pool.ActiveCount(),
-			want1: pool.IdleCount(),
-		},
-		{
-			name:      "Test_GetConnectionCount_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-		{
-			name:  "Test_GetConnectionCount_OK",
-			args:  args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want:  pool.ActiveCount(),
-			want1: pool.IdleCount(),
-		},
-		{
-			name:      "Test_GetConnectionCount_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			defer func() {
-				got := recover()
-				if (got != nil) != tt.wantPanic {
-					t.Errorf("GetConnectionCount() want panic  = %v, but got = %v", tt.wantPanic, got)
-				}
-			}()
-
-			got, got1 := GetConnectionCount(tt.args.entityMetadata)
-			if got != tt.want {
-				t.Errorf("GetConnectionCount() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("GetConnectionCount() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func Test_getdbpool(t *testing.T) {
-	dbid := "dbid"
-	pool := NewPool("", 8080)
-	pools[dbid] = &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
-
-	type args struct {
-		entityMetadata datastore.EntityMetadata
-	}
-	tests := []struct {
-		name      string
-		args      args
-		want      *dbpool
-		wantPanic bool
-	}{
-		{
-			name: "Test_getdbpool_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
-		},
-		{
-			name:      "Test_getdbpool_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-		{
-			name: "Test_getdbpool_OK",
-			args: args{entityMetadata: &datastore.EntityMetadataImpl{DB: dbid}},
-			want: &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool},
-		},
-		{
-			name:      "Test_getdbpool_Panic",
-			args:      args{entityMetadata: &datastore.EntityMetadataImpl{DB: "unknown"}},
-			wantPanic: true,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			defer func() {
-				got := recover()
-				if (got != nil) != tt.wantPanic {
-					t.Errorf("getdbpool() want panic  = %v, but got = %v", tt.wantPanic, got)
-				}
-			}()
-
-			if got := getdbpool(tt.args.entityMetadata); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getdbpool() = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 func TestGetConnection(t *testing.T) {
@@ -489,7 +153,7 @@ func TestWithConnection(t *testing.T) {
 		},
 		{
 			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 		{
@@ -504,7 +168,7 @@ func TestWithConnection(t *testing.T) {
 		},
 		{
 			name: "Test_WithConnection_Nil_Connection_In_Ctx_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 	}
@@ -524,7 +188,7 @@ func TestWithConnection(t *testing.T) {
 			if !ok {
 				t.Error("unexpected type of ctx value")
 			}
-			gotConn, ok := gotCMap[CONNECTION]
+			gotConn, ok := gotCMap.get(CONNECTION)
 			if !ok {
 				t.Error("expected pool in c map")
 			}
@@ -566,7 +230,7 @@ func TestGetCon(t *testing.T) {
 		},
 		{
 			name: "Test_GetCon_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 		{
@@ -586,7 +250,7 @@ func TestGetCon(t *testing.T) {
 		},
 		{
 			name: "Test_GetCon_OK",
-			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, make(connections))},
+			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, newConnections())},
 			want: DefaultPool,
 		},
 	}
@@ -648,7 +312,7 @@ func TestWithEntityConnection(t *testing.T) {
 		{
 			name: "Test_WithEntityConnection_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			ctxKey: getConnectionCtxKey(anotherDbid),
@@ -669,7 +333,7 @@ func TestWithEntityConnection(t *testing.T) {
 		{
 			name: "Test_WithEntityConnection_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			ctxKey: getConnectionCtxKey(anotherDbid),
@@ -692,7 +356,7 @@ func TestWithEntityConnection(t *testing.T) {
 			if !ok {
 				t.Error("unexpected type of ctx value")
 			}
-			gotConn, ok := gotCMap[tt.ctxKey]
+			gotConn, ok := gotCMap.get(tt.ctxKey)
 			if !ok {
 				t.Error("expected pool in c map")
 			}
@@ -748,7 +412,7 @@ func TestGetEntityCon(t *testing.T) {
 		{
 			name: "TestGetEntityCon_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			want: anotherPool,
@@ -774,7 +438,7 @@ func TestGetEntityCon(t *testing.T) {
 		{
 			name: "TestGetEntityCon_OK",
 			args: args{
-				ctx:            context.WithValue(context.TODO(), CONNECTION, make(connections)),
+				ctx:            context.WithValue(context.TODO(), CONNECTION, newConnections()),
 				entityMetadata: &datastore.EntityMetadataImpl{DB: anotherDbid},
 			},
 			want: anotherPool,
@@ -814,10 +478,13 @@ func TestClose(t *testing.T) {
 	AddPool(anotherDbid, anotherPool)
 
 	cMap := connections{
-		getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
-		getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+		cons: map[common.ContextKey]*Conn{
+			getConnectionCtxKey(dbid):        &Conn{Conn: DefaultPool.Get(), Pool: DefaultPool},
+			getConnectionCtxKey(anotherDbid): &Conn{Conn: anotherConn, Pool: anotherPool},
+		},
+		mutex: &sync.RWMutex{},
 	}
-
+	cMap = cMap
 	type args struct {
 		ctx context.Context
 	}
@@ -834,10 +501,6 @@ func TestClose(t *testing.T) {
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, cMap)},
 		},
 		{
-			name: "Test_Close_OK",
-			args: args{ctx: context.TODO()},
-		},
-		{
 			name: "Test_Close_OK2",
 			args: args{ctx: context.WithValue(context.TODO(), CONNECTION, cMap)},
 		},
@@ -847,34 +510,6 @@ func TestClose(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			Close(tt.args.ctx)
-		})
-	}
-}
-
-func TestInitDefaultPool(t *testing.T) {
-	t.Parallel()
-
-	type args struct {
-		host string
-		port int
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-		{
-			name: "Test_InitDefaultPool_OK",
-		},
-		{
-			name: "Test_InitDefaultPool_OK",
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			InitDefaultPool(tt.args.host, tt.args.port)
 		})
 	}
 }

@@ -22,7 +22,7 @@ smart_contracts:
     # max delegates allowed by SC
     max_delegates: 200 #
     # DKG
-    t_percent: .51 # of active
+    t_percent: .67 # of active
     k_percent: .75 # of registered
     x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
     # etc

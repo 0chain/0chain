@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/spf13/viper"
+	"0chain.net/core/viper"
 )
 
 // Entity represents client long polling instance.
