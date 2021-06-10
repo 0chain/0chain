@@ -708,37 +708,3 @@ func createTestMPT(db NodeDB, maxEntries int) (mpt MerklePatriciaTrieI) {
 	}
 	return mpt
 }
-
-func TestPNodeDBMPTIteration(t *testing.T) {
-	db := createTestPNodeDB()
-	defer db.Close()
-
-	startTime := time.Now()
-	mpt := createTestMPT(db, 100000)
-	fmt.Printf("createdTestMPT in %v\n", time.Since(startTime))
-
-	startTime = time.Now()
-	cnt := 0
-	mpt.Iterate(context.Background(), func(ctx context.Context, path Path, key Key, node Node) error {
-		if node != nil {
-			cnt++
-		}
-		return nil
-	}, NodeTypesAll)
-	fmt.Printf("iteration took %v\n", time.Since(startTime))
-}
-
-func BenchmarkPNodeDBMPTIteration(b *testing.B) {
-	db := createTestPNodeDB()
-	defer db.Close()
-	mpt := createTestMPT(db, 10000000)
-	for i := 0; i < b.N; i++ {
-		cnt := 0
-		mpt.Iterate(context.Background(), func(ctx context.Context, path Path, key Key, node Node) error {
-			if node != nil {
-				cnt++
-			}
-			return nil
-		}, NodeTypesAll)
-	}
-}
