@@ -1281,16 +1281,17 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 // SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
-	defer c.lfbMutex.Unlock()
-
 	c.LatestFinalizedBlock = b
 	if b != nil {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
+	}
+	c.lfbMutex.Unlock()
 
-		// add LFB to blocks cache
+	// add LFB to blocks cache
+	if b != nil {
 		c.blocksMutex.Lock()
 		defer c.blocksMutex.Unlock()
 		cb, ok := c.blocks[b.Hash]
@@ -1304,7 +1305,6 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 			cb.ClientState = b.ClientState
 		}
 	}
-
 }
 
 // GetLatestFinalizedBlock - get the latest finalized block.
