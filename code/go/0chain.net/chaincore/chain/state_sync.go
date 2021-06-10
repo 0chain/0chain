@@ -289,7 +289,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return nil, ErrPreviousBlockUnavailable
 	}
 	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
-		b.SetStateDB(b.PrevBlock)
+		b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		b.SetStateStatus(block.StateSynched)
 		return nil, nil
 	}
@@ -370,7 +370,7 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 		return common.NewError("state_root_error", "state root not correct")
 	}
 	if b.ClientState == nil {
-		b.CreateState(bsc.GetNodeDB(), root.GetHashBytes())
+		b.CreateState(c.GetStateDB(), root.GetHashBytes())
 	}
 
 	c.stateMutex.Lock()

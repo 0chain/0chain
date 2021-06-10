@@ -500,7 +500,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Any("prior_block_state", pb.GetStateStatus()))
 		}
 
-		b.SetStateDB(pb)
+		b.SetStateDB(pb, mc.GetStateDB())
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {

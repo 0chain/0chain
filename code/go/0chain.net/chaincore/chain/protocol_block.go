@@ -360,7 +360,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			zap.String("prev_hash", b.PrevHash))
 	}
 
-	if b.PrevBlock != nil {
+	if b.PrevBlock != nil && b.PrevBlock.Hash == b.PrevHash {
 		return b.PrevBlock
 	}
 
