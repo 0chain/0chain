@@ -223,7 +223,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 		alloc    *StorageAllocation
 		err      error
 	)
-	if alloc, err = ssc.getAllocation(allocID, balances); err == nil {
+	if _, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
 	}
 	if err != util.ErrValueNotPresent {
@@ -582,7 +582,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	tx.Value = 400
-	resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg9)
 
 	// 10. ok
@@ -1068,19 +1068,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 }
 
-// add empty blobber challenges
-func addBloberChallenges(t *testing.T, sscID string, alloc *StorageAllocation,
-	balances *testBalances) {
-
-	var err error
-	for _, d := range alloc.BlobberDetails {
-		var bc = new(BlobberChallenge)
-		bc.BlobberID = d.BlobberID
-		_, err = balances.InsertTrieNode(bc.GetKey(sscID), bc)
-		require.NoError(t, err)
-	}
-}
-
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
 	t.Skip("This test fails because the challenge pool is less than the min lock demand")
@@ -1203,11 +1190,11 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// balances
 	var wp *writePool
-	wp, err = ssc.getWritePool(client.id, balances)
+	_, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 
 	var cp *challengePool
-	cp, err = ssc.getChallengePool(allocID, balances)
+	_, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
 	var sp *stakePool
