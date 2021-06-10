@@ -59,20 +59,6 @@ docker.local/log_dumps
 
 **/vendor/
 
-code/go/0chain.net/miner/mocks/*
-!code/go/0chain.net/miner/mocks/.gitkeep
-
-code/go/0chain.net/core/mocks/*
-!code/go/0chain.net/core/mocks/.gitkeep
-
-code/go/0chain.net/chaincore/mocks/*
-!code/go/0chain.net/chaincore/mocks/.gitkeep
-
-code/go/0chain.net/conductor/mocks/*
-!code/go/0chain.net/conductor/mocks/.gitkeep
-
-code/go/0chain.net/sharder/mocks/*
-!code/go/0chain.net/sharder/mocks/.gitkeep
-
-code/go/0chain.net/smartcontract/mocks/*
-!code/go/0chain.net/smartcontract/mocks/.gitkeep
+**/mocks/*
+!**/mocks/mocks.go
+!**/mocks/.gitkeep
