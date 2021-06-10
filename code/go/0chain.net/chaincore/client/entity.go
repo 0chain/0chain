@@ -40,20 +40,30 @@ func NewClient() *Client {
 	return datastore.GetEntityMetadata("client").Instance().(*Client)
 }
 
-// Copy of the Client.
-func (c *Client) Copy() (cp *Client) {
-	cp = new(Client)
-	cp.CollectionMemberField.CollectionScore = c.CollectionMemberField.CollectionScore
-	cp.CollectionMemberField.EntityCollection = c.CollectionMemberField.EntityCollection.Copy()
-	cp.IDField.ID = c.IDField.ID
-	cp.VersionField.Version = c.VersionField.Version
-	cp.CreationDateField.CreationDate = c.CreationDateField.CreationDate
-	cp.PublicKey = c.PublicKey
-	if len(c.PublicKeyBytes) > 0 {
-		cp.PublicKeyBytes = make([]byte, len(c.PublicKeyBytes))
-		copy(cp.PublicKeyBytes, c.PublicKeyBytes)
+// Clone returns a clone of the Client.
+func (c *Client) Clone() *Client {
+	if c == nil {
+		return nil
 	}
-	return
+
+	clone := Client{
+		IDField:           c.IDField,
+		VersionField:      c.VersionField,
+		CreationDateField: c.CreationDateField,
+		PublicKey:         c.PublicKey,
+		PublicKeyBytes:    make([]byte, len(c.PublicKeyBytes)),
+		CollectionMemberField: datastore.CollectionMemberField{
+			CollectionScore: c.CollectionMemberField.CollectionScore,
+		},
+	}
+
+	copy(clone.PublicKeyBytes, c.PublicKeyBytes)
+
+	if c.EntityCollection != nil {
+		clone.EntityCollection = &(*c.EntityCollection)
+	}
+
+	return &clone
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl

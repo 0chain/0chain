@@ -83,8 +83,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	mc.AddVRFShare(ctx, r, r.vrfShare)
-	go mc.SendVRFShare(ctx, r.vrfShare)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs.Clone())
+	}
 }
 
 func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
@@ -165,6 +166,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 }
 
 func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
+	logging.Logger.Debug("finalizedRound - cancel round verification")
 	mc.CancelRoundVerification(ctx, r)
 	go mc.FinalizeRound(ctx, r.Round, mc)
 }
@@ -588,7 +590,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		b.SetBlockState(block.StateVerificationRejected)
 		logging.Logger.Error("add to verification (invalid magic block)",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
+			zap.String("magic_block", b.LatestFinalizedMagicBlockHash),
+			zap.Int64("magic_block_round", b.LatestFinalizedMagicBlockRound))
 		return
 	}
 
@@ -668,7 +671,13 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 }
 
 func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
-	logging.Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	logging.Logger.Info("adding block to verify",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("prev_block", b.PrevHash),
+		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+		zap.Float64("weight", b.Weight()),
+		zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	miner := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
 	if vctx != nil && miner != nil {
@@ -894,8 +903,9 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if !b.IsBlockNotarized() {
-		logging.Logger.Info("checkBlockNotarization -- block is not Notarized. Returning",
-			zap.Int64("round", b.Round))
+		logging.Logger.Error("checkBlockNotarization -- block is not Notarized. Returning",
+			zap.Int64("round", b.Round),
+			zap.Any("block hash", b.Hash))
 		return false
 	}
 	if !mc.AddNotarizedBlock(ctx, r, b) {
@@ -950,16 +960,20 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
+
+	mc.UpdateNodeState(b)
+
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		go mc.ComputeState(ctx, b)
+		mc.ComputeState(ctx, b)
 	}
+
 	if !r.IsVerificationComplete() {
+		logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
 		mc.CancelRoundVerification(ctx, r)
 	}
 	b.SetBlockState(block.StateNotarized)
-	mc.UpdateNodeState(b)
 	return true
 }
 
@@ -978,15 +992,7 @@ type BlockConsensus struct {
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
-	var (
-		mb  = mc.GetLatestFinalizedMagicBlock()
-		m2s = mb.Sharders
-
-		mx sync.Mutex
-	)
-
-	fbs = make([]*BlockConsensus, 0, m2s.Size())
-
+	var mx sync.Mutex
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
@@ -1039,8 +1045,8 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		return fb, nil
 	}
 
-	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil,
-		handler)
+	fbs = make([]*BlockConsensus, 0, len(mc.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs))
+	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 
 	// highest (the first sorting order), most popular (the second order)
 	sort.Slice(fbs, func(i int, j int) bool {
@@ -1190,6 +1196,18 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
 			}
+			lfmbr := mc.GetLatestFinalizedMagicBlockRound(round) // related magic block
+			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
+				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
+					zap.Any("lfmbr hash", lfmbr.Hash),
+					zap.Any("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
+					zap.Int64("lfmbr starting round", lfmbr.Round),
+					zap.Int64("block lfmbr starting round", b.LatestFinalizedMagicBlockRound))
+			} else {
+				logging.Logger.Debug("handleNoProgress match latest finalized magic block",
+					zap.Any("lfmbr hash", lfmbr.Hash),
+					zap.Int64("lfmbr round", lfmbr.Round))
+			}
 			mc.SendBlock(ctx, b)
 		}
 	}
@@ -1253,6 +1271,10 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		tk  = mc.GetLatestLFBTicket(ctx)
 	)
 	
+	if lfb == nil || tk == nil {
+		return
+	}
+
 	if lfb == nil || tk == nil {
 		return
 	}
@@ -1388,6 +1410,13 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 			mc.startNextRoundInRestartRound(ctx, i)
 			return // <============================================= [exit loop]
 		}
+		if i == round {
+			xr.Restart()
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
+			mc.RedoVrfShare(ctx, xr)
+			return // the round has restarted <===================== [exit loop]
+		}
+
 		if xr.IsFinalized() || xr.IsFinalizing() {
 			continue // skip rounds finalizing or finalized <=== [continue loop]
 		}
@@ -1401,8 +1430,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 		// (previous round random seed required for it)
 		if xrhnb == nil {
 			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1),
-				mc.GetMiners(i))
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
@@ -1505,17 +1533,18 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	// LFMB. The LFMB can be already update by LFMD worker (which uses 0DNS)
 	// and here we just set correct DKG.
 
-	lfmb := mc.GetLatestFinalizedMagicBlock()
-	rcvd := mc.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-		lfmb.MagicBlock)
-
+	rcvd := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
 	if rcvd == nil {
 		return
 	}
 
+	lfmb := mc.GetLatestFinalizedMagicBlock()
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
+		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb",
+			zap.Int64("sharder lfmb number", rcvd.MagicBlockNumber),
+			zap.Int64("local lfmb number", lfmb.MagicBlockNumber))
 		return
 	}
 
@@ -1526,8 +1555,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		return false, err
 	}
 	mc.UpdateNodesFromMagicBlock(rcvd.MagicBlock)
-	mc.SetLatestFinalizedMagicBlock(rcvd)
 	mc.ensureDKG(ctx, rcvd)
+	mc.SetLatestFinalizedMagicBlock(rcvd)
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
@@ -1674,11 +1703,15 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	var oldRound = mc.GetCurrentRound()
-	defer mc.SetCurrentRound(oldRound)
-	defer chain.ResetStatusMonitor(oldRound)
+	var (
+		oldRound = mc.GetCurrentRound()
+		lmb      = mc.GetCurrentMagicBlock()
+	)
 
-	var lmb = mc.GetCurrentMagicBlock()
+	defer func() {
+		mc.SetCurrentRound(oldRound)
+		chain.ResetStatusMonitor(lmb.StartingRound)
+	}()
 
 	// we can't use the lmb.StartingRound as current round, since the lmb
 	// is saved in store but can be rejected by Miner SC if the LMB is not

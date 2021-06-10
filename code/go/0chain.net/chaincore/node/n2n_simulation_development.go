@@ -3,8 +3,9 @@
 package node
 
 import (
-	"0chain.net/chaincore/config"
 	"time"
+
+	"0chain.net/chaincore/config"
 )
 
 type Route struct {
@@ -15,7 +16,7 @@ type Route struct {
 var routes = make(map[string]*Route, 10)
 
 //InduceDelay - incude network delay
-func (nd *Node) InduceDelay(toNode *Node) {
+func (n *Node) InduceDelay(toNode *Node) {
 	if route, ok := routes[toNode.N2NHost]; ok {
 		time.Sleep(route.Delay)
 	}

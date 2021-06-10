@@ -276,10 +276,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 	params.Add("round", fmt.Sprintf("%v", rn))
 
-	var (
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-		mb           = c.GetMagicBlock(rn)
-	)
+	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -288,6 +285,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 		logging.Logger.Info("get notarized block for round", zap.Int64("round", rn),
 			zap.String("block", entity.GetKey()))
 
+		// cancel further requests and return when a notarized block is acquired
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
 			cancel()
 			return b, nil
@@ -334,7 +332,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 		return b, nil
 	}
 
-	mb.Miners.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(lctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
 }
 
@@ -347,7 +345,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	var (
 		sharders = mb.Sharders
-		snk      = node.Self.Underlying().GetKey()
 
 		listMutex sync.Mutex
 	)
@@ -376,16 +373,10 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		return mb, nil
 	}
 
-	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
-		handler)
+	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
 		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
-	}
-
-	// add own LFMB
-	if sharders.HasNode(snk) {
-		magicBlocks = append(magicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 
 	if len(magicBlocks) == 0 {
@@ -409,18 +400,16 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 // block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
 // finalized magic block of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
-	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-		c.GetLatestFinalizedMagicBlock().MagicBlock)
+	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, c.GetLatestFinalizedMagicBlock().MagicBlock)
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
-func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
-	lfmb *block.Block) {
+func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
 
-	lfmb = c.LatestFinalizedMagicBlock
+	var lfmb = c.latestFinalizedMagicBlock
 
 	rn = mbRoundOffset(rn) // round number with MB offset
 
@@ -442,5 +431,5 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
 		lfmb = c.magicBlockStartingRounds[foundRound]
 	}
 
-	return
+	return lfmb
 }

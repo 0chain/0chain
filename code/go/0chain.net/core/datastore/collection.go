@@ -19,7 +19,7 @@ type (
 	Order int8
 )
 
-// GetCollectionScore returns value of score initialized by time.
+/*GetCollectionScore - Get collection score */
 func GetCollectionScore(ts time.Time) int64 {
 	// time.Now().Unix() returns amount of seconds followed by 1e9
 	// time.Now().UniqNano() returns amount of nanoseconds followed by 1e18

@@ -5,6 +5,7 @@ package bls
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -21,9 +22,9 @@ type DKG struct {
 	N  int
 	ID PartyID
 
-	Msk []Key
+	msk []Key
 
-	Sij                  map[PartyID]Key
+	sij                  map[PartyID]Key
 	sijMutex             *sync.Mutex
 	receivedSecretShares map[PartyID]Key
 	secretSharesMutex    *sync.RWMutex
@@ -31,7 +32,8 @@ type DKG struct {
 	Si Key
 	Pi *PublicKey
 
-	Mpk []PublicKey
+	mpksMutex *sync.Mutex
+	mpks      []PublicKey
 
 	gmpkMutex *sync.RWMutex
 	gmpk      map[PartyID]PublicKey
@@ -66,29 +68,30 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg := &DKG{
 		T:                    t,
 		N:                    n,
-		Sij:                  make(map[PartyID]Key),
+		sij:                  make(map[PartyID]Key),
 		receivedSecretShares: make(map[PartyID]Key),
 		secretSharesMutex:    &sync.RWMutex{},
 		sijMutex:             &sync.Mutex{},
 		Si:                   Key{},
 		ID:                   PartyID{},
 		gmpkMutex:            &sync.RWMutex{},
+		mpksMutex:            &sync.Mutex{},
 	}
 	var secKey Key
 	secKey.SetByCSPRNG()
 
 	dkg.ID = ComputeIDdkg(id)
-	dkg.Msk = secKey.GetMasterSecretKey(t)
-	dkg.Mpk = bls.GetMasterPublicKey(dkg.Msk)
+	dkg.msk = secKey.GetMasterSecretKey(t)
+	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
 	return dkg
 }
 
-/*MakeDKG - to create a dkg object */
+// SetDKG - to create a dkg object
 func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][]PublicKey, id string) *DKG {
 	dkg := &DKG{
 		T:                    t,
 		N:                    n,
-		Sij:                  make(map[PartyID]Key),
+		sij:                  make(map[PartyID]Key),
 		receivedSecretShares: make(map[PartyID]Key),
 		secretSharesMutex:    &sync.RWMutex{},
 		sijMutex:             &sync.Mutex{},
@@ -103,9 +106,9 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 		if err != nil {
 			panic(err.Error())
 		}
-		dkg.Msk = append(dkg.Msk, secretKey)
+		dkg.msk = append(dkg.msk, secretKey)
 	}
-	dkg.Mpk = bls.GetMasterPublicKey(dkg.Msk)
+	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
 	dkg.AggregatePublicKeyShares(mpks)
 	for k, v := range shares {
 		var secreteShare Key
@@ -124,7 +127,7 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 	return dkg
 }
 
-/*ComputeIDdkg - to create an ID of party of type PartyID */
+// ComputeIDdkg - to create an ID of party of type PartyID
 func ComputeIDdkg(minerID string) PartyID {
 	var forID PartyID
 	if err := forID.SetHexString("1" + minerID[:31]); err != nil {
@@ -133,31 +136,58 @@ func ComputeIDdkg(minerID string) PartyID {
 	return forID
 }
 
-/*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
+// GetMPKs returns the mpks
+func (dkg *DKG) GetMPKs() []PublicKey {
+	dkg.mpksMutex.Lock()
+	defer dkg.mpksMutex.Unlock()
+	mpks := make([]PublicKey, len(dkg.mpks))
+	copy(mpks, dkg.mpks)
+	return mpks
+}
+
+// ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method
 func (dkg *DKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
 	var secVec Key
-	err := secVec.Set(dkg.Msk, &forID)
+	err := secVec.Set(dkg.msk, &forID)
 	if err != nil {
 		return Key{}, err
 	}
-	dkg.Sij[forID] = secVec
+
+	dkg.sijMutex.Lock()
+	dkg.sij[forID] = secVec
+	dkg.sijMutex.Unlock()
 	return secVec, nil
 }
 
-/*GetKeyShareForOther - Get the DKGKeyShare for this Miner specified by the PartyID */
-func (dkg *DKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
+// GetDKGKeyShare gets the DKGKeyShare of given PartyID
+func (dkg *DKG) GetDKGKeyShare(to PartyID) *DKGKeyShare {
 	dkg.sijMutex.Lock()
 	defer dkg.sijMutex.Unlock()
-	indivShare, ok := dkg.Sij[to]
+	share, ok := dkg.sij[to]
 	if !ok {
 		return nil
 	}
-	dShare := &DKGKeyShare{Share: indivShare.GetHexString()}
+	dShare := &DKGKeyShare{Share: share.GetHexString()}
 	dShare.SetKey(to.GetHexString())
 	return dShare
 }
 
-/*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
+// GetKeyShare gets the Key of given PartyID
+func (dkg *DKG) GetKeyShare(id PartyID) (Key, bool) {
+	dkg.sijMutex.Lock()
+	defer dkg.sijMutex.Unlock()
+	share, ok := dkg.sij[id]
+	return share, ok
+}
+
+// GetSijLen returns the length of Sij
+func (dkg *DKG) GetSijLen() int {
+	dkg.sijMutex.Lock()
+	defer dkg.sijMutex.Unlock()
+	return len(dkg.sij)
+}
+
+// AggregateSecretKeyShares - Each party aggregates the received shares from other party which is calculated for that party
 func (dkg *DKG) AggregateSecretKeyShares() {
 	var sk Key
 	dkg.secretSharesMutex.RLock()
@@ -169,7 +199,7 @@ func (dkg *DKG) AggregateSecretKeyShares() {
 	dkg.Pi = dkg.Si.GetPublicKey()
 }
 
-/*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
+// GetSecretKeyShares - Each party aggregates the received shares from other party which is calculated for that party
 func (dkg *DKG) GetSecretKeyShares() []string {
 	var shares []string
 	dkg.secretSharesMutex.RLock()
@@ -239,8 +269,8 @@ func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 	var sig Sign
 	t := len(shares)
-	if t > len(dkg.Msk) {
-		t = len(dkg.Msk)
+	if t > len(dkg.msk) {
+		t = len(dkg.msk)
 	}
 	err := sig.Recover(shares, from)
 	if err == nil {
@@ -269,6 +299,11 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 			idVec = append(idVec, forID)
 		}
 	}
+
+	if len(idVec) == 0 || len(signVec) == 0 {
+		return Sign{}, errors.New("empty id or share")
+	}
+
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 

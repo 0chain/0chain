@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
@@ -61,4 +62,24 @@ func (gsos *GroupSharesOrSigns) GetHashBytes() []byte {
 		data = append(data, bytes...)
 	}
 	return encryption.RawHash(data)
+}
+
+// Clone returns a clone of GroupSharesOrSigns instance
+func (gsos *GroupSharesOrSigns) Clone() *GroupSharesOrSigns {
+	//Shares map[string]*ShareOrSigns `json:"shares"`
+	gsos.mutex.RLock()
+	defer gsos.mutex.RUnlock()
+	clone := &GroupSharesOrSigns{Shares: make(map[string]*ShareOrSigns, len(gsos.Shares))}
+	//ShareOrSigns map[string]*bls.DKGKeyShare `json:"share_or_sign"`
+	for k, v := range gsos.Shares {
+		sos := *v
+		sos.ShareOrSigns = make(map[string]*bls.DKGKeyShare, len(v.ShareOrSigns))
+		for sk, sv := range v.ShareOrSigns {
+			nsv := *sv
+			sos.ShareOrSigns[sk] = &nsv
+		}
+		clone.Shares[k] = &sos
+	}
+
+	return clone
 }
