@@ -235,7 +235,11 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = sc.getBlobbersList(balances)
-	if err != nil || len(allBlobbersList.Nodes) == 0 {
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"getting blobber list: %v", err)
+	}
+	if len(allBlobbersList.Nodes) == 0 {
 		return "", common.NewError("allocation_creation_failed",
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
