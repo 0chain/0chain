@@ -22,8 +22,6 @@ import (
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
-
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 )
