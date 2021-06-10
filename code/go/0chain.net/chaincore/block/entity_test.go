@@ -1433,7 +1433,7 @@ func TestBlock_SetStateDB_Debug_True(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			b.SetStateDB(tt.args.prevBlock)
+			b.SetStateDB(tt.args.prevBlock, util.NewMemoryNodeDB())
 
 			b.ClientState = nil
 			tt.want.ClientState = nil
@@ -1662,7 +1662,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
 				MagicBlock:            tt.fields.MagicBlock,
 			}
-			b.SetStateDB(tt.args.prevBlock)
+			b.SetStateDB(tt.args.prevBlock, util.NewMemoryNodeDB())
 
 			// setting mutexes and states to nil because they are not comparable
 			nilBlocksMutexes(b)

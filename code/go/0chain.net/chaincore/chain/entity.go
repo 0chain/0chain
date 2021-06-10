@@ -502,6 +502,8 @@ func CloseStateDB() {
 	stateDB.Close()
 }
 
+func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
+
 func (c *Chain) SetupConfigInfoDB() {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
@@ -1289,7 +1291,20 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
+
+		// add LFB to blocks cache
+		c.blocksMutex.Lock()
+		defer c.blocksMutex.Unlock()
+		cb, ok := c.blocks[b.Hash]
+		if !ok {
+			c.blocks[b.Hash] = b
+		} else {
+			if b.ClientState != nil && cb.ClientState != b.ClientState {
+				cb.ClientState = b.ClientState
+			}
+		}
 	}
+
 }
 
 // GetLatestFinalizedBlock - get the latest finalized block.

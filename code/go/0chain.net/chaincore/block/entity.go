@@ -290,7 +290,7 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 }
 
 /*SetStateDB - set the state from the previous block */
-func (b *Block) SetStateDB(prevBlock *Block) {
+func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
@@ -298,7 +298,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 		if state.Debug() {
 			logging.Logger.DPanic("Set state db - prior state not available")
 		} else {
-			pndb = util.NewMemoryNodeDB()
+			pndb = stateDB
 		}
 	} else {
 		pndb = prevBlock.ClientState.GetNodeDB()
