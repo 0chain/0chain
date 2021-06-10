@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"sync"
 	"time"
 
@@ -125,7 +127,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// goroutine here, and phases events sending is non-blocking (can
 			// skip, reject the event); then the pahsesEvent channel should be
 			// buffered (at least 1 element in the buffer)
-			mc.GetPhaseFromSharders()
+			mc.GetPhaseFromSharders(ctx)
 			continue
 		case newPhaseEvent = <-phaseEventsChan:
 			if !newPhaseEvent.Sharders {
@@ -147,7 +149,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
-			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
 			active = mc.IsActiveInChain()
 		)
 
@@ -155,10 +156,11 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
-		logging.Logger.Debug("dkg process: trying",
+		logging.Logger.Debug("dkg process trying",
 			zap.Any("next_phase", pn),
-			zap.Any("current_phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+			zap.Bool("active", active),
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
@@ -171,10 +173,9 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Info("dkg process: run phase func",
-			zap.Any("next_phase", pn),
-			zap.Any("current_phase", mc.CurrentPhase()),
-			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
+		logging.Logger.Info("dkg process start", zap.Any("next_phase", pn),
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.Any("sc funcs", getFunctionName(mc.viewChangeProcess.scFunctions[pn.Phase])))
 
 		var scFunc, ok = mc.viewChangeProcess.scFunctions[pn.Phase]
 		if !ok {
@@ -183,7 +184,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		txn, err := scFunc(ctx, lfb, mb, active)
+		logging.Logger.Debug("run sc function", zap.Any("name", getFunctionName(scFunc)))
+
+		lfmb := mc.GetLatestFinalizedMagicBlock()
+		txn, err := scFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
 				zap.Any("error", err),
@@ -192,6 +196,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			if pn.Phase != minersc.Share {
 				continue
 			}
+
 			retrySharePhase = true
 		}
 
@@ -210,6 +215,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 	}
 
+}
+
+func getFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
 
 func (vcp *viewChangeProcess) clearViewChange() {
@@ -236,10 +245,10 @@ func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 
 func (vcp *viewChangeProcess) isNeedCreateSijs() (ok bool) {
 	return vcp.viewChangeDKG != nil &&
-		len(vcp.viewChangeDKG.Sij) < vcp.viewChangeDKG.T
+		vcp.viewChangeDKG.GetSijLen() < vcp.viewChangeDKG.T
 }
 
-func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
+func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
 	active bool) (mpks *block.Mpks, err error) {
 
 	if active {
@@ -266,7 +275,7 @@ func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
 		ok  bool
 	)
 
-	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetMinersMPKS,
+	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetMinersMPKS,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return block.NewMpks()
 		}, func(val util.Serializable) bool {
@@ -282,7 +291,7 @@ func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
 	return
 }
 
-func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
+func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
 	active bool) (dmn *minersc.DKGMinerNodes, err error) {
 
 	if active {
@@ -311,7 +320,7 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 		ok  bool
 	)
 
-	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetDKGMiners,
+	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetDKGMiners,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return new(minersc.DKGMinerNodes)
 		}, func(val util.Serializable) bool {
@@ -337,21 +346,25 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 	return
 }
 
-func (mc *Chain) createSijs(lfb *block.Block, mb *block.MagicBlock,
+func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
 	active bool) (err error) {
+
+	if !mc.viewChangeProcess.isDKGSet() {
+		return common.NewError("createSijs", "DKG is not set")
+	}
 
 	if !mc.viewChangeProcess.isNeedCreateSijs() {
 		return // doesn't need to create them
 	}
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
+	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
 		logging.Logger.Error("can't share", zap.Any("error", err))
 		return
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		logging.Logger.Error("can't share", zap.Any("error", err))
 		return
 	}
@@ -418,7 +431,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 	}
 
 	var dkgMiners *minersc.DKGMinerNodes
-	if dkgMiners, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dkgMiners, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		return // error
 	}
 
@@ -429,7 +442,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 		return // (nil, nil)
 	}
 
-	if err = mc.createSijs(lfb, mb, active); err != nil {
+	if err = mc.createSijs(ctx, lfb, mb, active); err != nil {
 		return // error
 	}
 
@@ -449,11 +462,20 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 	return
 }
 
-func (mc *Chain) getNodeSij(nodeID hbls.ID) (secShare hbls.SecretKey) {
+func (mc *Chain) getNodeSij(nodeID hbls.ID) (*hbls.SecretKey, bool) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
-	return mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+	if mc.viewChangeProcess.viewChangeDKG == nil {
+		return nil, false
+	}
+
+	k, ok := mc.viewChangeProcess.viewChangeDKG.GetKeyShare(nodeID)
+	if !ok {
+		return nil, false
+	}
+
+	return &k, true
 }
 
 func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare) {
@@ -494,7 +516,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	return // (nil, nil)
 }
 
-func (mc *Chain) GetMagicBlockFromSC(lfb *block.Block, mb *block.MagicBlock,
+func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
 	if active {
@@ -521,7 +543,7 @@ func (mc *Chain) GetMagicBlockFromSC(lfb *block.Block, mb *block.MagicBlock,
 		ok  bool
 	)
 
-	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetMagicBlock,
+	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetMagicBlock,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return block.NewMagicBlock()
 		}, func(val util.Serializable) bool {
@@ -638,7 +660,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	}
 
 	var magicBlock *block.MagicBlock
-	if magicBlock, err = mc.GetMagicBlockFromSC(lfb, mb, active); err != nil {
+	if magicBlock, err = mc.GetMagicBlockFromSC(ctx, lfb, mb, active); err != nil {
 		return // error
 	}
 
@@ -870,8 +892,11 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	logging.Logger.Info("setup latest and previous fmbs")
+	lfmb := mc.GetLatestFinalizedMagicBlock()
+	if lfmb.Sharders == nil || lfmb.Miners == nil {
+		return
+	}
 
-	var lfmb = mc.GetLatestFinalizedMagicBlock()
 	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
 
 	if lfmb.MagicBlockNumber <= 1 {

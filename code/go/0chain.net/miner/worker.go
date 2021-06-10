@@ -4,16 +4,15 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/smartcontract/minersc"
-	"github.com/spf13/viper"
-
 	"0chain.net/core/logging"
-
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
+	"0chain.net/smartcontract/minersc"
 )
 
 const minerScMinerHealthCheck = "miner_health_check"
@@ -23,7 +22,7 @@ func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
-	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
+	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
@@ -43,28 +42,30 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			if !mc.isStarted() {
 				break
 			}
-			if msg.Sender != nil {
-				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
-			} else {
-				logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
-			}
-			switch msg.Type {
-			case MessageVRFShare:
-				protocol.HandleVRFShare(ctx, msg)
-			case MessageVerify:
-				protocol.HandleVerifyBlockMessage(ctx, msg)
-			case MessageVerificationTicket:
-				protocol.HandleVerificationTicketMessage(ctx, msg)
-			case MessageNotarization:
-				protocol.HandleNotarizationMessage(ctx, msg)
-			case MessageNotarizedBlock:
-				protocol.HandleNotarizedBlockMessage(ctx, msg)
-			}
-			if msg.Sender != nil {
-				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
-			} else {
-				logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
-			}
+			go func(bmsg *BlockMessage) {
+				if bmsg.Sender != nil {
+					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+				} else {
+					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+				}
+				switch bmsg.Type {
+				case MessageVRFShare:
+					protocol.HandleVRFShare(ctx, bmsg)
+				case MessageVerify:
+					protocol.HandleVerifyBlockMessage(ctx, bmsg)
+				case MessageVerificationTicket:
+					protocol.HandleVerificationTicketMessage(ctx, bmsg)
+				case MessageNotarization:
+					protocol.HandleNotarizationMessage(ctx, bmsg)
+				case MessageNotarizedBlock:
+					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
+				}
+				if bmsg.Sender != nil {
+					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+				} else {
+					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+				}
+			}(msg)
 		}
 	}
 }
@@ -96,14 +97,15 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 					func(ctx context.Context) {
-						cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+						cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 						defer cancel()
 						rc := make(chan struct{})
 						ts := time.Now()
 						go func() {
 							protocol.HandleRoundTimeout(cctx, cround)
-							rc <- struct{}{}
+							close(rc)
 						}()
+
 						select {
 						case <-cctx.Done():
 							logging.Logger.Error("protocol.HandleRoundTimeout timeout",

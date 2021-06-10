@@ -112,3 +112,33 @@ func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
 	}
 	return true
 }
+
+// Clone returns a clone of MagicBlock instance
+func (mb *MagicBlock) Clone() *MagicBlock {
+	mb.mutex.RLock()
+	defer mb.mutex.RUnlock()
+	clone := &MagicBlock{
+		HashIDField:            mb.HashIDField,
+		PreviousMagicBlockHash: mb.PreviousMagicBlockHash,
+		MagicBlockNumber:       mb.MagicBlockNumber,
+		StartingRound:          mb.StartingRound,
+		T:                      mb.T,
+		K:                      mb.K,
+		N:                      mb.N,
+	}
+
+	if mb.ShareOrSigns != nil {
+		clone.ShareOrSigns = mb.ShareOrSigns.Clone()
+	}
+	if mb.Mpks != nil {
+		clone.Mpks = mb.Mpks.Clone()
+	}
+	if mb.Miners != nil {
+		clone.Miners = mb.Miners.Clone()
+	}
+	if mb.Sharders != nil {
+		clone.Sharders = mb.Sharders.Clone()
+	}
+
+	return clone
+}

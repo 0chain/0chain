@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"time"
+
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/state"
@@ -15,8 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
+	"0chain.net/core/viper"
 )
 
 const (
@@ -114,31 +114,8 @@ func extractDiscoverIps(discFile string) []string {
 
 // Read a yaml file from disk.
 func readYamlConfig(file string) *viper.Viper {
-	dir, fileName := filepath.Split(file)
-
-	ext := filepath.Ext(fileName)
-
-	if ext == "" {
-		ext = ".yaml"
-	} else {
-		fileName = fileName[:len(fileName)-len(ext)]
-	}
-
-	format := ext[1:]
-
-	if dir == "" {
-		dir = "."
-	} else if dir[0] != '.' {
-		dir = "." + string(filepath.Separator) + dir
-	}
-
 	v := viper.New()
-	v.AddConfigPath(dir)
-	v.SetConfigName(fileName)
-	v.SetConfigType(format)
-
-	err := v.ReadInConfig()
-	if err != nil {
+	if err := v.ReadConfigFile(file); err != nil {
 		panic(fmt.Sprintf("Error reading config file %v - %v\n", file, err))
 	}
 

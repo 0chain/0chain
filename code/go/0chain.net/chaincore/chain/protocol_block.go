@@ -123,18 +123,18 @@ func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb  = c.GetMagicBlock(round)
-		num = mb.Miners.Size()
+		mb        = c.GetMagicBlock(round)
+		num       = mb.Miners.Size()
+		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
 	if c.ThresholdByCount > 0 {
 		var numSignatures = len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount(num) {
-			//ToDo: Remove this comment
+		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("miners", num),
-				zap.Int("threshold", c.GetNotarizationThresholdCount(num)),
+				zap.Int("active_miners", num),
+				zap.Int("threshold", threshold),
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -147,17 +147,26 @@ func (c *Chain) reachedNotarization(round int64,
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
 		if verifiersStake < c.ThresholdByStake {
+			logging.Logger.Info("not reached notarization - stake < threshold stake",
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("verify stake", verifiersStake),
+				zap.Int("threshold", c.ThresholdByStake),
+				zap.Int("active_miners", num),
+				zap.Int("num_signatures", len(bvt)),
+				zap.Int("signature threshold", threshold),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("round", round))
 			return false
 		}
 	}
 
 	logging.Logger.Info("Reached notarization!!!",
 		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("miners", num),
+		zap.Int("active_miners", num),
 		zap.Int64("round", round),
 		zap.Int64("current_cound", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", c.GetNotarizationThresholdCount(num)))
+		zap.Int("threshold", threshold))
 
 	return true
 }
@@ -218,16 +227,22 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
-	if fb.RoundRank >= c.NumGenerators || fb.RoundRank < 0 {
+	numGenerators := c.GetGeneratorsNum()
+	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
 		logging.Logger.Warn("FB round rank is invalid or greater than num_generators",
 			zap.Int("round_rank", fb.RoundRank),
-			zap.Int("num_generators", c.NumGenerators))
+			zap.Int("num_generators", numGenerators))
 	} else {
 		var bNode = node.GetNode(fb.MinerID)
 		if bNode != nil {
 			if bNode.ProtocolStats != nil {
 				//FIXME: fix node stats
 				ms := bNode.ProtocolStats.(*MinerStats)
+				if numGenerators > len(ms.FinalizationCountByRank) {
+					newRankStat := make([]int64, numGenerators)
+					copy(newRankStat, ms.FinalizationCountByRank)
+					ms.FinalizationCountByRank = newRankStat
+				}
 				ms.FinalizationCountByRank[fb.RoundRank]++ // stat
 			}
 		} else {
@@ -242,6 +257,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		generators := c.GetGenerators(fr)
 		for idx, g := range generators {
 			ms := g.ProtocolStats.(*MinerStats)
+			if len(generators) > len(ms.GenerationCountByRank) {
+				newRankStat := make([]int64, len(generators))
+				copy(newRankStat, ms.GenerationCountByRank)
+				ms.GenerationCountByRank = newRankStat
+			}
 			ms.GenerationCountByRank[idx]++
 		}
 	}
@@ -265,6 +285,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.updateFeeStats(fb)
 
 	if fb.MagicBlock != nil {
+		c.UpdateMagicBlock(fb.MagicBlock)
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 	if config.Development() {

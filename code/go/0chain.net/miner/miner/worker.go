@@ -6,12 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/chain"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"0chain.net/miner"
-
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
@@ -20,6 +17,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
+	"0chain.net/miner"
 	"0chain.net/smartcontract/faucetsc"
 )
 
@@ -87,7 +86,7 @@ func TransactionGenerator(c *chain.Chain) {
 		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 	}
 
-	numGenerators := sc.NumGenerators
+	numGenerators := sc.GetGeneratorsNum()
 	mb := sc.GetCurrentMagicBlock()
 	numMiners := mb.Miners.Size()
 	var timerCount int64
@@ -250,7 +249,9 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		}
 	}
 	if config.DevConfiguration.FaucetEnabled {
-		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
+		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
+			viper.GetInt64("development.faucet.refill_amount"),
+			`{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator - faucet refill", zap.Any("error", err))

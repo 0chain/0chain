@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/round"
@@ -50,9 +51,15 @@ var messageLookups = common.CreateLookups("vrf_share", "VRF Share",
 	"notarization", "Notarization",
 	"notarized_block", "Notarized Block")
 
+// lock for protecting the messageLookups
+var messageLock sync.RWMutex
+
 /*GetMessageLookup - get the message type lookup */
 func GetMessageLookup(msgType int) *common.Lookup {
-	return messageLookups[msgType]
+	messageLock.RLock()
+	msg := messageLookups[msgType]
+	messageLock.RUnlock()
+	return msg
 }
 
 //ShouldRetry - tells whether this message should be retried by putting back into the channel

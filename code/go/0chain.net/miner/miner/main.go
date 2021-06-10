@@ -8,15 +8,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/miner"
-
-	_ "net/http/pprof"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -26,15 +24,16 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/viper"
+	"0chain.net/miner"
 	"0chain.net/smartcontract/setupsc"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -354,67 +353,6 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	logging.Logger.Info("Description inside", zap.String("description", description))
 	return h, n2nh, p, path, description, nil
 
-}
-
-func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (*block.Block, error) {
-
-	const limitAttempts = 10
-
-	var (
-		attempt      = 0
-		retryTimeout = time.Second * 5
-	)
-	for {
-		lfmb := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-		if lfmb != nil {
-			return lfmb, nil
-		}
-
-		attempt++
-		if attempt >= limitAttempts {
-			return nil, common.NewErrorf("get_lfmbs_from_sharders",
-				"no lfmb given after %d attempts", attempt)
-		}
-		logging.Logger.Warn("get_current_mb_sharder -- retry",
-			zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
-		select {
-		case <-ctx.Done():
-			return nil, common.NewError("get_lfmbs_from_sharders",
-				"context done: exiting")
-		case <-time.After(retryTimeout):
-		}
-	}
-}
-
-func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
-	err error) {
-
-	lfmb, err := getMagicBlocksFromSharders(ctx, mc)
-	if err != nil {
-		return err
-	}
-
-	cmb := mc.GetCurrentMagicBlock()
-
-	switch {
-	case lfmb.StartingRound < cmb.StartingRound:
-		// can't initialize this magic block
-		return // nil
-	case lfmb.StartingRound == cmb.StartingRound:
-		// ok, initialize the magicBlock
-	default: // magicBlock > cmb.StartingRoound, verify chain
-		err = mc.VerifyChainHistoryAndRepair(common.GetRootContext(), lfmb, nil)
-		if err != nil {
-			return
-		}
-	}
-
-	if err = mc.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err)
-	}
-	mc.SetLatestFinalizedMagicBlock(lfmb)
-	mc.UpdateNodesFromMagicBlock(lfmb.MagicBlock)
-	return nil
 }
 
 func initEntities() {

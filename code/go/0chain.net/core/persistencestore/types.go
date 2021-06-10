@@ -2,6 +2,7 @@ package persistencestore
 
 import (
 	"errors"
+
 	"github.com/gocql/gocql"
 )
 
@@ -43,7 +44,7 @@ func (s *session) NewBatch(typ gocql.BatchType) BatchI {
 // otherwise an error is returned describing the failure.
 // Note: works only with default batch implementation.
 func (s *session) ExecuteBatch(b BatchI) error {
-	bat, ok := b.(batch)
+	bat, ok := b.(*batch)
 	if !ok {
 		return errors.New("unknown batch")
 	}

@@ -95,6 +95,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
 	newDKG.StartingRound = mb.StartingRound
 
+	if mb.Miners == nil {
+		return common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
+	}
+
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
 			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
@@ -193,6 +197,12 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	if dkg == nil {
 		return "", common.NewError("get_bls_share", "DKG is nil")
 	}
+
+	Logger.Debug("Sign msg with dkg",
+		zap.String("msg", msg),
+		zap.Int64("round", r.Number),
+		zap.Int64("dkg starting round", dkg.StartingRound),
+	)
 	sigShare := dkg.Sign(msg)
 
 	var (

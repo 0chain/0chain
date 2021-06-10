@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -35,6 +34,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/persistencestore"
+	"0chain.net/core/viper"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
@@ -309,12 +309,16 @@ func done(ctx context.Context) {
 }
 
 func startBlocksInfoLogs(sc *sharder.Chain) {
-	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
+	var (
+		lfb  = sc.GetLatestFinalizedBlock()
+		lfmb = sc.GetLatestFinalizedMagicBlockBrief()
+	)
+
 	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
 	Logger.Info("start from LFMB",
-		zap.Int64("round", lfmb.MagicBlock.StartingRound),
-		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
+		zap.Int64("round", lfmb.StartingRound),
+		zap.String("hash", lfmb.MagicBlockHash)) // hash of block with the magic block
 }
 
 func initServer() {

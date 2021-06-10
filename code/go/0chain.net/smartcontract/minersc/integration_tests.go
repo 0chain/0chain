@@ -11,7 +11,7 @@ import (
 	crpc "0chain.net/conductor/conductrpc"
 )
 
-func (msc *MinerSmartContract) InitSC() {
+func (msc *MinerSmartContract) initSC() {
 	if msc.smartContractFunctions == nil {
 		msc.smartContractFunctions = make(map[string]smartContractFunction)
 	}
@@ -101,7 +101,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 
 	// phase before {
 	var pn *PhaseNode
-	if pn, err = msc.getPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 	var phaseBefore = pn.Phase
@@ -162,7 +162,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 	// }
 
 	// phase after {
-	if pn, err = msc.getPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 	if pn.Phase != phaseBefore {

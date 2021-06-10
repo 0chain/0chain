@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/smartcontract"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 
 	"0chain.net/core/common"
@@ -64,7 +63,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	sctx := c.newStateContext(lfb, clientState, &transaction.Transaction{})
+	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{})
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {
@@ -161,8 +160,6 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	PrintCSS(w)
-	sc := sci.NewSC(key)
-	scInt.SetSC(sc, nil)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 	restPoints := scInt.GetRestPoints()
