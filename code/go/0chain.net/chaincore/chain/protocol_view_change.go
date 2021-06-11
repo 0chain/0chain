@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -20,15 +22,11 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
-
-	"0chain.net/core/util"
-	"0chain.net/smartcontract/minersc"
-
-	"github.com/spf13/viper"
-
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/core/memorystore"
+	"0chain.net/core/util"
+	"0chain.net/core/viper"
+	"0chain.net/smartcontract/minersc"
 )
 
 const (

@@ -51,8 +51,8 @@ func (cmd *cmdMagicBlock) setupBlock() {
 	mb.MagicBlockNumber = cmd.yml.MagicBlockNumber
 	mb.StartingRound = cmd.yml.StartingRound
 	mb.N = len(cmd.yml.Miners)
-	mb.K = int(math.Ceil(float64(cmd.yml.KPercent) / 100.0 * float64(mb.N)))
-	mb.T = int(math.Ceil(float64(cmd.yml.TPercent) / 100.0 * float64(mb.N)))
+	mb.T = int(math.Ceil(float64(mb.N) * (float64(cmd.yml.TPercent) / 100.0)))
+	mb.K = int(math.Ceil(float64(mb.N) * (float64(cmd.yml.KPercent) / 100.0)))
 	cmd.block = mb
 }
 
@@ -78,7 +78,7 @@ func (cmd *cmdMagicBlock) setupMPKS() {
 		cmd.dkgs[id] = bls.MakeDKG(cmd.block.T, cmd.block.N, id)
 		mpk := &block.MPK{ID: id}
 		for _, v := range cmd.dkgs[id].GetMPKs() {
-			mpk.Mpk = append(mpk.Mpk, v.SerializeToHexStr())
+			mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 		}
 		cmd.block.Mpks.Mpks[id] = mpk
 	}

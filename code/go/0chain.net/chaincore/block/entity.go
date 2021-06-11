@@ -290,7 +290,7 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 }
 
 /*SetStateDB - set the state from the previous block */
-func (b *Block) SetStateDB(prevBlock *Block) {
+func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
@@ -298,7 +298,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 		if state.Debug() {
 			logging.Logger.DPanic("Set state db - prior state not available")
 		} else {
-			pndb = util.NewMemoryNodeDB()
+			pndb = stateDB
 		}
 	} else {
 		pndb = prevBlock.ClientState.GetNodeDB()
@@ -664,11 +664,29 @@ func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 
 // Clone returns a clone of the block instance
 func (b *Block) Clone() *Block {
-	clone := *b
-	clone.UnverifiedBlockBody = *b.UnverifiedBlockBody.Clone()
-	clone.VerificationTickets = copyVerificationTickets(b.VerificationTickets)
+	clone := &Block{
+		UnverifiedBlockBody: *b.UnverifiedBlockBody.Clone(),
+		VerificationTickets: copyVerificationTickets(b.VerificationTickets),
+		HashIDField:         b.HashIDField,
+		Signature:           b.Signature,
+		ChainID:             b.ChainID,
+		ChainWeight:         b.ChainWeight,
+		RoundRank:           b.RoundRank,
+		PrevBlock:           b.PrevBlock,
+		RunningTxnCount:     b.RunningTxnCount,
+		stateStatus:         b.stateStatus,
+		blockState:          b.blockState,
+		isNotarized:         b.isNotarized,
+		verificationStatus:  b.verificationStatus,
 
-	clone.mutexTxns = &sync.RWMutex{}
+		StateMutex:       &sync.RWMutex{},
+		stateStatusMutex: &sync.RWMutex{},
+		ticketsMutex:     &sync.RWMutex{},
+		mutexTxns:        &sync.RWMutex{},
+
+		MagicBlock: b.MagicBlock.Clone(),
+	}
+
 	b.mutexTxns.RLock()
 	clone.TxnsMap = make(map[string]bool, len(b.TxnsMap))
 	for k, v := range b.TxnsMap {
@@ -676,22 +694,18 @@ func (b *Block) Clone() *Block {
 	}
 	b.mutexTxns.RUnlock()
 
-	clone.StateMutex = &sync.RWMutex{}
 	b.StateMutex.RLock()
 	if b.ClientState != nil {
 		clone.CreateState(b.ClientState.GetNodeDB(), b.ClientStateHash)
 	}
 	b.StateMutex.RUnlock()
 
-	clone.stateStatusMutex = &sync.RWMutex{}
-	clone.ticketsMutex = &sync.RWMutex{}
 	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
 	for k, v := range b.UniqueBlockExtensions {
 		clone.UniqueBlockExtensions[k] = v
 	}
 
-	clone.MagicBlock = b.MagicBlock.Clone()
-	return &clone
+	return clone
 }
 
 func copyVerificationTickets(src []*VerificationTicket) []*VerificationTicket {

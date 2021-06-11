@@ -337,6 +337,10 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 	)
 
 	// get the entity type
+	if entity == nil {
+		return common.NewError("SCRestAPI - decode failed", "empty entity")
+	}
+
 	entityType := reflect.TypeOf(entity).Elem()
 
 	//normally this goes to sharders

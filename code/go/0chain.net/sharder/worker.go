@@ -4,25 +4,23 @@ import (
 	"context"
 	"time"
 
+	"github.com/remeh/sizedwaitgroup"
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/sharder/blockstore"
-
-	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/smartcontract/minersc"
-
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
-
-	"github.com/remeh/sizedwaitgroup"
-	"github.com/spf13/viper"
+	"0chain.net/core/viper"
+	"0chain.net/sharder/blockstore"
+	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"

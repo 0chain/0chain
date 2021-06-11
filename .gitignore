@@ -58,3 +58,7 @@ docker.local/log_dumps
 *.tar.gz
 
 **/vendor/
+
+**/mocks/*
+!**/mocks/mocks.go
+!**/mocks/.gitkeep

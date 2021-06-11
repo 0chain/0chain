@@ -15,7 +15,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	metrics "github.com/rcrowley/go-metrics"
+
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -101,16 +102,20 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		pool.TokensEarned = state.Balance(
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
 		)
-		balances.AddMint(&state.Mint{
+		if err := balances.AddMint(&state.Mint{
 			Minter:     ip.ID,
 			ToClientID: transfer.ClientID,
 			Amount:     pool.TokensEarned,
-		})
+		}); err != nil {
+			return "", err
+		}
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned
 		balances.InsertTrieNode(gn.getKey(), gn)
 		// add to user pools
-		un.addPool(pool)
+		if err := un.addPool(pool); err != nil {
+			return "", err
+		}
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
 		return resp, nil
 	}
@@ -118,16 +123,15 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 }
 
 func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
-	var response string
-	var transfer *state.Transfer
 	ps := &poolStat{}
 	err := ps.decode(inputData)
 	if err != nil {
-		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("input not formatted correctly: %v\n", err.Error()))
+		return "", common.NewError("failed to unlock tokens",
+			fmt.Sprintf("input not formatted correctly: %v\n", err.Error()))
 	}
 	pool, ok := un.Pools[ps.ID]
 	if ok {
-		transfer, response, err = pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
+		transfer, response, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
 		if err != nil {
 			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error emptying pool %v", err.Error()))
 		}
@@ -137,17 +141,16 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 		}
 		balances.AddTransfer(transfer)
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
-	} else {
-		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
+		return response, nil
 	}
-	return response, nil
+	return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 }
 
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
 	if t.ClientID != owner {
 		return "", common.NewError("failed to update variables", "unauthorized access - only the owner can update the variables")
 	}
-	newGn := &GlobalNode{}
+	newGn := &GlobalNode{SimpleGlobalNode: &SimpleGlobalNode{}}
 	err := newGn.Decode(inputData)
 	if err != nil {
 		return "", common.NewError("failed to update variables", "request not formatted correctly")
@@ -190,8 +193,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn := newGlobalNode()
 	globalBytes, err := balances.GetTrieNode(gn.getKey())
 	if err == nil {
-		err := gn.Decode(globalBytes.Encode())
-		if err == nil {
+		if err := gn.Decode(globalBytes.Encode()); err == nil {
 			return gn
 		}
 	}

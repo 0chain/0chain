@@ -199,6 +199,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			if pn.Phase != minersc.Share {
 				continue
 			}
+
 			retrySharePhase = true
 		}
 

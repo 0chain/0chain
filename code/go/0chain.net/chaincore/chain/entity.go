@@ -11,12 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/client"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -24,13 +22,12 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
-
-	"github.com/spf13/viper"
-
-	"go.uber.org/zap"
 )
 
 //PreviousBlockUnavailable - to indicate an error condition when the previous
@@ -305,6 +302,7 @@ func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
 		logging.Logger.Error("failed to put magic block", zap.Error(err))
 	}
+
 }
 
 /*GetEntityMetadata - implementing the interface */
@@ -501,6 +499,8 @@ func SetupStateDB() {
 func CloseStateDB() {
 	stateDB.Close()
 }
+
+func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
 
 func (c *Chain) SetupConfigInfoDB() {
 	c.configInfoDB = "configdb"
@@ -1281,14 +1281,29 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 // SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
-	defer c.lfbMutex.Unlock()
-
 	c.LatestFinalizedBlock = b
 	if b != nil {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
+	}
+	c.lfbMutex.Unlock()
+
+	// add LFB to blocks cache
+	if b != nil {
+		c.blocksMutex.Lock()
+		defer c.blocksMutex.Unlock()
+		cb, ok := c.blocks[b.Hash]
+		if !ok {
+			c.blocks[b.Hash] = b
+			return
+		}
+		if b.ClientState == nil {
+			b.ClientState = cb.ClientState
+		} else if cb.ClientState == nil {
+			cb.ClientState = b.ClientState
+		}
 	}
 }
 

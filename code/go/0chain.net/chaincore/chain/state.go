@@ -186,7 +186,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			zap.Any("state status", pb.GetStateStatus()))
 		return ErrPreviousStateNotComputed
 	}
-	b.SetStateDB(pb)
+	b.SetStateDB(pb, c.GetStateDB())
 
 	beginState := b.ClientState.GetRoot()
 

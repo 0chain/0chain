@@ -500,7 +500,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Any("prior_block_state", pb.GetStateStatus()))
 		}
 
-		b.SetStateDB(pb)
+		b.SetStateDB(pb, mc.GetStateDB())
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
@@ -1282,6 +1282,14 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		return
 	}
 
+	if lfb == nil || tk == nil {
+		return
+	}
+
+	if lfb == nil || tk == nil {
+		return
+	}
+
 	if lfb.Round <= tk.Round {
 		mc.kickFinalization(ctx)
 		return
@@ -1568,7 +1576,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
 		return false, err
 	}
-
 	mc.ensureDKG(ctx, rcvd)
 	mc.SetLatestFinalizedMagicBlock(rcvd)
 
