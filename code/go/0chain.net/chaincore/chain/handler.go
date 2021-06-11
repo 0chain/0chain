@@ -1267,7 +1267,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if mb == nil {
-		fmt.Fprintf(w, fmt.Sprintf("<h3>MagicBlock not found for round %d</h3>", rn))
+		fmt.Fprintf(w, "<h3>MagicBlock not found for round %d</h3>", rn)
 		return
 	}
 
