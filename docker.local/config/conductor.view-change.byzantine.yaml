@@ -14,7 +14,7 @@
 ###   x_percent: 0.70 of min(max_n, num_dkg_miners)
 ###   min_s: 1, max_s: 2
 ###   min_n: 3, max_n: 7
-###   consensus: 67%
+###   consensus: 66%
 ###
 ### Outside Miners: ["miner-5", "miner-5", "miner-7", "miner-8"]
 ### Outside Sharders: ["sharder-3"]
