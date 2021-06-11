@@ -78,7 +78,15 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			if b.IsBlockNotarized() {
 				if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 					/* Since this is a notarized block, we are accepting it. */
-					b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
+					b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
+					if err != nil {
+						logging.Logger.Error("handle verify block failed",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.String("miner", b.MinerID),
+							zap.Error(err))
+						return
+					}
 					b = b1
 					mr = r1.(*Round)
 					logging.Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",

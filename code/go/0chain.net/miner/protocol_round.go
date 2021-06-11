@@ -957,7 +957,16 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
-	if _, ok := r.AddNotarizedBlock(b); !ok {
+	_, ok, err := r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("add notarized block failed",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return false
+	}
+
+	if !ok {
 		return false
 	}
 
@@ -1270,7 +1279,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		lfb = mc.GetLatestFinalizedBlock()
 		tk  = mc.GetLatestLFBTicket(ctx)
 	)
-	
+
 	if lfb == nil || tk == nil {
 		return
 	}
@@ -1434,8 +1443,23 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
-		if xr.GetRandomSeed() != xrhnb.GetRoundRandomSeed() {
-			mc.AddNotarizedBlockToRound(xr, xrhnb)
+
+		xrhnb, _, err = mc.AddNotarizedBlockToRound(xr, xrhnb)
+		if err != nil {
+			logging.Logger.Error("restartRound failed",
+				zap.Int64("round", i),
+				zap.String("block", xrhnb.Hash),
+				zap.Error(err))
+			return
+		}
+
+		if !xrhnb.IsStateComputed() {
+			lfmb := mc.GetLatestFinalizedMagicBlockRound(xr.GetRoundNumber())
+			if lfmb != nil && lfmb.Miners.HasNode(node.Self.GetKey()) {
+				if err := mc.ComputeOrSyncState(ctx, xrhnb); err != nil {
+					logging.Logger.Debug("restartRound: Notarized block ComputeOrSyncState", zap.Error(err))
+				}
+			}
 		}
 	}
 }

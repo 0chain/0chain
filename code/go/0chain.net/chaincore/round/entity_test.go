@@ -525,7 +525,8 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				softTimeoutCount: tt.fields.softTimeoutCount,
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
-			got, got1 := r.AddNotarizedBlock(tt.args.b)
+			got, got1, err := r.AddNotarizedBlock(tt.args.b)
+			assert.NoError(t, err)
 			if !assert.Equal(t, tt.want, got) {
 				t.Errorf("AddNotarizedBlock() got = %v, want %v", got, tt.want)
 			}

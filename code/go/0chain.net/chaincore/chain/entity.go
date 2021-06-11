@@ -596,7 +596,11 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 }
 
 /*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
-func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
+func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
+	if b.GetRoundRandomSeed() == 0 {
+		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
+	}
+
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 
@@ -617,7 +621,9 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
-			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
+			zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
+			zap.Int("Round_timeout", r.GetTimeoutCount()),
+			zap.Int("Block_round_timeout", b.RoundTimeoutCount))
 		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
@@ -626,7 +632,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 	}
-	return b, r
+	return b, r, nil
 }
 
 /*AddRoundBlock - add a block for a given round to the cache */
