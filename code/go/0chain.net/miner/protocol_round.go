@@ -1431,7 +1431,7 @@ func (mc *Chain) restartRound(ctx context.Context, round int64) {
 		}
 		// check out corresponding not. block
 		var xrhnb = xr.GetHeaviestNotarizedBlock()
-		if xrhnb == nil {
+		if xrhnb == nil || (xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) {
 			mc.pullNotarizedBlocks(ctx, xr)        // try to pull a not. block
 			xrhnb = xr.GetHeaviestNotarizedBlock() //
 		}
