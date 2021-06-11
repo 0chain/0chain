@@ -1033,6 +1033,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	}
 	if randomSeed == 0 {
 		logging.Logger.Error("SetRandomSeed -- seed is 0")
+		return false
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
