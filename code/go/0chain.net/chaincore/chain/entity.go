@@ -38,6 +38,9 @@ const PreviousBlockUnavailable = "previous_block_unavailable"
 // to a channel for syncing the latest finalized round state.
 const notifySyncLFRStateTimeout = 3 * time.Second
 
+// genesisRandomSeed is the geneisis block random seed
+const genesisRandomSeed = 839695260482366273
+
 var (
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
 	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
@@ -551,7 +554,8 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	c.UpdateMagicBlock(gb.MagicBlock)
 	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
 	gr := round.NewRound(0)
-	c.SetRandomSeed(gr, 839695260482366273)
+	c.SetRandomSeed(gr, genesisRandomSeed)
+	gb.SetRoundRandomSeed(genesisRandomSeed)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
