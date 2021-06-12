@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -444,10 +446,16 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 
 	b := block.NewBlock("", 1)
 	b.HashBlock()
+	b.SetRoundRandomSeed(1)
 
 	b2 := block.NewBlock("", 2)
 	b2.HashBlock()
 	b2.SetBlockNotarized()
+	b2.SetRoundRandomSeed(1)
+
+	b3 := block.NewBlock("", 3)
+	b3.HashBlock()
+	b3.SetBlockNotarized()
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -469,14 +477,33 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 		b *block.Block
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   *block.Block
-		want1  bool
+		name    string
+		fields  fields
+		args    args
+		want    *block.Block
+		want1   bool
+		wantErr error
 	}{
 		{
 			name: "FALSE",
+			fields: fields{
+				notarizedBlocks: []*block.Block{
+					func() *block.Block {
+						// creating new reference for same block
+						b := block.NewBlock("", b.Round)
+						b.HashBlock()
+						b.SetRoundRandomSeed(1)
+
+						return b
+					}(),
+				},
+			},
+			args:  args{b: b},
+			want:  b,
+			want1: false,
+		},
+		{
+			name: "FALSE_with_no_random_seed",
 			fields: fields{
 				notarizedBlocks: []*block.Block{
 					func() *block.Block {
@@ -488,9 +515,10 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 					}(),
 				},
 			},
-			args:  args{b: b},
-			want:  b,
-			want1: false,
+			args:    args{b: b3},
+			want:    b,
+			want1:   false,
+			wantErr: common.NewError("add_notarized_block", "block has no seed"),
 		},
 		{
 			name: "TRUE",
@@ -525,7 +553,13 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				softTimeoutCount: tt.fields.softTimeoutCount,
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
-			got, got1 := r.AddNotarizedBlock(tt.args.b)
+			got, got1, err := r.AddNotarizedBlock(tt.args.b)
+			require.Equal(t, tt.wantErr, err)
+
+			if err != nil {
+				return
+			}
+
 			if !assert.Equal(t, tt.want, got) {
 				t.Errorf("AddNotarizedBlock() got = %v, want %v", got, tt.want)
 			}

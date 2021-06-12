@@ -158,7 +158,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	if nbCount < len(c.NotarizedBlocksCounts) {
 		c.NotarizedBlocksCounts[nbCount]++
 	}
-	
+
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",
@@ -324,11 +324,27 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 		var b *block.Block
 		// This is a notarized block. So, use this method to sync round info with the notarized block.
-		b, r = c.AddNotarizedBlockToRound(r, nb)
+		b, r, err = c.AddNotarizedBlockToRound(r, nb)
+		if err != nil {
+			logging.Logger.Error("get notarized block for round failed",
+				zap.Int64("round", rn),
+				zap.String("block", nb.Hash),
+				zap.String("miner", nb.MinerID),
+				zap.Error(err))
+			return
+		}
 
 		// TODO: this may not be the best round block or the best chain weight
 		// block. Do we do that extra work?
-		b, _ = r.AddNotarizedBlock(b)
+		b, _, err = r.AddNotarizedBlock(b)
+		if err != nil {
+			logging.Logger.Error("get notarized block for round failed",
+				zap.Int64("round", rn),
+				zap.String("block", nb.Hash),
+				zap.String("miner", nb.MinerID),
+				zap.Error(err))
+			return
+		}
 		return b, nil
 	}
 
