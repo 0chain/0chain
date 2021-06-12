@@ -1,6 +1,19 @@
 #!/bin/bash
 set -e
 
+cmd="build"
+
+for arg in "$@"
+do
+    case $arg in
+        -m1|--m1|m1)
+        echo "The build will be performed for Apple M1 chip"
+        cmd="buildx build --platform linux/amd64"
+        shift
+        ;;
+    esac
+done
+
 # Allocate interactive TTY to allow Ctrl-C.
 INTERACTIVE="-it"
 PACKAGE=""
@@ -10,12 +23,12 @@ then
     # We need non-interactive mode for CI
     INTERACTIVE=""
     echo "Building both general and SC test images"
-    docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
+    docker $cmd -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 else
     PACKAGE="$1"
 
     echo "Building general test image"
-    docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
+    docker $cmd -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 fi
 
 if [[ -n "$PACKAGE" ]]; then
