@@ -418,11 +418,11 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				defer func() {
 					synchingStopC <- struct{}{}
 				}()
-				if lfb == nil || lfb.ClientState == nil {
+				if lfb == nil {
 					return
 				}
 
-				c.syncRoundStateToPersistentDB(cctx, lfb.Round, lfb.ClientState)
+				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
 			}()
 		case <-synchingStopC:
 			isSynching = false
@@ -434,10 +434,9 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	}
 }
 
-func (c *Chain) syncRoundStateToPersistentDB(ctx context.Context, round int64, state util.MerklePatriciaTrieI) {
+func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) {
 	Logger.Info("Sync round state from network...")
-	mpt := util.NewMerklePatriciaTrie(state.GetNodeDB(), util.Sequence(round))
-	rootStateHash := state.GetRoot()
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
 	mpt.SetRoot(rootStateHash)
 
 	Logger.Info("Finding missing nodes")
