@@ -21,7 +21,15 @@ func scConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":configurations")
 }
 
-// stake pool configs
+type freeAllocationSettings struct {
+	DataShards                 int           `json:"data_shards"`
+	ParityShards               int           `json:"parity_shards"`
+	Size                       int64         `json:"size"`
+	Duration                   time.Duration `json:"duration"`
+	ReadPriceRange             PriceRange    `json:"read_price_range"`
+	WritePriceRange            PriceRange    `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+}
 
 type stakePoolConfig struct {
 	MinLock int64 `json:"min_lock"`
@@ -30,15 +38,11 @@ type stakePoolConfig struct {
 	InterestInterval time.Duration `json:"interest_interval"`
 }
 
-// read pool configs
-
 type readPoolConfig struct {
 	MinLock       int64         `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
-
-// write pool configurations
 
 type writePoolConfig struct {
 	MinLock       int64         `json:"min_lock"`
@@ -98,6 +102,9 @@ type scConfig struct {
 	// blobber to revoke its min_lock demand back to user; only part not
 	// paid yet can go back.
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
+
+	// free allocations
+	FreeAllocationSettings freeAllocationSettings `json:"free_allocation_settings"`
 
 	// challenges generating
 
@@ -174,6 +181,36 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
 			sc.StakePool.InterestInterval)
 	}
+
+	if sc.FreeAllocationSettings.DataShards < 0 {
+		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
+			sc.StakePool.InterestRate)
+	}
+	if sc.FreeAllocationSettings.ParityShards < 0 {
+		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
+			sc.StakePool.InterestRate)
+	}
+	if sc.FreeAllocationSettings.ParityShards < 0 {
+		return fmt.Errorf("negative free_allocation_settings.size: %v",
+			sc.StakePool.InterestRate)
+	}
+	if sc.FreeAllocationSettings.Duration <= 0 {
+		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
+			sc.StakePool.InterestRate)
+	}
+	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
+		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
+			sc.StakePool.InterestRate)
+	}
+	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
+		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
+			sc.StakePool.InterestRate)
+	}
+	if sc.FreeAllocationSettings.MaxChallengeCompletionTime <= 0 {
+		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
+			sc.StakePool.InterestRate)
+	}
+
 	if sc.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
 			sc.FailedChallengesToCancel)
@@ -259,7 +296,6 @@ func (ssc *StorageSmartContract) getConfigBytes(
 
 // configs from sc.yaml
 func getConfiguredConfig() (conf *scConfig, err error) {
-
 	const pfx = "smart_contracts.storagesc."
 
 	conf = new(scConfig)
@@ -301,6 +337,22 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		pfx + "stakepool.interest_rate")
 	conf.StakePool.InterestInterval = scc.GetDuration(
 		pfx + "stakepool.interest_interval")
+
+	fas := pfx + "free_allocation_settings."
+	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
+	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
+	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
+	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
+	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
+		Min: state.Balance(scc.GetFloat64(fas + "read_price_range.max")),
+		Max: state.Balance(scc.GetFloat64(fas + "read_price_range.min")),
+	}
+	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
+		Min: state.Balance(scc.GetFloat64(fas + "write_price_range.max")),
+		Max: state.Balance(scc.GetFloat64(fas + "write_price_range.min")),
+	}
+	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
+
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(
 		pfx + "failed_challenges_to_cancel")

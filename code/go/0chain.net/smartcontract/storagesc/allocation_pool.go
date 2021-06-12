@@ -130,10 +130,6 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 	return true // added
 }
 
-//
-// allocation read/write pool
-//
-
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPool struct {
 	tokenpool.ZcnPool `json:"pool"`

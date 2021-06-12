@@ -152,6 +152,10 @@ func (nar *newAllocationRequest) decode(b []byte) error {
 	return json.Unmarshal(b, nar)
 }
 
+func (nar *newAllocationRequest) encode() ([]byte, error) {
+	return json.Marshal(nar)
+}
+
 // (1) adjust blobber capacity used, (2) add offer (stake lock boundary),
 // (3) save updated blobber
 func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
