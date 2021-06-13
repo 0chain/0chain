@@ -555,9 +555,9 @@ type StorageAllocation struct {
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
 
-	isFree          bool               `json:"is_free_allocation"`
-	freeTimestamp   common.Timestamp   `json:"free_timestamp"`
-	topUpTimestamps []common.Timestamp `json:"top_up_timestamps"`
+	IsFree          bool               `json:"is_free_allocation"`
+	FreeTimestamp   common.Timestamp   `json:"free_timestamp"`
+	TopUpTimestamps []common.Timestamp `json:"top_up_timestamps"`
 }
 
 // The restMinLockDemand returns number of tokens required as min_lock_demand;

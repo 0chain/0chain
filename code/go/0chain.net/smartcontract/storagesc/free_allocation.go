@@ -29,11 +29,11 @@ func (ssc *StorageSmartContract) GetFreeStorageMarker(
 	params url.Values,
 	balances state.StateContextI,
 ) (interface{}, error) {
-	var amount, err = strconv.Atoi(params.Get("amount"))
+	var amount, err = strconv.ParseFloat(params.Get("amount"), 64)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "cannot read amount")
 	}
-	if amount <= 0 {
+	if amount <= 0.0 {
 		common.NewErrorf("get_free_storage_marker", "marker amount %f out of range", amount)
 	}
 
@@ -117,12 +117,16 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	resp, err := ssc.newAllocationRequest(t, arBytes, balances)
-	if err != nil {
+	resp, sa, err := ssc.newAllocationRequestInternal(t, arBytes, balances)
+
+	sa.IsFree = true
+	sa.FreeTimestamp = frm.Timestamp
+
+	if resp, err = ssc.addAllocation(sa, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "%v", err)
 	}
 
-	return resp, nil
+	return resp, err
 }
 
 func (ssc *StorageSmartContract) updateFreeStorageRequest(

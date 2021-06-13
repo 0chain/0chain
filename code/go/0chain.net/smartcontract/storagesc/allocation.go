@@ -233,30 +233,45 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 }
 
 // newAllocationRequest creates new allocation
-func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI) (resp string, err error) {
+func (sc *StorageSmartContract) newAllocationRequest(
+	t *transaction.Transaction,
+	input []byte,
+	balances chainstate.StateContextI,
+) (string, error) {
+	resp, sa, err := sc.newAllocationRequestInternal(t, input, balances)
+
+	if resp, err = sc.addAllocation(sa, balances); err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+	}
+
+	return resp, err
+}
+
+// newAllocationRequest creates new allocation
+func (sc *StorageSmartContract) newAllocationRequestInternal(t *transaction.Transaction,
+	input []byte, balances chainstate.StateContextI) (resp string, ar *StorageAllocation, err error) {
 
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", nil, common.NewErrorf("allocation_creation_failed",
 			"can't get config: %v", err)
 	}
 
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = sc.getBlobbersList(balances)
 	if err != nil || len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewError("allocation_creation_failed",
+		return "", nil, common.NewError("allocation_creation_failed",
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
 
 	if t.ClientID == "" {
-		return "", common.NewError("allocation_creation_failed",
+		return "", nil, common.NewError("allocation_creation_failed",
 			"Invalid client in the transaction. No client id in transaction")
 	}
 
 	var request newAllocationRequest
 	if err = request.decode(input); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", nil, common.NewErrorf("allocation_creation_failed",
 			"malformed request: %v", err)
 	}
 
@@ -264,7 +279,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	sa.TimeUnit = conf.TimeUnit          // keep the initial time unit
 
 	if err = sa.validate(t.CreationDate, conf); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
+		return "", nil, common.NewErrorf("allocation_creation_failed",
 			"invalid request: %v", err)
 	}
 
@@ -280,7 +295,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	)
 
 	if len(list) < size {
-		return "", common.NewError("allocation_creation_failed",
+		return "", nil, common.NewError("allocation_creation_failed",
 			"Not enough blobbers to honor the allocation")
 	}
 
@@ -293,7 +308,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	if preferredBlobbersSize > 0 {
 		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
 		if err != nil {
-			return "", common.NewError("allocation_creation_failed",
+			return "", nil, common.NewError("allocation_creation_failed",
 				err.Error())
 		}
 	}
@@ -302,7 +317,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	if len(blobberNodes) < size {
 		var seed int64
 		if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
-			return "", common.NewError("allocation_creation_failed",
+			return "", nil, common.NewError("allocation_creation_failed",
 				"Failed to create seed for randomizeNodes")
 		}
 		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
@@ -343,31 +358,31 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	sa.Tx = t.Hash                // keep
 
 	if err = sc.addBlobbersOffers(sa, blobberNodes, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
 	if err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// create write pool and lock tokens
 	if err = sc.createWritePool(t, sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// create challenge pool
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// save
-	if resp, err = sc.addAllocation(sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed",
-			"failed to store the allocation request")
-	}
+	//if resp, err = sc.addAllocation(sa, balances); err != nil {
+	//	return "", nil, common.NewError("allocation_creation_failed",
+	//		"failed to store the allocation request")
+	//}
 
-	return // the resp
+	return resp, sa, err
 }
 
 // update allocation request
