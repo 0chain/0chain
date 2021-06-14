@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-PWD=`pwd`
-MINER_DIR=`basename $PWD`
-MINER_ID=`echo $MINER_DIR | sed -e 's/.*\(.\)$/\1/'`
+PWD=$(pwd)
+MINER_DIR=$(basename "$PWD")
+MINER_ID=$(echo "$MINER_DIR" | sed -e 's/.*\(.\)$/\1/')
 
 if [[ "$*" == *"--debug"* ]]
 then

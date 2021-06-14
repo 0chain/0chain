@@ -2,9 +2,9 @@
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
-echo $GIT_COMMIT
+echo "$GIT_COMMIT"
 
-docker build --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Dockerfile . -t sharder
+docker build --build-arg GIT_COMMIT="$GIT_COMMIT" -f docker.local/build.sharder/Dockerfile . -t sharder
 
 for i in $(seq 1 3);
 do

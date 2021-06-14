@@ -4,7 +4,7 @@ set -e
 
 for running in $(docker ps -q)
 do
-    docker stop $running
+    docker stop "$running"
 done
 
 # go caches all build by default
