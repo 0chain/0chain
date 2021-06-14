@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"errors"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -46,12 +43,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	var all *MinerNodes
-	if all, err = msc.getMinersList(balances); err != nil {
+	all, err = getMinersList(balances)
+	if err != nil {
 		Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
 		return "", common.NewErrorf("add_miner_failed",
 			"failed to get miner list: %v", err)
 	}
+
 	msc.verifyMinerState(balances,
 		"add_miner: checking all miners list in the beginning")
 
@@ -114,30 +113,39 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			newMiner.MaxStake, gn.MaxStake)
 	}
 
-	if msc.doesMinerExist(newMiner.getKey(), balances) {
-		return "", common.NewError("add_miner_failed",
-			"miner already exists")
-	}
-
 	newMiner.NodeType = NodeTypeMiner // set node type
 
-	// add to all miners list
-	all.Nodes = append(all.Nodes, newMiner)
-	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
-		return "", common.NewErrorf("add_miner_failed",
-			"saving all miners list: %v", err)
+	allMap := make(map[string]struct{}, len(all.Nodes))
+	for _, n := range all.Nodes {
+		allMap[n.getKey()] = struct{}{}
 	}
 
-	// set node type -- miner
-	if err = newMiner.save(balances); err != nil {
-		return "", common.NewError("add_miner_failed", err.Error())
+	var update bool
+	if _, ok := allMap[newMiner.getKey()]; !ok {
+		all.Nodes = append(all.Nodes, newMiner)
+
+		if err = updateMinersList(balances, all); err != nil {
+			return "", common.NewErrorf("add_miner_failed",
+				"saving all miners list: %v", err)
+		}
+		update = true
 	}
 
-	msc.verifyMinerState(balances,
-		"add_miner: Checking all miners list afterInsert")
+	if !msc.doesMinerExist(newMiner.getKey(), balances) {
+		if err = newMiner.save(balances); err != nil {
+			return "", common.NewError("add_miner_failed", err.Error())
+		}
 
-	resp = string(newMiner.Encode())
-	return
+		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
+
+		update = true
+	}
+
+	if !update {
+		Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
+	}
+
+	return string(newMiner.Encode()), nil
 }
 
 func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
@@ -185,7 +193,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	var mn *MinerNode
-	mn, err = msc.getMinerNode(update.ID, balances)
+	mn, err = getMinerNode(update.ID, balances)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
@@ -210,7 +218,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 	msg string) {
 
-	allMinersList, err := msc.getMinersList(balances)
+	allMinersList, err := getMinersList(balances)
 	if err != nil {
 		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
 			"Failed to retrieve existing miners list: " + err.Error())
@@ -235,42 +243,65 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
-	return msc.getMinersList(balances)
+	return getMinersList(balances)
 }
 
-func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
-	all *MinerNodes, err error) {
+// getMinerNode
+func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+	getFromNodeFunc := func() (*MinerNode, error) {
+		mn := NewMinerNode()
+		mn.ID = id
 
-	all = new(MinerNodes)
-	allMinersBytes, err := balances.GetTrieNode(AllMinersKey)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, errors.New("get_miners_list_failed - " +
-			"failed to retrieve existing miners list: " + err.Error())
-	}
-	if allMinersBytes == nil {
-		return all, nil
-	}
-	err = all.Decode(allMinersBytes.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return all, nil
-}
+		ms, err := state.GetTrieNode(mn.getKey())
+		if err != nil {
+			return nil, err
+		}
 
-func (msc *MinerSmartContract) getMinerNode(id string,
-	balances cstate.StateContextI) (*MinerNode, error) {
+		if err := mn.Decode(ms.Encode()); err != nil {
+			return nil, err
+		}
 
-	mn := NewMinerNode()
-	mn.ID = id
-	ms, err := balances.GetTrieNode(mn.getKey())
-	if err == util.ErrValueNotPresent {
-		return mn, err
-	} else if err != nil {
-		return nil, err
+		return mn, nil
 	}
 
-	if err := mn.Decode(ms.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	getFromMinersList := func() (*MinerNode, error) {
+		allMiners, err := getMinersList(state)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, node := range allMiners.Nodes {
+			if node.ID == id {
+				return node, nil
+			}
+		}
+
+		return nil, util.ErrValueNotPresent
 	}
-	return mn, nil
+
+	getFuncs := []func() (*MinerNode, error){
+		getFromNodeFunc,
+		getFromMinersList,
+	}
+
+	var err error
+	var mn *MinerNode
+	for _, fn := range getFuncs {
+		var node *MinerNode
+		node, err = fn()
+		if err == nil {
+			return node, nil
+		}
+
+		switch err {
+		case util.ErrNodeNotFound, util.ErrValueNotPresent:
+			mn = NewMinerNode()
+			mn.ID = id
+			continue
+		default:
+			return nil, err
+		}
+	}
+
+	return mn, err
 }

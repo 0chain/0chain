@@ -54,7 +54,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		}
 
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
-
 	} else {
 		if !mr.IsVRFComplete() {
 			logging.Logger.Info("handle verify block - got block proposal before VRF is complete",
@@ -79,7 +78,15 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			if b.IsBlockNotarized() {
 				if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 					/* Since this is a notarized block, we are accepting it. */
-					b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
+					b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
+					if err != nil {
+						logging.Logger.Error("handle verify block failed",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.String("miner", b.MinerID),
+							zap.Error(err))
+						return
+					}
 					b = b1
 					mr = r1.(*Round)
 					logging.Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",
@@ -98,9 +105,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			}
 		}
 	}
-
+	// reassign the 'mr' variable, the miner should not be nil, but somehow
+	//, this happened!! how could it happen?
+	mr = mc.GetMinerRound(b.Round)
 	if mr == nil {
-		logging.Logger.Error("this should not happen %v", zap.Int64("round", b.Round),
+		logging.Logger.Error("this should not happen", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int64("cround", mc.GetCurrentRound()))
 		return
@@ -128,8 +137,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		return
 	}
 
-	logging.Logger.Info("Added block to Round", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash))
+	logging.Logger.Info("Added block to Round",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
+		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
 	mc.AddToRoundVerification(ctx, mr, b)
 }
 
@@ -165,6 +177,11 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		mr.AddVerificationTicket(bvt)
 		return
 	}
+
+	logging.Logger.Debug("verification ticket",
+		zap.Int64("round", rn),
+		zap.String("block hash", b.Hash),
+		zap.String("block id", bvt.BlockID))
 
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {

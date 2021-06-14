@@ -79,3 +79,19 @@ func (vrfs *VRFShare) SetParty(party *node.Node) {
 func (vrfs *VRFShare) GetParty() *node.Node {
 	return vrfs.party
 }
+
+// Clone returns a clone of the VRFShare
+func (vrfs *VRFShare) Clone() *VRFShare {
+	clone := &VRFShare{
+		NOIDField:         vrfs.NOIDField,
+		Round:             vrfs.Round,
+		Share:             vrfs.Share,
+		RoundTimeoutCount: vrfs.RoundTimeoutCount,
+	}
+
+	if vrfs.party != nil {
+		clone.party = vrfs.party.Clone()
+	}
+
+	return clone
+}

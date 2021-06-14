@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/url"
 	"strconv"
-	"sync"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -334,14 +333,7 @@ type Chainer interface {
 func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	ticket *LFBTicket) (fb *block.Block, err error) {
 
-	var (
-		mb       = c.GetLatestFinalizedMagicBlock()
-		sharders = mb.Sharders
-		params   = make(url.Values)
-
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-		fbMutex      sync.Mutex
-	)
+	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -375,25 +367,29 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		fbMutex.Lock()
-		defer fbMutex.Unlock()
+		// stop requesting on first block accepted
+		cancel()
 		fb = gfb
 
-		cancel() // stop
-		return   // (nil, nil)
+		return // (nil, nil)
 	}
-
+	params := make(url.Values)
 	params.Add("hash", ticket.LFBHash)
 	params.Add("round", strconv.FormatInt(ticket.Round, 10))
 
 	// request from ticket sender, or. if the sender is missing,
 	// try to fetch from all other sharders from the current MB
-	if sh := sharders.GetNode(ticket.SharderID); sh != nil {
-		sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
-	} else {
-		sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
+	sharders := c.getLatestFinalizedMagicBlock().Sharders
+	if node.Self.Underlying().GetKey() != ticket.SharderID {
+		if sh := sharders.GetNode(ticket.SharderID); sh != nil {
+			sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
+			if fb != nil {
+				return
+			}
+		}
 	}
 
+	sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 	if fb == nil {
 		return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 	}
@@ -416,13 +412,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 
 	params.Add("block", hash)
 
-	// force a request to be limited (recreate the context for a the sharders
-	// requesting fallback below)
-	var (
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-		mb           = c.GetLatestFinalizedMagicBlock()
-		lock         sync.Mutex
-	)
+	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel() // terminate the context after all anyway
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -466,24 +456,48 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 			zap.Int64("round", nb.Round),
 			zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 
-		cancel() // stop requesting on first block accepted
-
-		// using mutex for the b variable
-		lock.Lock()
-		defer lock.Unlock()
+		// stop requesting on first block accepted
+		cancel()
 		b = nb
 
 		return // (nil, nil), don't return the block back
 	}
 
-	var n2n = mb.Miners
-	n2n.RequestEntity(lctx, MinerNotarizedBlockRequestor, &params, handler)
+	c.RequestEntityFromMiners(lctx, MinerNotarizedBlockRequestor, &params, handler)
 
 	if b == nil {
 		return nil, common.NewError("get_notarized_block", "no block given")
 	}
 
 	return
+}
+
+// RequestEntityFromMiners requests entity from miners in latest finalized magic block
+func (c *Chain) RequestEntityFromMiners(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	c.RequestEntityFromMinersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
+}
+
+// RequestEntityFromSharders requests entity from sharders in latest finalized magic block
+func (c *Chain) RequestEntityFromSharders(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	c.RequestEntityFromShardersOnMB(ctx, c.getLatestFinalizedMagicBlock(), requestor, params, handler)
+}
+
+// RequestEntityFromMinersOnMB requests entity from miners on given magic block
+func (c *Chain) RequestEntityFromMinersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Miners.RequestEntity(ctx, requestor, params, handler)
+}
+
+// RequestEntityFromShardersOnMB requests entity from sharders on given magic block
+func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
+	mb *block.MagicBlock, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+	mb.Sharders.RequestEntity(ctx, requestor, params, handler)
+}
+
+func (c *Chain) getLatestFinalizedMagicBlock() *block.MagicBlock {
+	c.lfmbMutex.Lock()
+	defer c.lfmbMutex.Unlock()
+	return c.latestFinalizedMagicBlock.MagicBlock
 }
 
 //
@@ -550,8 +564,21 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	b, r = c.AddNotarizedBlockToRound(r, nb)
-	b, _ = r.AddNotarizedBlock(b)
+	var err error
+	b, r, err = c.AddNotarizedBlockToRound(r, nb)
+	if err != nil {
+		logging.Logger.Error("get notarized block failed",
+			zap.Int64("cround", cround), zap.Int64("round", rn),
+			zap.String("block", hash), zap.Error(err))
+		return nil
+	}
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("get notarized block failed",
+			zap.Int64("cround", cround), zap.Int64("round", rn),
+			zap.String("block", hash), zap.Error(err))
+		return nil
+	}
 
 	// Add the round if chain does not have it
 	if c.GetRound(nb.Round) == nil {
@@ -627,8 +654,21 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	b, r = c.AddNotarizedBlockToRound(r, fb)
-	b, _ = r.AddNotarizedBlock(b)
+	var err error
+	b, r, err = c.AddNotarizedBlockToRound(r, fb)
+	if err != nil {
+		logging.Logger.Error("async fetch fb from sharders failed",
+			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
+			zap.Error(err))
+		return
+	}
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("async fetch fb from sharders failed",
+			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
+			zap.Error(err))
+		return
+	}
 
 	//  Add the round to chain if does not in the chain yet
 	if c.GetRound(fb.Round) == nil {

@@ -330,65 +330,62 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 	// Bounds for the round.
 	bounds := cc.bounds
 
-	for true {
-		// Log end of the current cycle
-		bc.CycleEnd = time.Now().Truncate(time.Second)
-		bc.CycleDuration = time.Since(bc.CycleStart).Truncate(time.Second)
-		bc.ElapsedSeconds = int64(bc.CycleDuration.Seconds())
+	// Log end of the current cycle
+	bc.CycleEnd = time.Now().Truncate(time.Second)
+	bc.CycleDuration = time.Since(bc.CycleStart).Truncate(time.Second)
+	bc.ElapsedSeconds = int64(bc.CycleDuration.Seconds())
 
-		// Mark as cycle is in hiatus
-		cc.Status = SyncHiatus
+	// Mark as cycle is in hiatus
+	cc.Status = SyncHiatus
 
-		Logger.Info("HC-CycleHistory",
-			zap.String("mode", cc.ScanMode.String()),
-			zap.Int64("cycle", cc.CycleCount),
-			zap.String("event", "end"),
-			zap.String("bounds",
-				fmt.Sprintf("[%v-%v]", bounds.highRound, bounds.lowRound)),
-			zap.Time("start", bc.CycleStart.Truncate(time.Second)),
-			zap.Time("end", bc.CycleEnd.Truncate(time.Second)),
-			zap.Duration("duration", bc.CycleDuration))
+	Logger.Info("HC-CycleHistory",
+		zap.String("mode", cc.ScanMode.String()),
+		zap.Int64("cycle", cc.CycleCount),
+		zap.String("event", "end"),
+		zap.String("bounds",
+			fmt.Sprintf("[%v-%v]", bounds.highRound, bounds.lowRound)),
+		zap.Time("start", bc.CycleStart.Truncate(time.Second)),
+		zap.Time("end", bc.CycleEnd.Truncate(time.Second)),
+		zap.Duration("duration", bc.CycleDuration))
 
-		// Calculate the sweep rate
-		bc.SweepCount = bounds.highRound - bounds.lowRound + 1
+	// Calculate the sweep rate
+	bc.SweepCount = bounds.highRound - bounds.lowRound + 1
 
-		if bc.ElapsedSeconds > 0 {
-			bc.SweepRate = bc.SweepCount / bc.ElapsedSeconds
-		}
-
-		Logger.Info("HC-CycleHistory",
-			zap.String("mode", cc.ScanMode.String()),
-			zap.Int64("cycle", cc.CycleCount),
-			zap.String("event", "sweep-rate"),
-			zap.Int64("BlocksSweeped", bc.SweepCount),
-			zap.Int64("ElapsedSeconds", bc.ElapsedSeconds),
-			zap.Int64("SweepRate", bc.SweepRate))
-
-		// End of the cycle. Sleep between cycles.
-		config := &sc.HCCycleScan[scanMode]
-
-		sleepTime := config.RepeatInterval
-		wakeToReport := config.ReportStatus
-		if wakeToReport > sleepTime {
-			wakeToReport = sleepTime
-		}
-
-		// Add time to sleep before waking up
-		restartCycle := time.Now().Add(sleepTime)
-		for ok := true; ok; ok = restartCycle.After(time.Now()) {
-			Logger.Info("HC-CycleHistory",
-				zap.String("mode", cc.ScanMode.String()),
-				zap.Int64("cycle", cc.CycleCount),
-				zap.String("event", "hiatus"),
-				zap.Time("restart", restartCycle.Truncate(time.Second)))
-			time.Sleep(wakeToReport)
-		}
-
-		// Time to start a new cycle
-		sc.setCycleBounds(ctx, scanMode)
-		sc.initSyncStats(ctx, scanMode)
-		break
+	if bc.ElapsedSeconds > 0 {
+		bc.SweepRate = bc.SweepCount / bc.ElapsedSeconds
 	}
+
+	Logger.Info("HC-CycleHistory",
+		zap.String("mode", cc.ScanMode.String()),
+		zap.Int64("cycle", cc.CycleCount),
+		zap.String("event", "sweep-rate"),
+		zap.Int64("BlocksSweeped", bc.SweepCount),
+		zap.Int64("ElapsedSeconds", bc.ElapsedSeconds),
+		zap.Int64("SweepRate", bc.SweepRate))
+
+	// End of the cycle. Sleep between cycles.
+	config := &sc.HCCycleScan[scanMode]
+
+	sleepTime := config.RepeatInterval
+	wakeToReport := config.ReportStatus
+	if wakeToReport > sleepTime {
+		wakeToReport = sleepTime
+	}
+
+	// Add time to sleep before waking up
+	restartCycle := time.Now().Add(sleepTime)
+	for ok := true; ok; ok = restartCycle.After(time.Now()) {
+		Logger.Info("HC-CycleHistory",
+			zap.String("mode", cc.ScanMode.String()),
+			zap.Int64("cycle", cc.CycleCount),
+			zap.String("event", "hiatus"),
+			zap.Time("restart", restartCycle.Truncate(time.Second)))
+		time.Sleep(wakeToReport)
+	}
+
+	// Time to start a new cycle
+	sc.setCycleBounds(ctx, scanMode)
+	sc.initSyncStats(ctx, scanMode)
 }
 
 func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHealthCheckStatus) {

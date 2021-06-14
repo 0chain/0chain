@@ -2,6 +2,7 @@ package httpclientutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -725,22 +725,27 @@ func TestGetTransactionStatus(t *testing.T) {
 	}
 }
 
+type mokeErrEntity struct {
+	mocks.Serializable
+}
+
+func (ee *mokeErrEntity) Decode([]byte) error {
+	return errors.New("")
+}
+
+type mokeEntity struct {
+	mocks.Serializable
+}
+
+func (me *mokeEntity) Decode([]byte) error {
+	return nil
+}
+
 func TestMakeSCRestAPICall(t *testing.T) {
 	t.Parallel()
 
-	errEntity := mocks.Serializable{}
-	errEntity.On("Decode", mock.AnythingOfType("[]uint8")).Return(
-		func(blob []byte) error {
-			return errors.New("")
-		},
-	)
-
-	entity := mocks.Serializable{}
-	entity.On("Decode", mock.AnythingOfType("[]uint8")).Return(
-		func(blob []byte) error {
-			return nil
-		},
-	)
+	errEntity := mokeErrEntity{}
+	entity := mokeEntity{}
 
 	type (
 		args struct {
@@ -762,6 +767,7 @@ func TestMakeSCRestAPICall(t *testing.T) {
 		{
 			name: "Client_ERR",
 			args: args{
+				entity: &entity,
 				params: map[string]string{
 					"key": "value",
 				},
@@ -830,7 +836,7 @@ func TestMakeSCRestAPICall(t *testing.T) {
 				tt.args.urls = append(tt.args.urls, URL)
 			}
 
-			if err := MakeSCRestAPICall(tt.args.scAddress, tt.args.relativePath, tt.args.params, tt.args.urls, tt.args.entity, tt.args.consensus); (err != nil) != tt.wantErr {
+			if err := MakeSCRestAPICall(context.TODO(), tt.args.scAddress, tt.args.relativePath, tt.args.params, tt.args.urls, tt.args.entity, tt.args.consensus); (err != nil) != tt.wantErr {
 				t.Errorf("MakeSCRestAPICall() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -905,7 +911,7 @@ func TestGetBlockSummaryCall(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			for _, f := range tt.makeServers {
 				URL := f()

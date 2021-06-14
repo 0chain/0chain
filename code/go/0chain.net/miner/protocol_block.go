@@ -238,6 +238,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if err = mc.ComputeState(ctx, b); err != nil {
+		if err == context.Canceled {
+			logging.Logger.Warn("verify block canceled")
+			return
+		}
+
 		logging.Logger.Error("verify block - error computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
