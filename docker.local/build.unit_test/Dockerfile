@@ -4,11 +4,12 @@ ENV GO111MODULE=on
 
 # Download the dependencies:
 # Will be cached if we don't change mod/sum files
-COPY ./code/go/0chain.net $SRC_DIR/code/go/0chain.net
+COPY ./code/go/0chain.net/go.mod $SRC_DIR/code/go/0chain.net/go.mod
+COPY ./code/go/0chain.net/go.sum $SRC_DIR/code/go/0chain.net/go.sum
 COPY ./generate_mocks.sh $SRC_DIR/generate_mocks.sh
 
 RUN go get github.com/vektra/mockery/v2/.../
-RUN cd $SRC_DIR && ls && ./generate_mocks.sh
+#RUN cd $SRC_DIR && ./generate_mocks.sh
 
 RUN cd $SRC_DIR/code/go/0chain.net && \
     go mod download
