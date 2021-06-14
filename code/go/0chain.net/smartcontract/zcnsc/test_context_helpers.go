@@ -51,6 +51,14 @@ type mockStateContext struct {
 	store              map[datastore.Key]util.Serializable
 }
 
+func CreateStateContext() cstate.StateContextI {
+	return &mockStateContext{
+		ctx:                cstate.StateContext{},
+		clientStartBalance: zcnToBalance(3),
+		store:              make(map[datastore.Key]util.Serializable),
+	}
+}
+
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block           { return nil }
 func (sc *mockStateContext) GetBlock() *block.Block                                { return nil }
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }

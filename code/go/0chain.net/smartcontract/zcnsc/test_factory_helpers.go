@@ -1,17 +1,16 @@
 package zcnsc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 )
 
 var (
-	zcnscAddressId         = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	tokens         float64 = 10
-	clientSignatureScheme = "bls0chain"
+	zcnscAddressId                = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	tokens                float64 = 10
+	clientSignatureScheme         = "bls0chain"
 )
 
 func CreateTransaction() *transaction.Transaction {
@@ -52,10 +51,10 @@ func CreateTransaction() *transaction.Transaction {
 	return txn
 }
 
-func CreateStateContext() cstate.StateContextI {
-	return &mockStateContext{
-		ctx:                cstate.StateContext{},
-		clientStartBalance: 0,
-		store:              make(map[datastore.Key]util.Serializable),
-	}
+func CreateZcNsc() *ZCNSmartContract {
+	msc := new(ZCNSmartContract)
+	msc.SmartContract = new(smartcontractinterface.SmartContract)
+	msc.ID = ADDRESS
+	msc.SmartContractExecutionStats = make(map[string]interface{})
+	return msc
 }
