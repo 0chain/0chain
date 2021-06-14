@@ -9,7 +9,6 @@ COPY ./code/go/0chain.net/go.sum $SRC_DIR/code/go/0chain.net/go.sum
 COPY ./generate_mocks.sh $SRC_DIR/generate_mocks.sh
 
 RUN go get github.com/vektra/mockery/v2/.../
-#RUN cd $SRC_DIR && ./generate_mocks.sh
 
 RUN cd $SRC_DIR/code/go/0chain.net && \
     go mod download
