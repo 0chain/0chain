@@ -8,7 +8,8 @@
 *.jar
 **/target/
 **/data/
-**/log/
+**/log/**
+!**/log/.gitkeep
 **/bin/
 !bin/
 !docker.local/bin/
