@@ -33,6 +33,7 @@ const (
 	clientID0            = "client0_address"
 	clientID1            = "client1_address"
 	zrc20scAddress       = "zrc20sc_address"
+	globalNodeId         = "global node id"
 )
 
 const x10 = 10 * 1000 * 1000 * 1000
@@ -51,9 +52,31 @@ type mockStateContext struct {
 	store              map[datastore.Key]util.Serializable
 }
 
-func CreateStateContext() cstate.StateContextI {
+func CreateStateContext() *cstate.StateContext {
+
+	var txn = &transaction.Transaction{
+		HashIDField:  datastore.HashIDField{Hash: txHash},
+		ClientID:     clientId,
+		ToClientID:   zcnscAddressId,
+		CreationDate: startTime,
+		Value:        int64(zcnToBalance(tokens)),
+	}
+
+	return cstate.NewStateContext(
+		nil,
+		&util.MerklePatriciaTrie{},
+		&state.Deserializer{},
+		txn,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+}
+
+func CreateMockStateContext() cstate.StateContextI {
 	return &mockStateContext{
-		ctx:                cstate.StateContext{},
+		ctx:                *CreateStateContext(),
 		clientStartBalance: zcnToBalance(3),
 		store:              make(map[datastore.Key]util.Serializable),
 	}

@@ -13,8 +13,11 @@ var (
 	clientSignatureScheme         = "bls0chain"
 )
 
-func CreateTransaction() *transaction.Transaction {
+func CreateDefaultTransaction() *transaction.Transaction {
+	return CreateTransaction(clientId, tokens)
+}
 
+func CreateTransaction(fromClient string, amount float64) *transaction.Transaction {
 	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
 	err := sigScheme.GenerateKeys()
 	if err != nil {
@@ -27,9 +30,9 @@ func CreateTransaction() *transaction.Transaction {
 		HashIDField:           datastore.HashIDField{Hash: txHash},
 		CollectionMemberField: datastore.CollectionMemberField{},
 		VersionField:          datastore.VersionField{},
-		ClientID:              clientId,
+		ClientID:              fromClient,
 		ToClientID:            zcnscAddressId,
-		Value:                 int64(zcnToBalance(tokens)),
+		Value:                 int64(zcnToBalance(amount)),
 		CreationDate:          startTime,
 		PublicKey:             pk,
 		ChainID:               "",
@@ -42,19 +45,25 @@ func CreateTransaction() *transaction.Transaction {
 		Status:                0,
 	}
 
-	//txn = &transaction.Transaction{
-	//	ClientID:   clientID0,
-	//	ToClientID: zrc20scAddress,
-	//	Value:      4,
-	//}
-
 	return txn
 }
 
-func CreateZcNsc() *ZCNSmartContract {
+func CreateZCNSmartContract() *ZCNSmartContract {
 	msc := new(ZCNSmartContract)
 	msc.SmartContract = new(smartcontractinterface.SmartContract)
 	msc.ID = ADDRESS
 	msc.SmartContractExecutionStats = make(map[string]interface{})
 	return msc
+}
+
+func CreateSmartContractGlobalNode() *globalNode {
+	return &globalNode{
+		ID:                 ADDRESS,
+		MinMintAmount:      0,
+		PercentAuthorizers: 0,
+		MinBurnAmount:      0,
+		MinStakeAmount:     0,
+		BurnAddress:        "0",
+		MinAuthorizers:     0,
+	}
 }
