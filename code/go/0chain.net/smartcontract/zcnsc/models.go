@@ -154,7 +154,9 @@ type authorizerNode struct {
 }
 
 func getNewAuthorizer(pk string) *authorizerNode {
-	return &authorizerNode{PublicKey: pk, Staking: &tokenpool.ZcnLockingPool{}}
+	return &authorizerNode{
+		PublicKey: pk,
+		Staking: &tokenpool.ZcnLockingPool{}}
 }
 
 type authorizerNodes struct {

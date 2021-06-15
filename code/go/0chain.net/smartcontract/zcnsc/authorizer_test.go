@@ -8,15 +8,10 @@ import (
 	"0chain.net/core/common"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 	"time"
 )
 
-// TODO: Mock transaction.Transaction
-// TODO: Prepare inputData []byte
-// TODO: Mock c_state.StateContextI
-// TODO: Create SC mock
 // TODO: Mock Transaction.TransactionData with SmartContractTransactionData
 // TODO: Mock SmartContractTransactionData
 
@@ -60,19 +55,6 @@ func (tl tokenLock) LockStats(entity interface{}) []byte {
 		return ts.Encode()
 	}
 	return nil
-}
-
-func setup() {
-}
-
-func shutdown() {
-}
-
-func TestMain(m *testing.M) {
-	setup()
-	code := m.Run()
-	shutdown()
-	os.Exit(code)
 }
 
 func TestTransferToLockPool(t *testing.T) {
@@ -175,4 +157,121 @@ func TestShouldDeleteAuthorizer(t *testing.T) {
 func TestShouldFailIfAuthorizerExists(t *testing.T) {
 	var sc = ZCNSmartContract{}
 	require.NotNil(t, sc)
+}
+
+func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
+	var data []byte
+	sc := CreateZCNSmartContract()
+	balances := CreateMockStateContext()
+	tr := CreateDefaultTransaction()
+	tr.Value = 99
+
+	node := CreateSmartContractGlobalNode()
+	node.MinStakeAmount = 100
+	err := node.save(balances)
+	require.NoError(t, err)
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.Empty(t, resp)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "is lower than min amount")
+}
+
+func Test_Should_FailWithoutPublicKey(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	tr.PublicKey = ""
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.Empty(t, resp)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "public key was not included with transaction")
+}
+
+func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
+	pk := &PublicKey{Key: "public Key"}
+	data, _ := json.Marshal(pk)
+	tr := CreateDefaultTransaction()
+	tr.PublicKey = ""
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+}
+
+func Test_Transaction_Or_InputData_MustBe_A_Key_Transaction(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	tr.PublicKey = "public Key"
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+}
+
+func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+
+	tr = CreateTransaction("another client", 10)
+
+	authorizer, err := sc.deleteAuthorizer(tr, data, balances)
+	require.Empty(t, authorizer)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "doesn't exist")
+}
+
+func Test_Can_Delete_Authorizer(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+
+	tr = CreateDefaultTransaction()
+
+	_, err = sc.deleteAuthorizer(tr, data, balances)
+	//require.NotEmpty(t, authorizer)
+	require.NoError(t, err)
+}
+
+func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+
+	ans := getAuthorizerNodes(balances)
+	gn := getGlobalNode(balances)
+
+	_, err = sc.deleteAuthorizer(tr, data, balances)
+	_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, nil)
+	require.NoError(t, err)
+
+	//require.NotEmpty(t, authorizer)
+	require.NoError(t, err)
 }
