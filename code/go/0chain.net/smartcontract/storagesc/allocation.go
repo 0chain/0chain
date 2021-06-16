@@ -252,9 +252,9 @@ func (sc *StorageSmartContract) newAllocationRequest(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	if resp, err = sc.addAllocation(sa, balances); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-	}
+	//if resp, err = sc.addAllocation(sa, balances); err != nil {
+	//	return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+	//}
 
 	return resp, err
 }
@@ -377,6 +377,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
 		return "", nil, common.NewError("allocation_creation_failed", err.Error())
+	}
+
+	if resp, err = sc.addAllocation(sa, balances); err != nil {
+		return "", nil, common.NewErrorf("free_allocation_failed", "%v", err)
 	}
 
 	return resp, sa, err

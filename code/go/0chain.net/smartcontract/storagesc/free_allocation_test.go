@@ -313,7 +313,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Giver),
-			freeStorageAssigner{
+			&freeStorageAssigner{
 				ClientId:    p.assigner.ClientId,
 				PublicKey:   p.assigner.PublicKey,
 				AnnualLimit: p.assigner.AnnualLimit,
@@ -387,38 +387,3 @@ func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, stri
 	require.NoError(t, err)
 	return signature, signatureScheme.GetPublicKey()
 }
-
-/*
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- */

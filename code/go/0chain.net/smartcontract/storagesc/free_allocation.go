@@ -229,9 +229,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewError("free_allocation_failed", "nil allocation storage object")
 	}
 
-	sa.IsFree = true
-	sa.FreeTimestamp = marker.Timestamp
-
 	redeemed := freeStorageRedeemed{
 		Timestamp: marker.Timestamp,
 		When:      txn.CreationDate,
@@ -242,9 +239,9 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
 	}
 
-	if resp, err = ssc.addAllocation(sa, balances); err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "%v", err)
-	}
+	//if resp, err = ssc.addAllocation(sa, balances); err != nil {
+	//	return "", common.NewErrorf("free_allocation_failed", "%v", err)
+	//}
 
 	// create write pool and lock tokens
 	if err = ssc.createWritePool(txn, sa, balances); err != nil {

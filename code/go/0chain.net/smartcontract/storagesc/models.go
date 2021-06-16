@@ -554,10 +554,6 @@ type StorageAllocation struct {
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
-
-	IsFree          bool               `json:"is_free_allocation"`
-	FreeTimestamp   common.Timestamp   `json:"free_timestamp"`
-	TopUpTimestamps []common.Timestamp `json:"top_up_timestamps"`
 }
 
 // The restMinLockDemand returns number of tokens required as min_lock_demand;
