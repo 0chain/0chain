@@ -1,0 +1,23 @@
+syntax = "proto3";
+package miner.service.v1;
+
+option go_package = "code/go/0chain.net/miner/minerGRPC";
+
+import "google/api/annotations.proto";
+
+
+service Miner {
+  rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse) {
+    option (google.api.http) = {
+      get: "/v2/_nh/whoami"
+    };
+  }
+}
+
+message WhoAmIRequest {
+
+}
+
+message WhoAmIResponse {
+  string data = 1;
+}
