@@ -18,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerClient interface {
 	WhoAmI(ctx context.Context, in *WhoAmIRequest, opts ...grpc.CallOption) (*WhoAmIResponse, error)
+	GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error)
 }
 
 type minerClient struct {
@@ -37,11 +38,21 @@ func (c *minerClient) WhoAmI(ctx context.Context, in *WhoAmIRequest, opts ...grp
 	return out, nil
 }
 
+func (c *minerClient) GetLatestFinalizedBlockSummary(ctx context.Context, in *GetLatestFinalizedBlockSummaryRequest, opts ...grpc.CallOption) (*GetLatestFinalizedBlockSummaryResponse, error) {
+	out := new(GetLatestFinalizedBlockSummaryResponse)
+	err := c.cc.Invoke(ctx, "/miner.service.v1.Miner/GetLatestFinalizedBlockSummary", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinerServer is the server API for Miner service.
 // All implementations must embed UnimplementedMinerServer
 // for forward compatibility
 type MinerServer interface {
 	WhoAmI(context.Context, *WhoAmIRequest) (*WhoAmIResponse, error)
+	GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error)
 	mustEmbedUnimplementedMinerServer()
 }
 
@@ -51,6 +62,9 @@ type UnimplementedMinerServer struct {
 
 func (UnimplementedMinerServer) WhoAmI(context.Context, *WhoAmIRequest) (*WhoAmIResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WhoAmI not implemented")
+}
+func (UnimplementedMinerServer) GetLatestFinalizedBlockSummary(context.Context, *GetLatestFinalizedBlockSummaryRequest) (*GetLatestFinalizedBlockSummaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLatestFinalizedBlockSummary not implemented")
 }
 func (UnimplementedMinerServer) mustEmbedUnimplementedMinerServer() {}
 
@@ -83,6 +97,24 @@ func _Miner_WhoAmI_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Miner_GetLatestFinalizedBlockSummary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLatestFinalizedBlockSummaryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServer).GetLatestFinalizedBlockSummary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.service.v1.Miner/GetLatestFinalizedBlockSummary",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServer).GetLatestFinalizedBlockSummary(ctx, req.(*GetLatestFinalizedBlockSummaryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Miner_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "miner.service.v1.Miner",
 	HandlerType: (*MinerServer)(nil),
@@ -90,6 +122,10 @@ var _Miner_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WhoAmI",
 			Handler:    _Miner_WhoAmI_Handler,
+		},
+		{
+			MethodName: "GetLatestFinalizedBlockSummary",
+			Handler:    _Miner_GetLatestFinalizedBlockSummary_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

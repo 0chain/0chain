@@ -39,7 +39,8 @@ func TestWhoAmIHandler(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for _, v := range testcases {
+		tc := v
 		t.Run("WhoAmIHandler"+tc.Description, func(t *testing.T) {
 			t.Parallel()
 
