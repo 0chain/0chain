@@ -104,7 +104,8 @@ type scConfig struct {
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
 	// free allocations
-	FreeAllocationSettings freeAllocationSettings `json:"free_allocation_settings"`
+	MaxAnnualFreeAllocation state.Balance          `json:"max_annual_free_allocation"`
+	FreeAllocationSettings  freeAllocationSettings `json:"free_allocation_settings"`
 
 	// challenges generating
 
@@ -180,6 +181,10 @@ func (sc *scConfig) validate() (err error) {
 	if sc.StakePool.InterestInterval <= 0 {
 		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
 			sc.StakePool.InterestInterval)
+	}
+
+	if sc.MaxAnnualFreeAllocation < 0 {
+		return fmt.Errorf("negative max_anual_free_allocation: %v", sc.MaxAnnualFreeAllocation)
 	}
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
@@ -338,6 +343,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.StakePool.InterestInterval = scc.GetDuration(
 		pfx + "stakepool.interest_interval")
 
+	conf.MaxAnnualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_annual_free_allocation") * 1e10)
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
 	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))

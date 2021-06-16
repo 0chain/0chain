@@ -238,7 +238,19 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	resp, sa, err := sc.newAllocationRequestInternal(t, input, balances)
+	var conf *scConfig
+	var err error
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"can't get config: %v", err)
+	}
+
+	resp, sa, err := sc.newAllocationRequestInternal(t, input, conf, balances)
+
+	// create write pool and lock tokens
+	if err = sc.createWritePool(t, sa, balances); err != nil {
+		return "", common.NewError("allocation_creation_failed", err.Error())
+	}
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
@@ -248,15 +260,12 @@ func (sc *StorageSmartContract) newAllocationRequest(
 }
 
 // newAllocationRequest creates new allocation
-func (sc *StorageSmartContract) newAllocationRequestInternal(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI) (resp string, ar *StorageAllocation, err error) {
-
-	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", nil, common.NewErrorf("allocation_creation_failed",
-			"can't get config: %v", err)
-	}
-
+func (sc *StorageSmartContract) newAllocationRequestInternal(
+	t *transaction.Transaction,
+	input []byte,
+	conf *scConfig,
+	balances chainstate.StateContextI,
+) (resp string, ar *StorageAllocation, err error) {
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = sc.getBlobbersList(balances)
 	if err != nil || len(allBlobbersList.Nodes) == 0 {
@@ -354,8 +363,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(t *transaction.Tran
 
 	sa.Blobbers = allocatedBlobbers
 	sa.ID = t.Hash
-	sa.StartTime = t.CreationDate // offer start time
-	sa.Tx = t.Hash                // keep
+	sa.StartTime = t.CreationDate
+	sa.Tx = t.Hash
 
 	if err = sc.addBlobbersOffers(sa, blobberNodes, balances); err != nil {
 		return "", nil, common.NewError("allocation_creation_failed", err.Error())
@@ -366,21 +375,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(t *transaction.Tran
 		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	// create write pool and lock tokens
-	if err = sc.createWritePool(t, sa, balances); err != nil {
-		return "", nil, common.NewError("allocation_creation_failed", err.Error())
-	}
-
-	// create challenge pool
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
 		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
-
-	// save
-	//if resp, err = sc.addAllocation(sa, balances); err != nil {
-	//	return "", nil, common.NewError("allocation_creation_failed",
-	//		"failed to store the allocation request")
-	//}
 
 	return resp, sa, err
 }
