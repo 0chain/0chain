@@ -561,8 +561,8 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 		}
 		consensus := int(math.Ceil((float64(config.GetThresholdCount()) / 100) * float64(lfmb.Miners.Size())))
 
-		bvts := fmt.Sprintf("<span style='display:flex;'>%.10s<span style='flex:1;'></span>(%v/%v)%s</span>", blockHash,
-			numVerificationTickets, consensus, boolString(numVerificationTickets > consensus))
+		bvts := fmt.Sprintf("<span style='display:flex;'>%.10s<span style='flex:1;'></span>(%v/%v)%s</span>",
+			blockHash, numVerificationTickets, consensus, boolString(numVerificationTickets > consensus))
 		fmt.Fprintf(w, "<tr class='green'><td>CRB</td><td>%v</td></tr>", bvts)
 
 	}
@@ -1267,7 +1267,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if mb == nil {
-		fmt.Fprintf(w, fmt.Sprintf("<h3>MagicBlock not found for round %d</h3>", rn))
+		fmt.Fprintf(w, "<h3>MagicBlock not found for round %d</h3>", rn)
 		return
 	}
 

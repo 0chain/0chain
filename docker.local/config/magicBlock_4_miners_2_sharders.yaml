@@ -54,7 +54,7 @@ sharders:
 
 magic_block_number: 1
 starting_round: 0
-t_percent: 67
+t_percent: 66
 k_percent: 75
 magic_block_filename: "b0magicBlock_4_miners_2_sharders"
 dkg_summary_filename: ""

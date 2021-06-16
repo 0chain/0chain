@@ -1409,7 +1409,7 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		if lfbr == nil {
 			lfbr = mc.AddRound(mc.CreateRound(round.NewRound(lfb.Round))).(*Round)
 		}
-		if lfbr.RandomSeed != lfb.RoundRandomSeed {
+		if lfb.RoundRandomSeed != 0 && lfbr.RandomSeed != lfb.RoundRandomSeed {
 			lfbr.SetRandomSeedForNotarizedBlock(lfb.RoundRandomSeed, 0)
 		}
 	}

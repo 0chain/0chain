@@ -614,13 +614,16 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	// Only for blocks with greater RTC (elder blocks)
 	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
 		r.GetTimeoutCount() <= b.RoundTimeoutCount {
-
-		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
-			zap.Int64("Round", r.GetRoundNumber()),
-			zap.Int64("Round_rrs", r.GetRandomSeed()),
-			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
-		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
-		r.SetTimeoutCount(b.RoundTimeoutCount)
+		logging.Logger.Info("AddNotarizedBlockToRound: different round/block rrs or rtc",
+			zap.Int64("r", r.GetRoundNumber()),
+			zap.Int64("rrs", r.GetRandomSeed()),
+			zap.Int64("block_rrs", b.GetRoundRandomSeed()),
+			zap.Int("rtc", r.GetTimeoutCount()),
+			zap.Int("block_rtc", b.RoundTimeoutCount))
+		if b.GetRoundRandomSeed() != 0 {
+			r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
+			r.SetTimeoutCount(b.RoundTimeoutCount)
+		}
 	}
 
 	c.SetRoundRank(r, b)
@@ -1023,6 +1026,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	}
 	if randomSeed == 0 {
 		logging.Logger.Error("SetRandomSeed -- seed is 0")
+		return false
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()

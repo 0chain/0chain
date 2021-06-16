@@ -407,11 +407,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				defer func() {
 					synchingStopC <- struct{}{}
 				}()
-				if lfb == nil || lfb.ClientState == nil {
+				if lfb == nil {
 					return
 				}
-
-				mpt, err := c.syncRoundState(cctx, lfb.ClientState, lfb.Round)
+				mpt, err := c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
 				if err != nil {
 					Logger.Error("sync round state failed", zap.Error(err))
 					return
@@ -430,11 +429,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	}
 }
 
-func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTrieI, round int64) (util.MerklePatriciaTrieI, error) {
+func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) (util.MerklePatriciaTrieI, error) {
 	Logger.Info("Sync round state from network...", zap.Int64("round", round))
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
-	rootState := state.GetRoot()
-	mpt.SetRoot(rootState)
+	mpt := util.NewMerklePatriciaTrie(c.GetStateDB(), util.Sequence(round))
+	mpt.SetRoot(rootStateHash)
 
 	Logger.Info("Finding missing nodes")
 	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
@@ -450,14 +448,14 @@ func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTri
 		default:
 			return nil, common.NewError("sync round state abort",
 				fmt.Sprintf("failed to get missing nodes, round: %d, client state hash: %s, err: %v",
-					round, util.ToHex(rootState), err))
+					round, util.ToHex(rootStateHash), err))
 		}
 	}
 
 	if len(keys) == 0 {
 		Logger.Debug("Found no missing node",
 			zap.Int64("round", round),
-			zap.String("state hash", util.ToHex(rootState)))
+			zap.String("state hash", util.ToHex(rootStateHash)))
 		return mpt, nil
 	}
 
@@ -468,7 +466,7 @@ func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTri
 	if err := c.UpdateStateFromNetwork(ctx, mpt, keys); err != nil {
 		return nil, common.NewError("update state from network failed",
 			fmt.Sprintf("round: %d, client state hash: %s, err: %v",
-				round, util.ToHex(rootState), err))
+				round, util.ToHex(rootStateHash), err))
 	}
 
 	return mpt, nil
