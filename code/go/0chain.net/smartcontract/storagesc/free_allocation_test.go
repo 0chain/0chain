@@ -20,7 +20,6 @@ import (
 )
 
 func TestAddFreeStorageAssigner(t *testing.T) {
-	t.Skip()
 	const (
 		mockCooperationId            = "mock cooperation id"
 		mockPublicKey                = "mock public key"
@@ -197,6 +196,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		FreeAllocationSettings:     mockFreeAllocationSettings,
 	}
 	var now = common.Timestamp(10000)
+	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
 	for i := 0; i < mockNumBlobbers; i++ {
 		mockBlobber := &StorageNode{
 			ID:       strconv.Itoa(i),
@@ -205,7 +205,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			Terms: Terms{
 				MaxOfferDuration:        mockFreeAllocationSettings.Duration * 2,
 				ReadPrice:               mockFreeAllocationSettings.ReadPriceRange.Max,
-				ChallengeCompletionTime: conf.MaxChallengeCompletionTime,
+				ChallengeCompletionTime: mockChallengeCompletionTime,
 			},
 			LastHealthCheck: now - blobberHealthTime + 1,
 		}
@@ -219,8 +219,8 @@ func TestFreeAllocationRequest(t *testing.T) {
 		balances cstate.StateContextI
 	}
 	type want struct {
-		err, getConfig, getExisting, saveNew bool
-		errMsg                               string
+		err    bool
+		errMsg string
 	}
 	type parameters struct {
 		assigner freeStorageAssigner
@@ -246,11 +246,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		input, err := json.Marshal(p.marker)
 		require.NoError(t, err)
 		fmt.Println("public key", p.assigner.PublicKey)
-
-		if !want.getConfig {
-			return args{ssc, txn, input, balances}
-		}
-
 		balances.On(
 			"GetTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Giver),
@@ -327,6 +322,25 @@ func TestFreeAllocationRequest(t *testing.T) {
 			},
 		).Return("", nil).Once()
 
+		balances.On("AddMint", &state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: ADDRESS,
+			Amount:     zcnToBalance(p.marker.FreeTokens),
+		}).Return(nil).Once()
+
+		balances.On("InsertTrieNode",
+			writePoolKey(ssc.ID, p.marker.Recipient),
+			mock.MatchedBy(func(wp *writePool) bool {
+				pool, found := wp.Pools.get(mockTransactionHash)
+				require.True(t, found)
+				return pool.Balance == zcnToBalance(p.marker.FreeTokens) &&
+					pool.ID == mockTransactionHash &&
+					pool.AllocationID == mockTransactionHash &&
+					len(pool.Blobbers) == mockNumBlobbers &&
+					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
+						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
+			})).Return("", nil).Once()
+
 		return args{ssc, txn, input, balances}
 	}
 
@@ -349,7 +363,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 					AnnualLimit: mockAnnualTokenLimit,
 				},
 			},
-			want: want{false, true, true, true, ""},
+			want: want{false, ""},
 		},
 	}
 	for _, test := range testCases {
@@ -366,6 +380,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
 			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 			resp = resp
 		})
 	}

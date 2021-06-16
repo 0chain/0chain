@@ -221,12 +221,9 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	resp, sa, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, balances)
+	resp, _, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", ": %v", err)
-	}
-	if sa == nil {
-		return "", common.NewError("free_allocation_failed", "nil allocation storage object")
 	}
 
 	redeemed := freeStorageRedeemed{
@@ -237,15 +234,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	assigner.FreeStoragesRedeemed = append(assigner.FreeStoragesRedeemed, redeemed)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
-	}
-
-	//if resp, err = ssc.addAllocation(sa, balances); err != nil {
-	//	return "", common.NewErrorf("free_allocation_failed", "%v", err)
-	//}
-
-	// create write pool and lock tokens
-	if err = ssc.createWritePool(txn, sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	return resp, err

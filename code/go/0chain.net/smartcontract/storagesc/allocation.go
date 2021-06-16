@@ -245,16 +245,10 @@ func (sc *StorageSmartContract) newAllocationRequest(
 			"can't get config: %v", err)
 	}
 
-	resp, sa, err := sc.newAllocationRequestInternal(t, input, conf, balances)
-
-	// create write pool and lock tokens
-	if err = sc.createWritePool(t, sa, balances); err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
+	resp, _, err := sc.newAllocationRequestInternal(t, input, conf, false, balances)
+	if err != nil {
+		return "", err
 	}
-
-	//if resp, err = sc.addAllocation(sa, balances); err != nil {
-	//	return "", common.NewErrorf("allocation_creation_failed", "%v", err)
-	//}
 
 	return resp, err
 }
@@ -264,6 +258,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
 	conf *scConfig,
+	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, ar *StorageAllocation, err error) {
 	var allBlobbersList *StorageNodes
@@ -372,6 +367,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
 	if err != nil {
+		return "", nil, common.NewError("allocation_creation_failed", err.Error())
+	}
+
+	// create write pool and lock tokens
+	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
 		return "", nil, common.NewError("allocation_creation_failed", err.Error())
 	}
 
@@ -714,7 +714,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
 		}
-		if _, err = wp.fill(t, alloc, until, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
 			return "", common.NewErrorf("allocation_extending_failed",
 				"write pool filling: %v", err)
 		}
@@ -797,7 +797,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
 			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
