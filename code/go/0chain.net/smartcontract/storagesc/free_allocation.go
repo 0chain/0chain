@@ -78,11 +78,9 @@ func (fsa *freeStorageAssigner) save(sscKey string, balances cstate.StateContext
 func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
-	annualLimit state.Balance,
 ) error {
 	if marker.Timestamp >= now {
-		return common.NewErrorf("free_allocation_failed",
-			"marker timestamped in the future: %v", marker.Timestamp)
+		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
 	}
 
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey)
@@ -90,7 +88,7 @@ func (fsa *freeStorageAssigner) validate(
 		return err
 	}
 	if !verified {
-		return common.NewErrInternal("failed to verify signature")
+		return fmt.Errorf("failed to verify signature")
 	}
 
 	yearStartIndex := len(fsa.FreeStoragesRedeemed)
@@ -100,18 +98,19 @@ func (fsa *freeStorageAssigner) validate(
 			break
 		}
 		if marker.Timestamp == redeemed.Timestamp {
-			return common.NewErrInternal("marker already redeemed")
+			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
 		}
 	}
 	annualTotal := state.Balance(0)
 	for i := yearStartIndex; i < len(fsa.FreeStoragesRedeemed); i++ {
 		if marker.Timestamp == fsa.FreeStoragesRedeemed[i].Timestamp {
-			return common.NewErrInternal("marker already redeemed")
+			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
 		}
 		annualTotal += fsa.FreeStoragesRedeemed[i].Amount
 	}
-	if annualTotal+state.Balance(marker.FreeTokens)*floatToBalance > annualLimit {
-		return common.NewErrInternal("exceeded annual free storage limit")
+	newTotal := annualTotal + state.Balance(marker.FreeTokens)*floatToBalance
+	if newTotal > fsa.AnnualLimit {
+		return fmt.Errorf("%d exceeded annual free storage limit %d", newTotal, fsa.AnnualLimit)
 	}
 	return nil
 }
@@ -198,9 +197,9 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Giver, balances)
-	if err := assigner.validate(marker, txn.CreationDate, conf.MaxAnnualFreeAllocation); err != nil {
-		return "", common.NewError("free_allocation_failed",
-			"marker verification failed")
+	if err := assigner.validate(marker, txn.CreationDate); err != nil {
+		return "", common.NewErrorf("free_allocation_failed",
+			"marker verification failed: %v", err)
 	}
 
 	var request = newAllocationRequest{
@@ -277,7 +276,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 		FreeTokens: info.FreeTokens,
 		Timestamp:  info.Timestamp,
 		Signature:  info.Signature,
-	}, txn.CreationDate, conf.MaxAnnualFreeAllocation); err != nil {
+	}, txn.CreationDate); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"marker verification failed: %v", err)
 	}
