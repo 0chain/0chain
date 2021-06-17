@@ -1,14 +1,15 @@
 package zcnsc
 
 import (
-	"encoding/json"
-	"fmt"
-
 	"0chain.net/chaincore/chain"
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"encoding/json"
+	"fmt"
+	"time"
+
 	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -17,7 +18,7 @@ import (
 )
 
 var (
-	allAuthorizerKey = datastore.Key(ADDRESS + encryption.Hash("all_authorizers"))
+	allAuthorizerKey = ADDRESS + encryption.Hash("all_authorizers")
 )
 
 type globalNode struct {
@@ -31,7 +32,7 @@ type globalNode struct {
 }
 
 func (gn *globalNode) GetKey() datastore.Key {
-	return datastore.Key(gn.ID + gn.ID)
+	return ADDRESS + gn.ID
 }
 
 func (gn *globalNode) GetHash() string {
@@ -52,32 +53,34 @@ func (gn *globalNode) Decode(input []byte) error {
 	return err
 }
 
-func (gn *globalNode) save(balances c_state.StateContextI) (err error) {
+func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 	return
 }
 
-func getGlobalSavedNode(balances c_state.StateContextI) (*globalNode, error) {
+func getGlobalSavedNode(balances cstate.StateContextI) (*globalNode, error) {
 	gn := &globalNode{ID: ADDRESS}
 	gv, err := balances.GetTrieNode(gn.GetKey())
 	if err != nil {
 		return gn, err
 	}
-	gn.Decode(gv.Encode())
+	_ = gn.Decode(gv.Encode())
 	return gn, err
 }
 
-func getGlobalNode(balances c_state.StateContextI) *globalNode {
+func getGlobalNode(balances cstate.StateContextI) *globalNode {
 	gn, err := getGlobalSavedNode(balances)
 	if err == nil {
 		return gn
 	}
+
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcnsc.min_mint_amount"))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcnsc.percent_authorizers")
 	gn.MinAuthorizers = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_authorizers")
 	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_burn_amount")
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcnsc.burn_address")
+
 	return gn
 }
 
@@ -112,7 +115,7 @@ func (mp mintPayload) verifySignatures(ans *authorizerNodes) (ok bool) {
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	toSign := mp.getStringToSign()
 	for _, v := range mp.Signatures {
-		signatureScheme.SetPublicKey(ans.NodeMap[v.ID].PublicKey)
+		_ = signatureScheme.SetPublicKey(ans.NodeMap[v.ID].PublicKey)
 		ok, _ = signatureScheme.Verify(v.Signature, toSign)
 		if !ok {
 			return
@@ -142,6 +145,11 @@ type PublicKey struct {
 	Key string `json:"public_key"`
 }
 
+func (pk *PublicKey) Encode() (data []byte, err error) {
+	data, err = json.Marshal(pk)
+	return
+}
+
 func (pk *PublicKey) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
@@ -153,10 +161,25 @@ type authorizerNode struct {
 	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
 }
 
-func getNewAuthorizer(pk string) *authorizerNode {
+// To review
+func getNewAuthorizer(pk string, id string) *authorizerNode {
 	return &authorizerNode{
 		PublicKey: pk,
-		Staking: &tokenpool.ZcnLockingPool{}}
+		Staking: &tokenpool.ZcnLockingPool{
+			ZcnPool: tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{
+					ID:      id,
+					Balance: 0,
+				},
+			},
+			TokenLockInterface: tokenLock{
+				StartTime: 0,
+				Duration:  0,
+				Owner:     id,
+			},
+		},
+		ID: id,
+	}
 }
 
 type authorizerNodes struct {
@@ -184,7 +207,7 @@ func (an *authorizerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(an.Encode())
 }
 
-func (an *authorizerNodes) save(balances c_state.StateContextI) (err error) {
+func (an *authorizerNodes) save(balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(allAuthorizerKey, an)
 	return
 }
@@ -216,14 +239,14 @@ func (an *authorizerNodes) updateAuthorizer(node *authorizerNode) (err error) {
 	return
 }
 
-func getAuthorizerNodes(balances c_state.StateContextI) (an *authorizerNodes) {
+func getAuthorizerNodes(balances cstate.StateContextI) (an *authorizerNodes) {
 	an = &authorizerNodes{}
 	av, err := balances.GetTrieNode(allAuthorizerKey)
 	if err != nil {
 		an.NodeMap = make(map[string]*authorizerNode)
 		return
 	}
-	an.Decode(av.Encode())
+	_ = an.Decode(av.Encode())
 	return
 }
 
@@ -232,8 +255,8 @@ type userNode struct {
 	Nonce int64  `json:"nonce"`
 }
 
-func (un *userNode) GetKey() datastore.Key {
-	return datastore.Key(un.ID + un.ID)
+func (un *userNode) GetKey(globalKey string) datastore.Key {
+	return globalKey + un.ID
 }
 
 func (un *userNode) GetHash() string {
@@ -254,17 +277,64 @@ func (un *userNode) Decode(input []byte) error {
 	return err
 }
 
-func (un *userNode) save(balances c_state.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(un.GetKey(), un)
+func (un *userNode) save(balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(un.GetKey(ADDRESS), un)
 	return
 }
 
-func getUserNode(id string, balances c_state.StateContextI) (*userNode, error) {
+func getUserNode(id string, balances cstate.StateContextI) (*userNode, error) {
 	un := &userNode{ID: id}
-	uv, err := balances.GetTrieNode(un.GetKey())
+	uv, err := balances.GetTrieNode(un.GetKey(ADDRESS))
 	if err != nil {
 		return un, err
 	}
-	un.Decode(uv.Encode())
+	_ = un.Decode(uv.Encode())
 	return un, err
+}
+
+type tokenLock struct {
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	Owner     datastore.Key    `json:"owner"`
+}
+
+func (tl tokenLock) IsLocked(entity interface{}) bool {
+	tm, ok := entity.(time.Time)
+	if ok {
+		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
+	}
+	return true
+}
+
+func (tl tokenLock) LockStats(entity interface{}) []byte {
+	tm, ok := entity.(time.Time)
+	if ok {
+		p := &poolStat{
+			StartTime: tl.StartTime,
+			Duration:  tl.Duration,
+			TimeLeft:  tl.Duration - tm.Sub(common.ToTime(tl.StartTime)), Locked: tl.IsLocked(tm)}
+		return p.encode()
+	}
+	return nil
+}
+
+type poolStat struct {
+	ID           datastore.Key    `json:"pool_id"`
+	StartTime    common.Timestamp `json:"start_time"`
+	Duration     time.Duration    `json:"duration"`
+	TimeLeft     time.Duration    `json:"time_left"`
+	Locked       bool             `json:"locked"`
+	APR          float64          `json:"apr"`
+	TokensEarned state.Balance    `json:"tokens_earned"`
+	Balance      state.Balance    `json:"balance"`
+}
+
+func (ps *poolStat) encode() []byte {
+	buff, _ := json.Marshal(ps)
+	return buff
+}
+
+func (ps *poolStat) decode(input []byte) error {
+	err := json.Unmarshal(input, ps)
+	return err
 }

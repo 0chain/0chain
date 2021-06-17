@@ -49,7 +49,7 @@ func TestEmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
 }
 
 func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) {
-	authorizer := getNewAuthorizer("public key")
+	authorizer := getNewAuthorizer("public key", "id")
 	balances := CreateMockStateContext()
 
 	nodes := getAuthorizerNodes(balances)

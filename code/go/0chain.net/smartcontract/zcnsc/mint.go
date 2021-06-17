@@ -15,7 +15,7 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 
 	// decode input to mint payload
 	var payload *mintPayload
-	payload.Decode(inputData)
+	_ = payload.Decode(inputData)
 
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
@@ -56,7 +56,7 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	un.Nonce++
 
 	// mint the tokens
-	balances.AddMint(&state.Mint{
+	_ = balances.AddMint(&state.Mint{
 		Minter:     gn.ID,
 		ToClientID: t.ClientID,
 		Amount:     payload.Amount,

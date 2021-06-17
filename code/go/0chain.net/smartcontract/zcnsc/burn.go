@@ -18,7 +18,7 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 
 	// decode input to burn payload
 	payload := &burnPayload{}
-	payload.Decode(inputData)
+	_ = payload.Decode(inputData)
 	payload.TxnID = t.Hash
 
 	// check burn amount
