@@ -15,4 +15,4 @@ deps="$( \
 #echo Deps are "$deps"
 
 cd "$(dirname "$go_mod")"
-go get -v -tags bn256 $deps
+go get -v -tags bn256 "$deps"
