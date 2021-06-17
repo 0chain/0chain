@@ -80,6 +80,11 @@ func (fsa *freeStorageAssigner) validate(
 	now common.Timestamp,
 	annualLimit state.Balance,
 ) error {
+	if marker.Timestamp >= now {
+		return common.NewErrorf("free_allocation_failed",
+			"marker timestamped in the future: %v", marker.Timestamp)
+	}
+
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey)
 	if err != nil {
 		return err
@@ -186,11 +191,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"unmarshal request: %v", err)
 	}
 
-	if marker.Timestamp >= txn.CreationDate {
-		return "", common.NewErrorf("free_allocation_failed",
-			"marker timestamped in the past: %v", marker.Timestamp)
-	}
-
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
@@ -221,7 +221,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
-	resp, _, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", ": %v", err)
 	}
@@ -239,12 +239,77 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	return resp, err
 }
 
+type updateFreeStorageMarker struct {
+	AllocationId string           `json:"allocation_id"`
+	Giver        string           `json:"giver"`
+	Recipient    string           `json:"recipient"`
+	FreeTokens   float64          `json:"free_tokens"`
+	Timestamp    common.Timestamp `json:"timestamp"`
+	Signature    string           `json:"signature"`
+}
+
+func (frm *updateFreeStorageMarker) decode(b []byte) error {
+	return json.Unmarshal(b, frm)
+}
+
 func (ssc *StorageSmartContract) updateFreeStorageRequest(
-	t *transaction.Transaction,
+	txn *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", nil
+	var err error
+	var info updateFreeStorageMarker
+	if err := info.decode(input); err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"unmarshal request: %v", err)
+	}
+
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"can't get config: %v", err)
+	}
+
+	assigner, err := ssc.getFreeStorageAssigner(info.Giver, balances)
+	if err := assigner.validate(freeStorageMarker{
+		Giver:      info.Giver,
+		Recipient:  info.Recipient,
+		FreeTokens: info.FreeTokens,
+		Timestamp:  info.Timestamp,
+		Signature:  info.Signature,
+	}, txn.CreationDate, conf.MaxAnnualFreeAllocation); err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"marker verification failed: %v", err)
+	}
+
+	var request = updateAllocationRequest{
+		ID:         info.AllocationId,
+		OwnerID:    info.Recipient,
+		Size:       conf.FreeAllocationSettings.Size,
+		Expiration: common.Timestamp(conf.FreeAllocationSettings.Duration.Seconds()),
+	}
+	input, err = json.Marshal(request)
+	if err != nil {
+		return "", common.NewErrorf("update_free_storage_request",
+			"marshal marker: %v", err)
+	}
+
+	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, true, balances)
+	if err != nil {
+		return "", common.NewErrorf("update_free_storage_request", err.Error())
+	}
+
+	redeemed := freeStorageRedeemed{
+		Timestamp: info.Timestamp,
+		When:      txn.CreationDate,
+		Amount:    state.Balance(info.FreeTokens * floatToBalance),
+	}
+	assigner.FreeStoragesRedeemed = append(assigner.FreeStoragesRedeemed, redeemed)
+	if err := assigner.save(ssc.ID, balances); err != nil {
+		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)
+	}
+
+	return resp, nil
 }
 
 func (ssc *StorageSmartContract) getFreeStorageAssignerBytes(
@@ -269,9 +334,9 @@ func (ssc *StorageSmartContract) getFreeStorageAssigner(
 	if aBytes, err = ssc.getFreeStorageAssignerBytes(clientID, balances); err != nil {
 		return nil, err
 	}
+
 	fsa := new(freeStorageAssigner)
-	err = fsa.Decode(aBytes)
-	if err != nil {
+	if err := fsa.Decode(aBytes); err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return fsa, nil
