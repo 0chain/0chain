@@ -75,3 +75,5 @@ code/go/0chain.net/sharder/mocks/*
 
 code/go/0chain.net/smartcontract/mocks/*
 !code/go/0chain.net/smartcontract/mocks/.gitkeep
+
+code/go/0chain.net/mocks/state-context-i.go
