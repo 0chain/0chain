@@ -18,7 +18,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		blobberServiceCharge []float64
 		blockReward          float64
 		qualifyingStake      float64
-		blobberCapacityRato  float64
+		blobberCapacityRatio float64
 		blobberUsageRatio    float64
 		minerRatio           float64
 		sharderRatio         float64
@@ -47,10 +47,10 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			}
 		}
 
-		var capacityRewardTotal = p.blockReward * p.blobberCapacityRato /
-			(p.blobberCapacityRato + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
+		var capacityRewardTotal = p.blockReward * p.blobberCapacityRatio /
+			(p.blobberCapacityRatio + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
 		var usageRewardTotal = p.blockReward * p.blobberUsageRatio /
-			(p.blobberCapacityRato + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
+			(p.blobberCapacityRatio + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
 
 		for i, bStake := range blobberStakes {
 			var reward blockRewards
@@ -94,7 +94,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				QualifyingStake: zcnToBalance(p.qualifyingStake),
 			},
 		}
-		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRato, p.blobberUsageRatio)
+		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRatio, p.blobberUsageRatio)
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
 		if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 ||
 			conf.BlockReward.BlockReward == 0 {
@@ -206,7 +206,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				blobberServiceCharge: []float64{0.1},
 				blockReward:          100,
 				qualifyingStake:      10.0,
-				blobberCapacityRato:  5,
+				blobberCapacityRatio: 5,
 				blobberUsageRatio:    10,
 				minerRatio:           2,
 				sharderRatio:         3,
@@ -219,7 +219,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				blobberServiceCharge: []float64{0.1, 0.2, 0.3},
 				blockReward:          100,
 				qualifyingStake:      10.0,
-				blobberCapacityRato:  5,
+				blobberCapacityRatio: 5,
 				blobberUsageRatio:    10,
 				minerRatio:           2,
 				sharderRatio:         3,
@@ -232,7 +232,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				blobberServiceCharge: []float64{},
 				blockReward:          100,
 				qualifyingStake:      10.0,
-				blobberCapacityRato:  5,
+				blobberCapacityRatio: 5,
 				blobberUsageRatio:    10,
 				minerRatio:           2,
 				sharderRatio:         3,
@@ -245,7 +245,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				blobberServiceCharge: []float64{0.1, 0.2, 0.3},
 				blockReward:          100,
 				qualifyingStake:      1000.0,
-				blobberCapacityRato:  5,
+				blobberCapacityRatio: 5,
 				blobberUsageRatio:    10,
 				minerRatio:           2,
 				sharderRatio:         3,
@@ -258,7 +258,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				blobberServiceCharge: []float64{0.1},
 				blockReward:          0,
 				qualifyingStake:      10.0,
-				blobberCapacityRato:  5,
+				blobberCapacityRatio: 5,
 				blobberUsageRatio:    10,
 				minerRatio:           2,
 				sharderRatio:         3,

@@ -14,11 +14,11 @@ import (
 
 func TestTransferReward(t *testing.T) {
 	type parameters struct {
-		from         string
-		to           string
-		value        float64
-		delegates    []float64
-		seviceCharge float64
+		from          string
+		to            string
+		value         float64
+		delegates     []float64
+		serviceCharge float64
 	}
 
 	type args struct {
@@ -31,7 +31,7 @@ func TestTransferReward(t *testing.T) {
 
 	var setExpectations = func(t *testing.T, p parameters) cstate.StateContextI {
 		var balances = &mocks.StateContextI{}
-		var serviceCharge = p.value * p.seviceCharge
+		var serviceCharge = p.value * p.serviceCharge
 		balances.On("AddTransfer", &state.Transfer{
 			ClientID:   datastore.Key(p.from),
 			ToClientID: datastore.Key(p.to),
@@ -59,7 +59,7 @@ func TestTransferReward(t *testing.T) {
 		sPool := newStakePool()
 
 		sPool.Settings = stakePoolSettings{
-			ServiceCharge:  p.seviceCharge,
+			ServiceCharge:  p.serviceCharge,
 			DelegateWallet: p.to,
 		}
 		for i, d := range p.delegates {
@@ -95,11 +95,11 @@ func TestTransferReward(t *testing.T) {
 		{
 			name: "ok",
 			parameters: parameters{
-				from:         "fred",
-				to:           "tommy",
-				value:        100,
-				delegates:    []float64{1, 5, 2, 1},
-				seviceCharge: 0.1,
+				from:          "fred",
+				to:            "tommy",
+				value:         100,
+				delegates:     []float64{1, 5, 2, 1},
+				serviceCharge: 0.1,
 			},
 			want: want{
 				moved: zcnToBalance(90),
@@ -126,10 +126,10 @@ func TestTransferReward(t *testing.T) {
 
 func TestMintReward(t *testing.T) {
 	type parameters struct {
-		to           string
-		value        float64
-		delegates    []float64
-		seviceCharge float64
+		to            string
+		value         float64
+		delegates     []float64
+		serviceCharge float64
 	}
 
 	type args struct {
@@ -140,7 +140,7 @@ func TestMintReward(t *testing.T) {
 
 	var setExpectations = func(t *testing.T, p parameters) cstate.StateContextI {
 		var balances = &mocks.StateContextI{}
-		var serviceCharge = p.value * p.seviceCharge
+		var serviceCharge = p.value * p.serviceCharge
 		balances.On("AddMint", &state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: datastore.Key(p.to),
@@ -165,7 +165,7 @@ func TestMintReward(t *testing.T) {
 	var setup = func(t *testing.T, p parameters) args {
 		sPool := newStakePool()
 		sPool.Settings = stakePoolSettings{
-			ServiceCharge:  p.seviceCharge,
+			ServiceCharge:  p.serviceCharge,
 			DelegateWallet: p.to,
 		}
 		for i, d := range p.delegates {
@@ -198,18 +198,18 @@ func TestMintReward(t *testing.T) {
 		{
 			name: "ok",
 			parameters: parameters{
-				to:           "tommy",
-				value:        100.0,
-				delegates:    []float64{1, 5, 2, 1},
-				seviceCharge: 0.1,
+				to:            "tommy",
+				value:         100.0,
+				delegates:     []float64{1, 5, 2, 1},
+				serviceCharge: 0.1,
 			},
 		},
 		{
 			name: "no delegates",
 			parameters: parameters{
-				to:           "tommy",
-				value:        100.0,
-				seviceCharge: 0.1,
+				to:            "tommy",
+				value:         100.0,
+				serviceCharge: 0.1,
 			},
 			want: want{
 				error:    true,

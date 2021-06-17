@@ -50,14 +50,20 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	}
 
 	for i, qsp := range stakePools {
-		ratio := stakeTotals[i] / totalQStake
+		var ratio float64
+		if totalQStake > 0 {
+			ratio = stakeTotals[i] / totalQStake
+		} else {
+			ratio = 1.0 / float64(len(stakePools))
+		}
+
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
 		if err := mintReward(qsp, capacityReward, balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed", "mintting capacity reward"+err.Error())
+			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
 		}
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
 		if err := mintReward(qsp, usageReward, balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed", "mintting usage reward"+err.Error())
+			return common.NewError("blobber_block_rewards_failed", "minting usage reward"+err.Error())
 		}
 		qsp.Rewards.Blobber += state.Balance(capacityReward + usageReward)
 	}
