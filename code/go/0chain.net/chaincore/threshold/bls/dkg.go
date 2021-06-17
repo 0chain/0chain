@@ -268,15 +268,11 @@ func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 /*RecoverGroupSig - To compute the Gp sign with any k number of BLS sig shares */
 func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 	var sig Sign
-	t := len(shares)
-	if t > len(dkg.msk) {
-		t = len(dkg.msk)
+	if err := sig.Recover(shares, from); err != nil {
+		return Sign{}, err
 	}
-	err := sig.Recover(shares, from)
-	if err == nil {
-		return sig, nil
-	}
-	return Sign{}, err
+
+	return sig, nil
 }
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
@@ -346,10 +342,6 @@ func (dkg *DKG) ValidateShare(jpk []PublicKey, sij bls.SecretKey) bool {
 
 //ValidateShare - validate Sij using Pj coefficients
 func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
-	var mpk []string
-	for _, pk := range jpk {
-		mpk = append(mpk, pk.GetHexString())
-	}
 	var expectedSijPK PublicKey
 	if err := expectedSijPK.Set(jpk, &id); err != nil {
 		return false

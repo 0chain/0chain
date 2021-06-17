@@ -166,6 +166,11 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
+		if b.GetRoundRandomSeed() == 0 {
+			Logger.Error("process block - block has no seed",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return
+		}
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	} else {
 		Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
@@ -195,7 +200,14 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	sc.AddNotarizedBlockToRound(er, b)
+	_, _, err = sc.AddNotarizedBlockToRound(er, b)
+	if err != nil {
+		Logger.Error("process block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),

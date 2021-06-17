@@ -194,7 +194,11 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
-	bl.r.AddNotarizedBlock(bl.lfb)
+	_, _, err = bl.r.AddNotarizedBlock(bl.lfb)
+	if err != nil {
+		Logger.Error("load_lfb - add notarized block failed", zap.Error(err))
+		return
+	}
 
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
