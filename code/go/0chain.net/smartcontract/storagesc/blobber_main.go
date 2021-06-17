@@ -8,37 +8,23 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
 )
 
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, all *StorageNodes,
-	balances cstate.StateContextI) (err error) {
-
-	// check config
-	if err = blobber.validate(conf); err != nil {
-		return fmt.Errorf("invalid values in request: %v", err)
-	}
-
+	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	balances cstate.StateContextI,
+) (err error) {
 	// check for duplicates
-	for _, b := range all.Nodes {
+	for _, b := range blobbers.Nodes {
 		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
-			var existingBytes util.Serializable
-			existingBytes, err = balances.GetTrieNode(blobber.GetKey(sc.ID))
-
-			if err = blobber.validate(conf); err != nil {
-				return fmt.Errorf("invalid values in request: %v", err)
-			}
-
-			return sc.updateBlobber(t, existingBytes, blobber, all)
+			return sc.updateBlobber(t, conf, blobber, blobbers, balances)
 		}
 	}
 
-	blobber.LastHealthCheck = t.CreationDate // set to now
+	// create stake pool
 
-	// the stake pool can be created by related validator
 	var sp *stakePool
 	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
 		&blobber.StakePoolSettings, balances)
@@ -50,9 +36,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	all.Nodes.add(blobber) // add to all
+	// update the list
+	blobbers.Nodes.add(blobber)
 
-	// statistic
+	// update statistic
 	sc.statIncr(statAddBlobber)
 	sc.statIncr(statNumberOfBlobbers)
 	return
