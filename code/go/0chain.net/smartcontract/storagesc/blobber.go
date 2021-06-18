@@ -164,7 +164,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 // tokens left will be moved to unlocked part of related stake pool;
 // the part can be moved back to the blobber anytime or used to
 // increase blobber's capacity or write_price next time
-func (sc *StorageSmartContract) addOrUpdateBlobber(t *transaction.Transaction,
+func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
 	// get smart contract configuration
