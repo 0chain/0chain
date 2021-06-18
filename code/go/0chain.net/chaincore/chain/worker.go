@@ -504,17 +504,13 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		requestMBNum := currentLFMB.MagicBlockNumber + 1
 		Logger.Debug("verify_chain_history", zap.Int64("get_mb_number", requestMBNum))
 
-		// magicBlock, err = httpclientutil.GetMagicBlockCall(sharders, requestMBNum, 1)
-		magicBlock, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharders, requestMBNum)
-
+		magicBlock, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharders, requestMBNum,
+			func(b *block.Block) bool {
+				return currentLFMB.VerifyMinersSignatures(b)
+			})
 		if err != nil {
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to get %d: %v", requestMBNum, err))
-		}
-
-		if !currentLFMB.VerifyMinersSignatures(magicBlock) {
-			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to verify magic block %d miners signatures", requestMBNum))
 		}
 
 		Logger.Info("verify chain history",
