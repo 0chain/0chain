@@ -130,7 +130,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
 				continue // already have a fresh phase
 			}
-			sc.GetPhaseFromSharders(ctx) // not in a goroutine
+			go sc.GetPhaseFromSharders(ctx)
 			continue
 		case pe = <-phaseq:
 			if !pe.Sharders {
@@ -138,8 +138,8 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			}
 		}
 
-		if pe.Phase.StartRound == phaseRound {
-			continue // the phase already accepted
+		if pe.Phase.StartRound < phaseRound {
+			continue
 		}
 
 		if pe.Phase.Phase != minersc.Contribute {
@@ -152,8 +152,13 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue
 		}
 
+		logging.Logger.Debug("Start to register to sharder keep list")
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
+			logging.Logger.Error("Register sharder keep failed",
+				zap.Int64("phase start round", pe.Phase.StartRound),
+				zap.Int64("phase current round", pe.Phase.CurrentRound),
+				zap.Error(err))
 			continue // repeat next time
 		}
 

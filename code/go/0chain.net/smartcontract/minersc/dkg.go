@@ -537,8 +537,8 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// if err != nil {
 	// 	return err
 	// }
-	allMinersList := new(MinerNodes)
-	return updateShardersKeepList(balances, allMinersList)
+	allSharderKeepList := new(MinerNodes)
+	return updateShardersKeepList(balances, allSharderKeepList)
 }
 
 func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
@@ -814,8 +814,8 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 
-	allMinersList := new(MinerNodes)
-	if err := updateShardersKeepList(balances, allMinersList); err != nil {
+	sharderKeepList := new(MinerNodes)
+	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 	pn.Phase = Start
