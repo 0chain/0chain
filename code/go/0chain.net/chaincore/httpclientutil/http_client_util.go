@@ -530,51 +530,70 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 
 }
 
-// TODO: Don't use this function. It doesn't to block validation. Just used for testing.
-func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64) (*block.Block, error) {
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-	}
-
-	done := false
-	recv := make(chan *block.Block)
-
-	for _, url := range sharderURLs {
+// FetchMagicBlockFromSharders fetchs magic blocks from sharders
+func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64,
+	verifyBlock func(mb *block.Block) bool) (*block.Block, error) {
+	recv := make(chan *block.Block, len(sharderURLs))
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	for _, sharder := range sharderURLs {
 		go func(url string) {
-			resp, err := httpClient.Get(url)
-			if done || err != nil || resp.StatusCode != http.StatusOK {
+			req, err := http.NewRequestWithContext(cctx, http.MethodGet, url, nil)
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - new request failed",
+					zap.String("url", url),
+					zap.Error(err))
 				return
 			}
+
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - send request failed",
+					zap.String("url", url),
+					zap.Error(err))
+				return
+			}
+
 			defer resp.Body.Close()
 			body, err := ioutil.ReadAll(resp.Body)
-			if done || err != nil {
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - read data failed",
+					zap.String("url", url),
+					zap.Error(err))
 				return
 			}
+
 			b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-			err = b.Decode(body)
-			if done || err != nil {
+			if err := b.Decode(body); err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - decode data failed",
+					zap.String("url", url),
+					zap.Error(err))
 				return
 			}
-			if b.MagicBlock != nil &&
-				b.MagicBlockNumber == number {
+
+			if b.MagicBlock != nil && b.MagicBlockNumber == number {
+				if !verifyBlock(b) {
+					logging.Logger.Error("fetch_magic_block_from_sharders - failed to verify magic block",
+						zap.String("from", url),
+						zap.Int64("magic_block_number", number))
+					return
+				}
+
 				select {
 				case recv <- b:
 				default:
 				}
 			}
-		}(fmt.Sprintf("%v/%v%v", url, specificMagicBlockURL, number))
+		}(fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, number))
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("failed to fetch MB from sharders: n=%d, err=%v", number, ctx.Err())
-		case b := <-recv:
-			done = true
-			return b, nil
-		}
+	select {
+	case <-cctx.Done():
+		return nil, common.NewError("fetch_magic_block_from_sharders", cctx.Err().Error())
+	case b := <-recv:
+		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))
+		cancel()
+		return b, nil
 	}
 }
 
