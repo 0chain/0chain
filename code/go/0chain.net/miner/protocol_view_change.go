@@ -127,7 +127,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// goroutine here, and phases events sending is non-blocking (can
 			// skip, reject the event); then the pahsesEvent channel should be
 			// buffered (at least 1 element in the buffer)
-			mc.GetPhaseFromSharders(ctx)
+			go mc.GetPhaseFromSharders(ctx)
 			continue
 		case newPhaseEvent = <-phaseEventsChan:
 			if !newPhaseEvent.Sharders {
@@ -929,7 +929,7 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	// pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
 	// 	lfmb.MagicBlockNumber-1, 1)
 	pfmb, err = httpclientutil.FetchMagicBlockFromSharders(
-		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1)
+		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1, func(*block.Block) bool { return true })
 	if err != nil || pfmb.MagicBlock == nil {
 		logging.Logger.Error("getting previous FMB from sharder", zap.Error(err),
 			zap.Int64("num", lfmb.MagicBlockNumber-1),

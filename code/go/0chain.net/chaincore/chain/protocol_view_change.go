@@ -427,12 +427,11 @@ func getHighestOnly(list []seriHigh) []seriHigh {
 }
 
 // The makeSCRESTAPICall is internal for GetFromSharders.
-func makeSCRESTAPICall(ctx context.Context, address, relative, sharder string,
+func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder string,
 	seri util.Serializable, collect chan util.Serializable) {
 
-	var err = httpclientutil.MakeSCRestAPICall(ctx, address, relative, nil,
-		[]string{sharder}, seri, 1)
-	if err != nil {
+	if err := httpclientutil.MakeSCRestAPICall(ctx, address, relative, nil,
+		[]string{sharder}, seri, 1); err != nil {
 		logging.Logger.Error("requesting phase node from sharder",
 			zap.String("sharder", sharder),
 			zap.Error(err))
@@ -473,13 +472,20 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 	highFunc func(seri util.Serializable) int64) (
 	got util.Serializable) {
 
+	t := time.Now()
+	defer func() {
+		logging.Logger.Debug("GetFromSharders", zap.Any("duration", time.Since(t)))
+	}()
+
 	wg := &sync.WaitGroup{}
 	var collect = make(chan util.Serializable, len(sharders))
 	for _, sharder := range sharders {
 		wg.Add(1)
 		go func(sh string) {
 			defer wg.Done()
-			makeSCRESTAPICall(ctx, address, relative, sh, newFunc(), collect)
+			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			makeSCRESTAPICall(cctx, address, relative, sh, newFunc(), collect)
 		}(sharder)
 	}
 
