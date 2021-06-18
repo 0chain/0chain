@@ -29,7 +29,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
 		&blobber.StakePoolSettings, balances)
 	if err != nil {
-		return
+		return fmt.Errorf("creating stake pool: %v", err)
 	}
 
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
