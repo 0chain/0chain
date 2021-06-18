@@ -76,13 +76,18 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
 	balances cstate.StateContextI,
 ) (err error) {
+	// check terms
+	if err = blobber.Terms.validate(conf); err != nil {
+		return fmt.Errorf("invalid blobber terms: %v", err)
+	}
+
 	if blobber.Capacity == 0 {
 		return  sc.removeBlobber(t, blobber, blobbers, balances)
 	}
 
-	// check terms
-	if err = blobber.Terms.validate(conf); err != nil {
-		return fmt.Errorf("invalid new terms: %v", err)
+	// check params
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid blobber params: %v", err)
 	}
 
 	// get saved blobber
@@ -143,7 +148,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		return fmt.Errorf("can't get and decode saved blobber: %v", err)
 	}
 
-	// set to zero explicitly, in case "direct" calls
+	// set to zero explicitly, for "direct" calls
 	blobber.Capacity = 0
 
 	// remove from the all list, since the blobber can't accept new allocations
@@ -191,12 +196,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
-
-	// check blobber values
-	if err = blobber.validate(conf); err != nil {
-		return "", common.NewError("add_or_update_blobber_failed",
-			"invalid values in request: " + err.Error())
-	}
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, blobbers, balances); err != nil {
@@ -247,12 +246,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	if blobber, err = sc.getBlobber(updateBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get the blobber: " + err.Error())
-	}
-
-	// check blobber values
-	if err = blobber.validate(conf); err != nil {
-		return "", common.NewError("add_or_update_blobber_failed",
-			"invalid values in request: " + err.Error())
 	}
 
 	var sp *stakePool

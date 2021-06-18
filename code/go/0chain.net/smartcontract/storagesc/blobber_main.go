@@ -23,8 +23,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		}
 	}
 
-	// create stake pool
+	// check params
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid blobber params: %v", err)
+	}
 
+	blobber.LastHealthCheck = t.CreationDate // set to now
+
+	// create stake pool
 	var sp *stakePool
 	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
 		&blobber.StakePoolSettings, balances)
