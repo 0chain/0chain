@@ -4,6 +4,7 @@ import (
 	//cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/common"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -199,7 +200,7 @@ func Test_LockingBasicLogicTest (t *testing.T) {
 			},
 		},
 		TokenLockInterface: tokenLock{
-			StartTime: 0,
+			StartTime: common.Now(),
 			Duration:  0,
 		},
 	}
@@ -365,12 +366,13 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	require.NotEmpty(t, resp)
 	require.NotNil(t, resp)
 
+	// This method is translated below
+	//_, err = sc.deleteAuthorizer(tr, data, balances)
+
 	ans, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
 	gn := getGlobalNode(balances)
-
-	_, err = sc.deleteAuthorizer(tr, data, balances)
-	_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, nil)
+	_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 
 	//require.NotEmpty(t, authorizer)

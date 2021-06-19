@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/chaincore/transaction"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -195,7 +196,7 @@ func (an *authorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 
 	if an.Staking == nil {
 		an.Staking = &tokenpool.ZcnLockingPool{
-			ZcnPool:            tokenpool.ZcnPool{
+			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{},
 			},
 		}
@@ -211,7 +212,7 @@ func (an *authorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 	return nil
 }
 
-// To review
+// To review: tokenLock init values
 func getNewAuthorizer(pk string, id string) *authorizerNode {
 	return &authorizerNode{
 		PublicKey: pk,
@@ -306,7 +307,7 @@ func (an *authorizerNodes) addAuthorizer(node *authorizerNode) (err error) {
 	}
 
 	if an.NodeMap == nil {
-		err = common.NewError("failed to add authorizer", "receiver NodeMap is nil")
+		err = common.NewError("failed to add authorizer", "receiver NodeMap is not initialized")
 		return
 	}
 
@@ -389,20 +390,22 @@ type tokenLock struct {
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
-	tm, ok := entity.(time.Time)
+	txn, ok := entity.(*transaction.Transaction)
 	if ok {
-		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
+		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}
 	return true
 }
 
 func (tl tokenLock) LockStats(entity interface{}) []byte {
-	tm, ok := entity.(time.Time)
+	txn, ok := entity.(*transaction.Transaction)
 	if ok {
 		p := &poolStat{
 			StartTime: tl.StartTime,
 			Duration:  tl.Duration,
-			TimeLeft:  tl.Duration - tm.Sub(common.ToTime(tl.StartTime)), Locked: tl.IsLocked(tm)}
+			TimeLeft:  tl.Duration - common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)),
+			Locked:    tl.IsLocked(txn),
+		}
 		return p.encode()
 	}
 	return nil
