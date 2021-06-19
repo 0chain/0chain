@@ -14,6 +14,6 @@ func (zcn *ZCNSmartContract) globalPerodicLimit(ctx context.Context, params url.
 }
 
 func (zcn *ZCNSmartContract) getAuthorizerNodes(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	an := getAuthorizerNodes(balances)
-	return an, nil
+	an, err := getAuthorizerNodes(balances)
+	return an, err
 }

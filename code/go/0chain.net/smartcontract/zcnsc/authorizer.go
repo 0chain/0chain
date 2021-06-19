@@ -17,7 +17,10 @@ import (
 // ToClient is a SC address
 func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	// check for authorizer already there
-	ans := getAuthorizerNodes(balances)
+	ans, err := getAuthorizerNodes(balances)
+	if err != nil {
+		return resp, err
+	}
 	if ans.NodeMap[t.ClientID] != nil {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("authorizer(id: %v) already exists", t.ClientID))
 		return
@@ -66,11 +69,16 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 
 func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, _ []byte, balances cstate.StateContextI) (resp string, err error) {
 	//check for authorizer
-	ans := getAuthorizerNodes(balances)
+	ans, err := getAuthorizerNodes(balances)
+	if err != nil {
+		return
+	}
+
 	if ans.NodeMap[t.ClientID] == nil {
 		err = common.NewError("failed to delete authorizer", fmt.Sprintf("authorizer (%v) doesn't exist", t.ClientID))
 		return
 	}
+
 	gn := getGlobalNode(balances)
 
 	//empty the authorizer's pool

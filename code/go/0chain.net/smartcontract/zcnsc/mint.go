@@ -37,7 +37,10 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	}
 
 	// get the authorizers
-	ans := getAuthorizerNodes(balances)
+	ans, err := getAuthorizerNodes(balances)
+	if err != nil {
+		return
+	}
 
 	// check number of authorizers
 	signaturesNeeded := int(gn.PercentAuthorizers * float64(len(ans.NodeMap)))
