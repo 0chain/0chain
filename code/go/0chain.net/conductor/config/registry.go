@@ -98,6 +98,11 @@ func init() {
 		return setRevealed(name, ex, val, false, tm)
 	})
 
+	register("delay_send_verification_ticket", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return delaySendVerificationTicket(name, ex, val, tm)
+	})
+
 	// Byzantine blockchain.
 
 	register("vrfs", func(name string,

@@ -253,6 +253,26 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 }
 
 //
+// fault tolerance setup messages
+//
+
+func (r *Runner) DelaySendVerificationTicket(ss []NodeName, tm time.Duration) (
+	err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] Delay SendVerificationTicket of %s to %s", ss, tm.String())
+	}
+
+	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
+		state.DelaySendVerificationTicket = tm
+	})
+	if err != nil {
+		return fmt.Errorf("delay SendVerificationTickets: %v", err)
+	}
+	return
+}
+
+//
 // Byzantine blockchain miners.
 //
 

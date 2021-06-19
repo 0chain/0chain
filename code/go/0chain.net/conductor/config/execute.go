@@ -25,6 +25,9 @@ type Executor interface {
 
 	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
 
+	// fault tolerance setup messages
+	DelaySendVerificationTicket(miners []NodeName, tm time.Duration) (err error)
+
 	// waiting
 
 	WaitViewChange(vc WaitViewChange, timeout time.Duration) (err error)
@@ -227,4 +230,19 @@ func setRevealed(name string, ex Executor, val interface{}, pin bool,
 		return ex.SetRevealed(ss, pin, tm)
 	}
 	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
+
+// WaitAdd used to wait for add_miner and add_sharder SC calls.
+type DelaySendVerificationTicket struct {
+	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
+}
+
+func delaySendVerificationTicket(name string, ex Executor, val interface{},
+	tm time.Duration) (err error) {
+
+	var params DelaySendVerificationTicket
+	if err = mapstructure.Decode(val, &params); err != nil {
+		return fmt.Errorf("decoding 'delay_': %v", err)
+	}
+	return ex.DelaySendVerificationTicket(params.Miners, tm)
 }

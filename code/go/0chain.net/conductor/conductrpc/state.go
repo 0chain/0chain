@@ -1,6 +1,8 @@
 package conductrpc
 
 import (
+	"time"
+
 	"0chain.net/conductor/config"
 )
 
@@ -44,6 +46,8 @@ type State struct {
 	Shares     *config.Bad
 	Signatures *config.Bad
 	Publish    *config.Bad
+
+	DelaySendVerificationTicket time.Duration
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

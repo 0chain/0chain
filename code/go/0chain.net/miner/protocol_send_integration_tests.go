@@ -4,6 +4,7 @@ package miner
 
 import (
 	"context"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -104,6 +105,10 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 
 		good, bad []*node.Node
 	)
+
+	time.Sleep(state.DelaySendVerificationTicket)
+	// todo: are concurrent calls possible?
+	state.DelaySendVerificationTicket = 0
 
 	if mc.VerificationTicketsTo == chain.Generator && b.MinerID != selfNodeKey {
 		switch {
