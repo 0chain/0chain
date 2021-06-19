@@ -682,6 +682,7 @@ func (b *Block) Clone() *Block {
 		StateMutex:       &sync.RWMutex{},
 		stateStatusMutex: &sync.RWMutex{},
 		ticketsMutex:     &sync.RWMutex{},
+		mutexTxns:        &sync.RWMutex{},
 
 		MagicBlock: b.MagicBlock.Clone(),
 	}

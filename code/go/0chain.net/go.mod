@@ -42,6 +42,7 @@ require (
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/exp v0.0.0-20191030013958-a1ab85dbe136
 	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
 	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

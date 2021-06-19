@@ -92,7 +92,7 @@ func (msc *MinerSmartContract) AddSharder(
 	// if found
 	if err == nil {
 		// and found in all
-		if all.FindNodeById(newSharder.ID) != nil {
+		if allSharders.FindNodeById(newSharder.ID) != nil {
 			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward
@@ -239,7 +239,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 
 	if sharderKeepList.FindNodeById(newSharder.ID) != nil {
 		// do not return error for sharder already exist,
-		Logger.Debug("Add sharder already exists", zap.String("ID", newSharder.ID))
+		logging.Logger.Debug("Add sharder already exists", zap.String("ID", newSharder.ID))
 		return string(newSharder.Encode()), nil
 	}
 

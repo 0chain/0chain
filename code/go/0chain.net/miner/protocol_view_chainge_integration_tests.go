@@ -146,8 +146,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		if k == selfNodeKey {
 			continue
 		}
-		var _, ok = sos.ShareOrSigns[k]
-		if isRevealed || !ok {
+		if _, ok := sos.ShareOrSigns[k]; !ok || isRevealed {
 			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
 		}
 	}

@@ -1586,7 +1586,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
 		return false, err
 	}
-
 	mc.ensureDKG(ctx, rcvd)
 	mc.SetLatestFinalizedMagicBlock(rcvd)
 

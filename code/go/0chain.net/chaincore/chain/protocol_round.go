@@ -158,7 +158,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	if nbCount < len(c.NotarizedBlocksCounts) {
 		c.NotarizedBlocksCounts[nbCount]++
 	}
-
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",

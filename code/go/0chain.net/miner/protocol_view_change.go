@@ -173,7 +173,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Info("dkg process start",
+		logging.Logger.Info("dkg process: start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("next_phase", pn),
 			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))

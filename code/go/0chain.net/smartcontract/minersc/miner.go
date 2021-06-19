@@ -149,7 +149,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	if !update {
-		Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
+		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
 	}
 
 	return string(newMiner.Encode()), nil
