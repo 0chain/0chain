@@ -161,6 +161,56 @@ type authorizerNode struct {
 	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
 }
 
+func (an *authorizerNode) Encode() []byte {
+	bytes, _ := json.Marshal(an)
+	return bytes
+}
+
+func (an *authorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+	var objMap map[string]*json.RawMessage
+	err := json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+
+	id, ok := objMap["id"]
+	if ok {
+		var idStr *string
+		err = json.Unmarshal(*id, &idStr)
+		if err != nil {
+			return err
+		}
+		an.ID = *idStr
+	}
+
+	pk, ok := objMap["public_key"]
+	if ok {
+		var pkStr *string
+		err = json.Unmarshal(*pk, &pkStr)
+		if err != nil {
+			return err
+		}
+		an.PublicKey = *pkStr
+	}
+
+	if an.Staking == nil {
+		an.Staking = &tokenpool.ZcnLockingPool{
+			ZcnPool:            tokenpool.ZcnPool{
+				TokenPool: tokenpool.TokenPool{},
+			},
+		}
+	}
+
+	staking, ok := objMap["staking"]
+	if ok {
+		err = an.Staking.Decode(*staking, tokenlock)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // To review
 func getNewAuthorizer(pk string, id string) *authorizerNode {
 	return &authorizerNode{
@@ -187,10 +237,34 @@ type authorizerNodes struct {
 }
 
 func (an *authorizerNodes) Decode(input []byte) error {
-	err := json.Unmarshal(input, an)
+	var objMap map[string]json.RawMessage
+	err := json.Unmarshal(input, &objMap)
 	if err != nil {
 		return err
 	}
+
+	nodeMap, ok := objMap["node_map"]
+	if ok {
+		var authorizerNodes map[string]json.RawMessage
+		err := json.Unmarshal(nodeMap, &authorizerNodes)
+		if err != nil {
+			return err
+		}
+
+		for _, raw := range authorizerNodes {
+			target := &authorizerNode{}
+			err := target.Decode(raw, &tokenLock{})
+			if err != nil {
+				return err
+			}
+
+			err = an.addAuthorizer(target)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -239,15 +313,15 @@ func (an *authorizerNodes) updateAuthorizer(node *authorizerNode) (err error) {
 	return
 }
 
-func getAuthorizerNodes(balances cstate.StateContextI) (an *authorizerNodes) {
-	an = &authorizerNodes{}
+func getAuthorizerNodes(balances cstate.StateContextI) (*authorizerNodes, error) {
+	an := &authorizerNodes{}
 	av, err := balances.GetTrieNode(allAuthorizerKey)
 	if err != nil {
 		an.NodeMap = make(map[string]*authorizerNode)
-		return
+		return an, nil
 	}
-	_ = an.Decode(av.Encode())
-	return
+	err = an.Decode(av.Encode())
+	return an, err
 }
 
 type userNode struct {

@@ -151,7 +151,8 @@ func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
 	balances := CreateMockStateContext()
 	sc := CreateZCNSmartContract()
 
-	ans := getAuthorizerNodes(balances)
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
 	require.Nil(t, ans.NodeMap[tr.ClientID])
 
 	resp, err := sc.addAuthorizer(tr, data, balances)
@@ -159,7 +160,8 @@ func Test_Cannot_Delete_AuthorizerFromAnotherClient(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NoError(t, err)
 
-	ans = getAuthorizerNodes(balances)
+	ans, err = getAuthorizerNodes(balances)
+	require.NoError(t, err)
 	require.NotNil(t, ans.NodeMap[tr.ClientID])
 
 	tr = CreateTransaction("another client", 10)
@@ -210,27 +212,103 @@ func Test_Can_EmptyPool(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
-	trId := "id"
-	node := getNewAuthorizer("pk", trId)
+func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
+	tr := CreateDefaultTransaction()
+	an := getNewAuthorizer(tr.PublicKey, tr.ClientID)
+	require.NotNil(t, an.Staking.TokenLockInterface)
+
+	ans := &authorizerNodes{}
+	ans.NodeMap = make(map[string]*authorizerNode)
+	ans.NodeMap[an.ID] = an
+
+	ans2 := &authorizerNodes{}
+	_ = ans2.Decode(ans.Encode())
+	//require.NoError(t, err)
+
+	node := ans2.NodeMap[an.ID]
+	require.NotNil(t, node)
+	require.NotNil(t, node.Staking.TokenLockInterface)
+}
+
+// With this test, the ability to save nodes to context is tested
+func Test_GetAuthorizerNodes_ShouldBeAbleToReturnNodes(t *testing.T) {
+	ans := &authorizerNodes{}
+	balances := CreateMockStateContext()
+	av, err := balances.GetTrieNode(allAuthorizerKey)
+	if err != nil {
+		ans.NodeMap = make(map[string]*authorizerNode)
+	} else {
+		// deep copy to the local context
+		_ = ans.Decode(av.Encode())
+	}
+
+	require.NotNil(t, ans)
+
+	tr := CreateDefaultTransaction()
+	an := getNewAuthorizer(tr.PublicKey, tr.ClientID)
+	err = ans.addAuthorizer(an)
+	require.NoError(t, err)
+	require.NotNil(t, an.Staking.TokenLockInterface)
+
+	node := ans.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
+	// without saving it won't be possible to get nodes
+	err = ans.save(balances)
+	require.NoError(t, err)
+
+	ans2, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	node = ans2.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+	require.NotNil(t, node.Staking.TokenLockInterface)
+}
+
+func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
+	// Init
+	tr := CreateDefaultTransaction()
+	node := getNewAuthorizer(tr.PublicKey, tr.ClientID)
+	require.NotNil(t, node.Staking.TokenLockInterface)
 	balances := CreateMockStateContext()
-	ans := getAuthorizerNodes(balances)
+
+	// Add
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
 	_ = ans.addAuthorizer(node)
 
-	node = ans.NodeMap[trId]
+	// Get
+	node = ans.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+	require.NotNil(t, node.Staking.TokenLockInterface)
+
+	// Save
+	err = ans.save(balances)
+	require.NoError(t, err)
+
+	// Get nodes again from context
+	ans2, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	node = ans2.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+
+	// Staking Pool must be initialized
 	require.NotNil(t, node.Staking.TokenLockInterface)
 }
 
 func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
+	// Init
 	var data []byte
 	tr := CreateDefaultTransaction()
-	balances := CreateMockStateContext()
 	sc := CreateZCNSmartContract()
+
+	// Add
+	balances := CreateMockStateContext()
 	_, _ = sc.addAuthorizer(tr, data, balances)
 
-	ans := getAuthorizerNodes(balances)
+	// Get
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
 	node := ans.NodeMap[tr.ClientID]
 
 	require.NotNil(t, node.Staking.TokenLockInterface)
@@ -247,7 +325,8 @@ func Test_Can_Delete_Authorizer(t *testing.T) {
 	require.NotEmpty(t, resp)
 	require.NoError(t, err)
 
-	ans := getAuthorizerNodes(balances)
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
 	require.NotNil(t, ans.NodeMap[tr.ClientID])
 	require.NotNil(t, ans.NodeMap[tr.ClientID].Staking)
 
@@ -269,13 +348,14 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NoError(t, err)
 
-	//ans := getAuthorizerNodes(balances)
-	//gn := getGlobalNode(balances)
-	//
-	//_, err = sc.deleteAuthorizer(tr, data, balances)
-	//_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, nil)
-	//require.NoError(t, err)
-	//
-	////require.NotEmpty(t, authorizer)
-	//require.NoError(t, err)
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	gn := getGlobalNode(balances)
+
+	_, err = sc.deleteAuthorizer(tr, data, balances)
+	_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, nil)
+	require.NoError(t, err)
+
+	//require.NotEmpty(t, authorizer)
+	require.NoError(t, err)
 }
