@@ -237,6 +237,10 @@ type authorizerNodes struct {
 }
 
 func (an *authorizerNodes) Decode(input []byte) error {
+	if an.NodeMap == nil {
+		an.NodeMap = make(map[string]*authorizerNode)
+	}
+
 	var objMap map[string]json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -296,11 +300,23 @@ func (an *authorizerNodes) deleteAuthorizer(id string) (err error) {
 }
 
 func (an *authorizerNodes) addAuthorizer(node *authorizerNode) (err error) {
+	if node == nil {
+		err = common.NewError("failed to add authorizer", "authorizerNode is not initialized")
+		return
+	}
+
+	if an.NodeMap == nil {
+		err = common.NewError("failed to add authorizer", "receiver NodeMap is nil")
+		return
+	}
+
 	if an.NodeMap[node.ID] != nil {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("authorizer (%v) already exists", node.ID))
 		return
 	}
+
 	an.NodeMap[node.ID] = node
+
 	return
 }
 

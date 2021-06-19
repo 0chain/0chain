@@ -49,7 +49,7 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestShouldAddAuthorizer(t *testing.T) {
+func Test_ShouldAddAuthorizer(t *testing.T) {
 	var data []byte
 	sc := CreateZCNSmartContract()
 	balances := CreateMockStateContext()
@@ -59,22 +59,39 @@ func TestShouldAddAuthorizer(t *testing.T) {
 
 	require.NoError(t, err, "must be able to add authorizer")
 	require.NotEmpty(t, address)
+
+	// TODO: Check authorizer exists in the tree
 }
 
-func TestShouldAddOnlyOneAuthorizer(t *testing.T) {
+func TestAuthorizerNodes_ShouldSaveState(t *testing.T) {
 	var data []byte
 	sc := CreateZCNSmartContract()
 	balances := CreateMockStateContext()
 	tr := CreateDefaultTransaction()
 
 	address, err := sc.addAuthorizer(tr, data, balances)
-	require.NotEmpty(t, address)
 	require.NoError(t, err, "must be able to add authorizer")
+	require.NotEmpty(t, address)
+
+	// TODO: fetch all nodes from context and check the saved node
+}
+
+func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
+	var data []byte
+	sc := CreateZCNSmartContract()
+	balances := CreateMockStateContext()
+	tr := CreateDefaultTransaction()
+
+	address, err := sc.addAuthorizer(tr, data, balances)
+	require.NoError(t, err, "must be able to add authorizer")
+	require.NotEmpty(t, address)
+
+	// TODO: fetch the save not from context and check it
 
 	address, err = sc.addAuthorizer(tr, data, balances)
-	require.Empty(t, address)
-	require.Contains(t, err.Error(), "failed to add authorizer")
 	require.Error(t, err, "must be able to add only one authorizer")
+	require.Contains(t, err.Error(), "failed to add authorizer")
+	require.Empty(t, address)
 }
 
 func TestShouldDeleteAuthorizer(t *testing.T) {
@@ -344,9 +361,9 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	sc := CreateZCNSmartContract()
 
 	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NoError(t, err)
 	require.NotEmpty(t, resp)
 	require.NotNil(t, resp)
-	require.NoError(t, err)
 
 	ans, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
@@ -358,4 +375,37 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 
 	//require.NotEmpty(t, authorizer)
 	require.NoError(t, err)
+}
+
+func Test_AddAuthorizerNode_IsPersisted (t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NoError(t, err)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+
+	nodes, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	require.NotNil(t, nodes.NodeMap)
+}
+
+func Test_Authorizers_NodeMap_ShouldBeInitializedAfterSaving (t *testing.T) {
+	// Create authorizers nodes tree
+	balances := CreateMockStateContext()
+	tree, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+	require.NotNil(t, tree.NodeMap)
+
+	err = tree.save(balances)
+	require.NoError(t, err)
+
+	tree, err = getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+	require.NotNil(t, tree.NodeMap)
 }

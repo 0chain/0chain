@@ -139,8 +139,9 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	// Create authorizers nodes tree
 	balances := CreateMockStateContext()
 	tree, err := getAuthorizerNodes(balances)
-	require.NotNil(t, tree)
 	require.NoError(t, err)
+	require.NotNil(t, tree)
+	require.NotNil(t, tree.NodeMap)
 
 	// Save authorizer node in the dictionary (nodes tree)
 	tree.NodeMap[node.ID] = node
@@ -155,6 +156,22 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	require.NotNil(t, targetNode)
 	require.Equal(t, targetNode.Staking.ID, "11")
 	require.Equal(t, int(targetNode.Staking.Balance), 100)
+}
+
+func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
+	// Create authorizers nodes tree
+	balances := CreateMockStateContext()
+	tree, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+	require.NotNil(t, tree.NodeMap)
+
+	// Serialize and deserialize nodes tree
+	target := &authorizerNodes{}
+	err = target.Decode(tree.Encode())
+	require.NoError(t, err)
+	require.NotNil(t, target)
+	require.NotNil(t, target.NodeMap)
 }
 
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *globalNode, error) {
