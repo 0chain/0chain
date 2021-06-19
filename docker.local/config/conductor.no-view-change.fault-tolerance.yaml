@@ -9,6 +9,7 @@ enable:
   - "Sharders go down and come up"
   - "Nodes go down and come up"
   - "Nodes fail and recover randomly"
+  - "Miners are delayed"
 
 sets:
   - name: "Miners go down"
@@ -22,6 +23,10 @@ sets:
       - "Less than consensus miners go down and come up"
       - "More than consensus miners go down and come up"
       - "All miners go down and come up"
+
+  - name: "Miners are delayed"
+    tests:
+      - "More than consensus miners are delayed"
 
   - name: "Sharders go down"
     tests:
@@ -134,6 +139,25 @@ tests:
           shift: 20
       - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 30
+
+  - name: "More than consensus miners are delayed"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - delay_send_verification_ticket:
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+          timeout: "2m"
+      - wait_no_progress:
+          timeout: "2m"
       - wait_round:
           shift: 30
 
