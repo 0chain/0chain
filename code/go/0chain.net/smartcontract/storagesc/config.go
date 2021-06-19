@@ -193,31 +193,31 @@ func (sc *scConfig) validate() (err error) {
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.DataShards)
 	}
 	if sc.FreeAllocationSettings.ParityShards < 0 {
 		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.ParityShards)
 	}
-	if sc.FreeAllocationSettings.ParityShards < 0 {
+	if sc.FreeAllocationSettings.Size < 0 {
 		return fmt.Errorf("negative free_allocation_settings.size: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.Size)
 	}
 	if sc.FreeAllocationSettings.Duration <= 0 {
 		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.Duration)
 	}
 	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.ReadPriceRange)
 	}
 	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
 		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.WritePriceRange)
 	}
-	if sc.FreeAllocationSettings.MaxChallengeCompletionTime <= 0 {
+	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
 		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
-			sc.StakePool.InterestRate)
+			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
 
 	if sc.FailedChallengesToCancel < 0 {
@@ -355,12 +355,12 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
 	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
 	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas + "read_price_range.max")),
-		Max: state.Balance(scc.GetFloat64(fas + "read_price_range.min")),
+		Min: state.Balance(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
+		Max: state.Balance(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas + "write_price_range.max")),
-		Max: state.Balance(scc.GetFloat64(fas + "write_price_range.min")),
+		Min: state.Balance(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
+		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
 

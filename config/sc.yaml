@@ -63,7 +63,7 @@ smart_contracts:
       write_price_range:
         min: 0.0
         max: 100.0
-      MaxChallengeCompletionTime:  20m
+      max_challenge_completion_time:  20m
     # validator_reward represents part of blobbers' rewards goes to validators
     validator_reward: 0.025
     # blobber_slash represents blobber's stake penalty when a challenge not
