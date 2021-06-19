@@ -104,7 +104,7 @@ type scConfig struct {
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
 	// free allocations
-	MaxTotalFreeAllocation      state.Balance          `json:"max_annual_free_allocation"`
+	MaxTotalFreeAllocation      state.Balance          `json:"max_total_free_allocation"`
 	MaxIndividualFreeAllocation state.Balance          `json:"max_individual_free_allocation"`
 	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
 
