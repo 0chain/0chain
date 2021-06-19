@@ -347,7 +347,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.StakePool.InterestInterval = scc.GetDuration(
 		pfx + "stakepool.interest_interval")
 
-	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_annual_free_allocation") * 1e10)
+	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
 	fas := pfx + "free_allocation_settings."
 	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))

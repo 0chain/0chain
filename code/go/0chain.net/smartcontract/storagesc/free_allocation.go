@@ -18,7 +18,7 @@ const (
 )
 
 type freeStorageMarker struct {
-	Giver      string           `json:"giver"`
+	Assigner   string           `json:"assigner"`
 	Recipient  string           `json:"recipient"`
 	FreeTokens float64          `json:"free_tokens"`
 	Timestamp  common.Timestamp `json:"timestamp"`
@@ -153,7 +153,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	var newIndividualLimit = state.Balance(assignerInfo.IndividualLimit * floatToBalance)
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
 		return common.NewErrorf("add_free_storage_assigner",
-			"total tokens limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
+			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(assignerInfo.Name, balances)
@@ -219,7 +219,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"can't get config: %v", err)
 	}
 
-	assigner, err := ssc.getFreeStorageAssigner(marker.Giver, balances)
+	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"error getting assigner details: %v", err)
@@ -286,7 +286,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"can't get config: %v", err)
 	}
 
-	assigner, err := ssc.getFreeStorageAssigner(marker.Giver, balances)
+	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"error getting assigner details: %v", err)
