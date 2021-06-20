@@ -1,7 +1,8 @@
 #!/bin/sh
-PWD=`pwd`
-NODE_DIR=`basename "$PWD"`
-NODE_ID=`echo "$NODE_DIR" | sed -e 's/.*\(.\)$/\1/'`
+
+PWD=$(pwd)
+NODE_DIR=$(basename "$PWD")
+NODE_ID=$(echo "$NODE_DIR" | sed -e 's/.*\(.\)$/\1/')
 
 SERVICE=$1; shift
 CMD=$1; shift

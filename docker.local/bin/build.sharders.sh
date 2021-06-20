@@ -17,6 +17,7 @@ do
     esac
 done
 
+
 docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" -f docker.local/build.sharder/Dockerfile . -t sharder
 
 for i in $(seq 1 3);
