@@ -246,7 +246,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		inputBytes, err := json.Marshal(&p.marker)
 		require.NoError(t, err)
-		inputObj := freeStorageAllocationInput{string(inputBytes)}
+		inputObj := freeStorageAllocationInput{
+			RecipientPublicKey: mockUserPublicKey,
+			Marker:             string(inputBytes),
+		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 

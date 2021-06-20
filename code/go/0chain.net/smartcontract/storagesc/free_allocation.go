@@ -30,7 +30,8 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 }
 
 type freeStorageAllocationInput struct {
-	Marker string `json:"marker"`
+	RecipientPublicKey string `json:"recipient_public_key"`
+	Marker             string `json:"marker"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -201,14 +202,14 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	balances cstate.StateContextI,
 ) (string, error) {
 	var err error
-	var markerMarshalled freeStorageAllocationInput
-	if err := json.Unmarshal(input, &markerMarshalled); err != nil {
+	var inputObj freeStorageAllocationInput
+	if err := json.Unmarshal(input, &inputObj); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"unmarshal input: %v", err)
 	}
 
 	var marker freeStorageMarker
-	if err := marker.decode([]byte(markerMarshalled.Marker)); err != nil {
+	if err := marker.decode([]byte(inputObj.Marker)); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"unmarshal request: %v", err)
 	}
@@ -235,8 +236,8 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		ParityShards:               conf.FreeAllocationSettings.ParityShards,
 		Size:                       conf.FreeAllocationSettings.Size,
 		Expiration:                 common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.FreeAllocationSettings.Duration).Unix()),
-		Owner:                      txn.ClientID,
-		OwnerPublicKey:             txn.PublicKey,
+		Owner:                      marker.Recipient,
+		OwnerPublicKey:             inputObj.RecipientPublicKey,
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
 		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
