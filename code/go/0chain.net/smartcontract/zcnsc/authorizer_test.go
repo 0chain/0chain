@@ -4,20 +4,19 @@ import (
 	//cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"testing"
-	"time"
 )
 
 // TODO: Mock Transaction.TransactionData with SmartContractTransactionData
 // TODO: Mock SmartContractTransactionData
+// TODO: StateContext should be able to add transfers
 
-const (
-	LOCKUPTIME90DAYS = time.Second * 10
-	C0               = "client_0"
-	C1               = "client_1"
+var (
+	stringEmpty = ""
 )
 
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
@@ -31,7 +30,15 @@ func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	require.NoError(t, err, "must be able to dig pool")
 	require.NotNil(t, transfer)
 	require.NotNil(t, resp)
-	require.NoError(t, err)
+
+	// Staking params
+	require.Equal(t, an.Staking.ID, tr.Hash)
+	require.Equal(t, an.Staking.Balance, state.Balance(tr.Value))
+
+	// Transfer params
+	transferDigPoolEqualityCheck(t, transfer, tr)
+	// Response params
+	responseDigPoolEqualityCheck(t, resp, tr, &an.Staking.ID, &stringEmpty)
 
 	err = sc.AddTransfer(transfer)
 	require.NoError(t, err, "must be able to add transfer")
@@ -47,7 +54,11 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 	require.NoError(t, err, "must be able to dig pool")
 	require.NotNil(t, transfer)
 	require.NotNil(t, resp)
-	require.NoError(t, err)
+
+	// Transfer params
+	transferDigPoolEqualityCheck(t, transfer, tr)
+	// Response params
+	responseDigPoolEqualityCheck(t, resp, tr, &an.Staking.ID, &stringEmpty)
 }
 
 func Test_ShouldAddAuthorizer(t *testing.T) {
@@ -56,25 +67,17 @@ func Test_ShouldAddAuthorizer(t *testing.T) {
 	balances := CreateMockStateContext()
 	tr := CreateDefaultTransaction()
 
-	address, err := sc.addAuthorizer(tr, data, balances)
+	response, err := sc.addAuthorizer(tr, data, balances)
 
 	require.NoError(t, err, "must be able to add authorizer")
-	require.NotEmpty(t, address)
+	require.NotEmpty(t, response)
 
-	// TODO: Check authorizer exists in the tree
-}
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
 
-func TestAuthorizerNodes_ShouldSaveState(t *testing.T) {
-	var data []byte
-	sc := CreateZCNSmartContract()
-	balances := CreateMockStateContext()
-	tr := CreateDefaultTransaction()
-
-	address, err := sc.addAuthorizer(tr, data, balances)
-	require.NoError(t, err, "must be able to add authorizer")
-	require.NotEmpty(t, address)
-
-	// TODO: fetch all nodes from context and check the saved node
+	node := ans.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+	require.Equal(t, len(ans.NodeMap), 1)
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
@@ -87,22 +90,25 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	require.NoError(t, err, "must be able to add authorizer")
 	require.NotEmpty(t, address)
 
-	// TODO: fetch the save not from context and check it
+	// Check nodes state
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	node := ans.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+	require.Equal(t, len(ans.NodeMap), 1)
 
+	// Try adding one more authorizer
 	address, err = sc.addAuthorizer(tr, data, balances)
 	require.Error(t, err, "must be able to add only one authorizer")
 	require.Contains(t, err.Error(), "failed to add authorizer")
 	require.Empty(t, address)
-}
 
-func TestShouldDeleteAuthorizer(t *testing.T) {
-	var sc = ZCNSmartContract{}
-	require.NotNil(t, sc)
-}
-
-func TestShouldFailIfAuthorizerExists(t *testing.T) {
-	var sc = ZCNSmartContract{}
-	require.NotNil(t, sc)
+	// Check nodes state
+	ans, err = getAuthorizerNodes(balances)
+	require.NoError(t, err)
+	node = ans.NodeMap[tr.ClientID]
+	require.NotNil(t, node)
+	require.Equal(t, len(ans.NodeMap), 1)
 }
 
 func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testing.T) {
@@ -240,8 +246,8 @@ func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	ans.NodeMap[an.ID] = an
 
 	ans2 := &authorizerNodes{}
-	_ = ans2.Decode(ans.Encode())
-	//require.NoError(t, err)
+	err := ans2.Decode(ans.Encode())
+	require.NoError(t, err)
 
 	node := ans2.NodeMap[an.ID]
 	require.NotNil(t, node)
@@ -367,16 +373,35 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	require.NotNil(t, resp)
 
 	// This method is translated below
-	//_, err = sc.deleteAuthorizer(tr, data, balances)
-
-	ans, err := getAuthorizerNodes(balances)
+	resp, err = sc.deleteAuthorizer(tr, data, balances)
 	require.NoError(t, err)
-	gn := getGlobalNode(balances)
-	_, _, err = ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
-	require.NoError(t, err)
+	require.NotEmpty(t, resp)
 
 	//require.NotEmpty(t, authorizer)
 	require.NoError(t, err)
+}
+
+func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
+	var data []byte
+	tr := CreateDefaultTransaction()
+	balances := CreateMockStateContext()
+	sc := CreateZCNSmartContract()
+
+	resp, err := sc.addAuthorizer(tr, data, balances)
+	require.NoError(t, err)
+	responseDigPoolEqualityCheck(t, resp, tr, &tr.Hash, &stringEmpty)
+	require.NotEmpty(t, resp)
+	require.NotNil(t, resp)
+
+	ans, err := getAuthorizerNodes(balances)
+	require.NoError(t, err)
+
+	gn := getGlobalNode(balances)
+	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
+	require.NoError(t, err)
+
+	transferEmptyPoolEqualityCheck(t, transfer, tr)
+	responseEmptyPoolEqualityCheck(t, resp, tr, &stringEmpty, &tr.Hash)
 }
 
 func Test_AddAuthorizerNode_IsPersisted (t *testing.T) {
@@ -410,4 +435,54 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterSaving (t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tree)
 	require.NotNil(t, tree.NodeMap)
+}
+
+func getResponse(t *testing.T, resp string) *tokenpool.TokenPoolTransferResponse {
+	response := &tokenpool.TokenPoolTransferResponse{}
+	err := response.Decode([]byte(resp))
+	require.NoError(t, err, "failed to decode response")
+	return response
+}
+
+func responseEmptyPoolEqualityCheck(t *testing.T, resp string, tr *transaction.Transaction, toPoolID, fromPoolID *string) {
+	require.NotEmpty(t, resp)
+	response := getResponse(t, resp)
+	require.Equal(t, tr.Value, int64(response.Value))
+	require.Equal(t, tr.ClientID, response.ToClient)
+	require.Equal(t, tr.ToClientID, response.FromClient)
+	if toPoolID != nil {
+		require.Equal(t, *toPoolID, response.ToPool)
+	}
+	if fromPoolID != nil {
+		require.Equal(t, *fromPoolID, response.FromPool)
+	}
+	require.Equal(t, stringEmpty, response.TxnHash)
+}
+
+
+func responseDigPoolEqualityCheck(t *testing.T, resp string, tr *transaction.Transaction, toPoolID, fromPoolID *string) {
+	require.NotEmpty(t, resp)
+	response := getResponse(t, resp)
+	require.Equal(t, tr.Value, int64(response.Value))
+	require.Equal(t, tr.ClientID, response.FromClient)
+	require.Equal(t, tr.ToClientID, response.ToClient)
+	if toPoolID != nil {
+		require.Equal(t, *toPoolID, response.ToPool)
+	}
+	if fromPoolID != nil {
+		require.Equal(t, *fromPoolID, response.FromPool)
+	}
+	require.Equal(t, tr.Hash, response.TxnHash)
+}
+
+func transferEmptyPoolEqualityCheck(t *testing.T, transfer *state.Transfer, tr *transaction.Transaction) {
+	require.Equal(t, tr.ClientID, transfer.ToClientID)
+	require.Equal(t, tr.ToClientID, transfer.ClientID)
+	require.Equal(t, state.Balance(tr.Value), transfer.Amount)
+}
+
+func transferDigPoolEqualityCheck(t *testing.T, transfer *state.Transfer, tr *transaction.Transaction) {
+	require.Equal(t, tr.ClientID, transfer.ClientID)
+	require.Equal(t, tr.ToClientID, transfer.ToClientID)
+	require.Equal(t, state.Balance(tr.Value), transfer.Amount)
 }
