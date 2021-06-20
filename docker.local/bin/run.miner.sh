@@ -1,4 +1,5 @@
 #!/bin/sh
+
 PWD=$(pwd)
 NODE_DIR=$(basename "$PWD")
 NODE_ID=$(echo "$NODE_DIR" | sed -e 's/.*\(.\)$/\1/')

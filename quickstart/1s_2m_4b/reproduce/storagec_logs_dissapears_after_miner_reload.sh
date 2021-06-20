@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/sh
 
 #Run
 #../reliable/restart_from_scratch.sh

@@ -6,8 +6,6 @@ if [ "$#" -ne 3 ];
     exit 
 fi
 
-
-
 docker run -v "$2":/mykeys -it zchain_genkeys go run encryption/keys/main.go   --signature_scheme "$1" --keys_file_name "$3" --keys_file_path "/mykeys" --generate_keys true  --timestamp true
 
 retVal=$?

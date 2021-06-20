@@ -1,4 +1,5 @@
 #!/bin/sh
+
 PWD=$(pwd)
 SHARDER_DIR=$(basename "$PWD")
 SHARDER_ID=$(echo "$SHARDER_DIR" | sed -e 's/.*\(.\)$/\1/')

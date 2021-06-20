@@ -1,28 +1,28 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 BASEDIR=$(pwd)
 
 echo "Making mocks..."
 
-cd $BASEDIR/code/go/0chain.net/core || exit
+cd "$BASEDIR"/code/go/0chain.net/core || exit
 mockery --output=../core/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/miner || exit
+cd "$BASEDIR"/code/go/0chain.net/miner || exit
 mockery --output=../miner/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/chaincore || exit
+cd "$BASEDIR"/code/go/0chain.net/chaincore || exit
 mockery --output=../chaincore/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/conductor || exit
+cd "$BASEDIR"/code/go/0chain.net/conductor || exit
 mockery --output=../conductor/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/sharder || exit
+cd "$BASEDIR"/code/go/0chain.net/sharder || exit
 mockery --output=../sharder/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/smartcontract || exit
+cd "$BASEDIR"/code/go/0chain.net/smartcontract || exit
 mockery --output=../smartcontract/mocks --all
 
-cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
+cd "$BASEDIR"/code/go/0chain.net/chaincore/chain/state || exit
 mockery --name=StateContextI --output=../../../mocks --filename=state-context-i.go
 
 echo "Mocks files are generated."

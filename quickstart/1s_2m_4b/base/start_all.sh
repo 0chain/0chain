@@ -1,3 +1,4 @@
+#!/bin/sh
  #!/bin/bash
 
 ./start_sharders.sh
