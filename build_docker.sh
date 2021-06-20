@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ZCM="miner"
 ZCS="sharder"
 read -r -p "Provide the docker image tag name: " TAG
