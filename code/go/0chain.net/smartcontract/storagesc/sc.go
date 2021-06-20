@@ -207,6 +207,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "cancel_allocation":
 		resp, err = sc.cancelAllocationRequest(t, input, balances)
 
+	case "add_curator":
+		resp, err = "", sc.addCurator(t, input, balances)
+
 	// blobbers
 
 	case "add_blobber":
