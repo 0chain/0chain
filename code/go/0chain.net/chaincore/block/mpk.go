@@ -58,6 +58,19 @@ func (mpks *Mpks) GetMpks() map[string]*MPK {
 	return result
 }
 
+// Clone returns a clone of Mpks instance
+func (mpks *Mpks) Clone() *Mpks {
+	clone := &Mpks{Mpks: make(map[string]*MPK, len(mpks.Mpks))}
+	for k, v := range mpks.Mpks {
+		nv := *v
+		nv.Mpk = make([]string, len(v.Mpk))
+		copy(nv.Mpk, v.Mpk)
+		clone.Mpks[k] = &nv
+	}
+
+	return clone
+}
+
 func (mpk *MPK) Encode() []byte {
 	buff, _ := json.Marshal(mpk)
 	return buff

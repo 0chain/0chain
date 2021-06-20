@@ -7,7 +7,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -21,14 +20,13 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	Logger.Info("try to add sharder", zap.Any("txn", t))
 	var all *MinerNodes
-	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
+	if all, err = getAllShardersList(balances); err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("add_sharder",
 			"getting miner list: %v", err)
 	}
 
-	msc.verifySharderState(balances, AllShardersKey,
-		"Checking all sharders list in the beginning")
+	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
 
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
@@ -89,7 +87,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	if err == nil {
 		// and found in all
 		if all.FindNodeById(newSharder.ID) != nil {
-			return "", common.NewError("add_sharder", "sharder already exists")
+			return string(newSharder.Encode()), nil
 		}
 		// otherwise the sharder has saved by block sharders reward
 		newSharder.Stat.SharderRewards = existing.Stat.SharderRewards
@@ -106,7 +104,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 			"saving sharder: %v", err)
 	}
 	// save all sharders list
-	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
+	if err = updateAllShardersList(balances, all); err != nil {
 		return "", common.NewErrorf("add_sharder",
 			"saving all sharders list: %v", err)
 	}
@@ -117,41 +115,40 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 }
 
 //------------- local functions ---------------------
-func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI, key datastore.Key, msg string) {
-	allSharderList, err := msc.getShardersList(balances, key)
+func verifyAllShardersState(balances cstate.StateContextI, msg string) {
+	shardersList, err := getAllShardersList(balances)
 	if err != nil {
-		Logger.Info(msg + " getShardersList_failed - Failed to retrieve existing miners list")
+		Logger.Error("verify_all_sharder_state_failed", zap.Error(err))
 		return
 	}
-	if allSharderList == nil || len(allSharderList.Nodes) == 0 {
-		Logger.Info(msg + " allSharderList is empty")
+
+	if shardersList == nil || len(shardersList.Nodes) == 0 {
+		Logger.Info(msg + " shardersList is empty")
 		return
 	}
 
 	Logger.Info(msg)
-	for _, sharder := range allSharderList.Nodes {
-		Logger.Info("allSharderList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
+	for _, sharder := range shardersList.Nodes {
+		Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
 	}
-
 }
 
-func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
-	key datastore.Key) (*MinerNodes, error) {
-
-	allMinersList := &MinerNodes{}
-	allMinersBytes, err := balances.GetTrieNode(key)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, common.NewError("getShardersList_failed",
-			fmt.Sprintf("Failed to retrieve existing sharders list: %v", err))
-	}
-	if allMinersBytes == nil {
-		return allMinersList, nil
-	}
-	err = allMinersList.Decode(allMinersBytes.Encode())
+func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
+	shardersList, err := getShardersKeepList(balances)
 	if err != nil {
-		return nil, fmt.Errorf("%w: can't decode miners list: %s", common.ErrDecoding, err)
+		Logger.Error("verify_sharder_keep_state_failed", zap.Error(err))
+		return
 	}
-	return allMinersList, nil
+
+	if shardersList == nil || len(shardersList.Nodes) == 0 {
+		Logger.Info(msg + " shardersList is empty")
+		return
+	}
+
+	Logger.Info(msg)
+	for _, sharder := range shardersList.Nodes {
+		Logger.Info("shardersList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
+	}
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,
@@ -181,7 +178,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return "", err
 	}
@@ -190,13 +187,13 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 			"this is not the correct phase to contribute (sharder keep)")
 	}
 
-	sharderKeepList, err := msc.getShardersList(balances, ShardersKeepKey)
+	sharderKeepList, err := getShardersKeepList(balances)
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("sharder_keep_failed",
 			"Failed to get miner list: %v", err)
 	}
-	msc.verifySharderState(balances, ShardersKeepKey, "Checking sharderKeepList in the beginning")
+	verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
 
 	newSharder := NewMinerNode()
 	err = newSharder.Decode(input)
@@ -217,7 +214,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	}
 
 	//check new sharder
-	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
+	allShardersList, err := getAllShardersList(balances)
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("sharder_keep_failed",
@@ -228,11 +225,13 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	}
 
 	if sharderKeepList.FindNodeById(newSharder.ID) != nil {
-		return "", common.NewErrorf("failed to add sharder", "sharder already exists: %v", newSharder.ID)
+		// do not return error for sharder already exist,
+		Logger.Debug("Add sharder already exists", zap.String("ID", newSharder.ID))
+		return string(newSharder.Encode()), nil
 	}
 
 	sharderKeepList.Nodes = append(sharderKeepList.Nodes, newSharder)
-	if _, err := balances.InsertTrieNode(ShardersKeepKey, sharderKeepList); err != nil {
+	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
 		return "", err
 	}
 	msc.verifyMinerState(balances, "Checking allsharderslist afterInsert")

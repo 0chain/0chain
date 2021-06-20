@@ -1,17 +1,19 @@
-package sharder_test
+package sharder
 
 import (
 	"testing"
-
-	"0chain.net/sharder"
 )
+
+func init() {
+	SetupS2SRequestors()
+}
 
 func TestHealthCheckScan_String(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name      string
-		e         sharder.HealthCheckScan
+		e         HealthCheckScan
 		want      string
 		wantPanic bool
 	}{

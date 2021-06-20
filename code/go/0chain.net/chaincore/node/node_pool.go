@@ -40,9 +40,10 @@ type Pool struct {
 
 /*NewPool - create a new node pool of given type */
 func NewPool(Type int8) *Pool {
-	np := Pool{Type: Type}
-	np.NodesMap = make(map[string]*Node)
-	return &np
+	return &Pool{
+		Type:     Type,
+		NodesMap: make(map[string]*Node),
+	}
 }
 
 /*Size - size of the pool regardless node status */
@@ -57,7 +58,6 @@ func (np *Pool) Size() int {
 func (np *Pool) MapSize() int {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	return len(np.NodesMap)
 }
 
@@ -87,17 +87,9 @@ func (np *Pool) GetNode(id string) *Node {
 
 var none = make([]*Node, 0)
 
-func (np *Pool) copyNodes() (cp []*Node) {
-	if len(np.Nodes) == 0 {
-		return // nil
-	}
-	cp = make([]*Node, len(np.Nodes))
-	copy(cp, np.Nodes)
-	return
-}
-
+// TODO: refactor to return a copy of Nodes instead of the pointers
 func (np *Pool) shuffleNodes() (shuffled []*Node) {
-	shuffled = np.copyNodes()
+	shuffled = np.Nodes
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
@@ -113,7 +105,7 @@ func (np *Pool) computeNodesArray() {
 	np.computeNodePositions()
 }
 
-/*GetActiveCount - get the active count */
+// GetActiveCount returns the active count
 func (np *Pool) GetActiveCount() (count int) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
@@ -126,13 +118,11 @@ func (np *Pool) GetActiveCount() (count int) {
 	return
 }
 
-/*GetRandomNodes - get a random set of nodes from the pool
-* Doesn't consider active/inactive status
- */
+// GetRandomNodes returns a random set of nodes from the pool
+// Doesn't consider active/inactive status
 func (np *Pool) GetRandomNodes(num int) []*Node {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
 	nodes := np.shuffleNodes()
 	if num > len(nodes) {
 		num = len(nodes)
@@ -143,10 +133,19 @@ func (np *Pool) GetRandomNodes(num int) []*Node {
 /*GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the
 time to send a large message */
 func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
+	sorted = np.Nodes
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].getOptimalLargeMessageSendTime() <
+			sorted[j].getOptimalLargeMessageSendTime()
+	})
 
-	sorted = np.copyNodes()
+	return
+}
+
+func (np *Pool) getNodesByLargeMessageTime() (sorted []*Node) {
+	sorted = np.Nodes
 	sort.SliceStable(sorted, func(i, j int) bool {
 		return sorted[i].getOptimalLargeMessageSendTime() <
 			sorted[j].getOptimalLargeMessageSendTime()
@@ -155,9 +154,8 @@ func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
 }
 
 func (np *Pool) shuffleNodesLock() []*Node {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
 	return np.shuffleNodes()
 }
 
@@ -221,7 +219,6 @@ func (np *Pool) computeNodePositions() {
 func (np *Pool) ComputeProperties() {
 	np.mmx.Lock()
 	defer np.mmx.Unlock()
-
 	np.computeNodesArray()
 	for _, node := range np.Nodes {
 		RegisterNode(node)
@@ -250,7 +247,9 @@ func (np *Pool) ComputeNetworkStats() {
 	mt := time.Duration(medianTime/1000000.) * time.Millisecond
 	switch np.Type {
 	case NodeTypeMiner:
-		Self.Underlying().GetInfoPtr().SetMinersMedianNetworkTime(mt)
+		info := Self.Underlying().GetNodeInfo()
+		info.MinersMedianNetworkTime = mt
+		Self.Underlying().SetNodeInfo(&info)
 	}
 }
 
@@ -260,9 +259,8 @@ func (np *Pool) GetMedianNetworkTime() float64 {
 }
 
 func (np *Pool) N2NURLs() (n2n []string) {
-	np.mmx.Lock()
-	defer np.mmx.Unlock()
-
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
 	n2n = make([]string, 0, len(np.NodesMap))
 	for _, node := range np.NodesMap {
 		n2n = append(n2n, node.GetN2NURLBase())
@@ -274,7 +272,6 @@ func (np *Pool) N2NURLs() (n2n []string) {
 func (np *Pool) CopyNodes() (list []*Node) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	if len(np.Nodes) == 0 {
 		return
 	}
@@ -288,11 +285,11 @@ func (np *Pool) CopyNodes() (list []*Node) {
 func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	nodesMap = make(map[string]*Node, len(np.NodesMap))
 	for k, v := range np.NodesMap {
 		nodesMap[k] = v
 	}
+
 	return
 }
 
@@ -300,7 +297,6 @@ func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
 func (np *Pool) HasNode(key string) (ok bool) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	_, ok = np.NodesMap[key]
 	return
 }
@@ -309,7 +305,6 @@ func (np *Pool) HasNode(key string) (ok bool) {
 func (np *Pool) Keys() (keys []string) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
-
 	keys = make([]string, 0, len(np.NodesMap))
 	for k := range np.NodesMap {
 		keys = append(keys, k)
@@ -333,4 +328,23 @@ func (np *Pool) NewNodes(newPool *Pool) (newNodes []*Node) {
 	}
 
 	return
+}
+
+// Clone returns a clone of Pool instance
+func (np *Pool) Clone() *Pool {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+	clone := NewPool(np.Type)
+	clone.Nodes = make([]*Node, 0, len(np.Nodes))
+	clone.NodesMap = make(map[string]*Node, len(np.NodesMap))
+	clone.medianNetworkTime = np.medianNetworkTime
+
+	for k, v := range np.NodesMap {
+		nv := v.Clone()
+		clone.NodesMap[k] = nv
+	}
+
+	clone.computeNodesArray()
+
+	return clone
 }

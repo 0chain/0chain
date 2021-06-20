@@ -123,18 +123,18 @@ func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb  = c.GetMagicBlock(round)
-		num = mb.Miners.Size()
+		mb        = c.GetMagicBlock(round)
+		num       = mb.Miners.Size()
+		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
 	if c.ThresholdByCount > 0 {
 		var numSignatures = len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount(num) {
-			//ToDo: Remove this comment
+		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("miners", num),
-				zap.Int("threshold", c.GetNotarizationThresholdCount(num)),
+				zap.Int("active_miners", num),
+				zap.Int("threshold", threshold),
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -147,17 +147,26 @@ func (c *Chain) reachedNotarization(round int64,
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
 		if verifiersStake < c.ThresholdByStake {
+			logging.Logger.Info("not reached notarization - stake < threshold stake",
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("verify stake", verifiersStake),
+				zap.Int("threshold", c.ThresholdByStake),
+				zap.Int("active_miners", num),
+				zap.Int("num_signatures", len(bvt)),
+				zap.Int("signature threshold", threshold),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("round", round))
 			return false
 		}
 	}
 
 	logging.Logger.Info("Reached notarization!!!",
 		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("miners", num),
+		zap.Int("active_miners", num),
 		zap.Int64("round", round),
 		zap.Int64("current_cound", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", c.GetNotarizationThresholdCount(num)))
+		zap.Int("threshold", threshold))
 
 	return true
 }
@@ -276,6 +285,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.updateFeeStats(fb)
 
 	if fb.MagicBlock != nil {
+		c.UpdateMagicBlock(fb.MagicBlock)
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 	if config.Development() {

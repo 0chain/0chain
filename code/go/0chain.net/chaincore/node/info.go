@@ -12,8 +12,3 @@ type Info struct {
 	MinersMedianNetworkTime time.Duration `json:"miners_median_network_time"`
 	AvgBlockTxns            int           `json:"avg_block_txns"`
 }
-
-// SetMinersMedianNetworkTime asynchronously.
-func (i *Info) SetMinersMedianNetworkTime(mmnt time.Duration) {
-	i.MinersMedianNetworkTime = mmnt
-}

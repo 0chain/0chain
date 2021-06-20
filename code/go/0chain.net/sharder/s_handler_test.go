@@ -14,15 +14,13 @@ import (
 )
 
 func TestLatestRoundRequestHandler(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/v1/_s2s/latest_round/get"
 
-	sc := sharder.GetSharderChain()
+	sc := makeTestChain(t)
 	var num int64 = 1
-	sc.SetCurrentRound(num)
 	r := round.NewRound(num)
 	sc.AddRound(r)
+	sc.SetCurrentRound(num)
 
 	type test struct {
 		name       string
@@ -46,10 +44,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.LatestRoundRequestHandler)))
 
@@ -82,7 +77,7 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 
 	tests := []test{
 		{
-			name: "Test_BlockSummaryRequestHandler_Empty_Hash_OK",
+			name: "Test_BlockSummaryRequestHandler_Empty_Hash_ERR",
 			request: func() *http.Request {
 				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
 				if err != nil {
@@ -100,6 +95,9 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
+			cl := initDBs(t)
+			defer cl()
+
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockSummaryRequestHandler)))
 
@@ -113,8 +111,6 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 }
 
 func TestRoundBlockRequestHandler(t *testing.T) {
-	t.Parallel()
-
 	const baseUrl = "/v1/_s2s/block/get"
 
 	type test struct {
@@ -125,7 +121,7 @@ func TestRoundBlockRequestHandler(t *testing.T) {
 
 	tests := []test{
 		{
-			name: "Test_RoundBlockRequestHandler_Empty_Block_OK",
+			name: "Test_RoundBlockRequestHandler_Empty_Block_ERR",
 			request: func() *http.Request {
 				req, err := http.NewRequest(http.MethodGet, baseUrl, nil)
 				if err != nil {

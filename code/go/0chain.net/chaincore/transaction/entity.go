@@ -369,6 +369,16 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	return nil
 }
 
+// Clone returns a clone of the transaction instance
+func (t *Transaction) Clone() *Transaction {
+	clone := *t
+	if t.CollectionMemberField.EntityCollection != nil {
+		entityCollection := *t.CollectionMemberField.EntityCollection
+		clone.CollectionMemberField.EntityCollection = &entityCollection
+	}
+	return &clone
+}
+
 func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
 }

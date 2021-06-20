@@ -35,10 +35,7 @@ func init() {
 		CurrentRelayLength: 0,
 		Compress:           false,
 	}
-	LFBTicketSender = node.SendEntityHandler(
-		"/v1/block/get/latest_finalized_ticket",
-		&options,
-	)
+	LFBTicketSender = node.SendEntityHandler("/v1/block/get/latest_finalized_ticket", &options)
 	// 2. Register LFBTicket EntityMetadata implementation.
 	datastore.RegisterEntityMetadata("lfb_ticket", new(LFBTicketEntityMetadata))
 }

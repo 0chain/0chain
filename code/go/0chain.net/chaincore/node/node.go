@@ -121,9 +121,9 @@ type Node struct {
 	ErrorCount     int64         `json:"-"`
 	CommChannel    chan struct{} `json:"-"`
 	//These are approximiate as we are not going to lock to update
-	Sent       int64 `json:"-"` // messages sent to this node
-	SendErrors int64 `json:"-"` // failed message sent to this node
-	Received   int64 `json:"-"` // messages received from this node
+	sent       int64 `json:"-"` // messages sent to this node
+	sendErrors int64 `json:"-"` // failed message sent to this node
+	received   int64 `json:"-"` // messages received from this node
 
 	TimersByURI map[string]metrics.Timer     `json:"-"`
 	SizeByURI   map[string]metrics.Histogram `json:"-"`
@@ -180,6 +180,24 @@ func (n *Node) GetErrorCount() int64 {
 	return n.ErrorCount
 }
 
+// AddSendErrors add sent errors
+func (n *Node) AddSendErrors(num int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.sendErrors += num
+	//n.recordChangesFunc(func(tn *Node) {
+	//	tn.sendErrors += num
+	//	fmt.Println("add send errors")
+	//})
+}
+
+// GetSendErrors returns the send errors num
+func (n *Node) GetSendErrors() int64 {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	return n.sendErrors
+}
+
 // SetErrorCount asynchronously.
 func (n *Node) SetErrorCount(ec int64) {
 	n.mutex.Lock()
@@ -195,12 +213,18 @@ func (n *Node) AddErrorCount(ecd int64) {
 	n.ErrorCount += ecd
 }
 
-// GetInfo returns pointer to underlying Info.
-func (n *Node) GetInfoPtr() *Info {
+// GetNodeInfo returns the node info
+func (n *Node) GetNodeInfo() Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
+	return n.Info
+}
 
-	return &n.Info
+// SetNodeInfo updates the node info
+func (n *Node) SetNodeInfo(info *Info) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.Info = *info
 }
 
 // GetStatus asynchronously.
@@ -364,12 +388,33 @@ func (n *Node) Grab() {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 
-	n.Sent++
+	n.sent++
 }
 
 //Release - release a slot after sending the message
 func (n *Node) Release() {
 	<-n.CommChannel
+}
+
+// GetSent returns the sent num
+func (n *Node) GetSent() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.sent
+}
+
+// GetReceived returns the received num
+func (n *Node) GetReceived() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.received
+}
+
+// AddReceived increases received num
+func (n *Node) AddReceived(num int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.received += num
 }
 
 //GetTimer - get the timer
@@ -417,11 +462,11 @@ func (n *Node) GetLargeMessageSendTimeSec() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime)) / 1000000
 }
 
-func (n *Node) SetLargeMessageSendTime(value float64) {
+func (n *Node) setLargeMessageSendTime(value float64) {
 	atomic.StoreUint64(&n.largeMessageSendTime, math.Float64bits(value))
 }
 
-//GetSmallMessageSendTime - get the time it takes to send a small message to this node
+// GetSmallMessageSendTimeSec gets the time it takes to send a small message to this node
 func (n *Node) GetSmallMessageSendTimeSec() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime)) / 1000000
 }
@@ -430,7 +475,7 @@ func (n *Node) GetSmallMessageSendTime() float64 {
 	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime))
 }
 
-func (n *Node) SetSmallMessageSendTime(value float64) {
+func (n *Node) setSmallMessageSendTime(value float64) {
 	atomic.StoreUint64(&n.smallMessageSendTime, math.Float64bits(value))
 }
 
@@ -476,8 +521,8 @@ func (n *Node) updateSendMessageTimings() {
 			minval = maxval
 		}
 	}
-	n.SetLargeMessageSendTime(maxval)
-	n.SetSmallMessageSendTime(minval)
+	n.setLargeMessageSendTime(maxval)
+	n.setSmallMessageSendTime(minval)
 }
 
 func (n *Node) updateRequestMessageTimings() {
@@ -594,48 +639,42 @@ func (n *Node) getTime(uri string) float64 {
 	return pullTimer.Mean()
 }
 
-func (n *Node) SetNodeInfo(oldNode *Node) {
-	// Copy timers and size to new map from oldNode
-	if n == oldNode {
+func (n *Node) SetNode(old *Node) {
+	// Copy timers and size to new map from clone
+	if n == old {
 		return
 	}
-	oldNode.mutex.RLock()
-	timersByURI := make(map[string]metrics.Timer, len(oldNode.TimersByURI))
-	sizeByURI := make(map[string]metrics.Histogram, len(oldNode.SizeByURI))
-	for k, v := range oldNode.TimersByURI {
-		timersByURI[k] = v
-	}
-	for k, v := range oldNode.SizeByURI {
-		sizeByURI[k] = v
-	}
-	oldNode.mutex.RUnlock()
 
+	clone := old.Clone()
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+
 	// NOTE:
 	// We can avoid copying and simply assign the new maps if
 	// n.TimersByURI and n.SizeByURI are expected to be empty while
 	// calling this method
-	for k, v := range timersByURI {
+	n.TimersByURI = make(map[string]metrics.Timer, len(clone.TimersByURI))
+	n.SizeByURI = make(map[string]metrics.Histogram, len(clone.SizeByURI))
+	for k, v := range clone.TimersByURI {
 		n.TimersByURI[k] = v
 	}
-	for k, v := range sizeByURI {
+	for k, v := range clone.SizeByURI {
 		n.SizeByURI[k] = v
 	}
 
-	n.Sent = oldNode.Sent
-	n.SendErrors = oldNode.SendErrors
-	n.Received = oldNode.Received
-
-	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
-	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
-	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
-	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
-	if oldNode.ProtocolStats != nil {
-		n.ProtocolStats = oldNode.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+	n.sent = clone.sent
+	n.sendErrors = clone.sendErrors
+	n.received = clone.received
+	n.largeMessageSendTime = clone.largeMessageSendTime
+	n.setLargeMessageSendTime(clone.GetLargeMessageSendTime())
+	n.setSmallMessageSendTime(clone.GetSmallMessageSendTime())
+	n.LargeMessagePullServeTime = clone.LargeMessagePullServeTime
+	n.SmallMessagePullServeTime = clone.SmallMessagePullServeTime
+	if clone.ProtocolStats != nil {
+		n.ProtocolStats = clone.ProtocolStats.(interface{ Clone() interface{} }).Clone()
 	}
-	n.Info = oldNode.GetInfo()
-	n.Status = oldNode.Status
+	n.Info = clone.Info
+	n.Status = clone.Status
 }
 
 func (n *Node) SetInfo(info Info) {
@@ -649,4 +688,56 @@ func (n *Node) GetInfo() Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 	return n.Info
+}
+
+// Clone returns a clone of Node instance.
+func (n *Node) Clone() *Node {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	clone := &Node{
+		N2NHost:                   n.N2NHost,
+		Host:                      n.Host,
+		Port:                      n.Port,
+		Path:                      n.Path,
+		Type:                      n.Type,
+		Description:               n.Description,
+		SetIndex:                  n.SetIndex,
+		Status:                    n.Status,
+		LastActiveTime:            n.LastActiveTime,
+		ErrorCount:                n.ErrorCount,
+		sent:                      n.sent,
+		sendErrors:                n.sendErrors,
+		received:                  n.received,
+		largeMessageSendTime:      n.largeMessageSendTime,
+		smallMessageSendTime:      n.smallMessageSendTime,
+		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
+		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
+		CommChannel:               make(chan struct{}, 5),
+	}
+
+	cc := n.Client.Clone()
+	if cc != nil {
+		clone.Client = *cc
+	}
+
+	clone.TimersByURI = make(map[string]metrics.Timer, len(n.TimersByURI))
+	for k, v := range n.TimersByURI {
+		clone.TimersByURI[k] = v
+	}
+
+	clone.SizeByURI = make(map[string]metrics.Histogram, len(n.SizeByURI))
+	for k, v := range n.SizeByURI {
+		clone.SizeByURI[k] = v
+	}
+
+	clone.idBytes = make([]byte, len(n.idBytes))
+	copy(clone.idBytes, n.idBytes)
+
+	ps, ok := n.ProtocolStats.(interface{ Clone() interface{} })
+	if ok {
+		clone.ProtocolStats = ps.Clone()
+	}
+
+	return clone
 }

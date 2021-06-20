@@ -673,9 +673,9 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 				fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
 			}
 		}
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetSent())
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetSendErrors())
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.GetReceived())
 		fmt.Fprintf(w, "<td>%v</td>", nd.GetLastActiveTime().Format(common.DateTimeFormat))
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTimeSec())
 		lmt := nd.GetLargeMessageSendTimeSec()

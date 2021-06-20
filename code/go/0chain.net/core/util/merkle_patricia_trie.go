@@ -141,7 +141,7 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if mpt.Root == nil {
 		_, newRootHash, err = mpt.insertLeaf(nil, value, path)
 	} else {
-		_, newRootHash, err = mpt.insert(value, []byte(mpt.Root), path)
+		_, newRootHash, err = mpt.insert(value, mpt.Root, path)
 	}
 	if err != nil {
 		return nil, err
@@ -896,7 +896,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	return err
 }
 
-// GetMissingNodes returns the paths and keys of missing nodes
+// FindMissingNodes returns the paths and keys of missing nodes
 func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []Key, error) {
 	paths := make([]Path, 0, BatchSize)
 	keys := make([]Key, 0, BatchSize)

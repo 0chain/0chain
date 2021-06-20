@@ -3323,7 +3323,6 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 		test := test
 		t.Run(test.name,
 			func(t *testing.T) {
-				t.Parallel()
 				if test.setValidConfig {
 					config.SmartContractConfig.Set("smart_contracts.storagesc.max_challenge_completion_time", 1000)
 					config.SmartContractConfig.Set("smart_contracts.vestingsc.min_duration", time.Second*5)
@@ -3394,7 +3393,6 @@ func TestGetSCRestOutput(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 			w := httptest.NewRecorder()
 			chain.HandleSCRest(w, getRequest(test.address))
 

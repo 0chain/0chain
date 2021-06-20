@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
@@ -13,8 +15,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/sharder"
 )
+
+func init() {
+	logging.Logger = zap.NewNop()
+}
 
 func TestLatestFinalizedBlockHandler(t *testing.T) {
 	t.Parallel()
@@ -22,7 +29,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 	sc := sharder.GetSharderChain()
-	sc.LatestFinalizedBlock = b
+	sc.SetLatestFinalizedBlock(b)
 
 	type args struct {
 		ctx context.Context
@@ -46,7 +53,7 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 			t.Parallel()
 
 			sc := sharder.GetSharderChain()
-			sc.LatestFinalizedBlock = b
+			sc.SetLatestFinalizedBlock(b)
 
 			got, err := sharder.LatestFinalizedBlockHandler(tt.args.ctx, tt.args.r)
 			if (err != nil) != tt.wantErr {
@@ -106,7 +113,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 			fields: fields{
 				Chain: sharder.GetSharderChain().Chain,
 			},
-			args: args{entityName: "block"},
+			args: args{entityName: "block", entityID: encryption.Hash("Test_Chain_AcceptMessage_Not_Existing_Block_TRUE")},
 			want: true,
 		},
 	}
@@ -160,12 +167,9 @@ func TestNotarizedBlockHandler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
 			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 			}
 
 			got, err := sharder.NotarizedBlockHandler(tt.args.ctx, tt.args.entity)
@@ -213,7 +217,7 @@ func TestNotarizedBlockKickHandler(t *testing.T) {
 			t.Parallel()
 
 			if tt.setLFB {
-				sharder.GetSharderChain().LatestFinalizedBlock = b
+				sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 			}
 
 			got, err := sharder.NotarizedBlockKickHandler(tt.args.ctx, tt.args.entity)
