@@ -1,31 +1,31 @@
-#!/bin/bash
+#!/bin/sh
 
 # docker.local/bin/start.miner
 
 . ./paths.sh
 
-cd $zChain_Root
+cd "$zChain_Root" || exit
 
 
 #----------------------------------------------
 
 
-cd ./docker.local/miner1
+cd ./docker.local/miner1 || exit
 
 
 PWD=`pwd`
-MINER_DIR=`basename $PWD`
-MINER_ID=`echo $MINER_DIR | sed -e 's/.*\(.\)$/\1/'`
-echo Starting miner$MINER_ID ...
-MINER=$MINER_ID docker-compose -p miner$MINER_ID -f ../build.miner/b0docker-compose.yml up &
+MINER_DIR=`basename "$PWD"`
+MINER_ID=`echo "$MINER_DIR" | sed -e 's/.*\(.\)$/\1/'`
+echo Starting miner"$MINER_ID" ...
+MINER=$MINER_ID docker-compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose.yml up &
 
-cd ../miner2
+cd ../miner2 || exit
 
 PWD=`pwd`
-MINER_DIR=`basename $PWD`
-MINER_ID=`echo $MINER_DIR | sed -e 's/.*\(.\)$/\1/'`
-echo Starting miner$MINER_ID ...
-MINER=$MINER_ID docker-compose -p miner$MINER_ID -f ../build.miner/b0docker-compose.yml up &
+MINER_DIR=`basename "$PWD"`
+MINER_ID=`echo "$MINER_DIR" | sed -e 's/.*\(.\)$/\1/'`
+echo Starting miner"$MINER_ID" ...
+MINER=$MINER_ID docker-compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose.yml up &
 
 
 #-------------------------------------

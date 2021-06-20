@@ -2,7 +2,7 @@
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
-echo $GIT_COMMIT
+echo "$GIT_COMMIT"
 
 cmd="build"
 
@@ -17,11 +17,11 @@ do
     esac
 done
 
-docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Dockerfile . -t sharder
+docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" -f docker.local/build.sharder/Dockerfile . -t sharder
 
 for i in $(seq 1 3);
 do
-  SHARDER=$i docker-compose -p sharder$i -f docker.local/build.sharder/docker-compose.yml build --force-rm
+  SHARDER=$i docker-compose -p sharder"$i" -f docker.local/build.sharder/docker-compose.yml build --force-rm
 done
 
 docker.local/bin/sync_clock.sh

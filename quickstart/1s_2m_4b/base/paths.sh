@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 
 export zChain_Root="/home/andriy/Documents/0Chain/0Chain/0Chain"

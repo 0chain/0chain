@@ -1,12 +1,12 @@
-#!/bin/bash
+#!/bin/sh
 
 . ./paths.sh
 
-cd $zDNS_Root
+cd "$zDNS_Root" || exit
 
 #------------------------------------------------------
 
-cd ./docker.local/bin
+cd ./docker.local/bin || exit
 
 PWD=`pwd`
 echo Stopping 0dns ...
@@ -18,7 +18,7 @@ sudo rm -rf ./docker.local/0dns/log/*
 sudo rm -rf ./docker.local/0dns/mongodata/*
 
 
-cd ./docker.local/bin
+cd ./docker.local/bin || exit
 
 PWD=`pwd`
 echo Starting 0dns ...

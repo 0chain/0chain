@@ -18,5 +18,5 @@ do
     esac
 done
 
-docker $cmd -f $build_dockerfile . -t zchain_build_base
-docker $cmd -f $run_dockerfile docker.local/build.base -t zchain_run_base
+docker "$cmd" -f $build_dockerfile . -t zchain_build_base
+docker "$cmd" -f $run_dockerfile docker.local/build.base -t zchain_run_base

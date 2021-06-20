@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-cd ../base
+cd ../base || exit
 
 ./clear_all.sh
 sleep 1

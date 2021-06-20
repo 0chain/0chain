@@ -1,22 +1,20 @@
-#!/bin/bash
+#!/bin/sh
 
 . ./paths.sh
 
-cd $zDNS_Root
-
+cd "$zDNS_Root" || exit
 #------------------------------------------------------
+cd ./docker.local/bin || exit
 
-cd ./docker.local/bin
-
-PWD=`pwd`
+PWD=$(pwd)
 echo Stopping 0dns ...
 docker-compose -p 0dns -f ../docker-compose.yml stop
 
 cd ../../
 
-cd ./docker.local/bin
+cd ./docker.local/bin || exit
 
-PWD=`pwd`
+PWD=$(pwd)
 echo Starting 0dns ...
 docker-compose -p 0dns -f ../docker-compose.yml up -d
 

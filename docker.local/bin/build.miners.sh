@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
-echo $GIT_COMMIT
+echo "$GIT_COMMIT"
 
 ROOT="$(git rev-parse --show-toplevel)"
 DOCKERDIR="$ROOT/docker.local/build.miner"
@@ -33,7 +33,7 @@ then
     sed 's,%COPY%,COPY ./code,g' "$DOCKERFILE.template" > "$DOCKERFILE"
 
     cd "$ROOT"
-    docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT \
+    docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" \
         -f "$DOCKERFILE" . -t miner --build-arg DEV=yes
 else
     echo -e "\nProduction mode: building miner in Docker\n"
@@ -41,13 +41,13 @@ else
     sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE.template" > "$DOCKERFILE"
 
     cd "$ROOT"
-    docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT \
+    docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" \
         -f "$DOCKERFILE" . -t miner --build-arg DEV=no
 fi
 
 for i in $(seq 1 5);
 do
-    MINER=$i docker-compose -p miner$i -f "$DOCKERCOMPOSE" build --force-rm
+    MINER=$i docker-compose -p miner"$i" -f "$DOCKERCOMPOSE" build --force-rm
 done
 
 "$ROOT"/docker.local/bin/sync_clock.sh

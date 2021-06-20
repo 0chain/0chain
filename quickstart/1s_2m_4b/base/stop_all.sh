@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ./stop_blobbers.sh
 ./stop_miners.sh

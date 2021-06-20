@@ -1,7 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #   Use this script to test if a given TCP host/port are available
 
-cmdname=$(basename $0)
+cmdname=$(basename "$0")
 
 echoerr() { if [[ $QUIET -ne 1 ]]; then echo "$@" 1>&2; fi }
 
@@ -33,10 +33,10 @@ wait_for()
     while :
     do
         if [[ $ISBUSY -eq 1 ]]; then
-            nc -z $HOST $PORT
+            nc -z "$HOST" "$PORT"
             result=$?
         else
-            (echo > /dev/tcp/$HOST/$PORT) >/dev/null 2>&1
+            (echo > /dev/tcp/"$HOST"/"$PORT") >/dev/null 2>&1
             result=$?
         fi
         if [[ $result -eq 0 ]]; then
@@ -53,9 +53,9 @@ wait_for_wrapper()
 {
     # In order to support SIGINT during timeout: http://unix.stackexchange.com/a/57692
     if [[ $QUIET -eq 1 ]]; then
-        timeout $BUSYTIMEFLAG $TIMEOUT $0 --quiet --child --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout "$BUSYTIMEFLAG" "$TIMEOUT" "$0" --quiet --child --host="$HOST" --port="$PORT" --timeout="$TIMEOUT" &
     else
-        timeout $BUSYTIMEFLAG $TIMEOUT $0 --child --host=$HOST --port=$PORT --timeout=$TIMEOUT &
+        timeout "$BUSYTIMEFLAG" "$TIMEOUT" "$0" --child --host="$HOST" --port="$PORT" --timeout="$TIMEOUT" &
     fi
     PID=$!
     trap "kill -INT -$PID" INT

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 . ./paths.sh
 
@@ -9,7 +9,7 @@
 
 #-------------------------------------------------------
 
-cd $zChain_Root
+cd "$zChain_Root" || exit
 
 sleep 1
 
@@ -19,6 +19,6 @@ sleep
 
 #-------------------------------------------------------
 
-cd $zWorkflows_Base
+cd "$zWorkflows_Base" || exit
 
 ./start_miners.sh

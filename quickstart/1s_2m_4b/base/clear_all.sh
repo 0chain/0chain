@@ -2,7 +2,7 @@
 
 . ./paths.sh
 
-cd $zChain_Root
+cd "$zChain_Root" || exit
 
 #----------------------------------------------
 
@@ -23,20 +23,20 @@ sudo docker.local/bin/build.base.sh
 
 #----------------------------------------------
 
-cd $zBlober_Root
+cd "$zBlober_Root" || exit
 
 for i in $(seq 1 4)
 do
 
-  sudo rm -rf docker.local/blobber$i/*
-  mkdir -p docker.local/blobber$i/files
-  mkdir -p docker.local/blobber$i/data/postgresql
-  mkdir -p docker.local/blobber$i/log	
+  sudo rm -rf docker.local/blobber"$i"/*
+  mkdir -p docker.local/blobber"$i"/files
+  mkdir -p docker.local/blobber"$i"/data/postgresql
+  mkdir -p docker.local/blobber"$i"/log	
 
 done
 
 
-cd $zDNS_Root
+cd "$zDNS_Root" || exit
 
 sudo rm -rf docker.local/0dns/log/*
 sudo rm -rf docker.local/0dns/mongodata/*
