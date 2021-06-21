@@ -209,12 +209,11 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
-	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "error reading blobber challenge from DB")
-	}
-	err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
-	if err != nil {
-		return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
+	if err == nil {
+		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
+		if err != nil {
+			return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
+		}
 	}
 
 	// for k, v := range blobberChallengeObj.ChallengeMap {
@@ -223,6 +222,8 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	// 	}
 	// }
 
+	// return populate or empty list of challenges
+	// don't return error, if no challenges (expected by blobbers)
 	return &blobberChallengeObj, nil
 }
 
