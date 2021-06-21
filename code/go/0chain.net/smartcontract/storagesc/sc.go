@@ -209,6 +209,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "add_curator":
 		resp, err = "", sc.addCurator(t, input, balances)
+	case "transfer_allocation_request":
+		resp, err = "", sc.transferAllocationRequest(t, input, balances)
 
 	// blobbers
 
@@ -245,13 +247,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolUnlock(t, input, balances)
 	case "stake_pool_pay_interests":
 		resp, err = sc.stakePoolPayInterests(t, input, balances)
-
-	// case "challenge_request":
-	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
-	// 	return resp, nil
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(
