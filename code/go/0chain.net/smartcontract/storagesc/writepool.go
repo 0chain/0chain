@@ -326,7 +326,7 @@ func (ssc *StorageSmartContract) createWritePool(
 
 	if force || t.Value > 0 {
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, true, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, force, balances); err != nil {
 			return
 		}
 	}
