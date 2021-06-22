@@ -348,7 +348,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	}
 
 	// create write pool and lock tokens
-	if err = sc.createWritePool(t, sa, false, balances); err != nil {
+	if err = sc.createWritePool(t, sa, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
@@ -694,7 +694,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
 		}
-		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewErrorf("allocation_extending_failed",
 				"write pool filling: %v", err)
 		}
@@ -777,7 +777,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
@@ -1406,7 +1406,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
 
 	if !alloc.hasWritePool(sc, tai.NewOwnerId, balances) {
-		if err = sc.createWritePool(txn, alloc, true, balances); err != nil {
+		if err = sc.createEmptyWritePool(txn, alloc, balances); err != nil {
 			return "", common.NewError("curator_transfer_allocation_failed",
 				"error creating write pool: "+err.Error())
 		}

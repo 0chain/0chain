@@ -182,7 +182,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	tx.Hash = "new_write_pool_tx_hash"
 	tx.Value, balances.balances[client.id] = 40, 40 // set {
-	err = ssc.createWritePool(&tx, &alloc, false, balances)
+	err = ssc.createWritePool(&tx, &alloc, balances)
 	require.NoError(t, err)
 	tx.Hash = txHash
 	tx.Value, balances.balances[client.id] = 0, 0 // } reset

@@ -220,18 +220,37 @@ func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	return
 }
 
-func (wp *writePool) fill(
-	t *transaction.Transaction, alloc *StorageAllocation,
-	until common.Timestamp,
-	force bool,
-	balances chainState.StateContextI,
+func (wp *writePool) fill(t *transaction.Transaction, alloc *StorageAllocation,
+	until common.Timestamp, balances chainState.StateContextI,
 ) (resp string, err error) {
-	var bps blobberPools
-	if !force {
-		if err = checkFill(t, balances); err != nil {
-			return
-		}
+	if err = checkFill(t, balances); err != nil {
+		return
 	}
+
+	var (
+		ap       allocationPool
+		transfer *state.Transfer
+	)
+	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
+		return "", fmt.Errorf("digging write pool: %v", err)
+	}
+
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", fmt.Errorf("adding transfer to write pool: %v", err)
+	}
+
+	// set fields
+	ap.AllocationID = alloc.ID
+	ap.ExpireAt = until
+	ap.Blobbers = allocationBlobbers(*alloc, t.Value)
+
+	// add the allocation pool
+	wp.Pools.add(&ap)
+	return
+}
+
+func allocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
+	var bps blobberPools
 	var total float64
 	for _, b := range alloc.BlobberDetails {
 		total += float64(b.Terms.WritePrice)
@@ -239,30 +258,11 @@ func (wp *writePool) fill(
 	for _, b := range alloc.BlobberDetails {
 		var ratio = float64(b.Terms.WritePrice) / total
 		bps.add(&blobberPool{
-			Balance:   state.Balance(float64(t.Value) * ratio),
+			Balance:   state.Balance(float64(value) * ratio),
 			BlobberID: b.BlobberID,
 		})
 	}
-	var (
-		ap       allocationPool
-		transfer *state.Transfer
-	)
-	if !force {
-		if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-			return "", fmt.Errorf("digging write pool: %v", err)
-		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", fmt.Errorf("adding transfer to write pool: %v", err)
-		}
-	} else {
-		ap.TokenPool.ID = t.Hash
-	}
-
-	ap.AllocationID = alloc.ID
-	ap.ExpireAt = until
-	ap.Blobbers = bps
-	wp.Pools.add(&ap)
-	return
+	return bps
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
@@ -303,12 +303,38 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	return
 }
 
-func (ssc *StorageSmartContract) createWritePool(
-	t *transaction.Transaction,
+func (ssc *StorageSmartContract) createEmptyWritePool(
+	txn *transaction.Transaction,
 	alloc *StorageAllocation,
-	force bool,
 	balances chainState.StateContextI,
 ) (err error) {
+	var wp *writePool
+	wp, err = ssc.getWritePool(alloc.Owner, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return fmt.Errorf("getting client write pool: %v", err)
+	}
+	if err == util.ErrValueNotPresent {
+		wp = new(writePool)
+	}
+
+	var ap = allocationPool{
+		AllocationID: alloc.ID,
+		ExpireAt:     alloc.Until(),
+		Blobbers:     allocationBlobbers(*alloc, txn.Value),
+	}
+	ap.TokenPool.ID = txn.Hash
+	wp.Pools.add(&ap)
+
+	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
+		return fmt.Errorf("saving write pool: %v", err)
+	}
+
+	return
+}
+
+func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
+	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
+
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
@@ -321,14 +347,14 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	var mld = alloc.restMinLockDemand()
-	if !force && t.Value < int64(mld) {
+	if t.Value < int64(mld) {
 		return fmt.Errorf("not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
 
-	if force || t.Value > 0 {
+	if t.Value > 0 {
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, force, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return
 		}
 	}
