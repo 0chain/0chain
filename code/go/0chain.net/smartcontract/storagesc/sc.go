@@ -213,7 +213,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "add_curator":
 		resp, err = "", sc.addCurator(t, input, balances)
 	case "curator_transfer_allocation":
-		resp, err = "", sc.curatorTransferAllocation(t, input, balances)
+		resp, err = sc.curatorTransferAllocation(t, input, balances)
 
 	// blobbers
 

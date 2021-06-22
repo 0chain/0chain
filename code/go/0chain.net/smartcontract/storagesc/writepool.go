@@ -254,6 +254,8 @@ func (wp *writePool) fill(
 		if err = balances.AddTransfer(transfer); err != nil {
 			return "", fmt.Errorf("adding transfer to write pool: %v", err)
 		}
+	} else {
+		ap.TokenPool.ID = t.Hash
 	}
 
 	ap.AllocationID = alloc.ID

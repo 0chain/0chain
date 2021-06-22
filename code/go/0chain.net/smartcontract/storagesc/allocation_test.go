@@ -277,13 +277,14 @@ func TestTransferAllocation(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
+			resp, err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
 				return
 			}
+			require.EqualValues(t, args.txn.Hash, resp)
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
