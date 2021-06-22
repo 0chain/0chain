@@ -1,13 +1,13 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
-echo "$GIT_COMMIT"
+echo $GIT_COMMIT
 
 ROOT="$(git rev-parse --show-toplevel)"
-DOCKER_DIR="$ROOT/docker.local/build.miner"
-DOCKER_FILE="$DOCKER_DIR/Dockerfile"
-DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
+DOCKERDIR="$ROOT/docker.local/build.miner"
+DOCKERFILE="$DOCKERDIR/Dockerfile"
+DOCKERCOMPOSE="$DOCKERDIR/docker-compose.yml"
 
 cmd="build"
 
@@ -30,20 +30,19 @@ then
     go build -v -tags "bn256 development" \
         -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
 
-    sed 's,%COPY%,COPY ./code,g' "$DOCKER_FILE.template" > "$DOCKER_FILE"
+    sed 's,%COPY%,COPY ./code,g' "$DOCKERFILE.template" > "$DOCKERFILE"
 
     cd "$ROOT"
     docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT \
-        -f "$DOCKER_FILE" . -t miner --build-arg DEV=yes
+        -f "$DOCKERFILE" . -t miner --build-arg DEV=yes
 else
     echo -e "\nProduction mode: building miner in Docker\n"
 
-    sed "s,%COPY%,COPY --from=miner_build $APP_DIR,g" "$DOCKER_FILE.template" > "$DOCKER_FILE"
+    sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE.template" > "$DOCKERFILE"
 
     cd "$ROOT"
-
-    docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" \
-        -f "$DOCKER_FILE" . -t miner --build-arg DEV=no
+    docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT \
+        -f "$DOCKERFILE" . -t miner --build-arg DEV=no
 fi
 
 for i in $(seq 1 5);
