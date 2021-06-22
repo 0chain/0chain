@@ -104,7 +104,6 @@ func (sc *mockStateContext) GetBlock() *block.Block                             
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }
 func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
 func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
-func (sc *mockStateContext) GetTransfers() []*state.Transfer                       { return nil }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
 func (sc *mockStateContext) GetMints() []*state.Mint                               { return nil }
 func (sc *mockStateContext) Validate() error                                       { return nil }
@@ -138,6 +137,10 @@ func (sc *mockStateContext) InsertTrieNode(key datastore.Key, node util.Serializ
 
 func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
 	return sc.ctx.AddTransfer(t)
+}
+
+func (sc *mockStateContext) GetTransfers() []*state.Transfer {
+	return sc.ctx.GetTransfers()
 }
 
 func (sc *mockStateContext) AddMint(m *state.Mint) error {

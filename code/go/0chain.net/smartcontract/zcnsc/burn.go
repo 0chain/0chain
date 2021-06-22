@@ -44,7 +44,7 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 	}
 
 	if payload.EthereumAddress == "" {
-		err = common.NewError("failed to burn", "Ethereum address is required")
+		err = common.NewError("failed to burn", "ethereum address is required")
 		return
 	}
 
