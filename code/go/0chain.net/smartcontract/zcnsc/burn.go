@@ -3,23 +3,22 @@ package zcnsc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 // inputData - is a burnPayload
-func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
-	// get global node
+func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := getGlobalNode(balances)
 
-	// decode input to burn payload
 	payload := &burnPayload{}
-	_ = payload.Decode(inputData)
+	err = payload.Decode(inputData)
+	if err != nil {
+		return
+	}
+
 	payload.TxnID = t.Hash
 
 	// check burn amount
@@ -27,8 +26,9 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 		err = common.NewError("failed to burn", fmt.Sprintf("amount requested(%v) is lower than min amount for burn (%v)", t.Value, gn.MinBurnAmount))
 		return
 	}
+
 	payload.Amount = t.Value
-	Logger.Info("burn ticket", zap.Any("payload", payload), zap.Any("input", string(inputData)))
+	//Logger.Info("burn ticket", zap.Any("payload", payload), zap.Any("input", string(inputData)))
 
 	// get user node
 	un, err := getUserNode(t.ClientID, balances)
@@ -39,7 +39,7 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 
 	// check nonce is correct (current + 1)
 	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError("failed to burn", fmt.Sprintf("nonce given (%v) is more than 1 higher than current (%v)", payload.Nonce, un.Nonce))
+		err = common.NewError("failed to burn", fmt.Sprintf("the payload nonce (%v) should be 1 higher than the current nonce (%v)", payload.Nonce, un.Nonce))
 		return
 	}
 
@@ -56,8 +56,12 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 	if err != nil {
 		return
 	}
+
 	// burn the tokens
-	balances.AddTransfer(state.NewTransfer(t.ClientID, gn.BurnAddress, state.Balance(t.Value)))
+	err = balances.AddTransfer(state.NewTransfer(t.ClientID, gn.BurnAddress, state.Balance(t.Value)))
+	if err != nil {
+		return "", err
+	}
 	resp = string(payload.Encode())
 	return
 }

@@ -71,7 +71,7 @@ func CreateSmartContractGlobalNode() *globalNode {
 func createBurnPayload() *burnPayload {
 	return &burnPayload{
 		TxnID:           txHash,
-		Nonce:           123,
+		Nonce:           1,
 		Amount:          100,
 		EthereumAddress: ADDRESS,
 	}
@@ -81,7 +81,7 @@ func createMintPayload() *mintPayload {
 	return &mintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
-		Nonce:             19,
+		Nonce:             0,
 		Signatures:        createTransactionSignatures(),
 		ReceivingClientID: "Client0",
 	}
@@ -105,4 +105,11 @@ func createTransactionSignatures() []*authorizerSignature {
 		})
 
 	return sigs
+}
+
+func createUserNode(id string, nonce int64) *userNode {
+	return &userNode{
+		ID:    id,
+		Nonce: nonce,
+	}
 }

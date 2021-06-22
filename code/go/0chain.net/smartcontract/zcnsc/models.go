@@ -443,7 +443,10 @@ func getUserNode(id string, balances cstate.StateContextI) (*userNode, error) {
 	if err != nil {
 		return un, err
 	}
-	_ = un.Decode(uv.Encode())
+	err = un.Decode(uv.Encode())
+	if err != nil {
+		return un, err
+	}
 	return un, err
 }
 

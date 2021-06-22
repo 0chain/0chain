@@ -20,7 +20,7 @@ var (
 )
 
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
-	sc := CreateStateContext()
+	sc := CreateMockStateContext()
 	an := getNewAuthorizer("public key", "id")
 	tr := CreateDefaultTransaction()
 

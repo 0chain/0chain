@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"strconv"
 )
 
 const (
@@ -75,11 +76,27 @@ func CreateStateContext() *cstate.StateContext {
 }
 
 func CreateMockStateContext() cstate.StateContextI {
-	return &mockStateContext{
+	m := &mockStateContext{
 		ctx:                *CreateStateContext(),
 		clientStartBalance: zcnToBalance(3),
 		store:              make(map[datastore.Key]util.Serializable),
 	}
+
+	node := createUserNode(clientId, int64(0))
+	err := node.save(m)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 1; i <= 5; i++ {
+		node := createUserNode(strconv.Itoa(i), int64(i))
+		err := node.save(m)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return m
 }
 
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block           { return nil }

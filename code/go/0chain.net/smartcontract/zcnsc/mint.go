@@ -13,7 +13,7 @@ import (
 func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
 	gn := getGlobalNode(balances)
 
-	var payload *mintPayload
+	payload := &mintPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
 		return
@@ -61,17 +61,23 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	un.Nonce++
 
 	// mint the tokens
-	_ = balances.AddMint(&state.Mint{
-		Minter:     gn.ID,
-		ToClientID: t.ClientID,
-		Amount:     payload.Amount,
-	})
+	err = balances.AddMint(
+		&state.Mint{
+			Minter:     gn.ID,
+			ToClientID: t.ClientID,
+			Amount:     payload.Amount,
+		})
+
+	if err != nil {
+		return
+	}
 
 	// save the user node
 	err = un.save(balances)
 	if err != nil {
 		return
 	}
+
 	resp = string(payload.Encode())
 	return
 }
