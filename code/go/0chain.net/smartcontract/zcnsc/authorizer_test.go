@@ -19,6 +19,33 @@ var (
 	stringEmpty = ""
 )
 
+func Test_AddingAuthorizer_Adds_Transfers_To_Context(t *testing.T) {
+	var data []byte
+	sc := CreateZCNSmartContract()
+	ctx := CreateMockStateContext()
+	tr := CreateDefaultTransaction()
+
+	address, err := sc.addAuthorizer(tr, data, ctx)
+	require.NoError(t, err, "must be able to add authorizer")
+	require.NotEmpty(t, address)
+
+	transfers := ctx.GetTransfers()
+	require.Equal(t, len(transfers), 1)
+
+	transfer := transfers[0]
+	require.Equal(t, int64(transfer.Amount), tr.Value)
+	require.Equal(t, transfer.ClientID, tr.ClientID)
+	require.Equal(t, transfer.ToClientID, tr.ToClientID)
+}
+
+func Test_AuthorizersShouldNotBeInitializedWhenContextIsCreated(t *testing.T) {
+	sc := CreateMockStateContext()
+	ans, err := getAuthorizerNodes(sc)
+	require.NoError(t, err)
+	require.NotNil(t, ans)
+	require.Equal(t, len(ans.NodeMap), 0)
+}
+
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	sc := CreateMockStateContext()
 	an := getNewAuthorizer("public key", "id")

@@ -57,7 +57,10 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("error digging pool(%v)", err.Error()))
 		return
 	}
-	_ = balances.AddTransfer(transfer)
+	err = balances.AddTransfer(transfer)
+	if err != nil {
+		return
+	}
 	err = ans.addAuthorizer(an)
 	if err != nil {
 		return
