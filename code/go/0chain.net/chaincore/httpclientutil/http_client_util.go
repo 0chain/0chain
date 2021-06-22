@@ -533,8 +533,12 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 // FetchMagicBlockFromSharders fetchs magic blocks from sharders
 func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64,
 	verifyBlock func(mb *block.Block) bool) (*block.Block, error) {
+	if len(sharderURLs) == 0 {
+		return nil, common.NewError("fetch_magic_block_from_sharders", "empty sharder URLs")
+	}
+
 	recv := make(chan *block.Block, len(sharderURLs))
-	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 	for _, sharder := range sharderURLs {
 		go func(url string) {
