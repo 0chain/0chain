@@ -1381,21 +1381,24 @@ func (aci *transferAllocationInput) decode(input []byte) error {
 	return json.Unmarshal(input, aci)
 }
 
-func (sc *StorageSmartContract) transferAllocationRequest(
+func (sc *StorageSmartContract) curatorTransferAllocation(
 	txn *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
 ) error {
 	var tai transferAllocationInput
-	tai.decode(input)
+	if err := tai.decode(input); err != nil {
+		return common.NewError("curator_transfer_allocation_failed",
+			"error unmarshalling input: "+err.Error())
+	}
 
 	alloc, err := sc.getAllocation(tai.AllocationId, balances)
 	if err != nil {
-		return common.NewError("transfer_allocation", err.Error())
+		return common.NewError("curator_transfer_allocation_failed", err.Error())
 	}
 
 	if !alloc.isCurator(txn.ClientID) {
-		return common.NewError("transfer_allocation",
+		return common.NewError("curator_transfer_allocation_failed",
 			"only curators can transfer allocations; "+txn.ClientID+" is not a curator")
 	}
 
@@ -1403,12 +1406,15 @@ func (sc *StorageSmartContract) transferAllocationRequest(
 	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
 
 	if !alloc.hasWritePool(sc, tai.NewOwnerId, balances) {
-		sc.createWritePool(txn, alloc, true, balances)
+		if err = sc.createWritePool(txn, alloc, true, balances); err != nil {
+			return common.NewError("curator_transfer_allocation_failed",
+				"error creating write pool: "+err.Error())
+		}
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return common.NewErrorf("add_allocation_failed",
+		return common.NewErrorf("curator_transfer_allocation_failed",
 			"saving new allocation: %v", err)
 	}
 

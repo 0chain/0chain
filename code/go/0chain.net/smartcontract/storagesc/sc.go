@@ -61,6 +61,9 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
 	ssc.SmartContractExecutionStats["cancel_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cancel_allocation"), nil)
+
+	ssc.SmartContractExecutionStats["add_curator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_curator"), nil)
+	ssc.SmartContractExecutionStats["curator_transfer_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "curator_transfer_allocation"), nil)
 	// challenge
 	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
 	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
@@ -209,8 +212,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "add_curator":
 		resp, err = "", sc.addCurator(t, input, balances)
-	case "transfer_allocation_request":
-		resp, err = "", sc.transferAllocationRequest(t, input, balances)
+	case "curator_transfer_allocation":
+		resp, err = "", sc.curatorTransferAllocation(t, input, balances)
 
 	// blobbers
 

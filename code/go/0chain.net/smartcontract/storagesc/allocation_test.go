@@ -277,7 +277,7 @@ func TestTransferAllocation(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.transferAllocationRequest(args.txn, args.input, args.balances)
+			err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
