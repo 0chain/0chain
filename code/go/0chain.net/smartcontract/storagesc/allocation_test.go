@@ -270,6 +270,22 @@ func TestTransferAllocation(t *testing.T) {
 				existingWPForAllocation: false,
 			},
 		},
+		{
+			name: "Err_not_curator",
+			parameters: parameters{
+				curator: mockCuratorId,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators: []string{"not mock curator"},
+			},
+			want: want{
+				err:    true,
+				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+			},
+		},
 	}
 	for _, test := range testCases {
 		test := test
