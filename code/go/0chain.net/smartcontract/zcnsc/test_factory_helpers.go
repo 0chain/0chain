@@ -1,10 +1,13 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 var (
@@ -81,7 +84,7 @@ func createMintPayload() *mintPayload {
 	return &mintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
-		Nonce:             0,
+		Nonce:             1,
 		Signatures:        createTransactionSignatures(),
 		ReceivingClientID: "Client0",
 	}
@@ -112,4 +115,16 @@ func createUserNode(id string, nonce int64) *userNode {
 		ID:    id,
 		Nonce: nonce,
 	}
+}
+
+func addAuthorizer(t *testing.T, contract *ZCNSmartContract, ctx state.StateContextI, clientId, pk string) {
+	publicKey := &PublicKey{Key: pk}
+	tr := CreateTransaction(clientId, 10)
+	tr.PublicKey = publicKey.Key
+	tr.ClientID = clientId
+	data, _ := publicKey.Encode()
+	resp, err := contract.addAuthorizer(tr, data, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp)
 }

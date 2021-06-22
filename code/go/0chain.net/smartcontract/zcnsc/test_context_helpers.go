@@ -16,25 +16,8 @@ import (
 
 const (
 	clientId             = "fred"
-	startMinted          = 10
-	clientStartZCN       = 777
 	txHash               = "tx hash"
-	errLock              = "failed locking tokens: "
-	errInsufficientFunds = "insufficient amount to dig an interest pool"
-	errNoTokens          = "you have no tokens to your name"
-	errLockGtBalance     = "lock amount is greater than balance"
-	errDurationToLong    = "is longer than max lock period"
-	errDurationToShort   = "is shorter than min lock period"
-	errMaxMint           = "can't mint anymore"
-	errUnlock            = "failed to unlock tokens"
-	errEmptyingPool      = "error emptying pool"
-	errPoolLocked        = "pool is still locked"
-	errPoolNotExist      = "doesn't exist"
 	startTime            = common.Timestamp(100)
-	clientID0            = "client0_address"
-	clientID1            = "client1_address"
-	zrc20scAddress       = "zrc20sc_address"
-	globalNodeId         = "global node id"
 )
 
 const x10 = 10 * 1000 * 1000 * 1000
@@ -53,7 +36,7 @@ type mockStateContext struct {
 	store              map[datastore.Key]util.Serializable
 }
 
-func CreateStateContext() *cstate.StateContext {
+func CreateStateContext(clientId string) *cstate.StateContext {
 
 	var txn = &transaction.Transaction{
 		HashIDField:  datastore.HashIDField{Hash: txHash},
@@ -75,9 +58,9 @@ func CreateStateContext() *cstate.StateContext {
 	)
 }
 
-func CreateMockStateContext() cstate.StateContextI {
+func CreateMockStateContext(clientId string) cstate.StateContextI {
 	m := &mockStateContext{
-		ctx:                *CreateStateContext(),
+		ctx:                *CreateStateContext(clientId),
 		clientStartBalance: zcnToBalance(3),
 		store:              make(map[datastore.Key]util.Serializable),
 	}

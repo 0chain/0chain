@@ -28,7 +28,6 @@ func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, 
 	}
 
 	payload.Amount = t.Value
-	//Logger.Info("burn ticket", zap.Any("payload", payload), zap.Any("input", string(inputData)))
 
 	// get user node
 	un, err := getUserNode(t.ClientID, balances)

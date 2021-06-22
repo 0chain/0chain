@@ -42,7 +42,7 @@ func TestGlobalNodeEncodeAndDecode(t *testing.T) {
 }
 
 func TestEmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
-	balances := CreateMockStateContext()
+	balances := CreateMockStateContext(clientId)
 	nodes, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
 	require.NotNil(t, nodes)
@@ -51,7 +51,7 @@ func TestEmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
 
 func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) {
 	authorizer := getNewAuthorizer("public key", "id")
-	balances := CreateMockStateContext()
+	balances := CreateMockStateContext(clientId)
 
 	nodes, err := getAuthorizerNodes(balances)
 	require.NoError(t, err, )
@@ -137,7 +137,7 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	require.NotNil(t, node.Staking.TokenPool)
 
 	// Create authorizers nodes tree
-	balances := CreateMockStateContext()
+	balances := CreateMockStateContext(clientId)
 	tree, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
 	require.NotNil(t, tree)
@@ -160,7 +160,7 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 
 func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
 	// Create authorizers nodes tree
-	balances := CreateMockStateContext()
+	balances := CreateMockStateContext(clientId)
 	tree, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
 	require.NotNil(t, tree)
@@ -177,7 +177,7 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.
 func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *globalNode, error) {
 	node := CreateSmartContractGlobalNode()
 	node.MinBurnAmount = 111
-	balances := CreateMockStateContext()
+	balances := CreateMockStateContext(clientId)
 	err := node.save(balances)
 	return balances, node, err
 }

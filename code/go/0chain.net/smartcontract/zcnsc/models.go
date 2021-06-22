@@ -176,7 +176,7 @@ func (mp *mintPayload) getStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp mintPayload) verifySignatures(ans *authorizerNodes) (ok bool) {
+func (mp *mintPayload) verifySignatures(ans *authorizerNodes) (ok bool) {
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	toSign := mp.getStringToSign()
 	for _, v := range mp.Signatures {

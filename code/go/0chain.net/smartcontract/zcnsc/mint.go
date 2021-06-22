@@ -3,14 +3,14 @@ package zcnsc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
 // inputData - is a mintPayload
-func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := getGlobalNode(balances)
 
 	payload := &mintPayload{}

@@ -1,10 +1,24 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/chain"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	chain.ServerChain = new(chain.Chain)
+	chain.ServerChain.Config = new(chain.Config)
+	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+
+	logging.Logger = zap.NewNop()
+}
 
 func TestBurnPayload_Encode_Decode(t *testing.T) {
 	actual := burnPayload{}
@@ -17,11 +31,11 @@ func TestBurnPayload_Encode_Decode(t *testing.T) {
 	require.Equal(t, expected.EthereumAddress, actual.EthereumAddress)
 }
 
-func Test_FuzzyTest(t *testing.T) {
+func Test_FuzzyBurnTest(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	burn, err := contract.burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -29,11 +43,11 @@ func Test_FuzzyTest(t *testing.T) {
 	require.NotEmpty(t, burn)
 }
 
-func Test_PayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
+func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	payload.Nonce = 1
 	node, err := getUserNode(clientId, ctx)
@@ -51,7 +65,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	payload.Nonce = 1
 
@@ -85,11 +99,11 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 	// Without address
 
 	payload := createBurnPayload()
-	payload.EthereumAddress = ""
+	payload.EthereumAddress = stringEmpty
 
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	burn, err := contract.burn(tr, payload.Encode(), ctx)
 	require.Error(t, err)
@@ -103,7 +117,7 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 
 	tr = CreateDefaultTransaction()
 	contract = CreateZCNSmartContract()
-	ctx = CreateMockStateContext()
+	ctx = CreateMockStateContext(clientId)
 
 	resp, err := contract.burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -114,7 +128,7 @@ func Test_userNodeNonceShouldIncrement(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	node, err := getUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
@@ -135,14 +149,14 @@ func Test_userNodeNonceShouldIncrement(t *testing.T) {
 }
 
 func Test_getUserNode(t *testing.T) {
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 	node, err := getUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 }
 
 func Test_updateUserNode(t *testing.T) {
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 	node, err := getUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
@@ -171,7 +185,7 @@ func Test_burn_should_return_encoded_payload(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	resp, err := contract.burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -189,7 +203,7 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransaction()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext()
+	ctx := CreateMockStateContext(clientId)
 
 	resp, err := contract.burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
