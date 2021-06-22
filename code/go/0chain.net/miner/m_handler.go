@@ -347,7 +347,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 		return nil, err
 	}
 
-	if b.GetStateStatus() != block.StateSuccessful {
+	if !b.IsStateComputed() {
 		return nil, common.NewError("state_not_verified",
 			"state is not computed and validated locally")
 	}
@@ -382,8 +382,8 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
 
 	var (
-		r = req.FormValue("round")
-		hash  = req.FormValue("block")
+		r    = req.FormValue("round")
+		hash = req.FormValue("block")
 
 		mc = GetMinerChain()
 	)
