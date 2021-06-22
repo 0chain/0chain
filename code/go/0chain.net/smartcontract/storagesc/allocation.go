@@ -1374,7 +1374,7 @@ func (sc *StorageSmartContract) finishAllocation(
 type transferAllocationInput struct {
 	AllocationId      string `json:"allocation_id"`
 	NewOwnerId        string `json:"new_owner_id"`
-	NewOwnerPublicKey string `json:"bew_owner_public_key"`
+	NewOwnerPublicKey string `json:"new_owner_public_key"`
 }
 
 func (aci *transferAllocationInput) decode(input []byte) error {
@@ -1418,6 +1418,7 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"saving new allocation: %v", err)
 	}
 
+	// txn.Hash is the id of the new token pool
 	return txn.Hash, nil
 }
 
