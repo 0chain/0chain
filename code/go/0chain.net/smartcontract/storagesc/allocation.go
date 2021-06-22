@@ -1461,7 +1461,10 @@ func (sc *StorageSmartContract) addCurator(
 	balances chainstate.StateContextI,
 ) (err error) {
 	var aci addCuratorInput
-	aci.decode(input)
+	if err = aci.decode(input); err != nil {
+		return common.NewError("add_curator_failed",
+			"error unmarshalling input: "+err.Error())
+	}
 
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(aci.AllocationId, balances)
