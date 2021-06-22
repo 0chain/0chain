@@ -71,7 +71,8 @@ type StateContext struct {
 func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
-	csd state.DeserializerI, t *transaction.Transaction,
+	csd state.DeserializerI,
+	t *transaction.Transaction,
 	getSharderFunc func(*block.Block) []string,
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
