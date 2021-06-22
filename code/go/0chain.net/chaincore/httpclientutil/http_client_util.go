@@ -537,11 +537,14 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 		return nil, common.NewError("fetch_magic_block_from_sharders", "empty sharder URLs")
 	}
 
+	wg := &sync.WaitGroup{}
 	recv := make(chan *block.Block, len(sharderURLs))
 	cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
 	for _, sharder := range sharderURLs {
+		wg.Add(1)
 		go func(url string) {
+			defer wg.Done()
 			req, err := http.NewRequestWithContext(cctx, http.MethodGet, url, nil)
 			if err != nil {
 				logging.Logger.Error("fetch_magic_block_from_sharders - new request failed",
@@ -591,12 +594,20 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 		}(fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, number))
 	}
 
+	go func() {
+		wg.Wait()
+		close(recv)
+	}()
+
 	select {
 	case <-cctx.Done():
-		return nil, common.NewError("fetch_magic_block_from_sharders", cctx.Err().Error())
-	case b := <-recv:
-		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))
+		return nil, common.NewError("fetch_magic_block_from_sharders - could not get magic block from sharders", cctx.Err().Error())
+	case b, ok := <-recv:
+		if !ok {
+			return nil, common.NewErrorf("fetch_magic_block_from_sharders", "could not get magic block from sharders")
+		}
 		cancel()
+		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))
 		return b, nil
 	}
 }
