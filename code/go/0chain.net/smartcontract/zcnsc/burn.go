@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// inputData - is a burnPayload
 func (zcn *ZCNSmartContract) burn(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
 	// get global node
 	gn := getGlobalNode(balances)

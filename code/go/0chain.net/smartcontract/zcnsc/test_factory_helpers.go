@@ -59,11 +59,50 @@ func CreateZCNSmartContract() *ZCNSmartContract {
 func CreateSmartContractGlobalNode() *globalNode {
 	return &globalNode{
 		ID:                 ADDRESS,
-		MinMintAmount:      0,
-		PercentAuthorizers: 0,
-		MinBurnAmount:      0,
-		MinStakeAmount:     0,
+		MinMintAmount:      111,
+		PercentAuthorizers: 70,
+		MinBurnAmount:      100,
+		MinStakeAmount:     200,
 		BurnAddress:        "0",
-		MinAuthorizers:     0,
+		MinAuthorizers:     1,
 	}
+}
+
+func createBurnPayload() *burnPayload {
+	return &burnPayload{
+		TxnID:           txHash,
+		Nonce:           123,
+		Amount:          100,
+		EthereumAddress: ADDRESS,
+	}
+}
+
+func createMintPayload() *mintPayload {
+	return &mintPayload{
+		EthereumTxnID:     txHash,
+		Amount:            200,
+		Nonce:             19,
+		Signatures:        createTransactionSignatures(),
+		ReceivingClientID: "Client0",
+	}
+}
+
+func createTransactionSignatures() []*authorizerSignature {
+	var sigs []*authorizerSignature
+	sigs = append(
+		sigs,
+		&authorizerSignature{
+			ID:        "1",
+			Signature: "sig1",
+		},
+		&authorizerSignature{
+			ID:        "2",
+			Signature: "sig2",
+		},
+		&authorizerSignature{
+			ID:        "3",
+			Signature: "sig3",
+		})
+
+	return sigs
 }

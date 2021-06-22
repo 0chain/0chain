@@ -69,6 +69,7 @@ func getGlobalSavedNode(balances cstate.StateContextI) (*globalNode, error) {
 	return gn, err
 }
 
+// getGlobalNode - returns global node
 func getGlobalNode(balances cstate.StateContextI) *globalNode {
 	gn, err := getGlobalSavedNode(balances)
 	if err == nil {
@@ -85,17 +86,17 @@ func getGlobalNode(balances cstate.StateContextI) *globalNode {
 	return gn
 }
 
-type authorizerSignatures struct {
+type authorizerSignature struct {
 	ID        string `json:"authorizer_id"`
 	Signature string `json:"signature"`
 }
 
 type mintPayload struct {
-	EthereumTxnID     string                 `json:"ethereum_txn_id"`
-	Amount            state.Balance          `json:"amount"`
-	Nonce             int64                  `json:"nonce"`
-	Signatures        []authorizerSignatures `json:"signatures"`
-	ReceivingClientID string                 `json:"receiving_client_id"`
+	EthereumTxnID     string                `json:"ethereum_txn_id"`
+	Amount            state.Balance         `json:"amount"`
+	Nonce             int64                 `json:"nonce"`
+	Signatures        []*authorizerSignature `json:"signatures"`
+	ReceivingClientID string                `json:"receiving_client_id"`
 }
 
 func (mp *mintPayload) Encode() []byte {
@@ -104,7 +105,70 @@ func (mp *mintPayload) Encode() []byte {
 }
 
 func (mp *mintPayload) Decode(input []byte) error {
-	err := json.Unmarshal(input, mp)
+	var objMap map[string]*json.RawMessage
+	err := json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+
+	id, ok := objMap["ethereum_txn_id"]
+	if ok {
+		var value *string
+		err = json.Unmarshal(*id, &value)
+		if err != nil {
+			return err
+		}
+		mp.EthereumTxnID = *value
+	}
+
+	id, ok = objMap["nonce"]
+	if ok {
+		var value *int64
+		err = json.Unmarshal(*id, &value)
+		if err != nil {
+			return err
+		}
+		mp.Nonce = *value
+	}
+
+	id, ok = objMap["amount"]
+	if ok {
+		var value *int64
+		err = json.Unmarshal(*id, &value)
+		if err != nil {
+			return err
+		}
+		mp.Amount = state.Balance(*value)
+	}
+
+	id, ok = objMap["receiving_client_id"]
+	if ok {
+		var value *string
+		err = json.Unmarshal(*id, &value)
+		if err != nil {
+			return err
+		}
+		mp.ReceivingClientID = *value
+	}
+
+	id, ok = objMap["signatures"]
+	if ok {
+		var sigs []*json.RawMessage
+		err = json.Unmarshal(*id, &sigs)
+		if err != nil {
+			return err
+		}
+
+		for _, raw := range sigs {
+			sig := &authorizerSignature{}
+			err = json.Unmarshal(*raw, sig)
+			if err != nil {
+				return err
+			}
+			mp.Signatures = append(mp.Signatures, sig)
+		}
+	}
+
 	return err
 }
 

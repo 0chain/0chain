@@ -9,13 +9,15 @@ import (
 	"0chain.net/core/common"
 )
 
+// inputData - is a mintPayload
 func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (resp string, err error) {
-	// get global node
 	gn := getGlobalNode(balances)
 
-	// decode input to mint payload
 	var payload *mintPayload
-	_ = payload.Decode(inputData)
+	err = payload.Decode(inputData)
+	if err != nil {
+		return
+	}
 
 	// check mint amount
 	if payload.Amount < gn.MinMintAmount {
