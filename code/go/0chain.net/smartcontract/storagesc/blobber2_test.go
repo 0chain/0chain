@@ -32,6 +32,7 @@ const (
 	errExpiredAllocation = "late reading, allocation expired"
 	errNoTokensReadPool  = "no tokens in read pool for allocation"
 	errNotEnoughTokens   = "not enough tokens in read pool "
+	errImmutable         = "allocation is immutable"
 )
 
 type mockReadMarker struct {
@@ -41,6 +42,7 @@ type mockReadMarker struct {
 type mockAllocation struct {
 	startTime  common.Timestamp
 	expiration common.Timestamp
+	immutable  bool
 }
 type mockAllocationPool struct {
 	balance          float64
@@ -112,6 +114,17 @@ func TestCommitBlobberRead(t *testing.T) {
 			t, blobberYaml, lastRead, read, allocation, stakes, bRPools,
 		)
 		require.NoError(t, err)
+	})
+
+	t.Run(errImmutable, func(t *testing.T) {
+		immutableAllocation := allocation
+		immutableAllocation.immutable = true
+
+		var err = testCommitBlobberRead(
+			t, blobberYaml, lastRead, read, immutableAllocation, stakes, rPools,
+		)
+		require.Error(t, err)
+		require.EqualValues(t, errCommitBlobber+": "+errImmutable, err.Error())
 	})
 
 	t.Run(errFieldLength+" -> read counter", func(t *testing.T) {
@@ -311,7 +324,8 @@ func testCommitBlobberRead(
 				},
 			},
 		},
-		Owner: payerId,
+		Owner:       payerId,
+		IsImmutable: allocation.immutable,
 	}
 	_, err = ctx.InsertTrieNode(storageAllocation.GetKey(ssc.ID), storageAllocation)
 
