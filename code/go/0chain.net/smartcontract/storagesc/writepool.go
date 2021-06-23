@@ -242,14 +242,14 @@ func (wp *writePool) fill(t *transaction.Transaction, alloc *StorageAllocation,
 	// set fields
 	ap.AllocationID = alloc.ID
 	ap.ExpireAt = until
-	ap.Blobbers = allocationBlobbers(*alloc, t.Value)
+	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
 
 	// add the allocation pool
 	wp.Pools.add(&ap)
 	return
 }
 
-func allocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
+func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
 	var bps blobberPools
 	var total float64
 	for _, b := range alloc.BlobberDetails {
@@ -320,7 +320,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	var ap = allocationPool{
 		AllocationID: alloc.ID,
 		ExpireAt:     alloc.Until(),
-		Blobbers:     allocationBlobbers(*alloc, txn.Value),
+		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
 	}
 	ap.TokenPool.ID = txn.Hash
 	wp.Pools.add(&ap)
