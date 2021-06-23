@@ -204,12 +204,17 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = blobberID
-	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
 
-	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
-	if err == nil {
+	// return "404", if blobber not registered
+	blobber := StorageNode{ID: blobberID}
+	if _, err := balances.GetTrieNode(blobber.GetKey(ssc.ID)); err != nil {
+		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't find blobber")
+	}
+
+	// return "200" with empty list, if no challenges are found
+	blobberChallengeObj := &BlobberChallenge{BlobberID: blobberID}
+	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
+	if blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID)); err == nil {
 		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
 		if err != nil {
 			return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
