@@ -522,6 +522,7 @@ type StorageAllocation struct {
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
+	IsImmutable       bool                          `json:"is_immutable"`
 
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`

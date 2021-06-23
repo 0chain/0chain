@@ -366,12 +366,12 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	return // the resp
 }
 
-// update allocation request
 type updateAllocationRequest struct {
-	ID         string           `json:"id"`              // allocation id
-	OwnerID    string           `json:"owner_id"`        // Owner of the allocation
-	Size       int64            `json:"size"`            // difference
-	Expiration common.Timestamp `json:"expiration_date"` // difference
+	ID           string           `json:"id"`              // allocation id
+	OwnerID      string           `json:"owner_id"`        // Owner of the allocation
+	Size         int64            `json:"size"`            // difference
+	Expiration   common.Timestamp `json:"expiration_date"` // difference
+	SetImmutable bool             `json:"set_immutable"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -597,9 +597,8 @@ func (sc *StorageSmartContract) adjustChallengePool(alloc *StorageAllocation,
 // here we use new terms of blobbers
 func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	all *StorageNodes, alloc *StorageAllocation, blobbers []*StorageNode,
-	uar *updateAllocationRequest, balances chainstate.StateContextI) (
-	resp string, err error) {
-
+	uar *updateAllocationRequest, balances chainstate.StateContextI,
+) (err error) {
 	var (
 		diff   = uar.getBlobbersSizeDiff(alloc) // size difference
 		size   = uar.getNewBlobbersSize(alloc)  // blobber size
@@ -623,12 +622,12 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 		var b = blobbers[i]
 		if b.Capacity == 0 {
-			return "", common.NewErrorf("allocation_extending_failed",
+			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s no longer provides its service", b.ID)
 		}
 		if uar.Size > 0 {
 			if b.Capacity-b.Used-diff < 0 {
-				return "", common.NewErrorf("allocation_extending_failed",
+				return common.NewErrorf("allocation_extending_failed",
 					"blobber %s doesn't have enough free space", b.ID)
 			}
 		}
@@ -643,7 +642,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		details.Size = size // new size
 
 		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
-			return "", common.NewErrorf("allocation_extending_failed",
+			return common.NewErrorf("allocation_extending_failed",
 				"blobber %s doesn't allow so long offers", b.ID)
 		}
 
@@ -674,7 +673,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// extend offers after alloc.challenge_completion_time is known
 	for _, ba := range alloc.BlobberDetails {
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
-			return "", common.NewError("allocation_extending_failed",
+			return common.NewError("allocation_extending_failed",
 				err.Error())
 		}
 	}
@@ -682,7 +681,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// get related write pool
 	var wp *writePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return "", common.NewErrorf("allocation_extending_failed",
+		return common.NewErrorf("allocation_extending_failed",
 			"can't get write pool: %v", err)
 	}
 
@@ -691,11 +690,11 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
 		if err = checkFill(t, balances); err != nil {
-			return "", common.NewError("allocation_extending_failed",
+			return common.NewError("allocation_extending_failed",
 				err.Error())
 		}
 		if _, err = wp.fill(t, alloc, until, balances); err != nil {
-			return "", common.NewErrorf("allocation_extending_failed",
+			return common.NewErrorf("allocation_extending_failed",
 				"write pool filling: %v", err)
 		}
 	}
@@ -705,7 +704,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	if diff > 0 {
 		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
 			if wp.allocUntil(alloc.ID, until) < mldLeft {
-				return "", common.NewError("allocation_extending_failed",
+				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}
 		}
@@ -716,31 +715,23 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	err = sc.adjustChallengePool(alloc, wp, odr, ndr, oterms, t.CreationDate,
 		balances)
 	if err != nil {
-		return "", common.NewErrorf("allocation_extending_failed", "%v", err)
+		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
 	// save the write pool
 	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return "", common.NewErrorf("allocation_extending_failed", "%v", err)
+		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
-	// save all
-
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
-	if err != nil {
-		return "", common.NewErrorf("allocation_extending_failed", "%v", err)
-	}
-
-	return string(alloc.Encode()), nil
+	return nil
 }
 
 // reduceAllocation reduces size or/and expiration (no one can be increased);
 // here we use the same terms of related blobbers
 func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	all *StorageNodes, alloc *StorageAllocation, blobbers []*StorageNode,
-	uar *updateAllocationRequest, balances chainstate.StateContextI) (
-	resp string, err error) {
-
+	uar *updateAllocationRequest, balances chainstate.StateContextI,
+) (err error) {
 	var (
 		diff = uar.getBlobbersSizeDiff(alloc) // size difference
 		size = uar.getNewBlobbersSize(alloc)  // blobber size
@@ -760,25 +751,25 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		ba.Size = size // new size
 		// update stake pool
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
-			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
 
 	// get related write pool
 	var wp *writePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return "", common.NewErrorf("allocation_reducing_failed",
+		return common.NewErrorf("allocation_reducing_failed",
 			"can't get write pool: %v", err)
 	}
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
 		if err = checkFill(t, balances); err != nil {
-			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 		var until = alloc.Until()
 		if _, err = wp.fill(t, alloc, until, balances); err != nil {
-			return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
 
@@ -787,22 +778,16 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	err = sc.adjustChallengePool(alloc, wp, odr, ndr, nil, t.CreationDate,
 		balances)
 	if err != nil {
-		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
 	// save the write pool
 	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	// save all
+	return nil
 
-	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
-	if err != nil {
-		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
-	}
-
-	return string(alloc.Encode()), nil
 }
 
 // update allocation allows to change allocation size or expiration;
@@ -843,8 +828,6 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 
 	if request.OwnerID == "" {
 		request.OwnerID = t.ClientID
-		// return "", common.NewError("allocation_updating_failed",
-		//	"invalid request: missing owner_id")
 	}
 
 	var clist *Allocations // client allocations list
@@ -910,10 +893,24 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		return sc.extendAllocation(t, all, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, all, alloc, blobbers, &request, balances)
+	} else if request.Size != 0 || request.Expiration != 0 {
+		err = sc.reduceAllocation(t, all, alloc, blobbers, &request, balances)
+	}
+	if err != nil {
+		return "", err
 	}
 
-	return sc.reduceAllocation(t, all, alloc, blobbers, &request, balances)
+	if request.SetImmutable {
+		alloc.IsImmutable = true
+	}
+
+	err = sc.saveUpdatedAllocation(all, alloc, blobbers, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
+	}
+
+	return string(alloc.Encode()), nil
 }
 
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
