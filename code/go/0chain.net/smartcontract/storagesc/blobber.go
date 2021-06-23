@@ -403,11 +403,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
-	if alloc.IsImmutable {
-		return "", common.NewError("commit_blobber_read",
-			"allocation is immutable")
-	}
-
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
 			"early reading, allocation not started yet")
