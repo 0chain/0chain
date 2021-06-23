@@ -2752,7 +2752,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusInternalServerError,
 		},
 		{
-			name:  "Storagesc_/openchallenges_200",
+			name:  "Storagesc_/openchallenges_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
@@ -2764,7 +2764,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusOK,
+			wantStatus:     http.StatusNotFound,
 		},
 		{
 			name: "Storagesc_/openchallenges_404",
