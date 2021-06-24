@@ -81,7 +81,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return fmt.Errorf("invalid blobber terms: %v", err)
 	}
 
-	if blobber.Capacity == 0 {
+	if blobber.Capacity <= 0 {
 		return  sc.removeBlobber(t, blobber, blobbers, balances)
 	}
 
@@ -236,20 +236,20 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"failed to get blobber list: " + err.Error())
 	}
 
-	var updateBlobber = new(StorageNode)
-	if err = updateBlobber.Decode(input); err != nil {
+	var updatedBlobber = new(StorageNode)
+	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"malformed request: " + err.Error())
 	}
 
 	var blobber *StorageNode
-	if blobber, err = sc.getBlobber(updateBlobber.ID, balances); err != nil {
+	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get the blobber: " + err.Error())
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(updateBlobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get related stake pool: " + err.Error())
 	}
@@ -265,8 +265,8 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	}
 
 	// upate some extra props
-	blobber.Terms = updateBlobber.Terms
-	blobber.Capacity = updateBlobber.Capacity
+	blobber.Terms = updatedBlobber.Terms
+	blobber.Capacity = updatedBlobber.Capacity
 
 	// update blobber
 	if err = sc.updateBlobber(t, conf, blobber, blobbers, balances); err != nil {
