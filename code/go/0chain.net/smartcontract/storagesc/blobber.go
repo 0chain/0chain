@@ -91,11 +91,9 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// get saved blobber
-	savedBlobberBytes, _ := balances.GetTrieNode(blobber.GetKey(sc.ID))
-
-	var savedBlobber StorageNode
-	if err = savedBlobber.Decode(savedBlobberBytes.Encode()); err != nil {
-		return fmt.Errorf("can't get and decode saved blobber: %v", err)
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances);
+	if err != nil {
+		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
 	// update props
@@ -141,11 +139,9 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	blobber *StorageNode, blobbers *StorageNodes, balances cstate.StateContextI,
 ) (err error) {
 	// get saved blobber
-	savedBlobberBytes, _ := balances.GetTrieNode(blobber.GetKey(sc.ID))
-
-	var savedBlobber StorageNode
-	if err = savedBlobber.Decode(savedBlobberBytes.Encode()); err != nil {
-		return fmt.Errorf("can't get and decode saved blobber: %v", err)
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances);
+	if err != nil {
+		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
 	// set to zero explicitly, for "direct" calls
