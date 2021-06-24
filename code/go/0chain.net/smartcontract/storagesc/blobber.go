@@ -597,11 +597,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"can't get allocation: "+err.Error())
 	}
 
-	if alloc.IsImmutable {
-		return "", common.NewError("commit_blobber_read",
-			"allocation is immutable")
-	}
-
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
 		return "", common.NewError("commit_connection_failed", "write marker has"+
 			" to be by the same client as owner of the allocation")
