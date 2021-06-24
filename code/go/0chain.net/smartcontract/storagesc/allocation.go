@@ -379,16 +379,24 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 }
 
 // validate request
-func (uar *updateAllocationRequest) validate(conf *scConfig,
-	alloc *StorageAllocation) (err error) {
-
-	if uar.Size == 0 && uar.Expiration == 0 {
-		return errors.New("update allocation changes nothing")
+func (uar *updateAllocationRequest) validate(
+	conf *scConfig,
+	alloc *StorageAllocation,
+) (err error) {
+	if uar.SetImmutable && alloc.IsImmutable {
+		return errors.New("allocation is already immutable")
 	}
 
-	if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
-		return fmt.Errorf("new allocation size is too small: %d < %d",
-			ns, conf.MinAllocSize)
+	if uar.Size == 0 && uar.Expiration == 0 {
+		if !uar.SetImmutable {
+			return errors.New("update allocation changes nothing")
+		}
+
+	} else {
+		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
+			return fmt.Errorf("new allocation size is too small: %d < %d",
+				ns, conf.MinAllocSize)
+		}
 	}
 
 	if len(alloc.BlobberDetails) == 0 {
