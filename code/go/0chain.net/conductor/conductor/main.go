@@ -307,7 +307,7 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		return fmt.Errorf("VC expected with %d number, but given number is %d",
 			emb.Number, vce.Number)
 	}
-	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
+	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 && emb.Miners_Count == 0 && emb.Sharders_Count == 0 {
 		r.lastVCRound = vce.Round                  // keep the last VC round
 		r.waitViewChange = config.WaitViewChange{} // reset
 		return                                     // doesn't check MB for nodes
@@ -315,19 +315,36 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	// check for nodes
 	var okm, oks bool
 	// check miners
-	if okm = isEqual(emb.Miners, vce.Miners); !okm {
-		fmt.Println("[ERR] expected miners list:")
-		r.printNodes(emb.Miners)
-		fmt.Println("[ERR] got miners")
-		r.printNodes(vce.Miners)
+	if emb.Miners_Count > 0 && len(emb.Miners) == 0 {
+		// check count only
+		if okm = (emb.Miners_Count == len(vce.Miners)); !okm {
+			fmt.Println("[ERR] expected miners count:", emb.Miners_Count)
+			fmt.Println("[ERR] got miners")
+			r.printNodes(vce.Miners)
+		}
+	} else {
+		if okm = isEqual(emb.Miners, vce.Miners); !okm {
+			fmt.Println("[ERR] expected miners list:")
+			r.printNodes(emb.Miners)
+			fmt.Println("[ERR] got miners")
+			r.printNodes(vce.Miners)
+		}
 	}
-
 	// check sharders
-	if oks = isEqual(emb.Sharders, vce.Sharders); !oks {
-		fmt.Println("[ERR] expected sharders list:")
-		r.printNodes(emb.Sharders)
-		fmt.Println("[ERR] got sharders")
-		r.printNodes(vce.Sharders)
+	if emb.Sharders_Count > 0 && len(emb.Sharders) == 0 {
+		// check count only
+		if oks = (emb.Sharders_Count == len(vce.Sharders)); !oks {
+			fmt.Println("[ERR] expected sharders count:", emb.Sharders_Count)
+			fmt.Println("[ERR] got sharders")
+			r.printNodes(vce.Sharders)
+		}
+	} else {
+		if oks = isEqual(emb.Sharders, vce.Sharders); !oks {
+			fmt.Println("[ERR] expected sharders list:")
+			r.printNodes(emb.Sharders)
+			fmt.Println("[ERR] got sharders")
+			r.printNodes(vce.Sharders)
+		}
 	}
 
 	if !okm || !oks {

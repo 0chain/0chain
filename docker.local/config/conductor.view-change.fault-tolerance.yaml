@@ -228,6 +228,7 @@ sets:
   - name: "All nodes fail and recover randomly"
     tests:
       - "All nodes fail and recover randomly"
+      - "All nodes fail and recover randomly (scenario 2)"
 
 tests:
   # - Miner goes down
@@ -3409,3 +3410,65 @@ tests:
       - wait_round:
           shift: 50
       # To be continued
+
+  - name: "All nodes fail and recover randomly (scenario 2)"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: ["sharder-1"]
+      - start_lock: ["miner-1", "miner-2", "miner-3"]
+      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3"] # a
+          timeout: "1m"
+      - wait_add:
+          timeout: "1m"
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3"]
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 2 # round 250
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+      - start: ["miner-4", "sharder-2"] # b
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 3 # intermediate
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 4 # round 1000 ?
+            sharders: ["sharder-1", "sharder-2"]
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - start: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # c
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 5 # intermediate
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 6 # round 2000 ?
+            sharders_count: 3
+            miners_count: 6
+      - stop: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # d drop 3 miners and 2 sharders
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 7
+            sharders: ["sharder-1", "sharder-2"]
+            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - stop: ["miner-4"] # e drop 1 miner
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 8
+            sharders: ["sharder-1", "sharder-2"]
+            miners: ["miner-1", "miner-2", "miner-3"]
+      - stop: ["sharder-2"] # drop 1 sharder
+      - wait_view_change:
+          timeout: "5m"
+          expect_magic_block:
+            number: 9
+            sharders: ["sharder-1"]
+            miners: ["miner-1", "miner-2", "miner-3"]

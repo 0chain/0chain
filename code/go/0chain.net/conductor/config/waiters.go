@@ -19,6 +19,10 @@ type ExpectMagicBlock struct {
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	// Miners expected in MB.
 	Miners []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
+	// Sharders Count expected in MB.
+	Sharders_Count int `json:"sharders_count" yaml:"sharders_count" mapstructure:"sharders_count"`
+	// Miners Count expected in MB.
+	Miners_Count int `json:"miners_count" yaml:"miners_count" mapstructure:"miners_count"`
 }
 
 // IsZero returns true if the MagicBlock is empty.
@@ -58,9 +62,9 @@ func (wp *WaitPhase) IsZero() bool {
 
 // WaitRound waits a round.
 type WaitRound struct {
-	Round    Round     `json:"round" yaml:"round" mapstructure:"round"`
-	Name     RoundName `json:"name" yaml:"name" mapstructure:"name"`
-	Shift    Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
+	Round Round     `json:"round" yaml:"round" mapstructure:"round"`
+	Name  RoundName `json:"name" yaml:"name" mapstructure:"name"`
+	Shift Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
 }
 
 func (wr *WaitRound) IsZero() bool {
