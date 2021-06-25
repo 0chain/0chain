@@ -31,3 +31,4 @@ volumes:
   sharder1:
   sharder2:
   sharder3:
+  sharder4:

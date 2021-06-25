@@ -12,8 +12,8 @@ do
   rm -rf ./miner$i/data/rocksdb/*
 done
 
-echo "cleaning 3 sharders..."
-for i in $(seq 1 3)
+echo "cleaning 4 sharders..."
+for i in $(seq 1 4)
 do
   echo "deleting sharder$i logs"
   rm -rf ./sharder$i/log/*
