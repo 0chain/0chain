@@ -74,7 +74,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	ab, ok = all.Nodes.get(b.ID)
 	require.True(t, ok)
 	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
-	require.Equal(t, ab.Capacity, b.Capacity * 2)
+	require.Equal(t, ab.Capacity, b.Capacity)
 }
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
