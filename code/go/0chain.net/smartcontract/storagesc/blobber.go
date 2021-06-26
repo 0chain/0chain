@@ -111,7 +111,6 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// update stake pool settings
-
 	var sp *stakePool
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
@@ -264,7 +263,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
 
-	// update blobber
 	if err = sc.updateBlobber(t, conf, blobber, blobbers, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
 	}
