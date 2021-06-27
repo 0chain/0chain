@@ -22,7 +22,7 @@ services:
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: bash /0chain/bin/cassandra-init.sh
+    command: ./0chain/bin/cassandra-init.sh
     links:
       - cassandra:cassandra
     restart: on-failure
