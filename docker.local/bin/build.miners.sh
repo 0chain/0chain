@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
