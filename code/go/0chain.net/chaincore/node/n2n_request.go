@@ -66,7 +66,10 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		wg.Add(1)
 		go func(n *Node) {
 			if rhandler(n) {
-				nodeC <- n
+				select {
+				case nodeC <- n:
+				default:
+				}
 			}
 			wg.Done()
 		}(nd)
