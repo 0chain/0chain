@@ -7,7 +7,7 @@ VERBOSE = 1
 help:
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: init_setup network_setup build_base build_miner build_sharder sync_clock
+.PHONY: init_setup network_setup build_base build_miner build_sharder sync_clock cleanup miner sharder
 
 init_setup: ## 1.Init setup
 	@cd .. && ./docker.local/bin/init.setup.sh
@@ -29,3 +29,9 @@ sync_clock: ## 6.Sync clock
 
 cleanup: ## Cleanup
 	@cd .. && ./docker.local/bin/clean.sh
+
+miner: ## Run miner num (=miner number)
+	@cd miner$(num) && ../bin/start.b0miner.sh
+
+sharder: ## Run sharder num (=miner number)
+	@cd sharder$(num) && ../bin/start.b0sharder.sh
