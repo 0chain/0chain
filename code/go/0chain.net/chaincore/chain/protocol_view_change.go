@@ -98,24 +98,32 @@ func (mc *Chain) RegisterClient() {
 }
 
 func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
-	is = mc.isRegisteredEx(ctx,
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeMiner {
-				return minersc.AllMinersKey
-			} else if typ == node.NodeTypeSharder {
-				return minersc.AllShardersKey
-			}
-			return ""
-		},
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeMiner {
-				return scRestAPIGetMinerList
-			} else if typ == node.NodeTypeSharder {
-				return scRestAPIGetSharderList
-			}
-			return ""
-		}, false)
-	return
+	getStatePathFunc := func(n *node.Node) string {
+		switch n.Type {
+		case node.NodeTypeMiner:
+			return minersc.AllMinersKey
+		case node.NodeTypeSharder:
+			return minersc.AllShardersKey
+		default:
+			logging.Logger.Error("isRegistered.getStatePath unknown node type",
+				zap.String("type", node.NodeTypeNames[n.Type].Value))
+		}
+
+		return ""
+	}
+	getAPIPathFunc := func(n *node.Node) string {
+		switch n.Type {
+		case node.NodeTypeMiner:
+			return scRestAPIGetMinerList
+		case node.NodeTypeSharder:
+			return scRestAPIGetSharderList
+		default:
+			logging.Logger.Error("isRegistered.getAPIPath unknown node type",
+				zap.String("type", node.NodeTypeNames[n.Type].Value))
+		}
+		return ""
+	}
+	return mc.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
 }
 
 func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
@@ -180,14 +188,17 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	return false
 }
 
-func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
+func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
 	var (
 		active = mc.IsActiveInChain()
 		mb     = mc.GetCurrentMagicBlock()
 
 		found, pastTime bool
 		urls            []string
+		cctx, cancel    = context.WithTimeout(ctx, time.Duration(transaction.TXN_TIME_TOLERANCE)*time.Second)
 	)
+
+	defer cancel()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
@@ -196,10 +207,17 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	}
 
 	for !found && !pastTime {
+		select {
+		case <-cctx.Done():
+			return false
+		default:
+		}
+
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
 			lfb := mc.GetLatestFinalizedBlock()
-			pastTime = lfb != nil && !common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
+			pastTime = lfb != nil &&
+				!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		} else {
 			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 			if err != nil {
@@ -208,6 +226,7 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 			}
 			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		}
+
 		found = err == nil && txn != nil
 		if !found {
 			time.Sleep(time.Second)
@@ -251,6 +270,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn.PublicKey = selfNode.PublicKey
 	mb := mc.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
+	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }

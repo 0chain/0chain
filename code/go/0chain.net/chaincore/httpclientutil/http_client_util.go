@@ -128,7 +128,9 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	}
 	resp, err := httpClient.Do(req)
 	if resp == nil || err != nil {
-		logging.N2n.Error("Failed after multiple retries", zap.Int("retried", maxRetries))
+		logging.N2n.Error("Failed after multiple retries",
+			zap.String("url", url),
+			zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
