@@ -37,7 +37,7 @@ then
 else
     echo -e "\nProduction mode: building miner in Docker\n"
 
-    sed "s,%COPY%,COPY --from=miner_build $APP_DIR,g" "$DOCKER_FILE.template" > "$DOCKER_FILE"
+    sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKER_FILE.template" > "$DOCKER_FILE"
 
     cd "$ROOT"
     docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" -f "$DOCKER_FILE" . -t miner --build-arg DEV=no
