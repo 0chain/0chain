@@ -130,6 +130,7 @@ type newAllocationRequest struct {
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
+	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
 }
 
 // storageAllocation from the request
@@ -145,6 +146,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
+	sa.DiverseBlobbers = nar.DiversifyBlobbers
 	return
 }
 
@@ -263,7 +265,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 ) (resp string, err error) {
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = sc.getBlobbersList(balances)
-	if err != nil || len(allBlobbersList.Nodes) == 0 {
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"getting blobber list: %v", err)
+	}
+	if len(allBlobbersList.Nodes) == 0 {
 		return "", common.NewError("allocation_creation_failed",
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
@@ -280,61 +286,25 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
-	sa.TimeUnit = conf.TimeUnit          // keep the initial time unit
 
-	if err = sa.validate(t.CreationDate, conf); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"invalid request: %v", err)
-	}
-
-	var (
-		// number of blobbers required
-		size = sa.DataShards + sa.ParityShards
-		// size of allocation for a blobber
-		bsize = (sa.Size + int64(size-1)) / int64(size)
-		// filtered list
-		list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), t.CreationDate,
-			bsize, filterHealthyBlobbers(t.CreationDate),
-			sc.filterBlobbersByFreeSpace(t.CreationDate, bsize, balances))
-	)
-
-	if len(list) < size {
+	var seed int64
+	if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
 		return "", common.NewError("allocation_creation_failed",
-			"Not enough blobbers to honor the allocation")
+			"Failed to create seed for randomizeNodes")
 	}
 
+	blobberNodes, bSize, err := sc.selectBlobbers(
+		t.CreationDate, *allBlobbersList, sa, seed, balances)
+	if err != nil {
+		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
+	}
+
+	var gbSize = sizeInGB(bSize) // size in gigabytes
 	allocatedBlobbers := make([]*StorageNode, 0)
-	sa.BlobberDetails = make([]*BlobberAllocation, 0)
-	sa.Stats = &StorageAllocationStats{}
-
-	var blobberNodes []*StorageNode
-	preferredBlobbersSize := len(sa.PreferredBlobbers)
-	if preferredBlobbersSize > 0 {
-		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
-		if err != nil {
-			return "", common.NewError("allocation_creation_failed",
-				err.Error())
-		}
-	}
-
-	// randomize blobber nodes
-	if len(blobberNodes) < size {
-		var seed int64
-		if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
-			return "", common.NewError("allocation_creation_failed",
-				"Failed to create seed for randomizeNodes")
-		}
-		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
-	}
-
-	blobberNodes = blobberNodes[:size]
-
-	var gbSize = sizeInGB(bsize) // size in gigabytes
-
 	for _, b := range blobberNodes {
 		var balloc BlobberAllocation
 		balloc.Stats = &StorageAllocationStats{}
-		balloc.Size = bsize
+		balloc.Size = bSize
 		balloc.Terms = b.Terms
 		balloc.AllocationID = t.Hash
 		balloc.BlobberID = b.ID
@@ -384,6 +354,69 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	return resp, err
+}
+
+func (sc *StorageSmartContract) selectBlobbers(
+	creationDate common.Timestamp,
+	allBlobbersList StorageNodes,
+	sa *StorageAllocation,
+	randomSeed int64,
+	balances chainstate.StateContextI,
+) ([]*StorageNode, int64, error) {
+	var err error
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return nil, 0, fmt.Errorf("can't get config: %v", err)
+	}
+
+	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
+
+	if err = sa.validate(creationDate, conf); err != nil {
+		return nil, 0, fmt.Errorf("invalid request: %v", err)
+	}
+
+	// number of blobbers required
+	var size = sa.DataShards + sa.ParityShards
+	// size of allocation for a blobber
+	var bSize = (sa.Size + int64(size-1)) / int64(size)
+	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
+		bSize, filterHealthyBlobbers(creationDate),
+		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
+
+	if len(list) < size {
+		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
+	}
+
+	sa.BlobberDetails = make([]*BlobberAllocation, 0)
+	sa.Stats = &StorageAllocationStats{}
+
+	var blobberNodes []*StorageNode
+	if len(sa.PreferredBlobbers) > 0 {
+		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
+		if err != nil {
+			return nil, 0, common.NewError("allocation_creation_failed",
+				err.Error())
+		}
+	}
+
+	if len(blobberNodes) < size {
+		if sa.DiverseBlobbers {
+			// removed pre selected blobbers from list
+			for _, preferredBlobber := range blobberNodes {
+				for i, blobber := range list {
+					if blobber.BaseURL == preferredBlobber.BaseURL {
+						list = append(list[:i], list[i+1:]...)
+						break
+					}
+				}
+			}
+			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
+		} else {
+			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
+		}
+	}
+
+	return blobberNodes[:size], bSize, nil
 }
 
 // update allocation request
