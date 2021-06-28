@@ -1166,7 +1166,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name: "Storagesc_/openchallenges_500",
+			name: "Storagesc_/openchallenges_404",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1191,7 +1191,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:  "Storagesc_/getchallenge_404",
@@ -2767,7 +2767,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name: "Storagesc_/openchallenges_500",
+			name: "Storagesc_/openchallenges_404",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -2792,7 +2792,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 					return req
 				}(),
 			},
-			wantStatus: http.StatusInternalServerError,
+			wantStatus: http.StatusNotFound,
 		},
 		{
 			name:  "Storagesc_/getchallenge_404",
