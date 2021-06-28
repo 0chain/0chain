@@ -763,7 +763,7 @@ func (sc *StorageSmartContract) extendAllocation(
 			}
 		}
 		if _, err = wp.fill(t, alloc, until, mintTokens, balances); err != nil {
-			return  common.NewErrorf("allocation_extending_failed",
+			return common.NewErrorf("allocation_extending_failed",
 				"write pool filling: %v", err)
 		}
 	}
@@ -973,7 +973,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, all, alloc, blobbers, &request, balances)
+		err = sc.extendAllocation(t, all, alloc, blobbers, &request, mintTokens, balances)
 	} else if request.Size != 0 || request.Expiration != 0 {
 		if mintTokens {
 			return "", common.NewError("allocation_updating_failed",
