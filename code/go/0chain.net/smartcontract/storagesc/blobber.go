@@ -82,7 +82,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	if blobber.Capacity <= 0 {
-		return  sc.removeBlobber(t, blobber, blobbers, balances)
+		return sc.removeBlobber(t, blobber, blobbers, balances)
 	}
 
 	// check params
@@ -91,12 +91,11 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// get saved blobber
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances);
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
 
-	// update props
 	blobber.LastHealthCheck = t.CreationDate
 	blobber.Used = savedBlobber.Used
 
@@ -138,7 +137,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	blobber *StorageNode, blobbers *StorageNodes, balances cstate.StateContextI,
 ) (err error) {
 	// get saved blobber
-	savedBlobber, err := sc.getBlobber(blobber.ID, balances);
+	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
 		return fmt.Errorf("can't get or decode saved blobber: %v", err)
 	}
@@ -171,21 +170,21 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
-			"can't get config: " + err.Error())
+			"can't get config: "+err.Error())
 	}
 
 	// get registered blobbers
 	blobbers, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
-			"Failed to get blobber list: " + err.Error())
+			"Failed to get blobber list: "+err.Error())
 	}
 
 	// set blobber
 	var blobber = new(StorageNode)
 	if err = blobber.Decode(input); err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
-			"malformed request: " + err.Error())
+			"malformed request: "+err.Error())
 	}
 
 	// set transaction information
@@ -201,14 +200,14 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, blobbers)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
-			"saving all blobbers: " + err.Error())
+			"saving all blobbers: "+err.Error())
 	}
 
 	// save the blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
-			"saving blobber: " + err.Error())
+			"saving blobber: "+err.Error())
 	}
 
 	return string(blobber.Encode()), nil
@@ -222,31 +221,31 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"can't get config: " + err.Error())
+			"can't get config: "+err.Error())
 	}
 
 	var blobbers *StorageNodes
 	if blobbers, err = sc.getBlobbersList(balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"failed to get blobber list: " + err.Error())
+			"failed to get blobber list: "+err.Error())
 	}
 
 	var updatedBlobber = new(StorageNode)
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"malformed request: " + err.Error())
+			"malformed request: "+err.Error())
 	}
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"can't get the blobber: " + err.Error())
+			"can't get the blobber: "+err.Error())
 	}
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"can't get related stake pool: " + err.Error())
+			"can't get related stake pool: "+err.Error())
 	}
 
 	if sp.Settings.DelegateWallet == "" {
@@ -259,7 +258,6 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
-	// upate some extra props
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
 
