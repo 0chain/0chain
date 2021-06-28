@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -74,10 +73,10 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(2016))
 
-	doStateValInsert(t, mpt2, "0123456", 100)
-	doStateValInsert(t, mpt2, "0123457", 1000)
-	doStateValInsert(t, mpt2, "0123458", 1000000)
-	doStateValInsert(t, mpt2, "0133458", 1000000000)
+	doStateValInsert(t, mpt2, "123456", 100)
+	doStateValInsert(t, mpt2, "123457", 1000)
+	doStateValInsert(t, mpt2, "123458", 1000000)
+	doStateValInsert(t, mpt2, "133458", 1000000000)
 
 	var err = mpt2.SaveChanges(context.TODO(), pndb, false)
 	if err != nil {
@@ -113,16 +112,16 @@ func TestMerkeTreePruning(t *testing.T) {
 		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
-			doStateValInsert(t, mpt2, "0123456", 100+i)
+			doStateValInsert(t, mpt2, "123456", 100+i)
 		}
 		if i%3 == 0 {
-			doStateValInsert(t, mpt2, "0123457", 1000+i)
+			doStateValInsert(t, mpt2, "123457", 1000+i)
 		}
 		if i%5 == 0 {
-			doStateValInsert(t, mpt2, "0123458", 1000000+i)
+			doStateValInsert(t, mpt2, "123458", 1000000+i)
 		}
 		if i%7 == 0 {
-			doStateValInsert(t, mpt2, "0133458", 1000000000+i)
+			doStateValInsert(t, mpt2, "133458", 1000000000+i)
 		}
 		roots = append(roots, mpt2.GetRoot())
 		var err = mpt2.SaveChanges(context.TODO(), pndb, false)
@@ -193,10 +192,10 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 
-		doStateValInsert(t, mpt2, "0123456", 100+i)
-		doStateValInsert(t, mpt2, "0123457", 1000+i)
-		doStateValInsert(t, mpt2, "0123458", 1000000+i)
-		doStateValInsert(t, mpt2, "0133458", 1000000000+i)
+		doStateValInsert(t, mpt2, "123456", 100+i)
+		doStateValInsert(t, mpt2, "123457", 1000+i)
+		doStateValInsert(t, mpt2, "123458", 1000000+i)
+		doStateValInsert(t, mpt2, "133458", 1000000000+i)
 
 		if err := mpt2.SaveChanges(context.TODO(), pndb, false); err != nil {
 			panic(err)
@@ -237,7 +236,7 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 
 	val, err := mpt.GetNodeValue([]byte(key))
 	if err != nil {
-		t.Fatalf("getting inserted value: %v %v", key, value)
+		t.Fatalf("getting inserted value: %v %v, err: %v", key, value, err)
 	}
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
@@ -374,9 +373,9 @@ func TestMPTHexachars(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db, Sequence(2018))
 
-	doStrValInsert(t, mpt2, "1", "1")
-	doStrValInsert(t, mpt2, "2", "2")
-	doStrValInsert(t, mpt2, "a", "a")
+	doStrValInsert(t, mpt2, "01", "1")
+	doStrValInsert(t, mpt2, "02", "2")
+	doStrValInsert(t, mpt2, "0a", "a")
 }
 
 func TestMPTInsertLeafNode(t *testing.T) {
@@ -386,9 +385,9 @@ func TestMPTInsertLeafNode(t *testing.T) {
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert(t, mpt2, "1234", "1")
-	doStrValInsert(t, mpt2, "12356", "2")
+	doStrValInsert(t, mpt2, "123567", "2")
 	doStrValInsert(t, mpt2, "123671", "3")
-	doStrValInsert(t, mpt2, "1237123", "4")
+	doStrValInsert(t, mpt2, "12371234", "4")
 	doStrValInsert(t, mpt2, "12381234", "5")
 	doStrValInsert(t, mpt2, "12391234", "6")
 
@@ -398,13 +397,13 @@ func TestMPTInsertLeafNode(t *testing.T) {
 	}
 
 	doStrValInsert(t, mpt2, "1234", "1.1")
-	doStrValInsert(t, mpt2, "12345", "1.1.1")
-	doStrValInsert(t, mpt2, "12356", "2.1")
-	doStrValInsert(t, mpt2, "123567", "2.1.1")
+	doStrValInsert(t, mpt2, "123456", "1.1.1")
+	doStrValInsert(t, mpt2, "123567", "2.1")
+	doStrValInsert(t, mpt2, "12356789", "2.1.1")
 	doStrValInsert(t, mpt2, "123671", "3.1")
-	doStrValInsert(t, mpt2, "1236711", "3.1.1")
+	doStrValInsert(t, mpt2, "12367112", "3.1.1")
 	doStrValInsert(t, mpt2, "123712", "4.1")
-	doStrValInsert(t, mpt2, "1238124", "5.1")
+	doStrValInsert(t, mpt2, "12381245", "5.1")
 	doStrValInsert(t, mpt2, "1239", "6.1")
 }
 
@@ -414,15 +413,15 @@ func TestMPTInsertFullNode(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "1", "1")
-	doStrValInsert(t, mpt2, "2", "2")
-	doStrValInsert(t, mpt2, "11", "11")
-	doStrValInsert(t, mpt2, "12", "12")
-	doStrValInsert(t, mpt2, "211", "211")
-	doStrValInsert(t, mpt2, "212", "212")
-	doStrValInsert(t, mpt2, "3", "3")
-	doStrValInsert(t, mpt2, "3112", "3112")
-	doStrValInsert(t, mpt2, "3113", "3113")
+	doStrValInsert(t, mpt2, "01", "1")
+	doStrValInsert(t, mpt2, "02", "2")
+	doStrValInsert(t, mpt2, "0112", "11")
+	doStrValInsert(t, mpt2, "0121", "12")
+	doStrValInsert(t, mpt2, "0211", "211")
+	doStrValInsert(t, mpt2, "0212", "212")
+	doStrValInsert(t, mpt2, "03", "3")
+	doStrValInsert(t, mpt2, "0312", "3112")
+	doStrValInsert(t, mpt2, "0313", "3113")
 }
 
 func TestMPTInsertExtensionNode(t *testing.T) {
@@ -431,19 +430,19 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "12345", "12345")
-	doStrValInsert(t, mpt2, "12346", "12346")
-	doStrValInsert(t, mpt2, "2", "2")
+	doStrValInsert(t, mpt2, "123456", "12345")
+	doStrValInsert(t, mpt2, "123467", "12346")
+	doStrValInsert(t, mpt2, "02", "2")
 	err := mpt2.Iterate(context.TODO(), iterStrPathHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
-	doStrValInsert(t, mpt2, "123", "123")
-	doStrValInsert(t, mpt2, "22345", "22345")
-	doStrValInsert(t, mpt2, "22346", "22346")
-	doStrValInsert(t, mpt2, "22347", "22347")
+	doStrValInsert(t, mpt2, "1234", "123")
+	doStrValInsert(t, mpt2, "223456", "22345")
+	doStrValInsert(t, mpt2, "223467", "22346")
+	doStrValInsert(t, mpt2, "223478", "22347")
 	doStrValInsert(t, mpt2, "23", "23")
-	doStrValInsert(t, mpt2, "12345", "12345.1")
+	doStrValInsert(t, mpt2, "123456", "12345.1")
 	doStrValInsert(t, mpt2, "2234", "2234")
 	doStrValInsert(t, mpt2, "22", "22")
 }
@@ -454,42 +453,42 @@ func TestMPTDelete(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "12345", "12345")
-	doStrValInsert(t, mpt2, "22345", "22345")
+	doStrValInsert(t, mpt2, "123456", "12345")
+	doStrValInsert(t, mpt2, "223456", "22345")
 
-	doStrValInsert(t, mpt2, "123", "123")
-	doStrValInsert(t, mpt2, "124", "124")
+	doStrValInsert(t, mpt2, "1234", "123")
+	doStrValInsert(t, mpt2, "1245", "124")
 
 	doStrValInsert(t, mpt2, "12", "12")
-	doStrValInsert(t, mpt2, "34567", "34567")
-	doStrValInsert(t, mpt2, "34577", "34577")
+	doStrValInsert(t, mpt2, "345678", "34567")
+	doStrValInsert(t, mpt2, "345778", "34577")
 
 	doStrValInsert(t, mpt2, "412345", "412345")
-	doStrValInsert(t, mpt2, "42234", "42234")
+	doStrValInsert(t, mpt2, "4223", "42234")
 	doStrValInsert(t, mpt2, "412346", "412346")
 	doStrValInsert(t, mpt2, "513346", "513346")
 
 	doStrValInsert(t, mpt2, "512345", "512345")
-	doStrValInsert(t, mpt2, "52234", "52234")
+	doStrValInsert(t, mpt2, "5223", "52234")
 	doStrValInsert(t, mpt2, "512346", "512346")
 
 	doStrValInsert(t, mpt2, "612345", "612345")
 	doStrValInsert(t, mpt2, "612512", "612512")
 	doStrValInsert(t, mpt2, "612522", "612522")
 
-	doDelete(t, mpt2, "12345", nil)
+	doDelete(t, mpt2, "123456", nil)
 	doDelete(t, mpt2, "12", nil)
-	doDelete(t, mpt2, "34577", nil)
-	doDelete(t, mpt2, "124", nil)
+	doDelete(t, mpt2, "345778", nil)
+	doDelete(t, mpt2, "1245", nil)
 
 	// lift up
-	doDelete(t, mpt2, "42234", nil)
-	doDelete(t, mpt2, "52234", nil)
+	doDelete(t, mpt2, "4223", nil)
+	doDelete(t, mpt2, "5223", nil)
 	doStrValInsert(t, mpt2, "612345", "")
 
 	// delete not existent node
-	doDelete(t, mpt2, "abcdef123", ErrNodeNotFound)
-	doDelete(t, mpt2, "6125123", ErrNodeNotFound)
+	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound)
+	doDelete(t, mpt2, "61251234", ErrNodeNotFound)
 	doDelete(t, mpt2, "613512", ErrNodeNotFound)
 }
 
@@ -499,40 +498,43 @@ func TestMPTUniverse(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "1234513", "earth")
-	doStrValInsert(t, mpt2, "123451478", "mars")
-	doStrValInsert(t, mpt2, "123451", "mercury")
-	doStrValInsert(t, mpt2, "123455", "jupiter")
-	doStrValInsert(t, mpt2, "12345", "sun")
-	doStrValInsert(t, mpt2, "12345131131", "moon")
+	doStrValInsert(t, mpt2, "01234513", "earth")
+	doStrValInsert(t, mpt2, "0123451478", "mars")
+	doStrValInsert(t, mpt2, "01234512", "mercury")
+	doStrValInsert(t, mpt2, "01234551", "jupiter")
+	doStrValInsert(t, mpt2, "012345", "sun")
+	doStrValInsert(t, mpt2, "012345131131", "moon")
 
 	// Add a bunch of child nodes to existing full node
-	doStrValInsert(t, mpt2, "123456", "saturn")
-	doStrValInsert(t, mpt2, "123457", "uranus")
-	doStrValInsert(t, mpt2, "123458", "neptune")
-	doStrValInsert(t, mpt2, "123459", "pluto")
+	doStrValInsert(t, mpt2, "01234567", "saturn")
+	doStrValInsert(t, mpt2, "01234578", "uranus")
+	doStrValInsert(t, mpt2, "01234589", "neptune")
+	doStrValInsert(t, mpt2, "01234590", "pluto")
 
-	doStrValInsert(t, mpt2, "123459", "dwarf planet")
-	doStrValInsert(t, mpt2, "1234513", "green earth and ham")
-	doStrValInsert(t, mpt2, "1234514781", "phobos")
-	doStrValInsert(t, mpt2, "1234556", "europa")
-	doStrValInsert(t, mpt2, "123452", "venus")
-	doStrValInsert(t, mpt2, "123", "world")
+	doStrValInsert(t, mpt2, "01234590", "dwarf planet")
+	doStrValInsert(t, mpt2, "01234513", "green earth and ham")
+	doStrValInsert(t, mpt2, "012345147812", "phobos")
+	doStrValInsert(t, mpt2, "0123455167", "europa")
+	doStrValInsert(t, mpt2, "01234523", "venus")
+	doStrValInsert(t, mpt2, "0123", "world")
 
 	mpt.ResetChangeCollector(mpt.GetRoot()) // adding a new change collector so there are changes with old nodes that are not nil
 
-	doStrValInsert(t, mpt2, "12346", "proxima centauri")
-	doStrValInsert(t, mpt2, "1", "hello")
+	doStrValInsert(t, mpt2, "012346", "proxima centauri")
+	doStrValInsert(t, mpt2, "01", "hello")
 
 	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	key, err := hex.DecodeString("aabaed5911cb89fe95680df9f42e07c5bb147fc7a742bde7cb5be62419eb41bf")
+	key, err := hex.DecodeString("14e6f2fd08c3ba3bc816d16d6af63965e5d82eb7db22761d67b8d63a4e21f1f4")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	mpt2.PrettyPrint(os.Stdout)
+
 	err = mpt2.IterateFrom(context.TODO(), key, iterHandler(),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
@@ -609,7 +611,7 @@ func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
 
 	newRoot, err := mpt.Delete([]byte(key))
 	if err != expErr {
-		t.Error(err)
+		t.Fatalf("expect err: %v, got err: %v", expErr, err)
 		return
 	}
 	mpt.SetRoot(newRoot)
@@ -625,25 +627,25 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "223456789", "mercury")
+	doStrValInsert(t, mpt2, "22345678", "mercury")
 	doStrValInsert(t, mpt2, "1235", "venus")
-	doStrValInsert(t, mpt2, "123458970", "earth")
-	doStrValInsert(t, mpt2, "123459012", "mars")
-	doStrValInsert(t, mpt2, "123459013", "jupiter")
-	doStrValInsert(t, mpt2, "123459023", "saturn")
-	doStrValInsert(t, mpt2, "123459024", "uranus")
+	doStrValInsert(t, mpt2, "1234589701", "earth")
+	doStrValInsert(t, mpt2, "1234590121", "mars")
+	doStrValInsert(t, mpt2, "1234590131", "jupiter")
+	doStrValInsert(t, mpt2, "1234590231", "saturn")
+	doStrValInsert(t, mpt2, "1234590241", "uranus")
 
 	doDelete(t, mpt2, "1235", nil)
 	doStrValInsert(t, mpt2, "1235", "venus")
 	doDelete(t, mpt2, "1235", nil)
-	doStrValInsert(t, mpt2, "12345903", "neptune")
+	doStrValInsert(t, mpt2, "1234590341", "neptune")
 
 	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = mpt2.GetNodeValue(Path("123458970"))
+	_, err = mpt2.GetNodeValue(Path("1234589701"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -655,14 +657,14 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
-	doStrValInsert(t, mpt2, "123456781", "x")
-	doStrValInsert(t, mpt2, "123456782", "y")
+	doStrValInsert(t, mpt2, "1234567812", "x")
+	doStrValInsert(t, mpt2, "1234567822", "y")
 	//doStrValInsert(t,"setup data", mpt2, "123556782", "z")
 
-	doStrValInsert(t, mpt2, "223456781", "x")
-	doStrValInsert(t, mpt2, "223456782", "y")
+	doStrValInsert(t, mpt2, "2234567812", "x")
+	doStrValInsert(t, mpt2, "2234567822", "y")
 
-	doStrValInsert(t, mpt2, "223456782", "a")
+	doStrValInsert(t, mpt2, "2234567822", "a")
 	//doStrValInsert(t,"setup data", mpt2, "223556782", "b")
 
 	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
@@ -1127,7 +1129,7 @@ func TestMerklePatriciaTrie_getPathNodes(t *testing.T) {
 	keyFn1 := Key(fn1.GetHash())
 	fn1.Children[0] = NewFullNode(&SecureSerializableValue{Buffer: []byte("children data")}).Encode()
 
-	ln := NewLeafNode(Path("path"), 0, &SecureSerializableValue{Buffer: []byte("ln data")})
+	ln := NewLeafNode(Path(""), Path("path"), 0, &SecureSerializableValue{Buffer: []byte("ln data")})
 	keyLn := Key(ln.GetHash())
 
 	keyEn := Key("key")
@@ -1357,9 +1359,10 @@ func TestMerklePatriciaTrie_insert(t *testing.T) {
 		Version         Sequence
 	}
 	type args struct {
-		value Serializable
-		key   Key
-		path  Path
+		value  Serializable
+		key    Key
+		prefix Path
+		path   Path
 	}
 	tests := []struct {
 		name    string
@@ -1387,7 +1390,7 @@ func TestMerklePatriciaTrie_insert(t *testing.T) {
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			got, got1, err := mpt.insert(tt.args.value, tt.args.key, tt.args.path)
+			got, got1, err := mpt.insert(tt.args.value, tt.args.key, tt.args.prefix, tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("insert() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1419,9 +1422,10 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 		Version         Sequence
 	}
 	type args struct {
-		value Serializable
-		node  Node
-		path  Path
+		value  Serializable
+		node   Node
+		prefix Path
+		path   Path
 	}
 	tests := []struct {
 		name    string
@@ -1444,7 +1448,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 			name:   "Test_MerklePatriciaTrie_insertAtNode_Leaf_Node_ERR",
 			fields: fields{mutex: &sync.RWMutex{}, db: db},
 			args: args{
-				node: NewLeafNode(Path(""), 0, &SecureSerializableValue{}),
+				node: NewLeafNode(Path(""), Path(""), 0, &SecureSerializableValue{}),
 				path: Path("01"),
 			},
 			wantErr: true,
@@ -1453,7 +1457,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 			name:   "Test_MerklePatriciaTrie_insertAtNode_Leaf_Node_ERR2",
 			fields: fields{mutex: &sync.RWMutex{}, db: db},
 			args: args{
-				node: NewLeafNode(path, 0, &SecureSerializableValue{}),
+				node: NewLeafNode(Path(""), path, 0, &SecureSerializableValue{}),
 				path: append(path, []byte("123")...),
 			},
 			wantErr: true,
@@ -1462,7 +1466,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 			name:   "Test_MerklePatriciaTrie_insertAtNode_Leaf_Node_ERR3",
 			fields: fields{mutex: &sync.RWMutex{}, db: db},
 			args: args{
-				node: NewLeafNode(append(path, []byte("098")...), 0, &SecureSerializableValue{}),
+				node: NewLeafNode(Path(""), append(path, []byte("098")...), 0, &SecureSerializableValue{}),
 				path: append(path, []byte("123")...),
 			},
 			wantErr: true,
@@ -1471,7 +1475,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 			name:   "Test_MerklePatriciaTrie_insertAtNode_Leaf_Node_ERR4",
 			fields: fields{mutex: &sync.RWMutex{}, db: db},
 			args: args{
-				node: NewLeafNode(append(path, []byte("098")...), 0, &SecureSerializableValue{}),
+				node: NewLeafNode(Path(""), append(path, []byte("098")...), 0, &SecureSerializableValue{}),
 				path: path,
 			},
 			wantErr: true,
@@ -1531,7 +1535,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			got, got1, err := mpt.insertAtNode(tt.args.value, tt.args.node, tt.args.path)
+			got, got1, err := mpt.insertAtNode(tt.args.value, tt.args.node, tt.args.prefix, tt.args.path)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("insertAtNode() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1989,4 +1993,43 @@ func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMPTInsertABC(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert(t, mpt2, "12345897", "earth")
+	doStrValInsert(t, mpt2, "1234", "mars")
+	doStrValInsert(t, mpt2, "1234", "mars")
+}
+
+func TestMPTDeleteSameEndingPathNode(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert(t, mpt2, "1245", "1234")
+	doStrValInsert(t, mpt2, "12", "12")
+	doStrValInsert(t, mpt2, "2345", "1234")
+	doStrValInsert(t, mpt2, "23", "23")
+
+	doDelete(t, mpt2, "1245", nil)
+	doDelete(t, mpt2, "2345", nil)
+}
+func TestMPTFullToLeafNodeDelete(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert(t, mpt2, "1245", "1234")
+	doStrValInsert(t, mpt2, "12", "12")
+	doStrValInsert(t, mpt2, "2345", "1234")
+	doStrValInsert(t, mpt2, "23", "23")
+
+	doDelete(t, mpt2, "1245", nil)
 }

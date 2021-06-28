@@ -164,7 +164,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 		// so, transaction sent, let's verify it
 
-		if !sc.ConfirmTransaction(txn) {
+		if !sc.ConfirmTransaction(ctx, txn) {
 			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
 				"to confirm transaction", zap.Any("txn", txn))
 			continue

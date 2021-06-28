@@ -55,7 +55,7 @@ func (mc *Chain) SetupSC(ctx context.Context) {
 					return
 				}
 
-				if txn != nil && mc.ConfirmTransaction(txn) {
+				if txn != nil && mc.ConfirmTransaction(ctx, txn) {
 					logging.Logger.Debug("Register node transaction confirmed")
 					return
 				}

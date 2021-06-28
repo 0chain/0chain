@@ -327,7 +327,7 @@ func TestExtensionNode_Decode(t *testing.T) {
 func TestGetValueNode(t *testing.T) {
 	t.Parallel()
 
-	ln := NewLeafNode(nil, 0, NewValueNode())
+	ln := NewLeafNode(Path(""), nil, 0, NewValueNode())
 	fn := NewFullNode(NewValueNode())
 
 	type args struct {
