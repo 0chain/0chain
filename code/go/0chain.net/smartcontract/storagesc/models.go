@@ -589,6 +589,8 @@ type StorageAllocation struct {
 	// TimeUnit configured in Storage SC when the allocation created. It can't
 	// be changed for this allocation anymore. Even using expire allocation.
 	TimeUnit time.Duration `json:"time_unit"`
+
+	Curators []string `json:"curators"`
 }
 
 // The restMinLockDemand returns number of tokens required as min_lock_demand;

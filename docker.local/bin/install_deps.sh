@@ -3,7 +3,7 @@ set -e
 
 go_mod=$1
 
-echo Building dependencies from $go_mod
+echo Building dependencies from "$go_mod"
 
 deps="$( \
         cat $go_mod | \
@@ -14,5 +14,5 @@ deps="$( \
       )"
 #echo Deps are "$deps"
 
-cd $(dirname $go_mod)
-go get -v -tags bn256 $deps
+cd "$(dirname "$go_mod")"
+go get -v -tags bn256 "$deps"

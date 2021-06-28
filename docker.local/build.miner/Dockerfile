@@ -1,0 +1,35 @@
+# Compile the miner in an un-tagged image so the final, tagged image can be smaller:
+FROM zchain_build_base as miner_build
+ENV SRC_DIR=/0chain
+ENV GO111MODULE=on
+
+# Download the dependencies:
+# Will be cached if we don't change mod/sum files
+COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
+RUN cd $SRC_DIR/go/0chain.net && \
+    go mod download
+WORKDIR $SRC_DIR/go/0chain.net/miner/miner
+
+# Build libzstd:
+# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+# FIXME: Also, is there a way we can move this to zchain_build_base?
+RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+    chmod -R +w . && \
+    make clean libzstd.a
+
+# Build it:
+ARG GIT_COMMIT
+ARG DEV
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN if [ "$DEV" = "yes" ] ;\
+    then echo "Artifacts will be copied from local machine";\
+    else go build -v -tags "bn256 development" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" ;\
+fi
+
+# Copy the build artifact into a minimal runtime image:
+FROM zchain_run_base
+ENV APP_DIR=/0chain
+WORKDIR $APP_DIR
+
+COPY --from=miner_build $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner

@@ -23,7 +23,7 @@ type RoundI interface {
 	AddProposedBlock(b *block.Block) (*block.Block, bool)
 	GetProposedBlocks() []*block.Block
 
-	AddNotarizedBlock(b *block.Block) (*block.Block, bool)
+	AddNotarizedBlock(b *block.Block) (*block.Block, bool, error)
 	GetNotarizedBlocks() []*block.Block
 	GetHeaviestNotarizedBlock() *block.Block
 	GetBestRankedNotarizedBlock() *block.Block

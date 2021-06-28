@@ -121,7 +121,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 				cp.Balance, oneReward)
 		}
 		var oneMove state.Balance
-		oneMove, err = moveReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
+		oneMove, err = transferReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
 		sp.Rewards.Validator += oneMove
 		if err != nil {
 			return 0, fmt.Errorf("moving to validator %s: %v",
