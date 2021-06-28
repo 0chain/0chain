@@ -1,7 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/mock"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,14 +21,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-//
-// use:
-//
-//      go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
-//
-// to test and generate coverage html page
-//
 
 func TestStorageSmartContract_getAllocation(t *testing.T) {
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
@@ -53,6 +50,260 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	got, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, alloc.Encode(), got.Encode())
+}
+
+func TestAddCurator(t *testing.T) {
+	t.Parallel()
+	const (
+		mockClientId     = "mock client id"
+		mockCuratorId    = "mock curator id"
+		mockAllocationId = "mock allocation id"
+	)
+	type args struct {
+		ssc      *StorageSmartContract
+		txn      *transaction.Transaction
+		input    []byte
+		balances chainState.StateContextI
+	}
+	type parameters struct {
+		clientId         string
+		info             addCuratorInput
+		existingCurators []string
+	}
+	type want struct {
+		err    bool
+		errMsg string
+	}
+	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
+		var balances = &mocks.StateContextI{}
+		var txn = &transaction.Transaction{
+			ClientID: p.clientId,
+		}
+		var ssc = &StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		input, err := json.Marshal(p.info)
+		require.NoError(t, err)
+
+		var sa = StorageAllocation{
+			ID:    p.info.AllocationId,
+			Owner: p.clientId,
+		}
+		for _, curator := range p.existingCurators {
+			sa.Curators = append(sa.Curators, curator)
+		}
+		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
+
+		balances.On(
+			"InsertTrieNode",
+			sa.GetKey(ssc.ID),
+			mock.MatchedBy(func(sa *StorageAllocation) bool {
+				if len(sa.Curators) < 1 {
+					return false
+				}
+				for i, curator := range p.existingCurators {
+					if curator != sa.Curators[i] {
+						return false
+					}
+				}
+				if p.info.CuratorId != sa.Curators[len(sa.Curators)-1] {
+					return false
+				}
+				return sa.ID == p.info.AllocationId && sa.Owner == p.clientId
+			})).Return("", nil).Once()
+
+		return args{ssc, txn, input, balances}
+	}
+
+	testCases := []struct {
+		name       string
+		parameters parameters
+		want       want
+	}{
+		{
+			name: "ok",
+			parameters: parameters{
+				clientId: mockClientId,
+				info: addCuratorInput{
+					CuratorId:    mockCuratorId,
+					AllocationId: mockAllocationId,
+				},
+			},
+		},
+	}
+	for _, test := range testCases {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			args := setExpectations(t, test.name, test.parameters, test.want)
+
+			err := args.ssc.addCurator(args.txn, args.input, args.balances)
+
+			require.EqualValues(t, test.want.err, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.errMsg, err.Error())
+				return
+			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
+		})
+	}
+}
+
+func TestTransferAllocation(t *testing.T) {
+	t.Parallel()
+	const (
+		mockNewOwnerId        = "mock new owner id"
+		mockNewOwnerPublicKey = "mock new owner public key"
+		mockCuratorId         = "mock curator id"
+		mockAllocationId      = "mock allocation id"
+		mockNotAllocationId   = "mock not allocation id"
+	)
+	type args struct {
+		ssc      *StorageSmartContract
+		txn      *transaction.Transaction
+		input    []byte
+		balances chainState.StateContextI
+	}
+	type parameters struct {
+		curator                 string
+		info                    transferAllocationInput
+		existingCurators        []string
+		existingWPForAllocation bool
+		existingNoiseWPools     int
+	}
+	type want struct {
+		err    bool
+		errMsg string
+	}
+	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
+		var balances = &mocks.StateContextI{}
+		var txn = &transaction.Transaction{
+			ClientID: p.curator,
+		}
+		var ssc = &StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		input, err := json.Marshal(p.info)
+		require.NoError(t, err)
+
+		var sa = StorageAllocation{
+			ID: p.info.AllocationId,
+		}
+		for _, curator := range p.existingCurators {
+			sa.Curators = append(sa.Curators, curator)
+		}
+		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
+
+		var wp writePool
+		if p.existingWPForAllocation || p.existingNoiseWPools > 0 {
+			for i := 0; i < p.existingNoiseWPools; i++ {
+				wp.Pools.add(&allocationPool{AllocationID: mockNotAllocationId + strconv.Itoa(i)})
+			}
+			if p.existingWPForAllocation {
+				wp.Pools.add(&allocationPool{AllocationID: p.info.AllocationId})
+			}
+			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(&wp, nil).Twice()
+		} else {
+			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(
+				nil, util.ErrValueNotPresent).Twice()
+		}
+
+		balances.On(
+			"InsertTrieNode",
+			writePoolKey(ssc.ID, p.info.NewOwnerId),
+			mock.MatchedBy(func(wp *writePool) bool {
+				if p.existingNoiseWPools+1 != len(wp.Pools) {
+					return false
+				}
+				_, ok := wp.Pools.get(p.info.AllocationId)
+				return ok
+
+			})).Return("", nil).Once()
+
+		balances.On(
+			"InsertTrieNode",
+			sa.GetKey(ssc.ID),
+			mock.MatchedBy(func(sa *StorageAllocation) bool {
+				for i, curator := range p.existingCurators {
+					if sa.Curators[i] != curator {
+						return false
+					}
+				}
+				return sa.ID == p.info.AllocationId &&
+					sa.Owner == p.info.NewOwnerId &&
+					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
+			})).Return("", nil).Once()
+
+		return args{ssc, txn, input, balances}
+	}
+
+	testCases := []struct {
+		name       string
+		parameters parameters
+		want       want
+	}{
+		{
+			name: "ok",
+			parameters: parameters{
+				curator: mockCuratorId,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     3,
+				existingWPForAllocation: false,
+			},
+		},
+		{
+			name: "ok",
+			parameters: parameters{
+				curator: mockCuratorId,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     0,
+				existingWPForAllocation: false,
+			},
+		},
+		{
+			name: "Err_not_curator",
+			parameters: parameters{
+				curator: mockCuratorId,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators: []string{"not mock curator"},
+			},
+			want: want{
+				err:    true,
+				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+			},
+		},
+	}
+	for _, test := range testCases {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			args := setExpectations(t, test.name, test.parameters, test.want)
+
+			resp, err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
+
+			require.EqualValues(t, test.want.err, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.errMsg, err.Error())
+				return
+			}
+			require.EqualValues(t, args.txn.Hash, resp)
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
+		})
+	}
 }
 
 func isEqualStrings(a, b []string) (eq bool) {
@@ -393,7 +644,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	tx.Value = 400
 	resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
-	requireErrMsg(t, err, errMsg9)
+	//	requireErrMsg(t, err, errMsg9)
 
 	// 10. ok
 

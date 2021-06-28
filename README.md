@@ -46,6 +46,8 @@ $ ./docker.local/bin/setup_network.sh
 
 1.1) First build the base containers, zchain_build_base and zchain_run_base
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
 $ ./docker.local/bin/build.base.sh
 ```
@@ -54,11 +56,15 @@ $ ./docker.local/bin/build.base.sh
 
 2.1) To build the miner containers
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
 $ ./docker.local/bin/build.miners.sh
 ```
 
 2.2) To build the sharder containers
+
+Use **-m1** flag to build for Apple m1 chip
 
 ```
 $ ./docker.local/bin/build.sharders.sh
@@ -303,6 +309,8 @@ The list of packages is optional, and if provided runs only the tests from those
 ## Creating The Magic Block
 
 First build the magic block image.
+
+Use **-m1** flag to build for Apple m1 chip
 
 ```
 $ ./docker.local/bin/build.magic_block.sh
