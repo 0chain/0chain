@@ -220,23 +220,36 @@ func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	return
 }
 
-func (wp *writePool) fill(t *transaction.Transaction, alloc *StorageAllocation,
-	until common.Timestamp, balances chainState.StateContextI,
-) (resp string, err error) {
-	if err = checkFill(t, balances); err != nil {
-		return
+func (wp *writePool) fill(
+	t *transaction.Transaction,
+	alloc *StorageAllocation,
+	until common.Timestamp,
+	mintNewTokens bool,
+	balances chainState.StateContextI,
+) (
+	resp string, err error) {
+
+	if !mintNewTokens {
+		if err = checkFill(t, balances); err != nil {
+			return
+		}
 	}
 
-	var (
-		ap       allocationPool
-		transfer *state.Transfer
-	)
+	var ap allocationPool
+	var transfer *state.Transfer
 	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
 		return "", fmt.Errorf("digging write pool: %v", err)
 	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", fmt.Errorf("adding transfer to write pool: %v", err)
+	if mintNewTokens {
+		balances.AddMint(&state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: ADDRESS,
+			Amount:     state.Balance(t.Value),
+		})
+	} else {
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", fmt.Errorf("adding transfer to write pool: %v", err)
+		}
 	}
 
 	// set fields
@@ -332,9 +345,12 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	return
 }
 
-func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
-	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
-
+func (ssc *StorageSmartContract) createWritePool(
+	t *transaction.Transaction,
+	alloc *StorageAllocation,
+	mintNewTokens bool,
+	balances chainState.StateContextI,
+) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
@@ -354,7 +370,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 
 	if t.Value > 0 {
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, mintNewTokens, balances); err != nil {
 			return
 		}
 	}

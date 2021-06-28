@@ -61,7 +61,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
 	ssc.SmartContractExecutionStats["cancel_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cancel_allocation"), nil)
-
+	ssc.SmartContractExecutionStats["free_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "free_allocation_request"), nil)
+	ssc.SmartContractExecutionStats["free_update_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_free_storage"), nil)
 	ssc.SmartContractExecutionStats["add_curator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_curator"), nil)
 	ssc.SmartContractExecutionStats["curator_transfer_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "curator_transfer_allocation"), nil)
 	// challenge
@@ -210,6 +211,15 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "cancel_allocation":
 		resp, err = sc.cancelAllocationRequest(t, input, balances)
 
+	// free allocations
+
+	case "add_free_storage_assigner":
+		err = sc.addFreeStorageAssigner(t, input, balances)
+	case "free_allocation_request":
+		resp, err = sc.freeAllocationRequest(t, input, balances)
+	case "free_update_allocation":
+		resp, err = sc.updateFreeStorageRequest(t, input, balances)
+
 	case "add_curator":
 		resp, err = "", sc.addCurator(t, input, balances)
 	case "curator_transfer_allocation":
@@ -218,7 +228,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// blobbers
 
 	case "add_blobber":
-		resp, err = sc.addBlobber(t, input, balances) // add or update
+		resp, err = sc.addBlobber(t, input, balances)
 	case "add_validator":
 		resp, err = sc.addValidator(t, input, balances)
 	case "blobber_health_check":
