@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 
@@ -265,7 +266,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		etxns = etxns[:blockSize]
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processFeeTxn(ctx, b, clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DevConfiguration.IsBlockRewards {
+		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
 		if err != nil {
 			return err
 		}

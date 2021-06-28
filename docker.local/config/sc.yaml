@@ -146,7 +146,14 @@ smart_contracts:
     # goes to blobber's delegate wallets, other part goes to related stake
     # holders
     max_charge: 0.50
-
+    # reward paid out every block
+    block_reward:
+      block_reward: 1
+      qualifying_stake: 1
+      sharder_ratio: 80
+      miner_ratio: 20
+      blobber_capacity_ratio: 20
+      blobber_usage_ratio: 80
   vestingsc:
     min_lock: 0.01
     min_duration: '2m'
