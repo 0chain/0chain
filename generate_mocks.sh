@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# This files needs to be run from the ./code/go directory
+# cd ./code/go && ../../generate_mocks.sh
 
 BASEDIR=$(pwd)
 
@@ -21,8 +23,5 @@ mockery --output=../sharder/mocks --all
 
 cd $BASEDIR/0chain.net/smartcontract || exit
 mockery --output=../smartcontract/mocks --all
-
-cd $BASEDIR/0chain.net/chaincore/chain/state || exit
-mockery --name=StateContextI --output=../../../mocks --filename=state-context-i.go
 
 echo "Mocks files are generated."
