@@ -333,19 +333,18 @@ func (ssc *StorageSmartContract) createWritePool(
 func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
-	// configs
-
 	var conf *writePoolConfig
 	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			"can't get configs: "+err.Error())
 	}
 
-	// user write pools
-
 	var wp *writePool
 	if wp, err = ssc.getWritePool(t.ClientID, balances); err != nil {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("write_pool_lock_failed", err.Error())
+		}
+		wp = new(writePool)
 	}
 
 	// lock request & user balance
