@@ -11,10 +11,59 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/mocks"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
 	SetupStateChange(memorystore.GetStorageProvider())
+}
+
+func newBSC(state util.MerklePatriciaTrieI) *StateChange {
+	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
+	bsc.Hash = state.GetRoot()
+	changes := state.GetChangeCollector().GetChanges()
+	bsc.Nodes = make([]util.Node, len(changes))
+	for idx, change := range changes {
+		bsc.Nodes[idx] = change.New
+	}
+	bsc.ComputeProperties()
+	return bsc
+}
+
+func TestStateChangeComputeRoot(t *testing.T) {
+	initPathValues := [][]string{
+		{"1234", "1234"},
+		{"12", "12"},
+		{"1235", "1235"},
+		{"123", "123"},
+	}
+
+	newPathValues := [][]string{
+		{"12345", "12345"},
+		{"1235", "1235A"},
+	}
+
+	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	for _, pv := range initPathValues {
+		_, err := clientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
+		require.NoError(t, err)
+	}
+
+	clientState.ChangeCollector.GetChanges()
+	clientState.GetRoot()
+	bsc := newBSC(clientState)
+	require.Equal(t, bsc.GetRoot().GetHash(), util.ToHex(clientState.GetRoot()))
+
+	// apply new updates
+	newClientState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2)
+	for _, pv := range newPathValues {
+		_, err := newClientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
+		require.NoError(t, err)
+	}
+
+	bsc = newBSC(newClientState)
+	require.Equal(t, bsc.GetRoot().GetHash(), util.ToHex(newClientState.GetRoot()))
+
 }
 
 func TestNewBlockStateChange(t *testing.T) {
