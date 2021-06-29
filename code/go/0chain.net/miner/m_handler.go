@@ -347,7 +347,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 		return nil, err
 	}
 
-	if !b.IsStateComputed() {
+	if b.GetStateStatus() != block.StateSuccessful {
 		return nil, common.NewError("state_not_verified",
 			"state is not computed and validated locally")
 	}
@@ -358,6 +358,15 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 			zap.String("block", b.Hash),
 			zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())),
 			zap.Int("sc_nodes", len(bsc.Nodes)))
+	}
+
+	//if len(bsc.Nodes) == 0 {
+	//	logging.Logger.Debug("get state changes - no changes", zap.Int64("round", b.Round))
+	if bsc.GetRoot() == nil {
+		cr := GetMinerChain().GetCurrentRound()
+		logging.Logger.Debug("get state changes - state nil root",
+			zap.Int64("round", b.Round),
+			zap.Int64("current_round", cr))
 	}
 
 	return bsc, nil
