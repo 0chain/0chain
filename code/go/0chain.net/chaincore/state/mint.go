@@ -9,7 +9,6 @@ import (
 
 var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")
 
-// Mint Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {
 	Minter     datastore.Key `json:"minter"`
 	ToClientID datastore.Key `json:"to"`
