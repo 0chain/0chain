@@ -22,8 +22,8 @@ import (
 )
 
 var (
-	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "Block hash mismatch")
-	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
+	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "block hash mismatch")
+	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "block state hash mismatch")
 )
 
 const (

@@ -744,19 +744,23 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if err != nil {
 			b.SetBlockState(block.StateVerificationFailed)
 			minerStats.VerificationFailures++
-			if cerr, ok := err.(*common.Error); ok {
-				if cerr.Code == RoundMismatch {
-					logging.Logger.Debug("verify round block",
-						zap.Any("round", r.Number), zap.Any("block", b.Hash),
-						zap.Any("current_round", mc.GetCurrentRound()))
+			switch err {
+			case context.Canceled:
+			default:
+				if cerr, ok := err.(*common.Error); ok {
+					if cerr.Code == RoundMismatch {
+						logging.Logger.Debug("verify round block",
+							zap.Any("round", r.Number), zap.Any("block", b.Hash),
+							zap.Any("current_round", mc.GetCurrentRound()))
+					} else {
+						logging.Logger.Error("verify round block",
+							zap.Any("round", r.Number), zap.Any("block", b.Hash),
+							zap.Error(err))
+					}
 				} else {
-					logging.Logger.Error("verify round block",
-						zap.Any("round", r.Number), zap.Any("block", b.Hash),
-						zap.Error(err))
+					logging.Logger.Error("verify round block", zap.Any("round", r.Number),
+						zap.Any("block", b.Hash), zap.Error(err))
 				}
-			} else {
-				logging.Logger.Error("verify round block", zap.Any("round", r.Number),
-					zap.Any("block", b.Hash), zap.Error(err))
 			}
 			return false
 		}
@@ -1688,7 +1692,7 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		err    error
 	)
 	if latest, err = LoadLatestMB(ctx); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- loading the latest MB",
+		logging.Logger.Error("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue
 	}
