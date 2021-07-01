@@ -3434,29 +3434,29 @@ tests:
           expect_magic_block:
             number: 3 # round 600
       - wait_view_change:
-          timeout: "5m"
+          timeout: "8m"
           expect_magic_block:
             number: 4 # round 850
       - wait_view_change:
-          timeout: "5m"
+          timeout: "8m"
           expect_magic_block:
             number: 5 # round 1100
             sharders: ["sharder-1", "sharder-2"]
             miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - start: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # c
       - wait_view_change:
-          timeout: "5m"
+          timeout: "8m"
           expect_magic_block:
             number: 6 # intermediate
       - wait_view_change:
-          timeout: "5m"
+          timeout: "8m"
           expect_magic_block:
             number: 7 # round ?
             sharders_count: 3
             miners_count: 6
       - stop: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # d drop 3 miners and 2 sharders
       - wait_view_change:
-          timeout: "5m"
+          timeout: "8m"
           expect_magic_block:
             number: 8
             sharders: ["sharder-1", "sharder-2"]
