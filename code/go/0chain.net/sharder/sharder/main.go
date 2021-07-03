@@ -256,9 +256,9 @@ func main() {
 	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
-	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
+	initWorkers(ctx)
 
 	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 		Logger.Fatal("update LFMB from sharders", zap.Error(err))

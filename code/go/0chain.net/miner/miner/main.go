@@ -201,10 +201,10 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
-	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)
