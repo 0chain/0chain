@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -113,6 +114,26 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		log.Print(n.Name, " stopped")
 	}
 	return
+}
+
+//
+// checks
+//
+
+func (r *Runner) ExpectActiveSet(emb config.ExpectMagicBlock) (
+	err error) {
+
+	if r.verbose {
+		log.Print(" [INF] checking the active set ")
+	}
+	if r.lastVC == nil {
+		return errors.New("no VC info yet!")
+	}
+	err = r.checkMagicBlock(&emb, r.lastVC)
+	if err == nil {
+		log.Println("[OK] active set")
+	}
+	return err
 }
 
 //

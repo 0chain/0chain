@@ -35,11 +35,20 @@ func init() {
 
 // type aliases
 type (
-	NodeID    = config.NodeID
-	NodeName  = config.NodeName
-	Round     = config.Round
-	RoundName = config.RoundName
+	NodeID           = config.NodeID
+	NodeName         = config.NodeName
+	Round            = config.Round
+	RoundName        = config.RoundName
+	Number           = config.Number
+	ExpectMagicBlock = config.ExpectMagicBlock
 )
+
+type VCInfo struct {
+	MagicBlockNumber Number
+	Round            Round
+	Miners           []NodeName
+	Sharders         []NodeName
+}
 
 func main() {
 	log.Print("start the conductor")
@@ -142,8 +151,8 @@ type Runner struct {
 
 	// state
 
-	lastVCRound Round // last view change round
-	lastRound   Round // last accepted round
+	lastVC    *VCInfo // last view change
+	lastRound Round   // last accepted round
 
 	// wait for
 	waitPhase              config.WaitPhase              //
@@ -268,6 +277,13 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		}
 	}
 
+	vci := VCInfo{
+		Round:            vce.Round,
+		MagicBlockNumber: vce.Number,
+		Miners:           vce.Miners,
+		Sharders:         vce.Sharders,
+	}
+
 	r.printViewChange(vce) // if verbose
 	if !r.conf.Nodes.Has(vce.Sender) {
 		return fmt.Errorf("unknown node %q sends view change", vce.Sender)
@@ -275,7 +291,7 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	log.Println("view change:", vce.Round, vce.Sender)
 	// don't wait a VC
 	if r.waitViewChange.IsZero() {
-		r.lastVCRound = vce.Round // keep last round number
+		r.lastVC = &vci
 		return
 	}
 	// remember the round
@@ -283,78 +299,78 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		log.Printf("[OK] remember round %q: %d", rrn, vce.Round)
 		r.rounds[r.waitViewChange.RememberRound] = vce.Round
 	}
-	var emb = r.waitViewChange.ExpectMagicBlock
+	err = r.checkMagicBlock(&r.waitViewChange.ExpectMagicBlock, &vci)
+
+	log.Println("[OK] view change", vce.Round)
+
+	r.lastVC = &vci
+	r.waitViewChange = config.WaitViewChange{} // reset
+	return
+}
+
+func (r *Runner) checkMagicBlock(emb *ExpectMagicBlock, vci *VCInfo) (err error) {
 	if emb.IsZero() {
-		r.lastVCRound = vce.Round                  // keep last round number
-		r.waitViewChange = config.WaitViewChange{} // reset
-		return                                     // nothing more is here
+		return // nothing more is here
 	}
 	if rnan := emb.RoundNextVCAfter; rnan != "" {
 		var rna, ok = r.rounds[rnan]
 		if !ok {
 			return fmt.Errorf("unknown round name: %q", rnan)
 		}
-		var vcr = vce.Round // VC round
+		var vcr = vci.Round // VC round
 		if vcr != r.conf.ViewChange+rna {
 			return fmt.Errorf("VC expected at %d, but given at %d",
 				r.conf.ViewChange+rna, vcr)
 		}
 		// ok, accept
-	} else if emb.Round != 0 && vce.Round != emb.Round {
+	} else if emb.Round != 0 && vci.Round != emb.Round {
 		return fmt.Errorf("VC expected at %d, but given at %d",
-			emb.Round, vce.Round)
-	} else if emb.Number != 0 && vce.Number != emb.Number {
+			emb.Round, vci.Round)
+	} else if emb.Number != 0 && vci.MagicBlockNumber != emb.Number {
 		return fmt.Errorf("VC expected with %d number, but given number is %d",
-			emb.Number, vce.Number)
+			emb.Number, vci.MagicBlockNumber)
 	}
 	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 && emb.Miners_Count == 0 && emb.Sharders_Count == 0 {
-		r.lastVCRound = vce.Round                  // keep the last VC round
-		r.waitViewChange = config.WaitViewChange{} // reset
-		return                                     // doesn't check MB for nodes
+		return // don't check MB for nodes
 	}
 	// check for nodes
 	var okm, oks bool
 	// check miners
 	if emb.Miners_Count > 0 && len(emb.Miners) == 0 {
 		// check count only
-		if okm = (emb.Miners_Count == len(vce.Miners)); !okm {
+		if okm = (emb.Miners_Count == len(vci.Miners)); !okm {
 			fmt.Println("[ERR] expected miners count:", emb.Miners_Count)
 			fmt.Println("[ERR] got miners")
-			r.printNodes(vce.Miners)
+			r.printNodes(vci.Miners)
 		}
 	} else {
-		if okm = isEqual(emb.Miners, vce.Miners); !okm {
+		if okm = isEqual(emb.Miners, vci.Miners); !okm {
 			fmt.Println("[ERR] expected miners list:")
 			r.printNodes(emb.Miners)
 			fmt.Println("[ERR] got miners")
-			r.printNodes(vce.Miners)
+			r.printNodes(vci.Miners)
 		}
 	}
 	// check sharders
 	if emb.Sharders_Count > 0 && len(emb.Sharders) == 0 {
 		// check count only
-		if oks = (emb.Sharders_Count == len(vce.Sharders)); !oks {
+		if oks = (emb.Sharders_Count == len(vci.Sharders)); !oks {
 			fmt.Println("[ERR] expected sharders count:", emb.Sharders_Count)
 			fmt.Println("[ERR] got sharders")
-			r.printNodes(vce.Sharders)
+			r.printNodes(vci.Sharders)
 		}
 	} else {
-		if oks = isEqual(emb.Sharders, vce.Sharders); !oks {
+		if oks = isEqual(emb.Sharders, vci.Sharders); !oks {
 			fmt.Println("[ERR] expected sharders list:")
 			r.printNodes(emb.Sharders)
 			fmt.Println("[ERR] got sharders")
-			r.printNodes(vce.Sharders)
+			r.printNodes(vci.Sharders)
 		}
 	}
 
 	if !okm || !oks {
 		return fmt.Errorf("unexpected MB miners/sharders (see logs)")
 	}
-
-	log.Println("[OK] view change", vce.Round)
-
-	r.lastVCRound = vce.Round                  // keep the last VC round
-	r.waitViewChange = config.WaitViewChange{} // reset
 	return
 }
 
@@ -378,17 +394,21 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		vcr Round
 		ok  bool
 	)
+	var lastVCRound Round = 0
+	if r.lastVC != nil {
+		lastVCRound = r.lastVC.Round
+	}
 	if vcrn := r.waitPhase.ViewChangeRound; vcrn != "" {
 		if vcr, ok = r.rounds[vcrn]; !ok {
 			return fmt.Errorf("unknown view_change_round of phase: %s", vcrn)
 		}
-		if vcr < r.lastVCRound {
+		if vcr < lastVCRound {
 			return // wait one more view change
 		}
-		if vcr >= r.lastVCRound+r.conf.ViewChange {
-			return fmt.Errorf("got phase %s, but after %s (%d) view change, "+
+		if vcr >= lastVCRound+r.conf.ViewChange {
+			log.Printf("got phase %s, but after %s (%d) view change, "+
 				"last known view change: %d", pe.Phase.String(), vcrn, vcr,
-				r.lastVCRound)
+				lastVCRound)
 		}
 		// ok, accept it
 	}
@@ -801,7 +821,7 @@ func (r *Runner) resetWaiters() {
 
 func (r *Runner) resetRounds() {
 	r.lastRound = 0
-	r.lastVCRound = 0
+	r.lastVC = nil
 }
 
 // Run the tests.
