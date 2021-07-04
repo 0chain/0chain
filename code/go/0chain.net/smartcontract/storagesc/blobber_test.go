@@ -58,6 +58,23 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var ab, ok = all.Nodes.get(b.ID)
 	require.True(t, ok)
 	require.NotNil(t, ab)
+
+	// update (incl. url)
+	const NEW_BASE_URL = "https://new-base-url.com"
+	b.BaseURL = NEW_BASE_URL
+	b.Capacity = b.Capacity * 2
+	tp += 100
+	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+	all, err = ssc.getBlobbersList(balances)
+	require.NoError(t, err)
+	require.Len(t, all.Nodes, 1)
+
+	ab, ok = all.Nodes.get(b.ID)
+	require.True(t, ok)
+	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
+	require.Equal(t, ab.Capacity, b.Capacity)
 }
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
@@ -99,6 +116,31 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(t, false)
+		tp       int64 = 100
+		blobbers *StorageNodes
+		err      error
+	)
+
+	setConfig(t, balances)
+
+	var blob = newClient(0, balances)
+	blob.terms = avgTerms
+	blob.cap = 2*GB
+
+	_, err = blob.callAddBlobber(t, ssc, tp, balances)
+	require.NoError(t, err)
+
+	_, err = blob.callAddBlobber(t, ssc, tp, balances)
+	require.NoError(t, err)
+
+	blobbers, err = ssc.getBlobbersList(balances)
+	require.Equal(t, 1, len(blobbers.Nodes))
+}
+
+func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
