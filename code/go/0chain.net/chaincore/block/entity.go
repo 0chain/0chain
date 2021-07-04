@@ -148,15 +148,15 @@ type Block struct {
 	PrevBlock   *Block        `json:"-"`
 
 	TxnsMap   map[string]bool `json:"-"`
-	mutexTxns *sync.RWMutex
+	mutexTxns sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
-	stateStatusMutex      *sync.RWMutex `json:"-"`
-	StateMutex            *sync.RWMutex `json:"-"`
+	stateStatusMutex      sync.RWMutex `json:"-"`
+	stateMutex            sync.RWMutex `json:"-"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          *sync.RWMutex
+	ticketsMutex          sync.RWMutex
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-"`
@@ -294,10 +294,6 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
-	b.StateMutex = &sync.RWMutex{}
-	b.stateStatusMutex = &sync.RWMutex{}
-	b.mutexTxns = &sync.RWMutex{}
-	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
 
@@ -714,11 +710,6 @@ func (b *Block) Clone() *Block {
 		blockState:          b.blockState,
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
-
-		StateMutex:       &sync.RWMutex{},
-		stateStatusMutex: &sync.RWMutex{},
-		ticketsMutex:     &sync.RWMutex{},
-		mutexTxns:        &sync.RWMutex{},
 
 		MagicBlock: b.MagicBlock.Clone(),
 	}
