@@ -589,7 +589,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
 	if r.verbose {
-		// log.Print(" [INF] round ", re.Round, " ", n.Name)
+		log.Print(" [INF] round ", re.Round)
 	}
 
 	// set last round
@@ -602,14 +602,12 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	switch {
 	case r.waitRound.Round > re.Round:
 		return // not this round
-	case r.waitRound.Round == re.Round:
-		log.Print("[OK] accept round ", re.Round)
-		r.waitRound.Round = 0 // doesn't wait anymore
-	case r.waitRound.Round < re.Round:
+	case !r.waitRound.Allow_Beyound && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
-
+	log.Print("[OK] accept round ", re.Round)
+	r.waitRound = config.WaitRound{} // don't wait anymore
 	return
 }
 
