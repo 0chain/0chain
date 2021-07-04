@@ -30,10 +30,6 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-//PreviousBlockUnavailable - to indicate an error condition when the previous
-// block of a given block is not available.
-const PreviousBlockUnavailable = "previous_block_unavailable"
-
 // notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
 // to a channel for syncing the latest finalized round state.
 const notifySyncLFRStateTimeout = 3 * time.Second
@@ -42,9 +38,6 @@ const notifySyncLFRStateTimeout = 3 * time.Second
 const genesisRandomSeed = 839695260482366273
 
 var (
-	// ErrPreviousBlockUnavailable - error for previous block is not available.
-	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
-		"Previous block is not available")
 	ErrInsufficientChain = common.NewError("insufficient_chain",
 		"Chain length not sufficient to perform the logic")
 )

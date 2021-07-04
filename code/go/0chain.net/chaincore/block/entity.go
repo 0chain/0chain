@@ -1,12 +1,16 @@
 package block
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -18,12 +22,39 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
+)
+
+const (
+	//PreviousBlockUnavailable - to indicate an error condition when the previous
+	// block of a given block is not available.
+	PreviousBlockUnavailable = "previous_block_unavailable"
+	//StateMismatch - indicate if there is a mismatch between computed state and received state of a block
+	StateMismatch = "state_mismatch"
+)
+
+var (
+
+	//StateSaveTimer - a metric that tracks the time it takes to save the state
+	StateSaveTimer metrics.Timer
+
+	//StateChangeSizeMetric - a metric that tracks how many state nodes are changing with each block
+	StateChangeSizeMetric metrics.Histogram
 )
 
 var (
 	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "block hash mismatch")
 	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "block state hash mismatch")
+
+	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
+	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
+
+	// ErrPreviousBlockUnavailable - error for previous block is not available.
+	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
+		"Previous block is not available")
+
+	ErrStateMismatch = common.NewError(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
 )
 
 const (
@@ -50,6 +81,11 @@ const (
 	VerificationSuccessful = iota
 	VerificationFailed     = iota
 )
+
+func init() {
+	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
+	StateChangeSizeMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
+}
 
 // UnverifiedBlockBody - used to compute the signature
 // This is what is used to verify the correctness of the block & the associated signature
@@ -112,15 +148,15 @@ type Block struct {
 	PrevBlock   *Block        `json:"-"`
 
 	TxnsMap   map[string]bool `json:"-"`
-	mutexTxns *sync.RWMutex
+	mutexTxns sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
-	stateStatusMutex      *sync.RWMutex `json:"-"`
-	StateMutex            *sync.RWMutex `json:"-"`
+	stateStatusMutex      sync.RWMutex `json:"-"`
+	stateMutex            sync.RWMutex `json:"-"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          *sync.RWMutex
+	ticketsMutex          sync.RWMutex
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-"`
@@ -258,10 +294,6 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
-	b.StateMutex = &sync.RWMutex{}
-	b.stateStatusMutex = &sync.RWMutex{}
-	b.mutexTxns = &sync.RWMutex{}
-	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
 
@@ -679,11 +711,6 @@ func (b *Block) Clone() *Block {
 		isNotarized:         b.isNotarized,
 		verificationStatus:  b.verificationStatus,
 
-		StateMutex:       &sync.RWMutex{},
-		stateStatusMutex: &sync.RWMutex{},
-		ticketsMutex:     &sync.RWMutex{},
-		mutexTxns:        &sync.RWMutex{},
-
 		MagicBlock: b.MagicBlock.Clone(),
 	}
 
@@ -694,11 +721,11 @@ func (b *Block) Clone() *Block {
 	}
 	b.mutexTxns.RUnlock()
 
-	b.StateMutex.RLock()
+	b.stateMutex.RLock()
 	if b.ClientState != nil {
 		clone.CreateState(b.ClientState.GetNodeDB(), b.ClientStateHash)
 	}
-	b.StateMutex.RUnlock()
+	b.stateMutex.RUnlock()
 
 	clone.UniqueBlockExtensions = make(map[string]bool, len(b.UniqueBlockExtensions))
 	for k, v := range b.UniqueBlockExtensions {
@@ -706,6 +733,233 @@ func (b *Block) Clone() *Block {
 	}
 
 	return clone
+}
+
+type Chainer interface {
+	GetPreviousBlock(ctx context.Context, b *Block) *Block
+	GetBlockStateChange(b *Block) error
+	ComputeState(ctx context.Context, pb *Block) error
+	GetStateDB() util.NodeDB
+	UpdateState(b *Block, txn *transaction.Transaction) error
+}
+
+// ComputeState computes block client state
+func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
+	select {
+	case <-ctx.Done():
+		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
+		return ctx.Err()
+	default:
+	}
+
+	if b.IsStateComputed() {
+		return nil
+	}
+
+	b.stateMutex.Lock()
+	defer b.stateMutex.Unlock()
+
+	pb := b.PrevBlock
+	if pb == b {
+		b.PrevBlock = nil // reset (a real case, may be unexpected)
+	}
+	if pb == nil {
+		pb = c.GetPreviousBlock(ctx, b)
+		if pb == nil {
+			b.SetStateStatus(StateFailed)
+			logging.Logger.Error("compute state - previous block not available",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("prev_block", b.PrevHash))
+			return ErrPreviousBlockUnavailable
+		}
+	}
+
+	if pb == b {
+		b.PrevBlock = nil // reset (a real case, may be unexpected)
+		logging.Logger.Error("computing block state",
+			zap.String("error", "block_prev points to itself, or its state mutex does it"),
+			zap.Int64("round", b.Round))
+		return common.NewError("computing block state",
+			"prev_block points to itself, or its state mutex does it")
+	}
+	if !pb.IsStateComputed() {
+		if pb.GetStateStatus() == StateFailed {
+			if err := c.GetBlockStateChange(pb); err != nil {
+				logging.Logger.Error("fetchMissingStates failed", zap.Error(err))
+				return err
+			}
+			if !pb.IsStateComputed() {
+				return ErrPreviousStateUnavailable
+			}
+			logging.Logger.Debug("fetch previous block state from network successfully",
+				zap.Int64("prev_round", pb.Round),
+				zap.Any("hash", pb.Hash),
+				zap.Any("prev_state", util.ToHex(pb.ClientStateHash)))
+		} else {
+			logging.Logger.Info("compute state - previous block state not ready",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("prev_block", b.PrevHash),
+				zap.Int8("prev_block_state", pb.GetBlockState()),
+				zap.Int8("prev_block_state_status", pb.GetStateStatus()))
+			err := c.ComputeState(ctx, pb)
+			if err != nil {
+				pb.SetStateStatus(StateFailed)
+				if state.DebugBlock() {
+					logging.Logger.Error("compute state - error computing previous state",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("prev_block", b.PrevHash), zap.Error(err))
+				} else {
+					logging.Logger.Error("compute state - error computing previous state",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("prev_block", b.PrevHash), zap.Error(err))
+				}
+				return err
+			}
+		}
+	}
+	if pb.ClientState == nil {
+		logging.Logger.Error("compute state - previous state nil",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.String("prev_block", b.PrevHash),
+			zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
+		return ErrPreviousStateUnavailable
+	}
+
+	// Before continue the the following state update for transactions, the previous
+	// block's state must be computed successfully.
+	if !pb.IsStateComputed() {
+		logging.Logger.Error("previous state not compute successfully",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Any("state status", pb.GetStateStatus()))
+		return ErrPreviousStateNotComputed
+	}
+	b.SetStateDB(pb, c.GetStateDB())
+
+	beginState := b.ClientState.GetRoot()
+
+	for _, txn := range b.Txns {
+		if datastore.IsEmpty(txn.ClientID) {
+			txn.ComputeClientID()
+		}
+		if err := c.UpdateState(b, txn); err != nil {
+			b.SetStateStatus(StateFailed)
+			logging.Logger.Error("compute state - update state failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+				zap.Error(err))
+			return common.NewError("state_update_error", "error updating state")
+		}
+	}
+
+	logging.Logger.Info("compute state", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("client_state", util.ToHex(b.ClientStateHash)),
+		zap.String("begin_client_state", util.ToHex(beginState)),
+		zap.String("after_client_state", util.ToHex(b.ClientState.GetRoot())),
+		zap.String("prev_block", b.PrevHash),
+		zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+
+	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+		b.SetStateStatus(StateFailed)
+		logging.Logger.Error("compute state - state hash mismatch",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.Int("block_size", len(b.Txns)),
+			zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
+			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
+			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+		return ErrStateMismatch
+	}
+	StateSanityCheck(ctx, b)
+	b.SetStateStatus(StateSuccessful)
+	logging.Logger.Info("compute state successful", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)),
+		zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
+		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
+		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+	return nil
+}
+
+// ApplyBlockStateChange apply and merge the state changes
+func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
+	b.stateMutex.Lock()
+	defer b.stateMutex.Unlock()
+
+	if b.Hash != bsc.Block {
+		return ErrBlockHashMismatch
+	}
+	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
+		return ErrBlockStateHashMismatch
+	}
+	root := bsc.GetRoot()
+	if root == nil {
+		if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
+			return nil
+		}
+		return common.NewError("state_root_error", "state root not correct")
+	}
+	if b.ClientState == nil {
+		b.CreateState(c.GetStateDB(), root.GetHashBytes())
+	}
+
+	//c.stateMutex.Lock()
+	//defer c.stateMutex.Unlock()
+
+	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	if err != nil {
+		logging.Logger.Error("apply block state change - error merging",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return err
+	}
+	b.SetStateStatus(StateSynched)
+	return nil
+}
+
+// SaveChanges persistents the state changes
+func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
+	b.stateMutex.Lock()
+	defer b.stateMutex.Unlock()
+	if b.ClientState == nil {
+		logging.Logger.Error("save changes - client state is nil",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash))
+		return errors.New("save changes - client state is nil")
+	}
+
+	var err error
+	ts := time.Now()
+	switch b.GetStateStatus() {
+	case StateSynched, StateSuccessful:
+		err = b.ClientState.SaveChanges(ctx, c.GetStateDB(), false)
+		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
+		if ok {
+			c.GetStateDB().(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
+		}
+	default:
+		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
+	}
+	duration := time.Since(ts)
+	StateSaveTimer.UpdateSince(ts)
+	p95 := StateSaveTimer.Percentile(.95)
+	changes := b.ClientState.GetChangeCollector().GetChanges()
+	if len(changes) > 0 {
+		StateChangeSizeMetric.Update(int64(len(changes)))
+	}
+	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+		logging.Logger.Info("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+	} else {
+		logging.Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
+	}
+	if err != nil {
+		logging.Logger.Info("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
+	}
+
+	return err
 }
 
 func copyVerificationTickets(src []*VerificationTicket) []*VerificationTicket {

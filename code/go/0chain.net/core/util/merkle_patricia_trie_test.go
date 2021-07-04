@@ -533,8 +533,6 @@ func TestMPTUniverse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mpt2.PrettyPrint(os.Stdout)
-
 	err = mpt2.IterateFrom(context.TODO(), key, iterHandler(),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {

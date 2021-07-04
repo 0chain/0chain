@@ -174,10 +174,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h3>State Save Statistics</h3>")
-	diagnostics.WriteTimerStatistics(w, c, chain.StateSaveTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, block.StateSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h3>State Change Statistics</h3>")
-	diagnostics.WriteHistogramStatistics(w, c, chain.StateChangeSizeMetric)
+	diagnostics.WriteHistogramStatistics(w, c, block.StateChangeSizeMetric)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
