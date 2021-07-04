@@ -172,7 +172,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger("/tmp/state.txt")
 	}
 
 	setupBlockStorageProvider(mConf)

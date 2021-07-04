@@ -25,22 +25,11 @@ var MaxStateNodesForSync = 10000
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
-		//logging.Logger.Error("get block state change",
-		//	zap.Int64("round", b.Round),
-		//	zap.String("block", b.Hash),
-		//	zap.String("state_hash",
-		//		util.ToHex(b.ClientStateHash)),
-		//	zap.Error(err))
 		return common.NewError("get block state changes", err.Error())
 	}
 
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
-		//logging.Logger.Error("get block state change - apply failed",
-		//	zap.Int64("round", b.Round),
-		//	zap.String("block", b.Hash),
-		//	zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-		//	zap.Error(err))
 		return common.NewError("apply block state changes", err.Error())
 	}
 
@@ -353,41 +342,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	return bsc, nil
 }
 
-// ApplyBlockStateChange - apply the state chagnes to the block state.
+// ApplyBlockStateChange - applies the state chagnes to the block state.
 func (c *Chain) ApplyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
-	lock := b.StateMutex
-	lock.Lock()
-	defer lock.Unlock()
-	return c.applyBlockStateChange(b, bsc)
-}
-
-func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
-	if b.Hash != bsc.Block {
-		return block.ErrBlockHashMismatch
-	}
-	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
-		return block.ErrBlockStateHashMismatch
-	}
-	root := bsc.GetRoot()
-	if root == nil {
-		if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
-			return nil
-		}
-		return common.NewError("state_root_error", "state root not correct")
-	}
-	if b.ClientState == nil {
-		b.CreateState(c.GetStateDB(), root.GetHashBytes())
-	}
-
-	c.stateMutex.Lock()
-	defer c.stateMutex.Unlock()
-
-	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
-	if err != nil {
-		logging.Logger.Error("apply block state change - error merging",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return err
-	}
-	b.SetStateStatus(block.StateSynched)
-	return nil
+	return b.ApplyBlockStateChange(bsc, c)
 }

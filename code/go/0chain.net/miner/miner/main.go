@@ -123,7 +123,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger("/tmp/state.txt")
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)

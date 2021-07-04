@@ -212,7 +212,6 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 		stateStatus           int8
 		blockState            int8
 		isNotarized           bool
-		ticketsMutex          *sync.RWMutex
 		verificationStatus    int
 		RunningTxnCount       int64
 		UniqueBlockExtensions map[string]bool
@@ -235,10 +234,8 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 			},
 		},
 		{
-			name: "Empty_Tickets_OK",
-			fields: fields{
-				ticketsMutex: &sync.RWMutex{},
-			},
+			name:    "Empty_Tickets_OK",
+			fields:  fields{},
 			wantVts: nil,
 		},
 	}
@@ -258,7 +255,6 @@ func TestBlock_GetVerificationTickets(t *testing.T) {
 				stateStatus:           tt.fields.stateStatus,
 				blockState:            tt.fields.blockState,
 				isNotarized:           tt.fields.isNotarized,
-				ticketsMutex:          tt.fields.ticketsMutex,
 				verificationStatus:    tt.fields.verificationStatus,
 				RunningTxnCount:       tt.fields.RunningTxnCount,
 				UniqueBlockExtensions: tt.fields.UniqueBlockExtensions,
@@ -480,10 +476,6 @@ func TestBlock_ComputeProperties(t *testing.T) {
 
 			b.ComputeProperties()
 
-			// setting mutexes to nil because they are not comparable
-			nilBlocksMutexes(b)
-			nilBlocksMutexes(tt.want)
-
 			assert.Equal(t, tt.want, b)
 		})
 	}
@@ -576,10 +568,6 @@ func TestBlock_Decode(t *testing.T) {
 			if err := b.Decode(tt.args.input); (err != nil) != tt.wantErr {
 				t.Errorf("Decode() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
-			// setting mutexes to nil because they are not comparable
-			nilBlocksMutexes(b)
-			nilBlocksMutexes(tt.want)
 
 			if !tt.wantErr && !assert.Equal(t, tt.want, b) {
 				t.Errorf("Decode() got = %v, want = %v", b, tt.want)
@@ -1345,10 +1333,6 @@ func TestBlock_SetPreviousBlock(t *testing.T) {
 
 			b.SetPreviousBlock(tt.args.prevBlock)
 
-			// setting mutexes and states to nil because they are not comparable
-			nilBlocksMutexes(tt.want)
-			nilBlocksMutexes(b)
-
 			if !assert.Equal(t, tt.want, b) {
 				t.Errorf("SetPreviousBlock() got = %v, want = %v", b, tt.want)
 			}
@@ -1660,9 +1644,6 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 			}
 			b.SetStateDB(tt.args.prevBlock, util.NewMemoryNodeDB())
 
-			// setting mutexes and states to nil because they are not comparable
-			nilBlocksMutexes(b)
-			nilBlocksMutexes(tt.want)
 			b.ClientState = nil
 			tt.want.ClientState = nil
 
