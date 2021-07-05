@@ -268,7 +268,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 		log.Print(" [INF] wait no progress ", wait.String())
 	}
 
-	r.waitNoProgressUntil = time.Now().Add(wait)
+	r.waitNoProgress = config.WaitNoProgress{Start: time.Now().Add(noProgressSeconds * time.Second), Until: time.Now().Add(wait)}
 	r.setupTimeout(wait)
 	return
 }

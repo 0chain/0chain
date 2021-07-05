@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // ExpectMagicBlock represents expected magic block.
 type ExpectMagicBlock struct {
 	// Number is expected Magic Block number. Use of MB number is
@@ -129,6 +131,15 @@ func (wa *WaitAdd) TakeBlobber(name NodeName) (ok bool) {
 		}
 	}
 	return
+}
+
+type WaitNoProgress struct {
+	Start time.Time
+	Until time.Time
+}
+
+func (wnp *WaitNoProgress) IsZero() bool {
+	return (*wnp) == (WaitNoProgress{})
 }
 
 type WaitNoViewChainge struct {

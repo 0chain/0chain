@@ -27,7 +27,7 @@ import (
 	"0chain.net/conductor/config"
 )
 
-const noProgressRounds = 10
+const noProgressSeconds = 10
 
 func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
@@ -163,8 +163,7 @@ type Runner struct {
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
 	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
-	waitNoProgressUntil    time.Time                     // }
-	waitNoPreogressCount   int                           // } got rounds
+	waitNoProgress         config.WaitNoProgress         // no new rounds expected
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	waitCommand            chan error                    // wait a command
 	// timeout and monitor
@@ -199,7 +198,7 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 		return tm, true
 	case !r.waitSharderKeep.IsZero():
 		return tm, true
-	case !r.waitNoProgressUntil.IsZero():
+	case !r.waitNoProgress.IsZero():
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
 		return tm, true
@@ -563,11 +562,9 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
-	if !r.waitNoProgressUntil.IsZero() {
-		r.waitNoPreogressCount++
-		if r.waitNoPreogressCount >= noProgressRounds {
-			return fmt.Errorf("got round %d, but 'no progress' is expected"+
-				" (got > %d rounds)", re.Round, r.waitNoPreogressCount)
+	if !r.waitNoProgress.IsZero() {
+		if time.Now().After(r.waitNoProgress.Start) {
+			return fmt.Errorf("got round %d, but 'no progress' is expected", re.Round)
 		}
 	}
 
@@ -726,10 +723,9 @@ func (r *Runner) proceedWaiting() (err error) {
 			}
 			r.waitCommand = nil // reset
 		case timeout := <-tm.C:
-			if !r.waitNoProgressUntil.IsZero() {
-				if timeout.UnixNano() >= r.waitNoProgressUntil.UnixNano() {
-					r.waitNoProgressUntil = time.Time{} // reset
-					r.waitNoPreogressCount = 0          // reset
+			if !r.waitNoProgress.IsZero() {
+				if timeout.UnixNano() >= r.waitNoProgress.Until.UnixNano() {
+					r.waitNoProgress = config.WaitNoProgress{} // reset
 					return
 				}
 			}
@@ -807,7 +803,7 @@ func (r *Runner) resetWaiters() {
 	r.waitShareSignsOrShares = config.WaitShareSignsOrShares{} //
 	r.waitViewChange = config.WaitViewChange{}                 //
 	r.waitAdd = config.WaitAdd{}                               //
-	r.waitNoProgressUntil = time.Time{}                        //
+	r.waitNoProgress = config.WaitNoProgress{}                 //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
 	r.waitSharderKeep = config.WaitSharderKeep{}               //
 	if r.waitCommand != nil {
