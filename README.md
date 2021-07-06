@@ -27,7 +27,7 @@
 In the git/0chain run the following command
 
 ```
-$ ./docker.local/bin/init.setup.sh
+./docker.local/bin/init.setup.sh
 ```
 
 ### Setup Network
@@ -37,7 +37,7 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
 ```
-$ ./docker.local/bin/setup_network.sh
+./docker.local/bin/setup_network.sh
 ```
 
 ## Building the Nodes
@@ -49,7 +49,7 @@ $ ./docker.local/bin/setup_network.sh
 Use **-m1** flag to build for Apple m1 chip
 
 ```
-$ ./docker.local/bin/build.base.sh
+./docker.local/bin/build.base.sh
 ```
 
 2. Building the miners and sharders. From the git/0chain directory use
@@ -59,7 +59,7 @@ $ ./docker.local/bin/build.base.sh
 Use **-m1** flag to build for Apple m1 chip
 
 ```
-$ ./docker.local/bin/build.miners.sh
+./docker.local/bin/build.miners.sh
 ```
 
 2.2) To build the sharder containers
@@ -67,7 +67,7 @@ $ ./docker.local/bin/build.miners.sh
 Use **-m1** flag to build for Apple m1 chip
 
 ```
-$ ./docker.local/bin/build.sharders.sh
+./docker.local/bin/build.sharders.sh
 ```
 
 for building the 1 sharder.
@@ -75,7 +75,7 @@ for building the 1 sharder.
 2.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
 ```
-$ ./docker.local/bin/sync_clock.sh
+./docker.local/bin/sync_clock.sh
 ```
 
 ## Configuring the nodes
@@ -99,7 +99,7 @@ $ ./docker.local/bin/sync_clock.sh
 Start sharder first because miners need the genesis magic block. On the sharder terminal, use
 
 ```
-$ ../bin/start.b0sharder.sh
+../bin/start.b0sharder.sh
 ```
 
 Wait till the cassandra is started and the sharder is ready to listen to requests.
@@ -107,7 +107,7 @@ Wait till the cassandra is started and the sharder is ready to listen to request
 On the respective miner terminal, use
 
 ```
-$ ../bin/start.b0miner.sh
+../bin/start.b0miner.sh
 ```
 
 ## Re-starting the nodes
@@ -148,25 +148,25 @@ The following is no longer required as the schema is automatically loaded.
 Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh
+../bin/run.sharder.sh cassandra cqlsh
 ```
 
 1. To create zerochain keyspace, do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
+../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
 ```
 
 2. To create the tables, do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
+../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
 ```
 
 3. When you want to truncate existing data (use caution), do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
+../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
 ```
 
 ## Generating Test Transactions
@@ -186,7 +186,7 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 1. Ensure the port mapping is all correct:
 
 ```
-$ docker ps
+docker ps
 ```
 
 This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
@@ -214,19 +214,19 @@ Similarly, following links can be used to see the status of the sharders
 Default redis (used for clients and state):
 
 ```
-$ ../bin/run.miner.sh redis redis-cli
+../bin/run.miner.sh redis redis-cli
 ```
 
 Redis used for transactions:
 
 ```
-$ ../bin/run.miner.sh redis_txns redis-cli
+../bin/run.miner.sh redis_txns redis-cli
 ```
 
 4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh
+../bin/run.sharder.sh cassandra cqlsh
 ```
 
 ## Dependencies for local compilation
@@ -262,13 +262,13 @@ The logs of the nodes are stored in log directory (/0chain/log on the container 
 Find arrors in all the miner nodes (from git/0chain)
 
 ```
-$ grep ERROR docker.local/miner*/log/0chain.log
+grep ERROR docker.local/miner*/log/0chain.log
 ```
 
 This gives a set of errors in the log. Say an error indicates a problem for a specific block, say abc, then
 
 ```
-$ grep abc docker.local/miner*/log/0chain.log
+grep abc docker.local/miner*/log/0chain.log
 ```
 
 gives all the logs related to block 'abc'
@@ -276,7 +276,7 @@ gives all the logs related to block 'abc'
 To get the start time of all the rounds
 
 ```
-$ grep 'starting round' docker.local/miner*/log/0chain.log
+grep 'starting round' docker.local/miner*/log/0chain.log
 ```
 
 This gives the start timestamps that can be used to correlate the events and their timings.
@@ -286,8 +286,8 @@ This gives the start timestamps that can be used to correlate the events and the
 Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
 
 ```
-$ cd code/go/0chain.net/my-pkg
-$ go test
+cd code/go/0chain.net/my-pkg
+go test
 ```
 
 Otherwise, we have a Docker image which takes care of installing the build dependencies for you in an environment identical to our other Docker builds.
@@ -295,13 +295,13 @@ Otherwise, we have a Docker image which takes care of installing the build depen
 First build the base image.
 
 ```
-$ ./docker.local/bin/build.base.sh
+./docker.local/bin/build.base.sh
 ```
 
 Then run the tests.
 
 ```
-$ ./docker.local/bin/unit_test.sh [<packages>]
+./docker.local/bin/unit_test.sh [<packages>]
 ```
 
 The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.
@@ -313,7 +313,7 @@ First build the magic block image.
 Use **-m1** flag to build for Apple m1 chip
 
 ```
-$ ./docker.local/bin/build.magic_block.sh
+./docker.local/bin/build.magic_block.sh
 ```
 
 Next, set the configuration file. To do this edit the docker.local/build.magicBlock/docker-compose.yml file. On line 13 is a flag "--config_file" set it to the magic block configuration file you want to use.
@@ -321,7 +321,7 @@ Next, set the configuration file. To do this edit the docker.local/build.magicBl
 To create the magic block.
 
 ```
-$ ./docker.local/bin/create.magic_block.sh
+./docker.local/bin/create.magic_block.sh
 ```
 
 The magic block and the dkg summary json files will appear in the docker.local/config under the name given in the configuration file.
@@ -349,7 +349,7 @@ An example, that can be used with the preset ids, can be found at
 1. If you want to restart the blockchain from the beginning
 
 ```
-$ ./docker.local/bin/clean.sh
+./docker.local/bin/clean.sh
 ```
 
 This cleans up the directories within docker.local/miner* and docker.local/sharder*
@@ -361,7 +361,7 @@ separate file, deleting thousands of such files will take some time._**
 2. If you want to get rid of old unused docker resources:
 
 ```
-$ docker system prune
+docker system prune
 ```
 
 ### Minio
