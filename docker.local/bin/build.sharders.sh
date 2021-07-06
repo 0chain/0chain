@@ -11,6 +11,19 @@ DOCKERCOMPOSE="$DOCKERDIR/docker-compose.yml"
 
 APP_ROOT="$ROOT/code/go/0chain.net"
 
+cmd="build"
+
+for arg in "$@"
+do
+    case $arg in
+        -m1|--m1|m1)
+        echo "The build will be performed for Apple M1 chip"
+        cmd="buildx build --platform linux/amd64"
+        shift
+        ;;
+    esac
+done
+
 if [[ "$@" == *"--dev"* ]]
 then
     cd $APP_ROOT
@@ -27,7 +40,7 @@ then
     cd $ROOT
 fi
 
-docker build --build-arg GIT_COMMIT=$GIT_COMMIT -f $DOCKERFILE -t sharder .
+docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT -f $DOCKERFILE -t sharder .
 
 if [[ "$@" == *"--dev"* ]]
 then
