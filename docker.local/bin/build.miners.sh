@@ -6,7 +6,7 @@ echo "$GIT_COMMIT"
 
 ROOT="$(git rev-parse --show-toplevel)"
 DOCKER_DIR="$ROOT/docker.local/build.miner"
-DOCKER_FILE="$DOCKER_DIR/Dockerfile"
+DOCKERFILE="$DOCKER_DIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
 
 APP_ROOT="$ROOT/code/go/0chain.net"
