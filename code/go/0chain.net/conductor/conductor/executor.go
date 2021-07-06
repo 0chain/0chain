@@ -21,6 +21,29 @@ func (r *Runner) setupTimeout(tm time.Duration) {
 	}
 }
 
+func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err error) {
+	var n, ok = r.conf.Nodes.NodeByName(name)
+	if !ok {
+		return fmt.Errorf("(doStart): unknown node: %q", name)
+	}
+	if n.IsStarted() {
+		if errIfAlreadyStarted {
+			return fmt.Errorf("(doStart): node already started: %s", n.Name)
+		} else {
+			return nil
+		}
+	}
+	// miners and sharders, but skip blobbers
+	if !r.conf.IsSkipWait(name) {
+		r.server.AddNode(name, lock)   // expected server interaction
+		r.waitNodes[name] = struct{}{} // wait list
+	}
+	if err := n.Start(r.conf.Logs); err != nil {
+		return fmt.Errorf("starting %s: %v", n.Name, err)
+	}
+	return nil
+}
+
 //
 // control the conductor (entire tests controls)
 //
@@ -61,19 +84,8 @@ func (r *Runner) Start(names []NodeName, lock bool,
 
 	// start nodes
 	for _, name := range names {
-		var n, ok = r.conf.Nodes.NodeByName(name) //
-		if !ok {
-			return fmt.Errorf("(start): unknown node: %q", name)
-		}
-
-		// miners and sharders, but skip blobbers
-		if !r.conf.IsSkipWait(name) {
-			r.server.AddNode(name, lock)   // expected server interaction
-			r.waitNodes[name] = struct{}{} // wait list
-		}
-
-		if err = n.Start(r.conf.Logs); err != nil {
-			return fmt.Errorf("starting %s: %v", n.Name, err)
+		if err := r.doStart(name, lock, true); err != nil {
+			return err
 		}
 	}
 	return
@@ -248,6 +260,14 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 
 	r.setupTimeout(tm)
 	r.waitAdd = wadd
+	if wadd.Start {
+		// start nodes that haven't been started yet
+		for _, name := range append(wadd.Sharders, append(wadd.Miners, wadd.Blobbers...)...) {
+			if err := r.doStart(name, false, false); err != nil {
+				return err
+			}
+		}
+	}
 	return
 }
 

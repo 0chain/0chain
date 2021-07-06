@@ -97,6 +97,7 @@ type WaitAdd struct {
 	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	Blobbers []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	Start    bool       `json:"start" yaml:"start" mapstructure:"start"`
 }
 
 func (wa *WaitAdd) IsZero() bool {
