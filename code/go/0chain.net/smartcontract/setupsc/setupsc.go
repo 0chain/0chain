@@ -1,7 +1,9 @@
 package setupsc
 
 import (
+	"0chain.net/core/logging"
 	"fmt"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -53,12 +55,13 @@ var (
 	}
 )
 
-//SetupSmartContracts initialize smartcontract addresses
+//SetupSmartContracts initializes smart contract addresses
 func SetupSmartContracts() {
 	for _, name := range SCNames {
 		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
-			var sci = newSmartContract(name)
-			smartcontract.ContractMap[sci.GetAddress()] = sci
+			var contract = newSmartContract(name)
+			smartcontract.ContractMap[contract.GetAddress()] = contract
+			logging.Logger.Info("Smart contract init", zap.String("name", name), zap.String("address", contract.GetAddress()))
 		}
 	}
 }
