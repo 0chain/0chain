@@ -4,6 +4,7 @@ import (
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"0chain.net/smartcontract/zrc20sc"
 	"context"
 	"encoding/json"
@@ -41,6 +42,7 @@ func init() {
 	viper.Set("development.smart_contract.faucet", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.zcn", true)
 	viper.Set("development.smart_contract.interest", true)
 	viper.Set("development.smart_contract.multisig", true)
 	viper.Set("development.smart_contract.miner", true)
@@ -232,6 +234,11 @@ func TestGetSmartContract(t *testing.T) {
 			name:       "vesting",
 			address:    vestingsc.ADDRESS,
 			restpoints: 3,
+		},
+		{
+			name:       "zcn",
+			address:    zcnsc.ADDRESS,
+			restpoints: 0,
 		},
 		{
 			name:    "Nil_OK",

@@ -76,12 +76,12 @@ func getGlobalNode(balances cstate.StateContextI) *globalNode {
 		return gn
 	}
 
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcnsc.min_mint_amount"))
-	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcnsc.percent_authorizers")
-	gn.MinAuthorizers = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_authorizers")
-	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_burn_amount")
-	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcnsc.min_stake_amount")
-	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcnsc.burn_address")
+	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
+	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcn.percent_authorizers")
+	gn.MinAuthorizers = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_authorizers")
+	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_burn_amount")
+	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
+	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
 
 	return gn
 }

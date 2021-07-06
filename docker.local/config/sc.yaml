@@ -133,7 +133,7 @@ smart_contracts:
     max_destinations: 3
     max_description_length: 20
 
-  zcnsc:
+  zcn:
     min_mint_amount: 1
     percent_authorizers: 0.7
     min_authorizers: 1

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	zcnscAddressId                = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	zcnAddressId                  = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
 	tokens                float64 = 10
 	clientSignatureScheme         = "bls0chain"
 )
@@ -34,7 +34,7 @@ func CreateTransaction(fromClient string, amount float64) *transaction.Transacti
 		CollectionMemberField: datastore.CollectionMemberField{},
 		VersionField:          datastore.VersionField{},
 		ClientID:              fromClient,
-		ToClientID:            zcnscAddressId,
+		ToClientID:            zcnAddressId,
 		Value:                 int64(zcnToBalance(amount)),
 		CreationDate:          startTime,
 		PublicKey:             pk,
