@@ -41,7 +41,7 @@ func CreateStateContext(clientId string) *cstate.StateContext {
 	var txn = &transaction.Transaction{
 		HashIDField:  datastore.HashIDField{Hash: txHash},
 		ClientID:     clientId,
-		ToClientID:   zcnscAddressId,
+		ToClientID:   zcnAddressId,
 		CreationDate: startTime,
 		Value:        int64(zcnToBalance(tokens)),
 	}
