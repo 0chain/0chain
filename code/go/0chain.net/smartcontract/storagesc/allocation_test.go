@@ -1,12 +1,7 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,200 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSelectBlobbers(t *testing.T) {
-	const (
-		randomSeed           = 1
-		mockURL              = "mock_url"
-		mockOwner            = "mock owner"
-		mockPublicKey        = "mock public key"
-		mockBlobberId        = "mock_blobber_id"
-		mockPoolId           = "mock pool id"
-		mockMinPrice         = 0
-		confTimeUnit         = 720 * time.Hour
-		confMinAllocSize     = 1024
-		confMinAllocDuration = 5 * time.Minute
-		mockMaxOffDuration   = 744 * time.Hour
-	)
-	var mockStatke = zcnToBalance(100)
-	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
-	var mockMaxPrice = zcnToBalance(100.0)
-	var mockReadPrice = zcnToBalance(0.01)
-	var mockWritePrice = zcnToBalance(0.10)
-	var now = common.Timestamp(1000000)
-
-	type args struct {
-		diverseBlobbers      bool
-		numBlobbers          int
-		numPreferredBlobbers int
-		dataShards           int
-		parityShards         int
-		allocSize            int64
-		expiration           common.Timestamp
-	}
-	type want struct {
-		blobberIds []int
-		err        bool
-		errMsg     string
-	}
-
-	makeMockBlobber := func(index int) *StorageNode {
-		return &StorageNode{
-			ID:              mockBlobberId + strconv.Itoa(index),
-			BaseURL:         mockURL + strconv.Itoa(index),
-			Capacity:        mockBlobberCapacity,
-			LastHealthCheck: now - blobberHealthTime + 1,
-			Terms: Terms{
-				ReadPrice:        mockReadPrice,
-				WritePrice:       mockWritePrice,
-				MaxOfferDuration: mockMaxOffDuration,
-			},
-		}
-	}
-
-	setup := func(
-		t *testing.T, args args,
-	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
-		var balances = &mocks.StateContextI{}
-		var ssc = StorageSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-		var sa = StorageAllocation{
-			PreferredBlobbers: []string{},
-			DataShards:        args.dataShards,
-			ParityShards:      args.parityShards,
-			Owner:             mockOwner,
-			OwnerPublicKey:    mockPublicKey,
-			Expiration:        args.expiration,
-			Size:              args.allocSize,
-			ReadPriceRange:    PriceRange{mockMinPrice, mockMaxPrice},
-			WritePriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
-			DiverseBlobbers:   args.diverseBlobbers,
-		}
-		for i := 0; i < args.numPreferredBlobbers; i++ {
-			sa.PreferredBlobbers = append(sa.PreferredBlobbers, mockURL+strconv.Itoa(i))
-		}
-		var sNodes = StorageNodes{}
-		for i := 0; i < args.numBlobbers; i++ {
-			sNodes.Nodes.add(makeMockBlobber(i))
-			sp := stakePool{
-				Pools: map[string]*delegatePool{
-					mockPoolId: {},
-				},
-			}
-			sp.Pools[mockPoolId].Balance = mockStatke
-			balances.On(
-				"GetTrieNode",
-				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)),
-			).Return(&sp, nil).Once()
-		}
-
-		var conf = &scConfig{
-			TimeUnit:         confTimeUnit,
-			MinAllocSize:     confMinAllocSize,
-			MinAllocDuration: confMinAllocDuration,
-		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
-
-		return ssc, sa, sNodes, balances
-	}
-
-	testCases := []struct {
-		name string
-		args args
-		want want
-	}{
-		{
-			name: "test_diverse_blobbers",
-			args: args{
-				diverseBlobbers:      true,
-				numBlobbers:          6,
-				numPreferredBlobbers: 2,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				blobberIds: []int{0, 1, 2, 3, 4},
-			},
-		},
-		{
-			name: "test_randomised_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 2,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				blobberIds: []int{0, 1, 5, 3, 2},
-			},
-		},
-		{
-			name: "test_excess_preferred_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 8,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				err:    true,
-				errMsg: "allocation_creation_failed: invalid preferred blobber URL",
-			},
-		},
-		{
-			name: "test_all_preferred_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 6,
-				dataShards:           4,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				blobberIds: []int{0, 1, 2, 3},
-			},
-		},
-	}
-	for _, tt := range testCases {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ssc, sa, blobbers, balances := setup(t, tt.args)
-
-			outBlobbers, outSize, err := ssc.selectBlobbers(
-				now, blobbers, &sa, randomSeed, balances,
-			)
-
-			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
-			require.EqualValues(t, tt.want.err, err != nil)
-			if err != nil {
-				require.EqualValues(t, tt.want.errMsg, err.Error())
-				return
-			}
-
-			size := int64(sa.DataShards + sa.ParityShards)
-			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
-
-			for _, blobber := range outBlobbers {
-				found := false
-				for _, index := range tt.want.blobberIds {
-					if mockBlobberId+strconv.Itoa(index) == blobber.ID {
-						require.EqualValues(t, makeMockBlobber(index), blobber)
-						found = true
-						break
-					}
-				}
-				require.True(t, found)
-			}
-		})
-	}
-}
+//
+// use:
+//
+//      go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
+//
+// to test and generate coverage html page
+//
 
 func TestStorageSmartContract_getAllocation(t *testing.T) {
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
@@ -225,7 +33,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 		alloc    *StorageAllocation
 		err      error
 	)
-	if _, err = ssc.getAllocation(allocID, balances); err == nil {
+	if alloc, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
 	}
 	if err != util.ErrValueNotPresent {
@@ -245,260 +53,6 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	got, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 	assert.Equal(t, alloc.Encode(), got.Encode())
-}
-
-func TestAddCurator(t *testing.T) {
-	t.Parallel()
-	const (
-		mockClientId     = "mock client id"
-		mockCuratorId    = "mock curator id"
-		mockAllocationId = "mock allocation id"
-	)
-	type args struct {
-		ssc      *StorageSmartContract
-		txn      *transaction.Transaction
-		input    []byte
-		balances chainState.StateContextI
-	}
-	type parameters struct {
-		clientId         string
-		info             addCuratorInput
-		existingCurators []string
-	}
-	type want struct {
-		err    bool
-		errMsg string
-	}
-	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
-		var balances = &mocks.StateContextI{}
-		var txn = &transaction.Transaction{
-			ClientID: p.clientId,
-		}
-		var ssc = &StorageSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-		input, err := json.Marshal(p.info)
-		require.NoError(t, err)
-
-		var sa = StorageAllocation{
-			ID:    p.info.AllocationId,
-			Owner: p.clientId,
-		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			sa.GetKey(ssc.ID),
-			mock.MatchedBy(func(sa *StorageAllocation) bool {
-				if len(sa.Curators) < 1 {
-					return false
-				}
-				for i, curator := range p.existingCurators {
-					if curator != sa.Curators[i] {
-						return false
-					}
-				}
-				if p.info.CuratorId != sa.Curators[len(sa.Curators)-1] {
-					return false
-				}
-				return sa.ID == p.info.AllocationId && sa.Owner == p.clientId
-			})).Return("", nil).Once()
-
-		return args{ssc, txn, input, balances}
-	}
-
-	testCases := []struct {
-		name       string
-		parameters parameters
-		want       want
-	}{
-		{
-			name: "ok",
-			parameters: parameters{
-				clientId: mockClientId,
-				info: addCuratorInput{
-					CuratorId:    mockCuratorId,
-					AllocationId: mockAllocationId,
-				},
-			},
-		},
-	}
-	for _, test := range testCases {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			args := setExpectations(t, test.name, test.parameters, test.want)
-
-			err := args.ssc.addCurator(args.txn, args.input, args.balances)
-
-			require.EqualValues(t, test.want.err, err != nil)
-			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
-				return
-			}
-			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
-		})
-	}
-}
-
-func TestTransferAllocation(t *testing.T) {
-	t.Parallel()
-	const (
-		mockNewOwnerId        = "mock new owner id"
-		mockNewOwnerPublicKey = "mock new owner public key"
-		mockCuratorId         = "mock curator id"
-		mockAllocationId      = "mock allocation id"
-		mockNotAllocationId   = "mock not allocation id"
-	)
-	type args struct {
-		ssc      *StorageSmartContract
-		txn      *transaction.Transaction
-		input    []byte
-		balances chainState.StateContextI
-	}
-	type parameters struct {
-		curator                 string
-		info                    transferAllocationInput
-		existingCurators        []string
-		existingWPForAllocation bool
-		existingNoiseWPools     int
-	}
-	type want struct {
-		err    bool
-		errMsg string
-	}
-	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
-		var balances = &mocks.StateContextI{}
-		var txn = &transaction.Transaction{
-			ClientID: p.curator,
-		}
-		var ssc = &StorageSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-		input, err := json.Marshal(p.info)
-		require.NoError(t, err)
-
-		var sa = StorageAllocation{
-			ID: p.info.AllocationId,
-		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
-
-		var wp writePool
-		if p.existingWPForAllocation || p.existingNoiseWPools > 0 {
-			for i := 0; i < p.existingNoiseWPools; i++ {
-				wp.Pools.add(&allocationPool{AllocationID: mockNotAllocationId + strconv.Itoa(i)})
-			}
-			if p.existingWPForAllocation {
-				wp.Pools.add(&allocationPool{AllocationID: p.info.AllocationId})
-			}
-			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(&wp, nil).Twice()
-		} else {
-			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(
-				nil, util.ErrValueNotPresent).Twice()
-		}
-
-		balances.On(
-			"InsertTrieNode",
-			writePoolKey(ssc.ID, p.info.NewOwnerId),
-			mock.MatchedBy(func(wp *writePool) bool {
-				if p.existingNoiseWPools+1 != len(wp.Pools) {
-					return false
-				}
-				_, ok := wp.Pools.get(p.info.AllocationId)
-				return ok
-
-			})).Return("", nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			sa.GetKey(ssc.ID),
-			mock.MatchedBy(func(sa *StorageAllocation) bool {
-				for i, curator := range p.existingCurators {
-					if sa.Curators[i] != curator {
-						return false
-					}
-				}
-				return sa.ID == p.info.AllocationId &&
-					sa.Owner == p.info.NewOwnerId &&
-					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
-			})).Return("", nil).Once()
-
-		return args{ssc, txn, input, balances}
-	}
-
-	testCases := []struct {
-		name       string
-		parameters parameters
-		want       want
-	}{
-		{
-			name: "ok",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
-				existingNoiseWPools:     3,
-				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "ok",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators:        []string{mockCuratorId, "another", "and another"},
-				existingNoiseWPools:     0,
-				existingWPForAllocation: false,
-			},
-		},
-		{
-			name: "Err_not_curator",
-			parameters: parameters{
-				curator: mockCuratorId,
-				info: transferAllocationInput{
-					AllocationId:      mockAllocationId,
-					NewOwnerId:        mockNewOwnerId,
-					NewOwnerPublicKey: mockNewOwnerPublicKey,
-				},
-				existingCurators: []string{"not mock curator"},
-			},
-			want: want{
-				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
-			},
-		},
-	}
-	for _, test := range testCases {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			args := setExpectations(t, test.name, test.parameters, test.want)
-
-			resp, err := args.ssc.curatorTransferAllocation(args.txn, args.input, args.balances)
-
-			require.EqualValues(t, test.want.err, err != nil)
-			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
-				return
-			}
-			require.EqualValues(t, args.txn.Hash, resp)
-			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
-		})
-	}
 }
 
 func isEqualStrings(a, b []string) (eq bool) {
@@ -838,7 +392,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	tx.Value = 400
-	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	resp, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg9)
 
 	// 10. ok
@@ -1324,6 +878,19 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 }
 
+// add empty blobber challenges
+func addBloberChallenges(t *testing.T, sscID string, alloc *StorageAllocation,
+	balances *testBalances) {
+
+	var err error
+	for _, d := range alloc.BlobberDetails {
+		var bc = new(BlobberChallenge)
+		bc.BlobberID = d.BlobberID
+		_, err = balances.InsertTrieNode(bc.GetKey(sscID), bc)
+		require.NoError(t, err)
+	}
+}
+
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
 	t.Skip("This test fails because the challenge pool is less than the min lock demand")
@@ -1445,11 +1012,11 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// balances
 	var wp *writePool
-	_, err = ssc.getWritePool(client.id, balances)
+	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 
 	var cp *challengePool
-	_, err = ssc.getChallengePool(allocID, balances)
+	cp, err = ssc.getChallengePool(allocID, balances)
 	require.NoError(t, err)
 
 	var sp *stakePool

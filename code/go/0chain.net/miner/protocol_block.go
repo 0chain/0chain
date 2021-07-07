@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/smartcontract/storagesc"
 	"bytes"
 	"context"
 	"fmt"
@@ -44,22 +43,23 @@ func init() {
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
-func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, clients map[string]*client.Client) error {
-	clients[txn.ClientID] = nil
-	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
+func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[string]*client.Client) error {
+	feeTxn := mc.createFeeTxn(b)
+	clients[feeTxn.ClientID] = nil
+	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, feeTxn); ok || err != nil {
 		if err != nil {
 			return err
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(b, txn); err != nil {
-		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
-			zap.String("txn_object", datastore.ToJSON(txn).String()),
+	if err := mc.UpdateState(b, feeTxn); err != nil {
+		logging.Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash),
+			zap.String("txn_object", datastore.ToJSON(feeTxn).String()),
 			zap.Error(err))
 		return err
 	}
-	b.Txns = append(b.Txns, txn)
-	b.AddTransaction(txn)
+	b.Txns = append(b.Txns, feeTxn)
+	b.AddTransaction(feeTxn)
 	return nil
 }
 
@@ -73,18 +73,6 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
 	feeTxn.Sign(node.Self.GetSignatureScheme())
 	return feeTxn
-}
-
-func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
-	brTxn := transaction.Provider().(*transaction.Transaction)
-	brTxn.ClientID = b.MinerID
-	brTxn.ToClientID = storagesc.ADDRESS
-	brTxn.CreationDate = b.CreationDate
-	brTxn.TransactionType = transaction.TxnTypeSmartContract
-	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
-	brTxn.Fee = 0
-	brTxn.Sign(node.Self.GetSignatureScheme())
-	return brTxn
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {

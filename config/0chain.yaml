@@ -9,7 +9,6 @@ logging:
 development:
   state: true
   dkg: true
-  block_rewards: false
   smart_contract:
     storage: true
     faucet: true

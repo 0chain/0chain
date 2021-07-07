@@ -134,7 +134,6 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		errMsg6 = "write_pool_lock_failed: " +
 			"duration (3h0m0s) is longer than max lock period (2h0m0s)"
 		errMsg7 = "write_pool_lock_failed: user already has this write pool"
-		errMsg8 = "write_pool_lock_failed: unexpected end of JSON input"
 	)
 
 	var (
@@ -179,11 +178,11 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	// 1. no pool
 	_, err = ssc.writePoolLock(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg8)
+	requireErrMsg(t, err, errMsg1)
 
 	tx.Hash = "new_write_pool_tx_hash"
 	tx.Value, balances.balances[client.id] = 40, 40 // set {
-	err = ssc.createWritePool(&tx, &alloc, false, balances)
+	err = ssc.createWritePool(&tx, &alloc, balances)
 	require.NoError(t, err)
 	tx.Hash = txHash
 	tx.Value, balances.balances[client.id] = 0, 0 // } reset

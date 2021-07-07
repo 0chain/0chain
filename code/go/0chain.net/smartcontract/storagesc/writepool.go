@@ -115,6 +115,59 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	return
 }
 
+/*
+func (wp *writePool) moveToStake(sscKey, allocID, blobID string, zcnPool tokenpool.ZcnPool,
+	sp *stakePool, now common.Timestamp, value state.Balance,
+	balances chainState.StateContextI) (err error) {
+
+	var cut = wp.blobberCut(allocID, blobID, now)
+
+	if len(cut) == 0 {
+		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
+	}
+
+	var torm []*allocationPool // to remove later (empty allocation pools)
+	for _, ap := range cut {
+		if value == 0 {
+			break // all required tokens has moved to the blobber
+		}
+		var bi, ok = ap.Blobbers.getIndex(blobID)
+		if !ok {
+			continue // impossible case, but leave the check here
+		}
+		var (
+			bp   = ap.Blobbers[bi]
+			move state.Balance
+		)
+		if value >= bp.Balance {
+			move, bp.Balance = bp.Balance, 0
+		} else {
+			move, bp.Balance = value, bp.Balance-value
+		}
+		if _, err := moveReward(sscKey, zcnPool, sp, move, balances); err != nil {
+			return err
+		}
+		sp.Rewards.Blobber += move
+		value -= move
+		if bp.Balance == 0 {
+			ap.Blobbers.removeByIndex(bi)
+		}
+		if ap.Balance == 0 {
+			torm = append(torm, ap) // remove the allocation pool later
+		}
+	}
+
+	if value != 0 {
+		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
+	}
+
+	// remove empty allocation pools
+	wp.removeEmpty(allocID, torm)
+	return nil
+}
+*/
 // take write pool by ID to unlock (the take is get and remove)
 func (wp *writePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
@@ -167,50 +220,14 @@ func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	return
 }
 
-func (wp *writePool) fill(
-	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	until common.Timestamp,
-	mintNewTokens bool,
-	balances chainState.StateContextI,
-) (
+func (wp *writePool) fill(t *transaction.Transaction, alloc *StorageAllocation,
+	until common.Timestamp, balances chainState.StateContextI) (
 	resp string, err error) {
 
-	if !mintNewTokens {
-		if err = checkFill(t, balances); err != nil {
-			return
-		}
-	}
-
-	var ap allocationPool
-	var transfer *state.Transfer
-	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-		return "", fmt.Errorf("digging write pool: %v", err)
-	}
-	if mintNewTokens {
-		balances.AddMint(&state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     state.Balance(t.Value),
-		})
-	} else {
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", fmt.Errorf("adding transfer to write pool: %v", err)
-		}
-	}
-
-	// set fields
-	ap.AllocationID = alloc.ID
-	ap.ExpireAt = until
-	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
-
-	// add the allocation pool
-	wp.Pools.add(&ap)
-	return
-}
-
-func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPools {
 	var bps blobberPools
+	if err = checkFill(t, balances); err != nil {
+		return
+	}
 	var total float64
 	for _, b := range alloc.BlobberDetails {
 		total += float64(b.Terms.WritePrice)
@@ -218,11 +235,30 @@ func makeCopyAllocationBlobbers(alloc StorageAllocation, value int64) blobberPoo
 	for _, b := range alloc.BlobberDetails {
 		var ratio = float64(b.Terms.WritePrice) / total
 		bps.add(&blobberPool{
-			Balance:   state.Balance(float64(value) * ratio),
+			Balance:   state.Balance(float64(t.Value) * ratio),
 			BlobberID: b.BlobberID,
 		})
 	}
-	return bps
+	var (
+		ap       allocationPool
+		transfer *state.Transfer
+	)
+	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
+		return "", fmt.Errorf("digging write pool: %v", err)
+	}
+
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", fmt.Errorf("adding transfer to write pool: %v", err)
+	}
+
+	// set fields
+	ap.AllocationID = alloc.ID
+	ap.ExpireAt = until
+	ap.Blobbers = bps
+
+	// add the allocation pool
+	wp.Pools.add(&ap)
+	return
 }
 
 func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
@@ -263,41 +299,9 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	return
 }
 
-func (ssc *StorageSmartContract) createEmptyWritePool(
-	txn *transaction.Transaction,
-	alloc *StorageAllocation,
-	balances chainState.StateContextI,
-) (err error) {
-	var wp *writePool
-	wp, err = ssc.getWritePool(alloc.Owner, balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return fmt.Errorf("getting client write pool: %v", err)
-	}
-	if err == util.ErrValueNotPresent {
-		wp = new(writePool)
-	}
+func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
+	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
 
-	var ap = allocationPool{
-		AllocationID: alloc.ID,
-		ExpireAt:     alloc.Until(),
-		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
-	}
-	ap.TokenPool.ID = txn.Hash
-	wp.Pools.add(&ap)
-
-	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
-		return fmt.Errorf("saving write pool: %v", err)
-	}
-
-	return
-}
-
-func (ssc *StorageSmartContract) createWritePool(
-	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	mintNewTokens bool,
-	balances chainState.StateContextI,
-) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
@@ -317,7 +321,7 @@ func (ssc *StorageSmartContract) createWritePool(
 
 	if t.Value > 0 {
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, mintNewTokens, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return
 		}
 	}
@@ -333,18 +337,19 @@ func (ssc *StorageSmartContract) createWritePool(
 func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
+	// configs
+
 	var conf *writePoolConfig
 	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			"can't get configs: "+err.Error())
 	}
 
+	// user write pools
+
 	var wp *writePool
 	if wp, err = ssc.getWritePool(t.ClientID, balances); err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("write_pool_lock_failed", err.Error())
-		}
-		wp = new(writePool)
+		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
 	// lock request & user balance

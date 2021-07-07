@@ -21,15 +21,7 @@ func scConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":configurations")
 }
 
-type freeAllocationSettings struct {
-	DataShards                 int           `json:"data_shards"`
-	ParityShards               int           `json:"parity_shards"`
-	Size                       int64         `json:"size"`
-	Duration                   time.Duration `json:"duration"`
-	ReadPriceRange             PriceRange    `json:"read_price_range"`
-	WritePriceRange            PriceRange    `json:"write_price_range"`
-	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
-}
+// stake pool configs
 
 type stakePoolConfig struct {
 	MinLock int64 `json:"min_lock"`
@@ -38,41 +30,20 @@ type stakePoolConfig struct {
 	InterestInterval time.Duration `json:"interest_interval"`
 }
 
+// read pool configs
+
 type readPoolConfig struct {
 	MinLock       int64         `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
+// write pool configurations
+
 type writePoolConfig struct {
 	MinLock       int64         `json:"min_lock"`
 	MinLockPeriod time.Duration `json:"min_lock_period"`
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
-}
-
-type blockReward struct {
-	BlockReward           state.Balance `json:"block_reward"`
-	QualifyingStake       state.Balance `json:"qualifying_stake"`
-	SharderWeight         float64       `json:"sharder_weight"`
-	MinerWeight           float64       `json:"miner_weight"`
-	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
-	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
-}
-
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
-	total := sharderRatio + minerRatio + bCapcacityRatio + bUsageRatio
-	if total == 0 {
-		br.SharderWeight = 0
-		br.MinerWeight = 0
-		br.BlobberCapacityWeight = 0
-		br.BlobberUsageWeight = 0
-	} else {
-		br.SharderWeight = sharderRatio / total
-		br.MinerWeight = minerRatio / total
-		br.BlobberCapacityWeight = bCapcacityRatio / total
-		br.BlobberUsageWeight = bUsageRatio / total
-	}
-
 }
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
@@ -128,11 +99,6 @@ type scConfig struct {
 	// paid yet can go back.
 	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
 
-	// free allocations
-	MaxTotalFreeAllocation      state.Balance          `json:"max_total_free_allocation"`
-	MaxIndividualFreeAllocation state.Balance          `json:"max_individual_free_allocation"`
-	FreeAllocationSettings      freeAllocationSettings `json:"free_allocation_settings"`
-
 	// challenges generating
 
 	// ChallengeEnabled is challenges generating pin.
@@ -154,8 +120,6 @@ type scConfig struct {
 
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
 	MaxCharge float64 `json:"max_charge"`
-
-	BlockReward *blockReward `json:"block_reward"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -210,43 +174,6 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
 			sc.StakePool.InterestInterval)
 	}
-
-	if sc.MaxTotalFreeAllocation < 0 {
-		return fmt.Errorf("negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
-	}
-	if sc.MaxIndividualFreeAllocation < 0 {
-		return fmt.Errorf("negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
-	}
-
-	if sc.FreeAllocationSettings.DataShards < 0 {
-		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
-			sc.FreeAllocationSettings.DataShards)
-	}
-	if sc.FreeAllocationSettings.ParityShards < 0 {
-		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
-			sc.FreeAllocationSettings.ParityShards)
-	}
-	if sc.FreeAllocationSettings.Size < 0 {
-		return fmt.Errorf("negative free_allocation_settings.size: %v",
-			sc.FreeAllocationSettings.Size)
-	}
-	if sc.FreeAllocationSettings.Duration <= 0 {
-		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
-			sc.FreeAllocationSettings.Duration)
-	}
-	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
-		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
-			sc.FreeAllocationSettings.ReadPriceRange)
-	}
-	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
-		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
-			sc.FreeAllocationSettings.WritePriceRange)
-	}
-	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
-			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
-	}
-
 	if sc.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
 			sc.FailedChallengesToCancel)
@@ -279,30 +206,6 @@ func (sc *scConfig) validate() (err error) {
 	if sc.MaxCharge > 1.0 {
 		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
 			sc.MaxCharge)
-	}
-	if sc.BlockReward.BlockReward < 0 {
-		return fmt.Errorf("negative block_reward.block_reward: %v",
-			sc.BlockReward.BlockReward)
-	}
-	if sc.BlockReward.QualifyingStake < 0 {
-		return fmt.Errorf("negative block_reward.qualifying_stake: %v",
-			sc.BlockReward.QualifyingStake)
-	}
-	if sc.BlockReward.SharderWeight < 0 {
-		return fmt.Errorf("negative block_reward.sharder_weight: %v",
-			sc.BlockReward.SharderWeight)
-	}
-	if sc.BlockReward.MinerWeight < 0 {
-		return fmt.Errorf("negative block_reward.miner_weight: %v",
-			sc.BlockReward.MinerWeight)
-	}
-	if sc.BlockReward.BlobberCapacityWeight < 0 {
-		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
-			sc.BlockReward.BlobberCapacityWeight)
-	}
-	if sc.BlockReward.BlobberUsageWeight < 0 {
-		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
-			sc.BlockReward.BlobberUsageWeight)
 	}
 	return
 }
@@ -356,6 +259,7 @@ func (ssc *StorageSmartContract) getConfigBytes(
 
 // configs from sc.yaml
 func getConfiguredConfig() (conf *scConfig, err error) {
+
 	const pfx = "smart_contracts.storagesc."
 
 	conf = new(scConfig)
@@ -397,24 +301,6 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		pfx + "stakepool.interest_rate")
 	conf.StakePool.InterestInterval = scc.GetDuration(
 		pfx + "stakepool.interest_interval")
-
-	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
-	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
-	fas := pfx + "free_allocation_settings."
-	conf.FreeAllocationSettings.DataShards = int(scc.GetFloat64(fas + "data_shards"))
-	conf.FreeAllocationSettings.ParityShards = int(scc.GetFloat64(fas + "parity_shards"))
-	conf.FreeAllocationSettings.Size = int64(scc.GetFloat64(fas + "size"))
-	conf.FreeAllocationSettings.Duration = scc.GetDuration(fas + "duration")
-	conf.FreeAllocationSettings.ReadPriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"read_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"read_price_range.max") * 1e10),
-	}
-	conf.FreeAllocationSettings.WritePriceRange = PriceRange{
-		Min: state.Balance(scc.GetFloat64(fas+"write_price_range.min") * 1e10),
-		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
-	}
-	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
-
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(
 		pfx + "failed_challenges_to_cancel")
@@ -429,22 +315,6 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
-
-	conf.BlockReward = new(blockReward)
-	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
-	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
-
-	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
-	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
-	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
-	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight" +
-		"blobber_usage_weight")
-	conf.BlockReward.setWeightsFromRatio(
-		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
-		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
-		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
-	)
 
 	err = conf.validate()
 	return
