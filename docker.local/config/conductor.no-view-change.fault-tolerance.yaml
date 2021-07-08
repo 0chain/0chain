@@ -142,6 +142,7 @@ tests:
           start: true
       - wait_round:
           shift: 20
+          allow_beyond: true
       - stop: ["sharder-1"]
       - wait_no_progress:
           timeout: "5m"
@@ -163,6 +164,7 @@ tests:
       #     timeout: "10s"
       - wait_round:
           shift: 50
+          allow_beyond: true
 
   # NODES GO DOWN AND COME UP
   - name: "All nodes go down and come up"
@@ -193,16 +195,19 @@ tests:
           start: true
       - wait_round:
           shift: 20
+          allow_beyond: true
       - stop: ["sharder-1", "miner-4"] # all sharders and some miners go down
       - wait_no_progress:
           timeout: "1m"
       - start: ["sharder-1"] # sharder comes up, BC should move
       - wait_round:
           shift: 20
+          allow_beyond: true
       - stop: ["miner-2", "miner-3"] # more than consensus miners are down
       - wait_no_progress:
           timeout: "1m"
       - start: ["miner-4"] # consensus miners are back online
       - wait_round:
           shift: 20
+          allow_beyond: true
       # To be continued
