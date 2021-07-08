@@ -563,7 +563,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	}
 
 	if !r.waitNoProgress.IsZero() {
-		if time.Now().After(r.waitNoProgress.Start) {
+		if r.lastRound < re.Round && time.Now().After(r.waitNoProgress.Start) {
 			return fmt.Errorf("got round %d, but 'no progress' is expected", re.Round)
 		}
 	}
@@ -599,7 +599,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	switch {
 	case r.waitRound.Round > re.Round:
 		return // not this round
-	case !r.waitRound.Allow_Beyound && r.waitRound.Round < re.Round:
+	case !r.waitRound.AllowBeyond && r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
