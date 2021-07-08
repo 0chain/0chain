@@ -204,10 +204,12 @@ func Test_allocationPools(t *testing.T) {
 	cut = aps.allocationCut(a3)
 	require.EqualValues(t, []*allocationPool{
 		&allocationPool{AllocationID: a3},
+		&allocationPool{AllocationID: a3},
 	}, cut)
 
 	cut = aps.allocationCut(a4)
 	require.EqualValues(t, []*allocationPool{
+		&allocationPool{AllocationID: a4},
 		&allocationPool{AllocationID: a4},
 	}, cut)
 

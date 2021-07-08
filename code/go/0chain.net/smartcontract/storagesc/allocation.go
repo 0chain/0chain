@@ -786,8 +786,7 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// add more tokens to related challenge pool, or move some tokens back
 	var ndr = alloc.Expiration - t.CreationDate
-	err = sc.adjustChallengePool(alloc, wps, odr, ndr, oterms, t.CreationDate,
-		balances)
+	err = sc.adjustChallengePool(alloc, wps, odr, ndr, oterms, t.CreationDate, balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}

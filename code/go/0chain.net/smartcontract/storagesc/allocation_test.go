@@ -244,7 +244,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
 	)
-	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
+	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
 	var mockReadPrice = zcnToBalance(0.01)
 	var mockWritePrice = zcnToBalance(0.10)
@@ -411,7 +411,11 @@ func TestExtendAllocation(t *testing.T) {
 		balances.On(
 			"InsertTrieNode", challengePoolKey(ssc.ID, sa.ID),
 			mock.MatchedBy(func(cp *challengePool) bool {
-				newFunds := sizeInGB(sa.Size+args.request.Size) *
+				var size int64
+				for _, blobber := range sa.BlobberDetails {
+					size += blobber.Stats.UsedSize
+				}
+				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
 					float64(sa.durationInTimeUnits(args.request.Expiration))
 				return cp.Balance/10 == state.Balance(newFunds/10) // ignore type cast errors
@@ -432,14 +436,14 @@ func TestExtendAllocation(t *testing.T) {
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
 					OwnerID:      mockOwner,
-					Size:         1,
+					Size:         zcnToInt64(31),
 					Expiration:   7000,
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.1,
+				value:      0.0000023,
 				poolFunds:  []float64{0.0, 5.0, 5.0},
-				poolCount:  []int{1, 2, 4},
+				poolCount:  []int{1, 3, 4},
 			},
 		},
 	}
