@@ -193,7 +193,7 @@ tests:
           good: [] # no tickets
           bad: [] # no bad tickets
       - wait_no_progress:
-          timeout: "1m"
+          timeout: "30s" # setting greater waiting time will cause eventual notarization via a different route
   - name: "Send bad verification ticket with wrong key"
     flow:
       - set_monitor: "sharder-1"
@@ -208,6 +208,7 @@ tests:
           bad: ["miner-1", "miner-2"]
       - wait_round:
           round: 20 # it keeps going
+          timeout: "15s" # fast
   - name: "Send bad verification ticket with wrong hash"
     flow:
       - set_monitor: "sharder-1"
@@ -222,6 +223,7 @@ tests:
           bad: ["miner-1", "miner-2"]
       - wait_round:
           round: 20 # it keeps going
+          timeout: "15s" # fast
 
   # Bad block
   - name: "Create competing block when not a generator"
