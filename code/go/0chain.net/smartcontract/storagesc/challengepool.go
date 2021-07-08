@@ -91,7 +91,7 @@ func (cp *challengePool) moveToWritePool(
 		ap = new(allocationPool)
 		ap.AllocationID = alloc.ID
 		ap.ExpireAt = 0
-		alloc.WritePoolOwners.add(alloc.Owner)
+		alloc.addWritePoolOwner(alloc.Owner)
 		wp.Pools.add(ap)
 	}
 

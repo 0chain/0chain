@@ -566,7 +566,7 @@ type StorageAllocation struct {
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 
 	//AllocationPools allocationPools `json:"allocation_pools"`
-	WritePoolOwners sortedList `json:"write_pool_owners"`
+	WritePoolOwners []string `json:"write_pool_owners"`
 
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
@@ -614,15 +614,24 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 	return
 }
 
+func (sa *StorageAllocation) addWritePoolOwner(userId string) {
+	for _, id := range sa.WritePoolOwners {
+		if userId == id {
+			return
+		}
+	}
+	sa.WritePoolOwners = append(sa.WritePoolOwners, userId)
+}
+
 func (sa *StorageAllocation) getAllocationPools(
 	ssc *StorageSmartContract,
 	balances chainstate.StateContextI,
 ) (*allocationWritePools, error) {
 	var awp = allocationWritePools{
-		ids: sa.WritePoolOwners,
+		ownerId: -1,
 	}
 
-	for _, wpOwner := range sa.WritePoolOwners {
+	for i, wpOwner := range sa.WritePoolOwners {
 		wp, err := ssc.getWritePool(wpOwner, balances)
 		if err != nil {
 			return nil, err
@@ -632,7 +641,25 @@ func (sa *StorageAllocation) getAllocationPools(
 		for _, ap := range cut {
 			awp.allocationPools.add(ap)
 		}
+		if wpOwner == sa.Owner {
+			awp.ownerId = i
+		}
 	}
+
+	if awp.ownerId < 0 {
+		wp, err := ssc.getWritePool(sa.Owner, balances)
+		if err != nil {
+			return nil, err
+		}
+		awp.writePools = append(awp.writePools, wp)
+		cut := wp.Pools.allocationCut(sa.ID)
+		for _, ap := range cut {
+			awp.allocationPools.add(ap)
+		}
+		awp.ownerId = len(awp.writePools) - 1
+		sa.WritePoolOwners = append(sa.WritePoolOwners, sa.Owner)
+	}
+	awp.ids = sa.WritePoolOwners
 
 	return &awp, nil
 }

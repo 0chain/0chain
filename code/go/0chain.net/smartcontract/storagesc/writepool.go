@@ -187,7 +187,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
 	}
 	ap.TokenPool.ID = txn.Hash
-	alloc.WritePoolOwners.add(alloc.Owner)
+	alloc.addWritePoolOwner(alloc.Owner)
 	wp.Pools.add(&ap)
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
@@ -224,7 +224,7 @@ func (ssc *StorageSmartContract) createWritePool(
 		var until = alloc.Until()
 		ap, err := newAllocationPool(t, alloc, until, mintNewTokens, balances)
 		if err != nil {
-			return fmt.Errorf("creating write pool: %v", err)
+			return err
 		}
 		wp.Pools.add(ap)
 	}
@@ -348,7 +348,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	ap.Blobbers = bps
 
 	// add and save
-	alloc.WritePoolOwners.add(t.ClientID)
+	alloc.addWritePoolOwner(alloc.Owner)
 	wp.Pools.add(&ap)
 	if err = wp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())

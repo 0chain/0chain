@@ -8,8 +8,10 @@ import (
 	"fmt"
 )
 
+// Created using StorageAllocation.getAllocationPools
 type allocationWritePools struct {
 	// The indices for ids and writePools match
+	ownerId         int
 	ids             []string
 	writePools      []*writePool
 	allocationPools allocationPools
@@ -19,7 +21,10 @@ func (awp *allocationWritePools) getOwnerWP() (*writePool, error) {
 	if len(awp.writePools) == 0 {
 		return nil, errors.New("no write pools")
 	}
-	return awp.writePools[0], nil
+	if awp.ownerId < 0 || len(awp.writePools) <= awp.ownerId {
+		return nil, errors.New("no owner write pool")
+	}
+	return awp.writePools[awp.ownerId], nil
 }
 
 func (awp *allocationWritePools) saveWritePools(
@@ -53,7 +58,10 @@ func (awp allocationWritePools) addOwnerWritePool(ap *allocationPool) error {
 	if len(awp.writePools) == 0 {
 		return errors.New("no write pools")
 	}
-	awp.writePools[0].Pools.add(ap)
+	if awp.ownerId < 0 || len(awp.writePools) <= awp.ownerId {
+		return errors.New("no owner write pool")
+	}
+	awp.writePools[awp.ownerId].Pools.add(ap)
 	awp.allocationPools.add(ap)
 	return nil
 }

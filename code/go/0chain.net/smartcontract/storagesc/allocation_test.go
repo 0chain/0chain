@@ -255,6 +255,7 @@ func TestExtendAllocation(t *testing.T) {
 		expiration common.Timestamp
 		value      float64
 		poolFunds  []float64
+		poolCount  []int
 	}
 	type want struct {
 		blobberIds []int
@@ -325,11 +326,13 @@ func TestExtendAllocation(t *testing.T) {
 		}
 		require.True(t, len(args.poolFunds) > 0)
 
+		bCount := sa.DataShards + sa.ParityShards
 		var sNodes = StorageNodes{}
 		var blobbers []*StorageNode
 		for i := 0; i < mockNumAllBlobbers; i++ {
 			mockBlobber := makeMockBlobber(i)
 			sNodes.Nodes.add(mockBlobber)
+
 			if i < sa.DataShards+sa.ParityShards {
 				blobbers = append(blobbers, mockBlobber)
 				sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
@@ -340,7 +343,7 @@ func TestExtendAllocation(t *testing.T) {
 						WritePrice:              mockWritePrice,
 					},
 					Stats: &StorageAllocationStats{
-						UsedSize: sa.Size / int64(sa.DataShards+sa.ParityShards),
+						UsedSize: sa.Size / int64(bCount),
 					},
 				})
 				sp := stakePool{
@@ -363,23 +366,27 @@ func TestExtendAllocation(t *testing.T) {
 			}
 		}
 
+		require.EqualValues(t, len(args.poolFunds), len(args.poolCount))
 		for i, funds := range args.poolFunds {
-			expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
-			ap := allocationPool{
-				AllocationID: sa.ID,
-				ExpireAt:     expiresAt,
-			}
-			ap.Balance = zcnToBalance(funds)
-			for _, blobber := range blobbers {
-				ap.Blobbers.add(&blobberPool{
-					BlobberID: blobber.ID,
-					Balance:   ap.Balance / state.Balance(sa.DataShards+sa.ParityShards),
-				})
-			}
 			var wp writePool
-			wp.Pools.add(&ap)
+			for j := 0; j < args.poolCount[i]; j++ {
+				expiresAt := sa.Expiration + toSeconds(sa.ChallengeCompletionTime) + args.request.Expiration + 1
+				ap := allocationPool{
+					AllocationID: sa.ID,
+					ExpireAt:     expiresAt,
+				}
+				ap.Balance = zcnToBalance(funds)
+				for _, blobber := range blobbers {
+					ap.Blobbers.add(&blobberPool{
+						BlobberID: blobber.ID,
+						Balance:   ap.Balance / state.Balance(bCount*args.poolCount[i]),
+					})
+				}
+				wp.Pools.add(&ap)
+			}
+
 			if i == 0 {
-				sa.WritePoolOwners.add(sa.Owner)
+				sa.addWritePoolOwner(sa.Owner)
 				balances.On(
 					"GetTrieNode", writePoolKey(ssc.ID, sa.Owner),
 				).Return(&wp, nil).Once()
@@ -388,7 +395,7 @@ func TestExtendAllocation(t *testing.T) {
 				).Return("", nil).Once()
 			} else {
 				wpOwner := mockWpOwner + strconv.Itoa(i)
-				sa.WritePoolOwners.add(wpOwner)
+				sa.addWritePoolOwner(wpOwner)
 				balances.On(
 					"GetTrieNode", writePoolKey(ssc.ID, wpOwner),
 				).Return(&wp, nil).Once()
@@ -432,6 +439,7 @@ func TestExtendAllocation(t *testing.T) {
 				expiration: mockExpiration,
 				value:      0.1,
 				poolFunds:  []float64{0.0, 5.0, 5.0},
+				poolCount:  []int{1, 2, 4},
 			},
 		},
 	}

@@ -155,7 +155,7 @@ func newAllocationPool(
 	var err error
 	if !mintNewTokens {
 		if err = checkFill(t, balances); err != nil {
-			return nil, nil
+			return nil, err
 		}
 	}
 
@@ -182,7 +182,7 @@ func newAllocationPool(
 	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
 
 	// add the allocation pool
-	alloc.WritePoolOwners.add(alloc.Owner)
+	alloc.addWritePoolOwner(alloc.Owner)
 	return &ap, nil
 }
 
