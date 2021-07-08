@@ -64,7 +64,7 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-          true
+          start: true
       - wait_round:
           shift: 20
       - stop: ["miner-2", "miner-3", "miner-4"]
@@ -93,7 +93,7 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-          true
+          start: true
       - wait_round:
           shift: 20
       - stop: ["miner-4"]
