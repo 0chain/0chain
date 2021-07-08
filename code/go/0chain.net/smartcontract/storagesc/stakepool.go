@@ -548,10 +548,13 @@ func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
 
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, with regards to division errors
-func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
-	wp *writePool, offer, slash state.Balance) (
-	move state.Balance, err error) {
-
+func (sp *stakePool) slash(
+	alloc *StorageAllocation,
+	blobID string,
+	until common.Timestamp,
+	wp *writePool,
+	offer, slash state.Balance,
+) (move state.Balance, err error) {
 	if offer == 0 || slash == 0 {
 		return // nothing to move
 	}
@@ -564,11 +567,12 @@ func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
 	// related stake holders, that can loose some tokens due to
 	// division error;
 
-	var ap = wp.allocPool(allocID, until)
+	var ap = wp.allocPool(alloc.ID, until)
 	if ap == nil {
 		ap = new(allocationPool)
-		ap.AllocationID = allocID
+		ap.AllocationID = alloc.ID
 		ap.ExpireAt = 0
+		alloc.WritePoolOwners.add(alloc.Owner)
 		wp.Pools.add(ap)
 	}
 

@@ -1,8 +1,11 @@
 package storagesc
 
 import (
+	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/transaction"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"time"
 
@@ -142,6 +145,47 @@ type allocationPool struct {
 	Blobbers          blobberPools     `json:"blobbers"`      //
 }
 
+func newAllocationPool(
+	t *transaction.Transaction,
+	alloc *StorageAllocation,
+	until common.Timestamp,
+	mintNewTokens bool,
+	balances chainState.StateContextI,
+) (*allocationPool, error) {
+	var err error
+	if !mintNewTokens {
+		if err = checkFill(t, balances); err != nil {
+			return nil, nil
+		}
+	}
+
+	var ap allocationPool
+	var transfer *state.Transfer
+	if transfer, _, err = ap.DigPool(t.Hash, t); err != nil {
+		return nil, fmt.Errorf("digging write pool: %v", err)
+	}
+	if mintNewTokens {
+		balances.AddMint(&state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: ADDRESS,
+			Amount:     state.Balance(t.Value),
+		})
+	} else {
+		if err = balances.AddTransfer(transfer); err != nil {
+			return nil, fmt.Errorf("adding transfer to write pool: %v", err)
+		}
+	}
+
+	// set fields
+	ap.AllocationID = alloc.ID
+	ap.ExpireAt = until
+	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
+
+	// add the allocation pool
+	alloc.WritePoolOwners.add(alloc.Owner)
+	return &ap, nil
+}
+
 //
 // allocation read/write pools (list)
 //
@@ -157,16 +201,6 @@ func (aps allocationPools) getIndex(allocID string) (i int, ok bool) {
 		}
 	}
 	return 0, false
-	// i = sort.Search(len(aps), func(i int) bool {
-	// 	return aps[i].AllocationID >= allocID
-	// })
-	// if i == len(aps) {
-	// 	return // not found
-	// }
-	// if aps[i].AllocationID == allocID {
-	// 	return i, true // found
-	// }
-	// return // not found
 }
 
 func (aps allocationPools) get(allocID string) (
@@ -182,19 +216,6 @@ func (aps allocationPools) get(allocID string) (
 		return aps[i], true // found
 	}
 	return // not found
-}
-
-func (aps *allocationPools) removeByIndex(i int) {
-	(*aps) = append((*aps)[:i], (*aps)[i+1:]...)
-}
-
-func (aps *allocationPools) remove(allocID string) (ok bool) {
-	var i int
-	if i, ok = aps.getIndex(allocID); !ok {
-		return // false
-	}
-	aps.removeByIndex(i)
-	return true // removed
 }
 
 func (aps *allocationPools) add(ap *allocationPool) {
@@ -289,6 +310,63 @@ Outer:
 		(*aps)[i], i = ax, i+1
 	}
 	(*aps) = (*aps)[:i]
+}
+
+func (aps *allocationPools) moveToChallenge(
+	allocID, blobID string,
+	cp *challengePool,
+	now common.Timestamp,
+	value state.Balance,
+) (err error) {
+	if value == 0 {
+		return // nothing to move, ok
+	}
+
+	var cut = aps.blobberCut(allocID, blobID, now)
+
+	if len(cut) == 0 {
+		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
+	}
+
+	var torm []*allocationPool // to remove later (empty allocation pools)
+	for _, ap := range cut {
+		if value == 0 {
+			break // all required tokens has moved to the blobber
+		}
+		var bi, ok = ap.Blobbers.getIndex(blobID)
+		if !ok {
+			continue // impossible case, but leave the check here
+		}
+		var (
+			bp   = ap.Blobbers[bi]
+			move state.Balance
+		)
+		if value >= bp.Balance {
+			move, bp.Balance = bp.Balance, 0
+		} else {
+			move, bp.Balance = value, bp.Balance-value
+		}
+		if _, _, err = ap.TransferTo(cp, move, nil); err != nil {
+			return // transferring error
+		}
+		value -= move
+		if bp.Balance == 0 {
+			ap.Blobbers.removeByIndex(bi)
+		}
+		if ap.Balance == 0 {
+			torm = append(torm, ap) // remove the allocation pool later
+		}
+	}
+
+	if value != 0 {
+		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
+	}
+
+	// remove empty allocation pools
+	aps.removeEmpty(allocID, torm)
+	return
 }
 
 func removeExpired(cut []*allocationPool, now common.Timestamp) (

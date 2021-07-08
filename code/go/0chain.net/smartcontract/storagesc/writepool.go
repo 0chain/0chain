@@ -61,60 +61,6 @@ func (wp *writePool) save(sscKey, clientID string,
 	return
 }
 
-func (wp *writePool) moveToChallenge(allocID, blobID string,
-	cp *challengePool, now common.Timestamp, value state.Balance) (err error) {
-
-	if value == 0 {
-		return // nothing to move, ok
-	}
-
-	var cut = wp.blobberCut(allocID, blobID, now)
-
-	if len(cut) == 0 {
-		return fmt.Errorf("no tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	var torm []*allocationPool // to remove later (empty allocation pools)
-	for _, ap := range cut {
-		if value == 0 {
-			break // all required tokens has moved to the blobber
-		}
-		var bi, ok = ap.Blobbers.getIndex(blobID)
-		if !ok {
-			continue // impossible case, but leave the check here
-		}
-		var (
-			bp   = ap.Blobbers[bi]
-			move state.Balance
-		)
-		if value >= bp.Balance {
-			move, bp.Balance = bp.Balance, 0
-		} else {
-			move, bp.Balance = value, bp.Balance-value
-		}
-		if _, _, err = ap.TransferTo(cp, move, nil); err != nil {
-			return // transferring error
-		}
-		value -= move
-		if bp.Balance == 0 {
-			ap.Blobbers.removeByIndex(bi)
-		}
-		if ap.Balance == 0 {
-			torm = append(torm, ap) // remove the allocation pool later
-		}
-	}
-
-	if value != 0 {
-		return fmt.Errorf("not enough tokens in write pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
-	}
-
-	// remove empty allocation pools
-	wp.removeEmpty(allocID, torm)
-	return
-}
-
 // take write pool by ID to unlock (the take is get and remove)
 func (wp *writePool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
@@ -164,48 +110,6 @@ func (wp *writePool) allocPool(allocID string, until common.Timestamp) (
 
 func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	aps = wp.Pools.stat(now)
-	return
-}
-
-func (wp *writePool) fill(
-	t *transaction.Transaction,
-	alloc *StorageAllocation,
-	until common.Timestamp,
-	mintNewTokens bool,
-	balances chainState.StateContextI,
-) (
-	resp string, err error) {
-
-	if !mintNewTokens {
-		if err = checkFill(t, balances); err != nil {
-			return
-		}
-	}
-
-	var ap allocationPool
-	var transfer *state.Transfer
-	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-		return "", fmt.Errorf("digging write pool: %v", err)
-	}
-	if mintNewTokens {
-		balances.AddMint(&state.Mint{
-			Minter:     ADDRESS,
-			ToClientID: ADDRESS,
-			Amount:     state.Balance(t.Value),
-		})
-	} else {
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", fmt.Errorf("adding transfer to write pool: %v", err)
-		}
-	}
-
-	// set fields
-	ap.AllocationID = alloc.ID
-	ap.ExpireAt = until
-	ap.Blobbers = makeCopyAllocationBlobbers(*alloc, t.Value)
-
-	// add the allocation pool
-	wp.Pools.add(&ap)
 	return
 }
 
@@ -283,6 +187,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 		Blobbers:     makeCopyAllocationBlobbers(*alloc, txn.Value),
 	}
 	ap.TokenPool.ID = txn.Hash
+	alloc.WritePoolOwners.add(alloc.Owner)
 	wp.Pools.add(&ap)
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
@@ -317,9 +222,11 @@ func (ssc *StorageSmartContract) createWritePool(
 
 	if t.Value > 0 {
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, mintNewTokens, balances); err != nil {
-			return
+		ap, err := newAllocationPool(t, alloc, until, mintNewTokens, balances)
+		if err != nil {
+			return fmt.Errorf("creating write pool: %v", err)
 		}
+		wp.Pools.add(ap)
 	}
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
@@ -441,12 +348,18 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	ap.Blobbers = bps
 
 	// add and save
-
+	alloc.WritePoolOwners.add(t.ClientID)
 	wp.Pools.add(&ap)
 	if err = wp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
+	// save new linked allocation pool
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	if err != nil {
+		return "", common.NewErrorf("write_pool_lock_failed",
+			"saving allocation: %v", err)
+	}
 	return
 }
 

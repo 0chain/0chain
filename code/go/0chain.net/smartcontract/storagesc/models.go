@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainstate "0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -564,6 +565,9 @@ type StorageAllocation struct {
 	WritePriceRange            PriceRange    `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
 
+	//AllocationPools allocationPools `json:"allocation_pools"`
+	WritePoolOwners sortedList `json:"write_pool_owners"`
+
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
@@ -608,6 +612,29 @@ func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 		}
 	}
 	return
+}
+
+func (sa *StorageAllocation) getAllocationPools(
+	ssc *StorageSmartContract,
+	balances chainstate.StateContextI,
+) (*allocationWritePools, error) {
+	var awp = allocationWritePools{
+		ids: sa.WritePoolOwners,
+	}
+
+	for _, wpOwner := range sa.WritePoolOwners {
+		wp, err := ssc.getWritePool(wpOwner, balances)
+		if err != nil {
+			return nil, err
+		}
+		awp.writePools = append(awp.writePools, wp)
+		cut := wp.Pools.allocationCut(sa.ID)
+		for _, ap := range cut {
+			awp.allocationPools.add(ap)
+		}
+	}
+
+	return &awp, nil
 }
 
 func (sa *StorageAllocation) validate(now common.Timestamp,

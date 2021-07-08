@@ -609,9 +609,14 @@ func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
 
 // The adjustChallengePool moves more or moves some tokens back from or to
 // challenge pool during allocation extending or reducing.
-func (sc *StorageSmartContract) adjustChallengePool(alloc *StorageAllocation,
-	wp *writePool, odr, ndr common.Timestamp, oterms []Terms,
-	now common.Timestamp, balances chainstate.StateContextI) (err error) {
+func (sc *StorageSmartContract) adjustChallengePool(
+	alloc *StorageAllocation,
+	awp *allocationWritePools,
+	odr, ndr common.Timestamp,
+	oterms []Terms,
+	now common.Timestamp,
+	balances chainstate.StateContextI,
+) (err error) {
 
 	var (
 		changes = alloc.challengePoolChanges(odr, ndr, oterms)
@@ -628,15 +633,18 @@ func (sc *StorageSmartContract) adjustChallengePool(alloc *StorageAllocation,
 		var blobID = alloc.BlobberDetails[i].BlobberID
 		switch {
 		case ch > 0:
-			err = wp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
+			err = awp.moveToChallenge(alloc.ID, blobID, cp, now, ch)
 			changed = true
 		case ch < 0:
 			// only if the challenge pool has the tokens; all the tokens
 			// can be moved back already, or moved to a blobber due to
 			// challenge process
 			if cp.Balance >= -ch {
-				err = cp.moveToWritePool(alloc.ID, blobID, alloc.Until(), wp,
-					-ch)
+				wp, err := awp.getOwnerWP()
+				if err != nil {
+					return fmt.Errorf("adjust_challenge_pool: %v", err)
+				}
+				err = cp.moveToWritePool(alloc, blobID, alloc.Until(), wp, -ch)
 				changed = true
 			}
 		default:
@@ -745,26 +753,22 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 	}
 
-	// get related write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return common.NewErrorf("allocation_extending_failed",
-			"can't get write pool: %v", err)
-	}
-
 	var until = alloc.Until()
+	wps, err := alloc.getAllocationPools(sc, balances)
+	if err != nil {
+		return common.NewErrorf("allocation_extending_failed", "%v", err)
+	}
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
-		if !mintTokens {
-			if err = checkFill(t, balances); err != nil {
-				return common.NewError("allocation_extending_failed",
-					err.Error())
-			}
-		}
-		if _, err = wp.fill(t, alloc, until, mintTokens, balances); err != nil {
+		ap, err := newAllocationPool(t, alloc, until, mintTokens, balances)
+		if err != nil {
 			return common.NewErrorf("allocation_extending_failed",
 				"write pool filling: %v", err)
+		}
+		if err := wps.addOwnerWritePool(ap); err != nil {
+			return common.NewErrorf("allocation_extending_failed",
+				"add write pool: %v", err)
 		}
 	}
 
@@ -772,7 +776,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	// pool has enough tokens
 	if diff > 0 {
 		if mldLeft := alloc.restMinLockDemand(); mldLeft > 0 {
-			if wp.allocUntil(alloc.ID, until) < mldLeft {
+			if wps.allocUntil(alloc.ID, until) < mldLeft {
 				return common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}
@@ -781,14 +785,13 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// add more tokens to related challenge pool, or move some tokens back
 	var ndr = alloc.Expiration - t.CreationDate
-	err = sc.adjustChallengePool(alloc, wp, odr, ndr, oterms, t.CreationDate,
+	err = sc.adjustChallengePool(alloc, wps, odr, ndr, oterms, t.CreationDate,
 		balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
-	// save the write pool
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+	if err := wps.saveWritePools(sc.ID, balances); err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
 	}
 
@@ -824,11 +827,9 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		}
 	}
 
-	// get related write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return common.NewErrorf("allocation_reducing_failed",
-			"can't get write pool: %v", err)
+	wps, err := alloc.getAllocationPools(sc, balances)
+	if err != nil {
+		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
 	// lock tokens if this transaction provides them
@@ -837,21 +838,26 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 		var until = alloc.Until()
-		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
+
+		ap, err := newAllocationPool(t, alloc, until, false, balances)
+		if err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
+		}
+		if err := wps.addOwnerWritePool(ap); err != nil {
+			return common.NewErrorf("allocation_extending_failed",
+				"add write pool: %v", err)
 		}
 	}
 
 	// new allocation duration remains
 	var ndr = alloc.Expiration - t.CreationDate
-	err = sc.adjustChallengePool(alloc, wp, odr, ndr, nil, t.CreationDate,
+	err = sc.adjustChallengePool(alloc, wps, odr, ndr, nil, t.CreationDate,
 		balances)
 	if err != nil {
 		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	// save the write pool
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+	if err := wps.saveWritePools(sc.ID, balances); err != nil {
 		return common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
@@ -1398,7 +1404,7 @@ func (sc *StorageSmartContract) finishAllocation(
 	cp.Balance = cpLeft - passPayments
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
-	err = cp.moveToWritePool(alloc.ID, "", alloc.Until(), wp, cp.Balance)
+	err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"moving challenge pool rest back to write pool: "+err.Error())
