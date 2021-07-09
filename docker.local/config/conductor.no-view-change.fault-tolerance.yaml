@@ -67,7 +67,7 @@ tests:
           start: true
       - wait_round:
           shift: 20
-      - stop: ["miner-2", "miner-3", "miner-4"]
+      - stop: ["miner-3", "miner-4"]
       - wait_no_progress:
           timeout: "5m"
 
@@ -111,8 +111,8 @@ tests:
           start: true
       - wait_round:
           shift: 20
-      - stop: ["miner-2", "miner-3", "miner-4"]
-      - start: ["miner-2", "miner-3", "miner-4"]
+      - stop: ["miner-3", "miner-4"]
+      - start: ["miner-3", "miner-4"]
       - wait_round:
           shift: 100
 
