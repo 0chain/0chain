@@ -214,7 +214,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		etxns = etxns[:blockSize]
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processFeeTxn(ctx, b, clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DevConfiguration.IsBlockRewards {
+		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
 		if err != nil {
 			return err
 		}
