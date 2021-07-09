@@ -274,7 +274,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 
 // newReadPool SC function creates new read pool for a client.
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
@@ -335,7 +335,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+		rp = new(readPool)
 	}
 
 	// lock request & user balance

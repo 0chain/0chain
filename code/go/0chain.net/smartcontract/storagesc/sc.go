@@ -61,6 +61,10 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
 	ssc.SmartContractExecutionStats["cancel_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cancel_allocation"), nil)
+	ssc.SmartContractExecutionStats["free_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "free_allocation_request"), nil)
+	ssc.SmartContractExecutionStats["free_update_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_free_storage"), nil)
+	ssc.SmartContractExecutionStats["add_curator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_curator"), nil)
+	ssc.SmartContractExecutionStats["curator_transfer_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "curator_transfer_allocation"), nil)
 	// challenge
 	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
 	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
@@ -78,6 +82,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/getBlobber"] = ssc.GetBlobberHandler
 	ssc.SmartContractExecutionStats["add_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_blobber (add/update/remove SC function)"), nil)
 	ssc.SmartContractExecutionStats["update_blobber_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_blobber_settings"), nil)
+	ssc.SmartContractExecutionStats["pay_blobber_block_rewards"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "pay_blobber_block_rewards"), nil)
 	// blobber statistic (not function calls)
 	ssc.SmartContractExecutionStats[statNumberOfBlobbers] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: number of blobbers"), nil)
 	ssc.SmartContractExecutionStats[statAddBlobber] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: add bblober"), nil)
@@ -207,6 +212,20 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "cancel_allocation":
 		resp, err = sc.cancelAllocationRequest(t, input, balances)
 
+	// free allocations
+
+	case "add_free_storage_assigner":
+		err = sc.addFreeStorageAssigner(t, input, balances)
+	case "free_allocation_request":
+		resp, err = sc.freeAllocationRequest(t, input, balances)
+	case "free_update_allocation":
+		resp, err = sc.updateFreeStorageRequest(t, input, balances)
+
+	case "add_curator":
+		resp, err = "", sc.addCurator(t, input, balances)
+	case "curator_transfer_allocation":
+		resp, err = sc.curatorTransferAllocation(t, input, balances)
+
 	// blobbers
 
 	case "add_blobber":
@@ -217,6 +236,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.blobberHealthCheck(t, input, balances)
 	case "update_blobber_settings":
 		resp, err = sc.updateBlobberSettings(t, input, balances)
+	case "pay_blobber_block_rewards":
+		err = sc.payBlobberBlockRewards(balances)
 
 	// read_pool
 
@@ -242,13 +263,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolUnlock(t, input, balances)
 	case "stake_pool_pay_interests":
 		resp, err = sc.stakePoolPayInterests(t, input, balances)
-
-	// case "challenge_request":
-	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
-	// 	return resp, nil
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(
