@@ -203,7 +203,7 @@ tests:
       - wait_round:
           shift: 20
           allow_beyond: true
-      - stop: ["miner-2", "miner-3"] # more than consensus miners are down
+      - stop: ["miner-3"] # more than consensus miners are down
       - wait_no_progress:
           timeout: "1m"
       - start: ["miner-4"] # consensus miners are back online
