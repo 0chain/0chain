@@ -348,7 +348,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	ap.Blobbers = bps
 
 	// add and save
-	alloc.addWritePoolOwner(alloc.Owner)
+	alloc.addWritePoolOwner(t.ClientID)
 	wp.Pools.add(&ap)
 	if err = wp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
