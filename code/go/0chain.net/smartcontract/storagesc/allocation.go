@@ -457,17 +457,6 @@ func (uar *updateAllocationRequest) validate(
 		return errors.New("invalid allocation for updating: no blobbers")
 	}
 
-	var found = false
-	for _, wpOwner := range alloc.WritePoolOwners {
-		if wpOwner == uar.OwnerID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("%s does not have allocation write pool", uar.OwnerID)
-	}
-
 	return
 }
 
@@ -925,6 +914,18 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	if request.OwnerID == "" {
 		request.OwnerID = t.ClientID
+	}
+
+	var clist *Allocations // client allocations list
+	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
+		return "", common.NewError("allocation_updating_failed",
+			"can't get client's allocations list: "+err.Error())
+	}
+
+	if !clist.has(request.ID) {
+		return "", common.NewErrorf("allocation_updating_failed",
+			"can't find allocation in client's allocations list: %s (%d)",
+			request.ID, len(clist.List))
 	}
 
 	var alloc *StorageAllocation
