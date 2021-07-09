@@ -28,7 +28,8 @@ func TestLatestFinalizedBlockHandler(t *testing.T) {
 
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
-	sc := sharder.GetSharderChain()
+
+	sc := makeTestChain(t)
 	sc.SetLatestFinalizedBlock(b)
 
 	type args struct {
@@ -73,7 +74,7 @@ func TestChain_AcceptMessage(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.Hash = encryption.Hash("data")
 
-	sharder.GetSharderChain().AddBlock(b)
+	makeTestChain(t).AddBlock(b)
 
 	type fields struct {
 		Chain          *chain.Chain

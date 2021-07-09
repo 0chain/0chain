@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -230,7 +229,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var pb *block.Block
 	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
-		return nil, chain.ErrPreviousBlockUnavailable
+		return nil, block.ErrPreviousBlockUnavailable
 	}
 
 	if err = mc.ValidateTransactions(ctx, b); err != nil {

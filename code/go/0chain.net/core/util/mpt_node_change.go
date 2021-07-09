@@ -52,7 +52,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
-		change.New = newNode
+		change.New = newNode.Clone()
 		cc.Changes[nhash] = change
 		return
 	}
@@ -65,14 +65,14 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 				return
 			}
 		}
-		prevChange.New = newNode
+		prevChange.New = newNode.Clone()
 		cc.Changes[nhash] = prevChange
 	} else {
 		change := &NodeChange{}
-		change.New = newNode
-		change.Old = oldNode
+		change.New = newNode.Clone()
+		change.Old = oldNode.Clone()
 		cc.Changes[nhash] = change
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 
@@ -84,7 +84,7 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
 	} else {
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 

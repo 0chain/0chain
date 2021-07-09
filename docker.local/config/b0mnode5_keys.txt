@@ -3,5 +3,3 @@
 localhost
 198.18.0.75
 7075
-miner75
-Miner5's description

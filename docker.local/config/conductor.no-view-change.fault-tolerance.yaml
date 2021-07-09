@@ -1,0 +1,216 @@
+###
+### No ViewChange Fault Tolerance Test Cases
+###
+
+enable:
+  - "Miners go down"
+  - "Miners go down and come up"
+  - "Sharders go down"
+  - "Sharders go down and come up"
+  - "Nodes go down and come up"
+  - "Nodes fail and recover randomly"
+
+sets:
+  - name: "Miners go down"
+    tests:
+      - "Less than consensus miners go down"
+      - "More than consensus miners go down"
+      - "All miners go down"
+
+  - name: "Miners go down and come up"
+    tests:
+      - "Less than consensus miners go down and come up"
+      - "More than consensus miners go down and come up"
+      - "All miners go down and come up"
+
+  - name: "Sharders go down"
+    tests:
+      # - "Some sharders go down"
+      - "All sharders go down"
+
+  - name: "Sharders go down and come up"
+    tests:
+      # - "Some sharders go down and come up"
+      - "All sharders go down and come up"
+
+  - name: "Nodes go down and come up"
+    tests:
+      - "All nodes go down and come up"
+
+  - name: "Nodes fail and recover randomly"
+    tests:
+      - "Nodes fail and recover randomly"
+
+tests:
+  # Miners go down
+  - name: "Less than consensus miners go down"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-4"]
+      - wait_round:
+          shift: 30
+
+  - name: "More than consensus miners go down"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-3", "miner-4"]
+      - wait_no_progress:
+          timeout: "5m"
+
+  - name: "All miners go down"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_no_progress:
+          timeout: "5m"
+
+  # Miners go down and come up
+  - name: "Less than consensus miners go down and come up"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-4"]
+      - start: ["miner-4"]
+      - wait_round:
+          shift: 30
+
+  - name: "More than consensus miners go down and come up"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-3", "miner-4"]
+      - start: ["miner-3", "miner-4"]
+      - wait_round:
+          shift: 30
+
+  - name: "All miners go down and come up"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 30
+
+  # Sharders go down
+  - name: "All sharders go down"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["sharder-1"]
+      - wait_no_progress:
+          timeout: "5m"
+
+  # Sharders go down and come up
+  - name: "All sharders go down and come up"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["sharder-1"]
+      - start: ["sharder-1"]
+      - wait_round:
+          shift: 30
+
+  # Nodes go down and come up
+  - name: "All nodes go down and come up"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["sharder-1"]
+      - stop: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 30 # 50
+
+  # # Nodes fail and recover randomly
+  - name: "Nodes fail and recover randomly"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+      - wait_round:
+          shift: 20
+      - stop: ["sharder-1", "miner-4"] # all sharders and some miners go down
+      - wait_no_progress:
+          timeout: "1m"
+      - start: ["sharder-1"] # sharder comes up, BC should move
+      - wait_round:
+          shift: 20
+      - stop: ["miner-3"] # more than consensus miners are down
+      - wait_no_progress:
+          timeout: "1m"
+      - start: ["miner-4"] # consensus miners are back online
+      - wait_round:
+          shift: 20
+      # To be continued
