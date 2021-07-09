@@ -108,7 +108,7 @@ func (ps *PartialState) ComputeProperties() {
 	mndb := ps.newNodeDB()
 	root := mndb.ComputeRoot()
 	if root != nil {
-		if bytes.Compare(root.GetHashBytes(), ps.Hash) == 0 {
+		if bytes.Equal(root.GetHashBytes(), ps.Hash) {
 			ps.mndb = mndb
 			ps.root = root
 		} else {

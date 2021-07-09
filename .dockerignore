@@ -2,4 +2,3 @@
 awsnet
 docker.local/miner*
 docker.local/sharder*
-**/pkg

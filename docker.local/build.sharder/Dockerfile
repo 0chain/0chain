@@ -1,31 +1,38 @@
 # Compile the sharder in an un-tagged image so the final, tagged image can be smaller:
 FROM zchain_build_base as sharder_build
-ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
-# Download the dependencies:
-# Will be cached if we don't change mod/sum files
-COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+# Add the source code:
+COPY code/go/0chain.net /0chain.net
 
-RUN cd $SRC_DIR/go/0chain.net && \
-    go mod download
-WORKDIR $SRC_DIR/go/0chain.net/sharder/sharder
+# Set workdir
+WORKDIR /0chain.net
 
 # Build libzstd:
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
 # FIXME: Also, is there a way we can move this to zchain_build_base?
-RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+
+RUN [[ -d /0chain.net/vendor ]] || ( \
+    go mod download && \
+    go mod vendor -v && \
+    dir=github.com/valyala/gozstd && \
+    rm -r vendor/$dir && \
+    mv $GOPATH/pkg/mod/$dir* vendor/$dir )
+
+RUN cd vendor/github.com/valyala/gozstd* && \
     chmod -R +w . && \
     make clean libzstd.a
+
+# Set workdir
+WORKDIR /0chain.net/sharder/sharder
 
 # Build it:
 ARG GIT_COMMIT
 ENV GIT_COMMIT=$GIT_COMMIT
-RUN go build -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
-
+RUN go build -mod vendor -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
 
 # Copy the build artifact into a minimal runtime image:
 FROM zchain_run_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
-COPY --from=sharder_build $APP_DIR/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/
+COPY --from=sharder_build /0chain.net/sharder/sharder/sharder $APP_DIR/bin/
