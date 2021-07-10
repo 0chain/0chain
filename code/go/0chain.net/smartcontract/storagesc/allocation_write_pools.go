@@ -54,7 +54,7 @@ func (aps allocationWritePools) allocUntil(
 	return aps.allocationPools.allocUntil(allocID, until)
 }
 
-func (awp allocationWritePools) addOwnerWritePool(ap *allocationPool) error {
+func (awp *allocationWritePools) addOwnerWritePool(ap *allocationPool) error {
 	if len(awp.writePools) == 0 {
 		return errors.New("no write pools")
 	}
