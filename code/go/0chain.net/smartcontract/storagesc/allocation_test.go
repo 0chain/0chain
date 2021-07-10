@@ -430,39 +430,39 @@ func TestExtendAllocation(t *testing.T) {
 		name string
 		args args
 		want want
-	}{ /*
-			{
-				name: "ok_multiple_users",
-				args: args{
-					request: updateAllocationRequest{
-						ID:           mockAllocationId,
-						OwnerID:      mockOwner,
-						Size:         zcnToInt64(31),
-						Expiration:   7000,
-						SetImmutable: false,
-					},
-					expiration: mockExpiration,
-					value:      0.1,
-					poolFunds:  []float64{0.0, 5.0, 5.0},
-					poolCount:  []int{1, 3, 4},
+	}{
+		{
+			name: "ok_multiple_users",
+			args: args{
+				request: updateAllocationRequest{
+					ID:           mockAllocationId,
+					OwnerID:      mockOwner,
+					Size:         zcnToInt64(31),
+					Expiration:   7000,
+					SetImmutable: false,
 				},
+				expiration: mockExpiration,
+				value:      0.1,
+				poolFunds:  []float64{0.0, 5.0, 5.0},
+				poolCount:  []int{1, 3, 4},
 			},
-			{
-				name: "ok_multiple_allocation_pools",
-				args: args{
-					request: updateAllocationRequest{
-						ID:           mockAllocationId,
-						OwnerID:      mockOwner,
-						Size:         zcnToInt64(31),
-						Expiration:   7000,
-						SetImmutable: false,
-					},
-					expiration: mockExpiration,
-					value:      0.1,
-					poolFunds:  []float64{7},
-					poolCount:  []int{5},
+		},
+		{
+			name: "ok_multiple_allocation_pools",
+			args: args{
+				request: updateAllocationRequest{
+					ID:           mockAllocationId,
+					OwnerID:      mockOwner,
+					Size:         zcnToInt64(31),
+					Expiration:   7000,
+					SetImmutable: false,
 				},
-			},*/
+				expiration: mockExpiration,
+				value:      0.1,
+				poolFunds:  []float64{7},
+				poolCount:  []int{5},
+			},
+		},
 		{
 			name: "ok_multiple_users",
 			args: args{
@@ -1503,7 +1503,6 @@ func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
-	t.Skip("Tests two pools for same allocating in write pool. Ths should not happen.")
 	var (
 		ssc                  = newTestStorageSC()
 		balances             = newTestBalances(t, false)
