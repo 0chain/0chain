@@ -63,10 +63,6 @@ tests:
           by: ["miner-3"]
           good: []
           bad: ["miner-1", "miner-2"]
-      - round_timeout:
-          by: ["miner-1", "miner-2", "miner-3", "miner-4"]
-          good: []
-          bad: []
       - wait_round:
           shift: 10
           timeout: "3m"
