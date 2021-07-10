@@ -222,6 +222,7 @@ func TestExtendAllocation(t *testing.T) {
 		randomSeed                  = 1
 		mockURL                     = "mock_url"
 		mockOwner                   = "mock owner"
+		mockNotTheOwner             = "mock not the owner"
 		mockWpOwner                 = "mock write pool owner"
 		mockPublicKey               = "mock public key"
 		mockBlobberId               = "mock_blobber_id"
@@ -429,9 +430,41 @@ func TestExtendAllocation(t *testing.T) {
 		name string
 		args args
 		want want
-	}{
+	}{ /*
+			{
+				name: "ok_multiple_users",
+				args: args{
+					request: updateAllocationRequest{
+						ID:           mockAllocationId,
+						OwnerID:      mockOwner,
+						Size:         zcnToInt64(31),
+						Expiration:   7000,
+						SetImmutable: false,
+					},
+					expiration: mockExpiration,
+					value:      0.1,
+					poolFunds:  []float64{0.0, 5.0, 5.0},
+					poolCount:  []int{1, 3, 4},
+				},
+			},
+			{
+				name: "ok_multiple_allocation_pools",
+				args: args{
+					request: updateAllocationRequest{
+						ID:           mockAllocationId,
+						OwnerID:      mockOwner,
+						Size:         zcnToInt64(31),
+						Expiration:   7000,
+						SetImmutable: false,
+					},
+					expiration: mockExpiration,
+					value:      0.1,
+					poolFunds:  []float64{7},
+					poolCount:  []int{5},
+				},
+			},*/
 		{
-			name: "ok",
+			name: "ok_multiple_users",
 			args: args{
 				request: updateAllocationRequest{
 					ID:           mockAllocationId,
@@ -441,9 +474,13 @@ func TestExtendAllocation(t *testing.T) {
 					SetImmutable: false,
 				},
 				expiration: mockExpiration,
-				value:      0.0000023,
-				poolFunds:  []float64{0.0, 5.0, 5.0},
-				poolCount:  []int{1, 3, 4},
+				value:      0.1,
+				poolFunds:  []float64{0.0, 0.0},
+				poolCount:  []int{1, 3},
+			},
+			want: want{
+				err:    true,
+				errMsg: "allocation_extending_failed: not enough tokens in write pool to extend allocation",
 			},
 		},
 	}
