@@ -252,8 +252,10 @@ tests:
           by: ["miner-3"]
       - sign_only_competing_blocks:
           by: ["miner-3", "miner-4"]
-      - wait_no_progress:
-          timeout: "2m"
+      - wait_round:
+          shift: 10
+          must_fail: true
+          timeout: "3m"
 
   - name: "Sign a different hash than the block hash"
     flow:
