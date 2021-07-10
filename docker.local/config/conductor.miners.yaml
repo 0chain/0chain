@@ -67,8 +67,10 @@ tests:
           by: ["miner-1", "miner-2", "miner-3", "miner-4"]
           good: []
           bad: []
-      - wait_no_progress:
-          timeout: "2m"
+      - wait_round:
+          shift: 10
+          timeout: "3m"
+          must_fail: true
   - name: "Send VRFS only to group"
     flow:
       - set_monitor: "sharder-1"
@@ -109,8 +111,10 @@ tests:
           by: ["miner-3"]
           good: []
           bad: []
-      - wait_no_progress:
-          timeout: "2m"
+      - wait_round:
+          shift: 10
+          timeout: "3m"
+          must_fail: true
 
   # Round timeout
   - name: "Don't send a round timeout"
