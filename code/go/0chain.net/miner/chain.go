@@ -174,9 +174,6 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 // SetupGenesisBlock - setup the genesis block for this chain.
 func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, initStates *state.InitStates) *block.Block {
 	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock, initStates)
-	if gr == nil || gb == nil {
-		panic("Genesis round/block can't be null")
-	}
 	rr, ok := gr.(*round.Round)
 	if !ok {
 		panic("Genesis round cannot convert to *round.Round")

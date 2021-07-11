@@ -1,16 +1,17 @@
 package sharder
 
 import (
+	"context"
+	"fmt"
+	"runtime"
+	"time"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	. "0chain.net/core/logging"
-	"context"
-	"fmt"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-	"runtime"
-	"time"
 )
 
 // HealthCheckDateTimeFormat -
@@ -45,8 +46,8 @@ type HealthCheckStatus string
 // SyncProgress -
 const (
 	SyncProgress HealthCheckStatus = "syncing"
-	SyncHiatus                     = "hiatus"
-	SyncDone                       = "synced"
+	SyncHiatus   HealthCheckStatus = "hiatus"
+	SyncDone     HealthCheckStatus = "synced"
 )
 
 // EntityCounters -
