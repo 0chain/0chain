@@ -445,40 +445,6 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	return nil
 }
 
-// fetchPreviousBlock fetches a previous block from network
-func (c *Chain) fetchPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
-	logging.Logger.Info("fetch previous block", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-
-	pb := c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-	if pb == nil {
-		logging.Logger.Error("get previous block (unable to get prior blocks)",
-			zap.Int64("current_round", c.GetCurrentRound()),
-			zap.Int64("round", b.Round),
-			zap.Int64("prev_round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("prev_block", b.PrevHash))
-		return nil
-	}
-
-	// get the previous block from local blocks again, the GetNotarizedBlock() function
-	// called above should have updated the chain's blocks in memory.
-	pb, err := c.GetBlock(ctx, b.PrevHash)
-	if err != nil {
-		logging.Logger.DPanic("get previous notarized block failed", zap.Error(err))
-	}
-
-	b.SetPreviousBlock(pb)
-
-	// set the pre pre block if it could be acquired from local blocks
-	ppb, err := c.GetBlock(ctx, pb.PrevHash)
-	if err == nil {
-		pb.SetPreviousBlock(ppb)
-	}
-
-	return pb
-}
-
 //Note: this is expected to work only for small forks
 func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.Block) *block.Block {
 	if b1 == nil || b2 == nil {
