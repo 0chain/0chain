@@ -22,7 +22,7 @@ type (
 // Clone returns a clone of this collection
 func (cf *CollectionMemberField) Clone() *CollectionMemberField {
 	return &CollectionMemberField{
-		EntityCollection: &(*cf.EntityCollection),
+		EntityCollection: cf.EntityCollection.Clone(),
 		CollectionScore:  cf.CollectionScore,
 	}
 }
