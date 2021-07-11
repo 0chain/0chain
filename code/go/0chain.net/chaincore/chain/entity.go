@@ -1373,18 +1373,19 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.UpdateNodesFromMagicBlock(newMagicBlock)
 
 	mb := c.GetCurrentMagicBlock()
+	if mb != nil {
+		logging.Logger.Info("update magic block",
+			zap.Int("old magic block miners num", mb.Miners.Size()),
+			zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
+			zap.Int64("old mb starting round", mb.StartingRound),
+			zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
-	logging.Logger.Info("update magic block",
-		zap.Int("old magic block miners num", mb.Miners.Size()),
-		zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
-		zap.Int64("old mb starting round", mb.StartingRound),
-		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
-
-	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
-		logging.Logger.Info("update magic block -- hashes match ",
-			zap.Any("LFMB previous MB hash", mb.Hash),
-			zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
-		c.PreviousMagicBlock = mb
+		if mb.Hash == newMagicBlock.PreviousMagicBlockHash {
+			logging.Logger.Info("update magic block -- hashes match ",
+				zap.Any("LFMB previous MB hash", mb.Hash),
+				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
+			c.PreviousMagicBlock = mb
+		}
 	}
 
 	c.SetMagicBlock(newMagicBlock)
