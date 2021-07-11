@@ -191,7 +191,8 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	psRequestor := PartialStateRequestor
 	params := &url.Values{}
 	params.Add("node", util.ToHex(key))
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ps *state.PartialState
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
@@ -213,7 +214,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		ps = rps
 		return rps, nil
 	}
-	c.RequestEntityFromMinersOnMB(ctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
 	if ps == nil {
 		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
 	}
@@ -226,7 +227,8 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ns *state.Nodes
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
@@ -242,9 +244,9 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		return rns, nil
 	}
 	mb := c.GetCurrentMagicBlock()
-	c.RequestEntityFromMinersOnMB(ctx, mb, nsRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(cctx, mb, nsRequestor, params, handler)
 	if ns == nil {
-		c.RequestEntityFromShardersOnMB(ctx, mb, nsRequestor, params, handler)
+		c.RequestEntityFromShardersOnMB(cctx, mb, nsRequestor, params, handler)
 	}
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
@@ -258,7 +260,8 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ns *state.Nodes
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
@@ -273,7 +276,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		ns = rns
 		return rns, nil
 	}
-	c.RequestEntityFromShardersOnMB(ctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
+	c.RequestEntityFromShardersOnMB(cctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}

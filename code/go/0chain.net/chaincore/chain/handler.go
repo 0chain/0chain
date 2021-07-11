@@ -69,11 +69,11 @@ func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
 	mb := sc.GetCurrentMagicBlock()
 	d, err := json.MarshalIndent(append(mb.Sharders.CopyNodes(), mb.Miners.CopyNodes()...), "", "\t")
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprint(w, err.Error())
 		return
 	}
 
-	fmt.Fprintf(w, string(d))
+	fmt.Fprint(w, string(d))
 }
 
 /*GetChainHandler - given an id returns the chain information */
