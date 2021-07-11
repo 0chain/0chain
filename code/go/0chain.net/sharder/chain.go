@@ -187,7 +187,6 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		return common.NewErrorf("load_lfb",
 			"can't update magic block: %v", err) // fatal
 	}
-	sc.UpdateNodesFromMagicBlock(bl.lfmb.MagicBlock)
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
 	bl.r.Block = bl.lfb
@@ -217,8 +216,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 			return common.NewErrorf("load_lfb",
 				"can't update newer magic block: %v", err) // fatal
 		}
-		sc.UpdateNodesFromMagicBlock(bl.nlfmb.MagicBlock) //
-		sc.SetLatestFinalizedMagicBlock(bl.nlfmb)         // the real latest
+		sc.SetLatestFinalizedMagicBlock(bl.nlfmb) // the real latest
 	}
 
 	return // everything is ok

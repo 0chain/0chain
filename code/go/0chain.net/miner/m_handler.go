@@ -360,6 +360,15 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 			zap.Int("sc_nodes", len(bsc.Nodes)))
 	}
 
+	//if len(bsc.Nodes) == 0 {
+	//	logging.Logger.Debug("get state changes - no changes", zap.Int64("round", b.Round))
+	if bsc.GetRoot() == nil {
+		cr := GetMinerChain().GetCurrentRound()
+		logging.Logger.Debug("get state changes - state nil root",
+			zap.Int64("round", b.Round),
+			zap.Int64("current_round", cr))
+	}
+
 	return bsc, nil
 }
 
@@ -382,8 +391,8 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
 
 	var (
-		r = req.FormValue("round")
-		hash  = req.FormValue("block")
+		r    = req.FormValue("round")
+		hash = req.FormValue("block")
 
 		mc = GetMinerChain()
 	)

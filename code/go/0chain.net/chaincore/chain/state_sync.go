@@ -25,18 +25,14 @@ var MaxStateNodesForSync = 10000
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
-		logging.Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
-		return errors.New("get block state changes - no bsc")
+		return common.NewError("get block state changes", err.Error())
 	}
-	if bsc == nil {
-		return nil
-	}
-	logging.Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
+
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
-		logging.Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
-		return err
+		return common.NewError("apply block state changes", err.Error())
 	}
+
 	return nil
 }
 
@@ -195,7 +191,8 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	psRequestor := PartialStateRequestor
 	params := &url.Values{}
 	params.Add("node", util.ToHex(key))
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ps *state.PartialState
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
@@ -217,7 +214,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		ps = rps
 		return rps, nil
 	}
-	c.RequestEntityFromMinersOnMB(ctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
 	if ps == nil {
 		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
 	}
@@ -230,7 +227,8 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ns *state.Nodes
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
@@ -246,9 +244,9 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		return rns, nil
 	}
 	mb := c.GetCurrentMagicBlock()
-	c.RequestEntityFromMinersOnMB(ctx, mb, nsRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(cctx, mb, nsRequestor, params, handler)
 	if ns == nil {
-		c.RequestEntityFromShardersOnMB(ctx, mb, nsRequestor, params, handler)
+		c.RequestEntityFromShardersOnMB(cctx, mb, nsRequestor, params, handler)
 	}
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
@@ -262,7 +260,8 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	cctx, cancelf := context.WithCancel(ctx)
+	defer cancelf()
 	var ns *state.Nodes
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
@@ -277,7 +276,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		ns = rns
 		return rns, nil
 	}
-	c.RequestEntityFromShardersOnMB(ctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
+	c.RequestEntityFromShardersOnMB(cctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}
@@ -285,14 +284,6 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 }
 
 func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
-	if b.PrevBlock == nil {
-		return nil, ErrPreviousBlockUnavailable
-	}
-	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
-		b.SetStateDB(b.PrevBlock)
-		b.SetStateStatus(block.StateSynched)
-		return nil, nil
-	}
 	var (
 		params       = &url.Values{}
 		ctx, cancelf = context.WithCancel(common.GetRootContext())
@@ -303,35 +294,42 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
-		logging.Logger.Debug("get block state change", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
-
 		var rsc, ok = entity.(*block.StateChange)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
 
 		if rsc.Block != b.Hash {
-			logging.Logger.Error("get block state change - hash mismatch error",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			logging.Logger.Error("get_block_state_change",
+				zap.Error(errors.New("block hash mismatch")),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
 		}
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
-			logging.Logger.Error("get block state change - state hash mismatch error",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			logging.Logger.Error("get_block_state_change",
+				zap.Error(errors.New("state hash mismatch")),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return nil, block.ErrBlockStateHashMismatch
 		}
 
 		var root = rsc.GetRoot()
 		if root == nil {
-			logging.Logger.Error("get block state change - state root error",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			logging.Logger.Error("get_block_state_change",
+				zap.Error(errors.New("state root error")),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))
 			return nil, common.NewError("state_root_error",
-				"Block state root calculcation error")
+				"block state root calculation error")
 		}
 
+		logging.Logger.Debug("get_block_state_change - success with root",
+			zap.Int64("round", b.Round),
+			zap.String("bsc root", rsc.GetRoot().GetHash()),
+			zap.String("block state hash", util.ToHex(b.ClientStateHash)))
 		cancelf()
 		bsc = rsc
 		return rsc, nil
@@ -341,47 +339,13 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 	if bsc == nil {
 		return nil, common.NewError("block_state_change_error",
-			"Error getting the block state change")
+			"error getting the block state change")
 	}
 
 	return bsc, nil
 }
 
-// ApplyBlockStateChange - apply the state chagnes to the block state.
+// ApplyBlockStateChange - applies the state chagnes to the block state.
 func (c *Chain) ApplyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
-	lock := b.StateMutex
-	lock.Lock()
-	defer lock.Unlock()
-	return c.applyBlockStateChange(b, bsc)
-}
-
-func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
-	if b.Hash != bsc.Block {
-		return block.ErrBlockHashMismatch
-	}
-	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
-		return block.ErrBlockStateHashMismatch
-	}
-	root := bsc.GetRoot()
-	if root == nil {
-		if b.PrevBlock != nil && bytes.Compare(b.PrevBlock.ClientStateHash, b.ClientStateHash) == 0 {
-			return nil
-		}
-		return common.NewError("state_root_error", "state root not correct")
-	}
-	if b.ClientState == nil {
-		b.CreateState(bsc.GetNodeDB(), root.GetHashBytes())
-	}
-
-	c.stateMutex.Lock()
-	defer c.stateMutex.Unlock()
-
-	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
-	if err != nil {
-		logging.Logger.Error("apply block state change - error merging",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return err
-	}
-	b.SetStateStatus(block.StateSynched)
-	return nil
+	return b.ApplyBlockStateChange(bsc, c)
 }

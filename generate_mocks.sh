@@ -4,25 +4,30 @@ BASEDIR=$(pwd)
 
 echo "Making mocks..."
 
+ generate_mock() {
+	OUTPUT=$1
+	mockery --case underscore --output=$OUTPUT --all
+}
+
 cd $BASEDIR/code/go/0chain.net/core || exit
-mockery --output=../core/mocks --all
+generate_mock "../core/mocks"
 
 cd $BASEDIR/code/go/0chain.net/miner || exit
-mockery --output=../miner/mocks --all
+generate_mock "../miner/mocks"
 
 cd $BASEDIR/code/go/0chain.net/chaincore || exit
-mockery --output=../chaincore/mocks --all
+generate_mock "../chaincore/mocks"
 
 cd $BASEDIR/code/go/0chain.net/conductor || exit
-mockery --output=../conductor/mocks --all
+generate_mock "../conductor/mocks"
 
 cd $BASEDIR/code/go/0chain.net/sharder || exit
-mockery --output=../sharder/mocks --all
+generate_mock "../sharder/mocks"
 
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
-mockery --output=../smartcontract/mocks --all
+generate_mock "../smartcontract/mocks"
 
 cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
-mockery --name=StateContextI --output=../../../mocks --filename=state-context-i.go
+mockery --case underscore --name=StateContextI --output=../../../mocks
 
 echo "Mocks files are generated."

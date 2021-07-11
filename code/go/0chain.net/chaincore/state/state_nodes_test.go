@@ -8,13 +8,12 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-
 	. "0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func init() {

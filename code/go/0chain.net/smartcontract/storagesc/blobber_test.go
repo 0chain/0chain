@@ -128,7 +128,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 
 	var blob = newClient(0, balances)
 	blob.terms = avgTerms
-	blob.cap = 2*GB
+	blob.cap = 2 * GB
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)
@@ -632,14 +632,9 @@ func Test_flow_reward(t *testing.T) {
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 			// last loop balances (previous balance)
-			cpl     = cpb2
-			b3l     = sp.Rewards.Blobber + sp.Rewards.Validator
-			validsl []state.Balance
+			cpl = cpb2
+			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
 		)
-		// validators balances
-		for _, val := range valids {
-			validsl = append(validsl, balances.balances[val.id])
-		}
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
 			if i < 10 {
@@ -692,12 +687,9 @@ func Test_flow_reward(t *testing.T) {
 			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
 
 			// validators reward
-			for i, val := range valids {
-				var vsp *stakePool
-				vsp, err = ssc.getStakePool(val.id, balances)
+			for _, val := range valids {
+				_, err = ssc.getStakePool(val.id, balances)
 				require.NoError(t, err)
-				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
-				validsl[i] = vsp.Rewards.Validator
 			}
 
 			// next stage
@@ -840,17 +832,12 @@ func Test_flow_penalty(t *testing.T) {
 
 			until = alloc.Until()
 			// last loop balances (previous balance)
-			spl     = sp.stake()
-			wpl     = wp.allocUntil(allocID, until)
-			opl     = offer.Lock
-			cpl     = cp.Balance
-			b4l     = balances.balances[b4.id]
-			validsl []state.Balance
+			spl = sp.stake()
+			wpl = wp.allocUntil(allocID, until)
+			opl = offer.Lock
+			cpl = cp.Balance
+			b4l = balances.balances[b4.id]
 		)
-		// validators balances
-		for _, val := range valids {
-			validsl = append(validsl, balances.balances[val.id])
-		}
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
 			if i < 10 {
@@ -917,12 +904,9 @@ func Test_flow_penalty(t *testing.T) {
 			b4l = balances.balances[b4.id]
 
 			// validators reward
-			for i, val := range valids {
-				var vsp *stakePool
-				vsp, err = ssc.getStakePool(val.id, balances)
+			for _, val := range valids {
+				_, err = ssc.getStakePool(val.id, balances)
 				require.NoError(t, err)
-				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
-				validsl[i] = vsp.Rewards.Validator
 			}
 
 			// next stage
