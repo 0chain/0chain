@@ -329,16 +329,16 @@ func (r *Runner) checkMagicBlock(emb *ExpectMagicBlock, vci *VCInfo) (err error)
 		return fmt.Errorf("VC expected with %d number, but given number is %d",
 			emb.Number, vci.MagicBlockNumber)
 	}
-	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 && emb.Miners_Count == 0 && emb.Sharders_Count == 0 {
+	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 && emb.MinersCount == 0 && emb.ShardersCount == 0 {
 		return // don't check MB for nodes
 	}
 	// check for nodes
 	var okm, oks bool
 	// check miners
-	if emb.Miners_Count > 0 && len(emb.Miners) == 0 {
+	if emb.MinersCount > 0 && len(emb.Miners) == 0 {
 		// check count only
-		if okm = (emb.Miners_Count == len(vci.Miners)); !okm {
-			fmt.Println("[ERR] expected miners count:", emb.Miners_Count)
+		if okm = (emb.MinersCount == len(vci.Miners)); !okm {
+			fmt.Println("[ERR] expected miners count:", emb.MinersCount)
 			fmt.Println("[ERR] got miners")
 			r.printNodes(vci.Miners)
 		}
@@ -351,10 +351,10 @@ func (r *Runner) checkMagicBlock(emb *ExpectMagicBlock, vci *VCInfo) (err error)
 		}
 	}
 	// check sharders
-	if emb.Sharders_Count > 0 && len(emb.Sharders) == 0 {
+	if emb.ShardersCount > 0 && len(emb.Sharders) == 0 {
 		// check count only
-		if oks = (emb.Sharders_Count == len(vci.Sharders)); !oks {
-			fmt.Println("[ERR] expected sharders count:", emb.Sharders_Count)
+		if oks = (emb.ShardersCount == len(vci.Sharders)); !oks {
+			fmt.Println("[ERR] expected sharders count:", emb.ShardersCount)
 			fmt.Println("[ERR] got sharders")
 			r.printNodes(vci.Sharders)
 		}
@@ -586,7 +586,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
 	if r.verbose {
-		log.Print(" [INF] round ", re.Round)
+		// log.Print(" [INF] round ", re.Round)
 	}
 
 	// set last round

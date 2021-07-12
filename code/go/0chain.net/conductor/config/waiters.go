@@ -22,9 +22,9 @@ type ExpectMagicBlock struct {
 	// Miners expected in MB.
 	Miners []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	// Sharders Count expected in MB.
-	Sharders_Count int `json:"sharders_count" yaml:"sharders_count" mapstructure:"sharders_count"`
+	ShardersCount int `json:"sharders_count" yaml:"sharders_count" mapstructure:"sharders_count"`
 	// Miners Count expected in MB.
-	Miners_Count int `json:"miners_count" yaml:"miners_count" mapstructure:"miners_count"`
+	MinersCount int `json:"miners_count" yaml:"miners_count" mapstructure:"miners_count"`
 }
 
 // IsZero returns true if the MagicBlock is empty.
