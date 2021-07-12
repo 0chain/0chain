@@ -3430,7 +3430,7 @@ tests:
             miners: ["miner-1", "miner-2", "miner-3"]
       - start: ["miner-4", "sharder-2"] # b
       - wait_round:
-          timeout: "10m"
+          timeout: "5m"
           round: 1000
           allow_beyond: true # allow 1001 instead of 1000
       - expect_active_set:
@@ -3438,7 +3438,7 @@ tests:
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - start: ["miner-5", "miner-6", "miner-7", "sharder-3", "sharder-4"] # c
       - wait_round:
-          timeout: "10m"
+          timeout: "3m"
           shift: 500
       - expect_active_set:
           sharders_count: 3
