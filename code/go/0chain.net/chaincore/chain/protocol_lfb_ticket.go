@@ -224,7 +224,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// configurations (resend the latest by timer)
 		rebroadcastTimeout = config.GetReBroadcastLFBTicketTimeout()
 		rebroadcast        = time.NewTimer(rebroadcastTimeout)
-		isSharder          = (node.Self.Type == node.NodeTypeSharder)
+		isSharder          = node.Self.Type == node.NodeTypeSharder
 
 		// internals
 		latest = c.newLFBTicket(on)                 //

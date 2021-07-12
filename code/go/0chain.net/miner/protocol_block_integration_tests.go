@@ -22,8 +22,6 @@ import (
 	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 
-	"0chain.net/core/logging"
-
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 )

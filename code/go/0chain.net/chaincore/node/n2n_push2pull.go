@@ -127,7 +127,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 				if pcde.sentBy[i].requested {
 					return true
 				}
-				return pcde.sentBy[j].node.getTime(pullURL) < pcde.sentBy[j].node.getTime(pullURL)
+				return pcde.sentBy[i].node.getTime(pullURL) < pcde.sentBy[j].node.getTime(pullURL)
 			}
 			return !pcde.sentBy[i].requested
 		})

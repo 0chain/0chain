@@ -159,7 +159,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	if nbCount < len(c.NotarizedBlocksCounts) {
 		c.NotarizedBlocksCounts[nbCount]++
 	}
-
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",
@@ -420,33 +419,41 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, c.GetLatestFinalizedMagicBlock().MagicBlock)
 }
 
-// GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
+// GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
-
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-
-	var lfmb = c.latestFinalizedMagicBlock
-
-	rn = mbRoundOffset(rn) // round number with MB offset
-
+	rn = mbRoundOffset(rn) // round number with mb offset
+	lfmb := c.latestFinalizedMagicBlock
 	if len(c.magicBlockStartingRounds) > 0 {
-		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
+		lfmbr := int64(-1)
 		for r := range c.magicBlockStartingRounds {
-			startingRounds = append(startingRounds, r)
-		}
-		sort.SliceStable(startingRounds, func(i, j int) bool {
-			return startingRounds[i] >= startingRounds[j]
-		})
-		foundRound := startingRounds[0]
-		for _, r := range startingRounds {
-			foundRound = r
-			if r <= rn {
-				break
+			if r <= rn && r > lfmbr {
+				lfmbr = r
 			}
 		}
-		lfmb = c.magicBlockStartingRounds[foundRound]
+		if lfmbr >= 0 {
+			lfmb = c.magicBlockStartingRounds[lfmbr]
+		}
 	}
-
 	return lfmb
+}
+
+// GetLatestFinalizedMagicBlockBriefRound returns LFMB Brief for given round number
+func (c *Chain) GetLatestFinalizedMagicBlockBriefRound(rn int64) *MagicBlockBrief {
+	return getMagicBlockBrief(c.GetLatestFinalizedMagicBlockRound(rn))
+}
+
+func getMagicBlockBrief(b *block.Block) *MagicBlockBrief {
+	if b == nil || b.MagicBlock == nil {
+		return nil
+	}
+	return &MagicBlockBrief{
+		Round:            b.Round,
+		MagicBlockNumber: b.MagicBlock.MagicBlockNumber,
+		MagicBlockHash:   b.MagicBlock.Hash,
+		StartingRound:    b.MagicBlock.StartingRound,
+		MinersN2NURLs:    b.MagicBlock.Miners.N2NURLs(),
+		ShardersN2NURLs:  b.MagicBlock.Sharders.N2NURLs(),
+	}
 }

@@ -1,6 +1,6 @@
 module 0chain.net
 
-go 1.15
+go 1.16
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
@@ -19,6 +19,7 @@ require (
 	github.com/go-ini/ini v1.62.0 // indirect
 	github.com/gocql/gocql v0.0.0-20210707082121-9a3953d1826d
 	github.com/golang/snappy v0.0.4
+	github.com/go-playground/validator/v10 v10.6.1
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4
@@ -26,6 +27,7 @@ require (
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.2.1 // indirect
+	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
@@ -48,6 +50,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
 	golang.org/x/exp v0.0.0-20210709195130-ecdcf02a369a
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e // indirect
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
 )

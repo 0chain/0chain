@@ -158,6 +158,20 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 	return tc.count
 }
 
+func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
+	return tc.GetTimeoutCount()
+	// tc.mutex.Lock()
+	// defer tc.mutex.Unlock()
+	// tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
+	// if tolerance <= 1 {
+	// 	return tc.count
+	// }
+	// if tc.count%tolerance == 0 {
+	// 	return tc.count
+	// }
+	// return tolerance * (1 + tc.count/tolerance)
+}
+
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
@@ -348,6 +362,20 @@ func (r *Round) GetProposedBlocks() []*block.Block {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return r.proposedBlocks
+}
+
+func (r *Round) GetBestRankedProposedBlock() *block.Block {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	pbs := r.proposedBlocks
+	if len(pbs) == 0 {
+		return nil
+	}
+	if len(pbs) == 1 {
+		return pbs[0]
+	}
+	pbs = r.GetBlocksByRank(pbs)
+	return pbs[0]
 }
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */

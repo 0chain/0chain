@@ -95,11 +95,7 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // no MB, no VC
 	}
 
-	if err = sc.UpdateMagicBlock(mb); err != nil {
-		return
-	}
-	sc.UpdateNodesFromMagicBlock(mb)
-	return
+	return sc.UpdateMagicBlock(mb)
 }
 
 // The hasRelatedMagicBlock reports true if the Chain has MB related to the

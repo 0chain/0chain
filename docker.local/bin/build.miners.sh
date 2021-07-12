@@ -48,7 +48,7 @@ fi
 
 for i in $(seq 1 5);
 do
-    MINER=$i docker-compose -p miner$i -f "$DOCKERCOMPOSE" build --force-rm
+  MINER=$i docker-compose -p miner$i -f $DOCKERCOMPOSE build --force-rm
 done
 
-"$ROOT"/docker.local/bin/sync_clock.sh
+docker.local/bin/sync_clock.sh

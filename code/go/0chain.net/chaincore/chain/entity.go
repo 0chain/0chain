@@ -31,10 +31,6 @@ import (
 	"0chain.net/smartcontract/minersc"
 )
 
-//PreviousBlockUnavailable - to indicate an error condition when the previous
-// block of a given block is not available.
-const PreviousBlockUnavailable = "previous_block_unavailable"
-
 // notifySyncLFRStateTimeout is the maximum time allowed for sending a notification
 // to a channel for syncing the latest finalized round state.
 const notifySyncLFRStateTimeout = 3 * time.Second
@@ -43,10 +39,7 @@ const notifySyncLFRStateTimeout = 3 * time.Second
 const genesisRandomSeed = 839695260482366273
 
 var (
-	// ErrPreviousBlockUnavailable - error for previous block is not available.
-	ErrPreviousBlockUnavailable = errors.New(PreviousBlockUnavailable,
-		"Previous block is not available")
-	ErrInsufficientChain = errors.New("insufficient_chain",
+	ErrInsufficientChain = common.NewError("insufficient_chain",
 		"Chain length not sufficient to perform the logic")
 )
 
@@ -295,9 +288,9 @@ func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
 func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
 	pmb *block.MagicBlock) {
 
-	var r = mbRoundOffset(mb.StartingRound)
+	var round = mbRoundOffset(mb.StartingRound)
 
-	return c.GetPrevMagicBlock(r)
+	return c.GetPrevMagicBlock(round)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -504,6 +497,8 @@ func CloseStateDB() {
 	stateDB.Close()
 }
 
+func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
+
 func (c *Chain) SetupConfigInfoDB() {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
@@ -553,7 +548,6 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
 	c.UpdateMagicBlock(gb.MagicBlock)
-	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, genesisRandomSeed)
 	gb.SetRoundRandomSeed(genesisRandomSeed)
@@ -621,7 +615,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 
 	// Only for blocks with greater RTC (elder blocks)
 	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
-		r.GetTimeoutCount() <= b.RoundTimeoutCount {
+		r.GetTimeoutCount() < b.RoundTimeoutCount {
 
 		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
@@ -1033,6 +1027,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	}
 	if randomSeed == 0 {
 		logging.Logger.Error("SetRandomSeed -- seed is 0")
+		return false
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
@@ -1291,14 +1286,27 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 // SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
-	defer c.lfbMutex.Unlock()
-
 	c.LatestFinalizedBlock = b
 	if b != nil {
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
+	}
+	c.lfbMutex.Unlock()
+
+	// add LFB to blocks cache
+	if b != nil {
+		c.blocksMutex.Lock()
+		defer c.blocksMutex.Unlock()
+		cb, ok := c.blocks[b.Hash]
+		if !ok {
+			c.blocks[b.Hash] = b
+		} else {
+			if b.ClientState != nil && cb.ClientState != b.ClientState {
+				cb.ClientState = b.ClientState
+			}
+		}
 	}
 }
 
@@ -1362,21 +1370,23 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
 	}
 
+	// initialize magicblock nodepools
+	c.UpdateNodesFromMagicBlock(newMagicBlock)
+
 	mb := c.GetCurrentMagicBlock()
+	if mb != nil {
+		logging.Logger.Info("update magic block",
+			zap.Int("old magic block miners num", mb.Miners.Size()),
+			zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
+			zap.Int64("old mb starting round", mb.StartingRound),
+			zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
-	pmb := mb.Miners.Size()
-	nmb := newMagicBlock.Miners.Size()
-	logging.Logger.Info("update magic block",
-		zap.Int("old magic block miners num", pmb),
-		zap.Int("new magic block miners num", nmb),
-		zap.Int64("old mb starting round", mb.StartingRound),
-		zap.Int64("new mb starting round", newMagicBlock.StartingRound))
-
-	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
-		logging.Logger.Info("update magic block -- hashes match ",
-			zap.Any("LFMB previous MB hash", mb.Hash),
-			zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
-		c.PreviousMagicBlock = mb
+		if mb.Hash == newMagicBlock.PreviousMagicBlockHash {
+			logging.Logger.Info("update magic block -- hashes match ",
+				zap.Any("LFMB previous MB hash", mb.Hash),
+				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
+			c.PreviousMagicBlock = mb
+		}
 	}
 
 	c.SetMagicBlock(newMagicBlock)

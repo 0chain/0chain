@@ -61,7 +61,7 @@ func (c *Client) Clone() *Client {
 	copy(clone.PublicKeyBytes, c.PublicKeyBytes)
 
 	if c.EntityCollection != nil {
-		clone.EntityCollection = &(*c.EntityCollection)
+		clone.EntityCollection = c.EntityCollection.Clone()
 	}
 
 	return &clone

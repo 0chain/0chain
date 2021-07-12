@@ -93,7 +93,7 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 		"</tr>")
 	var previousStart, currentStart string
 	var previousElapsed, currentElapsed string
-	var previousStatus, currentStatus string
+	var previousStatus, currentStatus HealthCheckStatus
 	roundUnit := time.Minute
 	if scan == ProximityScan {
 		roundUnit = time.Second
@@ -119,7 +119,7 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 		case SyncProgress:
 			currentElapsed = time.Since(current.CycleStart).Round(roundUnit).String()
 		}
-		currentStatus = string(cc.Status)
+		currentStatus = cc.Status
 	}
 
 	fmt.Fprintf(w, "<tr>"+
