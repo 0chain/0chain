@@ -63,9 +63,14 @@ func (r *Runner) SetMonitor(name NodeName) (err error) {
 
 // CleanupBC cleans up blockchain.
 func (r *Runner) CleanupBC(tm time.Duration) (err error) {
+	log.Print("Cleanup_BC: stopping all...")
 	r.stopAll()
+	log.Print("Cleanup_BC: resetting rounds...")
 	r.resetRounds()
-	return r.conf.CleanupBC()
+	log.Print("Cleanup_BC: do cleanup...")
+	err = r.conf.CleanupBC()
+	log.Printf("Cleanup_BC: do cleanup result %v", err)
+	return err
 }
 
 //
