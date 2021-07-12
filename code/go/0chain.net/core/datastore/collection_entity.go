@@ -45,8 +45,8 @@ type (
 	}
 )
 
-// Copy returns a copy of the EntityCollection instance.
-func (d *EntityCollection) Copy() *EntityCollection {
+// Clone returns a copy of the EntityCollection instance.
+func (d *EntityCollection) Clone() *EntityCollection {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

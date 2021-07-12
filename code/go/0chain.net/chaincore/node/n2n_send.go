@@ -46,7 +46,7 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 
 /*SendOne - send message to a single node in the pool */
 func (np *Pool) SendOne(handler SendHandler) *Node {
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(false)
 	return np.sendOne(handler, nodes)
 }
 
@@ -72,7 +72,7 @@ func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) (result 
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(false)
 	return np.sendTo(numNodes, nodes, handler)
 }
 

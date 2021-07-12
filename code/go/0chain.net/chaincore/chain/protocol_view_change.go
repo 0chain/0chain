@@ -40,62 +40,6 @@ const (
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-func (mc *Chain) SetupSC(ctx context.Context) {
-	logging.Logger.Info("SetupSC start...")
-	// create timer with 0 duration to start it immediately
-	tm := time.NewTimer(0)
-	for {
-		select {
-		case <-ctx.Done():
-			logging.Logger.Debug("SetupSC is done")
-			return
-		case <-tm.C:
-			tm.Reset(30 * time.Second)
-			logging.Logger.Debug("SetupSC - check if node is registered")
-			func() {
-				isRegisteredC := make(chan bool)
-				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-				defer cancel()
-
-				go func() {
-					isRegistered := mc.isRegistered(cctx)
-
-					select {
-					case isRegisteredC <- isRegistered:
-					default:
-					}
-				}()
-
-				select {
-				case reg := <-isRegisteredC:
-					if reg {
-						logging.Logger.Debug("SetupSC - node is already registered")
-						return
-					}
-				case <-cctx.Done():
-					logging.Logger.Debug("SetupSC - check node registered timeout")
-					cancel()
-				}
-
-				logging.Logger.Debug("Request to register node")
-				txn, err := mc.RegisterNode()
-				if err != nil {
-					logging.Logger.Warn("failed to register node in SC -- init_setup_sc",
-						zap.Error(err))
-					return
-				}
-
-				if txn != nil && mc.ConfirmTransaction(txn) {
-					logging.Logger.Debug("Register node transaction confirmed")
-					return
-				}
-
-				logging.Logger.Debug("Register node transaction not confirmed yet")
-			}()
-		}
-	}
-}
-
 // RegisterClient registers client on BC.
 func (mc *Chain) RegisterClient() {
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
@@ -154,24 +98,32 @@ func (mc *Chain) RegisterClient() {
 }
 
 func (mc *Chain) isRegistered(ctx context.Context) (is bool) {
-	is = mc.isRegisteredEx(ctx,
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeMiner {
-				return minersc.AllMinersKey
-			} else if typ == node.NodeTypeSharder {
-				return minersc.AllShardersKey
-			}
-			return ""
-		},
-		func(n *node.Node) string {
-			if typ := n.Type; typ == node.NodeTypeMiner {
-				return scRestAPIGetMinerList
-			} else if typ == node.NodeTypeSharder {
-				return scRestAPIGetSharderList
-			}
-			return ""
-		}, false)
-	return
+	getStatePathFunc := func(n *node.Node) string {
+		switch n.Type {
+		case node.NodeTypeMiner:
+			return minersc.AllMinersKey
+		case node.NodeTypeSharder:
+			return minersc.AllShardersKey
+		default:
+			logging.Logger.Error("isRegistered.getStatePath unknown node type",
+				zap.String("type", node.NodeTypeNames[n.Type].Value))
+		}
+
+		return ""
+	}
+	getAPIPathFunc := func(n *node.Node) string {
+		switch n.Type {
+		case node.NodeTypeMiner:
+			return scRestAPIGetMinerList
+		case node.NodeTypeSharder:
+			return scRestAPIGetSharderList
+		default:
+			logging.Logger.Error("isRegistered.getAPIPath unknown node type",
+				zap.String("type", node.NodeTypeNames[n.Type].Value))
+		}
+		return ""
+	}
+	return mc.isRegisteredEx(ctx, getStatePathFunc, getAPIPathFunc, false)
 }
 
 func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.Node) string,
@@ -236,14 +188,17 @@ func (mc *Chain) isRegisteredEx(ctx context.Context, getStatePath func(n *node.N
 	return false
 }
 
-func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
+func (mc *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transaction) bool {
 	var (
 		active = mc.IsActiveInChain()
 		mb     = mc.GetCurrentMagicBlock()
 
 		found, pastTime bool
 		urls            []string
+		cctx, cancel    = context.WithTimeout(ctx, time.Duration(transaction.TXN_TIME_TOLERANCE)*time.Second)
 	)
+
+	defer cancel()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
@@ -252,10 +207,17 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	}
 
 	for !found && !pastTime {
+		select {
+		case <-cctx.Done():
+			return false
+		default:
+		}
+
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
 			lfb := mc.GetLatestFinalizedBlock()
-			pastTime = lfb != nil && !common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
+			pastTime = lfb != nil &&
+				!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		} else {
 			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 			if err != nil {
@@ -264,6 +226,7 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 			}
 			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		}
+
 		found = err == nil && txn != nil
 		if !found {
 			time.Sleep(time.Second)
@@ -307,6 +270,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn.PublicKey = selfNode.PublicKey
 	mb := mc.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
+	logging.Logger.Debug("Register nodes to", zap.Strings("urls", minerUrls))
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
@@ -483,15 +447,16 @@ func getHighestOnly(list []seriHigh) []seriHigh {
 }
 
 // The makeSCRESTAPICall is internal for GetFromSharders.
-func makeSCRESTAPICall(ctx context.Context, address, relative, sharder string,
+func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder string,
 	seri util.Serializable, collect chan util.Serializable) {
 
-	var err = httpclientutil.MakeSCRestAPICall(ctx, address, relative, nil,
-		[]string{sharder}, seri, 1)
-	if err != nil {
+	if err := httpclientutil.MakeSCRestAPICall(ctx, address, relative, nil,
+		[]string{sharder}, seri, 1); err != nil {
 		logging.Logger.Error("requesting phase node from sharder",
 			zap.String("sharder", sharder),
 			zap.Error(err))
+		collect <- nil
+		return
 	}
 	collect <- seri // regardless error
 }
@@ -527,13 +492,20 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 	highFunc func(seri util.Serializable) int64) (
 	got util.Serializable) {
 
+	t := time.Now()
+	defer func() {
+		logging.Logger.Debug("GetFromSharders", zap.Any("duration", time.Since(t)))
+	}()
+
 	wg := &sync.WaitGroup{}
 	var collect = make(chan util.Serializable, len(sharders))
 	for _, sharder := range sharders {
 		wg.Add(1)
 		go func(sh string) {
 			defer wg.Done()
-			makeSCRESTAPICall(ctx, address, relative, sh, newFunc(), collect)
+			cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+			makeSCRESTAPICall(cctx, address, relative, sh, newFunc(), collect)
 		}(sharder)
 	}
 

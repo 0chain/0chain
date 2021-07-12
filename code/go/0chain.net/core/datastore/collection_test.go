@@ -47,8 +47,8 @@ func TestEntityCollection_Copy(t *testing.T) {
 				CollectionSize:     tt.fields.CollectionSize,
 				CollectionDuration: tt.fields.CollectionDuration,
 			}
-			if gotCp := ec.Copy(); !reflect.DeepEqual(gotCp, tt.wantCp) {
-				t.Errorf("Copy() = %v, want %v", gotCp, tt.wantCp)
+			if gotCp := ec.Clone(); !reflect.DeepEqual(gotCp, tt.wantCp) {
+				t.Errorf("Clone() = %v, want %v", gotCp, tt.wantCp)
 			}
 		})
 	}

@@ -168,7 +168,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 
 	var (
 		prrs   = strconv.FormatInt(pr.GetRandomSeed(), 16) // pr.VRFOutput
-		blsMsg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), prrs)
+		blsMsg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetNormalizedTimeoutCount(), prrs)
 	)
 
 	Logger.Info("BLS sign VRF share calculated for ",
