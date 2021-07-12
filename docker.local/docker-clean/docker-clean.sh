@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "cleaning 8 mines..."
+echo "cleaning 8 miners..."
 for i in $(seq 1 8)
 do
   echo "deleting miner$i logs"
