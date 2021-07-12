@@ -93,19 +93,19 @@ func (m *MagmaSmartContract) allProviders(_ context.Context, _ url.Values, sci c
 
 // billing tries to extract Billing data with given id param.
 func (m *MagmaSmartContract) billing(id datastore.Key, sci chain.StateContextI) (*Billing, error) {
-	bill := Billing{SessionID: id}
+	bill := &Billing{SessionID: id}
 
 	data, err := sci.GetTrieNode(bill.uid(m.ID))
 	if err != nil && !errIs(err, util.ErrValueNotPresent) {
-		return nil, errWrap(errCodeFetchData, "fetch billing data failed", err)
+		return bill, errWrap(errCodeFetchData, "fetch billing data failed", err)
 	}
 	if data != nil { // decode saved data
 		if err = bill.Decode(data.Encode()); err != nil {
-			return nil, errWrap(errCodeFetchData, "decode billing data failed", err)
+			return bill, errWrap(errCodeFetchData, "decode billing data failed", err)
 		}
 	}
 
-	return &bill, nil
+	return bill, nil
 }
 
 // billingData tries to extract Billing data with given id param.
@@ -120,7 +120,7 @@ func (m *MagmaSmartContract) billingData(dataUsage *DataUsage, sci chain.StateCo
 	}
 
 	bill, err := m.billing(dataUsage.SessionID, sci)
-	if err != nil && !errIs(err, util.ErrValueNotPresent) {
+	if err != nil && !errIs(err, util.ErrNodeNotFound) {
 		return nil, errWrap(errCodeDataUsage, "fetch billing data failed", err)
 	}
 	if err = bill.validate(dataUsage); err != nil {
@@ -167,8 +167,9 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 		return "", errNew(errCodeAcceptTerms, "provider terms is expired")
 	}
 
+	terms := *provider.Terms
 	ackn.ConsumerID = consumer.ID
-	ackn.ProviderTerms = provider.Terms
+	ackn.ProviderTerms = &terms
 
 	var pool tokenPool
 	if _, err = pool.create(txn, &ackn, sci); err != nil {
@@ -263,10 +264,13 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 }
 
 // providerDataUsage updates the Provider billing session.
-func (m *MagmaSmartContract) providerDataUsage(_ *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
 	var dataUsage DataUsage
 	if err := dataUsage.Decode(blob); err != nil {
 		return "", errWrap(errCodeDataUsage, "decode data usage failed", err)
+	}
+	if _, err := extractProvider(m.ID, txn.ClientID, sci); err != nil {
+		return "", errWrap(errCodeFetchData, "fetch provider failed", err)
 	}
 
 	bill, err := m.billingData(&dataUsage, sci)
@@ -322,7 +326,7 @@ func (m *MagmaSmartContract) providerTerms(_ context.Context, vals url.Values, s
 
 	provider, err := extractProvider(m.ID, providerID, sci)
 	if err != nil {
-		return nil, errWrap(errCodeFetchData, "fetch provider terms failed", err)
+		return nil, errWrap(errCodeFetchData, "fetch provider failed", err)
 	}
 
 	return provider.Terms, nil

@@ -19,9 +19,8 @@ const (
 	errCodeSessionStop    = "session_stop"
 	errCodeUpdateData     = "update_data"
 
-	errCodeTokenPoolCreate   = "token_pool_create"
-	errCodeTokenPoolSpend    = "token_pool_spend"
-	errCodeTokenPoolTransfer = "token_pool_transfer"
+	errCodeTokenPoolCreate = "token_pool_create"
+	errCodeTokenPoolSpend  = "token_pool_spend"
 
 	errTextAcknInvalid = "acknowledgment invalid"
 	errTextDecode      = "decode error"

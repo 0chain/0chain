@@ -356,7 +356,7 @@ func mockTokenPool() *tokenPool {
 		PayeeID: "payee_id",
 	}
 
-	pool.ID = "pool_id"
+	pool.ID = "session_id"
 	pool.Balance = 1000
 
 	return &pool
