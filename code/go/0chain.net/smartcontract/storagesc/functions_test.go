@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"strconv"
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
@@ -8,8 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"testing"
 )
 
 func TestTransferReward(t *testing.T) {

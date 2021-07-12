@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"fmt"
 	"reflect"
 	"runtime"
 
@@ -388,7 +387,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 	for _, keepNode := range keep.Nodes {
 		var found = all.FindNodeById(keepNode.ID)
 		if found == nil {
-			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
+			return nil, errors.Newf("invalid state", "a sharder exists in"+
 				" keep list doesn't exists in all sharders list: %s", keepNode.ID)
 		}
 		tmpMinerNodes = append(tmpMinerNodes, found)
@@ -396,7 +395,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 	}
 
 	if len(simpleNodes) < gn.MinS {
-		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
+		return nil, errors.Newf("", "to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
 	}
 
 	var pmbrss int64
@@ -505,7 +504,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	}
 
 	if len(dkgMinersList.SimpleNodes) < dkgMinersList.K {
-		return common.NewErrorf("create_magic_block_failed",
+		return errors.Newf("create_magic_block_failed",
 			"len(dkgMinersList.SimpleNodes) [%d] < dkgMinersList.K [%d]", len(dkgMinersList.SimpleNodes), dkgMinersList.K)
 	}
 

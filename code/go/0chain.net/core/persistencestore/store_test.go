@@ -2,8 +2,9 @@ package persistencestore_test
 
 import (
 	"context"
-	"errors"
 	"testing"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"

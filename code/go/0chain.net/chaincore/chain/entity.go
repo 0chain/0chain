@@ -39,7 +39,7 @@ const notifySyncLFRStateTimeout = 3 * time.Second
 const genesisRandomSeed = 839695260482366273
 
 var (
-	ErrInsufficientChain = common.NewError("insufficient_chain",
+	ErrInsufficientChain = errors.New("insufficient_chain",
 		"Chain length not sufficient to perform the logic")
 )
 

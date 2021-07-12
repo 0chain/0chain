@@ -614,7 +614,7 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	}
 
 	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
+		return errors.Wrap(err, "failed to update magic block")
 	}
 	sc.SetLatestFinalizedMagicBlock(block)
 

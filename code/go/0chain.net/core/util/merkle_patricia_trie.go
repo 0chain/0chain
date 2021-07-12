@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -99,7 +98,7 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, fmt.Errorf("invalid hex path: path=%q, err=%v", string(path), err)
+		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=%v", string(path), err))
 	}
 
 	mpt.mutex.RLock()

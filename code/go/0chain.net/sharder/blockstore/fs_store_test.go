@@ -1,13 +1,14 @@
 package blockstore
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/minio/minio-go"
 	"github.com/stretchr/testify/assert"

@@ -26,12 +26,12 @@ var MaxStateNodesForSync = 10000
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
-		return common.NewError("get block state changes", err.Error())
+		return errors.New("get block state changes", err.Error())
 	}
 
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
-		return common.NewError("apply block state changes", err.Error())
+		return errors.New("apply block state changes", err.Error())
 	}
 
 	return nil
@@ -323,7 +323,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))
-			return nil, common.NewError("state_root_error",
+			return nil, errors.New("state_root_error",
 				"block state root calculation error")
 		}
 
@@ -339,7 +339,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	c.RequestEntityFromMinersOnMB(ctx, c.GetMagicBlock(b.Round), BlockStateChangeRequestor, params, handler)
 
 	if bsc == nil {
-		return nil, common.NewError("block_state_change_error",
+		return nil, errors.New("block_state_change_error",
 			"error getting the block state change")
 	}
 

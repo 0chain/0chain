@@ -536,7 +536,7 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64,
 	verifyBlock func(mb *block.Block) bool) (*block.Block, error) {
 	if len(sharderURLs) == 0 {
-		return nil, common.NewError("fetch_magic_block_from_sharders", "empty sharder URLs")
+		return nil, errors.New("fetch_magic_block_from_sharders", "empty sharder URLs")
 	}
 
 	wg := &sync.WaitGroup{}
@@ -603,10 +603,10 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 
 	select {
 	case <-cctx.Done():
-		return nil, common.NewError("fetch_magic_block_from_sharders - could not get magic block from sharders", cctx.Err().Error())
+		return nil, errors.New("fetch_magic_block_from_sharders - could not get magic block from sharders", cctx.Err().Error())
 	case b, ok := <-recv:
 		if !ok {
-			return nil, common.NewErrorf("fetch_magic_block_from_sharders", "could not get magic block from sharders")
+			return nil, errors.Newf("fetch_magic_block_from_sharders", "could not get magic block from sharders")
 		}
 		cancel()
 		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))

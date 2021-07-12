@@ -300,32 +300,32 @@ func TestGlobalNode_canMint(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "can't mint",
+			name: "can't mint",
 			fields: fields{
-				ID:               "",
+				ID: "",
 				SimpleGlobalNode: &SimpleGlobalNode{
 					MaxMint:     15,
 					TotalMinted: 10,
 					MinLock:     0,
 					APR:         0,
 				},
-				MinLockPeriod:    0,
+				MinLockPeriod: 0,
 			},
-			want:   true,
+			want: true,
 		},
 		{
-			name:   "can mint",
+			name: "can mint",
 			fields: fields{
-				ID:               "",
+				ID: "",
 				SimpleGlobalNode: &SimpleGlobalNode{
 					MaxMint:     10,
 					TotalMinted: 51,
 					MinLock:     0,
 					APR:         0,
 				},
-				MinLockPeriod:    0,
+				MinLockPeriod: 0,
 			},
-			want:   false,
+			want: false,
 		},
 	}
 	for _, tt := range tests {

@@ -13,7 +13,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 

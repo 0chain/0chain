@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"0chain.net/core/cache"
@@ -139,7 +138,7 @@ func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, e
 		fromStore = true
 	}
 	if r.BlockHash == "" {
-		err = fmt.Errorf("round %d has empty block hash", roundNumber)
+		err = errors.Newf("", "round %d has empty block hash", roundNumber)
 		Logger.Error("get_block_hash",
 			zap.Int64("round", roundNumber),
 			zap.Bool("from_store", fromStore),

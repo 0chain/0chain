@@ -2,7 +2,7 @@ package block
 
 import (
 	"context"
-	"errors"
+
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func init() {

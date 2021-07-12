@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/0chain/gorocksdb"
 	"github.com/stretchr/testify/assert"

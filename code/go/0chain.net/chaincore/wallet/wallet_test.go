@@ -1,9 +1,12 @@
 package wallet
 
 import (
-	"0chain.net/core/logging"
 	"encoding/hex"
-	"errors"
+
+	"github.com/0chain/gosdk/core/common/errors"
+
+	"0chain.net/core/logging"
+
 	"fmt"
 	"io/ioutil"
 	"math/rand"
