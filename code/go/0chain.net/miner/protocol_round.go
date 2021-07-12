@@ -748,7 +748,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			switch err {
 			case context.Canceled:
 			default:
-				if cerr, ok := err.(*common.Error); ok {
+				if cerr, ok := err.(*errors.Error); ok {
 					if cerr.Code == RoundMismatch {
 						logging.Logger.Debug("verify round block",
 							zap.Any("round", r.Number), zap.Any("block", b.Hash),
