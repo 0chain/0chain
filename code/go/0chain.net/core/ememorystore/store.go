@@ -7,8 +7,8 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 var storageAPI = &Store{}
@@ -80,7 +80,7 @@ func (ems *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error
 	c := GetEntityCon(ctx, emd)
 	_, err := c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(entity.GetKey())))
 	if err == nil {
-		return common.NewError("entity_already_exists", "Entity already exists")
+		return errors.New("entity_already_exists", "Entity already exists")
 	}
 	ems.Write(ctx, entity)
 	return nil

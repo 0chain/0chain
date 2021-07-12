@@ -3,9 +3,9 @@ package minersc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -33,7 +33,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	var newMiner = NewMinerNode()
 	if err = newMiner.Decode(inputData); err != nil {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"decoding request: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if err != nil {
 		Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"failed to get miner list: %v", err)
 	}
 
@@ -75,40 +75,40 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		Logger.Error("add_miner: public key or ID is empty")
-		return "", common.NewError("add_miner_failed",
+		return "", errors.New("add_miner_failed",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	if newMiner.ServiceCharge < 0 {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"invalid negative service charge: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"max_charge is greater than allowed by SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxCharge)
 	}
 
 	if newMiner.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"invalid negative number_of_delegates: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if newMiner.MinStake < gn.MinStake {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"min_stake is less than allowed by SC: %v > %v",
 			newMiner.MinStake, gn.MinStake)
 	}
 
 	if newMiner.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newMiner.MaxStake, gn.MaxStake)
 	}
@@ -125,7 +125,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		all.Nodes = append(all.Nodes, newMiner)
 
 		if err = updateMinersList(balances, all); err != nil {
-			return "", common.NewErrorf("add_miner_failed",
+			return "", errors.Newf("add_miner_failed",
 				"saving all miners list: %v", err)
 		}
 		update = true
@@ -133,7 +133,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if !msc.doesMinerExist(newMiner.getKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
-			return "", common.NewError("add_miner_failed", err.Error())
+			return "", errors.Wrap(err, "add_miner_failed")
 		}
 
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
@@ -154,40 +154,40 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 
 	var update = NewMinerNode()
 	if err = update.Decode(inputData); err != nil {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"decoding request: %v", err)
 	}
 
 	if update.ServiceCharge < 0 {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"invalid negative service charge: %v", update.ServiceCharge)
 	}
 
 	if update.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"max_charge is greater than allowed by SC: %v > %v",
 			update.ServiceCharge, gn.MaxCharge)
 	}
 
 	if update.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"invalid negative number_of_delegates: %v", update.ServiceCharge)
 	}
 
 	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner_failed",
+		return "", errors.Newf("add_miner_failed",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			update.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if update.MinStake < gn.MinStake {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"min_stake is less than allowed by SC: %v > %v",
 			update.MinStake, gn.MinStake)
 	}
 
 	if update.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("update_settings",
+		return "", errors.Newf("update_settings",
 			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
 	}
@@ -195,11 +195,11 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	var mn *MinerNode
 	mn, err = getMinerNode(update.ID, balances)
 	if err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", errors.Wrap(err, "update_settings")
 	}
 
 	if mn.DelegateWallet != t.ClientID {
-		return "", common.NewError("update_setings", "access denied")
+		return "", errors.New("update_setings", "access denied")
 	}
 
 	mn.ServiceCharge = update.ServiceCharge
@@ -208,7 +208,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	mn.MaxStake = update.MaxStake
 
 	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("update_setings", "saving: %v", err)
+		return "", errors.Newf("update_setings", "saving: %v", err)
 	}
 
 	return string(mn.Encode()), nil

@@ -1,14 +1,14 @@
 package vestingsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
+
+	"0chain.net/smartcontract"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -179,7 +179,7 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 
 	for _, d := range ar.Destinations {
 		if d.Amount < 0 {
-			return fmt.Errorf("negative amount for %q: %d", d.ID, d.Amount)
+			return errors.Newf("", "negative amount for %q: %d", d.ID, d.Amount)
 		}
 	}
 	return
@@ -294,11 +294,11 @@ func (vp *vestingPool) moveToDest(vscKey, destID datastore.Key,
 	var transfer *state.Transfer
 	transfer, resp, err = vp.DrainPool(vscKey, destID, value, nil)
 	if err != nil {
-		return "", fmt.Errorf("vesting destination %s: %v", destID, err)
+		return "", errors.Newf("", "vesting destination %s: %v", destID, err)
 	}
 
 	if err = balances.AddTransfer(transfer); err != nil {
-		return "", fmt.Errorf("adding transfer vesting_pool->destination %s: %v",
+		return "", errors.Newf("", "adding transfer vesting_pool->destination %s: %v",
 			destID, err)
 	}
 
@@ -338,7 +338,7 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 		var mrsp string
 		mrsp, err = vp.moveToDest(t.ToClientID, d.ID, value, balances)
 		if err != nil {
-			return "", fmt.Errorf("transferring to %s: %v", d.ID, err)
+			return "", errors.Newf("", "transferring to %s: %v", d.ID, err)
 		}
 		if i > 0 {
 			sb.WriteByte(',')
@@ -373,7 +373,7 @@ func (vp *vestingPool) delete(destID string) (err error) {
 		vp.Destinations[i], i = d, i+1
 	}
 	if !found {
-		return fmt.Errorf("destination %s not found in the pool", destID)
+		return errors.Newf("", "destination %s not found in the pool", destID)
 	}
 	vp.Destinations = vp.Destinations[:i]
 	return
@@ -388,7 +388,7 @@ func (vp *vestingPool) find(destID string) (d *destination, err error) {
 		break
 	}
 	if d == nil {
-		return nil, fmt.Errorf("destination %s not found in the pool", destID)
+		return nil, errors.Newf("", "destination %s not found in the pool", destID)
 	}
 	return
 }
@@ -416,7 +416,7 @@ func (vp *vestingPool) vest(vscID, destID datastore.Key, now common.Timestamp,
 	}
 	resp, err = vp.moveToDest(vscID, d.ID, value, balances)
 	if err != nil {
-		return "", fmt.Errorf("transferring to %s: %v", d.ID, err)
+		return "", errors.Newf("", "transferring to %s: %v", d.ID, err)
 	}
 
 	return
@@ -437,10 +437,10 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 	var transfer *state.Transfer
 	transfer, resp, err = vp.DrainPool(t.ToClientID, t.ClientID, over, nil)
 	if err != nil {
-		return "", fmt.Errorf("draining vesting pool: %v", err)
+		return "", errors.Newf("", "draining vesting pool: %v", err)
 	}
 	if err = balances.AddTransfer(transfer); err != nil {
-		return "", fmt.Errorf("adding transfer vesting_pool->owner: %v", err)
+		return "", errors.Newf("", "adding transfer vesting_pool->owner: %v", err)
 	}
 
 	return
@@ -537,7 +537,7 @@ func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
 
 	vp = newVestingPool()
 	if err = vp.Decode(poolb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 
 	return
@@ -552,58 +552,49 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 
 	var ar addRequest
 	if err = ar.decode(input); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"malformed request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "malformed request: "))
 	}
 
 	var conf *config
 	if conf, err = getConfig(); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"can't get SC configurations: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "can't get SC configurations: "))
+
 	}
 
 	if err = ar.validate(t.CreationDate, conf); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"invalid request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "invalid request: "))
 	}
 
 	if t.ClientID == "" {
-		return "", common.NewError("create_vesting_pool_failed",
-			"empty client_id of transaction")
+		return "", errors.New("create_vesting_pool_failed", "empty client_id of transaction")
 	}
 
 	var vp = newVestingPoolFromReqeust(t.ClientID, &ar)
 	vp.ID = poolKey(vsc.ID, t.Hash) // set ID by this transaction
 
 	if state.Balance(t.Value) < vp.want() {
-		return "", common.NewError("create_vesting_pool_failed",
-			"not enough tokens to create pool provided")
+		return "", errors.New("create_vesting_pool_failed", "not enough tokens to create pool provided")
 	}
 
 	if state.Balance(t.Value) < conf.MinLock {
-		return "", common.NewError("create_vesting_pool_failed",
-			"insufficient amount to lock")
+		return "", errors.New("create_vesting_pool_failed", "insufficient amount to lock")
 	}
 	if _, err = vp.fill(t, balances); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"can't fill pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "can't fill pool: "))
 	}
 
 	var cp *clientPools
 	if cp, err = vsc.getOrCreateClientPools(t.ClientID, balances); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"unexpected error: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "unexpected error: "))
 	}
 
 	cp.add(vp.ID)
 	if err = cp.save(vsc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"can't save client's pools list: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "can't save client's pools list: "))
 	}
 
 	if err = vp.save(balances); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"can't save pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("create_vesting_pool_failed", "can't save pool: "))
 	}
 
 	return string(vp.Encode()), nil
@@ -614,43 +605,38 @@ func (vsc *VestingSmartContract) stop(t *transaction.Transaction,
 
 	var sr stopRequest
 	if err = sr.decode(input); err != nil {
-		return "", common.NewError("stop_vesting_failed",
-			"malformed request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("stop_vesting_failed", "malformed request: "))
 	}
 
 	if sr.Destination == "" {
-		return "", common.NewError("stop_vesting_failed",
-			"missing destination to stop vesting")
+		return "", errors.New("stop_vesting_failed", "missing destination to stop vesting")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(sr.PoolID, balances); err != nil {
-		return "", common.NewError("stop_vesting_failed",
-			"can't get vesting pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("stop_vesting_failed", "can't get vesting pool: "))
 	}
 
 	if vp.ClientID != t.ClientID {
-		return "", common.NewError("stop_vesting_failed",
-			"only owner can stop a vesting")
+		return "", errors.New("stop_vesting_failed", "only owner can stop a vesting")
 	}
 
 	if t.CreationDate > vp.ExpireAt {
-		return "", common.NewError("stop_vesting_failed", "expired pool")
+		return "", errors.New("stop_vesting_failed", "expired pool")
 	}
 
 	_, err = vp.vest(t.ToClientID, sr.Destination, t.CreationDate, balances)
 	if err != nil && err != errZeroVesting {
-		return "", common.NewError("stop_vesting_failed", err.Error())
+		return "", errors.Wrap(err, "stop_vesting_failed")
 	}
 
 	if err = vp.delete(sr.Destination); err != nil {
-		return "", common.NewError("stop_vesting_failed",
-			"deleting destination: "+err.Error())
+		return "", errors.Wrap(err, errors.New("stop_vesting_failed", "deleting destination: "))
+
 	}
 
 	if err = vp.save(balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"saving pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("trigger_vesting_pool_failed", "saving pool: "))
 	}
 
 	return sr.Destination + " has deleted from the vesting pool", nil
@@ -661,36 +647,30 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 
 	var dr poolRequest
 	if err = dr.decode(input); err != nil {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"invalid request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "invalid request: "))
 	}
 
 	if dr.PoolID == "" {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"invalid request: missing pool id")
+		return "", errors.New("delete_vesting_pool_failed", "invalid request: missing pool id")
 	}
 
 	if t.ClientID == "" {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"empty client id of transaction")
+		return "", errors.New("delete_vesting_pool_failed", "empty client id of transaction")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(dr.PoolID, balances); err != nil {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"can't get pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "can't get pool: "))
 	}
 
 	if vp.ClientID != t.ClientID {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"only pool owner can delete the pool")
+		return "", errors.New("delete_vesting_pool_failed", "only pool owner can delete the pool")
 	}
 
 	// move tokens to destinations
 	if vp.Balance > 0 {
 		if _, err = vp.trigger(t, balances); err != nil {
-			return "", common.NewError("delete_vesting_pool_failed",
-				"moving tokens to destinations: "+err.Error())
+			return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "moving tokens to destinations: "))
 		}
 	}
 
@@ -699,15 +679,13 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 	// move left to owner
 	if vp.Balance > 0 {
 		if _, err = vp.drain(t, balances); err != nil {
-			return "", common.NewError("delete_vesting_pool_failed",
-				"draining pool: "+err.Error())
+			return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "draining pool: "))
 		}
 	}
 
 	var cp *clientPools
 	if cp, err = vsc.getOrCreateClientPools(t.ClientID, balances); err != nil {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"unexpected error: "+err.Error())
+		return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "unexpected error: "))
 	}
 
 	if len(cp.Pools) > 0 {
@@ -716,20 +694,18 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 		if len(cp.Pools) == 0 {
 			_, err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
 			if err != nil {
-				return "", common.NewError("delete_vesting_pool_failed",
-					"can't delete client's pools list: "+err.Error())
+				return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "can't delete client's pools list: "))
 			}
 		} else {
 			if err = cp.save(vsc.ID, t.ClientID, balances); err != nil {
-				return "", common.NewError("delete_vesting_pool_failed",
-					"can't save client's pools list: "+err.Error())
+				return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "can't save client's pools list: "))
 			}
 		}
 	}
 
 	if _, err = balances.DeleteTrieNode(vp.ID); err != nil {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"can't delete vesting pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("delete_vesting_pool_failed", "can't delete vesting pool: "))
+
 	}
 
 	return `{"pool_id":"` + vp.ID + `","action":"deleted"}`, nil
@@ -741,39 +717,35 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 
 	var ur poolRequest
 	if err = ur.decode(input); err != nil {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"invalid request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "invalid request: "))
+
 	}
 
 	if ur.PoolID == "" {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"invalid request: missing pool id")
+		return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "invalid request: missing pool id"))
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(ur.PoolID, balances); err != nil {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"can't get pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "can't get pool: "))
 	}
 
 	if vp.ClientID == t.ClientID {
 		// owner
 		if resp, err = vp.drain(t, balances); err != nil {
-			return "", common.NewError("unlock_vesting_pool_failed",
-				"draining pool: "+err.Error())
+			return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "draining pool: "))
+
 		}
 	} else {
 		// a destination
 		resp, err = vp.vest(t.ToClientID, t.ClientID, t.CreationDate, balances)
 		if err != nil {
-			return "", common.NewError("unlock_vesting_pool_failed",
-				"vesting pool: "+err.Error())
+			return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "vesting pool: "))
 		}
 	}
 
 	if err = vp.save(balances); err != nil {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"saving pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("unlock_vesting_pool_failed", "saving pool: "))
 	}
 
 	return
@@ -789,39 +761,43 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 
 	var tr poolRequest
 	if err = tr.decode(input); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"invalid request: "+err.Error())
+		return "", errors.Wrap(err, errors.New("trigger_vesting_pool_failed",
+			"invalid request"))
+
 	}
 
 	if tr.PoolID == "" {
-		return "", common.NewError("trigger_vesting_pool_failed",
+		return "", errors.New("trigger_vesting_pool_failed",
 			"invalid request: missing pool id")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(tr.PoolID, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"can't get pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("trigger_vesting_pool_failed",
+			"can't get pool"))
+
 	}
 
 	if vp.ClientID != t.ClientID {
-		return "", common.NewError("trigger_vesting_pool_failed",
+		return "", errors.New("trigger_vesting_pool_failed",
 			"only owner can trigger the pool")
 	}
 
 	if len(vp.Destinations) == 0 {
-		return "", common.NewError("trigger_vesting_pool_failed",
+		return "", errors.New("trigger_vesting_pool_failed",
 			"no destinations in the pool")
 	}
 
 	if resp, err = vp.trigger(t, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"triggering pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("trigger_vesting_pool_failed",
+			"triggering pool"))
+
 	}
 
 	if err = vp.save(balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"saving pool: "+err.Error())
+		return "", errors.Wrap(err, errors.New("trigger_vesting_pool_failed",
+			"saving pool"))
+
 	}
 
 	return //

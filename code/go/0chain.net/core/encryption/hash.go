@@ -3,12 +3,12 @@ package encryption
 import (
 	"encoding/hex"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 	"golang.org/x/crypto/sha3"
 )
 
 //ErrInvalidHash - hash is invalid error
-var ErrInvalidHash = common.NewError("invalid_hash", "Invalid hash")
+var ErrInvalidHash = errors.New("invalid_hash", "Invalid hash")
 
 const HASH_LENGTH = 32
 

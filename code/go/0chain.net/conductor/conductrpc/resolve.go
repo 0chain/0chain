@@ -1,10 +1,11 @@
 package conductrpc
 
 import (
-	"fmt"
 	"net"
 	"os/exec"
 	"strings"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func Host(address string) (addr string, err error) {
@@ -23,7 +24,7 @@ func Host(address string) (addr string, err error) {
 	}
 	var ip = strings.TrimSpace(string(stdout))
 	if net.ParseIP(ip) == nil {
-		return "", fmt.Errorf("invalid 'host.docker.internal' resolution: %s",
+		return "", errors.Newf("","invalid 'host.docker.internal' resolution: %s",
 			ip)
 	}
 	return ip + ":" + port, nil // host

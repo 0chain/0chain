@@ -8,8 +8,8 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -17,12 +17,9 @@ import (
 
 // common fetching errors
 var (
-	ErrBlockFetchQueueFull = common.NewError("block_fetcher",
-		"queue full")
-	ErrBlockFetchMinersQueueFull = common.NewError("block_fetcher",
-		"miners queue full")
-	ErrBlockFetchShardersQueueFull = common.NewError("block_fetcher",
-		"sharders queue full")
+	ErrBlockFetchQueueFull         = errors.New("block_fetcher", "queue full")
+	ErrBlockFetchMinersQueueFull   = errors.New("block_fetcher", "miners queue full")
+	ErrBlockFetchShardersQueueFull = errors.New("block_fetcher", "sharders queue full")
 )
 
 // The FetchQueueStat represents numbers of blocks fetch requests to
@@ -206,7 +203,6 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			var bfr, ok = fetching[rpl.Hash]
 			if !ok {
 				panic("BlockFetcher, invalid state: missing block fetch request")
-				continue
 			}
 
 			// got the correct response
@@ -347,8 +343,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 		if gfb.ComputeHash() != ticket.LFBHash {
 			logging.Logger.Error("fetch_fb_from_sharders - wrong block hash",
 				zap.Int64("round", gfb.Round), zap.String("block", gfb.Hash))
-			return nil, common.NewError("fetch_fb_from_sharders",
-				"wrong block hash")
+			return nil, errors.New("fetch_fb_from_sharders", "wrong block hash")
 		}
 
 		err = c.VerifyNotarization(ctx, gfb, gfb.GetVerificationTickets(),
@@ -391,7 +386,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 
 	sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 	if fb == nil {
-		return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
+		return nil, errors.New("fetch_fb_from_sharders", "no FB given")
 	}
 
 	return // return the first given
@@ -431,7 +426,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 		if nb.ComputeHash() != hash {
 			logging.Logger.Error("fetch_nb_from_miners - wrong block hash",
 				zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
-			return nil, common.NewError("fetch_nb_from_miners",
+			return nil, errors.New("fetch_nb_from_miners",
 				"wrong block hash")
 		}
 
@@ -466,7 +461,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 	c.RequestEntityFromMiners(lctx, MinerNotarizedBlockRequestor, &params, handler)
 
 	if b == nil {
-		return nil, common.NewError("get_notarized_block", "no block given")
+		return nil, errors.New("get_notarized_block", "no block given")
 	}
 
 	return

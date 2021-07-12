@@ -1,9 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"time"
 
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -308,7 +308,7 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var cn CommandName
 		if err = mapstructure.Decode(val, &cn); err != nil {
-			return fmt.Errorf("decoding '%s': %v", name, err)
+			return errors.Newf("","decoding '%s': %v", name, err)
 		}
 		ex.Command(cn.Name, tm) // async command
 		return nil
@@ -320,7 +320,7 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var st Bad
 		if err = mapstructure.Decode(val, &st); err != nil {
-			return fmt.Errorf("decoding '%s': %v", name, err)
+			return errors.Newf("","decoding '%s': %v", name, err)
 		}
 		return ex.StorageTree(&st)
 	})
@@ -329,7 +329,7 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var vp Bad
 		if err = mapstructure.Decode(val, &vp); err != nil {
-			return fmt.Errorf("decoding '%s': %v", name, err)
+			return errors.Newf("","decoding '%s': %v", name, err)
 		}
 		return ex.ValidatorProof(&vp)
 	})
@@ -338,7 +338,7 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var cs Bad
 		if err = mapstructure.Decode(val, &cs); err != nil {
-			return fmt.Errorf("decoding '%s': %v", name, err)
+			return errors.Newf("","decoding '%s': %v", name, err)
 		}
 		return ex.Challenges(&cs)
 	})

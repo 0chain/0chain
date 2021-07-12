@@ -1,7 +1,7 @@
 package persistencestore
 
 import (
-	"errors"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/gocql/gocql"
 )

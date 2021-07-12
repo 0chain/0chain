@@ -19,6 +19,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 var nodes = make(map[string]*Node)
@@ -280,7 +281,7 @@ func Read(line string) (*Node, error) {
 	node := Provider()
 	fields := strings.Split(line, ",")
 	if len(fields) != 5 {
-		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
+		return nil, errors.New("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
 	}
 	switch fields[0] {
 	case "m":
@@ -290,7 +291,7 @@ func Read(line string) (*Node, error) {
 	case "b":
 		node.Type = NodeTypeBlobber
 	default:
-		return nil, common.NewError("unknown_node_type", fmt.Sprintf("Unkown node type %v", fields[0]))
+		return nil, errors.New("unknown_node_type", fmt.Sprintf("Unkown node type %v", fields[0]))
 	}
 	node.Host = fields[1]
 	if node.Host == "" {
@@ -311,7 +312,7 @@ func Read(line string) (*Node, error) {
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
-		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
+		return nil, errors.New("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
 	Self.SetNodeIfPublicKeyIsEqual(node)
@@ -336,7 +337,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
-		return nil, common.NewErrorf("invalid_client_id",
+		return nil, errors.Newf("invalid_client_id",
 			"public key: %v, client_id: %v, hash: %v\n", node.PublicKey,
 			node.ID, hash)
 	}

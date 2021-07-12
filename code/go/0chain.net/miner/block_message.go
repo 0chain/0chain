@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"0chain.net/chaincore/round"
+	"0chain.net/core/common"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
-	"0chain.net/core/common"
 )
 
 // MessageVRFShare -

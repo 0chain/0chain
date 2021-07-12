@@ -6,10 +6,10 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 //
@@ -75,7 +75,7 @@ func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {
-			return "", common.NewError("failed to get trie node",
+			return "", errors.New("failed to get trie node",
 				"key is too short")
 		}
 		var btkey, err = tb.mpts.mpt.Delete(util.Path(encryption.Hash(key)))
@@ -107,7 +107,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node",
+		return nil, errors.New("failed to get trie node",
 			"key is too short")
 	}
 
@@ -127,7 +127,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 
 	if tb.mpts != nil {
 		if encryption.IsHash(key) {
-			return "", common.NewError("failed to get trie node",
+			return "", errors.New("failed to get trie node",
 				"key is too short")
 		}
 		var btkey, err = tb.mpts.mpt.Insert(util.Path(encryption.Hash(key)), node)

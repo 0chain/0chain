@@ -2,12 +2,13 @@ package minersc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net/url"
 	"sort"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -365,7 +366,7 @@ func (gn *GlobalNode) setLastRound(round int64) {
 
 func (gn *GlobalNode) save(balances cstate.StateContextI) (err error) {
 	if _, err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
-		return fmt.Errorf("saving global node: %v", err)
+		return errors.Newf("", "saving global node: %v", err)
 	}
 	return
 }
@@ -440,7 +441,7 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 	if _, err := balances.InsertTrieNode(mn.getKey(), mn); err != nil {
-		return fmt.Errorf("saving miner node: %v", err)
+		return errors.Newf("", "saving miner node: %v", err)
 	}
 
 	//Logger.Debug("MinerNode save successfully",
@@ -567,7 +568,7 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	case "sharder":
 		(*nt) = NodeTypeSharder
 	default:
-		err = fmt.Errorf("unknown node type: %q", nts)
+		err = errors.Newf("", "unknown node type: %q", nts)
 	}
 	return
 }
@@ -755,11 +756,11 @@ func (un *UserNode) save(balances cstate.StateContextI) (err error) {
 
 	if len(un.Pools) > 0 {
 		if _, err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
-			return fmt.Errorf("saving user node: %v", err)
+			return errors.Newf("", "saving user node: %v", err)
 		}
 	} else {
 		if _, err = balances.DeleteTrieNode(un.GetKey()); err != nil {
-			return fmt.Errorf("deleting user node: %v", err)
+			return errors.Newf("", "deleting user node: %v", err)
 		}
 	}
 
@@ -828,7 +829,7 @@ func HasPool(pools map[string]*sci.DelegatePool, poolID datastore.Key) bool {
 
 func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
 	if HasPool(pools, pool.ID) {
-		return common.NewError("can't add pool", "miner node already has pool")
+		return errors.New("can't add pool", "miner node already has pool")
 	}
 	pools[pool.ID] = pool
 	return nil
@@ -836,7 +837,7 @@ func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
 
 func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error {
 	if HasPool(pools, poolID) {
-		return common.NewError("can't delete pool", "pool doesn't exist")
+		return errors.New("can't delete pool", "pool doesn't exist")
 	}
 	delete(pools, poolID)
 	return nil
@@ -950,11 +951,11 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 
 	// check the lower boundary
 	if n < dkgmn.MinN {
-		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
+		return errors.Newf("", "to few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
 
 	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
-		return fmt.Errorf("missing miner from previous set, n: %d, list: %s",
+		return errors.Newf("", "missing miner from previous set, n: %d, list: %s",
 			n, simpleNodesKeys(dkgmn.SimpleNodes))
 	}
 
@@ -1017,7 +1018,7 @@ func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 
 func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 	if _, err := state.InsertTrieNode(AllMinersKey, miners); err != nil {
-		return common.NewError("update_all_miners_list_failed", err.Error())
+		return errors.Wrap(err, "update_all_miners_list_failed")
 	}
 	return nil
 }
@@ -1035,7 +1036,7 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	}
 
 	if err := dkgMiners.Decode(allMinersDKGBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("decode DKGMinersKey failed, err: %v", err)
+		return nil, errors.Newf("", "decode DKGMinersKey failed, err: %v", err)
 	}
 
 	return dkgMiners, nil
@@ -1056,7 +1057,7 @@ func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
 
 	mpks := block.NewMpks()
 	if err := mpks.Decode(mpksBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode node MinersMPKKey, err: %v", err)
+		return nil, errors.Newf("", "failed to decode node MinersMPKKey, err: %v", err)
 	}
 
 	return mpks, nil
@@ -1075,7 +1076,7 @@ func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
 
 	magicBlock := block.NewMagicBlock()
 	if err = magicBlock.Decode(magicBlockBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode MagicBlockKey, err: %v", err)
+		return nil, errors.Newf("", "failed to decode MagicBlockKey, err: %v", err)
 	}
 
 	return magicBlock, nil
@@ -1094,7 +1095,7 @@ func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns
 
 	var gsos = block.NewGroupSharesOrSigns()
 	if err = gsos.Decode(groupBytes.Encode()); err != nil {
-		return nil, fmt.Errorf("failed to decode GroupShareOrSignKey, err: %v", err)
+		return nil, errors.Newf("", "failed to decode GroupShareOrSignKey, err: %v", err)
 	}
 
 	return gsos, nil

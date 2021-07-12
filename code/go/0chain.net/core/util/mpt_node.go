@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/encryption"
 )

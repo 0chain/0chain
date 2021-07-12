@@ -1,12 +1,14 @@
 package common
 
 import (
-	"0chain.net/core/logging"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"net/http"
+
+	"0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -30,7 +32,7 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 				data["error"] = fmt.Sprintf("%v", err)
-				if are, ok := err.(*Error); ok {
+				if are, ok := err.(*errors.Error); ok {
 					data["code"] = are.Code
 				}
 				buf := bytes.NewBuffer(nil)

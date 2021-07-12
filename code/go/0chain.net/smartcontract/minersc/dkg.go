@@ -10,8 +10,8 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -40,47 +40,47 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	)
 
 	if allMinersList, err = msc.GetMinersList(balances); err != nil {
-		return common.NewError("move_to_contribute_failed", err.Error())
+		return errors.Wrap(err, "move_to_contribute_failed")
 	}
 
 	if dkgMinersList, err = getDKGMinersList(balances); err != nil {
-		return common.NewError("move_to_contribute_failed", err.Error())
+		return errors.Wrap(err, "move_to_contribute_failed")
 	}
 	allShardersList, err = getAllShardersList(balances)
 	if err != nil {
-		return common.NewError("move_to_contribute_failed", err.Error())
+		return errors.Wrap(err, "move_to_contribute_failed")
 	}
 
 	if len(allShardersList.Nodes) < gn.MinS {
-		return common.NewErrorf("move_to_contribute_failed",
+		return errors.Newf("move_to_contribute_failed",
 			"not enough sharders in all sharders list to move phase, all: %d, min_s: %d",
 			len(allShardersList.Nodes), gn.MinS)
 	}
 
 	if !gn.hasPrevShader(allShardersList, balances) {
-		return common.NewErrorf("move_to_contribute_failed",
+		return errors.Newf("move_to_contribute_failed",
 			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
 				"all: %d, min_s: %d", len(allShardersList.Nodes), gn.MinS)
 	}
 
 	if !gn.hasPrevMiner(allMinersList, balances) {
-		return common.NewErrorf("move_to_contribute_failed",
+		return errors.Newf("move_to_contribute_failed",
 			"invalid state: all miners list hasn't a miner from previous VC set, "+
 				"all: %d, min_n: %d", len(allMinersList.Nodes), gn.MinN)
 	}
 
 	if allMinersList == nil {
-		return common.NewError("move_to_contribute_failed", "allMinersList is nil")
+		return errors.New("move_to_contribute_failed", "allMinersList is nil")
 	}
 
 	if len(allMinersList.Nodes) < dkgMinersList.K {
-		return common.NewErrorf("move_to_contribute_failed",
+		return errors.Newf("move_to_contribute_failed",
 			"len(allMinersList.Nodes) < dkgMinersList.K, l_miners: %d, K: %d",
 			len(allMinersList.Nodes), dkgMinersList.K)
 	}
 
 	if len(allShardersList.Nodes) < gn.MinS {
-		return common.NewErrorf("move_to_contribute_failed",
+		return errors.Newf("move_to_contribute_failed",
 			"len(allShardersList.Nodes) < gn.MinS, l_shards: %d, min_s: %d",
 			len(allShardersList.Nodes), gn.MinS)
 	}
@@ -99,17 +99,17 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	shardersKeep, err := getShardersKeepList(balances)
 	if err != nil {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"failed to get sharders keep list: %v", err)
 	}
 
 	if len(shardersKeep.Nodes) < gn.MinS {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"not enough sharders in keep list to move phase keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
 	}
 
 	if !gn.hasPrevShader(shardersKeep, balances) {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"missing at least one sharder from previous set in "+
 				"sharders keep list to move phase, keep: %d, min_s: %d",
 			len(shardersKeep.Nodes), gn.MinS)
@@ -117,7 +117,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	dkgMinersList, err := getDKGMinersList(balances)
 	if err != nil {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
 	}
 
@@ -126,17 +126,17 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"phase: %v, err: %v", pn.Phase, err)
 	}
 
 	if len(mpks.Mpks) == 0 {
-		return common.NewError("move_to_share_or_publish_failed", "empty miners mpks keys")
+		return errors.New("move_to_share_or_publish_failed", "empty miners mpks keys")
 	}
 
 	// should have at least one miner from previous VC set
 	if !gn.hasPrevMinerInMPKs(mpks, balances) {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"no miner from previous VC set in MPKS, l_mpks: %d, DB: %d, DB version: %d",
 			len(mpks.Mpks),
 			int(balances.GetState().GetVersion()),
@@ -144,7 +144,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 	}
 
 	if len(mpks.Mpks) < dkgMinersList.K {
-		return common.NewErrorf("move_to_share_or_publish_failed",
+		return errors.Newf("move_to_share_or_publish_failed",
 			"len(mpks.Mpks) < dkgMinersList.K, l_mpks: %d, K: %d",
 			len(mpks.Mpks), dkgMinersList.K)
 	}
@@ -162,28 +162,28 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 
 	dkgMinersList, err := getDKGMinersList(balances)
 	if err != nil {
-		return common.NewErrorf("move_to_wait_failed",
+		return errors.Newf("move_to_wait_failed",
 			"failed to get miners DKG, phase: %v, err: %v", err, pn.Phase)
 	}
 
 	gsos, err := getGroupShareOrSigns(balances)
 	if err != nil {
-		return common.NewErrorf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
+		return errors.Newf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
 	}
 
 	if len(gsos.Shares) == 0 {
-		return common.NewError("move_to_wait_failed", "empty sharder or sign keys")
+		return errors.New("move_to_wait_failed", "empty sharder or sign keys")
 	}
 
 	if !gn.hasPrevMinerInGSoS(gsos, balances) {
-		return common.NewErrorf("move_to_wait_failed",
+		return errors.Newf("move_to_wait_failed",
 			"no miner from previous VC set in GSoS, "+
 				"l_gsos: %d, K: %d, DB version: %d, gsos_shares: %v",
 			len(gsos.Shares), dkgMinersList.K, int(balances.GetState().GetVersion()), gsos.Shares)
 	}
 
 	if len(gsos.Shares) < dkgMinersList.K {
-		return common.NewErrorf("move_to_wait_failed",
+		return errors.Newf("move_to_wait_failed",
 			"len(gsos.Shares) < dkgMinersList.K, l_gsos: %d, K: %d",
 			len(gsos.Shares), dkgMinersList.K)
 	}
@@ -298,7 +298,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	if len(allMinersList.Nodes) < gn.MinN {
-		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
+		return errors.Newf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
 	}
 
 	dkgMiners := NewDKGMinerNodes()
@@ -388,7 +388,7 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 	for _, ksh := range keep.Nodes {
 		var ash = all.FindNodeById(ksh.ID)
 		if ash == nil {
-			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
+			return nil, errors.Newf("invalid state", "a sharder exists in"+
 				" keep list doesn't exists in all sharders list: %s", ksh.ID)
 		}
 		list = append(list, ash)
@@ -441,7 +441,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
-		return common.NewError("create_magic_block_failed", err.Error())
+		return errors.Wrap(err, "create_magic_block_failed")
 	}
 
 	for key := range mpks.Mpks {
@@ -539,12 +539,12 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	Logger.Debug("miner smart contract, contribute Mpk")
 	pn, err := GetPhaseNode(balances)
 	if err != nil {
-		return "", common.NewErrorf("contribute_mpk_failed",
+		return "", errors.Newf("contribute_mpk_failed",
 			"can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Contribute {
-		return "", common.NewError("contribute_mpk_failed",
+		return "", errors.New("contribute_mpk_failed",
 			"this is not the correct phase to contribute mpk")
 	}
 
@@ -554,7 +554,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
-		return "", common.NewError("contribute_mpk_failed",
+		return "", errors.New("contribute_mpk_failed",
 			"miner not part of dkg set")
 	}
 
@@ -563,28 +563,27 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 
 	mpk := &block.MPK{ID: t.ClientID}
 	if err := mpk.Decode(inputData); err != nil {
-		return "", common.NewErrorf("contribute_mpk_failed",
+		return "", errors.Newf("contribute_mpk_failed",
 			"decoding request: %v", err)
 	}
 
 	if len(mpk.Mpk) != dmn.T {
-		return "", common.NewErrorf("contribute_mpk_failed",
+		return "", errors.Newf("contribute_mpk_failed",
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
-		return "", common.NewError("contribute_mpk_failed", err.Error())
+		return "", errors.Wrap(err, "contribute_mpk_failed")
 	}
 
 	if _, ok := mpks.Mpks[mpk.ID]; ok {
-		return "", common.NewError("contribute_mpk_failed",
-			"already have mpk for miner")
+		return "", errors.New("contribute_mpk_failed", "already have mpk for miner")
 	}
 
 	mpks.Mpks[mpk.ID] = mpk
 	if err := updateMinersMPKs(balances, mpks); err != nil {
-		return "", common.NewError("contribute_mpk_failed", err.Error())
+		return "", errors.Wrap(err, "contribute_mpk_failed")
 	}
 
 	Logger.Debug("contribute_mpk success",
@@ -599,12 +598,12 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Publish {
-		return "", common.NewErrorf("share_signs_or_shares", "this is not the"+
+		return "", errors.Newf("share_signs_or_shares", "this is not the"+
 			" correct phase to publish signs or shares, phase node: %v",
 			string(pn.Encode()))
 	}
@@ -613,31 +612,31 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	gsos, err = getGroupShareOrSigns(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return "", common.NewError("share_signs_or_shares_failed", err.Error())
+			return "", errors.Wrap(err, "share_signs_or_shares_failed")
 		}
 		gsos = block.NewGroupSharesOrSigns()
 	}
 
 	var ok bool
 	if _, ok = gsos.Shares[t.ClientID]; ok {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"already have share or signs for miner %v", t.ClientID)
 	}
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"getting miners DKG list %v", err)
 	}
 
 	var sos = block.NewShareOrSigns()
 	if err = sos.Decode(inputData); err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"decoding input %v", err)
 	}
 
 	if len(sos.ShareOrSigns) < dmn.K-1 {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
 			len(sos.ShareOrSigns), dmn.K-1)
 	}
@@ -648,7 +647,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var mpks = block.NewMpks()
 	mpks, err = getMinersMPKs(balances)
 	if err != nil {
-		return "", common.NewError("share_signs_or_shares_failed", err.Error())
+		return "", errors.Wrap(err, "share_signs_or_shares_failed")
 	}
 
 	var publicKeys = make(map[string]string)
@@ -659,7 +658,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var shares []string
 	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
 	if !ok {
-		return "", common.NewError("share_signs_or_shares",
+		return "", errors.New("share_signs_or_shares",
 			"share or signs failed validation")
 	}
 
@@ -675,12 +674,12 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 		zap.Int64("state.version", int64(balances.GetState().GetVersion())))
 	err = updateGroupShareOrSigns(balances, gsos)
 	if err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"saving group share of signs: %v", err)
 	}
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
+		return "", errors.Newf("share_signs_or_shares",
 			"saving DKG miners: %v", err)
 	}
 
@@ -697,28 +696,28 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
-		return "", common.NewErrorf("wait",
+		return "", errors.Newf("wait",
 			"can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Wait {
-		return "", common.NewErrorf("wait", "this is not the"+
+		return "", errors.Newf("wait", "this is not the"+
 			" correct phase to wait: %s", pn.Phase)
 	}
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
-		return "", common.NewErrorf("wait", "can't get DKG miners: %v", err)
+		return "", errors.Newf("wait", "can't get DKG miners: %v", err)
 	}
 
 	if already, ok := dmn.Waited[t.ClientID]; ok && already {
-		return "", common.NewError("wait", "already checked in")
+		return "", errors.New("wait", "already checked in")
 	}
 
 	dmn.Waited[t.ClientID] = true
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
-		return "", common.NewErrorf("wait", "saving DKG miners: %v", err)
+		return "", errors.Newf("wait", "saving DKG miners: %v", err)
 	}
 
 	return

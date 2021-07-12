@@ -1,15 +1,13 @@
 package interestpoolsc
 
 import (
-	"fmt"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 // testBalance implements state.StateContextI  intended for using
@@ -86,7 +84,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node",
+		return nil, errors.New("failed to get trie node",
 			"key is too short")
 	}
 	var ok bool
@@ -100,7 +98,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 	node util.Serializable) (_ datastore.Key, _ error) {
 	//@TODO add mutex to secure reading and writing into the map
 	if encryption.IsHash(key) {
-		return "", common.NewError("failed to insert trie node",
+		return "", errors.New("failed to insert trie node",
 			"key is too short")
 	}
 	tb.tree[key] = node
@@ -119,7 +117,7 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 
 func (tb *testBalances) AddMint(mint *state.Mint) error {
 	if mint.Minter != ADDRESS {
-		return fmt.Errorf("invalid miner: %v", mint.Minter)
+		return errors.Newf("", "invalid miner: %v", mint.Minter)
 	}
 	tb.balances[mint.ToClientID] += mint.Amount // mint!
 	return nil

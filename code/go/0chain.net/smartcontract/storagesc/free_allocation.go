@@ -1,6 +1,9 @@
 package storagesc
 
 import (
+	"encoding/hex"
+	"encoding/json"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -8,9 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 const (
@@ -94,7 +95,7 @@ func (fsa *freeStorageAssigner) validate(
 	value state.Balance,
 ) error {
 	if marker.Timestamp >= now {
-		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
+		return errors.Newf("", "marker timestamped in the future: %v", marker.Timestamp)
 	}
 
 	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey)
@@ -102,21 +103,21 @@ func (fsa *freeStorageAssigner) validate(
 		return err
 	}
 	if !verified {
-		return fmt.Errorf("failed to verify signature")
+		return errors.Newf("", "failed to verify signature")
 	}
 
 	newTotal := fsa.CurrentRedeemed + value
 	if newTotal > fsa.TotalLimit {
-		return fmt.Errorf("%d exceeded total permitted free storage limit %d", newTotal, fsa.TotalLimit)
+		return errors.Newf("", "%d exceeded total permitted free storage limit %d", newTotal, fsa.TotalLimit)
 	}
 
 	if value > fsa.IndividualLimit {
-		return fmt.Errorf("%d exceeded permitted free storage  %d", value, fsa.IndividualLimit)
+		return errors.Newf("", "%d exceeded permitted free storage  %d", value, fsa.IndividualLimit)
 	}
 
 	for _, timestamp := range fsa.RedeemedTimestamps {
 		if marker.Timestamp == timestamp {
-			return fmt.Errorf("marker already redeemed, timestamp: %v", marker.Timestamp)
+			return errors.Newf("", "marker already redeemed, timestamp: %v", marker.Timestamp)
 		}
 	}
 
@@ -129,37 +130,37 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	balances cstate.StateContextI,
 ) error {
 	if t.ClientID != owner {
-		return common.NewError("add_free_storage_assigner",
+		return errors.New("add_free_storage_assigner",
 			"unauthorized access - only the owner can update the variables")
 	}
 
 	var assignerInfo newFreeStorageAssignerInfo
 	if err := assignerInfo.decode(input); err != nil {
-		return common.NewErrorf("add_free_storage_assigner",
+		return errors.Newf("add_free_storage_assigner",
 			"can't unmarshal input: %v", err)
 	}
 
 	var conf *scConfig
 	var err error
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return common.NewErrorf("add_free_storage_assigner",
+		return errors.Newf("add_free_storage_assigner",
 			"can't get config: %v", err)
 	}
 	var newTotalLimit = state.Balance(assignerInfo.TotalLimit * floatToBalance)
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
-		return common.NewErrorf("add_free_storage_assigner",
+		return errors.Newf("add_free_storage_assigner",
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
 	var newIndividualLimit = state.Balance(assignerInfo.IndividualLimit * floatToBalance)
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
-		return common.NewErrorf("add_free_storage_assigner",
+		return errors.Newf("add_free_storage_assigner",
 			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(assignerInfo.Name, balances)
 	if err != nil && err != util.ErrValueNotPresent {
-		return common.NewError("add_free_storage_assigner", err.Error())
+		return errors.Wrap(err, "add_free_storage_assigner")
 	}
 	if err == util.ErrValueNotPresent || assigner == nil {
 		assigner = &freeStorageAssigner{
@@ -171,7 +172,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	assigner.IndividualLimit = newIndividualLimit
 	err = assigner.save(ssc.ID, balances)
 	if err != nil {
-		return common.NewErrorf("add_free_storage_assigner", "error saving new assigner: %v", err)
+		return errors.Newf("add_free_storage_assigner", "error saving new assigner: %v", err)
 	}
 
 	return nil
@@ -204,30 +205,30 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	var err error
 	var inputObj freeStorageAllocationInput
 	if err := json.Unmarshal(input, &inputObj); err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"unmarshal input: %v", err)
 	}
 
 	var marker freeStorageMarker
 	if err := marker.decode([]byte(inputObj.Marker)); err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"unmarshal request: %v", err)
 	}
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"can't get config: %v", err)
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"error getting assigner details: %v", err)
 	}
 
 	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value)); err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
 
@@ -245,19 +246,19 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 
 	arBytes, err := request.encode()
 	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"marshal request: %v", err)
 	}
 
 	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
 	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", ": %v", err)
+		return "", errors.Newf("free_allocation_failed", ": %v", err)
 	}
 
 	assigner.CurrentRedeemed += state.Balance(txn.Value)
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
+		return "", errors.Newf("free_allocation_failed", "assigner save failed: %v", err)
 	}
 
 	return resp, err
@@ -271,30 +272,30 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	var err error
 	var inputObj freeStorageUpgradeInput
 	if err := json.Unmarshal(input, &inputObj); err != nil {
-		return "", common.NewErrorf("free_allocation_failed",
+		return "", errors.Newf("free_allocation_failed",
 			"unmarshal input: %v", err)
 	}
 
 	var marker freeStorageMarker
 	if err := marker.decode([]byte(inputObj.Marker)); err != nil {
-		return "", common.NewErrorf("update_free_storage_request",
+		return "", errors.Newf("update_free_storage_request",
 			"unmarshal request: %v", err)
 	}
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("update_free_storage_request",
+		return "", errors.Newf("update_free_storage_request",
 			"can't get config: %v", err)
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(marker.Assigner, balances)
 	if err != nil {
-		return "", common.NewErrorf("update_free_storage_request",
+		return "", errors.Newf("update_free_storage_request",
 			"error getting assigner details: %v", err)
 	}
 
 	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value)); err != nil {
-		return "", common.NewErrorf("update_free_storage_request",
+		return "", errors.Newf("update_free_storage_request",
 			"marker verification failed: %v", err)
 	}
 
@@ -306,19 +307,19 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	}
 	input, err = json.Marshal(request)
 	if err != nil {
-		return "", common.NewErrorf("update_free_storage_request",
+		return "", errors.Newf("update_free_storage_request",
 			"marshal marker: %v", err)
 	}
 
 	resp, err := ssc.updateAllocationRequestInternal(txn, input, conf, true, balances)
 	if err != nil {
-		return "", common.NewErrorf("update_free_storage_request", err.Error())
+		return "", errors.Wrap(err, "update_free_storage_request")
 	}
 
 	assigner.CurrentRedeemed += state.Balance(txn.Value)
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
-		return "", common.NewErrorf("update_free_storage_request", "assigner save failed: %v", err)
+		return "", errors.Newf("update_free_storage_request", "assigner save failed: %v", err)
 	}
 
 	return resp, nil
@@ -349,7 +350,7 @@ func (ssc *StorageSmartContract) getFreeStorageAssigner(
 
 	fsa := new(freeStorageAssigner)
 	if err := fsa.Decode(aBytes); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return fsa, nil
 }

@@ -1,13 +1,14 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 // common types
@@ -47,7 +48,7 @@ func ParsePhase(ps string) (ph Phase, err error) {
 	case "wait":
 		return PhaseWait, nil
 	}
-	return 0, fmt.Errorf("unknown phase: %q", ps)
+	return 0, errors.Newf("", "unknown phase: %q", ps)
 }
 
 // String implements standard fmt.Stringer interface.
@@ -139,7 +140,7 @@ func (c *Config) IsSkipWait(name NodeName) (ok bool) {
 func (c *Config) Execute(name string) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
-		return fmt.Errorf("unknown system command: %q", name)
+		return errors.Newf("", "unknown system command: %q", name)
 	}
 
 	if n.WorkDir == "" {
@@ -166,7 +167,7 @@ func (c *Config) Execute(name string) (err error) {
 
 	if err == nil {
 		if n.ShouldFail {
-			return fmt.Errorf("command %q success (but should fail)", name)
+			return errors.Newf("", "command %q success (but should fail)", name)
 		}
 		return nil // ok
 	}

@@ -1,12 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -15,6 +15,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func scConfigKey(scKey string) datastore.Key {
@@ -160,148 +161,148 @@ type scConfig struct {
 
 func (sc *scConfig) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return fmt.Errorf("time_unit less than 1s: %s", sc.TimeUnit)
+		return errors.Newf("", "time_unit less than 1s: %s", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
-		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
+		return errors.Newf("", "validator_reward not in [0; 1] range: %v",
 			sc.ValidatorReward)
 	}
 	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
-		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
+		return errors.Newf("", "blobber_slash not in [0; 1] range: %v",
 			sc.BlobberSlash)
 	}
 	if sc.MinBlobberCapacity < 0 {
-		return fmt.Errorf("negative min_blobber_capacity: %v",
+		return errors.Newf("", "negative min_blobber_capacity: %v",
 			sc.MinBlobberCapacity)
 	}
 	if sc.MinOfferDuration < 0 {
-		return fmt.Errorf("negative min_offer_duration: %v",
+		return errors.Newf("", "negative min_offer_duration: %v",
 			sc.MinOfferDuration)
 	}
 	if sc.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative max_challenge_completion_time: %v",
+		return errors.Newf("", "negative max_challenge_completion_time: %v",
 			sc.MaxChallengeCompletionTime)
 	}
 	if sc.MinAllocDuration < 0 {
-		return fmt.Errorf("negative min_alloc_duration: %v",
+		return errors.Newf("", "negative min_alloc_duration: %v",
 			sc.MinAllocDuration)
 	}
 	if sc.MaxMint < 0 {
-		return fmt.Errorf("negative max_mint: %v", sc.MaxMint)
+		return errors.Newf("", "negative max_mint: %v", sc.MaxMint)
 	}
 	if sc.MinAllocSize < 0 {
-		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
+		return errors.Newf("", "negative min_alloc_size: %v", sc.MinAllocSize)
 	}
 	if sc.MaxReadPrice < 0 {
-		return fmt.Errorf("negative max_read_price: %v", sc.MaxReadPrice)
+		return errors.Newf("", "negative max_read_price: %v", sc.MaxReadPrice)
 	}
 	if sc.MaxWritePrice < 0 {
-		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
+		return errors.Newf("", "negative max_write_price: %v", sc.MaxWritePrice)
 	}
 	if sc.StakePool.MinLock <= 1 {
-		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
+		return errors.Newf("", "invalid stakepool.min_lock: %v <= 1",
 			sc.StakePool.MinLock)
 	}
 	if sc.StakePool.InterestRate < 0 {
-		return fmt.Errorf("negative stakepool.interest_rate: %v",
+		return errors.Newf("", "negative stakepool.interest_rate: %v",
 			sc.StakePool.InterestRate)
 	}
 	if sc.StakePool.InterestInterval <= 0 {
-		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
+		return errors.Newf("", "invalid stakepool.interest_interval <= 0: %v",
 			sc.StakePool.InterestInterval)
 	}
 
 	if sc.MaxTotalFreeAllocation < 0 {
-		return fmt.Errorf("negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
+		return errors.Newf("", "negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
 	}
 	if sc.MaxIndividualFreeAllocation < 0 {
-		return fmt.Errorf("negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
+		return errors.Newf("", "negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
 	}
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
-		return fmt.Errorf("negative free_allocation_settings.data_shards: %v",
+		return errors.Newf("", "negative free_allocation_settings.data_shards: %v",
 			sc.FreeAllocationSettings.DataShards)
 	}
 	if sc.FreeAllocationSettings.ParityShards < 0 {
-		return fmt.Errorf("negative free_allocation_settings.parity_shards: %v",
+		return errors.Newf("", "negative free_allocation_settings.parity_shards: %v",
 			sc.FreeAllocationSettings.ParityShards)
 	}
 	if sc.FreeAllocationSettings.Size < 0 {
-		return fmt.Errorf("negative free_allocation_settings.size: %v",
+		return errors.Newf("", "negative free_allocation_settings.size: %v",
 			sc.FreeAllocationSettings.Size)
 	}
 	if sc.FreeAllocationSettings.Duration <= 0 {
-		return fmt.Errorf("negative free_allocation_settings.expiration_date: %v",
+		return errors.Newf("", "negative free_allocation_settings.expiration_date: %v",
 			sc.FreeAllocationSettings.Duration)
 	}
 	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
-		return fmt.Errorf("invalid free_allocation_settings.read_price_range: %v",
+		return errors.Newf("", "invalid free_allocation_settings.read_price_range: %v",
 			sc.FreeAllocationSettings.ReadPriceRange)
 	}
 	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
-		return fmt.Errorf("invalid free_allocation_settings.write_price_range: %v",
+		return errors.Newf("", "invalid free_allocation_settings.write_price_range: %v",
 			sc.FreeAllocationSettings.WritePriceRange)
 	}
 	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
+		return errors.Newf("", "negative free_allocation_settings.max_challenge_completion_time: %v",
 			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
 
 	if sc.FailedChallengesToCancel < 0 {
-		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
+		return errors.Newf("", "negative failed_challenges_to_cancel: %v",
 			sc.FailedChallengesToCancel)
 	}
 	if sc.FailedChallengesToRevokeMinLock < 0 {
-		return fmt.Errorf("negative failed_challenges_to_revoke_min_lock: %v",
+		return errors.Newf("", "negative failed_challenges_to_revoke_min_lock: %v",
 			sc.FailedChallengesToRevokeMinLock)
 	}
 	if sc.MaxChallengesPerGeneration <= 0 {
-		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
+		return errors.Newf("", "invalid max_challenges_per_generation <= 0: %v",
 			sc.MaxChallengesPerGeneration)
 	}
 	if sc.ChallengeGenerationRate < 0 {
-		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
+		return errors.Newf("", "negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)
 	}
 	if sc.MinStake < 0 {
-		return fmt.Errorf("negative min_stake: %v", sc.MinStake)
+		return errors.Newf("", "negative min_stake: %v", sc.MinStake)
 	}
 	if sc.MaxStake < sc.MinStake {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
+		return errors.Newf("", "max_stake less than min_stake: %v < %v", sc.MinStake,
 			sc.MaxStake)
 	}
 	if sc.MaxDelegates < 1 {
-		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
+		return errors.Newf("", "max_delegates is too small %v", sc.MaxDelegates)
 	}
 	if sc.MaxCharge < 0 {
-		return fmt.Errorf("negative max_charge: %v", sc.MaxCharge)
+		return errors.Newf("", "negative max_charge: %v", sc.MaxCharge)
 	}
 	if sc.MaxCharge > 1.0 {
-		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
+		return errors.Newf("", "max_change >= 1.0 (> 100%%, invalid): %v",
 			sc.MaxCharge)
 	}
 	if sc.BlockReward.BlockReward < 0 {
-		return fmt.Errorf("negative block_reward.block_reward: %v",
+		return errors.Newf("", "negative block_reward.block_reward: %v",
 			sc.BlockReward.BlockReward)
 	}
 	if sc.BlockReward.QualifyingStake < 0 {
-		return fmt.Errorf("negative block_reward.qualifying_stake: %v",
+		return errors.Newf("", "negative block_reward.qualifying_stake: %v",
 			sc.BlockReward.QualifyingStake)
 	}
 	if sc.BlockReward.SharderWeight < 0 {
-		return fmt.Errorf("negative block_reward.sharder_weight: %v",
+		return errors.Newf("", "negative block_reward.sharder_weight: %v",
 			sc.BlockReward.SharderWeight)
 	}
 	if sc.BlockReward.MinerWeight < 0 {
-		return fmt.Errorf("negative block_reward.miner_weight: %v",
+		return errors.Newf("", "negative block_reward.miner_weight: %v",
 			sc.BlockReward.MinerWeight)
 	}
 	if sc.BlockReward.BlobberCapacityWeight < 0 {
-		return fmt.Errorf("negative block_reward.blobber_capacity_weight: %v",
+		return errors.Newf("", "negative block_reward.blobber_capacity_weight: %v",
 			sc.BlockReward.BlobberCapacityWeight)
 	}
 	if sc.BlockReward.BlobberUsageWeight < 0 {
-		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
+		return errors.Newf("", "negative block_reward.bobber_usage_weight: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
 	return
@@ -313,15 +314,15 @@ func (conf *scConfig) canMint() bool {
 
 func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	if min < conf.MinStake {
-		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
+		return errors.Newf("", "min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
 	}
 	if max > conf.MaxStake {
-		return fmt.Errorf("max_stake is greater than allowed by SC: %v > %v",
+		return errors.Newf("", "max_stake is greater than allowed by SC: %v > %v",
 			max, conf.MaxStake)
 	}
 	if max < min {
-		return fmt.Errorf("max_stake less than min_stake: %v < %v", min, max)
+		return errors.Newf("", "max_stake less than min_stake: %v < %v", min, max)
 	}
 	return
 }
@@ -484,7 +485,7 @@ func (ssc *StorageSmartContract) getConfig(
 	}
 
 	if err = conf.Decode(confb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -520,19 +521,20 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
 	if t.ClientID != owner {
-		return "", common.NewError("update_config",
+		return "", errors.New("update_config",
 			"unauthorized access - only the owner can update the variables")
 	}
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("update_config",
-			"can't get config: "+err.Error())
+		return "", errors.Wrap(err, errors.New("update_config",
+			"can't get config"))
+
 	}
 
 	var update scConfig
 	if err = update.Decode(input); err != nil {
-		return "", common.NewError("update_config", err.Error())
+		return "", errors.Wrap(err, "update_config")
 	}
 
 	if err = update.validate(); err != nil {
@@ -543,7 +545,7 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
 	if err != nil {
-		return "", common.NewError("update_config", err.Error())
+		return "", errors.Wrap(err, "update_config")
 	}
 
 	return string(update.Encode()), nil

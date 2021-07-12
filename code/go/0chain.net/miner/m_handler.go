@@ -16,6 +16,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"go.uber.org/zap"
 )
@@ -115,7 +116,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	// skip all VRFS before LFB-ticket (sharders' LFB)
 	var tk = mc.GetLatestLFBTicket(ctx)
 	if tk == nil {
-		return nil, common.NewError("Reject VRFShare", "context done")
+		return nil, errors.New("Reject VRFShare", "context done")
 	}
 	var (
 		lfb   = mc.GetLatestFinalizedBlock()
@@ -348,7 +349,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 	}
 
 	if b.GetStateStatus() != block.StateSuccessful {
-		return nil, common.NewError("state_not_verified",
+		return nil, errors.New("state_not_verified",
 			"state is not computed and validated locally")
 	}
 
@@ -388,7 +389,7 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 		mc = GetMinerChain()
 	)
 
-	errBlockNotAvailable := common.NewError("block_not_available",
+	errBlockNotAvailable := errors.New("block_not_available",
 		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
 			mc.GetCurrentRound(), r, hash))
 
@@ -405,7 +406,7 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 	}
 
 	if r == "" {
-		return nil, common.NewError("none_round_or_hash_provided",
+		return nil, errors.New("none_round_or_hash_provided",
 			"no block hash or round number is provided")
 	}
 

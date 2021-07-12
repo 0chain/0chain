@@ -1,11 +1,11 @@
 package conductrpc
 
 import (
-	"errors"
-	"fmt"
 	"net"
 	"net/rpc"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/conductor/config"
 )
@@ -202,7 +202,7 @@ func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
 
 	var ok bool
 	if ns, ok = s.nodes[name]; !ok {
-		return nil, fmt.Errorf("(node state) unexpected node: %s", name)
+		return nil, errors.Newf("","(node state) unexpected node: %s", name)
 	}
 	ns.counter++
 	return
@@ -218,7 +218,7 @@ func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
 
 	var n, ok = s.nodes[name]
 	if !ok {
-		return fmt.Errorf("(update state) unexpected node: %s", name)
+		return errors.Newf("","(update state) unexpected node: %s", name)
 	}
 
 	update(n.state) // update
@@ -376,7 +376,7 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 
 	var name, ok = s.names[id]
 	if !ok {
-		return fmt.Errorf("unknown node ID: %s", id)
+		return errors.Newf("","unknown node ID: %s", id)
 	}
 
 	var ns *nodeState

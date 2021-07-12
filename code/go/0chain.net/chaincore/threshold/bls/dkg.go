@@ -5,12 +5,12 @@ package bls
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"github.com/herumi/bls/ffi/go/bls"
@@ -59,7 +59,7 @@ var dkgSummaryMetadata *datastore.EntityMetadataImpl
 func init() {
 	err := bls.Init(int(bls.CurveFp254BNb))
 	if err != nil {
-		panic(fmt.Errorf("bls initialization error: %v", err))
+		panic(errors.Newf("", "bls initialization error: %v", err))
 	}
 }
 
@@ -223,7 +223,7 @@ func (dkg *DKG) AddSecretShare(id PartyID, share string, force bool) error {
 
 	if shareFound, ok := dkg.receivedSecretShares[id]; ok && !secretShare.IsEqual(&shareFound) {
 		if !force {
-			return common.NewError("failed to add secret share", "share already exists for miner")
+			return errors.New("failed to add secret share", "share already exists for miner")
 		}
 	}
 
@@ -412,11 +412,11 @@ func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) e
 		var sij Key
 		share := dkgSummary.SecretShares[k.GetHexString()]
 		if share == "" {
-			return common.NewError("failed to verify dkg summary", "share is nil")
+			return errors.New("failed to verify dkg summary", "share is nil")
 		}
 		sij.SetHexString(share)
 		if !ValidateShare(v, sij, id) {
-			return common.NewError("failed to verify dkg summary", fmt.Sprintf("share unable to verify: %v", share))
+			return errors.New("failed to verify dkg summary", fmt.Sprintf("share unable to verify: %v", share))
 		}
 	}
 	return nil

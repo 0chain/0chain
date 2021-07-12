@@ -6,12 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 

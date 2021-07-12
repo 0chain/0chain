@@ -3,10 +3,11 @@ package blockdb
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
 	"sort"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 type keyo struct {

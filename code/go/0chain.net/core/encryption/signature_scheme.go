@@ -2,9 +2,10 @@ package encryption
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 var ErrKeyRead = errors.New("error reading the keys")

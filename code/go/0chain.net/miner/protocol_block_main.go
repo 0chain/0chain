@@ -10,14 +10,15 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"0chain.net/core/util"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -206,7 +207,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", count),
 				zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns,
+			return errors.New(InsufficientTxns,
 				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)",
 					b.Round, count, blockSize, failedStateCount, len(invalidTxns), 0))
 		}
@@ -232,7 +233,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 	if err = client.GetClients(ctx, clients); err != nil {
 		logging.Logger.Error("generate block (get clients error)", zap.Error(err))
-		return common.NewError("get_clients_error", err.Error())
+		return errors.Wrap(err, "get_clients_error")
 	}
 
 	logging.Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
@@ -246,7 +247,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		cl := clients[txn.ClientID]
 		if cl == nil || cl.PublicKey == "" {
 			logging.Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
-			return common.NewError("invalid_client", "client not available")
+			return errors.New("invalid_client", "client not available")
 		}
 		txn.PublicKey = cl.PublicKey
 		txn.ClientID = datastore.EmptyKey

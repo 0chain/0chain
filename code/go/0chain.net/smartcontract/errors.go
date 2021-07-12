@@ -1,11 +1,12 @@
 package smartcontract
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/util"
-	"errors"
 	"fmt"
 	"strings"
+
+	"0chain.net/core/common"
+	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 // NewErrNoResourceOrErrInternal wraps err, passed in args, in common.ErrInternal or in common.ErrNoResource, depending on
@@ -38,6 +39,6 @@ func NewErrNoResourceOrErrInternal(err error, defaultInternal bool, msgs ...stri
 			return err
 		}
 
-		return fmt.Errorf("%s: %w", strings.Join(msgs, ": "), err)
+		return errors.Wrap(err, fmt.Sprintf("%s: ", strings.Join(msgs, ":")))
 	}
 }

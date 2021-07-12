@@ -3,10 +3,11 @@ package encryption
 import (
 	"bufio"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/herumi/bls/ffi/go/bls"
 )

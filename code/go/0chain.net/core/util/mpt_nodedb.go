@@ -2,11 +2,11 @@ package util
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
+
 	"go.uber.org/atomic"
 
 	"reflect"
@@ -306,7 +306,7 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 			Logger.Error("mndb validate",
 				zap.String("node_type", fmt.Sprintf("%T", node)),
 				zap.String("node_key", node.GetHash()))
-			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
+			return errors.New("nodes_outside_tree", "not all nodes are from the root")
 		}
 		return nil
 	})

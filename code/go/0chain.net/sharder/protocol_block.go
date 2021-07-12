@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"net/url"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/config"
@@ -128,7 +128,7 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if !sc.hasRelatedMagicBlock(b) {
-		return fmt.Errorf("can't pull related magic block for %d", b.Round)
+		return errors.Newf("","can't pull related magic block for %d", b.Round)
 	}
 
 	return

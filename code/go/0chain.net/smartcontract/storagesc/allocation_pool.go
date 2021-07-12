@@ -2,9 +2,10 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"sort"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"

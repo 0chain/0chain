@@ -7,11 +7,12 @@ import (
 	"io"
 
 	. "0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/vmihailenco/msgpack"
 	"go.uber.org/zap"
 )
 
-var ErrInvalidData = NewError("invalid_data", "Invalid data")
+var ErrInvalidData = errors.New("invalid_data", "Invalid data")
 
 const (
 	CodecJSON    = 0
@@ -66,7 +67,7 @@ func FromJSON(data interface{}, entity interface{}) error {
 	case io.Reader:
 		err = json.NewDecoder(jsondata).Decode(entity)
 	default:
-		return NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
+		return errors.New("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
 	}
 	if err != nil {
 		return err
@@ -96,7 +97,7 @@ func FromMsgpack(data interface{}, entity interface{}) error {
 		decoder.UseJSONTag(true)
 		err = decoder.Decode(entity)
 	default:
-		return NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
+		return errors.New("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
 	}
 	if err != nil {
 		return err

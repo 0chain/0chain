@@ -13,11 +13,11 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 const fileExt = ".dat.zlib"
@@ -109,7 +109,7 @@ func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Bl
 func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err error) {
 	// check out hash can be ""
 	if len(hash) != 64 {
-		return nil, common.NewError("fbs_store_read", "invalid block hash length given")
+		return nil, errors.New("fbs_store_read", "invalid block hash length given")
 	}
 
 	return fbs.read(hash, round)
@@ -201,7 +201,7 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 
 // Delete - delete from the hash of the block
 func (fbs *FSBlockStore) Delete(hash string) error {
-	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
+	return errors.New("interface_not_implemented", "FSBlockStore cannote provide this interface")
 }
 
 // DeleteBlock - delete the given block from the file system

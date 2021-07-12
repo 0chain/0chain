@@ -1,15 +1,16 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 
+	"0chain.net/chaincore/smartcontract"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -99,7 +100,7 @@ func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,
 		resp, err = vsc.delete(t, input, balances)
 
 	default:
-		err = common.NewError("vesting_sc_failed",
+		err = errors.New("vesting_sc_failed",
 			fmt.Sprintf("no function with %q name", function))
 	}
 	return

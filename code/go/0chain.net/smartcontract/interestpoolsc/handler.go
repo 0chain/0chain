@@ -1,13 +1,13 @@
 package interestpoolsc
 
 import (
-	"0chain.net/core/common"
 	"context"
-	"fmt"
 	"net/url"
 	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
@@ -32,7 +32,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	statBytes := pool.LockStats(t)
 	err := stat.decode(statBytes)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	stat.ID = pool.ID
 	stat.Locked = pool.IsLocked(t)

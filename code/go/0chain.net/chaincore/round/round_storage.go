@@ -1,8 +1,9 @@
 package round
 
 import (
-	"errors"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 var (

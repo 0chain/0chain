@@ -3,11 +3,11 @@ package state
 import (
 	"encoding/json"
 
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")
+var ErrInvalidMint = errors.New("invalid_mint", "invalid minter")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {

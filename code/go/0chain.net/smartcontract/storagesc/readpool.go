@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
+
+	"0chain.net/smartcontract"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -75,11 +76,11 @@ func (rp *readPool) moveBlobberCharge(sscKey string, sp *stakePool,
 	)
 	transfer, _, err = ap.DrainPool(sscKey, dw, value, nil)
 	if err != nil {
-		return fmt.Errorf("transferring tokens read_pool() -> "+
+		return errors.Newf("", "transferring tokens read_pool() -> "+
 			"blobber_charge(%s): %v", dw, err)
 	}
 	if err = balances.AddTransfer(transfer); err != nil {
-		return fmt.Errorf("adding transfer: %v", err)
+		return errors.Newf("", "adding transfer: %v", err)
 	}
 
 	// blobber service charge
@@ -119,11 +120,11 @@ func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 		)
 		transfer, _, err = ap.DrainPool(sscKey, dp.DelegateID, move, nil)
 		if err != nil {
-			return fmt.Errorf("transferring tokens read_pool() -> "+
+			return errors.Newf("", "transferring tokens read_pool() -> "+
 				"stake_pool_holder(%s): %v", dp.DelegateID, err)
 		}
 		if err = balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding transfer: %v", err)
+			return errors.Newf("", "adding transfer: %v", err)
 		}
 		// stat
 		dp.Rewards += move         // add to stake_pool_holder rewards
@@ -155,7 +156,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	var cut = rp.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
-		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
+		return "", errors.Newf("", "no tokens in read pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
 
@@ -202,7 +203,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	}
 
 	if value != 0 {
-		return "", fmt.Errorf("not enough tokens in read pool for "+
+		return "", errors.Newf("", "not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
@@ -267,7 +268,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	rp = new(readPool)
 	err = rp.Decode(poolb)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -279,16 +280,16 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("new_read_pool_failed", err.Error())
+		return "", errors.Wrap(err, "new_read_pool_failed")
 	}
 
 	if err == nil {
-		return "", common.NewError("new_read_pool_failed", "already exist")
+		return "", errors.New("new_read_pool_failed", "already exist")
 	}
 
 	var rp = new(readPool)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("new_read_pool_failed", err.Error())
+		return "", errors.Wrap(err, "new_read_pool_failed")
 	}
 
 	return string(rp.Encode()), nil
@@ -327,8 +328,8 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var conf *readPoolConfig
 	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
-		return "", common.NewError("read_pool_lock_failed",
-			"can't get configs: "+err.Error())
+		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
+			"can't get configs"))
 	}
 
 	// user read pools
@@ -336,7 +337,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	var rp *readPool
 	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
 		if err != util.ErrValueNotPresent {
-			return "", common.NewError("read_pool_lock_failed", err.Error())
+			return "", errors.Wrap(err, "read_pool_lock_failed")
 		}
 		rp = new(readPool)
 	}
@@ -345,44 +346,44 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var lr lockRequest
 	if err = lr.decode(input); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	// check
 
 	if lr.AllocationID == "" {
-		return "", common.NewError("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			"missing allocation ID in request")
 	}
 
 	if t.Value < conf.MinLock {
-		return "", common.NewError("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			"insufficient amount to lock")
 	}
 
 	if lr.Duration < conf.MinLockPeriod {
-		return "", common.NewError("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
 				lr.Duration.String(), conf.MinLockPeriod.String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
-		return "", common.NewError("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
 				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
 
 	// check client balance
 	if err = checkFill(t, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	// get the allocation object
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
 	if err != nil {
-		return "", common.NewError("read_pool_lock_failed",
-			"can't get allocation: "+err.Error())
+		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
+			"can't get allocation"))
 	}
 
 	var bps blobberPools
@@ -390,7 +391,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	// lock for allocation -> blobber (particular blobber locking)
 	if lr.BlobberID != "" {
 		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
-			return "", common.NewError("read_pool_lock_failed",
+			return "", errors.New("read_pool_lock_failed",
 				fmt.Sprintf("no such blobber %s in allocation %s",
 					lr.BlobberID, lr.AllocationID))
 		}
@@ -422,11 +423,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		transfer *state.Transfer
 	)
 	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	// set fields
@@ -438,7 +439,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	rp.Pools.add(&ap)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	return
@@ -452,7 +453,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	// the request
@@ -463,27 +464,27 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	)
 
 	if err = req.decode(input); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	var ap *allocationPool
 	if ap, err = rp.take(req.PoolID, t.CreationDate); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	transfer, resp, err = ap.EmptyPool(ssc.ID, t.ClientID,
 		common.ToTime(t.CreationDate))
 	if err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	// save read pools
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 
 	return

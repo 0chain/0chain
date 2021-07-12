@@ -2,7 +2,7 @@ package blockstore
 
 import (
 	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 //MultiBlockStore - a block store backed by multiple other block stores - useful to experiment different block stores
@@ -81,11 +81,11 @@ func (mbs *MultiBlockStore) DeleteBlock(b *block.Block) error {
 }
 
 func (mbs *MultiBlockStore) UploadToCloud(hash string, round int64) error {
-	return common.NewError("interface_not_implemented", "MultiBlockStore cannote provide this interface")
+	return errors.New("interface_not_implemented", "MultiBlockStore cannote provide this interface")
 }
 
 func (mbs *MultiBlockStore) DownloadFromCloud(hash string, round int64) error {
-	return common.NewError("interface_not_implemented", "MultiBlockStore cannote provide this interface")
+	return errors.New("interface_not_implemented", "MultiBlockStore cannote provide this interface")
 }
 
 func (mbs *MultiBlockStore) CloudObjectExists(hash string) bool {

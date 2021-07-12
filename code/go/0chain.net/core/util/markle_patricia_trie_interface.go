@@ -2,9 +2,10 @@ package util
 
 import (
 	"context"
-	"errors"
 	"io"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 //ErrIteratingChildNodes - indicates an error iterting the child nodes

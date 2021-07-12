@@ -2,10 +2,11 @@ package util
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 /*NodeChange - track a change to the node */

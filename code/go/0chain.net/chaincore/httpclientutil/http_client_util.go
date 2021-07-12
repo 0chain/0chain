@@ -20,11 +20,11 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 
@@ -205,9 +205,9 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 		if retTxn != nil {
 			return retTxn, nil
 		}
-		return nil, common.NewError("err_finding_txn_status", errString)
+		return nil, errors.New("err_finding_txn_status", errString)
 	}
-	return nil, common.NewError("transaction_not_found", "Transaction was not found on any of the urls provided")
+	return nil, errors.New("transaction_not_found", "Transaction was not found on any of the urls provided")
 }
 
 func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
@@ -235,23 +235,23 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 
 	rq, err = http.NewRequest(http.MethodGet, remoteUrl, nil)
 	if err != nil {
-		return fmt.Errorf("make GET: can't create HTTP request "+
+		return errors.Newf("", "make GET: can't create HTTP request "+
 			"on given URL %q: %v", remoteUrl, err)
 	}
 
 	var resp *http.Response
 	if resp, err = client.Do(rq); err != nil {
-		return fmt.Errorf("make GET: requesting %q: %v", remoteUrl, err)
+		return errors.Newf("", "make GET: requesting %q: %v", remoteUrl, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("make GET: non-200 response code %d: %s",
+		return errors.Newf("", "make GET: non-200 response code %d: %s",
 			resp.StatusCode, resp.Status)
 	}
 
 	if err = json.NewDecoder(resp.Body).Decode(result); err != nil {
-		return fmt.Errorf("make GET: decoding response: %v", err)
+		return errors.Newf("", "make GET: decoding response: %v", err)
 	}
 
 	return // ok
@@ -303,7 +303,7 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 	}
 
 	if numSuccess+numErrs == 0 {
-		return 0, common.NewError("req_not_run", "Could not run the request") //why???
+		return 0, errors.New("req_not_run", "Could not run the request") //why???
 	}
 
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
@@ -314,15 +314,15 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 	} else if numSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
 		logging.Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return 0, common.NewError("err_getting_consensus", errString)
+		return 0, errors.New("err_getting_consensus", errString)
 	} else if numErrs > 0 {
 		//We have received only errors
 		logging.Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return 0, common.NewError("err_running_req", errString)
+		return 0, errors.New("err_running_req", errString)
 	}
 
 	//this should never happen
-	return 0, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+	return 0, errors.New("unknown_err", "Not able to run the request. unknown reason")
 }
 
 //MakeSCRestAPICall for smart contract REST API Call
@@ -338,7 +338,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 
 	// get the entity type
 	if entity == nil {
-		return common.NewError("SCRestAPI - decode failed", "empty entity")
+		return errors.New("SCRestAPI - decode failed", "empty entity")
 	}
 
 	entityType := reflect.TypeOf(entity).Elem()
@@ -418,7 +418,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 	nErrs := atomic.LoadInt32(&numErrs)
 	logging.Logger.Info("SCRestAPI - sc rest consensus", zap.Any("success", nSuccess))
 	if nSuccess+nErrs == 0 {
-		return common.NewError("req_not_run", "Could not run the request") //why???
+		return errors.New("req_not_run", "Could not run the request") //why???
 	}
 	sr := int(math.Ceil((float64(nSuccess) * 100) / float64(nSuccess+nErrs)))
 	// We've at least one success and success rate sr is at least same as consensus
@@ -439,17 +439,17 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))
-		return common.NewError("err_getting_consensus", errStr)
+		return errors.New("err_getting_consensus", errStr)
 	} else if nErrs > 0 {
 		//We have received only errors
 		logging.Logger.Error("SCRestAPI - error running the request",
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))
-		return common.NewError("err_running_req", errStr)
+		return errors.New("err_running_req", errStr)
 	}
 	//this should never happen
-	return common.NewError("unknown_err", "Not able to run the request. unknown reason")
+	return errors.New("unknown_err", "Not able to run the request. unknown reason")
 }
 
 // MakeSCRestAPICall for smart contract REST API Call
@@ -506,7 +506,7 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 	}
 
 	if numSuccess+numErrs == 0 {
-		return nil, common.NewError("req_not_run", "Could not run the request") //why???
+		return nil, errors.New("req_not_run", "Could not run the request") //why???
 
 	}
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
@@ -515,18 +515,18 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 		if retObj != nil {
 			return summary, nil
 		}
-		return nil, common.NewError("err_getting_resp", errString)
+		return nil, errors.New("err_getting_resp", errString)
 	} else if numSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
 		logging.Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return nil, common.NewError("err_getting_consensus", errString)
+		return nil, errors.New("err_getting_consensus", errString)
 	} else if numErrs > 0 {
 		//We have received only errors
 		logging.Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return nil, common.NewError("err_running_req", errString)
+		return nil, errors.New("err_running_req", errString)
 	}
 	//this should never happen
-	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+	return nil, errors.New("unknown_err", "Not able to run the request. unknown reason")
 
 }
 
@@ -596,22 +596,22 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 	}
 
 	if numSuccess+numErrs == 0 {
-		return nil, common.NewError("req_not_run", "Could not run the request")
+		return nil, errors.New("req_not_run", "Could not run the request")
 	}
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
 	if numSuccess > 0 && sr >= consensus {
 		if retObj != nil {
 			return receivedBlock, nil
 		}
-		return nil, common.NewError("err_getting_resp", errString)
+		return nil, errors.New("err_getting_resp", errString)
 	} else if numSuccess > 0 {
 		logging.Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return nil, common.NewError("err_getting_consensus", errString)
+		return nil, errors.New("err_getting_consensus", errString)
 	} else if numErrs > 0 {
 		logging.Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return nil, common.NewError("err_running_req", errString)
+		return nil, errors.New("err_running_req", errString)
 	}
-	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+	return nil, errors.New("unknown_err", "Not able to run the request. unknown reason")
 
 }
 

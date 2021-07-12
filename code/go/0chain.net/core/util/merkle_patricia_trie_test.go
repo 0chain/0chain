@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/0chain/gorocksdb"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -589,7 +590,7 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func iterHandler() func(ctx context.Context, path Path, key Key, node Node) error {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			return fmt.Errorf("stop")
+			return errors.Newf("", "stop")
 		}
 		return nil
 	}
@@ -598,7 +599,7 @@ func iterHandler() func(ctx context.Context, path Path, key Key, node Node) erro
 func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Node) error {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			return fmt.Errorf("stop")
+			return errors.Newf("", "stop")
 		}
 		return nil
 	}

@@ -1,7 +1,6 @@
 package faucetsc
 
 import (
-	"0chain.net/core/common"
 	"context"
 	"net/url"
 	"time"
@@ -9,6 +8,7 @@ import (
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 )
 
 type faucetConfig struct {

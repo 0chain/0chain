@@ -18,12 +18,13 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 
 var (
-	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "Block hash mismatch")
-	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
+	ErrBlockHashMismatch      = errors.New("block_hash_mismatch", "Block hash mismatch")
+	ErrBlockStateHashMismatch = errors.New("block_state_hash_mismatch", "Block state hash mismatch")
 )
 
 const (
@@ -203,31 +204,31 @@ func (b *Block) Validate(ctx context.Context) error {
 	}
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
-		return common.NewError("unknown_miner", "Do not know this miner")
+		return errors.New("unknown_miner", "Do not know this miner")
 	}
 	if b.ChainWeight > float64(b.Round) {
-		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
+		return errors.New("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
 
 	b.mutexTxns.RLock()
 	if b.TxnsMap != nil {
 		if len(b.Txns) != len(b.TxnsMap) {
 			b.mutexTxns.RUnlock()
-			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
+			return errors.New("duplicate_transactions", "Block has duplicate transactions")
 		}
 	}
 	b.mutexTxns.RUnlock()
 
 	hash := b.ComputeHash()
 	if b.Hash != hash {
-		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
+		return errors.New("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
 	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)
 	if err != nil {
 		return err
 	} else if !ok {
-		return common.NewError("signature invalid", "The block wasn't signed correctly")
+		return errors.New("signature invalid", "The block wasn't signed correctly")
 	}
 	return nil
 }

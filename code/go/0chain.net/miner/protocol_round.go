@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
 
@@ -19,9 +20,9 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -414,13 +415,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {
 		logging.Logger.Error("generate round block - no prior round", zap.Any("round", roundNumber-1))
-		return nil, common.NewError("invalid_round,", "Round not available")
+		return nil, errors.New("invalid_round,", "Round not available")
 	}
 
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		logging.Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
-		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+		return nil, errors.New("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
 
 	if !pb.IsStateComputed() {
@@ -448,7 +449,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Int64("round", rn),
 			zap.Int64("lfmbr_sr", lfmbr.StartingRound),
 		)
-		return nil, common.NewError("gen_block",
+		return nil, errors.New("gen_block",
 			"required MB missing or still not finalized")
 	}
 
@@ -461,7 +462,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	roundSeed := r.GetRandomSeed()
 	if roundSeed == 0 {
 		logging.Logger.Error("Round seed reset to zero", zap.Int64("round", rn))
-		return nil, common.NewError("gen_block", "round seed reset to zero")
+		return nil, errors.New("gen_block", "round seed reset to zero")
 	}
 
 	b.SetRoundRandomSeed(roundSeed)
@@ -497,7 +498,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
-			cerr, ok := err.(*common.Error)
+			cerr, ok := err.(*errors.Error)
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
@@ -737,7 +738,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if err != nil {
 			b.SetBlockState(block.StateVerificationFailed)
 			minerStats.VerificationFailures++
-			if cerr, ok := err.(*common.Error); ok {
+			if cerr, ok := err.(*errors.Error); ok {
 				if cerr.Code == RoundMismatch {
 					logging.Logger.Debug("verify round block",
 						zap.Any("round", r.Number), zap.Any("block", b.Hash),
@@ -840,10 +841,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 /*VerifyRoundBlock - given a block is verified for a round*/
 func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.Block) (*block.BlockVerificationTicket, error) {
 	if !mc.CanShardBlocks(r.GetRoundNumber()) {
-		return nil, common.NewError("fewer_active_sharders", "Number of active sharders not sufficient")
+		return nil, errors.New("fewer_active_sharders", "Number of active sharders not sufficient")
 	}
 	if !mc.CanReplicateBlock(b) {
-		return nil, common.NewError("fewer_active_replicators", "Number of active replicators not sufficient")
+		return nil, errors.New("fewer_active_replicators", "Number of active replicators not sufficient")
 	}
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
 		return nil, ErrRoundMismatch

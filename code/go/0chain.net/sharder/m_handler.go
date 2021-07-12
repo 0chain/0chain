@@ -102,12 +102,12 @@ func (sc *Chain) getBlockStateChangeByBlock(b *block.Block) (
 	// we can't check the notarization
 
 	if len(b.ClientStateHash) == 0 {
-		return nil, common.NewError("handle_get_block_state", "DEBUG ERROR")
+		return nil, errors.New("handle_get_block_state", "DEBUG ERROR")
 	}
 
 	if b.ClientState == nil {
 		if err = sc.InitBlockState(b); err != nil {
-			return nil, common.NewErrorf("handle_get_block_state",
+			return nil, errors.Newf("handle_get_block_state",
 				"can't initialize block state %d (%s): %v", b.Round, b.Hash,
 				err)
 		}
@@ -136,19 +136,19 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (
 	// check round query parameter
 
 	if roundQuery == "" {
-		return nil, common.NewError("handle_get_block_state",
+		return nil, errors.New("handle_get_block_state",
 			"missing 'round' query parameter")
 	}
 
 	// parse round query parameter
 
 	if rn, err = strconv.ParseInt(roundQuery, 10, 64); err != nil {
-		return nil, common.NewErrorf("handle_get_block_state",
+		return nil, errors.Newf("handle_get_block_state",
 			"can't parse 'round' query parameter: %v", err)
 	}
 
 	if rn > lfb.Round {
-		return nil, common.NewErrorf("handle_get_block_state",
+		return nil, errors.Newf("handle_get_block_state",
 			"requested block is newer than lfb %d, want %d", lfb.Round, rn)
 	}
 
@@ -156,7 +156,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (
 
 	if hash == "" {
 		if hash, err = sc.GetBlockHash(ctx, rn); err != nil {
-			return nil, common.NewErrorf("handle_get_block_state",
+			return nil, errors.Newf("handle_get_block_state",
 				"can't get block hash by round number: %v", err)
 		}
 	}
@@ -173,7 +173,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (
 	// round number
 
 	if b, err = sc.GetBlockFromStore(hash, rn); err != nil {
-		return nil, common.NewErrorf("handle_get_block_state",
+		return nil, errors.Newf("handle_get_block_state",
 			"no such block (%s, %d): %v", hash, rn, err)
 	}
 

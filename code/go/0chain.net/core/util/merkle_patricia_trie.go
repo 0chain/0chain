@@ -3,12 +3,13 @@ package util
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -977,7 +978,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return fmt.Errorf(FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
+			return errors.Newf("", FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
 		}
 	}
 	return nil

@@ -26,7 +26,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// check blobber values
 	if err = blobber.validate(conf); err != nil {
-		return fmt.Errorf("invalid blobber params: %v", err)
+		return errors.Newf("","invalid blobber params: %v", err)
 	}
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
@@ -40,7 +40,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	}
 
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
-		return fmt.Errorf("saving stake pool: %v", err)
+		return errors.Newf("","saving stake pool: %v", err)
 	}
 
 	blobbers.Nodes.add(blobber) // add to all

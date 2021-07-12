@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"go.uber.org/zap"
 
@@ -157,7 +158,7 @@ func main() {
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		logging.Logger.Panic("node not configured as miner")
 	}
-	err = common.NewError("saving self as client", "client save")
+	err = errors.New("saving self as client", "client save")
 	for err != nil {
 		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
 	}
@@ -231,15 +232,16 @@ func main() {
 		if genesisDKG == 0 {
 			oldDKGShare, err = miner.ReadDKGSummaryFile(*dkgFile)
 			if err != nil {
-				logging.Logger.Panic(fmt.Sprintf("Error reading DKG file. ERROR: %v", err.Error()))
+
+				logging.Logger.Panic(errors.Wrap(err, "Error reading DKG file").Error())
 			}
 		} else {
 			oldDKGShare, err = miner.LoadDKGSummary(ctx, strconv.FormatInt(genesisDKG, 10))
 			if err != nil {
 				if config.DevConfiguration.ViewChange {
-					logging.Logger.Error(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+					logging.Logger.Error(errors.Wrap(err, "Can't load genesis dkg").Error())
 				} else {
-					logging.Logger.Panic(fmt.Sprintf("Can't load genesis dkg: ERROR: %v", err.Error()))
+					logging.Logger.Panic(errors.Wrap(err, "Can't load genesis dkg").Error())
 				}
 			}
 		}
@@ -248,12 +250,12 @@ func main() {
 			if config.DevConfiguration.ViewChange {
 				logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 			} else {
-				logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
+				logging.Logger.Panic(errors.Wrap(err, "Failed to verify genesis dkg").Error())
 			}
 
 		}
 		if err = miner.StoreDKGSummary(ctx, dkgShare); err != nil {
-			logging.Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
+			logging.Logger.Panic(errors.Wrap(err, "Failed to store genesis dkg").Error())
 		}
 	}
 

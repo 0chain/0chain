@@ -3,9 +3,10 @@ package encryption
 import (
 	"bufio"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"golang.org/x/crypto/ed25519"
 )

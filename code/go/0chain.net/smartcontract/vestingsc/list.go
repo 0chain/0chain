@@ -1,15 +1,16 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"sort"
 
+	"0chain.net/smartcontract"
+	"github.com/0chain/gosdk/core/common/errors"
+
 	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
@@ -120,7 +121,7 @@ func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 
 	cp = new(clientPools)
 	if err = cp.Decode(listb); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 
 	return

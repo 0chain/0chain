@@ -17,9 +17,9 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
+	"0chain.net/core/datastore/mocks"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/mocks"
 )
 
 func init() {

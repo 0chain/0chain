@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"errors"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
@@ -41,16 +41,16 @@ func init() {
 }
 
 var (
-	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
-	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
+	ErrPreviousStateUnavailable = errors.New("prev_state_unavailable", "Previous state not available")
+	ErrPreviousStateNotComputed = errors.New("prev_state_not_computed", "Previous state not computed")
 )
 
 //StateMismatch - indicate if there is a mismatch between computed state and received state of a block
 const StateMismatch = "state_mismatch"
 
-var ErrStateMismatch = common.NewError(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
+var ErrStateMismatch = errors.New(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
 
-var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
+var ErrInsufficientBalance = errors.New("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
@@ -129,7 +129,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		b.PrevBlock = nil // reset (a real case, may be unexpected)
 		logging.Logger.Error("computing block state", zap.String("error",
 			"block_prev points to itself, or its state mutex does it"))
-		return common.NewError("computing block state",
+		return errors.New("computing block state",
 			"prev_block points to itself, or its state mutex does it")
 	}
 	if !pb.IsStateComputed() {
@@ -203,7 +203,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 				zap.String("prev_block", b.PrevHash),
 				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
 				zap.Error(err))
-			return common.NewError("state_update_error", "error updating state")
+			return errors.New("state_update_error", "error updating state")
 		}
 	}
 
@@ -265,7 +265,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			c.stateDB.(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
 		}
 	default:
-		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
+		return errors.New("state_save_without_success", "State can't be saved without successful computation")
 	}
 	duration := time.Since(ts)
 	StateSaveTimer.UpdateSince(ts)
@@ -332,7 +332,7 @@ func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, balances bcstat
 	}()
 	select {
 	case <-time.After(c.SmartContractTimeout):
-		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
+		return "", errors.New("smart_contract_execution_timeout", "smart contract execution timed out")
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -371,7 +371,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {
-		return common.NewErrorf("update_state_failed",
+		return errors.Newf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, b.ClientStateHash, b.ClientState.GetRoot(), b.Round)
 	}
@@ -406,7 +406,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+		return errors.Newf("", "invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -622,7 +622,7 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
-		return nil, common.NewError("getState", "client state does not exist")
+		return nil, errors.New("getState", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
@@ -646,11 +646,11 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
 		if !b.IsStateComputed() {
-			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
+			return nil, errors.New("state_not_yet_computed", "State is not yet computed")
 		}
 		ps := c.GetPruneStats()
 		if ps != nil && ps.MissingNodes > 0 {
-			return nil, common.NewError("state_not_synched", "State sync is not yet complete")
+			return nil, errors.New("state_not_synched", "State sync is not yet complete")
 		}
 		return nil, err
 	}

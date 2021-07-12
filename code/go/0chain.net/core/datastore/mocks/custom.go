@@ -1,12 +1,13 @@
 package mocks
 
 import (
+	"context"
+	"strconv"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
-	"context"
-	"errors"
-	"strconv"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 type StoreCustom struct {

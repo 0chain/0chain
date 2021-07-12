@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"errors"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/sharder/blockstore"

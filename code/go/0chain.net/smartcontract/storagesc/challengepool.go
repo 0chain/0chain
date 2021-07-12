@@ -1,12 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/url"
+
+	"0chain.net/smartcontract"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -77,7 +77,7 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 	}
 
 	if cp.Balance < value {
-		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+		return errors.Newf("", "not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
 	}
 
@@ -117,14 +117,14 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 
 	for i, sp := range vsps {
 		if cp.Balance < oneReward {
-			return 0, fmt.Errorf("not enough tokens in challenge pool: %v < %v",
+			return 0, errors.Newf("", "not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
 		var oneMove state.Balance
 		oneMove, err = transferReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
 		sp.Rewards.Validator += oneMove
 		if err != nil {
-			return 0, fmt.Errorf("moving to validator %s: %v",
+			return 0, errors.Newf("", "moving to validator %s: %v",
 				validatos[i], err)
 		}
 		moved += oneMove
@@ -184,7 +184,7 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	cp = newChallengePool()
 	err = cp.Decode(poolb)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -198,11 +198,11 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	_, err = ssc.getChallengePoolBytes(allocationID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
-		return nil, common.NewError("new_challenge_pool_failed", err.Error())
+		return nil, errors.Wrap(err, "new_challenge_pool_failed")
 	}
 
 	if err == nil {
-		return nil, common.NewError("new_challenge_pool_failed",
+		return nil, errors.New("new_challenge_pool_failed",
 			"already exist")
 	}
 
@@ -223,14 +223,14 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(),
 		balances)
 	if err != nil {
-		return fmt.Errorf("can't create challenge pool: %v", err)
+		return errors.Newf("", "can't create challenge pool: %v", err)
 	}
 
 	// don't lock anything here
 
 	// save the challenge pool
 	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
-		return fmt.Errorf("can't save challenge pool: %v", err)
+		return errors.Newf("", "can't save challenge pool: %v", err)
 	}
 
 	return

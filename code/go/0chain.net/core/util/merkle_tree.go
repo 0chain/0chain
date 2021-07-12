@@ -1,8 +1,6 @@
 package util
 
-import (
-	"fmt"
-)
+import "github.com/0chain/gosdk/core/common/errors"
 
 /*MerkleTree - A data structure that implements MerkleTreeI interface */
 type MerkleTree struct {
@@ -81,7 +79,7 @@ func (mt *MerkleTree) GetTree() []string {
 func (mt *MerkleTree) SetTree(leavesCount int, tree []string) error {
 	size, levels := mt.computeSize(leavesCount)
 	if size != len(tree) {
-		return fmt.Errorf("Merkle tree with leaves %v should have size %v but only %v is given", leavesCount, size, len(tree))
+		return errors.Newf("","Merkle tree with leaves %v should have size %v but only %v is given", leavesCount, size, len(tree))
 	}
 	mt.levels = levels
 	mt.tree = tree

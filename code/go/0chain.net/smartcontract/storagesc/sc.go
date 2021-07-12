@@ -1,16 +1,17 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
+
+	"0chain.net/chaincore/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -286,7 +287,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.updateConfig(t, input, balances)
 
 	default:
-		err = common.NewError("invalid_storage_function_name",
+		err = errors.New("invalid_storage_function_name",
 			"Invalid storage function called")
 	}
 

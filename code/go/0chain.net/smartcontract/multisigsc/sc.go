@@ -1,12 +1,13 @@
 package multisigsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/chaincore/smartcontract"
 
 	"0chain.net/chaincore/chain/state"
 	c_state "0chain.net/chaincore/chain/state"
@@ -15,6 +16,7 @@ import (
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 
@@ -102,7 +104,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	}
 	if !isValid {
 		//if there are no errors, it should be valid
-		return "err_register_invalid: invalid request", common.NewError("err_register_invalid", "invalid request")
+		return "err_register_invalid: invalid request", errors.New("err_register_invalid", "invalid request")
 	}
 
 	// If you want to replace a multi-sig wallet, you have to delete the
@@ -115,7 +117,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 		} //else means no wallet exists
 	}
 	if alreadyExisted {
-		return "err_register_exists: multi-sig wallet already exists", common.NewError("err_register_exists", "multi-sig wallet already exists")
+		return "err_register_exists: multi-sig wallet already exists", errors.New("err_register_exists", "multi-sig wallet already exists")
 	}
 
 	err = ms.putWallet(w, balances)
@@ -147,13 +149,13 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Play nice.
 	if !v.notTooBig() {
-		return "", common.NewError("err_vote_too_big", "an input field exceeded allowable length")
+		return "", errors.New("err_vote_too_big", "an input field exceeded allowable length")
 	}
 	if !v.hasValidAmount() {
-		return "", common.NewError("err_vote_invalid_tokens", "invalid number of tokens to send")
+		return "", errors.New("err_vote_invalid_tokens", "invalid number of tokens to send")
 	}
 	if !v.hasSignature() {
-		return "", common.NewError("err_vote_no_signature", " must sign vote")
+		return "", errors.New("err_vote_no_signature", " must sign vote")
 	}
 
 	// Every vote is associated with a proposal. If an appropriate proposal does
@@ -166,7 +168,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Ensure all voters are on the same page.
 	if !v.isCompatibleWithProposal(p) {
-		return "", common.NewError("err_vote_not_compatible", " previous votes for same proposal differed")
+		return "", errors.New("err_vote_not_compatible", " previous votes for same proposal differed")
 	}
 
 	// Check if the proposal was already finished, making this vote unnecessary.
@@ -181,17 +183,17 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 		return "", err
 	}
 	if w.isEmpty() {
-		return "", common.NewError("err_vote_wallet_not_registered", " wallet not registered")
+		return "", errors.New("err_vote_wallet_not_registered", " wallet not registered")
 	}
 
 	// Check that the voter is registered on the wallet and that the signature
 	// is valid.
 	signerThresholdID := w.thresholdIdForSigner(signingClientID)
 	if signerThresholdID == "" {
-		return "", common.NewError("err_vote_auth", " authorization failure")
+		return "", errors.New("err_vote_auth", " authorization failure")
 	}
 	if !w.isVoteAuthorized(signingClientID, v) {
-		return "", common.NewError("err_vote_auth", " authorization failure")
+		return "", errors.New("err_vote_auth", " authorization failure")
 	}
 
 	remaining := w.NumRequired - len(p.SignerSignatures)
@@ -226,7 +228,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// execute it.
 	thresholdSignature, err := w.constructTransferSignature(p)
 	if err != nil {
-		return "", common.NewError("err_vote_recover", " in signature recovery: "+err.Error())
+		return "", errors.Wrap(err, errors.New("err_vote_recover", " in signature recovery: "))
 	}
 
 	p.ClientSignature = thresholdSignature
@@ -360,7 +362,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 		if err != nil {
 			return proposal{}, err
 		}
-		return proposal{}, common.NewError("proposal_expired", "proposal is expired")
+		return proposal{}, errors.New("proposal_expired", "proposal is expired")
 	}
 
 	// If it didn't exist or was expired, create it and update expiration queue.

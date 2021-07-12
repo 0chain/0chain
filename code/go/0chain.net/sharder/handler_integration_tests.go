@@ -9,7 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	crpc "0chain.net/conductor/conductrpc"
 )

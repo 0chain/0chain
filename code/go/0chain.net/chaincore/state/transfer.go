@@ -3,11 +3,11 @@ package state
 import (
 	"encoding/json"
 
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrInvalidTransfer = common.NewError("invalid_transfer", "invalid transfer of state")
+var ErrInvalidTransfer = errors.New("invalid_transfer", "invalid transfer of state")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {

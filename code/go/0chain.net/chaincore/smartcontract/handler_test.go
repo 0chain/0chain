@@ -1,19 +1,20 @@
 package smartcontract_test
 
 import (
-	"0chain.net/smartcontract/interestpoolsc"
-	"0chain.net/smartcontract/multisigsc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
+
+	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zrc20sc"
+	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"

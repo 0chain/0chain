@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/chaincore/block"

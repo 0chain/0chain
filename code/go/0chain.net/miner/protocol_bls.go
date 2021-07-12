@@ -13,8 +13,8 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
 
-	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -45,9 +45,9 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
-			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
-				" may be damaged or permissions may not be available?",
-				err.Error())
+			return errors.Wrap(err, errors.New("error while setting dkg from store: \nstorage"+
+				" may be damaged or permissions may not be available?"))
+
 		}
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
@@ -87,7 +87,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	}
 
 	if summary.SecretShares == nil {
-		return common.NewError("failed to set dkg from store",
+		return errors.New("failed to set dkg from store",
 			"no saved shares for dkg")
 	}
 
@@ -96,7 +96,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	newDKG.StartingRound = mb.StartingRound
 
 	if mb.Miners == nil {
-		return common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
+		return errors.New("failed to set dkg from store", "miners pool is not initialized in magic block")
 	}
 
 	for k := range mb.Miners.CopyNodesMap() {
@@ -110,7 +110,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	}
 
 	if !newDKG.HasAllSecretShares() {
-		return common.NewError("failed to set dkg from store",
+		return errors.New("failed to set dkg from store",
 			"not enough secret shares for dkg")
 	}
 
@@ -154,7 +154,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 		Logger.Error("BLS sign VRFS share: could not find round"+
 			" object for non-zero round",
 			zap.Int64("PrevRoundNum", prn))
-		return "", common.NewError("no_prev_round",
+		return "", errors.New("no_prev_round",
 			"could not find the previous round")
 	}
 
@@ -162,7 +162,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 		Logger.Error("BLS sign VRF share: error in getting prev. random seed",
 			zap.Int64("prev_round", pr.Number),
 			zap.Bool("prev_round_has_seed", pr.HasRandomSeed()))
-		return "", common.NewErrorf("prev_round_rrs_zero",
+		return "", errors.Newf("prev_round_rrs_zero",
 			"prev. round %d random seed is 0", pr.GetRoundNumber())
 	}
 
@@ -195,7 +195,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	}
 	var dkg = mc.GetDKG(r.GetRoundNumber())
 	if dkg == nil {
-		return "", common.NewError("get_bls_share", "DKG is nil")
+		return "", errors.New("get_bls_share", "DKG is nil")
 	}
 
 	Logger.Debug("Sign msg with dkg",

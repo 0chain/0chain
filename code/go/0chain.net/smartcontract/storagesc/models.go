@@ -2,12 +2,13 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"math/bits"
 	"strings"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -287,11 +288,11 @@ type StorageNodeGeolocation struct {
 
 func (sng StorageNodeGeolocation) validate() error {
 	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
-		return common.NewErrorf("out_of_range_geolocation",
+		return errors.Newf("out_of_range_geolocation",
 			"latitude %f should be in range [-90, 90]", sng.Latitude)
 	}
 	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
-		return common.NewErrorf("out_of_range_geolocation",
+		return errors.Newf("out_of_range_geolocation",
 			"latitude %f should be in range [-180, 180]", sng.Longitude)
 	}
 	return nil
@@ -942,14 +943,14 @@ func (bc *BlobberCloseConnection) Verify() bool {
 	}
 
 	if bc.WriteMarker.AllocationRoot != bc.AllocationRoot {
-		// return "", common.NewError("invalid_parameters",
+		// return "", errors.New("invalid_parameters",
 		//     "Invalid Allocation root. Allocation root in write marker " +
 		//     "does not match the commit")
 		return false
 	}
 
 	if bc.WriteMarker.PreviousAllocationRoot != bc.PrevAllocationRoot {
-		// return "", common.NewError("invalid_parameters",
+		// return "", errors.New("invalid_parameters",
 		//     "Invalid Previous Allocation root. Previous Allocation root " +
 		//     "in write marker does not match the commit")
 		return false
@@ -1053,27 +1054,27 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 	clientID string) (err error) {
 
 	if at.AllocationID != alloc.ID {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Allocation ID mismatch")
 	}
 
 	if at.ClientID != clientID && len(at.ClientID) > 0 {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Client ID mismatch")
 	}
 
 	if at.Expiration < at.Timestamp || at.Expiration < now {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Expired ticket")
 	}
 
 	if at.OwnerID != alloc.Owner {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Owner ID mismatch")
 	}
 
 	if at.Timestamp > now+2 {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Timestamp in future")
 	}
 
@@ -1082,7 +1083,7 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ss  = encryption.GetSignatureScheme(ssn)
 	)
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
-		return common.NewErrorf("invalid_read_marker",
+		return errors.Newf("invalid_read_marker",
 			"setting owner public key: %v", err)
 	}
 
@@ -1091,7 +1092,7 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ok      bool
 	)
 	if ok, err = ss.Verify(at.Signature, sighash); err != nil || !ok {
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"Invalid auth ticket. Signature verification failed")
 	}
 
@@ -1135,7 +1136,7 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
 	}
 	// 3rd party payment
 	if rm.AuthTicket == nil {
-		return common.NewError("invalid_read_marker", "missing auth. ticket")
+		return errors.New("invalid_read_marker", "missing auth. ticket")
 	}
 	return rm.AuthTicket.verify(alloc, now, rm.PayerID)
 }
@@ -1152,7 +1153,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
 		rm.Timestamp == 0 {
 
-		return common.NewError("invalid_read_marker",
+		return errors.New("invalid_read_marker",
 			"length validations of fields failed")
 	}
 
@@ -1161,7 +1162,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 			rm.Timestamp < prevRM.Timestamp ||
 			rm.ReadCounter < prevRM.ReadCounter {
 
-			return common.NewError("invalid_read_marker",
+			return errors.New("invalid_read_marker",
 				"validations with previous marker failed.")
 		}
 	}
@@ -1170,7 +1171,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 		return nil
 	}
 
-	return common.NewError("invalid_read_marker",
+	return errors.New("invalid_read_marker",
 		"Signature verification failed for the read marker")
 }
 

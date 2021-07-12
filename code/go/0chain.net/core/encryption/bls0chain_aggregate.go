@@ -1,7 +1,7 @@
 package encryption
 
 import (
-	"errors"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"github.com/herumi/bls/ffi/go/bls"
 )

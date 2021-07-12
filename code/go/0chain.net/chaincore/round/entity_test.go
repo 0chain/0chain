@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -518,7 +518,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 			args:    args{b: b3},
 			want:    b,
 			want1:   false,
-			wantErr: common.NewError("add_notarized_block", "block has no seed"),
+			wantErr: errors.New("add_notarized_block", "block has no seed"),
 		},
 		{
 			name: "TRUE",
