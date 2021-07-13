@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -451,8 +452,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	// 3. not found
 	lr.PoolID = "pool_hex"
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
-		"can't get pool: value not present")
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+"can't get pool")
 
 	// 4. vesting is not started yet
 	var resp string
@@ -505,7 +505,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Equal(t, common.NewErrNoResource("can't get pool: value not present"), err)
+	require.Equal(t, errors.Top(common.NewErrNoResource("can't get pool: value not present")), errors.Top(err))
 
 	balances.balances[client.id] = 200e10
 
