@@ -41,6 +41,8 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037/go.mod h1:H6x//7
 github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481/go.mod h1:3i9d+2Osik7apjXERxpAlKxE7SilJKkHoW9Ihdjdfxs=
 github.com/0chain/gosdk v1.2.77-0.20210712155418-b53bc7f1a68c h1:Y4KUEpfON3iq39LYc1MkbPBMUPreOYCsSW9B9zkKtB8=
 github.com/0chain/gosdk v1.2.77-0.20210712155418-b53bc7f1a68c/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210713163236-c7b70477cac0 h1:875axYVReINzGg81kcH7W7d6/tnTXWCHVTWDxlt9yYQ=
+github.com/0chain/gosdk v1.2.77-0.20210713163236-c7b70477cac0/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
