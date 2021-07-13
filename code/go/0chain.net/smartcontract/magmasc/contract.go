@@ -167,9 +167,8 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 		return "", errNew(errCodeAcceptTerms, "provider terms is expired")
 	}
 
-	terms := *provider.Terms
 	ackn.ConsumerID = consumer.ID
-	ackn.ProviderTerms = &terms
+	ackn.ProviderTerms = provider.Terms
 
 	var pool tokenPool
 	if _, err = pool.create(txn, &ackn, sci); err != nil {

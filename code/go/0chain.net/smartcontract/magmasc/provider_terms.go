@@ -56,14 +56,6 @@ func (m *ProviderTerms) Encode() []byte {
 	return blob
 }
 
-// Equal reports whether the ProviderTerms are the same to given terms.
-func (m *ProviderTerms) Equal(terms *ProviderTerms) bool {
-	return m.Price == terms.Price &&
-		m.ExpiredAt == terms.ExpiredAt &&
-		m.QoS.UploadMbps == terms.QoS.UploadMbps &&
-		m.QoS.DownloadMbps == terms.QoS.DownloadMbps
-}
-
 // GetAmount returns calculated amount value of provider terms.
 // NOTE: math/big must be used to avoid inaccuracies of floating point operations.
 func (m *ProviderTerms) GetAmount() (amount state.Balance) {

@@ -641,10 +641,11 @@ func Test_MagmaSmartContract_consumerAcceptTerms(t *testing.T) {
 		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
 	}
 
-	prov.Terms.GetVolume()
-	blob, terms := ackn.Encode(), *prov.Terms
+	blob := ackn.Encode()
 	ackn.ConsumerID = cons.ID
-	ackn.ProviderTerms = &terms
+
+	prov.Terms.GetVolume()
+	ackn.ProviderTerms = prov.Terms
 
 	tests := [1]struct {
 		name  string

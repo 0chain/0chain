@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"reflect"
 	"testing"
+
+	"0chain.net/core/common"
 )
 
 func Test_Billing_CalcAmount(t *testing.T) {
@@ -68,6 +70,14 @@ func Test_Billing_Decode(t *testing.T) {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
 
+	billCompleted := mockBilling()
+	billCompleted.CalcAmount(1 * billion)
+	billCompleted.CompletedAt = common.Now()
+	blobCompleted, err := json.Marshal(billCompleted)
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
+	}
+
 	billInvalid := mockBilling()
 	billInvalid.DataUsage.SessionID = ""
 	blobInvalid, err := json.Marshal(billInvalid)
@@ -75,7 +85,7 @@ func Test_Billing_Decode(t *testing.T) {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
 
-	tests := [3]struct {
+	tests := [4]struct {
 		name  string
 		blob  []byte
 		want  *Billing
@@ -85,6 +95,12 @@ func Test_Billing_Decode(t *testing.T) {
 			name:  "OK",
 			blob:  blob,
 			want:  bill,
+			error: nil,
+		},
+		{
+			name:  "Completed_OK",
+			blob:  blobCompleted,
+			want:  billCompleted,
 			error: nil,
 		},
 		{

@@ -11,8 +11,8 @@ import (
 type (
 	// Provider represents providers node stored in block chain.
 	Provider struct {
-		ID    datastore.Key  `json:"id"`
-		Terms *ProviderTerms `json:"terms"`
+		ID    datastore.Key `json:"id"`
+		Terms ProviderTerms `json:"terms"`
 	}
 )
 
@@ -28,8 +28,12 @@ func (m *Provider) Decode(blob []byte) error {
 		return errDecodeData.WrapErr(err)
 
 	}
+	if err := provider.Terms.validate(); err != nil {
+		return errDecodeData.WrapErr(err)
+	}
 
-	*m = provider
+	m.ID = provider.ID
+	m.Terms = provider.Terms
 
 	return nil
 }

@@ -49,13 +49,17 @@ func (m *Billing) Decode(blob []byte) error {
 	if err := json.Unmarshal(blob, &bill); err != nil {
 		return errDecodeData.WrapErr(err)
 	}
-	if err := bill.DataUsage.validate(); err != nil {
-		return errDecodeData.WrapErr(err)
+
+	if bill.DataUsage != nil {
+		if err := bill.DataUsage.validate(); err != nil {
+			return errDecodeData.WrapErr(err)
+		}
+		m.DataUsage = bill.DataUsage
 	}
 
 	m.Amount = bill.Amount
-	m.DataUsage = bill.DataUsage
 	m.SessionID = bill.SessionID
+	m.CompletedAt = bill.CompletedAt
 
 	return nil
 }

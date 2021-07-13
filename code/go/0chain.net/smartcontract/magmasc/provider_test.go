@@ -19,21 +19,49 @@ func Test_Provider_Decode(t *testing.T) {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
 
-	tests := [2]struct {
-		name    string
-		blob    []byte
-		want    Provider
-		wantErr bool
+	provInvalid := mockProvider()
+	provInvalid.Terms.QoS.UploadMbps = -0.1
+	uBlobInvalid, err := json.Marshal(provInvalid)
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
+	}
+
+	provInvalid = mockProvider()
+	provInvalid.Terms.QoS.DownloadMbps = -0.1
+	dBlobInvalid, err := json.Marshal(provInvalid)
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
+	}
+
+	tests := [4]struct {
+		name  string
+		blob  []byte
+		want  Provider
+		error error
 	}{
 		{
-			name: "OK",
-			blob: blob,
-			want: prov,
+			name:  "OK",
+			blob:  blob,
+			want:  prov,
+			error: nil,
 		},
 		{
-			name:    "ERR",
-			blob:    []byte(":"), // invalid json
-			wantErr: true,
+			name:  "Decode_ERR",
+			blob:  []byte(":"), // invalid json
+			want:  Provider{},
+			error: errDecodeData,
+		},
+		{
+			name:  "QoS_Upload_Mbps_Invalid_ERR",
+			blob:  uBlobInvalid,
+			want:  Provider{},
+			error: errDecodeData,
+		},
+		{
+			name:  "QoS_Download_Mbps_Invalid_ERR",
+			blob:  dBlobInvalid,
+			want:  Provider{},
+			error: errDecodeData,
 		},
 	}
 
@@ -43,7 +71,7 @@ func Test_Provider_Decode(t *testing.T) {
 			t.Parallel()
 
 			got := Provider{}
-			if err = got.Decode(test.blob); (err != nil) != test.wantErr {
+			if err = got.Decode(test.blob); !errIs(err, test.error) {
 				t.Errorf("Decode() error: %v | want: %v", err, nil)
 			}
 			if !reflect.DeepEqual(got, test.want) {

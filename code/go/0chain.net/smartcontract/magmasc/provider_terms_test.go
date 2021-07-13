@@ -36,7 +36,7 @@ func Test_ProviderTerms_Decode(t *testing.T) {
 	tests := [4]struct {
 		name  string
 		blob  []byte
-		want  *ProviderTerms
+		want  ProviderTerms
 		error error
 	}{
 		{
@@ -48,19 +48,19 @@ func Test_ProviderTerms_Decode(t *testing.T) {
 		{
 			name:  "Decode_ERR",
 			blob:  []byte(":"), // invalid json
-			want:  &ProviderTerms{},
+			want:  ProviderTerms{},
 			error: errDecodeData,
 		},
 		{
 			name:  "QoS_Upload_Mbps_Invalid_ERR",
 			blob:  uBlobInvalid,
-			want:  &ProviderTerms{},
+			want:  ProviderTerms{},
 			error: errDecodeData,
 		},
 		{
 			name:  "QoS_Download_Mbps_Invalid_ERR",
 			blob:  dBlobInvalid,
-			want:  &ProviderTerms{},
+			want:  ProviderTerms{},
 			error: errDecodeData,
 		},
 	}
@@ -70,7 +70,7 @@ func Test_ProviderTerms_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := &ProviderTerms{}
+			got := ProviderTerms{}
 			if err = got.Decode(test.blob); !errIs(err, test.error) {
 				t.Errorf("Decode() error: %v | want: %v", err, test.error)
 				return
@@ -93,7 +93,7 @@ func Test_ProviderTerms_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  []byte
 	}{
 		{
@@ -115,73 +115,6 @@ func Test_ProviderTerms_Encode(t *testing.T) {
 	}
 }
 
-func Test_ProviderTerms_Equal(t *testing.T) {
-	t.Parallel()
-
-	terms := mockProviderTerms()
-
-	termsDiffPrice := mockProviderTerms()
-	termsDiffPrice.Price += 1
-
-	termsDiffExpiredAt := mockProviderTerms()
-	termsDiffExpiredAt.ExpiredAt += 1
-
-	termsDiffQoSUploadMbps := mockProviderTerms()
-	termsDiffQoSUploadMbps.QoS.UploadMbps += 0.1
-
-	termsDiffQoSDownloadMbps := mockProviderTerms()
-	termsDiffQoSDownloadMbps.QoS.DownloadMbps += 0.1
-
-	tests := [5]struct {
-		name  string
-		terms *ProviderTerms
-		with  *ProviderTerms
-		want  bool
-	}{
-		{
-			name:  "EQUAL",
-			terms: terms,
-			with:  terms,
-			want:  true,
-		},
-		{
-			name:  "termsDiffPrice",
-			terms: terms,
-			with:  termsDiffPrice,
-			want:  false,
-		},
-		{
-			name:  "termsDiffExpiredAt",
-			terms: terms,
-			with:  termsDiffExpiredAt,
-			want:  false,
-		},
-		{
-			name:  "termsDiffQoSUploadMbps",
-			terms: terms,
-			with:  termsDiffQoSUploadMbps,
-			want:  false,
-		},
-		{
-			name:  "termsDiffQoSDownloadMbps",
-			terms: terms,
-			with:  termsDiffQoSDownloadMbps,
-			want:  false,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := test.terms.Equal(test.with); got != test.want {
-				t.Errorf("Equal() got: %v | want: %v", got, test.want)
-			}
-		})
-	}
-}
-
 func TestProviderTerms_GetAmount(t *testing.T) {
 	t.Parallel()
 
@@ -192,7 +125,7 @@ func TestProviderTerms_GetAmount(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  state.Balance
 	}{
 		{
@@ -233,7 +166,7 @@ func TestProviderTerms_GetPrice(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  uint64
 	}{
 		{
@@ -275,7 +208,7 @@ func Test_ProviderTerms_GetVolume(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  uint64
 	}{
 		{
@@ -326,8 +259,8 @@ func Test_ProviderTerms_decrease(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		terms *ProviderTerms
-		want  *ProviderTerms
+		terms ProviderTerms
+		want  ProviderTerms
 	}{
 		{
 			name:  "OK",
@@ -341,8 +274,9 @@ func Test_ProviderTerms_decrease(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.terms.decrease(); !reflect.DeepEqual(got, test.want) {
-				t.Errorf("decrease() got: %#v | want: %#v", got, test.want)
+			test.terms.decrease()
+			if !reflect.DeepEqual(test.terms, test.want) {
+				t.Errorf("decrease() got: %#v | want: %#v", test.terms, test.want)
 			}
 		})
 	}
@@ -358,7 +292,7 @@ func Test_ProviderTerms_expired(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  bool
 	}{
 		{
@@ -409,8 +343,8 @@ func Test_ProviderTerms_increase(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		terms *ProviderTerms
-		want  *ProviderTerms
+		terms ProviderTerms
+		want  ProviderTerms
 	}{
 		{
 			name:  "OK",
@@ -424,8 +358,9 @@ func Test_ProviderTerms_increase(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.terms.increase(); !reflect.DeepEqual(got, test.want) {
-				t.Errorf("increase() got: %#v | want: %#v", got, test.want)
+			test.terms.increase()
+			if !reflect.DeepEqual(test.terms, test.want) {
+				t.Errorf("increase() got: %#v | want: %#v", test.terms, test.want)
 			}
 		})
 	}
@@ -442,7 +377,7 @@ func Test_ProviderTerms_validate(t *testing.T) {
 
 	tests := [3]struct {
 		name  string
-		terms *ProviderTerms
+		terms ProviderTerms
 		want  error
 	}{
 		{
