@@ -43,6 +43,8 @@ github.com/0chain/gosdk v1.2.77-0.20210712155418-b53bc7f1a68c h1:Y4KUEpfON3iq39L
 github.com/0chain/gosdk v1.2.77-0.20210712155418-b53bc7f1a68c/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/0chain/gosdk v1.2.77-0.20210713163236-c7b70477cac0 h1:875axYVReINzGg81kcH7W7d6/tnTXWCHVTWDxlt9yYQ=
 github.com/0chain/gosdk v1.2.77-0.20210713163236-c7b70477cac0/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210713182429-1f39ed17f01b h1:jN0RC2qU0f5394kxR5sm/j0R8dZpm13Dtabzl/gOXk0=
+github.com/0chain/gosdk v1.2.77-0.20210713182429-1f39ed17f01b/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=

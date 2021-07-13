@@ -78,7 +78,7 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 		return false, errors.New("invalid_request", "faucet has no tokens and needs to be refilled")
 	}
 	if err != nil {
-		return false, errors.Newf("invalid_request", "getting faucet balance resulted in an error: %v", err.Error())
+		return false, errors.Wrap(err, errors.Newf("invalid_request", "getting faucet balance resulted in an error"))
 	}
 	if gn.PourAmount > smartContractBalance {
 		return false, errors.Newf("invalid_request", "amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance)

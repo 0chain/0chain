@@ -26,12 +26,12 @@ var MaxStateNodesForSync = 10000
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
-		return errors.New("get block state changes", err.Error())
+		return errors.Wrap(err, "get block state changes")
 	}
 
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
-		return errors.New("apply block state changes", err.Error())
+		return errors.Wrap(err, "apply block state changes")
 	}
 
 	return nil

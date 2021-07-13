@@ -42,7 +42,7 @@ func (fc *FaucetSmartContract) getConfigHandler(context.Context,
 	url.Values, chainstate.StateContextI) (interface{}, error) {
 	res, err := getConfig()
 	if err != nil {
-		return nil, common.NewErrNoResource(cantGetConfig, err.Error())
+		return nil, common.NewErrNoResource(err, cantGetConfig)
 	}
 	return res, nil
 }

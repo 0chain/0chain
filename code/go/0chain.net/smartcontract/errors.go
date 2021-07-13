@@ -27,12 +27,12 @@ import (
 func NewErrNoResourceOrErrInternal(err error, defaultInternal bool, msgs ...string) error {
 	switch {
 	case errors.Is(err, common.ErrDecoding):
-		return common.NewErrInternal(strings.Join(msgs, ": "), err.Error())
+		return common.NewErrInternal(err, msgs...)
 	case errors.Is(err, util.ErrValueNotPresent), errors.Is(err, util.ErrNodeNotFound):
-		return common.NewErrNoResource(strings.Join(msgs, ": "), err.Error())
+		return common.NewErrNoResource(err, msgs...)
 	default:
 		if defaultInternal {
-			return common.NewErrInternal(strings.Join(msgs, ": "), err.Error())
+			return common.NewErrInternal(err, msgs...)
 		}
 
 		if len(msgs) == 0 {

@@ -35,28 +35,28 @@ func InvalidRequest(msg string) error {
 }
 
 // NewErrInternal creates new Error with ErrInternalCode.
-func NewErrInternal(msgs ...string) error {
-	if len(msgs) == 0 {
+func NewErrInternal(err error, msgs ...string) error {
+	if len(msgs) == 0 && err == nil {
 		return ErrNoResource
 	}
 
-	return errors.New(ErrInternalCode, strings.Join(msgs, ": "))
+	return errors.Wrap(err, errors.New(ErrInternalCode, strings.Join(msgs, ": ")))
 }
 
 // NewErrNoResource creates new Error with ErrNoResourceCode.
-func NewErrNoResource(msgs ...string) error {
-	if len(msgs) == 0 {
+func NewErrNoResource(err error, msgs ...string) error {
+	if len(msgs) == 0 && err == nil {
 		return ErrNoResource
 	}
 
-	return errors.New(ErrNoResourceCode, strings.Join(msgs, ": "))
+	return errors.Wrap(err, errors.New(ErrNoResourceCode, strings.Join(msgs, ": ")))
 }
 
 // NewErrBadRequest creates new Error with ErrBadRequestCode.
-func NewErrBadRequest(msgs ...string) error {
-	if len(msgs) == 0 {
+func NewErrBadRequest(err error, msgs ...string) error {
+	if len(msgs) == 0 && err == nil {
 		return ErrBadRequest
 	}
 
-	return errors.New(ErrBadRequestCode, strings.Join(msgs, ": "))
+	return errors.Wrap(err, errors.New(ErrBadRequestCode, strings.Join(msgs, ": ")))
 }

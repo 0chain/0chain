@@ -452,7 +452,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	// 3. not found
 	lr.PoolID = "pool_hex"
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+"can't get pool")
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+"can't get pool: "+"value not present")
 
 	// 4. vesting is not started yet
 	var resp string
@@ -505,7 +505,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Equal(t, errors.Top(common.NewErrNoResource("can't get pool: value not present")), errors.Top(err))
+	require.Equal(t, errors.ExcludeLocation(common.NewErrNoResource(nil, "can't get pool: value not present")), errors.ExcludeLocation(err))
 
 	balances.balances[client.id] = 200e10
 

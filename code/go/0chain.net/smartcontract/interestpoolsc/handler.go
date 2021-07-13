@@ -13,14 +13,14 @@ import (
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	un := ip.getUserNode(params.Get("client_id"), balances)
 	if len(un.Pools) == 0 {
-		return nil, common.NewErrNoResource("can't find user node")
+		return nil, common.NewErrNoResource(nil, "can't find user node")
 	}
 	t := time.Now()
 	stats := &poolStats{}
 	for _, pool := range un.Pools {
 		stat, err := ip.getPoolStats(pool, t)
 		if err != nil {
-			return nil, common.NewErrInternal("can't get pool stats", err.Error())
+			return nil, common.NewErrInternal(err, "can't get pool stats")
 		}
 		stats.addStat(stat)
 	}

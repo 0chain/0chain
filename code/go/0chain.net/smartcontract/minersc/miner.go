@@ -119,7 +119,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	newMiner.NodeType = NodeTypeMiner // set node type
 
 	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
-		return "", errors.New("add_miner", err.Error())
+		return "", errors.Wrap(err, errors.New("add_miner", ""))
 	}
 
 	allMap := make(map[string]struct{}, len(allMiners.Nodes))
@@ -140,7 +140,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if !msc.doesMinerExist(newMiner.getKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
-			return "", errors.New("add_miner", err.Error())
+			return "", errors.Wrap(err, errors.New("add_miner", ""))
+
 		}
 
 		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")

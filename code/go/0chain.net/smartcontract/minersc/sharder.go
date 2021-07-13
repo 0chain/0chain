@@ -100,7 +100,7 @@ func (msc *MinerSmartContract) AddSharder(
 	newSharder.NodeType = NodeTypeSharder // set node type
 
 	if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
-		return "", errors.New("add_sharder", err.Error())
+		return "", errors.Wrap(err, errors.New("add_sharder", ""))
 	}
 
 	allSharders.Nodes = append(allSharders.Nodes, newSharder)

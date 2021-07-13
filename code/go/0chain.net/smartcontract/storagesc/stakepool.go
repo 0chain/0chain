@@ -1205,7 +1205,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 		for _, id := range poolIDs {
 			var dp, ok = sp.Pools[id]
 			if !ok {
-				return nil, common.NewErrNoResource("missing delegate pool")
+				return nil, common.NewErrNoResource(nil, "missing delegate pool")
 			}
 			var dps = delegatePoolStat{
 				ID:         dp.ID,

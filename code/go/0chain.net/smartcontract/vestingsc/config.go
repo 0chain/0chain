@@ -72,7 +72,7 @@ func (vsc *VestingSmartContract) getConfigHandler(context.Context,
 
 	res, err := getConfig()
 	if err != nil {
-		return nil, common.NewErrInternal("can't get config", err.Error())
+		return nil, common.NewErrInternal(err, "can't get config")
 	}
 	return res, nil
 }
