@@ -331,24 +331,27 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"can't get configs: "+err.Error())
 	}
 
-	// user read pools
-
-	var rp *readPool
-	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("read_pool_lock_failed", err.Error())
-		}
-		rp = new(readPool)
-	}
-
-	// lock request & user balance
-
 	var lr lockRequest
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// check
+	if len(lr.TargetId) == 0 {
+		lr.TargetId = t.ClientID
+	}
+
+	// remembers who funded the read pool, so tokens get returned to funder on unlock
+	if err := ssc.addToFundedPools(t.ClientID, lr.TargetId, balances); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
+
+	var rp *readPool
+	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+		rp = new(readPool)
+	}
 
 	if lr.AllocationID == "" {
 		return "", common.NewError("read_pool_lock_failed",
@@ -450,11 +453,6 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	// user read pool
 
-	var rp *readPool
-	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
-	}
-
 	// the request
 
 	var (
@@ -464,6 +462,24 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
+	}
+
+	if len(req.PoolOwner) == 0 {
+		req.PoolOwner = t.ClientID
+	}
+
+	var rp *readPool
+	if rp, err = ssc.getReadPool(req.PoolOwner, balances); err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
+	}
+
+	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
+	if err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
+	}
+	if !isFunded {
+		return "", common.NewErrorf("read_pool_unlock_failed",
+			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 
 	var ap *allocationPool
