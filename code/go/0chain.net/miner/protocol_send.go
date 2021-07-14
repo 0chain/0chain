@@ -19,7 +19,7 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 	}
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
-	m2m.SendAll(VerifyBlockSender(b))
+	m2m.SendAll(ctx, VerifyBlockSender(b))
 }
 
 // SendNotarization - send the block notarization (collection of verification
@@ -39,7 +39,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 		miners = mb.Miners
 	)
 
-	go miners.SendAll(BlockNotarizationSender(notarization))
+	go miners.SendAll(ctx, BlockNotarizationSender(notarization))
 	mc.SendNotarizedBlock(ctx, b)
 }
 
@@ -50,7 +50,7 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 			mb  = mc.GetMagicBlock(b.Round)
 			mbs = mb.Sharders
 		)
-		mbs.SendAll(NotarizedBlockSender(b))
+		mbs.SendAll(ctx, NotarizedBlockSender(b))
 	}
 }
 
@@ -59,7 +59,7 @@ func (mc *Chain) ForcePushNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
-		m2s.SendAll(NotarizedBlockForcePushSender(b))
+		m2s.SendAll(ctx, NotarizedBlockForcePushSender(b))
 	}
 }
 
@@ -68,6 +68,6 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
-		m2s.SendAll(FinalizedBlockSender(b))
+		m2s.SendAll(ctx, FinalizedBlockSender(b))
 	}
 }
