@@ -379,7 +379,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				return
 			}
 		}
-		ctx := r.Context()
+		ctx := context.Background()
 		initialNodeID := r.Header.Get(HeaderInitialNodeID)
 		if initialNodeID != "" {
 			initSender := GetNode(initialNodeID)
