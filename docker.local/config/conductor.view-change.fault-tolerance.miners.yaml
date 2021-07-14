@@ -97,8 +97,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "contribute"
       - stop: ["miner-4"]
