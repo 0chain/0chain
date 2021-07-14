@@ -110,7 +110,6 @@ func NewSimpleNodes() SimpleNodes {
 type SimpleNodes map[string]*SimpleNode
 
 func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *node.Pool) (maxNodes int) {
-
 	var pmbNodes, newNodes, selectedNodes []*SimpleNode
 
 	// separate previous mb miners and new miners from dkg miners list
@@ -124,13 +123,15 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *
 
 	// sort pmb nodes by total stake: desc
 	sort.SliceStable(pmbNodes, func(i, j int) bool {
-		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked ||
-			pmbNodes[i].ID < pmbNodes[j].ID
+		if pmbNodes[i].TotalStaked == pmbNodes[j].TotalStaked {
+			return pmbNodes[i].ID < pmbNodes[j].ID
+		}
 
+		return pmbNodes[i].TotalStaked > pmbNodes[j].TotalStaked
 	})
 
 	// calculate max nodes count for next mb
-	maxNodes = min(limit, len(pmbNodes)+len(newNodes))
+	maxNodes = min(limit, len(sns))
 
 	// get number of nodes from previous mb that are required to be part of next mb
 	x := min(len(pmbNodes), int(math.Ceil(xPercent*float64(maxNodes))))
@@ -142,8 +143,11 @@ func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *
 	// add rest of the pmb miners into new miners list
 	newNodes = append(newNodes, pmbNodes[x:]...)
 	sort.SliceStable(newNodes, func(i, j int) bool {
-		return newNodes[i].TotalStaked > newNodes[j].TotalStaked ||
-			newNodes[i].ID < newNodes[j].ID
+		if newNodes[i].TotalStaked == newNodes[j].TotalStaked {
+			return newNodes[i].ID < newNodes[j].ID
+		}
+
+		return newNodes[i].TotalStaked > newNodes[j].TotalStaked
 	})
 
 	if len(newNodes) <= y {
@@ -370,36 +374,29 @@ func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
 	return // false, hasn't
 }
 
-//
-func (gn *GlobalNode) hasPrevSharderInList(list []*MinerNode,
-	balances cstate.StateContextI) (has bool) {
-
-	var pmb = gn.prevMagicBlock(balances)
-
-	for _, node := range list {
-		if pmb.Sharders.HasNode(node.ID) {
+// hasPrevSharderInList checks if there are nodes in previous magic block sharder list
+func hasPrevSharderInList(prevMB *block.MagicBlock, nodes []*MinerNode) bool {
+	for _, n := range nodes {
+		if prevMB.Sharders.HasNode(n.ID) {
 			return true
 		}
 	}
 
-	return // false, hasn't
+	return false
 }
 
-// Receive list of ranked sharders and extract sharder of previous MB preserving
-// order. The given list not modified.
-func (gn *GlobalNode) rankedPrevSharders(list []*MinerNode,
-	balances cstate.StateContextI) (prev []*MinerNode) {
-
-	var pmb = gn.prevMagicBlock(balances)
-	prev = make([]*MinerNode, 0, len(list))
+// rankedPrevSharders receives a list of ranked sharders and extract sharder of
+// previous MB preserving order. The given list not modified.
+func rankedPrevSharders(prevMB *block.MagicBlock, list []*MinerNode) []*MinerNode {
+	prev := make([]*MinerNode, 0, len(list))
 
 	for _, node := range list {
-		if pmb.Sharders.HasNode(node.ID) {
+		if prevMB.Sharders.HasNode(node.ID) {
 			prev = append(prev, node)
 		}
 	}
 
-	return // false, hasn't
+	return prev
 }
 
 // has previous sharder in sharders keep list
@@ -966,7 +963,6 @@ type DKGMinerNodes struct {
 	MaxN     int     `json:"max_n"`
 	TPercent float64 `json:"t_percent"`
 	KPercent float64 `json:"k_percent"`
-	XPercent float64 `json:"x_percent"`
 
 	SimpleNodes    `json:"simple_nodes"`
 	T              int             `json:"t"`
@@ -984,7 +980,6 @@ func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
 	dkgmn.MaxN = gn.MaxN
 	dkgmn.TPercent = gn.TPercent
 	dkgmn.KPercent = gn.KPercent
-	dkgmn.XPercent = gn.XPercent
 }
 
 func min(a, b int) int {
