@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"github.com/rcrowley/go-metrics"
 
@@ -393,66 +394,114 @@ func (sc *Chain) isValidRound(r *round.Round) bool {
 }
 
 func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Values) *RoundSummaries {
-	var rs *RoundSummaries
+	rsC := make(chan *RoundSummaries, 1)
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		roundSummaries, ok := entity.(*RoundSummaries)
 		if !ok {
 			Logger.Error("received invalid round summaries")
-			return nil, nil
+			return nil, common.NewError("request_for_round_summaries", "invalid round summaries")
 		}
-		rs = roundSummaries
-		return rs, nil
+		select {
+		case rsC <- roundSummaries:
+		default:
+		}
+		cancel()
+		return roundSummaries, nil
 	}
-	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), RoundSummariesRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(cctx, sc.GetCurrentMagicBlock(), RoundSummariesRequestor, params, handler)
+	var rs *RoundSummaries
+	select {
+	case rs = <-rsC:
+	default:
+	}
 	return rs
 }
 
 func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round.Round {
-	var r *round.Round
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		roundEntity, ok := entity.(*round.Round)
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	rC := make(chan *round.Round, 1)
+	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
+		r, ok := entity.(*round.Round)
 		if !ok {
 			Logger.Error("received invalid round entity")
-			return nil, nil
+			return nil, common.NewError("request_for_round", "received invalid round entity")
 		}
-		if sc.isValidRound(roundEntity) {
-			r = roundEntity
+
+		if sc.isValidRound(r) {
+			select {
+			case rC <- r:
+			default:
+			}
+			cancel()
 			return r, nil
 		}
-		return nil, nil
+		return nil, common.NewError("request_for_round", "invalid response round")
 	}
-	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), RoundRequestor, params, handler)
+
+	sc.RequestEntityFromShardersOnMB(cctx, sc.GetCurrentMagicBlock(), RoundRequestor, params, handler)
+	var r *round.Round
+	select {
+	case r = <-rC:
+	default:
+	}
+
 	return r
 }
 
 func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Values) *BlockSummaries {
-	var bs *BlockSummaries
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		blockSummaries, ok := entity.(*BlockSummaries)
+	bsC := make(chan *BlockSummaries, 1)
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
+		bs, ok := entity.(*BlockSummaries)
 		if !ok {
 			Logger.Error("received invalid block summaries", zap.String("round", params.Get("round")), zap.String("range", params.Get("range")))
-			return nil, nil
+			return nil, common.NewError("request_for_block_summaries", "invalid block summaries")
 		}
-		bs = blockSummaries
+		select {
+		case bsC <- bs:
+		default:
+		}
+		cancel()
 		return bs, nil
 	}
-	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), BlockSummariesRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(cctx, sc.GetCurrentMagicBlock(), BlockSummariesRequestor, params, handler)
+	var bs *BlockSummaries
+	select {
+	case bs = <-bsC:
+	default:
+	}
 	return bs
 }
 
 func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values) *block.BlockSummary {
-	var blockS *block.BlockSummary
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	bsC := make(chan *block.BlockSummary, 1)
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		bs, ok := entity.(*block.BlockSummary)
 		if !ok {
 			Logger.Error("received invalid block summary entity", zap.String("hash", params.Get("hash")))
-			return nil, nil
+			return nil, common.NewError("request_for_block_summary", "invalid block summary entity")
 		}
-		blockS = bs
-		return blockS, nil
+
+		select {
+		case bsC <- bs:
+		default:
+		}
+		cancel()
+		return bs, nil
 	}
-	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), BlockSummaryRequestor, params, handler)
-	return blockS
+	sc.RequestEntityFromShardersOnMB(cctx, sc.GetCurrentMagicBlock(), BlockSummaryRequestor, params, handler)
+	var bs *block.BlockSummary
+	select {
+	case bs = <-bsC:
+	default:
+	}
+	return bs
 }
 
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {

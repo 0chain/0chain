@@ -185,8 +185,8 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 
 		// send verify block message, then send notarized block
 		go func() {
-			mb.Miners.SendTo(VerifyBlockSender(hnb), found.ID)
-			mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
+			mb.Miners.SendTo(ctx, VerifyBlockSender(hnb), found.ID)
+			mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
 		}()
 
 		logging.Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
