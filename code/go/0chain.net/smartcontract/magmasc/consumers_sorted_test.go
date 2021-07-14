@@ -9,10 +9,10 @@ func Test_consumersSorted_add(t *testing.T) {
 	t.Parallel()
 
 	list := consumersSorted{}
-	con0 := Consumer{ID: "0"}
-	con1 := Consumer{ID: "1"}
-	con2 := Consumer{ID: "2"}
-	con3 := Consumer{ID: "3"}
+	con0 := Consumer{ExtID: "0"}
+	con1 := Consumer{ExtID: "1"}
+	con2 := Consumer{ExtID: "2"}
+	con3 := Consumer{ExtID: "3"}
 
 	tests := [5]struct {
 		name string
@@ -88,7 +88,7 @@ func Test_consumersSorted_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   cons.ID,
+			id:   cons.ExtID,
 			list: list,
 			want: cons,
 			ret:  true,
@@ -122,7 +122,7 @@ func Test_consumersSorted_getIndex(t *testing.T) {
 	t.Parallel()
 
 	idx, list := 0, mockConsumers().Nodes
-	id := list.Sorted[idx].ID
+	id := list.Sorted[idx].ExtID
 
 	tests := [2]struct {
 		name string
@@ -167,7 +167,7 @@ func Test_consumersSorted_remove(t *testing.T) {
 	t.Parallel()
 
 	cons := mockConsumer()
-	list := &consumersSorted{Sorted: []*Consumer{&cons}}
+	list := &consumersSorted{Sorted: []*Consumer{cons}}
 
 	tests := [2]struct {
 		name string
@@ -178,7 +178,7 @@ func Test_consumersSorted_remove(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   cons.ID,
+			id:   cons.ExtID,
 			list: list,
 			want: &consumersSorted{Sorted: make([]*Consumer, 0)},
 			ret:  true,
@@ -211,7 +211,7 @@ func Test_consumersSorted_removeByIndex(t *testing.T) {
 
 	list := &consumersSorted{
 		Sorted: []*Consumer{
-			{ID: "0"}, {ID: "1"}, {ID: "2"}, {ID: "3"},
+			{ExtID: "0"}, {ExtID: "1"}, {ExtID: "2"}, {ExtID: "3"},
 		},
 	}
 
@@ -225,25 +225,25 @@ func Test_consumersSorted_removeByIndex(t *testing.T) {
 			name: "OK",
 			idx:  2,
 			list: list,
-			want: &Consumer{ID: "2"},
+			want: &Consumer{ExtID: "2"},
 		},
 		{
 			name: "OK",
 			idx:  2,
 			list: list,
-			want: &Consumer{ID: "3"},
+			want: &Consumer{ExtID: "3"},
 		},
 		{
 			name: "OK",
 			idx:  0,
 			list: list,
-			want: &Consumer{ID: "0"},
+			want: &Consumer{ExtID: "0"},
 		},
 		{
 			name: "OK",
 			idx:  0,
 			list: list,
-			want: &Consumer{ID: "1"},
+			want: &Consumer{ExtID: "1"},
 		},
 	}
 
@@ -263,7 +263,7 @@ func Test_consumersSorted_update(t *testing.T) {
 	t.Parallel()
 
 	cons := mockConsumer()
-	list := &consumersSorted{Sorted: []*Consumer{&cons}}
+	list := &consumersSorted{Sorted: []*Consumer{cons}}
 
 	tests := [2]struct {
 		name string
@@ -273,13 +273,13 @@ func Test_consumersSorted_update(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			cons: &cons,
+			cons: cons,
 			list: list,
 			want: true,
 		},
 		{
 			name: "FALSE",
-			cons: &Consumer{ID: "not_present_id"},
+			cons: &Consumer{ExtID: "not_present_id"},
 			list: list,
 			want: false,
 		},

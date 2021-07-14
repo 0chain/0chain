@@ -96,16 +96,11 @@ func Test_Consumers_add(t *testing.T) {
 	}
 
 	cons := mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), &cons); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	node := mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, consumerType), &node); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
-
-	tests := [3]struct {
+	tests := [2]struct {
 		name  string
 		cons  *Consumer
 		list  Consumers
@@ -114,21 +109,14 @@ func Test_Consumers_add(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			cons:  &cons,
+			cons:  cons,
 			list:  list,
 			sci:   sci,
 			error: false,
 		},
 		{
-			name:  "Decode_ERR",
-			cons:  &Consumer{ID: "invalid_json_id"},
-			list:  list,
-			sci:   sci,
-			error: true,
-		},
-		{
-			name:  "Internal_Unexpected_ERR",
-			cons:  &Consumer{ID: "unexpected_id"},
+			name:  "Insert_Trie_Node_ERR",
+			cons:  &Consumer{ExtID: "cannot_insert_id"},
 			list:  list,
 			sci:   sci,
 			error: true,
@@ -147,7 +135,7 @@ func Test_Consumers_add(t *testing.T) {
 	}
 }
 
-func Test_extractConsumers(t *testing.T) {
+func Test_fetchConsumers(t *testing.T) {
 	t.Parallel()
 
 	sci, list := mockStateContextI(), mockConsumers()
@@ -190,13 +178,13 @@ func Test_extractConsumers(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := extractConsumers(test.id, test.sci)
+			got, err := fetchConsumers(test.id, test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("extractConsumers() got: %#v | want: %#v", got, test.want)
+				t.Errorf("fetchConsumers() got: %#v | want: %#v", got, test.want)
 				return
 			}
 			if !errIs(err, test.error) {
-				t.Errorf("extractConsumers() error: %v | want: %v", err, test.error)
+				t.Errorf("fetchConsumers() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

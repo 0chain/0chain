@@ -16,7 +16,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 	msc, sci := mockSmartContractI(), mockStateContextI()
 	blob, cons, prov := make([]byte, 0), mockConsumer(), mockProvider()
 
-	tests := [7]struct {
+	tests := [8]struct {
 		name  string
 		txn   *tx.Transaction
 		call  string
@@ -53,6 +53,15 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 			error: false,
 		},
 		{
+			name:  "Consumer_Update_OK",
+			txn:   &tx.Transaction{ClientID: cons.ID},
+			call:  consumerUpdate,
+			blob:  nil,
+			sci:   sci,
+			msc:   msc,
+			error: false,
+		},
+		{
 			name:  "Provider_DataUsage_OK",
 			txn:   &tx.Transaction{ClientID: prov.ID},
 			call:  providerDataUsage,
@@ -71,9 +80,9 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "Provider_Terms_Update_OK",
+			name:  "Provider_Update_OK",
 			txn:   &tx.Transaction{ClientID: prov.ID},
-			call:  providerTermsUpdate,
+			call:  providerUpdate,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -163,7 +172,7 @@ func TestMagmaSmartContract_GetHandlerStats(t *testing.T) {
 
 			got, err := test.msc.GetHandlerStats(test.ctx, test.vals)
 			if (err != nil) != test.error {
-				t.Errorf("GetHandlerStats() error: %v, want: %v", err, test.error)
+				t.Errorf("GetHandlerStats() error: %v | want: %v", err, test.error)
 				return
 			}
 			if _, ok := got.(string); !ok {

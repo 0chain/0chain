@@ -36,7 +36,7 @@ func Test_Provider_Decode(t *testing.T) {
 	tests := [4]struct {
 		name  string
 		blob  []byte
-		want  Provider
+		want  *Provider
 		error error
 	}{
 		{
@@ -48,19 +48,19 @@ func Test_Provider_Decode(t *testing.T) {
 		{
 			name:  "Decode_ERR",
 			blob:  []byte(":"), // invalid json
-			want:  Provider{},
+			want:  &Provider{},
 			error: errDecodeData,
 		},
 		{
 			name:  "QoS_Upload_Mbps_Invalid_ERR",
 			blob:  uBlobInvalid,
-			want:  Provider{},
+			want:  &Provider{},
 			error: errDecodeData,
 		},
 		{
 			name:  "QoS_Download_Mbps_Invalid_ERR",
 			blob:  dBlobInvalid,
-			want:  Provider{},
+			want:  &Provider{},
 			error: errDecodeData,
 		},
 	}
@@ -70,7 +70,7 @@ func Test_Provider_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := Provider{}
+			got := &Provider{}
 			if err = got.Decode(test.blob); !errIs(err, test.error) {
 				t.Errorf("Decode() error: %v | want: %v", err, nil)
 			}
@@ -92,7 +92,7 @@ func Test_Provider_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name string
-		prov Provider
+		prov *Provider
 		want []byte
 	}{
 		{
@@ -127,18 +127,18 @@ func Test_Provider_GetType(t *testing.T) {
 	})
 }
 
-func Test_extractProvider(t *testing.T) {
+func Test_providerFetch(t *testing.T) {
 	t.Parallel()
 
 	const scID = "sc_id"
 
 	sci, prov := mockStateContextI(), mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ID, providerType), &prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	provInvalid := mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, provInvalid.ID, providerType), &provInvalid); err != nil {
+	node := mockInvalidJson{ID: "invalid_json_id"}
+	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, providerType), &node); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -151,9 +151,9 @@ func Test_extractProvider(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    prov.ID,
+			id:    prov.ExtID,
 			sci:   sci,
-			want:  &prov,
+			want:  prov,
 			error: nil,
 		},
 		{
@@ -165,7 +165,7 @@ func Test_extractProvider(t *testing.T) {
 		},
 		{
 			name:  "Decode_ERR",
-			id:    provInvalid.ID,
+			id:    node.ID,
 			sci:   sci,
 			want:  nil,
 			error: errDecodeData,
@@ -177,13 +177,13 @@ func Test_extractProvider(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := extractProvider(scID, test.id, test.sci)
+			got, err := providerFetch(scID, test.id, test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("extractProvider() got: %#v | want: %#v", err, test.want)
+				t.Errorf("providerFetch() got: %#v | want: %#v", err, test.want)
 				return
 			}
 			if !errIs(test.error, err) {
-				t.Errorf("extractProvider() error: %v | want: %v", err, test.error)
+				t.Errorf("providerFetch() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

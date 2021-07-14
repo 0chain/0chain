@@ -42,6 +42,10 @@ const (
 	// consumerSessionStop represents the name of MagmaSmartContract function.
 	// When function is called it means that Consumer stops the session.
 	consumerSessionStop = "consumer_session_stop"
+
+	// consumerUpdate represents name for
+	// consumer data update MagmaSmartContract function.
+	consumerUpdate = "consumer_update"
 )
 
 // These constants used to identify smart contract functions by Provider.
@@ -61,9 +65,9 @@ const (
 	// Provider's registration MagmaSmartContract function.
 	providerRegister = "provider_register"
 
-	// providerRegister represents name for
-	// Provider's provider terms update MagmaSmartContract function.
-	providerTermsUpdate = "provider_terms_update"
+	// providerUpdate represents name for
+	// provider data update MagmaSmartContract function.
+	providerUpdate = "provider_update"
 
 	// providerTermsExpiredDuration represents value for
 	// Provider's provider terms duration on check it expired.

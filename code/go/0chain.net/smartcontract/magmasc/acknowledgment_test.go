@@ -120,26 +120,32 @@ func Test_Acknowledgment_uid(t *testing.T) {
 func Test_Acknowledgment_validate(t *testing.T) {
 	t.Parallel()
 
-	acknValid := mockAcknowledgment()
+	acknEmptySessionID := mockAcknowledgment()
+	acknEmptySessionID.SessionID = ""
 
 	acknEmptyAccessPointID := mockAcknowledgment()
 	acknEmptyAccessPointID.AccessPointID = ""
 
-	acknEmptyProviderID := mockAcknowledgment()
-	acknEmptyProviderID.ProviderID = ""
+	acknEmptyConsumerExtID := mockAcknowledgment()
+	acknEmptyConsumerExtID.Consumer.ExtID = ""
 
-	acknEmptySessionID := mockAcknowledgment()
-	acknEmptySessionID.SessionID = ""
+	acknEmptyProviderExtID := mockAcknowledgment()
+	acknEmptyProviderExtID.Provider.ExtID = ""
 
-	tests := [4]struct {
+	tests := [5]struct {
 		name string
 		ackn *Acknowledgment
 		want error
 	}{
 		{
 			name: "OK",
-			ackn: acknValid,
+			ackn: mockAcknowledgment(),
 			want: nil,
+		},
+		{
+			name: "Empty_Session_ID",
+			ackn: acknEmptySessionID,
+			want: errAcknowledgmentInvalid,
 		},
 		{
 			name: "Empty_Access_Point_ID",
@@ -147,13 +153,13 @@ func Test_Acknowledgment_validate(t *testing.T) {
 			want: errAcknowledgmentInvalid,
 		},
 		{
-			name: "Empty_Provider_ID",
-			ackn: acknEmptyProviderID,
+			name: "Empty_Consumer_Ext_ID",
+			ackn: acknEmptyConsumerExtID,
 			want: errAcknowledgmentInvalid,
 		},
 		{
-			name: "Empty_Session_ID",
-			ackn: acknEmptySessionID,
+			name: "Empty_Provider_Txt_ID",
+			ackn: acknEmptyProviderExtID,
 			want: errAcknowledgmentInvalid,
 		},
 	}

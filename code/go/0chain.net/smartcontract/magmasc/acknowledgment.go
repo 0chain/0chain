@@ -12,11 +12,10 @@ type (
 	// accepts the provider terms and stores in the state of the blockchain
 	// as a result of performing the consumerAcceptTerms MagmaSmartContract function.
 	Acknowledgment struct {
-		AccessPointID datastore.Key `json:"access_point_id"`
-		ConsumerID    datastore.Key `json:"consumer_id"`
-		ProviderID    datastore.Key `json:"provider_id"`
 		SessionID     datastore.Key `json:"session_id"`
-		ProviderTerms ProviderTerms `json:"provider_terms"`
+		AccessPointID datastore.Key `json:"access_point_id"`
+		Consumer      *Consumer     `json:"consumer"`
+		Provider      *Provider     `json:"provider"`
 	}
 )
 
@@ -35,16 +34,10 @@ func (m *Acknowledgment) Decode(blob []byte) error {
 		return errDecodeData.WrapErr(err)
 	}
 
-	m.AccessPointID = ackn.AccessPointID
-	m.ProviderID = ackn.ProviderID
 	m.SessionID = ackn.SessionID
-
-	if ackn.ConsumerID != "" {
-		m.ConsumerID = ackn.ConsumerID
-	}
-	if err := ackn.ProviderTerms.validate(); err == nil {
-		m.ProviderTerms = ackn.ProviderTerms
-	}
+	m.AccessPointID = ackn.AccessPointID
+	m.Consumer = ackn.Consumer
+	m.Provider = ackn.Provider
 
 	return nil
 }
@@ -64,9 +57,10 @@ func (m *Acknowledgment) uid(scID datastore.Key) datastore.Key {
 // If it is not return errAcknowledgmentInvalid.
 func (m *Acknowledgment) validate() error {
 	switch { // is invalid
-	case m.AccessPointID == "":
-	case m.ProviderID == "":
 	case m.SessionID == "":
+	case m.AccessPointID == "":
+	case m.Consumer.ExtID == "":
+	case m.Provider.ExtID == "":
 
 	default:
 		return nil // is valid

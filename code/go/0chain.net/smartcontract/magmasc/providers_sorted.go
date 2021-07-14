@@ -31,13 +31,13 @@ func (m *providersSorted) add(provider *Provider) bool {
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
-		return m.Sorted[idx].ID >= provider.ID
+		return m.Sorted[idx].ExtID >= provider.ExtID
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, provider)
 		return true // appended
 	}
-	if m.Sorted[idx].ID == provider.ID { // the same
+	if m.Sorted[idx].ExtID == provider.ExtID { // the same
 		m.Sorted[idx] = provider // replace
 		return false             // already have
 	}
@@ -73,9 +73,9 @@ func (m *providersSorted) getIndex(id datastore.Key) (int, bool) {
 	size := len(m.Sorted)
 	if size > 0 {
 		idx := sort.Search(size, func(idx int) bool {
-			return m.Sorted[idx].ID >= id
+			return m.Sorted[idx].ExtID >= id
 		})
-		if idx < size && m.Sorted[idx].ID == id {
+		if idx < size && m.Sorted[idx].ExtID == id {
 			return idx, true // found
 		}
 	}
@@ -103,7 +103,7 @@ func (m *providersSorted) removeByIndex(idx int) *Provider {
 }
 
 func (m *providersSorted) update(provider *Provider) bool {
-	idx, found := m.getIndex(provider.ID)
+	idx, found := m.getIndex(provider.ExtID)
 	if found {
 		m.mux.Lock()
 		m.Sorted[idx] = provider // replace if found

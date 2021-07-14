@@ -49,11 +49,10 @@ func (m *mockInvalidJson) Encode() []byte {
 
 func mockAcknowledgment() *Acknowledgment {
 	return &Acknowledgment{
-		AccessPointID: "access_point_id",
-		ConsumerID:    "consumer_id",
-		ProviderID:    "provider_id",
 		SessionID:     "session_id",
-		ProviderTerms: mockProviderTerms(),
+		AccessPointID: "access_point_id",
+		Consumer:      mockConsumer(),
+		Provider:      mockProvider(),
 	}
 }
 
@@ -66,8 +65,8 @@ func mockBilling() *Billing {
 	return &bill
 }
 
-func mockConsumer() Consumer {
-	return Consumer{
+func mockConsumer() *Consumer {
+	return &Consumer{
 		ID:    "consumer_id",
 		ExtID: "ext_id",
 		Host:  "localhost:8010",
@@ -133,8 +132,8 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	return &msc
 }
 
-func mockProvider() Provider {
-	return Provider{
+func mockProvider() *Provider {
+	return &Provider{
 		ID:    "provider_id",
 		ExtID: "ext_id",
 		Host:  "localhost:8020",

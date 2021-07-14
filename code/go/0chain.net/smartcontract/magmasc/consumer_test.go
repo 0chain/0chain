@@ -20,10 +20,10 @@ func Test_Consumer_Decode(t *testing.T) {
 	}
 
 	tests := [2]struct {
-		name    string
-		blob    []byte
-		want    Consumer
-		wantErr bool
+		name  string
+		blob  []byte
+		want  *Consumer
+		error bool
 	}{
 		{
 			name: "OK",
@@ -31,9 +31,10 @@ func Test_Consumer_Decode(t *testing.T) {
 			want: cons,
 		},
 		{
-			name:    "Decode_ERR",
-			blob:    []byte(":"), // invalid json
-			wantErr: true,
+			name:  "Decode_ERR",
+			blob:  []byte(":"), // invalid json
+			want:  &Consumer{},
+			error: true,
 		},
 	}
 
@@ -42,8 +43,8 @@ func Test_Consumer_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := Consumer{}
-			if err = got.Decode(test.blob); (err != nil) != test.wantErr {
+			got := &Consumer{}
+			if err = got.Decode(test.blob); (err != nil) != test.error {
 				t.Errorf("Decode() error: %v | want: %v", err, nil)
 			}
 			if !reflect.DeepEqual(got, test.want) {
@@ -64,7 +65,7 @@ func Test_Consumer_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name string
-		cons Consumer
+		cons *Consumer
 		want []byte
 	}{
 		{
@@ -99,33 +100,16 @@ func Test_Consumer_GetType(t *testing.T) {
 	})
 }
 
-func Test_consumerUID(t *testing.T) {
-	t.Parallel()
-
-	const (
-		scID    = "sc_id"
-		consID  = "consumer_id"
-		consUID = "sc:" + scID + ":consumer:" + consID
-	)
-
-	t.Run("OK", func(t *testing.T) {
-		t.Parallel()
-
-		if got := consumerUID(scID, consID); got != consUID {
-			t.Errorf("consumerUID() got: %v | want: %v", got, consUID)
-		}
-	})
-}
-
-func Test_extractConsumer(t *testing.T) {
+func Test_consumerFetch(t *testing.T) {
 	t.Parallel()
 
 	const scID = "sc_id"
 
 	sci, cons := mockStateContextI(), mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), &cons); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ExtID, consumerType), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
+
 	node := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, consumerType), &node); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
@@ -140,9 +124,9 @@ func Test_extractConsumer(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    cons.ID,
+			id:    cons.ExtID,
 			sci:   sci,
-			want:  &cons,
+			want:  cons,
 			error: nil,
 		},
 		{
@@ -166,13 +150,13 @@ func Test_extractConsumer(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := extractConsumer(scID, test.id, test.sci)
+			got, err := consumerFetch(scID, test.id, test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("extractProvider() got: %#v | want: %#v", err, test.want)
+				t.Errorf("consumerFetch() got: %#v | want: %#v", err, test.want)
 				return
 			}
 			if !errIs(test.error, err) {
-				t.Errorf("extractProvider() error: %v | want: %v", err, test.error)
+				t.Errorf("consumerFetch() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

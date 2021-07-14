@@ -53,14 +53,9 @@ func (m *Provider) GetType() string {
 	return providerType
 }
 
-// Idents reports whether the providers have the same identifiers.
-func (m *Provider) Idents(prov *Provider) bool {
-	return m.ExtID == prov.ExtID && m.Host == prov.Host
-}
-
-// extractProvider extracts Provider stored in state.StateContextI
+// providerFetch extracts Provider stored in state.StateContextI
 // or returns error if blockchain state does not contain it.
-func extractProvider(scID, id datastore.Key, sci chain.StateContextI) (*Provider, error) {
+func providerFetch(scID, id datastore.Key, sci chain.StateContextI) (*Provider, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, id, providerType))
 	if err != nil {
 		return nil, err

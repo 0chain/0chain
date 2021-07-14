@@ -43,36 +43,22 @@ func (m *Consumers) Encode() []byte {
 
 // add tries to append consumer to nodes list.
 func (m *Consumers) add(scID datastore.Key, cons *Consumer, sci chain.StateContextI) error {
-	got := &Consumer{}
-
-	data, err := sci.GetTrieNode(nodeUID(scID, cons.ID, consumerType))
-	if err != nil && !errAny(err, util.ErrNodeNotFound, util.ErrValueNotPresent) {
-		return errWrap(errCodeFetchData, "fetch consumer failed", err)
+	m.Nodes.add(cons)
+	if _, err := sci.InsertTrieNode(AllConsumersKey, m); err != nil {
+		return errWrap(errCodeInternal, "insert consumers list failed", err)
 	}
-	if data != nil { // decode consumer data
-		if err = got.Decode(data.Encode()); err != nil {
-			return errWrap(errCodeDecode, "decode consumer data failed", err)
-		}
-	}
-
-	if !cons.Idents(got) {
-		m.Nodes.add(cons)
-		if _, err = sci.InsertTrieNode(AllConsumersKey, m); err != nil {
-			return errWrap(errCodeInternal, "insert consumers list failed", err)
-		}
-		if _, err = sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), cons); err != nil {
-			return errWrap(errCodeInternal, "insert consumer failed", err)
-		}
+	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ExtID, consumerType), cons); err != nil {
+		return errWrap(errCodeInternal, "insert consumer failed", err)
 	}
 
 	return nil
 }
 
-// extractConsumers extracts all consumers represented in JSON bytes
+// fetchConsumers extracts all consumers represented in JSON bytes
 // stored in state.StateContextI with AllConsumersKey.
-// extractConsumers returns error if state.StateContextI does not contain
+// fetchConsumers returns error if state.StateContextI does not contain
 // consumers or stored bytes have invalid format.
-func extractConsumers(id datastore.Key, sci chain.StateContextI) (*Consumers, error) {
+func fetchConsumers(id datastore.Key, sci chain.StateContextI) (*Consumers, error) {
 	consumers := Consumers{Nodes: &consumersSorted{}}
 	if list, _ := sci.GetTrieNode(id); list != nil {
 		if err := json.Unmarshal(list.Encode(), &consumers.Nodes.Sorted); err != nil {

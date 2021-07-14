@@ -423,9 +423,6 @@ func Test_ProviderTerms_increase(t *testing.T) {
 func Test_ProviderTerms_validate(t *testing.T) {
 	t.Parallel()
 
-	termsZeroProlongDuration := mockProviderTerms()
-	termsZeroProlongDuration.ProlongDuration = 0
-
 	termsZeroExpiredAt := mockProviderTerms()
 	termsZeroExpiredAt.ExpiredAt = 0
 
@@ -435,7 +432,7 @@ func Test_ProviderTerms_validate(t *testing.T) {
 	termsZeroQoSDownloadMbps := mockProviderTerms()
 	termsZeroQoSDownloadMbps.QoS.DownloadMbps = 0
 
-	tests := [5]struct {
+	tests := [4]struct {
 		name  string
 		terms ProviderTerms
 		want  error
@@ -444,11 +441,6 @@ func Test_ProviderTerms_validate(t *testing.T) {
 			name:  "OK",
 			terms: mockProviderTerms(),
 			want:  nil,
-		},
-		{
-			name:  "Zero_Prolong_Duration_ERR",
-			terms: termsZeroProlongDuration,
-			want:  errProviderTermsInvalid,
 		},
 		{
 			name:  "Zero_Expired_At_ERR",

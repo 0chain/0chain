@@ -9,10 +9,10 @@ func Test_ProvidersSorted_add(t *testing.T) {
 	t.Parallel()
 
 	list := providersSorted{}
-	prov0 := Provider{ID: "0"}
-	prov1 := Provider{ID: "1"}
-	prov2 := Provider{ID: "2"}
-	prov3 := Provider{ID: "3"}
+	prov0 := Provider{ExtID: "0"}
+	prov1 := Provider{ExtID: "1"}
+	prov2 := Provider{ExtID: "2"}
+	prov3 := Provider{ExtID: "3"}
 
 	tests := [5]struct {
 		name string
@@ -88,7 +88,7 @@ func Test_ProvidersSorted_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   pros.ID,
+			id:   pros.ExtID,
 			list: list,
 			want: pros,
 			ret:  true,
@@ -122,7 +122,7 @@ func Test_ProvidersSorted_getIndex(t *testing.T) {
 	t.Parallel()
 
 	idx, list := 0, mockProviders().Nodes
-	id := list.Sorted[idx].ID
+	id := list.Sorted[idx].ExtID
 
 	tests := [2]struct {
 		name string
@@ -167,7 +167,7 @@ func Test_ProvidersSorted_remove(t *testing.T) {
 	t.Parallel()
 
 	prov := mockProvider()
-	list := &providersSorted{Sorted: []*Provider{&prov}}
+	list := &providersSorted{Sorted: []*Provider{prov}}
 
 	tests := [2]struct {
 		name string
@@ -178,7 +178,7 @@ func Test_ProvidersSorted_remove(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   prov.ID,
+			id:   prov.ExtID,
 			list: list,
 			want: &providersSorted{Sorted: make([]*Provider, 0)},
 			ret:  true,
@@ -211,7 +211,7 @@ func Test_ProvidersSorted_removeByIndex(t *testing.T) {
 
 	list := &providersSorted{
 		Sorted: []*Provider{
-			{ID: "0"}, {ID: "1"}, {ID: "2"}, {ID: "3"},
+			{ExtID: "0"}, {ExtID: "1"}, {ExtID: "2"}, {ExtID: "3"},
 		},
 	}
 
@@ -225,25 +225,25 @@ func Test_ProvidersSorted_removeByIndex(t *testing.T) {
 			name: "OK",
 			idx:  2,
 			list: list,
-			want: &Provider{ID: "2"},
+			want: &Provider{ExtID: "2"},
 		},
 		{
 			name: "OK",
 			idx:  2,
 			list: list,
-			want: &Provider{ID: "3"},
+			want: &Provider{ExtID: "3"},
 		},
 		{
 			name: "OK",
 			idx:  0,
 			list: list,
-			want: &Provider{ID: "0"},
+			want: &Provider{ExtID: "0"},
 		},
 		{
 			name: "OK",
 			idx:  0,
 			list: list,
-			want: &Provider{ID: "1"},
+			want: &Provider{ExtID: "1"},
 		},
 	}
 
@@ -263,25 +263,25 @@ func Test_ProvidersSorted_update(t *testing.T) {
 	t.Parallel()
 
 	prov := mockProvider()
-	list := &providersSorted{Sorted: []*Provider{&prov}}
+	list := &providersSorted{Sorted: []*Provider{prov}}
 
 	tests := [2]struct {
-		name  string
-		provs *Provider
-		list  *providersSorted
-		want  bool
+		name string
+		prov *Provider
+		list *providersSorted
+		want bool
 	}{
 		{
-			name:  "TRUE",
-			provs: &prov,
-			list:  list,
-			want:  true,
+			name: "TRUE",
+			prov: prov,
+			list: list,
+			want: true,
 		},
 		{
-			name:  "FALSE",
-			provs: &Provider{ID: "not_present_id"},
-			list:  list,
-			want:  false,
+			name: "FALSE",
+			prov: &Provider{ExtID: "not_present_id"},
+			list: list,
+			want: false,
 		},
 	}
 
@@ -290,7 +290,7 @@ func Test_ProvidersSorted_update(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.list.update(test.provs); got != test.want {
+			if got := test.list.update(test.prov); got != test.want {
 				t.Errorf("update() got: %v | want: %v", got, test.want)
 			}
 		})

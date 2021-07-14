@@ -35,6 +35,8 @@ func NewMagmaSmartContract() sci.SmartContractInterface {
 	msc.RestHandlers["/allConsumers"] = msc.allConsumers
 	msc.RestHandlers["/allProviders"] = msc.allProviders
 	msc.RestHandlers["/billingFetch"] = msc.billingFetch
+	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
+	msc.RestHandlers["/providerFetch"] = msc.providerFetch
 	msc.RestHandlers["/providerTerms"] = msc.providerTerms
 
 	// metrics setup section
@@ -54,14 +56,16 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 		return m.consumerRegister(txn, blob, sci)
 	case consumerSessionStop:
 		return m.consumerSessionStop(txn, blob, sci)
+	case consumerUpdate:
+		return m.consumerUpdate(txn, blob, sci)
 
 	// provider's function list
 	case providerDataUsage:
 		return m.providerDataUsage(txn, blob, sci)
 	case providerRegister:
 		return m.providerRegister(txn, blob, sci)
-	case providerTermsUpdate:
-		return m.providerTermsUpdate(txn, blob, sci)
+	case providerUpdate:
+		return m.providerUpdate(txn, blob, sci)
 	}
 
 	return "", errInvalidFuncName

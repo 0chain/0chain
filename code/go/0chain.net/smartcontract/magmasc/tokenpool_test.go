@@ -93,24 +93,24 @@ func Test_tokenPool_create(t *testing.T) {
 	t.Parallel()
 
 	ackn, sci := mockAcknowledgment(), mockStateContextI()
-	amount, txn := ackn.ProviderTerms.GetAmount(), sci.GetTransaction()
+	amount, txn := ackn.Provider.Terms.GetAmount(), sci.GetTransaction()
 
-	txn.ClientID = ackn.ConsumerID
+	txn.ClientID = ackn.Consumer.ID
 	txn.Value = int64(amount)
 
 	resp := &tokenpool.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     ackn.SessionID,
 		Value:      amount,
-		FromClient: ackn.ConsumerID,
+		FromClient: ackn.Consumer.ID,
 		ToClient:   txn.ToClientID,
 	}
 
 	acknClientBalanceErr := mockAcknowledgment()
-	acknClientBalanceErr.ConsumerID = ""
+	acknClientBalanceErr.Consumer.ID = ""
 
 	acknInsufficientFundsErr := mockAcknowledgment()
-	acknInsufficientFundsErr.ConsumerID = "insolvent_id"
+	acknInsufficientFundsErr.Consumer.ID = "insolvent_id"
 
 	tests := [5]struct {
 		name  string

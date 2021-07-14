@@ -49,19 +49,19 @@ func (m *tokenPool) Encode() []byte {
 
 // create creates token poll by given acknowledgment.
 func (m *tokenPool) create(txn *tx.Transaction, ackn *Acknowledgment, sci chain.StateContextI) (string, error) {
-	clientBalance, err := sci.GetClientBalance(ackn.ConsumerID)
+	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
 	if err != nil {
 		return "", errWrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
-	m.Balance = ackn.ProviderTerms.GetAmount()
+	m.Balance = ackn.Provider.Terms.GetAmount()
 	if clientBalance < m.Balance {
 		return "", errWrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
 	m.ID = ackn.SessionID
-	m.PayerID = ackn.ConsumerID
-	m.PayeeID = ackn.ProviderID
+	m.PayerID = ackn.Consumer.ID
+	m.PayeeID = ackn.Provider.ID
 
 	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, m.Balance)
 	if err = sci.AddTransfer(transfer); err != nil {
