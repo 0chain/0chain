@@ -15,7 +15,7 @@
 ###   min_s: 1, max_s: 2
 ###   min_n: 3, max_n: 7
 ###
-### Outside Miners: ["miner-5", "miner-5", "miner-7", "miner-8"]
+### Outside Miners: ["miner-5", "miner-6", "miner-7", "miner-8"]
 ### Outside Sharders: ["sharder-3"]
 ###
 ### Phase Rounds:
@@ -28,20 +28,9 @@
 
 ---
 enable:
-  # View Change
-  - "Miner goes down"
   - "Miner goes down and comes up"
 
 sets:
-  # View Change
-  - name: "Miner goes down"
-    tests:
-      - "Miner goes down in phase 'start'"
-      - "Miner goes down in phase 'contribute'"
-      - "Miner goes down in phase 'share'"
-      - "Miner goes down in phase 'publish'"
-      - "Miner goes down in phase 'wait'"
-
   - name: "Miner goes down and comes up"
     tests:
       - "Miner goes down in phase 'start' and comes up in phase 'start'"
@@ -64,124 +53,6 @@ sets:
       - "Miner goes down and comes up at VC + 1" #
 
 tests:
-  # - Miner goes down
-  - name: "Miner goes down in phase 'start'"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start_lock: ["sharder-1"]
-      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
-      - wait_phase:
-          phase: "start"
-      - stop: ["miner-4"]
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 2
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3"]
-
-  - name: "Miner goes down in phase 'contribute'"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start_lock: ["sharder-1"]
-      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      #- wait_sharder_keep:
-      #    sharders: ["sharder-1"] # sync nodes
-      - wait_phase:
-          phase: "contribute"
-      - stop: ["miner-4"]
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 2
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3"]
-
-  - name: "Miner goes down in phase 'share'"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start_lock: ["sharder-1"]
-      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
-      - wait_phase:
-          phase: "share"
-      - stop: ["miner-4"]
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 2
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3"]
-
-  - name: "Miner goes down in phase 'publish'"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start_lock: ["sharder-1"]
-      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
-      - wait_phase:
-          phase: "publish"
-      - stop: ["miner-4"]
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 2
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3"]
-
-  - name: "Miner goes down in phase 'wait'"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - start_lock: ["sharder-1"]
-      - start_lock: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - unlock: ["sharder-1", "miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
-      - wait_phase:
-          phase: "wait"
-      - stop:
-          - "miner-4"
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 2
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_view_change:
-          timeout: "10m"
-          expect_magic_block:
-            number: 3
-            sharders: ["sharder-1"]
-            miners: ["miner-1", "miner-2", "miner-3"]
-
   # Miner goes down and comes up
   - name: "Miner goes down in phase 'start' and comes up in phase 'start'"
     flow:
@@ -193,8 +64,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "start"
       - stop: ["miner-4"]
@@ -219,8 +90,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "start"
       - stop: ["miner-4"]
@@ -245,8 +116,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "start"
       - stop: ["miner-4"]
@@ -271,8 +142,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "start"
       - stop: ["miner-4"]
@@ -297,8 +168,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "start"
       - stop: ["miner-4"]
@@ -349,8 +220,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "contribute"
       - stop: ["miner-4"]
@@ -375,8 +246,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "contribute"
       - stop: ["miner-4"]
@@ -401,8 +272,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "contribute"
       - stop: ["miner-4"]
@@ -427,8 +298,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "share"
       - stop: ["miner-4"]
@@ -453,8 +324,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "share"
       - stop: ["miner-4"]
@@ -479,8 +350,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "share"
       - stop: ["miner-4"]
@@ -505,8 +376,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "publish"
       - stop: ["miner-4"]
@@ -531,8 +402,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "publish"
       - stop: ["miner-4"]
@@ -557,8 +428,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "wait"
       - stop: ["miner-4"]
@@ -583,8 +454,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "wait"
       - wait_round:
@@ -609,8 +480,8 @@ tests:
       - wait_add:
           sharders: ["sharder-1"]
           miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-      - wait_sharder_keep:
-          sharders: ["sharder-1"] # sync nodes
+      #- wait_sharder_keep:
+      #    sharders: ["sharder-1"] # sync nodes
       - wait_phase:
           phase: "wait"
       - wait_round:
