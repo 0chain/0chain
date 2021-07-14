@@ -26,9 +26,11 @@ var (
 // CalcAmount calculates and sets the billing Amount value by given price.
 // NOTE: the cost value must be represented in token units per mega byte.
 // NOTE: math/big must be used to avoid inaccuracies of floating point operations.
-func (m *Billing) CalcAmount(cost uint64) {
+func (m *Billing) CalcAmount(terms ProviderTerms) {
 	var amount int64
-	if cost > 0 {
+
+	price := terms.GetPrice()
+	if price > 0 {
 		bps := big.NewFloat(0).Add( // data usage summary: UploadBytes + DownloadBytes
 			big.NewFloat(0).SetUint64(m.DataUsage.UploadBytes),
 			big.NewFloat(0).SetUint64(m.DataUsage.DownloadBytes),
@@ -36,8 +38,12 @@ func (m *Billing) CalcAmount(cost uint64) {
 
 		amount, _ = big.NewFloat(0).Mul(
 			big.NewFloat(0).Quo(bps, big.NewFloat(million)), // data usage in mega bytes
-			big.NewFloat(0).SetUint64(cost),                 // cost per mega byte
+			big.NewFloat(0).SetInt64(price),                 // cost per mega byte
 		).Int64() // rounded of amount for data usage multiplied by cost
+	}
+
+	if minCost := terms.GetMinCost(); amount < minCost {
+		amount = minCost
 	}
 
 	m.Amount = amount

@@ -115,7 +115,7 @@ func Test_ProviderTerms_Encode(t *testing.T) {
 	}
 }
 
-func TestProviderTerms_GetAmount(t *testing.T) {
+func Test_ProviderTerms_GetAmount(t *testing.T) {
 	t.Parallel()
 
 	terms := mockProviderTerms()
@@ -146,20 +146,61 @@ func TestProviderTerms_GetAmount(t *testing.T) {
 			t.Parallel()
 
 			if got := test.terms.GetAmount(); got != test.want {
-				t.Errorf("GetAmount() got: %v | want %v", got, test.want)
+				t.Errorf("GetAmount() got: %v | want: %v", got, test.want)
 			}
 		})
 	}
 }
 
-func TestProviderTerms_GetPrice(t *testing.T) {
+func Test_ProviderTerms_GetMinCost(t *testing.T) {
+	t.Parallel()
+
+	terms := mockProviderTerms()
+	minCost, _ := big.NewFloat(0).Mul( // convert to token units price
+		big.NewFloat(billion),
+		big.NewFloat(float64(terms.MinCost)),
+	).Int64() // rounded value of price multiplied by volume
+
+	termsZeroMinCost := mockProviderTerms()
+	termsZeroMinCost.MinCost = 0
+
+	tests := [2]struct {
+		name  string
+		terms ProviderTerms
+		want  int64
+	}{
+		{
+			name:  "OK",
+			terms: terms,
+			want:  minCost,
+		},
+		{
+			name:  "Zero_Min_Cost_OK",
+			terms: termsZeroMinCost,
+			want:  0,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := test.terms.GetMinCost(); got != test.want {
+				t.Errorf("GetMinCost() got: %v | want: %v", got, test.want)
+			}
+		})
+	}
+}
+
+func Test_ProviderTerms_GetPrice(t *testing.T) {
 	t.Parallel()
 
 	terms := mockProviderTerms()
 	price, _ := big.NewFloat(0).Mul( // convert to token units price
 		big.NewFloat(billion),
 		big.NewFloat(float64(terms.Price)),
-	).Uint64() // rounded value of price multiplied by volume
+	).Int64() // rounded value of price multiplied by volume
 
 	termsZeroPrice := mockProviderTerms()
 	termsZeroPrice.Price = 0
@@ -167,7 +208,7 @@ func TestProviderTerms_GetPrice(t *testing.T) {
 	tests := [2]struct {
 		name  string
 		terms ProviderTerms
-		want  uint64
+		want  int64
 	}{
 		{
 			name:  "OK",
@@ -186,8 +227,8 @@ func TestProviderTerms_GetPrice(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if gotPrice := test.terms.GetPrice(); gotPrice != test.want {
-				t.Errorf("GetPrice() got: %v | want %v", gotPrice, test.want)
+			if got := test.terms.GetPrice(); got != test.want {
+				t.Errorf("GetPrice() got: %v | want: %v", got, test.want)
 			}
 		})
 	}
@@ -204,12 +245,12 @@ func Test_ProviderTerms_GetVolume(t *testing.T) {
 	volume, _ := big.NewFloat(0).Mul(
 		big.NewFloat(0).Quo(mbps, big.NewFloat(octet)),                // mega bytes per second
 		big.NewFloat(0).SetInt64(int64(terms.ExpiredAt-common.Now())), // duration in seconds
-	).Uint64() // rounded of bytes per second multiplied by duration
+	).Int64() // rounded of bytes per second multiplied by duration
 
 	tests := [1]struct {
 		name  string
 		terms ProviderTerms
-		want  uint64
+		want  int64
 	}{
 		{
 			name:  "OK",
@@ -241,21 +282,27 @@ func Test_ProviderTerms_decrease(t *testing.T) {
 
 	terms := mockProviderTerms()
 
-	// upload mbps quality of service up
-	terms.QoS.UploadMbps, _ = big.NewFloat(0).
-		Add(big.NewFloat(float64(terms.QoS.UploadMbps)), providerTermsAutoUpdateQoS).
-		Float32()
-	// download mbps quality of service up
-	terms.QoS.DownloadMbps, _ = big.NewFloat(0).
-		Add(big.NewFloat(float64(terms.QoS.DownloadMbps)), providerTermsAutoUpdateQoS).
-		Float32()
-	// prepare price
-	price := big.NewFloat(float64(terms.Price))
-	if price.Cmp(providerTermsAutoUpdatePrice) == 1 { // price of service down
-		terms.Price, _ = big.NewFloat(0).Sub(price, providerTermsAutoUpdatePrice).Float32()
+	if terms.AutoUpdateQoS.UploadMbps != 0 { // up the upload mbps quality of service
+		upload := big.NewFloat(float64(terms.QoS.UploadMbps))
+		update := big.NewFloat(float64(terms.AutoUpdateQoS.UploadMbps))
+		terms.QoS.UploadMbps, _ = big.NewFloat(0).Add(upload, update).Float32()
 	}
-	// prolong terms expire
-	terms.ExpiredAt += providerTermsProlongDuration
+	if terms.AutoUpdateQoS.DownloadMbps != 0 { // up the download mbps quality of service
+		download := big.NewFloat(float64(terms.QoS.DownloadMbps))
+		update := big.NewFloat(float64(terms.AutoUpdateQoS.DownloadMbps))
+		terms.QoS.DownloadMbps, _ = big.NewFloat(0).Add(download, update).Float32()
+	}
+	if terms.AutoUpdatePrice != 0 { // prepare price and auto update value
+		price := big.NewFloat(float64(terms.Price))
+		update := big.NewFloat(float64(terms.AutoUpdatePrice))
+		if price.Cmp(update) == 1 { // check if the price is greater than the value of auto update
+			terms.Price, _ = big.NewFloat(0).Sub(price, update).Float32() // down the price
+		}
+	}
+	// prolong terms. expire
+	terms.ExpiredAt += common.Timestamp(terms.ProlongDuration)
+	// the volume of terms must to be zeroed
+	terms.Volume = 0
 
 	tests := [1]struct {
 		name  string
@@ -324,22 +371,29 @@ func Test_ProviderTerms_increase(t *testing.T) {
 
 	terms := mockProviderTerms()
 
-	// price of service up
-	terms.Price, _ = big.NewFloat(0).
-		Add(big.NewFloat(float64(terms.Price)), providerTermsAutoUpdatePrice).
-		Float32()
-	// prepare upload mbps quality of service
-	upload := big.NewFloat(float64(terms.QoS.UploadMbps))
-	if upload.Cmp(providerTermsAutoUpdateQoS) == 1 { // upload mbps quality of service down
-		terms.QoS.UploadMbps, _ = big.NewFloat(0).Sub(upload, providerTermsAutoUpdateQoS).Float32()
+	if terms.AutoUpdatePrice != 0 { // up the price of service
+		price := big.NewFloat(float64(terms.Price))
+		update := big.NewFloat(float64(terms.AutoUpdatePrice))
+		terms.Price, _ = big.NewFloat(0).Add(price, update).Float32()
 	}
-	// prepare download mbps quality of service
-	download := big.NewFloat(float64(terms.QoS.DownloadMbps))
-	if download.Cmp(providerTermsAutoUpdateQoS) == 1 { // download mbps quality of service down
-		terms.QoS.DownloadMbps, _ = big.NewFloat(0).Sub(download, providerTermsAutoUpdateQoS).Float32()
+	if terms.AutoUpdateQoS.UploadMbps != 0 { // prepare upload mbps quality of service
+		upload := big.NewFloat(float64(terms.QoS.UploadMbps))
+		update := big.NewFloat(float64(terms.AutoUpdateQoS.UploadMbps))
+		if upload.Cmp(update) == 1 { // down thr upload mbps quality of service
+			terms.QoS.UploadMbps, _ = big.NewFloat(0).Sub(upload, update).Float32()
+		}
 	}
-	// prolong terms expire
-	terms.ExpiredAt += providerTermsProlongDuration
+	if terms.AutoUpdateQoS.DownloadMbps != 0 { // prepare download mbps quality of service
+		download := big.NewFloat(float64(terms.QoS.DownloadMbps))
+		update := big.NewFloat(float64(terms.AutoUpdateQoS.DownloadMbps))
+		if download.Cmp(update) == 1 { // down the download mbps quality of service
+			terms.QoS.DownloadMbps, _ = big.NewFloat(0).Sub(download, update).Float32()
+		}
+	}
+	// prolong expire of terms
+	terms.ExpiredAt += common.Timestamp(terms.ProlongDuration)
+	// the volume must to be zeroed
+	terms.Volume = 0
 
 	tests := [1]struct {
 		name  string
@@ -369,13 +423,19 @@ func Test_ProviderTerms_increase(t *testing.T) {
 func Test_ProviderTerms_validate(t *testing.T) {
 	t.Parallel()
 
+	termsZeroProlongDuration := mockProviderTerms()
+	termsZeroProlongDuration.ProlongDuration = 0
+
+	termsZeroExpiredAt := mockProviderTerms()
+	termsZeroExpiredAt.ExpiredAt = 0
+
 	termsZeroQoSUploadMbps := mockProviderTerms()
 	termsZeroQoSUploadMbps.QoS.UploadMbps = 0
 
 	termsZeroQoSDownloadMbps := mockProviderTerms()
 	termsZeroQoSDownloadMbps.QoS.DownloadMbps = 0
 
-	tests := [3]struct {
+	tests := [5]struct {
 		name  string
 		terms ProviderTerms
 		want  error
@@ -386,12 +446,22 @@ func Test_ProviderTerms_validate(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "ZeroQoSUploadMbps",
+			name:  "Zero_Prolong_Duration_ERR",
+			terms: termsZeroProlongDuration,
+			want:  errProviderTermsInvalid,
+		},
+		{
+			name:  "Zero_Expired_At_ERR",
+			terms: termsZeroExpiredAt,
+			want:  errProviderTermsInvalid,
+		},
+		{
+			name:  "Zero_QoS_Upload_Mbps_ERR",
 			terms: termsZeroQoSUploadMbps,
 			want:  errProviderTermsInvalid,
 		},
 		{
-			name:  "ZeroQoSDownloadMbps",
+			name:  "Zero_QoS_Download_Mbps_ERR",
 			terms: termsZeroQoSDownloadMbps,
 			want:  errProviderTermsInvalid,
 		},

@@ -12,35 +12,44 @@ import (
 func Test_Billing_CalcAmount(t *testing.T) {
 	t.Parallel()
 
-	bill, cost := mockBilling(), uint64(1*billion)
-
+	bill := mockBilling()
 	bps := big.NewFloat(0).Add( // data usage summary: UploadBytes + DownloadBytes
 		big.NewFloat(0).SetUint64(bill.DataUsage.UploadBytes),
 		big.NewFloat(0).SetUint64(bill.DataUsage.DownloadBytes),
 	)
 
+	terms := mockProviderTerms()
 	want, _ := big.NewFloat(0).Mul(
 		big.NewFloat(0).Quo(bps, big.NewFloat(million)), // data usage in mega bytes
-		big.NewFloat(0).SetUint64(cost),                 // cost per mega byte
+		big.NewFloat(0).SetInt64(terms.GetPrice()),      // price per mega byte
 	).Int64() // rounded of amount for data usage multiplied by cost
 
-	tests := [2]struct {
-		name string
-		bill *Billing
-		cost uint64
-		want int64
+	termsMinCost := mockProviderTerms()
+	termsMinCost.MinCost = 1000
+
+	tests := [3]struct {
+		name  string
+		bill  *Billing
+		terms ProviderTerms
+		want  int64
 	}{
 		{
-			name: "OK",
-			bill: bill,
-			cost: cost,
-			want: want,
+			name:  "OK",
+			bill:  bill,
+			terms: terms,
+			want:  want,
 		},
 		{
-			name: "Zero_OK",
-			bill: mockBilling(),
-			cost: 0,
-			want: 0,
+			name:  "Zero_Amount_OK",
+			bill:  mockBilling(),
+			terms: ProviderTerms{},
+			want:  0,
+		},
+		{
+			name:  "Min_Cost_Amount_OK",
+			bill:  mockBilling(),
+			terms: termsMinCost,
+			want:  termsMinCost.GetMinCost(),
 		},
 	}
 
@@ -53,7 +62,7 @@ func Test_Billing_CalcAmount(t *testing.T) {
 				t.Errorf("Billing.Amount is: %v | want: %v", test.bill.Amount, 0)
 			}
 
-			test.bill.CalcAmount(test.cost)
+			test.bill.CalcAmount(test.terms)
 			if test.bill.Amount != test.want { // must be the same value with test.want after called CalcAmount()
 				t.Errorf("GetVolume() got: %v | want: %v", test.bill.Amount, test.want)
 			}
@@ -71,7 +80,7 @@ func Test_Billing_Decode(t *testing.T) {
 	}
 
 	billCompleted := mockBilling()
-	billCompleted.CalcAmount(1 * billion)
+	billCompleted.CalcAmount(mockProviderTerms())
 	billCompleted.CompletedAt = common.Now()
 	blobCompleted, err := json.Marshal(billCompleted)
 	if err != nil {

@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/chain/state"
+	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 )
 
@@ -85,42 +85,55 @@ func Test_Providers_Encode(t *testing.T) {
 	}
 }
 
-func Test_Providers_contains(t *testing.T) {
+func Test_Providers_add(t *testing.T) {
 	t.Parallel()
 
 	const scID = "sc_id"
 
-	sci, prov, list := mockStateContextI(), mockProvider(), mockProviders()
+	list, sci := mockProviders(), mockStateContextI()
+	if _, err := sci.InsertTrieNode(AllProvidersKey, &list); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	prov := mockProvider()
 	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ID, providerType), &prov); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	provInvalid := mockProvider()
+	provInvalid.ID = "provider_invalid_id"
+	provInvalid.Terms.ExpiredAt = 0
+	if _, err := sci.InsertTrieNode(nodeUID(scID, provInvalid.ID, providerType), &provInvalid); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {
-		name string
-		prov *Provider
-		list Providers
-		sci  state.StateContextI
-		want bool
+		name  string
+		prov  *Provider
+		list  Providers
+		sci   chain.StateContextI
+		error bool
 	}{
 		{
-			name: "FALSE",
-			prov: &Provider{ID: "not_present_id"},
-			list: list,
-			sci:  sci,
-			want: false,
+			name:  "OK",
+			prov:  &prov,
+			list:  list,
+			sci:   sci,
+			error: false,
 		},
 		{
-			name: "In_Node_List_TRUE",
-			prov: list.Nodes.Sorted[0],
-			list: list,
-			want: true,
+			name:  "Decode_ERR",
+			prov:  &provInvalid,
+			list:  list,
+			sci:   sci,
+			error: true,
 		},
 		{
-			name: "In_State_Context_TRUE",
-			prov: &prov,
-			list: list,
-			sci:  sci,
-			want: true,
+			name:  "Internal_Unexpected_ERR",
+			prov:  &Provider{ID: "unexpected_id"},
+			list:  list,
+			sci:   sci,
+			error: true,
 		},
 	}
 
@@ -129,8 +142,8 @@ func Test_Providers_contains(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.list.contains(scID, test.prov, test.sci); got != test.want {
-				t.Errorf("contains() got: %v | want: %v", got, test.want)
+			if err := test.list.add(scID, test.prov, test.sci); (err != nil) != test.error {
+				t.Errorf("add() error: %v | want: %v", err, test.error)
 			}
 		})
 	}
@@ -141,13 +154,13 @@ func Test_extractProviders(t *testing.T) {
 
 	sci, list := mockStateContextI(), mockProviders()
 	if _, err := sci.InsertTrieNode(AllProvidersKey, &list); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {
 		name  string
 		id    datastore.Key
-		sci   state.StateContextI
+		sci   chain.StateContextI
 		want  *Providers
 		error error
 	}{

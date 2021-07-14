@@ -1,9 +1,5 @@
 package magmasc
 
-import (
-	"math/big"
-)
-
 const (
 	// Address is a SHA3-256 hex encoded hash of "magma" string.
 	// Represents address of MagmaSmartContract.
@@ -69,11 +65,7 @@ const (
 	// Provider's provider terms update MagmaSmartContract function.
 	providerTermsUpdate = "provider_terms_update"
 
-	providerTermsExpiredDuration = 1 * 60      // 1 minute
-	providerTermsProlongDuration = 1 * 60 * 60 // 1 hour
-)
-
-var (
-	providerTermsAutoUpdatePrice = big.NewFloat(0.01) // tokens ber byte
-	providerTermsAutoUpdateQoS   = big.NewFloat(0.01) // mega bits per second
+	// providerTermsExpiredDuration represents value for
+	// Provider's provider terms duration on check it expired.
+	providerTermsExpiredDuration = 1 * 60 // 1 minute
 )

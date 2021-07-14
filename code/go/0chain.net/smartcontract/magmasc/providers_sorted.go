@@ -3,6 +3,8 @@ package magmasc
 import (
 	"sort"
 	"sync"
+
+	"0chain.net/core/datastore"
 )
 
 type (
@@ -36,7 +38,8 @@ func (m *providersSorted) add(provider *Provider) bool {
 		return true // appended
 	}
 	if m.Sorted[idx].ID == provider.ID { // the same
-		return false // already have
+		m.Sorted[idx] = provider // replace
+		return false             // already have
 	}
 
 	// insert
@@ -46,7 +49,7 @@ func (m *providersSorted) add(provider *Provider) bool {
 	return true // inserted
 }
 
-func (m *providersSorted) get(id string) (*Provider, bool) {
+func (m *providersSorted) get(id datastore.Key) (*Provider, bool) {
 	idx, found := m.getIndex(id)
 	if !found {
 		return nil, false // not found
@@ -59,7 +62,7 @@ func (m *providersSorted) get(id string) (*Provider, bool) {
 	return provider, true // found
 }
 
-func (m *providersSorted) getIndex(id string) (int, bool) {
+func (m *providersSorted) getIndex(id datastore.Key) (int, bool) {
 	m.mux.RLock()
 	defer m.mux.RUnlock()
 
@@ -80,7 +83,7 @@ func (m *providersSorted) getIndex(id string) (int, bool) {
 	return -1, false // not found
 }
 
-func (m *providersSorted) remove(id string) bool {
+func (m *providersSorted) remove(id datastore.Key) bool {
 	idx, found := m.getIndex(id)
 	if found {
 		m.removeByIndex(idx)

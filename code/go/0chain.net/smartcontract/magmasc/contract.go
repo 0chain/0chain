@@ -128,7 +128,7 @@ func (m *MagmaSmartContract) billingData(dataUsage *DataUsage, sci chain.StateCo
 	}
 
 	bill.DataUsage = dataUsage
-	bill.CalcAmount(ackn.ProviderTerms.GetPrice())
+	bill.CalcAmount(ackn.ProviderTerms)
 	if _, err = sci.InsertTrieNode(bill.uid(m.ID), bill); err != nil { // update billing data
 		return nil, errWrap(errCodeDataUsage, "insert billing data failed", err)
 	}
@@ -189,33 +189,25 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 // consumerRegister allows registering Consumer in blockchain and creates
 // Consumer with Consumer.ID (equals to transaction client ID), adds it to all Consumers list,
 // creates consumerPools for new Consumer and saves results in provided state.StateContextI.
-func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, sci chain.StateContextI) (string, error) {
+func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	cons := &Consumer{}
+	if err := cons.Decode(blob); err != nil {
+		return "", errWrap(errCodeConsumerReg, "decode consumer data failed", err)
+	}
+	cons.ID = txn.ClientID
+
 	list, err := extractConsumers(AllConsumersKey, sci)
 	if err != nil {
 		return "", errWrap(errCodeConsumerReg, "fetch consumers list failed", err)
 	}
-
-	consumer := Consumer{ID: txn.ClientID}
-	if list.contains(m.ID, &consumer, sci) {
-		return "", errWrap(errCodeConsumerReg, "consumer id: "+consumer.ID, errConsumerAlreadyExists)
-
-	}
-
-	// save the all consumers
-	list.Nodes.add(&consumer)
-	if _, err = sci.InsertTrieNode(AllConsumersKey, list); err != nil {
-		return "", errWrap(errCodeConsumerReg, "insert consumers list failed", err)
-	}
-	// save the new consumer
-	uid := nodeUID(m.ID, consumer.ID, consumerType)
-	if _, err = sci.InsertTrieNode(uid, &consumer); err != nil {
-		return "", errWrap(errCodeConsumerReg, "insert consumer failed", err)
+	if err = list.add(m.ID, cons, sci); err != nil {
+		return "", errWrap(errCodeConsumerReg, "register consumer failed", err)
 	}
 
 	// update consumer register metric
 	m.SmartContractExecutionStats[consumerRegister].(metrics.Counter).Inc(1)
 
-	return string(consumer.Encode()), nil
+	return string(cons.Encode()), nil
 }
 
 // consumerSessionStop checks input for validity and complete the session with
@@ -284,37 +276,24 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 // with Provider.ID (equals to transaction client GetID), adds it to all Nodes list
 // and saves results in provided state.StateContextI.
 func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	prov := &Provider{}
+	if err := prov.Decode(blob); err != nil {
+		return "", errWrap(errCodeProviderReg, "decode provider data failed", err)
+	}
+	prov.ID = txn.ClientID
+
 	list, err := extractProviders(AllProvidersKey, sci)
 	if err != nil {
 		return "", errWrap(errCodeProviderReg, "fetch providers list failed", err)
 	}
-
-	provider := Provider{}
-	if err = provider.Decode(blob); err != nil {
-		return "", errWrap(errCodeProviderReg, "decode provider data failed", err)
-	}
-
-	provider.ID = txn.ClientID
-	if list.contains(m.ID, &provider, sci) {
-		return "", errWrap(errCodeProviderReg, "provider id: "+provider.ID, errProviderAlreadyExists)
-
-	}
-
-	// save the all providers
-	list.Nodes.add(&provider)
-	if _, err = sci.InsertTrieNode(AllProvidersKey, list); err != nil {
-		return "", errWrap(errCodeProviderReg, "insert providers list failed", err)
-	}
-	// save the new provider
-	uid := nodeUID(m.ID, provider.ID, providerType)
-	if _, err = sci.InsertTrieNode(uid, &provider); err != nil {
-		return "", errWrap(errCodeProviderReg, "fetch provider failed", err)
+	if err = list.add(m.ID, prov, sci); err != nil {
+		return "", errWrap(errCodeProviderReg, "register provider failed", err)
 	}
 
 	// update provider register metric
 	m.SmartContractExecutionStats[providerRegister].(metrics.Counter).Inc(1)
 
-	return string(provider.Encode()), nil
+	return string(prov.Encode()), nil
 }
 
 // providerTerms represents MagmaSmartContract handler.
@@ -401,6 +380,6 @@ func (m *MagmaSmartContract) tokenPollFetch(ackn *Acknowledgment, sci chain.Stat
 
 // nodeUID returns a uniq id for Node interacting with magma smart contract.
 // Should be used while inserting, removing or getting Node in state.StateContextI
-func nodeUID(scID, nodeID, nodeType string) datastore.Key {
+func nodeUID(scID, nodeID, nodeType datastore.Key) datastore.Key {
 	return "sc:" + scID + colon + nodeType + colon + nodeID
 }

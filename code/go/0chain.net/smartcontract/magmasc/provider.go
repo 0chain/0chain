@@ -12,6 +12,8 @@ type (
 	// Provider represents providers node stored in block chain.
 	Provider struct {
 		ID    datastore.Key `json:"id"`
+		ExtID datastore.Key `json:"ext_id,omitempty"`
+		Host  datastore.Key `json:"host,omitempty"`
 		Terms ProviderTerms `json:"terms"`
 	}
 )
@@ -33,6 +35,8 @@ func (m *Provider) Decode(blob []byte) error {
 	}
 
 	m.ID = provider.ID
+	m.ExtID = provider.ExtID
+	m.Host = provider.Host
 	m.Terms = provider.Terms
 
 	return nil
@@ -49,9 +53,14 @@ func (m *Provider) GetType() string {
 	return providerType
 }
 
+// Idents reports whether the providers have the same identifiers.
+func (m *Provider) Idents(prov *Provider) bool {
+	return m.ExtID == prov.ExtID && m.Host == prov.Host
+}
+
 // extractProvider extracts Provider stored in state.StateContextI
 // or returns error if blockchain state does not contain it.
-func extractProvider(scID, id string, sci chain.StateContextI) (*Provider, error) {
+func extractProvider(scID, id datastore.Key, sci chain.StateContextI) (*Provider, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, id, providerType))
 	if err != nil {
 		return nil, err

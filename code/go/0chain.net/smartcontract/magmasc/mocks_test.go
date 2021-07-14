@@ -59,21 +59,30 @@ func mockAcknowledgment() *Acknowledgment {
 
 func mockBilling() *Billing {
 	bill := Billing{
-		SessionID: "session_id",
 		DataUsage: mockDataUsage(),
+		SessionID: "session_id",
 	}
 
 	return &bill
 }
 
 func mockConsumer() Consumer {
-	return Consumer{ID: "consumer_id"}
+	return Consumer{
+		ID:    "consumer_id",
+		ExtID: "ext_id",
+		Host:  "localhost:8010",
+	}
 }
 
 func mockConsumers() Consumers {
 	list := Consumers{Nodes: &consumersSorted{}}
 	for i := 0; i < 10; i++ {
-		list.Nodes.add(&Consumer{ID: "consumer_id" + strconv.Itoa(i)})
+		id := strconv.Itoa(i)
+		list.Nodes.add(&Consumer{
+			ID:    "consumer_id" + id,
+			ExtID: "ext_id" + id,
+			Host:  "localhost:801" + id,
+		})
 	}
 
 	return list
@@ -98,18 +107,16 @@ func mockSmartContractI() *mockSmartContract {
 
 	smartContract := mockSmartContract{ID: msc.ID, SC: msc}
 	smartContract.On("Execute", argTxn, argStr, argBlob, argSci).Return(
-		func(txn *tx.Transaction, funcName string, blob []byte, sci chain.StateContextI) string {
-			if _, err := smartContract.SC.Execute(txn, funcName, blob, sci); errIs(err, errInvalidFuncName) {
+		func(txn *tx.Transaction, call string, blob []byte, sci chain.StateContextI) string {
+			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errIs(err, errInvalidFuncName) {
 				return ""
 			}
-
-			return funcName
+			return call
 		},
-		func(txn *tx.Transaction, funcName string, blob []byte, sci chain.StateContextI) error {
-			if _, err := smartContract.SC.Execute(txn, funcName, blob, sci); errIs(err, errInvalidFuncName) {
+		func(txn *tx.Transaction, call string, blob []byte, sci chain.StateContextI) error {
+			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errIs(err, errInvalidFuncName) {
 				return err
 			}
-
 			return nil
 		},
 	)
@@ -129,6 +136,8 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 func mockProvider() Provider {
 	return Provider{
 		ID:    "provider_id",
+		ExtID: "ext_id",
+		Host:  "localhost:8020",
 		Terms: mockProviderTerms(),
 	}
 }
@@ -136,7 +145,13 @@ func mockProvider() Provider {
 func mockProviders() Providers {
 	list := Providers{Nodes: &providersSorted{}}
 	for i := 0; i < 10; i++ {
-		list.Nodes.add(&Provider{ID: "provider_id" + strconv.Itoa(i)})
+		id := strconv.Itoa(i)
+		list.Nodes.add(&Provider{
+			ID:    "provider_id" + id,
+			ExtID: "ext_id" + id,
+			Host:  "localhost:802" + id,
+			Terms: ProviderTerms{},
+		})
 	}
 
 	return list
@@ -217,6 +232,9 @@ func mockStateContextI() *mockStateContext {
 		func(id datastore.Key) error {
 			if strings.Contains(id, "not_present_id") {
 				return util.ErrValueNotPresent
+			}
+			if strings.Contains(id, "unexpected_id") {
+				return errInternalUnexpected
 			}
 			if _, ok := stateContext.store[id]; ok {
 				return nil
@@ -344,9 +362,16 @@ func mockStateContextI() *mockStateContext {
 
 func mockTerms() Terms {
 	return Terms{
-		Price:     0.1,
-		Volume:    0,
-		ExpiredAt: common.Now() + providerTermsProlongDuration,
+		Price:           0.1,
+		MinCost:         0.5,
+		Volume:          0,
+		AutoUpdatePrice: 0.001,
+		AutoUpdateQoS: AutoUpdateQoS{
+			DownloadMbps: 0.001,
+			UploadMbps:   0.001,
+		},
+		ProlongDuration: 1 * 60 * 60,                  // 1 hour
+		ExpiredAt:       common.Now() + (1 * 60 * 60), // 1 hour from now
 	}
 }
 

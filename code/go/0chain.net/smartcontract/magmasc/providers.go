@@ -41,18 +41,31 @@ func (m *Providers) Encode() []byte {
 	return blob
 }
 
-// contains looks for given Provider by provided smart contract ID into state.StateContextI.
-func (m *Providers) contains(scID datastore.Key, provider *Provider, sci chain.StateContextI) bool {
-	if _, found := m.Nodes.getIndex(provider.ID); found {
-		return true
+// add tries to append consumer to nodes list.
+func (m *Providers) add(scID datastore.Key, prov *Provider, sci chain.StateContextI) error {
+	got := &Provider{}
+
+	data, err := sci.GetTrieNode(nodeUID(scID, prov.ID, providerType))
+	if err != nil && !errAny(err, util.ErrNodeNotFound, util.ErrValueNotPresent) {
+		return errWrap(errCodeFetchData, "fetch provider failed", err)
+	}
+	if data != nil { // decode provider data
+		if err = got.Decode(data.Encode()); err != nil {
+			return errWrap(errCodeDecode, "decode provider data failed", err)
+		}
 	}
 
-	uid := nodeUID(scID, provider.ID, providerType)
-	if _, err := sci.GetTrieNode(uid); err == nil {
-		return m.Nodes.add(provider)
+	if !prov.Idents(got) {
+		m.Nodes.add(prov)
+		if _, err = sci.InsertTrieNode(AllProvidersKey, m); err != nil {
+			return errWrap(errCodeInternal, "insert providers list failed", err)
+		}
+		if _, err = sci.InsertTrieNode(nodeUID(scID, prov.ID, providerType), prov); err != nil {
+			return errWrap(errCodeInternal, "insert provider failed", err)
+		}
 	}
 
-	return false
+	return nil
 }
 
 // extractProviders extracts all providers represented in JSON bytes

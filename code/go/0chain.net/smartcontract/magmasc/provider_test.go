@@ -134,11 +134,12 @@ func Test_extractProvider(t *testing.T) {
 
 	sci, prov := mockStateContextI(), mockProvider()
 	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ID, providerType), &prov); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
-	node := mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, providerType), &node); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+
+	provInvalid := mockInvalidJson{ID: "invalid_json_id"}
+	if _, err := sci.InsertTrieNode(nodeUID(scID, provInvalid.ID, providerType), &provInvalid); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {
@@ -164,7 +165,7 @@ func Test_extractProvider(t *testing.T) {
 		},
 		{
 			name:  "Decode_ERR",
-			id:    node.ID,
+			id:    provInvalid.ID,
 			sci:   sci,
 			want:  nil,
 			error: errDecodeData,

@@ -98,6 +98,44 @@ func Test_errWrapper_WrapErr(t *testing.T) {
 	}
 }
 
+func Test_errAny(t *testing.T) {
+	t.Parallel()
+
+	testErr := errNew(testCode, testText)
+	wrapErr := errWrap(wrapCode, wrapText, testErr)
+
+	tests := [2]struct {
+		name    string
+		list    []error
+		wrapErr error
+		want    bool
+	}{
+		{
+			name:    "TRUE",
+			list:    []error{testErr},
+			wrapErr: wrapErr,
+			want:    true,
+		},
+		{
+			name:    "FALSE",
+			list:    []error{testErr},
+			wrapErr: errWrap(wrapCode, wrapText, errNew(testCode, testText)),
+			want:    false,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := errAny(test.wrapErr, test.list...); got != test.want {
+				t.Errorf("errIs() got: %v | want: %v", got, test.want)
+			}
+		})
+	}
+}
+
 func Test_errIs(t *testing.T) {
 	t.Parallel()
 

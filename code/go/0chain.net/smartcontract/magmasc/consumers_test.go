@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"0chain.net/chaincore/chain/state"
+	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 )
 
@@ -30,7 +30,7 @@ func Test_Consumers_Decode(t *testing.T) {
 			want: list,
 		},
 		{
-			name:    "ERR",
+			name:    "Decode_ERR",
 			blob:    []byte(":"), // invalid json
 			wantErr: true,
 		},
@@ -85,43 +85,53 @@ func Test_Consumers_Encode(t *testing.T) {
 	}
 }
 
-func Test_Consumers_contains(t *testing.T) {
+func Test_Consumers_add(t *testing.T) {
 	t.Parallel()
 
 	const scID = "sc_id"
 
-	list := mockConsumers()
-	sci, cons := mockStateContextI(), mockConsumer()
+	list, sci := mockConsumers(), mockStateContextI()
+	if _, err := sci.InsertTrieNode(AllConsumersKey, &list); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	cons := mockConsumer()
 	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), &cons); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	node := mockInvalidJson{ID: "invalid_json_id"}
+	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, consumerType), &node); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {
-		name string
-		cons *Consumer
-		list Consumers
-		sci  state.StateContextI
-		want bool
+		name  string
+		cons  *Consumer
+		list  Consumers
+		sci   chain.StateContextI
+		error bool
 	}{
 		{
-			name: "FALSE",
-			cons: &Consumer{ID: "not_present_id"},
-			list: list,
-			sci:  sci,
-			want: false,
+			name:  "OK",
+			cons:  &cons,
+			list:  list,
+			sci:   sci,
+			error: false,
 		},
 		{
-			name: "InNodeList_TRUE",
-			cons: list.Nodes.Sorted[0],
-			list: list,
-			want: true,
+			name:  "Decode_ERR",
+			cons:  &Consumer{ID: "invalid_json_id"},
+			list:  list,
+			sci:   sci,
+			error: true,
 		},
 		{
-			name: "InStateContext_TRUE",
-			cons: &cons,
-			list: list,
-			sci:  sci,
-			want: true,
+			name:  "Internal_Unexpected_ERR",
+			cons:  &Consumer{ID: "unexpected_id"},
+			list:  list,
+			sci:   sci,
+			error: true,
 		},
 	}
 
@@ -130,8 +140,8 @@ func Test_Consumers_contains(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.list.contains(scID, test.cons, test.sci); got != test.want {
-				t.Errorf("contains() got: %v | want: %v", got, test.want)
+			if err := test.list.add(scID, test.cons, test.sci); (err != nil) != test.error {
+				t.Errorf("add() error: %v | want: %v", err, test.error)
 			}
 		})
 	}
@@ -142,13 +152,13 @@ func Test_extractConsumers(t *testing.T) {
 
 	sci, list := mockStateContextI(), mockConsumers()
 	if _, err := sci.InsertTrieNode(AllConsumersKey, &list); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {
 		name  string
 		id    datastore.Key
-		sci   state.StateContextI
+		sci   chain.StateContextI
 		want  *Consumers
 		error error
 	}{

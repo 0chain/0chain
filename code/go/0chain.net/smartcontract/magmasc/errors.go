@@ -52,10 +52,6 @@ var (
 	// that decode data was failed.
 	errDecodeData = errNew(errCodeDecode, errTextDecode)
 
-	// errConsumerAlreadyExists represents an error that can occur while
-	// Consumer is creating and saving in blockchain state.
-	errConsumerAlreadyExists = errNew(errCodeInternal, "consumer already exists")
-
 	// errInvalidFuncName represents an error that can occur while
 	// smart contract is calling with unsupported function name.
 	errInvalidFuncName = errNew(errCodeInvalidFuncName, errTextInvalidFuncName)
@@ -68,13 +64,13 @@ var (
 	// a checked value is negative.
 	errNegativeValue = errNew(errCodeBadRequest, "negative value")
 
-	// errProviderAlreadyExists represents an error that can occur while
-	// Provider is creating and saving in blockchain state.
-	errProviderAlreadyExists = errNew(errCodeInternal, "provider already exists")
-
 	// errProviderTermsInvalid represents an error
 	// that provider terms was invalidated.
 	errProviderTermsInvalid = errNew(errCodeInternal, "provider terms invalid")
+
+	// errInternalUnexpected represents an error
+	// that internal unexpected issue.
+	errInternalUnexpected = errNew(errCodeInternal, errTextUnexpected)
 
 	// errVerifyAccessPoint represents an error
 	// that verify access point id failed.
@@ -107,6 +103,18 @@ func (m *errWrapper) WrapErr(err error) *errWrapper {
 	}
 
 	return m
+}
+
+// errAny reports whether an error in err's chain
+// matches to any error provided in list.
+func errAny(err error, targets ...error) bool {
+	for _, target := range targets {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // errIs wraps function errors.Is from stdlib to avoid import it

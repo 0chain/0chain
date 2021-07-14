@@ -124,11 +124,11 @@ func Test_extractConsumer(t *testing.T) {
 
 	sci, cons := mockStateContextI(), mockConsumer()
 	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), &cons); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 	node := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, consumerType), &node); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [3]struct {

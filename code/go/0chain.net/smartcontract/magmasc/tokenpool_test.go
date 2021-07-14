@@ -186,7 +186,7 @@ func Test_tokenPool_spend(t *testing.T) {
 
 	pool, msc, sci := mockTokenPool(), mockMagmaSmartContract(), mockStateContextI()
 	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), pool); err != nil {
-		t.Fatalf("InsertTrieNode() got: %v | want: %v", err, nil)
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	poolInvalid := mockTokenPool()
