@@ -451,10 +451,6 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	// user read pool
-
-	// the request
-
 	var (
 		transfer *state.Transfer
 		req      unlockRequest
@@ -468,11 +464,6 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		req.PoolOwner = t.ClientID
 	}
 
-	var rp *readPool
-	if rp, err = ssc.getReadPool(req.PoolOwner, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
-	}
-
 	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
@@ -480,6 +471,11 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	if !isFunded {
 		return "", common.NewErrorf("read_pool_unlock_failed",
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
+	}
+
+	var rp *readPool
+	if rp, err = ssc.getReadPool(req.PoolOwner, balances); err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
 	var ap *allocationPool
