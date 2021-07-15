@@ -329,43 +329,6 @@ func Test_ProviderTerms_decrease(t *testing.T) {
 	}
 }
 
-func Test_ProviderTerms_expired(t *testing.T) {
-	t.Parallel()
-
-	termsValid := mockProviderTerms()
-
-	termsExpired := mockProviderTerms()
-	termsExpired.ExpiredAt = common.Now()
-
-	tests := [2]struct {
-		name  string
-		terms ProviderTerms
-		want  bool
-	}{
-		{
-			name:  "FALSE",
-			terms: termsValid,
-			want:  false,
-		},
-		{
-			name:  "TRUE",
-			terms: termsExpired,
-			want:  true,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			if got := test.terms.expired(); got != test.want {
-				t.Errorf("expired() got: %v | want: %v", got, test.want)
-			}
-		})
-	}
-}
-
 func Test_ProviderTerms_increase(t *testing.T) {
 	t.Parallel()
 

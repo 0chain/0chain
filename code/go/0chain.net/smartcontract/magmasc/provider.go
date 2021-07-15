@@ -12,7 +12,7 @@ type (
 	// Provider represents providers node stored in block chain.
 	Provider struct {
 		ID    datastore.Key `json:"id"`
-		ExtID datastore.Key `json:"ext_id" validate:"required"`
+		ExtID datastore.Key `json:"ext_id"`
 		Host  datastore.Key `json:"host,omitempty"`
 		Terms ProviderTerms `json:"terms"`
 	}
@@ -57,13 +57,15 @@ func (m *Provider) GetType() string {
 func (m *Provider) validate() (err error) {
 	switch { // is invalid
 	case m.ExtID == "":
-		err = errNew(errCodeBadRequest, "provider ext_id is required")
+		err = errNew(errCodeBadRequest, "provider external id is required")
+
+	case m.Terms.QoS.UploadMbps < 0:
+		err = errNew(errCodeBadRequest, "invalid provider qos upload mbps")
+
+	case m.Terms.QoS.DownloadMbps < 0:
+		err = errNew(errCodeBadRequest, "invalid provider qos download mbps")
 
 	default:
-		if err = m.Terms.validate(); err != nil {
-			return errInvalidProvider.WrapErr(err)
-		}
-
 		return nil // is valid
 	}
 

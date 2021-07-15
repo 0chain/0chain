@@ -55,7 +55,7 @@ func (m *Consumer) GetType() string {
 func (m *Consumer) validate() (err error) {
 	switch { // is invalid
 	case m.ExtID == "":
-		err = errNew(errCodeBadRequest, "consumer ext_id is required")
+		err = errNew(errCodeBadRequest, "consumer external id is required")
 
 	default:
 		return nil // is valid

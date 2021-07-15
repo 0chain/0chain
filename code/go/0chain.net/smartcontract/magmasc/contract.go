@@ -140,8 +140,8 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 	if err != nil {
 		return "", errWrap(errCodeAcceptTerms, "fetch provider failed", err)
 	}
-	if provider.Terms.expired() {
-		return "", errNew(errCodeAcceptTerms, "provider terms is expired")
+	if err = provider.Terms.validate(); err != nil {
+		return "", errNew(errCodeAcceptTerms, "invalid provider terms")
 	}
 
 	ackn.Consumer = consumer
@@ -326,6 +326,9 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 	if err := provider.Decode(blob); err != nil {
 		return "", errWrap(errCodeProviderReg, "decode provider data failed", err)
 	}
+	if err := provider.Terms.validate(); err != nil {
+		return "", errWrap(errCodeProviderReg, "validate provider failed", err)
+	}
 
 	list, err := fetchProviders(AllProvidersKey, sci)
 	if err != nil {
@@ -364,8 +367,8 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 	if err := provider.Decode(blob); err != nil {
 		return "", errWrap(errCodeProviderUpdate, "decode provider data failed", err)
 	}
-	if provider.Terms.expired() {
-		return "", errNew(errCodeProviderUpdate, "provider terms expired")
+	if err := provider.Terms.validate(); err != nil {
+		return "", errNew(errCodeProviderUpdate, "invalid provider terms")
 	}
 	if got, err := providerFetch(m.ID, provider.ExtID, sci); err != nil || got.ID != txn.ClientID {
 		return "", errWrap(errCodeProviderUpdate, "fetch provider failed", err)

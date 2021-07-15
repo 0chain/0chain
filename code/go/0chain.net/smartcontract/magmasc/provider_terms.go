@@ -157,11 +157,6 @@ func (m *ProviderTerms) decrease() *ProviderTerms {
 	return m
 }
 
-// expired checks the expiration time of the provider's terms.
-func (m *ProviderTerms) expired() bool {
-	return m.ExpiredAt <= common.Now()+providerTermsExpiredDuration
-}
-
 // increase makes automatically increase provider terms by config.
 // NOTE: math/big must be used to avoid inaccuracies of floating point operations.
 func (m *ProviderTerms) increase() *ProviderTerms {
@@ -198,14 +193,14 @@ func (m *ProviderTerms) increase() *ProviderTerms {
 func (m *ProviderTerms) validate() (err error) {
 	switch { // is invalid
 	case m.QoS.UploadMbps <= 0:
-		err = errNew(errCodeBadRequest, "qos upload_mbps is required")
+		err = errNew(errCodeBadRequest, "invalid terms qos upload mbps")
 
 	case m.QoS.DownloadMbps <= 0:
-		err = errNew(errCodeBadRequest, "qos download_mbps is required")
+		err = errNew(errCodeBadRequest, "invalid terms qos download mbps")
 
-	case m.ExpiredAt < common.Now():
-		now := time.Now().Format(time.RFC3339)
-		err = errNew(errCodeBadRequest, "expired_at should be after "+now)
+	case m.ExpiredAt < common.Now()+providerTermsExpiredDuration:
+		now := time.Now().Add(providerTermsExpiredDuration).Format(time.RFC3339)
+		err = errNew(errCodeBadRequest, "expired at must be after "+now)
 
 	default:
 		return nil // is valid
