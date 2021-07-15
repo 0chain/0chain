@@ -35,7 +35,9 @@ func NewMagmaSmartContract() sci.SmartContractInterface {
 	msc.RestHandlers["/allConsumers"] = msc.allConsumers
 	msc.RestHandlers["/allProviders"] = msc.allProviders
 	msc.RestHandlers["/billingFetch"] = msc.billingFetch
+	msc.RestHandlers["/consumerExist"] = msc.consumerExist
 	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
+	msc.RestHandlers["/providerExist"] = msc.providerExist
 	msc.RestHandlers["/providerFetch"] = msc.providerFetch
 	msc.RestHandlers["/providerTerms"] = msc.providerTerms
 

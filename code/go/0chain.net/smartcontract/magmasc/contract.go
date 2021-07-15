@@ -168,8 +168,15 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 	return string(ackn.Encode()), nil
 }
 
+// consumerExist tries to extract registered consumer
+// with given external id param and returns boolean value of it is existed.
+func (m *MagmaSmartContract) consumerExist(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
+	got, _ := sci.GetTrieNode(nodeUID(m.ID, vals.Get("ext_id"), consumerType))
+	return got != nil, nil
+}
+
 // consumerFetch tries to extract registered consumer
-// with given id param and returns boolean value of it is existed.
+// with given external id param and returns raw consumer data.
 func (m *MagmaSmartContract) consumerFetch(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
 	return consumerFetch(m.ID, vals.Get("ext_id"), sci)
 }
@@ -313,8 +320,15 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	return string(bill.Encode()), nil
 }
 
+// providerExist tries to extract registered provider
+// with given external id param and returns boolean value of it is existed.
+func (m *MagmaSmartContract) providerExist(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
+	got, _ := sci.GetTrieNode(nodeUID(m.ID, vals.Get("ext_id"), providerType))
+	return got != nil, nil
+}
+
 // providerFetch tries to extract registered provider
-// with given id param and returns boolean value of it is existed.
+// with given external id param and returns raw provider data.
 func (m *MagmaSmartContract) providerFetch(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
 	return providerFetch(m.ID, vals.Get("ext_id"), sci)
 }
