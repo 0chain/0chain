@@ -750,6 +750,11 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
+	ackn := mockAcknowledgment()
+	if _, err := sci.InsertTrieNode(ackn.uid(msc.ID), ackn); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
 	cons, consList := mockConsumer(), Consumers{Nodes: &consumersSorted{}}
 	if err := consList.add(msc.ID, cons, sci); err != nil {
 		t.Fatalf("Consumers.add() error: %v | want: %v", err, nil)
@@ -760,17 +765,14 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
-	ackn, bill := mockAcknowledgment(), mockBilling()
+	bill := mockBilling()
 	bill.CalcAmount(ackn.Provider.Terms)
 	if _, err := sci.InsertTrieNode(bill.uid(msc.ID), bill); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 	bill.CompletedAt = common.Now()
 
-	pool := tokenPool{
-		PayerID: ackn.Consumer.ID,
-		PayeeID: ackn.Provider.ID,
-	}
+	pool := tokenPool{PayerID: ackn.Consumer.ID, PayeeID: ackn.Provider.ID}
 	pool.ID = ackn.SessionID
 	pool.Balance = 1000
 	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), &pool); err != nil {
@@ -789,7 +791,7 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 		{
 			name:  "OK",
 			txn:   &tx.Transaction{ClientID: cons.ID, ToClientID: msc.ID},
-			blob:  ackn.Encode(),
+			blob:  (&Acknowledgment{SessionID: ackn.SessionID}).Encode(),
 			sci:   sci,
 			msc:   msc,
 			want:  string(bill.Encode()),
