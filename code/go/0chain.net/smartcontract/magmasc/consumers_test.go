@@ -102,7 +102,7 @@ func Test_Consumers_add(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [2]struct {
+	tests := [3]struct {
 		name  string
 		cons  *Consumer
 		list  *Consumers
@@ -117,9 +117,16 @@ func Test_Consumers_add(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "Insert_Trie_Node_ERR",
+			name:  "List_Insert_Trie_Node_ERR",
+			cons:  &Consumer{ExtID: "cannot_insert_list"},
+			list:  mockConsumers(),
+			sci:   sci,
+			error: true,
+		},
+		{
+			name:  "Consumer_Insert_Trie_Node_ERR",
 			cons:  &Consumer{ExtID: "cannot_insert_id"},
-			list:  list,
+			list:  mockConsumers(),
 			sci:   sci,
 			error: true,
 		},

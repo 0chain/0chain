@@ -42,12 +42,12 @@ func (m *Providers) Encode() []byte {
 
 // add tries to append consumer to nodes list.
 func (m *Providers) add(scID datastore.Key, prov *Provider, sci chain.StateContextI) error {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
+		return errWrap(errCodeInternal, "insert provider failed", err)
+	}
 	m.Nodes.add(prov)
 	if _, err := sci.InsertTrieNode(AllProvidersKey, m); err != nil {
 		return errWrap(errCodeInternal, "insert providers list failed", err)
-	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
-		return errWrap(errCodeInternal, "insert provider failed", err)
 	}
 
 	return nil

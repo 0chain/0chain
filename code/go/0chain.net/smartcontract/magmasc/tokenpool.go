@@ -55,6 +55,9 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *Acknowledgment, sci chain.
 	}
 
 	m.Balance = ackn.Provider.Terms.GetAmount()
+	if minCost := state.Balance(ackn.Provider.Terms.GetMinCost()); m.Balance < minCost {
+		m.Balance = minCost
+	}
 	if clientBalance < m.Balance {
 		return "", errWrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
