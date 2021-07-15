@@ -667,7 +667,6 @@ func (sc *StorageSmartContract) adjustChallengePool(
 // here we use new terms of blobbers
 func (sc *StorageSmartContract) extendAllocation(
 	t *transaction.Transaction,
-	all *StorageNodes,
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
 	uar *updateAllocationRequest,
@@ -801,7 +800,7 @@ func (sc *StorageSmartContract) extendAllocation(
 // reduceAllocation reduces size or/and expiration (no one can be increased);
 // here we use the same terms of related blobbers
 func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
-	all *StorageNodes, alloc *StorageAllocation, blobbers []*StorageNode,
+	alloc *StorageAllocation, blobbers []*StorageNode,
 	uar *updateAllocationRequest, balances chainstate.StateContextI,
 ) (err error) {
 	var (
@@ -979,13 +978,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, all, alloc, blobbers, &request, mintTokens, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, mintTokens, balances)
 	} else if request.Size != 0 || request.Expiration != 0 {
 		if mintTokens {
 			return "", common.NewError("allocation_updating_failed",
 				"cannot reduce when minting tokens")
 		}
-		err = sc.reduceAllocation(t, all, alloc, blobbers, &request, balances)
+		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
 	}
 	if err != nil {
 		return "", err
