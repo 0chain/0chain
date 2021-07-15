@@ -445,17 +445,17 @@ func Test_ProviderTerms_validate(t *testing.T) {
 		{
 			name:  "Zero_Expired_At_ERR",
 			terms: termsZeroExpiredAt,
-			want:  errProviderTermsInvalid,
+			want:  errInvalidProviderTerms,
 		},
 		{
 			name:  "Zero_QoS_Upload_Mbps_ERR",
 			terms: termsZeroQoSUploadMbps,
-			want:  errProviderTermsInvalid,
+			want:  errInvalidProviderTerms,
 		},
 		{
 			name:  "Zero_QoS_Download_Mbps_ERR",
 			terms: termsZeroQoSDownloadMbps,
-			want:  errProviderTermsInvalid,
+			want:  errInvalidProviderTerms,
 		},
 	}
 

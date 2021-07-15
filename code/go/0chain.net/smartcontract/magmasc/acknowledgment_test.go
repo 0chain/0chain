@@ -145,22 +145,22 @@ func Test_Acknowledgment_validate(t *testing.T) {
 		{
 			name: "Empty_Session_ID",
 			ackn: acknEmptySessionID,
-			want: errAcknowledgmentInvalid,
+			want: errInvalidAcknowledgment,
 		},
 		{
 			name: "Empty_Access_Point_ID",
 			ackn: acknEmptyAccessPointID,
-			want: errAcknowledgmentInvalid,
+			want: errInvalidAcknowledgment,
 		},
 		{
 			name: "Empty_Consumer_Ext_ID",
 			ackn: acknEmptyConsumerExtID,
-			want: errAcknowledgmentInvalid,
+			want: errInvalidAcknowledgment,
 		},
 		{
 			name: "Empty_Provider_Txt_ID",
 			ackn: acknEmptyProviderExtID,
-			want: errAcknowledgmentInvalid,
+			want: errInvalidAcknowledgment,
 		},
 	}
 

@@ -12,7 +12,7 @@ type (
 	// Consumer represents consumers node stored in block chain.
 	Consumer struct {
 		ID    datastore.Key `json:"id"`
-		ExtID datastore.Key `json:"ext_id,omitempty"`
+		ExtID datastore.Key `json:"ext_id"`
 		Host  datastore.Key `json:"host,omitempty"`
 	}
 )
@@ -26,6 +26,9 @@ var (
 func (m *Consumer) Decode(blob []byte) error {
 	var consumer Consumer
 	if err := json.Unmarshal(blob, &consumer); err != nil {
+		return errDecodeData.WrapErr(err)
+	}
+	if err := consumer.validate(); err != nil {
 		return errDecodeData.WrapErr(err)
 	}
 
@@ -45,6 +48,20 @@ func (m *Consumer) Encode() []byte {
 // GetType returns Consumer's type.
 func (m *Consumer) GetType() string {
 	return consumerType
+}
+
+// validate checks Consumer for correctness.
+// If it is not return errInvalidConsumer.
+func (m *Consumer) validate() (err error) {
+	switch { // is invalid
+	case m.ExtID == "":
+		err = errNew(errCodeBadRequest, "consumer ext_id is required")
+
+	default:
+		return nil // is valid
+	}
+
+	return errInvalidConsumer.WrapErr(err)
 }
 
 // consumerFetch extracts Consumer stored in state.StateContextI

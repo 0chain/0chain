@@ -54,17 +54,24 @@ func (m *Acknowledgment) uid(scID datastore.Key) datastore.Key {
 }
 
 // validate checks Acknowledgment for correctness.
-// If it is not return errAcknowledgmentInvalid.
-func (m *Acknowledgment) validate() error {
+// If it is not return errInvalidAcknowledgment.
+func (m *Acknowledgment) validate() (err error) {
 	switch { // is invalid
 	case m.SessionID == "":
+		err = errNew(errCodeBadRequest, "session_id is required")
+
 	case m.AccessPointID == "":
-	case m.Consumer.ExtID == "":
-	case m.Provider.ExtID == "":
+		err = errNew(errCodeBadRequest, "access_point_id is required")
+
+	case m.Consumer == nil || m.Consumer.ExtID == "":
+		err = errNew(errCodeBadRequest, "consumer ext_id is required")
+
+	case m.Provider == nil || m.Provider.ExtID == "":
+		err = errNew(errCodeBadRequest, "provider ext_id is required")
 
 	default:
 		return nil // is valid
 	}
 
-	return errAcknowledgmentInvalid
+	return errInvalidAcknowledgment.WrapErr(err)
 }

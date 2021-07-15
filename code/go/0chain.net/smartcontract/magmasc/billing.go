@@ -82,22 +82,29 @@ func (m *Billing) uid(scID datastore.Key) datastore.Key {
 }
 
 // validate checks given data usage is correctness for the billing.
-func (m *Billing) validate(dataUsage *DataUsage) error {
+func (m *Billing) validate(dataUsage *DataUsage) (err error) {
 	switch {
-	case dataUsage == nil: // is invalid: data usage cannon be nil
-	case m.SessionID != dataUsage.SessionID: // is invalid: invalid session id
+	case dataUsage == nil:
+		err = errNew(errCodeBadRequest, "data usage required")
 
-	case m.DataUsage == nil: // is valid: have no data usage yet
-		return nil
+	case m.SessionID != dataUsage.SessionID:
+		err = errNew(errCodeBadRequest, "invalid session_id")
 
-	// is invalid cases
+	case m.DataUsage == nil:
+		return nil // is valid: have no data usage yet
+
 	case m.DataUsage.SessionTime > dataUsage.SessionTime:
-	case m.DataUsage.UploadBytes > dataUsage.UploadBytes:
-	case m.DataUsage.DownloadBytes > dataUsage.DownloadBytes:
+		err = errNew(errCodeBadRequest, "invalid session_time")
 
-	default: // is valid: everything is ok
-		return nil
+	case m.DataUsage.UploadBytes > dataUsage.UploadBytes:
+		err = errNew(errCodeBadRequest, "invalid upload_bytes")
+
+	case m.DataUsage.DownloadBytes > dataUsage.DownloadBytes:
+		err = errNew(errCodeBadRequest, "invalid download_bytes")
+
+	default:
+		return nil // is valid - everything is ok
 	}
 
-	return errDataUsageInvalid
+	return errInvalidDataUsage.WrapErr(err)
 }

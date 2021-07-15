@@ -117,7 +117,7 @@ func Test_DataUsage_validate(t *testing.T) {
 		{
 			name:      "EmptySessionID",
 			dataUsage: duEmptySessionID,
-			want:      errDataUsageInvalid,
+			want:      errInvalidDataUsage,
 		},
 	}
 

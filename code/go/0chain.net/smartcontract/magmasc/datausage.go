@@ -47,13 +47,14 @@ func (m *DataUsage) Encode() []byte {
 }
 
 // validate checks DataUsage for correctness.
-func (m *DataUsage) validate() error {
+func (m *DataUsage) validate() (err error) {
 	switch { // is invalid
 	case m.SessionID == "":
+		err = errNew(errCodeBadRequest, "session_id is required")
 
 	default: // is valid
 		return nil
 	}
 
-	return errDataUsageInvalid
+	return errInvalidDataUsage.WrapErr(err)
 }

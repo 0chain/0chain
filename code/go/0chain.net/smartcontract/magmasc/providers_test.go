@@ -19,20 +19,22 @@ func Test_Providers_Decode(t *testing.T) {
 	}
 
 	tests := [2]struct {
-		name    string
-		blob    []byte
-		want    Providers
-		wantErr bool
+		name  string
+		blob  []byte
+		want  *Providers
+		error bool
 	}{
 		{
-			name: "OK",
-			blob: blob,
-			want: list,
+			name:  "OK",
+			blob:  blob,
+			want:  list,
+			error: false,
 		},
 		{
-			name:    "ERR",
-			blob:    []byte(":"), // invalid json
-			wantErr: true,
+			name:  "ERR",
+			blob:  []byte(":"), // invalid json
+			want:  &Providers{},
+			error: true,
 		},
 	}
 
@@ -41,8 +43,8 @@ func Test_Providers_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := Providers{}
-			if err = got.Decode(test.blob); (err != nil) != test.wantErr {
+			got := &Providers{}
+			if err = got.Decode(test.blob); (err != nil) != test.error {
 				t.Errorf("Decode() error: %v | want: %v", err, nil)
 			}
 			if !reflect.DeepEqual(got, test.want) {
@@ -63,7 +65,7 @@ func Test_Providers_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name string
-		list Providers
+		list *Providers
 		want []byte
 	}{
 		{
@@ -91,7 +93,7 @@ func Test_Providers_add(t *testing.T) {
 	const scID = "sc_id"
 
 	list, sci := mockProviders(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(AllProvidersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -103,7 +105,7 @@ func Test_Providers_add(t *testing.T) {
 	tests := [2]struct {
 		name  string
 		prov  *Provider
-		list  Providers
+		list  *Providers
 		sci   chain.StateContextI
 		error bool
 	}{
@@ -139,7 +141,7 @@ func Test_fetchProviders(t *testing.T) {
 	t.Parallel()
 
 	sci, list := mockStateContextI(), mockProviders()
-	if _, err := sci.InsertTrieNode(AllProvidersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -154,7 +156,7 @@ func Test_fetchProviders(t *testing.T) {
 			name:  "OK",
 			id:    AllProvidersKey,
 			sci:   sci,
-			want:  &list,
+			want:  list,
 			error: nil,
 		},
 		{

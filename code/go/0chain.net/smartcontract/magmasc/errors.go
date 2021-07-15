@@ -2,6 +2,7 @@ package magmasc
 
 import (
 	"errors"
+	"sync"
 )
 
 const (
@@ -36,57 +37,69 @@ type (
 		code string
 		text string
 		wrap error
+		rwmx sync.RWMutex
 	}
 )
 
 var (
-	// errAcknowledgmentInvalid represents an error
-	// that an acknowledgment was invalidated.
-	errAcknowledgmentInvalid = errNew(errCodeInternal, errTextAcknInvalid)
-
-	// errDataUsageInvalid represents an error
-	// that a data usage was invalidated.
-	errDataUsageInvalid = errNew(errCodeInternal, "data usage invalid")
-
 	// errDecodeData represents an error
 	// that decode data was failed.
 	errDecodeData = errNew(errCodeDecode, errTextDecode)
+
+	// errInvalidAccessPointID represents an error
+	// that access point id was invalidated.
+	errInvalidAccessPointID = errNew(errCodeBadRequest, "invalid access_point_id")
+
+	// errInvalidAcknowledgment represents an error
+	// that an acknowledgment was invalidated.
+	errInvalidAcknowledgment = errNew(errCodeInternal, errTextAcknInvalid)
+
+	// errInvalidConsumer represents an error
+	// that consumer was invalidated.
+	errInvalidConsumer = errNew(errCodeInternal, "invalid consumer")
+
+	// errInvalidConsumerExtID represents an error
+	// that consumer external id was invalidated.
+
+	errInvalidConsumerExtID = errNew(errCodeBadRequest, "invalid consumer_ext_id")
+	// errInvalidDataUsage represents an error
+	// that a data usage was invalidated.
+	errInvalidDataUsage = errNew(errCodeInternal, "invalid data usage")
 
 	// errInvalidFuncName represents an error that can occur while
 	// smart contract is calling with unsupported function name.
 	errInvalidFuncName = errNew(errCodeInvalidFuncName, errTextInvalidFuncName)
 
+	// errInvalidProvider represents an error
+	// that provider was invalidated.
+	errInvalidProvider = errNew(errCodeInternal, "invalid provider")
+
+	// errInvalidProviderExtID represents an error
+	// that provider external id was invalidated.
+	errInvalidProviderExtID = errNew(errCodeBadRequest, "invalid provider_ext_id")
+
+	// errInvalidProviderTerms represents an error
+	// that provider terms was invalidated.
+	errInvalidProviderTerms = errNew(errCodeInternal, "invalid provider terms")
+
 	// errInsufficientFunds represents an error that can occur while
 	// check a balance value condition.
 	errInsufficientFunds = errNew(errCodeBadRequest, "insufficient funds")
-
-	// errNegativeValue represents an error that can occur while
-	// a checked value is negative.
-	errNegativeValue = errNew(errCodeBadRequest, "negative value")
-
-	// errProviderTermsInvalid represents an error
-	// that provider terms was invalidated.
-	errProviderTermsInvalid = errNew(errCodeInternal, "provider terms invalid")
 
 	// errInternalUnexpected represents an error
 	// that internal unexpected issue.
 	errInternalUnexpected = errNew(errCodeInternal, errTextUnexpected)
 
-	// errVerifyAccessPoint represents an error
-	// that verify access point id failed.
-	errVerifyAccessPointID = errNew(errCodeBadRequest, "verify access point id failed")
-
-	// errVerifyAccessPoint represents an error
-	// that verify consumer id failed.
-	errVerifyConsumerID = errNew(errCodeBadRequest, "verify consumer id failed")
-
-	// errVerifyAccessPoint represents an error
-	// that verify provider id failed.
-	errVerifyProviderID = errNew(errCodeBadRequest, "verify provider id failed")
+	// errNegativeValue represents an error that can occur while
+	// a checked value is negative.
+	errNegativeValue = errNew(errCodeBadRequest, "negative value")
 )
 
 // Error implements error interface.
 func (m *errWrapper) Error() string {
+	m.rwmx.RLock()
+	defer m.rwmx.RUnlock()
+
 	return m.code + errDelim + m.text
 }
 
@@ -97,6 +110,9 @@ func (m *errWrapper) Unwrap() error {
 
 // WrapErr implements error wrapper interface.
 func (m *errWrapper) WrapErr(err error) *errWrapper {
+	m.rwmx.Lock()
+	defer m.rwmx.Unlock()
+
 	if err != nil && !errors.Is(m, err) {
 		m.wrap = err
 		m.text += errDelim + err.Error()
@@ -105,7 +121,7 @@ func (m *errWrapper) WrapErr(err error) *errWrapper {
 	return m
 }
 
-// errAny reports whether an error in err's chain
+// errAny reports whether an error in error's chain
 // matches to any error provided in list.
 func errAny(err error, targets ...error) bool {
 	for _, target := range targets {
@@ -130,11 +146,10 @@ func errNew(code, text string) *errWrapper {
 
 // errWrap wraps given error into a new error with format.
 func errWrap(code, text string, err error) *errWrapper {
-	wrapper := errWrapper{code: code, text: text}
-	if err != nil && !errors.Is(&wrapper, err) {
-		wrapper.wrap = err
-		wrapper.text += errDelim + err.Error()
+	wrapper := &errWrapper{code: code, text: text}
+	if err != nil && !errors.Is(wrapper, err) {
+		return wrapper.WrapErr(err)
 	}
 
-	return &wrapper
+	return wrapper
 }

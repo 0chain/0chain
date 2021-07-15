@@ -2,6 +2,7 @@ package magmasc
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 
 	"github.com/rcrowley/go-metrics"
@@ -48,14 +49,16 @@ func (m *MagmaSmartContract) acknowledgmentAcceptedVerify(_ context.Context, val
 
 	switch {
 	case ackn.AccessPointID != vals.Get("access_point_id"):
-		return nil, errVerifyAccessPointID
-	case ackn.Consumer.ID != vals.Get("consumer_id"):
-		return nil, errVerifyConsumerID
-	case ackn.Provider.ID != vals.Get("provider_id"):
-		return nil, errVerifyProviderID
+		return nil, errInvalidAccessPointID
+
+	case ackn.Consumer.ExtID != vals.Get("consumer_ext_id"):
+		return nil, errInvalidConsumerExtID
+
+	case ackn.Provider.ExtID != vals.Get("provider_ext_id"):
+		return nil, errInvalidProviderExtID
 	}
 
-	return ackn, nil
+	return ackn, nil // verified - every think is ok
 }
 
 // acknowledgmentExist tries to extract Acknowledgment with given id param
@@ -201,9 +204,14 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 // consumerSessionStop checks input for validity and complete the session with
 // stake spent tokens and refunds remaining balance by billing data.
 func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	ackn := &Acknowledgment{}
-	if err := ackn.Decode(blob); err != nil {
-		return "", errWrap(errCodeSessionStop, "decode acknowledgment failed", err)
+	var req Acknowledgment
+	if err := json.Unmarshal(blob, &req); err != nil {
+		return "", errWrap(errCodeSessionStop, "decode request failed", err)
+	}
+
+	ackn, err := m.acknowledgment(req.SessionID, sci)
+	if err != nil {
+		return "", errWrap(errCodeSessionStop, "fetch acknowledgment failed", err)
 	}
 
 	consumer, err := consumerFetch(m.ID, ackn.Consumer.ExtID, sci)
@@ -238,6 +246,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if err != nil {
 		return "", errWrap(errCodeSessionStop, "fetch providers list failed", err)
 	}
+
 	providerUpdate := *provider
 	providerUpdate.Terms.increase()
 	if err = list.add(m.ID, &providerUpdate, sci); err != nil {
@@ -261,6 +270,8 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 	if err != nil {
 		return "", errWrap(errCodeConsumerUpdate, "fetch consumer list failed", err)
 	}
+
+	consumer.ID = txn.ClientID
 	if err = list.add(m.ID, consumer, sci); err != nil {
 		return "", errWrap(errCodeConsumerUpdate, "update consumer list failed", err)
 	}

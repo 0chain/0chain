@@ -70,7 +70,7 @@ func Test_MagmaSmartContract_acknowledgment(t *testing.T) {
 			sci:   sci,
 			msc:   msc,
 			want:  nil,
-			error: errAcknowledgmentInvalid,
+			error: errInvalidAcknowledgment,
 		},
 	}
 
@@ -168,8 +168,8 @@ func Test_MagmaSmartContract_acknowledgmentAcceptedVerify(t *testing.T) {
 			vals: url.Values{
 				"session_id":      {ackn.SessionID},
 				"access_point_id": {ackn.AccessPointID},
-				"consumer_id":     {ackn.Consumer.ID},
-				"provider_id":     {ackn.Provider.ID},
+				"consumer_ext_id": {ackn.Consumer.ExtID},
+				"provider_ext_id": {ackn.Provider.ExtID},
 			},
 			sci:   sci,
 			msc:   msc,
@@ -186,43 +186,43 @@ func Test_MagmaSmartContract_acknowledgmentAcceptedVerify(t *testing.T) {
 			error: util.ErrValueNotPresent,
 		},
 		{
-			name: "Verify_Access_Point_ERR",
+			name: "Invalid_Access_Point_ERR",
 			ctx:  nil,
 			vals: url.Values{
-				"session_id":  {ackn.SessionID},
-				"consumer_id": {ackn.Consumer.ID},
-				"provider_id": {ackn.Provider.ID},
+				"session_id":      {ackn.SessionID},
+				"consumer_ext_id": {ackn.Consumer.ExtID},
+				"provider_ext_id": {ackn.Provider.ExtID},
 			},
 			sci:   sci,
 			msc:   msc,
 			want:  nil,
-			error: errVerifyAccessPointID,
+			error: errInvalidAccessPointID,
 		},
 		{
-			name: "Verify_Consumer_ERR",
+			name: "Invalid_Consumer_ExtID_ERR",
 			ctx:  nil,
 			vals: url.Values{
 				"session_id":      {ackn.SessionID},
 				"access_point_id": {ackn.AccessPointID},
-				"provider_id":     {ackn.Provider.ID},
+				"provider_ext_id": {ackn.Provider.ExtID},
 			},
 			sci:   sci,
 			msc:   msc,
 			want:  nil,
-			error: errVerifyConsumerID,
+			error: errInvalidConsumerExtID,
 		},
 		{
-			name: "Verify_Provider_ERR",
+			name: "Invalid_Provider_ExtID_ERR",
 			ctx:  nil,
 			vals: url.Values{
 				"session_id":      {ackn.SessionID},
 				"access_point_id": {ackn.AccessPointID},
-				"consumer_id":     {ackn.Consumer.ID},
+				"consumer_ext_id": {ackn.Consumer.ExtID},
 			},
 			sci:   sci,
 			msc:   msc,
 			want:  nil,
-			error: errVerifyProviderID,
+			error: errInvalidProviderExtID,
 		},
 	}
 
@@ -301,7 +301,7 @@ func Test_MagmaSmartContract_allConsumers(t *testing.T) {
 	t.Parallel()
 
 	msc, sci, list := mockMagmaSmartContract(), mockStateContextI(), mockConsumers()
-	if _, err := sci.InsertTrieNode(AllConsumersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -369,7 +369,7 @@ func Test_MagmaSmartContract_allProviders(t *testing.T) {
 	t.Parallel()
 
 	msc, sci, list := mockMagmaSmartContract(), mockStateContextI(), mockProviders()
-	if _, err := sci.InsertTrieNode(AllProvidersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 	sciInvalidJSON, node := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}

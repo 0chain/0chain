@@ -27,7 +27,6 @@ func (m *Providers) Decode(blob []byte) error {
 	if err := json.Unmarshal(blob, &sorted); err != nil {
 		return errDecodeData.WrapErr(err)
 	}
-
 	if sorted != nil {
 		m.Nodes = &providersSorted{Sorted: sorted}
 	}
@@ -61,7 +60,7 @@ func (m *Providers) add(scID datastore.Key, prov *Provider, sci chain.StateConte
 func fetchProviders(id datastore.Key, sci chain.StateContextI) (*Providers, error) {
 	providers := Providers{Nodes: &providersSorted{}}
 	if list, _ := sci.GetTrieNode(id); list != nil {
-		if err := json.Unmarshal(list.Encode(), &providers.Nodes.Sorted); err != nil {
+		if err := providers.Decode(list.Encode()); err != nil {
 			return nil, errDecodeData.WrapErr(err)
 		}
 	}

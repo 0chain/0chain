@@ -12,7 +12,7 @@ type (
 	// Provider represents providers node stored in block chain.
 	Provider struct {
 		ID    datastore.Key `json:"id"`
-		ExtID datastore.Key `json:"ext_id,omitempty"`
+		ExtID datastore.Key `json:"ext_id" validate:"required"`
 		Host  datastore.Key `json:"host,omitempty"`
 		Terms ProviderTerms `json:"terms"`
 	}
@@ -28,9 +28,8 @@ func (m *Provider) Decode(blob []byte) error {
 	var provider Provider
 	if err := json.Unmarshal(blob, &provider); err != nil {
 		return errDecodeData.WrapErr(err)
-
 	}
-	if err := provider.Terms.validate(); err != nil {
+	if err := provider.validate(); err != nil {
 		return errDecodeData.WrapErr(err)
 	}
 
@@ -51,6 +50,24 @@ func (m *Provider) Encode() []byte {
 // GetType returns Provider's type.
 func (m *Provider) GetType() string {
 	return providerType
+}
+
+// validate checks Provider for correctness.
+// If it is not return errInvalidProvider.
+func (m *Provider) validate() (err error) {
+	switch { // is invalid
+	case m.ExtID == "":
+		err = errNew(errCodeBadRequest, "provider ext_id is required")
+
+	default:
+		if err = m.Terms.validate(); err != nil {
+			return errInvalidProvider.WrapErr(err)
+		}
+
+		return nil // is valid
+	}
+
+	return errInvalidProvider.WrapErr(err)
 }
 
 // providerFetch extracts Provider stored in state.StateContextI

@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"sync"
 
 	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
@@ -24,6 +25,7 @@ type (
 	mockStateContext struct {
 		mocks.StateContextI
 		store map[datastore.Key]util.Serializable
+		mutex sync.RWMutex
 	}
 
 	// mockSmartContract implements mocked mocked smart contract interface.
@@ -73,8 +75,8 @@ func mockConsumer() *Consumer {
 	}
 }
 
-func mockConsumers() Consumers {
-	list := Consumers{Nodes: &consumersSorted{}}
+func mockConsumers() *Consumers {
+	list := &Consumers{Nodes: &consumersSorted{}}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
 		list.Nodes.add(&Consumer{
@@ -141,8 +143,8 @@ func mockProvider() *Provider {
 	}
 }
 
-func mockProviders() Providers {
-	list := Providers{Nodes: &providersSorted{}}
+func mockProviders() *Providers {
+	list := &Providers{Nodes: &providersSorted{}}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
 		list.Nodes.add(&Provider{

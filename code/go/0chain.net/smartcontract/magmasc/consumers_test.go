@@ -19,20 +19,22 @@ func Test_Consumers_Decode(t *testing.T) {
 	}
 
 	tests := [2]struct {
-		name    string
-		blob    []byte
-		want    Consumers
-		wantErr bool
+		name  string
+		blob  []byte
+		want  *Consumers
+		error bool
 	}{
 		{
-			name: "OK",
-			blob: blob,
-			want: list,
+			name:  "OK",
+			blob:  blob,
+			want:  list,
+			error: false,
 		},
 		{
-			name:    "Decode_ERR",
-			blob:    []byte(":"), // invalid json
-			wantErr: true,
+			name:  "Decode_ERR",
+			blob:  []byte(":"), // invalid json
+			want:  &Consumers{},
+			error: true,
 		},
 	}
 
@@ -41,8 +43,8 @@ func Test_Consumers_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := Consumers{}
-			if err = got.Decode(test.blob); (err != nil) != test.wantErr {
+			got := &Consumers{}
+			if err = got.Decode(test.blob); (err != nil) != test.error {
 				t.Errorf("Decode() error: %v | want: %v", err, nil)
 			}
 			if !reflect.DeepEqual(got, test.want) {
@@ -63,7 +65,7 @@ func Test_Consumers_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name string
-		list Consumers
+		list *Consumers
 		want []byte
 	}{
 		{
@@ -91,7 +93,7 @@ func Test_Consumers_add(t *testing.T) {
 	const scID = "sc_id"
 
 	list, sci := mockConsumers(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(AllConsumersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -103,7 +105,7 @@ func Test_Consumers_add(t *testing.T) {
 	tests := [2]struct {
 		name  string
 		cons  *Consumer
-		list  Consumers
+		list  *Consumers
 		sci   chain.StateContextI
 		error bool
 	}{
@@ -139,7 +141,7 @@ func Test_fetchConsumers(t *testing.T) {
 	t.Parallel()
 
 	sci, list := mockStateContextI(), mockConsumers()
-	if _, err := sci.InsertTrieNode(AllConsumersKey, &list); err != nil {
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -154,7 +156,7 @@ func Test_fetchConsumers(t *testing.T) {
 			name:  "OK",
 			id:    AllConsumersKey,
 			sci:   sci,
-			want:  &list,
+			want:  list,
 			error: nil,
 		},
 		{

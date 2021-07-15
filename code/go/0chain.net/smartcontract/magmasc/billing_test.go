@@ -237,31 +237,31 @@ func Test_Billing_validate(t *testing.T) {
 			name: "nil_Data_Usage_ERR",
 			du:   nil,
 			bill: bill,
-			want: errDataUsageInvalid,
+			want: errInvalidDataUsage,
 		},
 		{
 			name: "Invalid_Session_ID_ERR",
 			du:   duInvalidSessionID,
 			bill: bill,
-			want: errDataUsageInvalid,
+			want: errInvalidDataUsage,
 		},
 		{
 			name: "Invalid_Session_Time_ERR",
 			du:   duInvalidSessionTime,
 			bill: bill,
-			want: errDataUsageInvalid,
+			want: errInvalidDataUsage,
 		},
 		{
 			name: "Invalid_Upload_Bytes_ERR",
 			du:   duInvalidUploadBytes,
 			bill: bill,
-			want: errDataUsageInvalid,
+			want: errInvalidDataUsage,
 		},
 		{
 			name: "Invalid_Download_Bytes_ERR",
 			du:   duInvalidDownloadBytes,
 			bill: bill,
-			want: errDataUsageInvalid,
+			want: errInvalidDataUsage,
 		},
 	}
 

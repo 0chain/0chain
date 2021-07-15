@@ -194,16 +194,22 @@ func (m *ProviderTerms) increase() *ProviderTerms {
 }
 
 // validate checks ProviderTerms for correctness.
-// If it is not return errProviderTermsInvalid.
-func (m *ProviderTerms) validate() error {
+// If it is not return errInvalidProviderTerms.
+func (m *ProviderTerms) validate() (err error) {
 	switch { // is invalid
-	case m.ExpiredAt <= 0:
 	case m.QoS.UploadMbps <= 0:
-	case m.QoS.DownloadMbps <= 0:
+		err = errNew(errCodeBadRequest, "qos upload_mbps is required")
 
-	default: // is valid
-		return nil
+	case m.QoS.DownloadMbps <= 0:
+		err = errNew(errCodeBadRequest, "qos download_mbps is required")
+
+	case m.ExpiredAt < common.Now():
+		now := time.Now().Format(time.RFC3339)
+		err = errNew(errCodeBadRequest, "expired_at should be after "+now)
+
+	default:
+		return nil // is valid
 	}
 
-	return errProviderTermsInvalid
+	return errInvalidProviderTerms.WrapErr(err)
 }
