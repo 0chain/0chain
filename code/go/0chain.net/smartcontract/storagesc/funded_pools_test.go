@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/core/util"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -27,11 +28,19 @@ func TestAddToFundedPools(t *testing.T) {
 		var ssc = &StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		var existingPools fundedPools = p.existing
-		balances.On(
-			"GetTrieNode",
-			fundedPoolsKey(ssc.ID, p.client),
-		).Return(&existingPools, nil).Once()
+		if len(p.existing) != 0 {
+			var existingPools fundedPools = p.existing
+			balances.On(
+				"GetTrieNode",
+				fundedPoolsKey(ssc.ID, p.client),
+			).Return(&existingPools, nil).Once()
+		} else {
+			balances.On(
+				"GetTrieNode",
+				fundedPoolsKey(ssc.ID, p.client),
+			).Return(nil, util.ErrValueNotPresent).Once()
+		}
+
 		balances.On(
 			"InsertTrieNode",
 			fundedPoolsKey(ssc.ID, p.client),
@@ -66,6 +75,13 @@ func TestAddToFundedPools(t *testing.T) {
 				client:   mockClient,
 				newPool:  mockNewPool,
 				existing: []string{mockExistingId},
+			},
+		},
+		{
+			name: "ok_no_existing",
+			parameters: parameters{
+				client:  mockClient,
+				newPool: mockNewPool,
 			},
 		},
 	}
@@ -107,11 +123,19 @@ func TestIsFundedPool(t *testing.T) {
 		var ssc = &StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
-		var existingPools fundedPools = p.existing
-		balances.On(
-			"GetTrieNode",
-			fundedPoolsKey(ssc.ID, p.client),
-		).Return(&existingPools, nil).Once()
+
+		if len(p.existing) != 0 {
+			var existingPools fundedPools = p.existing
+			balances.On(
+				"GetTrieNode",
+				fundedPoolsKey(ssc.ID, p.client),
+			).Return(&existingPools, nil).Once()
+		} else {
+			balances.On(
+				"GetTrieNode",
+				fundedPoolsKey(ssc.ID, p.client),
+			).Return(nil, util.ErrValueNotPresent).Once()
+		}
 
 		return ssc, balances
 	}
@@ -145,6 +169,13 @@ func TestIsFundedPool(t *testing.T) {
 			},
 			want: want{
 				ok: true,
+			},
+		},
+		{
+			name: "ok_not_found_no_existing_funding_pool",
+			parameters: parameters{
+				client: mockClient,
+				poolId: mockPoolId,
 			},
 		},
 	}

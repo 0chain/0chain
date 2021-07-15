@@ -31,8 +31,8 @@ func (ssc *StorageSmartContract) addToFundedPools(
 	if err != nil {
 		return fmt.Errorf("error getting funded pools: %v", err)
 	}
-	pools = append(pools, poolId)
-	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, clientId), &pools)
+	*pools = append(*pools, poolId)
+	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, clientId), pools)
 	return nil
 }
 
@@ -44,7 +44,7 @@ func (ssc *StorageSmartContract) isFundedPool(
 	if err != nil {
 		return false, fmt.Errorf("error getting funded pools: %v", err)
 	}
-	for _, id := range pools {
+	for _, id := range *pools {
 		if id == poolId {
 			return true, nil
 		}
@@ -73,16 +73,19 @@ func (ssc *StorageSmartContract) getFundedPoolsBytes(
 func (ssc *StorageSmartContract) getFundedPools(
 	clientID datastore.Key,
 	balances cstate.StateContextI,
-) (fundedPools, error) {
+) (*fundedPools, error) {
 	var poolb []byte
 	var err error
-	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
-		return nil, err
-	}
 	fp := new(fundedPools)
+	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		return fp, nil
+	}
 	err = fp.Decode(poolb)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return *fp, nil
+	return fp, nil
 }
