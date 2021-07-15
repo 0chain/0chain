@@ -162,26 +162,14 @@ func (sc *Chain) setCycleBounds(_ context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
 	cb := &bss.cycle[scanMode].bounds
 
-	// Clear old bounds
-	*cb = CycleBounds{}
-	config := &sc.HCCycleScan[scanMode]
-	cb.window = config.Window
-
-	//roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
 	r := sc.GetLatestFinalizedBlock().Round
+	cb.window = r - cb.highRound
 	cb.highRound = r
 	if r == 0 {
 		cb.highRound = 1
 	}
 
-	// Start from the high round
-	cb.currentRound = cb.highRound
-	if cb.window == 0 || cb.window > cb.highRound {
-		// Cover entire blockchain.
-		cb.lowRound = 1
-	} else {
-		cb.lowRound = cb.highRound - cb.window + 1
-	}
+	cb.lowRound = cb.highRound - cb.window
 }
 
 // HealthCheckSetup - checks the health for each round
