@@ -284,7 +284,6 @@ func TestExtendAllocation(t *testing.T) {
 		StorageSmartContract,
 		transaction.Transaction,
 		StorageAllocation,
-		*StorageNodes,
 		[]*StorageNode,
 		chainState.StateContextI,
 	) {
@@ -328,11 +327,9 @@ func TestExtendAllocation(t *testing.T) {
 		require.True(t, len(args.poolFunds) > 0)
 
 		bCount := sa.DataShards + sa.ParityShards
-		var sNodes = StorageNodes{}
 		var blobbers []*StorageNode
 		for i := 0; i < mockNumAllBlobbers; i++ {
 			mockBlobber := makeMockBlobber(i)
-			sNodes.Nodes.add(mockBlobber)
 
 			if i < sa.DataShards+sa.ParityShards {
 				blobbers = append(blobbers, mockBlobber)
@@ -423,7 +420,7 @@ func TestExtendAllocation(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		return ssc, txn, sa, &sNodes, blobbers, balances
+		return ssc, txn, sa, blobbers, balances
 	}
 
 	testCases := []struct {
@@ -488,11 +485,10 @@ func TestExtendAllocation(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			ssc, txn, sa, allBlobbers, aBlobbers, balances := setup(t, tt.args)
+			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
 
 			err := ssc.extendAllocation(
 				&txn,
-				allBlobbers,
 				&sa,
 				aBlobbers,
 				&tt.args.request,
