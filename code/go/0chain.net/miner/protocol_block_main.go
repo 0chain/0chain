@@ -88,7 +88,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			}
 			return false
 		}
-		if err := mc.UpdateState(b, txn); err != nil {
+		if err := mc.UpdateState(ctx, b, txn); err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
 					zap.String("txn", txn.Hash), zap.Int32("idx", idx),
@@ -273,7 +273,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", count))
-	mc.StateSanityCheck(ctx, b)
+	block.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))

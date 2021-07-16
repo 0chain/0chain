@@ -123,7 +123,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger("/tmp/state.txt")
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
@@ -201,10 +201,10 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
-	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)

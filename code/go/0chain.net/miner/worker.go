@@ -118,7 +118,12 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						}
 					}(ctx)
 				} else {
-					logging.Logger.Debug("Round timeout, nil miner round", zap.Int64("round", cround))
+					// set current round to latet finalized block
+					lfbr := mc.GetLatestFinalizedBlock().Round
+					mc.SetCurrentRound(lfbr)
+					logging.Logger.Debug("Round timeout, nil miner round, set current round to lfb round",
+						zap.Int64("nil round", cround),
+						zap.Int64("lfb round", lfbr))
 				}
 			} else {
 				cround = mc.GetCurrentRound()

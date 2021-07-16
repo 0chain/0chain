@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"reflect"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 
 	"github.com/0chain/gorocksdb"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/exp/rand"
 )
 
 const dataDir = "tmp"

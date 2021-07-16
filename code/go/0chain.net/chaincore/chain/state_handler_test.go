@@ -3,6 +3,7 @@ package chain_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -463,7 +464,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/configs_500",
+			name: "Minersc_/configs_Err_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -2064,7 +2065,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Minersc_/configs_500",
+			name: "Minersc_/configs_Err_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -3332,7 +3333,9 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}
 
 				test.chain.HandleSCRest(test.args.w, test.args.r)
-				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode)
+				d, err := ioutil.ReadAll(test.args.w.Result().Body)
+				require.NoError(t, err)
+				assert.Equal(t, test.wantStatus, test.args.w.Result().StatusCode, string(d))
 			},
 		)
 	}
