@@ -185,9 +185,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		er.GetRoundNumber())
 	if err != nil {
 		Logger.Error("notarization verification failed",
+			zap.Error(err),
 			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Error(err))
+			zap.String("block", b.Hash))
 		return
 	}
 
