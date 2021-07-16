@@ -349,6 +349,7 @@ func TestTransferAllocation(t *testing.T) {
 	const (
 		mockNewOwnerId        = "mock new owner id"
 		mockNewOwnerPublicKey = "mock new owner public key"
+		mockOldOwner          = "mock old owner"
 		mockCuratorId         = "mock curator id"
 		mockAllocationId      = "mock allocation id"
 		mockNotAllocationId   = "mock not allocation id"
@@ -382,7 +383,8 @@ func TestTransferAllocation(t *testing.T) {
 		require.NoError(t, err)
 
 		var sa = StorageAllocation{
-			ID: p.info.AllocationId,
+			Owner: mockOldOwner,
+			ID:    p.info.AllocationId,
 		}
 		for _, curator := range p.existingCurators {
 			sa.Curators = append(sa.Curators, curator)
@@ -427,6 +429,40 @@ func TestTransferAllocation(t *testing.T) {
 				return sa.ID == p.info.AllocationId &&
 					sa.Owner == p.info.NewOwnerId &&
 					sa.OwnerPublicKey == p.info.NewOwnerPublicKey
+			})).Return("", nil).Once()
+
+		var oldClientAlloc = ClientAllocation{
+			ClientID: mockOldOwner,
+			Allocations: &Allocations{
+				List: sortedList{},
+			},
+		}
+		oldClientAlloc.Allocations.List.add(p.info.AllocationId)
+		balances.On(
+			"GetTrieNode", oldClientAlloc.GetKey(ssc.ID),
+		).Return(&oldClientAlloc, nil).Once()
+		balances.On(
+			"InsertTrieNode",
+			oldClientAlloc.GetKey(ssc.ID),
+			mock.MatchedBy(func(ca *ClientAllocation) bool {
+				return ca.ClientID == mockOldOwner &&
+					len(ca.Allocations.List) == 0
+			})).Return("", nil).Once()
+
+		var newClientAlloc = ClientAllocation{
+			ClientID:    p.info.NewOwnerId,
+			Allocations: &Allocations{},
+		}
+		balances.On(
+			"GetTrieNode", newClientAlloc.GetKey(ssc.ID),
+		).Return(&newClientAlloc, nil).Once()
+		balances.On(
+			"InsertTrieNode",
+			newClientAlloc.GetKey(ssc.ID),
+			mock.MatchedBy(func(ca *ClientAllocation) bool {
+				_, ok := ca.Allocations.List.getIndex(p.info.AllocationId)
+				return ca.ClientID == p.info.NewOwnerId &&
+					len(ca.Allocations.List) == 1 && ok
 			})).Return("", nil).Once()
 
 		return args{ssc, txn, input, balances}
