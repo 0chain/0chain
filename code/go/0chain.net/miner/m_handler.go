@@ -318,6 +318,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 	if err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
 		r.GetRoundNumber()); err != nil {
+		logging.Logger.Error("not. block handler -- verify notarization failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
 		return nil, err
 	}
 
