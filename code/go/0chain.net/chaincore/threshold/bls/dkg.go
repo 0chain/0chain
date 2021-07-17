@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/herumi/bls-go-binary/bls"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"github.com/herumi/bls/ffi/go/bls"
 )
 
 /*DKG - to manage DKG process */

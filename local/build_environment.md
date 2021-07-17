@@ -26,7 +26,7 @@ which will come apparent when you run your miner.
 
 More likely you have a response similar to
 ```shell
-# github.com/herumi/bls/ffi/go/bls
+# github.com/herumi/bls-go-binary/bls
 cgo: exec gcc: exec: "gcc": executable file not found in $PATH
 # github.com/valyala/gozstd
 cgo: exec gcc: exec: "gcc": executable file not found in $PATH
@@ -110,17 +110,19 @@ sudo apt-get install libssl-dev
 > you downgrade to version 1.0 or upgrade to version 1.1.1j or higher.
 
 ```shell
-wget https://github.com/herumi/mcl/archive/v0.98.tar.gz
-tar -xf v0.98.tar.gz
+wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
+tar -xf master.tar.gz
 mv mcl* mcl
-wget https://github.com/herumi/bls/archive/2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz 
-tar -xf 2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz
-mv bls* bls 
 cd mcl
 make -j $(nproc) lib/libmclbn256.so 
 sudo make install
 sudo cp lib/libmclbn256.so /usr/local/lib 
-cd ../bls
+```
+```shell
+wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz
+tar -xf master.tar.gz
+mv bls* bls
+cd bls
 make 
 sudo make install
 ```

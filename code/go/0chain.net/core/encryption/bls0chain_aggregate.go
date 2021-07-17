@@ -3,7 +3,7 @@ package encryption
 import (
 	"errors"
 
-	"github.com/herumi/bls/ffi/go/bls"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
 //BLS0ChainAggregateSignatureScheme - a scheme that can aggregate signatures for BLS0Chain signature scheme
