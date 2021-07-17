@@ -69,7 +69,7 @@ tested docker file wants to install an old version of RocksDB,
 so we will do that.
 ```shell
 cd ~/Downloads
-wget https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz
+wget https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz
 tar -xf v5.18.3.tar.gz
 cd rocksdb-5.18.3
 make OPT=-g0 USE_RTTI=1
