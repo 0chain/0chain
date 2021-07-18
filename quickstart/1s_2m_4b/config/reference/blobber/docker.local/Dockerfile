@@ -6,10 +6,15 @@ RUN apk add --update --no-cache build-base linux-headers git cmake bash perl gre
 RUN apk add gmp gmp-dev openssl-dev && \
     cd /tmp && \
     wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz && \
     mv mcl* mcl && \
+    mv bls* bls && \
     make -C mcl -j $(nproc) lib/libmclbn256.so install && \
     cp mcl/lib/libmclbn256.so /usr/local/lib && \
-    rm -R /tmp/mcl
+    make MCL_DIR=../mcl -C bls -j $(nproc) install && \
+    rm -R /tmp/mcl && \
+    rm -R /tmp/bls
+
 #TODO: create shared image and remove code duplicates!
 RUN git clone https://github.com/herumi/bls /tmp/bls && \
     cd /tmp/bls && \
