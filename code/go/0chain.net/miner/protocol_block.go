@@ -1,12 +1,13 @@
 package miner
 
 import (
-	"0chain.net/smartcontract/storagesc"
 	"bytes"
 	"context"
 	"fmt"
 	"strconv"
 	"time"
+
+	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
@@ -52,7 +53,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(b, txn); err != nil {
+	if err := mc.UpdateState(ctx, b, txn); err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))

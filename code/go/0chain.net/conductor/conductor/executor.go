@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -18,6 +19,29 @@ func (r *Runner) setupTimeout(tm time.Duration) {
 	if tm <= 0 {
 		<-r.timer.C // drain zero timeout
 	}
+}
+
+func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err error) {
+	var n, ok = r.conf.Nodes.NodeByName(name)
+	if !ok {
+		return fmt.Errorf("(doStart): unknown node: %q", name)
+	}
+	if n.IsStarted() {
+		if errIfAlreadyStarted {
+			return fmt.Errorf("(doStart): node already started: %s", n.Name)
+		} else {
+			return nil
+		}
+	}
+	// miners and sharders, but skip blobbers
+	if !r.conf.IsSkipWait(name) {
+		r.server.AddNode(name, lock)   // expected server interaction
+		r.waitNodes[name] = struct{}{} // wait list
+	}
+	if err := n.Start(r.conf.Logs); err != nil {
+		return fmt.Errorf("starting %s: %v", n.Name, err)
+	}
+	return nil
 }
 
 //
@@ -41,7 +65,11 @@ func (r *Runner) SetMonitor(name NodeName) (err error) {
 func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 	r.stopAll()
 	r.resetRounds()
-	return r.conf.CleanupBC()
+	err = r.conf.CleanupBC()
+	if err != nil {
+		log.Printf("Cleanup_BC: do cleanup result %v", err)
+	}
+	return err
 }
 
 //
@@ -60,19 +88,8 @@ func (r *Runner) Start(names []NodeName, lock bool,
 
 	// start nodes
 	for _, name := range names {
-		var n, ok = r.conf.Nodes.NodeByName(name) //
-		if !ok {
-			return fmt.Errorf("(start): unknown node: %q", name)
-		}
-
-		// miners and sharders, but skip blobbers
-		if !r.conf.IsSkipWait(name) {
-			r.server.AddNode(name, lock)   // expected server interaction
-			r.waitNodes[name] = struct{}{} // wait list
-		}
-
-		if err = n.Start(r.conf.Logs); err != nil {
-			return fmt.Errorf("starting %s: %v", n.Name, err)
+		if err := r.doStart(name, lock, true); err != nil {
+			return err
 		}
 	}
 	return
@@ -113,6 +130,26 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		log.Print(n.Name, " stopped")
 	}
 	return
+}
+
+//
+// checks
+//
+
+func (r *Runner) ExpectActiveSet(emb config.ExpectMagicBlock) (
+	err error) {
+
+	if r.verbose {
+		log.Print(" [INF] checking the active set ")
+	}
+	if r.lastVC == nil {
+		return errors.New("no VC info yet!")
+	}
+	err = r.checkMagicBlock(&emb, r.lastVC)
+	if err == nil {
+		log.Println("[OK] active set")
+	}
+	return err
 }
 
 //
@@ -227,6 +264,14 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 
 	r.setupTimeout(tm)
 	r.waitAdd = wadd
+	if wadd.Start {
+		// start nodes that haven't been started yet
+		for _, name := range append(wadd.Sharders, append(wadd.Miners, wadd.Blobbers...)...) {
+			if err := r.doStart(name, false, false); err != nil {
+				return err
+			}
+		}
+	}
 	return
 }
 
@@ -247,7 +292,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 		log.Print(" [INF] wait no progress ", wait.String())
 	}
 
-	r.waitNoProgressUntil = time.Now().Add(wait)
+	r.waitNoProgress = config.WaitNoProgress{Start: time.Now().Add(noProgressSeconds * time.Second), Until: time.Now().Add(wait)}
 	r.setupTimeout(wait)
 	return
 }

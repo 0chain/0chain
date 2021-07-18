@@ -140,7 +140,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				return false
 			}
 		}
-		if err := mc.UpdateState(b, txn); err != nil {
+		if err := mc.UpdateState(ctx, b, txn); err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
@@ -314,7 +314,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	logging.Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
-	mc.StateSanityCheck(ctx, b)
+	block.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))

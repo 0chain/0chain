@@ -1,9 +1,9 @@
 package minersc
 
 import (
-	"fmt"
 	"reflect"
 	"runtime"
+	"sort"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -375,58 +375,45 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	return nil
 }
 
-func (msc *MinerSmartContract) reduceShardersList(
-	keep,
+func (msc *MinerSmartContract) reduceShardersList(keep,
 	all *MinerNodes,
 	gn *GlobalNode,
-	balances cstate.StateContextI) (nodes []*MinerNode, err error) {
+	balances cstate.StateContextI) (list []*MinerNode, err error) {
 
-	simpleNodes := NewSimpleNodes()
+	pmb := gn.prevMagicBlock(balances)
 
-	tmpMinerNodes := make([]*MinerNode, 0, len(keep.Nodes))
-
-	for _, keepNode := range keep.Nodes {
-		var found = all.FindNodeById(keepNode.ID)
+	list = make([]*MinerNode, 0, len(keep.Nodes))
+	for _, n := range keep.Nodes {
+		found := all.FindNodeById(n.ID)
 		if found == nil {
 			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
-				" keep list doesn't exists in all sharders list: %s", keepNode.ID)
+				" keep list doesn't exists in all sharders list: %s", n.ID)
 		}
-		tmpMinerNodes = append(tmpMinerNodes, found)
-		simpleNodes[found.ID] = found.SimpleNode
+		list = append(list, found)
 	}
 
-	if len(simpleNodes) < gn.MinS {
-		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
+	if len(list) <= gn.MaxS {
+		return // doesn't need to sort, has sharder from previous set
 	}
 
-	var pmbrss int64
-	var pmbnp *node.Pool
-	pmb := balances.GetLastestFinalizedMagicBlock()
-	if pmb != nil {
-		pmbrss = pmb.RoundRandomSeed
-		if pmb.MagicBlock != nil {
-			pmbnp = pmb.MagicBlock.Sharders
+	// get max staked
+	sort.SliceStable(list, func(i, j int) bool {
+		if list[i].TotalStaked == list[j].TotalStaked {
+			return list[i].ID < list[j].ID
 		}
-	}
-	simpleNodes.reduce(gn.MaxS, gn.XPercent, pmbrss, pmbnp)
 
-	nodes = make([]*MinerNode, 0, len(simpleNodes))
+		return list[i].TotalStaked > list[j].TotalStaked
+	})
 
-	for _, mn := range tmpMinerNodes {
-		if sn, ok := simpleNodes[mn.ID]; ok {
-			mn.SimpleNode = sn
-			nodes = append(nodes, mn)
-		}
-	}
-
-	if !gn.hasPrevSharderInList(nodes, balances) {
-		var prev = gn.rankedPrevSharders(nodes, balances)
+	if !hasPrevSharderInList(pmb, list[:gn.MaxS]) {
+		var prev = rankedPrevSharders(pmb, list)
 		if len(prev) == 0 {
 			panic("must not happen")
 		}
-		nodes = append(nodes, prev[0])
+		list[gn.MaxS-1] = prev[0] // best rank
 	}
 
+	list = list[:gn.MaxS]
 	return
 }
 

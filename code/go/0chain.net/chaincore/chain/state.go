@@ -106,25 +106,20 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, balances bcstate.StateContextI) (string, error) {
+func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances bcstate.StateContextI) (string, error) {
 	var output string
 	var err error
 	ts := time.Now()
-	if balances.GetBlock().IsBlockNotarized() || c.SmartContractTimeout == 0 {
-		output, err = smartcontract.ExecuteSmartContract(common.GetRootContext(), t, balances)
-		SmartContractExecutionTimer.Update(time.Since(ts))
-		return output, err
-	}
 	done := make(chan bool, 1)
-	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
+	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout)
 	defer cancelf()
 	go func() {
-		output, err = smartcontract.ExecuteSmartContract(ctx, t, balances)
+		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
 		done <- true
 	}()
 	select {
-	case <-time.After(c.SmartContractTimeout):
-		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
+	case <-cctx.Done():
+		return "", common.NewError("smart_contract_execution_ctx_err", cctx.Err().Error())
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -139,10 +134,10 @@ func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, balances bcstat
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(b, txn)
+	return c.updateState(ctx, b, txn)
 }
 
 // NewStateContext creation helper.
@@ -157,7 +152,7 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 		c.GetSignatureScheme)
 }
 
-func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
+func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
 	err error) {
 
 	// check if the block's ClientState has root value
@@ -178,7 +173,8 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 
 	case transaction.TxnTypeSmartContract:
 		var output string
-		if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
+		t := time.Now()
+		if output, err = c.ExecuteSmartContract(ctx, txn, sctx); err != nil {
 			logging.Logger.Error("Error executing the SC", zap.Any("txn", txn),
 				zap.Error(err))
 			return
@@ -186,7 +182,8 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),
-			zap.Any("txn_hash", txn.Hash))
+			zap.Any("txn_hash", txn.Hash),
+			zap.Any("txn_exec_time", time.Since(t)))
 
 	case transaction.TxnTypeData:
 

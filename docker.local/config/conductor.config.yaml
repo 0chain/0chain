@@ -39,6 +39,14 @@ nodes:
     start_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml up"
     stop_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml down"
 
+  - name: "sharder-4"
+    id: 600396361b3c9efc3a1ad85df6930163591be04a8c12bc5226414d34a81cb8e5
+    work_dir: "docker.local/sharder4"
+    env: SHARDER=4
+    start_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml up"
+    stop_command: "docker-compose -p sharder4 -f ../build.sharder/b0docker-compose.yml down"
+
+    
   # miners
   - name: "miner-1"
     id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
