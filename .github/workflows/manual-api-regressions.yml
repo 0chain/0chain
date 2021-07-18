@@ -50,7 +50,7 @@ jobs:
         if: ${{ steps.network-check.outputs.VALID_NETWORK }}
         uses: actions/upload-artifact@v2
         with: 
-         name: RunReports
+         name: "TestReport-${{ github.event.inputs.network }}-${{ steps.time.outputs.time }}"
          path: "./${{ github.event.inputs.network }}/latest"
          
       - name: Deploy report page
