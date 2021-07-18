@@ -58,13 +58,13 @@ func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
 	if result == false {
-		return ErrKeyRead
+		return ErrKeyRead()
 	}
 	publicKey := scanner.Text()
 	b0.SetPublicKey(publicKey)
 	result = scanner.Scan()
 	if result == false {
-		return ErrKeyRead
+		return ErrKeyRead()
 	}
 	privateKey := scanner.Text()
 	privateKeyBytes, err := hex.DecodeString(privateKey)

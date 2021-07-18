@@ -243,7 +243,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var pb *block.Block
 	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
-		return nil, block.ErrPreviousBlockUnavailable
+		return nil, block.ErrPreviousBlockUnavailable()
 	}
 
 	if err = mc.ValidateTransactions(ctx, b); err != nil {

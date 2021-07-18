@@ -488,9 +488,9 @@ func TestMPTDelete(t *testing.T) {
 	doStrValInsert(t, mpt2, "612345", "")
 
 	// delete not existent node
-	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound)
-	doDelete(t, mpt2, "61251234", ErrNodeNotFound)
-	doDelete(t, mpt2, "613512", ErrNodeNotFound)
+	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound())
+	doDelete(t, mpt2, "61251234", ErrNodeNotFound())
+	doDelete(t, mpt2, "613512", ErrNodeNotFound())
 }
 
 func TestMPTUniverse(t *testing.T) {
@@ -574,7 +574,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	val, err := mpt.GetNodeValue(Path(key))
 	if value == "" {
-		if !(val == nil || err == ErrValueNotPresent) {
+		if !(val == nil || err == ErrValueNotPresent()) {
 			t.Fatalf("setting value to blank didn't return nil value: %v, %v",
 				val, err)
 		}

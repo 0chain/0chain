@@ -15,7 +15,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
 	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 			zap.String("key", pkey))
 		return false
@@ -284,7 +284,7 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 			}
 		}
 
-		return nil, util.ErrValueNotPresent
+		return nil, util.ErrValueNotPresent()
 	}
 
 	getFuncs := []func() (*MinerNode, error){
@@ -302,7 +302,7 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 		}
 
 		switch err {
-		case util.ErrNodeNotFound, util.ErrValueNotPresent:
+		case util.ErrNodeNotFound(), util.ErrValueNotPresent():
 			mn = NewMinerNode()
 			mn.ID = id
 			continue

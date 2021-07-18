@@ -42,11 +42,11 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 		}
 
 		switch {
-		case errors.Is(err, ErrBadRequest):
+		case errors.Is(err, ErrBadRequest()):
 			w.WriteHeader(http.StatusBadRequest)
-		case errors.Is(err, ErrInternal):
+		case errors.Is(err, ErrInternal()):
 			w.WriteHeader(http.StatusInternalServerError)
-		case errors.Is(err, ErrNoResource):
+		case errors.Is(err, ErrNoResource()):
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			w.WriteHeader(http.StatusBadRequest)

@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrSendingToSelf = errors.New("sending_to_self", "Message can't be sent to oneself")
+var ErrSendingToSelf = errors.Register("sending_to_self", "Message can't be sent to oneself")
 
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
 var MaxConcurrentRequests = 2
@@ -37,10 +37,10 @@ func (np *Pool) SendAll(handler SendHandler) []*Node {
 func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	recepient := np.GetNode(to)
 	if recepient == nil {
-		return false, ErrNodeNotFound
+		return false, ErrNodeNotFound()
 	}
 	if Self.IsEqual(recepient) {
-		return false, ErrSendingToSelf
+		return false, ErrSendingToSelf()
 	}
 	return handler(recepient), nil
 }
@@ -392,7 +392,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		entity, err := getRequestEntity(r, entityMetadata)
 		if err != nil {
-			if err == NoDataErr {
+			if err == NoDataErr() {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.AddReceived(1)
 				return

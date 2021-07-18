@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -227,7 +228,7 @@ func TestMintReward(t *testing.T) {
 			err := mintReward(args.sp, args.value, args.balances)
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
-				require.EqualValues(t, tt.want.errorMsg, err.Error())
+				require.EqualValues(t, tt.want.errorMsg, errors.ExcludeLocation(err))
 				return
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))

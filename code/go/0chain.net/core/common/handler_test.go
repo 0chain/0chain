@@ -18,7 +18,7 @@ func TestRespond(t *testing.T) {
 	t.Parallel()
 
 	var (
-		err  = error(errors.New("code", "msg"))
+		err  = errors.New("code", "msg")
 		data = map[string]string{
 			"key": "value",
 		}

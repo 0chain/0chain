@@ -15,6 +15,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -72,7 +73,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 		} else {
 			balances.On(
 				"GetTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
-			).Return(nil, util.ErrValueNotPresent).Once()
+			).Return(nil, util.ErrValueNotPresent()).Once()
 		}
 
 		balances.On("InsertTrieNode", freeStorageAssignerKey(ssc.ID, p.info.Name),
@@ -155,7 +156,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
+				require.EqualValues(t, test.want.errMsg, errors.ExcludeLocation(err))
 				return
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
@@ -283,11 +284,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
-		).Return(nil, util.ErrValueNotPresent).Once()
+		).Return(nil, util.ErrValueNotPresent()).Once()
 
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, txn.Hash),
-		).Return(nil, util.ErrValueNotPresent).Once()
+		).Return(nil, util.ErrValueNotPresent()).Once()
 		balances.On(
 			"InsertTrieNode", challengePoolKey(ssc.ID, txn.Hash), mock.Anything,
 		).Return("", nil).Once()
@@ -295,7 +296,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		var clientAlloc = ClientAllocation{ClientID: p.marker.Recipient}
 		balances.On(
 			"GetTrieNode", clientAlloc.GetKey(ssc.ID),
-		).Return(nil, util.ErrValueNotPresent).Once()
+		).Return(nil, util.ErrValueNotPresent()).Once()
 		balances.On(
 			"GetTrieNode", ALL_ALLOCATIONS_KEY,
 		).Return(&Allocations{}, nil).Once()
@@ -303,7 +304,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		allocation := StorageAllocation{ID: txn.Hash}
 		balances.On(
 			"GetTrieNode", allocation.GetKey(ssc.ID),
-		).Return(nil, util.ErrValueNotPresent).Once()
+		).Return(nil, util.ErrValueNotPresent()).Once()
 		balances.On(
 			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
 		).Return("", nil).Once()
@@ -572,7 +573,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			balances.On(
 				"GetTrieNode",
 				freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
-			).Return(nil, util.ErrValueNotPresent).Once()
+			).Return(nil, util.ErrValueNotPresent()).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
@@ -794,7 +795,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
+				require.EqualValues(t, test.want.errMsg, errors.ExcludeLocation(err))
 				return
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))

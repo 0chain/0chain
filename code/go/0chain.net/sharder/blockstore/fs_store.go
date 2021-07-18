@@ -174,7 +174,7 @@ func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err err
 
 func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	if len(hash) != 64 {
-		return nil, encryption.ErrInvalidHash
+		return nil, encryption.ErrInvalidHash()
 	}
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)

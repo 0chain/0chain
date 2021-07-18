@@ -1,6 +1,14 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -9,14 +17,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
-	"fmt"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -88,7 +90,7 @@ func TestAddChallenge(t *testing.T) {
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
 		require.EqualValues(t, want.error, err != nil)
 		if want.error {
-			require.EqualValues(t, want.errorMsg, err.Error())
+			require.EqualValues(t, want.errorMsg, errors.ExcludeLocation(err))
 			return
 		}
 		challenge := &StorageChallenge{}
@@ -142,7 +144,7 @@ func TestAddChallenge(t *testing.T) {
 			},
 			want: want{
 				error:    true,
-				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber: ",
+				errorMsg: "no_blobber_writes: no blobber writes, challenge generation not possible, allocation , blobber:",
 			},
 		},
 	}
@@ -204,7 +206,7 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLate)
+		require.EqualValues(t, errors.ExcludeLocation(err), errLate)
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
@@ -294,7 +296,7 @@ func TestBlobberPenalty(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLate)
+		require.EqualValues(t, errors.ExcludeLocation(err), errLate)
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {

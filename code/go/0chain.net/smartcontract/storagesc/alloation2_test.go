@@ -1,6 +1,13 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -9,19 +16,14 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 type blobberStakes []int64
 
 const (
-	errValueNotPresent   = "value not present"
+	ErrValueNotPresent   = "value not present"
 	ownerId              = "owin"
 	ErrCancelFailed      = "alloc_cancel_failed"
 	ErrExpired           = "trying to cancel expired allocation"
@@ -1023,7 +1025,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	for _, blobber := range allBlobbersList.Nodes {
 		var b *StorageNode
 		b, err = ssc.getBlobber(blobber.ID, ctx)
-		if err != nil && err.Error() == errValueNotPresent {
+		if err != nil && errors.ExcludeLocation(err) == ErrValueNotPresent {
 			continue
 		}
 		require.NoError(t, err)

@@ -40,13 +40,13 @@ const (
 
 var (
 	// ErrRoundMismatch - an error object for mismatched round error.
-	ErrRoundMismatch = errors.New(RoundMismatch, "Current round number"+
+	ErrRoundMismatch = errors.Register(RoundMismatch, "Current round number"+
 		" of the chain doesn't match the block generation round")
 	// ErrRRSMismatch - and error when rrs mismatch happens.
-	ErrRRSMismatch = errors.New(RRSMismatch, "RRS for current round"+
+	ErrRRSMismatch = errors.Register(RRSMismatch, "RRS for current round"+
 		" of the chain doesn't match the block rrs")
 	// ErrRoundTimeout - an error object for round timeout error.
-	ErrRoundTimeout = errors.New(RoundTimeout, "round timed out")
+	ErrRoundTimeout = errors.Register(RoundTimeout, "round timed out")
 
 	minerChain = &Chain{}
 )

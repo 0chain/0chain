@@ -293,7 +293,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 		var nb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if nb.Round != rn {
@@ -372,8 +372,8 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		resp interface{}, err error) {
 		var mb, ok = entity.(*block.Block)
 		if !ok || mb == nil {
-			errs = append(errs, datastore.ErrInvalidEntity)
-			return nil, datastore.ErrInvalidEntity
+			errs = append(errs, datastore.ErrInvalidEntity())
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		listMutex.Lock()

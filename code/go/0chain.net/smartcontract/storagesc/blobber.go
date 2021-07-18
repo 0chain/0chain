@@ -22,7 +22,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return allBlobbersList, nil
 }
@@ -55,7 +55,7 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 
 	blobber = new(StorageNode)
 	if err = blobber.Decode(b); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 
 	return
@@ -355,7 +355,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	lastBlobberClientReadBytes, err = balances.GetTrieNode(
 		commitRead.GetKey(sc.ID))
 
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return "", errors.Newf("commit_blobber_read",
 			"can't get latest blobber client read: %v", err)
 	}

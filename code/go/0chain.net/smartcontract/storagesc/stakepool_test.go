@@ -1,21 +1,23 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -146,7 +148,7 @@ func TestStakePoolLock(t *testing.T) {
 		var offers = []common.Timestamp{}
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
+		require.EqualValues(t, errors.ExcludeLocation(err), errStakePoolLock+errStakeTooSmall)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {

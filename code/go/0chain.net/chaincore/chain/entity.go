@@ -39,7 +39,7 @@ const notifySyncLFRStateTimeout = 3 * time.Second
 const genesisRandomSeed = 839695260482366273
 
 var (
-	ErrInsufficientChain = errors.New("insufficient_chain",
+	ErrInsufficientChain = errors.Register("insufficient_chain",
 		"Chain length not sufficient to perform the logic")
 )
 
@@ -951,7 +951,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	if false {
 		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	}
-	return false, ErrInsufficientChain
+	return false, ErrInsufficientChain()
 }
 
 func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
@@ -1256,7 +1256,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
 
-		if err == util.ErrNodeNotFound {
+		if err == util.ErrNodeNotFound() {
 			// get state from network
 			logging.Logger.Info("init block state by synching block state from network")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

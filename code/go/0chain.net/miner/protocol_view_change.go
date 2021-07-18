@@ -864,7 +864,7 @@ func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 	iter.SeekToLast() // from last
 
 	if !iter.Valid() {
-		return nil, util.ErrValueNotPresent
+		return nil, util.ErrValueNotPresent()
 	}
 
 	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {

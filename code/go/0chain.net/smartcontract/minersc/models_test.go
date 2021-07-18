@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/node"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,16 +96,16 @@ func TestQuickFixDuplicateHosts(t *testing.T) {
 			{SimpleNode: &SimpleNode{N2NHost: "abc.com", Host: "lmn.com", Port: 0}},
 		}
 	}
-	assert.EqualError(t, quickFixDuplicateHosts(node("", "", "", 0), nodes()), "invalid n2nhost: ''")
-	assert.EqualError(t, quickFixDuplicateHosts(node("", "localhost", "", 0), nodes()), "invalid n2nhost: 'localhost'")
-	assert.EqualError(t, quickFixDuplicateHosts(node("", "127.0.0.1", "", 0), nodes()), "invalid n2nhost: '127.0.0.1'")
+	assert.EqualValues(t, "invalid n2nhost: ''", errors.ExcludeLocation(quickFixDuplicateHosts(node("", "", "", 0), nodes())))
+	assert.EqualValues(t, "invalid n2nhost: 'localhost'", errors.ExcludeLocation(quickFixDuplicateHosts(node("", "localhost", "", 0), nodes())))
+	assert.EqualValues(t, "invalid n2nhost: '127.0.0.1'", errors.ExcludeLocation(quickFixDuplicateHosts(node("", "127.0.0.1", "", 0), nodes())))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "xyz.com", "", 0), nodes()))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "xyz.com", "localhost", 0), nodes()))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "xyz.com", "127.0.0.1", 0), nodes()))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "xyz.com", "prq.com", 0), nodes()))
-	assert.EqualError(t, quickFixDuplicateHosts(node("abc", "abc.com", "", 0), nodes()), "n2nhost:port already exists: 'abc.com:0'")
+	assert.EqualValues(t, "n2nhost:port already exists: 'abc.com:0'", errors.ExcludeLocation(quickFixDuplicateHosts(node("abc", "abc.com", "", 0), nodes())))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "abc.com", "", 1), nodes()))
-	assert.EqualError(t, quickFixDuplicateHosts(node("mn", "lmn.com", "", 0), nodes()), "host:port already exists: 'lmn.com:0'")
+	assert.EqualValues(t, "host:port already exists: 'lmn.com:0'", errors.ExcludeLocation(quickFixDuplicateHosts(node("mn", "lmn.com", "", 0), nodes())))
 	assert.NoError(t, quickFixDuplicateHosts(node("", "lmn.com", "", 1), nodes()))
 
 }

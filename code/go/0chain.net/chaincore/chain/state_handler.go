@@ -106,7 +106,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	clientID := r.FormValue("client_id")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
-		return nil, common.ErrTemporaryFailure
+		return nil, common.ErrTemporaryFailure()
 	}
 	state, err := c.GetState(lfb, clientID)
 	if err != nil {

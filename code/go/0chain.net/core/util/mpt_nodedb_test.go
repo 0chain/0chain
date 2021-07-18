@@ -96,7 +96,7 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 		for _, kv := range kvs {
 			node, err = mndb.GetNode(kv.key)
 			require.Nil(t, node)
-			require.Equal(t, ErrNodeNotFound, err)
+			require.Equal(t, ErrNodeNotFound(), err)
 
 			require.NoError(t, mndb.DeleteNode(kv.key))
 		}
@@ -138,7 +138,7 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 		// node not found
 		nodes, err = mndb.MultiGetNode(keys)
 		require.Nil(t, nodes)
-		require.Equal(t, ErrNodeNotFound, err)
+		require.Equal(t, ErrNodeNotFound(), err)
 
 		require.NoError(t, mndb.MultiDeleteNode(keys))
 		require.Zero(t, mndb.Size(back))
@@ -261,7 +261,7 @@ func TestLevelNodeDB_Full(t *testing.T) {
 		for _, kv := range kvs {
 			node, err = lndb.GetNode(kv.key)
 			require.Nil(t, node)
-			require.Equal(t, ErrNodeNotFound, err)
+			require.Equal(t, ErrNodeNotFound(), err)
 
 			require.NoError(t, lndb.DeleteNode(kv.key))
 		}
@@ -344,7 +344,7 @@ func TestLevelNodeDB_Full(t *testing.T) {
 		// node not found
 		nodes, err = lndb.MultiGetNode(keys)
 		require.Nil(t, nodes)
-		require.Equal(t, ErrNodeNotFound, err)
+		require.Equal(t, ErrNodeNotFound(), err)
 
 		require.NoError(t, lndb.MultiDeleteNode(keys))
 		require.Zero(t, lndb.Size(back))
@@ -525,7 +525,7 @@ func TestPNodeDB_Full(t *testing.T) {
 		for _, kv := range kvs {
 			node, err = mndb.GetNode(kv.key)
 			require.Nil(t, node)
-			require.Equal(t, ErrNodeNotFound, err)
+			require.Equal(t, ErrNodeNotFound(), err)
 
 			require.NoError(t, mndb.DeleteNode(kv.key))
 		}
@@ -568,7 +568,7 @@ func TestPNodeDB_Full(t *testing.T) {
 		// node not found
 		nodes, err = mndb.MultiGetNode(keys)
 		require.Nil(t, nodes)
-		require.Equal(t, ErrNodeNotFound, err)
+		require.Equal(t, ErrNodeNotFound(), err)
 
 		require.NoError(t, mndb.MultiDeleteNode(keys))
 		require.Zero(t, mndb.Size(back))
@@ -694,7 +694,7 @@ func TestMergeState(t *testing.T) {
 }
 
 func noNodeNotFound(err error) error {
-	if err == ErrNodeNotFound {
+	if err == ErrNodeNotFound() {
 		return nil
 	}
 	return err
@@ -791,7 +791,7 @@ func TestRaceMemoryNodeDB_Full(t *testing.T) {
 			go func() {
 				node, err := mndb.GetNode(kv.key)
 				require.Nil(t, node)
-				require.Equal(t, ErrNodeNotFound, err)
+				require.Equal(t, ErrNodeNotFound(), err)
 
 				require.NoError(t, mndb.DeleteNode(kv.key))
 				wg.Done()
@@ -877,7 +877,7 @@ func TestRaceLevelNodeDB_Full(t *testing.T) {
 
 				node, err := lndb.GetNode(kv.key)
 				require.Nil(t, node)
-				require.Equal(t, ErrNodeNotFound, err)
+				require.Equal(t, ErrNodeNotFound(), err)
 
 				require.NoError(t, lndb.DeleteNode(kv.key))
 				wg.Done()

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -28,7 +29,7 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	}
 	err = alloc.Decode(allocb.Encode())
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return
 }
@@ -45,7 +46,7 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	}
 	err = json.Unmarshal(allocationListBytes.Encode(), &clientAlloc)
 	if err != nil {
-		return nil, errors.Wrap(errors.Wrap(err, common.ErrDecoding), "failed to retrieve existing allocations list")
+		return nil, errors.Wrap(errors.Wrap(err, common.ErrDecoding()), "failed to retrieve existing allocations list")
 	}
 	return clientAlloc.Allocations, nil
 }
@@ -125,39 +126,41 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	var err error
 	if err != nil {
-		return "", errors.Newf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"Failed to get allocation list"))
+
 	}
 	all, err := sc.getAllAllocationsList(balances)
 	if err != nil {
-		return "", errors.Newf("add_allocation_failed",
-			"Failed to get allocation list: %v", err)
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"Failed to get allocation list"))
+
 	}
 
 	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
-		return "", errors.Newf("add_allocation_failed",
-			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"allocation id already used in trie"))
 	}
-	if err != util.ErrValueNotPresent {
-		return "", errors.Newf("add_allocation_failed",
-			"unexpected error: %v", err)
+	if err != util.ErrValueNotPresent() {
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"unexpected error"))
 	}
 
 	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("add_allocation_failed", err.Error())
+		return "", errors.Wrap(err, "add_allocation_failed")
 	}
 
 	all.List.add(alloc.ID)
 
 	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
-		return "", errors.Newf("add_allocation_failed",
-			"saving all allocations list: %v", err)
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"saving all allocations list"))
 	}
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", errors.Newf("add_allocation_failed",
-			"saving new allocation: %v", err)
+		return "", errors.Wrap(err, errors.New("add_allocation_failed",
+			"saving new allocation"))
 	}
 
 	buff := alloc.Encode()
@@ -213,17 +216,17 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 		b.Used += sa.BlobberDetails[i].Size // adjust used size
 		var sp *stakePool
 		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
-			return errors.Newf("", "can't get blobber's stake pool: %v", err)
+			return errors.Wrap(err, "can't get blobber's stake pool")
 		}
 		sp.addOffer(sa, sa.BlobberDetails[i])
 
 		// save blobber
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
-			return errors.Newf("", "can't save blobber: %v", err)
+			return errors.Wrap(err, "can't save blobber")
 		}
 		// save its stake pool
 		if err = sp.save(sc.ID, b.ID, balances); err != nil {
-			return errors.Newf("", "can't save blobber's stake pool: %v", err)
+			return errors.Wrap(err, "can't save blobber's stake pool")
 		}
 	}
 
@@ -245,7 +248,7 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 	// save
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
 	if err != nil {
-		return errors.Newf("", "can't save all blobber list: %v", err)
+		return errors.Wrap(err, "can't save all blobber list")
 	}
 
 	return
@@ -288,8 +291,8 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	var conf *scConfig
 	var err error
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", errors.Newf("allocation_creation_failed",
-			"can't get config: %v", err)
+		return "", errors.Wrap(err, errors.New("allocation_creation_failed",
+			"can't get config"))
 	}
 
 	resp, err := sc.newAllocationRequestInternal(t, input, conf, false, balances)
@@ -311,8 +314,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	var allBlobbersList *StorageNodes
 	allBlobbersList, err = sc.getBlobbersList(balances)
 	if err != nil {
-		return "", errors.Newf("allocation_creation_failed",
-			"getting blobber list: %v", err)
+		return "", errors.Wrap(err, errors.New("allocation_creation_failed",
+			"getting blobber list"))
+
 	}
 	if len(allBlobbersList.Nodes) == 0 {
 		return "", errors.New("allocation_creation_failed",
@@ -326,8 +330,8 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	var request newAllocationRequest
 	if err = request.decode(input); err != nil {
-		return "", errors.Newf("allocation_creation_failed",
-			"malformed request: %v", err)
+		return "", errors.Wrap(err, errors.New("allocation_creation_failed",
+			"malformed request"))
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
@@ -341,7 +345,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	blobberNodes, bSize, err := sc.selectBlobbers(
 		t.CreationDate, *allBlobbersList, sa, seed, balances)
 	if err != nil {
-		return "", errors.Newf("allocation_creation_failed", "%v", err)
+		return "", errors.Wrap(err, "allocation_creation_failed")
 	}
 
 	var gbSize = sizeInGB(bSize) // size in gigabytes
@@ -411,13 +415,13 @@ func (sc *StorageSmartContract) selectBlobbers(
 	var err error
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return nil, 0, errors.Newf("", "can't get config: %v", err)
+		return nil, 0, errors.Wrap(err, "can't get config")
 	}
 
 	sa.TimeUnit = conf.TimeUnit // keep the initial time unit
 
 	if err = sa.validate(creationDate, conf); err != nil {
-		return nil, 0, errors.Newf("", "invalid request: %v", err)
+		return nil, 0, errors.Wrap(err, "invalid request")
 	}
 
 	// number of blobbers required
@@ -535,8 +539,9 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *StorageAllocation,
 		var blobber *StorageNode
 		blobber, err = sc.getBlobber(details.BlobberID, balances)
 		if err != nil {
-			return nil, errors.Newf("", "can't get blobber %q: %v",
-				details.BlobberID, err)
+			return nil, errors.Wrap(err, errors.Newf("", "can't get blobber %q",
+				details.BlobberID))
+
 		}
 		blobbers = append(blobbers, blobber)
 	}
@@ -662,7 +667,7 @@ func (sc *StorageSmartContract) adjustChallengePool(alloc *StorageAllocation,
 	)
 
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-		return errors.Newf("", "adjust_challenge_pool: %v", err)
+		return errors.Wrap(err, "adjust_challenge_pool")
 	}
 
 	var changed bool
@@ -686,7 +691,7 @@ func (sc *StorageSmartContract) adjustChallengePool(alloc *StorageAllocation,
 			// no changes for the blobber
 		}
 		if err != nil {
-			return errors.Newf("", "adjust_challenge_pool: %v", err)
+			return errors.Wrap(err, "adjust_challenge_pool")
 		}
 	}
 
@@ -790,8 +795,8 @@ func (sc *StorageSmartContract) extendAllocation(
 	// get related write pool
 	var wp *writePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return errors.Newf("allocation_extending_failed",
-			"can't get write pool: %v", err)
+		return errors.Wrap(err, errors.New("allocation_extending_failed",
+			"can't get write pool"))
 	}
 
 	var until = alloc.Until()
@@ -804,8 +809,8 @@ func (sc *StorageSmartContract) extendAllocation(
 			}
 		}
 		if _, err = wp.fill(t, alloc, until, mintTokens, balances); err != nil {
-			return errors.Newf("allocation_extending_failed",
-				"write pool filling: %v", err)
+			return errors.Wrap(err, errors.New("allocation_extending_failed",
+				"write pool filling"))
 		}
 	}
 
@@ -825,12 +830,12 @@ func (sc *StorageSmartContract) extendAllocation(
 	err = sc.adjustChallengePool(alloc, wp, odr, ndr, oterms, t.CreationDate,
 		balances)
 	if err != nil {
-		return errors.Newf("allocation_extending_failed", "%v", err)
+		return errors.Wrap(err, "allocation_extending_failed")
 	}
 
 	// save the write pool
 	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return errors.Newf("allocation_extending_failed", "%v", err)
+		return errors.Wrap(err, "allocation_extending_failed")
 	}
 
 	return nil
@@ -861,25 +866,25 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		ba.Size = size // new size
 		// update stake pool
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
-			return errors.Newf("allocation_reducing_failed", "%v", err)
+			return errors.Wrap(err, "allocation_reducing_failed")
 		}
 	}
 
 	// get related write pool
 	var wp *writePool
 	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
-		return errors.Newf("allocation_reducing_failed",
-			"can't get write pool: %v", err)
+		return errors.Wrap(err, errors.New("allocation_reducing_failed",
+			"can't get write pool"))
 	}
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
 		if err = checkFill(t, balances); err != nil {
-			return errors.Newf("allocation_reducing_failed", "%v", err)
+			return errors.Wrap(err, "allocation_reducing_failed")
 		}
 		var until = alloc.Until()
 		if _, err = wp.fill(t, alloc, until, false, balances); err != nil {
-			return errors.Newf("allocation_reducing_failed", "%v", err)
+			return errors.Wrap(err, "allocation_reducing_failed")
 		}
 	}
 
@@ -888,12 +893,12 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	err = sc.adjustChallengePool(alloc, wp, odr, ndr, nil, t.CreationDate,
 		balances)
 	if err != nil {
-		return errors.Newf("allocation_reducing_failed", "%v", err)
+		return errors.Wrap(err, "allocation_reducing_failed")
 	}
 
 	// save the write pool
 	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return errors.Newf("allocation_reducing_failed", "%v", err)
+		return errors.Wrap(err, "allocation_reducing_failed")
 	}
 
 	return nil
@@ -912,7 +917,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", errors.Wrap(err, errors.New("allocation_updating_failed",
-			"can't get SC configurations: "))
+			"can't get SC configurations"))
 	}
 	return sc.updateAllocationRequestInternal(txn, input, conf, false, balances)
 }
@@ -927,7 +932,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var all *StorageNodes // all blobbers list
 	if all, err = sc.getBlobbersList(balances); err != nil {
-		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get all blobbers list: "))
+		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get all blobbers list"))
 	}
 
 	if len(all.Nodes) == 0 {
@@ -940,7 +945,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var request updateAllocationRequest
 	if err = request.decode(input); err != nil {
-		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "invalid request: "))
+		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "invalid request"))
 	}
 
 	if request.OwnerID == "" {
@@ -949,7 +954,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var clist *Allocations // client allocations list
 	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get client's allocations list: "))
+		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get client's allocations list"))
 	}
 
 	if !clist.has(request.ID) {
@@ -958,7 +963,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	var alloc *StorageAllocation
 	if alloc, err = sc.getAllocation(request.ID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get existing allocation: "))
+		return "", errors.Wrap(err, errors.New("allocation_updating_failed", "can't get existing allocation"))
 	}
 
 	if err = request.validate(conf, alloc); err != nil {
@@ -1127,11 +1132,11 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// check out blobber challenges
 		var bc *BlobberChallenge
 		bc, err = sc.getBlobberChallenge(d.BlobberID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return nil, errors.Newf("", "getting blobber challenge: %v", err)
+		if err != nil && err != util.ErrValueNotPresent() {
+			return nil, errors.Wrap(err, "getting blobber challenge")
 		}
 		// no blobber challenges, no failures
-		if err == util.ErrValueNotPresent || len(bc.Challenges) == 0 {
+		if err == util.ErrValueNotPresent() || len(bc.Challenges) == 0 {
 			passRates, err = append(passRates, 1.0), nil
 			continue // no challenges for the blobber
 		}
@@ -1516,14 +1521,14 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 	}
 
 	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
+		return "", errors.Wrap(err, "curator_transfer_allocation_failed")
 	}
 
 	alloc.Owner = tai.NewOwnerId
 	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
 
 	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
-		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
+		return "", errors.Wrap(err, "curator_transfer_allocation_failed")
 	}
 
 	if !alloc.hasWritePool(sc, tai.NewOwnerId, balances) {
@@ -1535,8 +1540,9 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", errors.Newf("curator_transfer_allocation_failed",
-			"saving new allocation: %v", err)
+		return "", errors.Wrap(err, errors.Newf("curator_transfer_allocation_failed",
+			"saving new allocation"))
+
 	}
 
 	// txn.Hash is the id of the new token pool

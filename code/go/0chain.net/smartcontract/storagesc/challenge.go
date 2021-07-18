@@ -531,7 +531,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	stats.Stats = &StorageAllocationStats{}
 	var statsBytes util.Serializable
 	statsBytes, err = balances.GetTrieNode(stats.GetKey(sc.ID))
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return // unexpected MPT error
 	}
 	if statsBytes != nil {
@@ -607,11 +607,11 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
 		alloc, err = sc.getAllocation(all.List[i], balances)
-		if err != nil && err != util.ErrValueNotPresent {
+		if err != nil && err != util.ErrValueNotPresent() {
 			return nil, errors.Newf("adding_challenge_error",
 				"unexpected error getting allocation: %v", err)
 		}
-		if err == util.ErrValueNotPresent {
+		if err == util.ErrValueNotPresent() {
 			Logger.Error("client state has invalid allocations",
 				zap.Any("allocation_list", all.List),
 				zap.Any("selected_allocation", all.List[i]))

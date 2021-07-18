@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrStop = errors.New("stop_error", "Stop signal error")
+var ErrStop = errors.Register("stop_error", "Stop signal error")
 
 var rootContext context.Context
 var rootCancel context.CancelFunc

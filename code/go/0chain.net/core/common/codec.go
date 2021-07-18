@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrInvalidData = errors.New("invalid_data", "Invalid data")
+var ErrInvalidData = errors.Register("invalid_data", "Invalid data")
 
 const (
 	CodecJSON    = 0

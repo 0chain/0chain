@@ -30,7 +30,7 @@ func NewBLS0ChainAggregateSignature(total int, batchSize int) *BLS0ChainAggregat
 func (b0a BLS0ChainAggregateSignatureScheme) Aggregate(ss SignatureScheme, idx int, signature string, hash string) error {
 	b0sig, ok := ss.(*BLS0ChainScheme)
 	if !ok {
-		return ErrInvalidSignatureScheme
+		return ErrInvalidSignatureScheme()
 	}
 	sig, err := b0sig.GetSignature(signature)
 	if err != nil {

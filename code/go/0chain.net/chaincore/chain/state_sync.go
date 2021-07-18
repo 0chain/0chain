@@ -16,9 +16,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrNodeNull = errors.New("node_null", "Node is not available")
+var ErrNodeNull = errors.Register("node_null", "Node is not available")
 
-var ErrStopIterator = errors.New("stop_iterator", "Stop MPT Iteration")
+var ErrStopIterator = errors.Register("stop_iterator", "Stop MPT Iteration")
 
 var MaxStateNodesForSync = 10000
 
@@ -131,17 +131,17 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	var partialState = state.NewPartialState(key)
 	handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
 		if node == nil {
-			return ErrNodeNull
+			return ErrNodeNull()
 		}
 		partialState.AddNode(node)
 		if len(partialState.Nodes) >= MaxStateNodesForSync {
-			return ErrStopIterator
+			return ErrStopIterator()
 		}
 		return nil
 	}
 	err := c.GetLatestFinalizedBlock().ClientState.IterateFrom(ctx, key, handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
 	if err != nil {
-		if err != ErrStopIterator {
+		if err != ErrStopIterator() {
 			return nil, err
 		}
 	}
@@ -149,7 +149,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 		partialState.ComputeProperties()
 		return partialState, nil
 	}
-	return nil, util.ErrNodeNotFound
+	return nil, util.ErrNodeNotFound()
 }
 
 //GetStateNodesFrom - get the state nodes from db
@@ -168,7 +168,7 @@ func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.
 //SyncPartialState - sync partial state
 func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
 	if ps.GetRoot() == nil {
-		return ErrNodeNull
+		return ErrNodeNull()
 	}
 	c.SavePartialState(ctx, ps)
 	return nil
@@ -199,12 +199,12 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
 		rps, ok := entity.(*state.PartialState)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 		logging.Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
 		if bytes.Compare(key, rps.Hash) != 0 {
 			logging.Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
-			return nil, state.ErrHashMismatch
+			return nil, state.ErrHashMismatch()
 		}
 		root := rps.GetRoot()
 		if root == nil {
@@ -234,10 +234,10 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 		if len(rns.Nodes) == 0 {
-			return nil, util.ErrNodeNotFound
+			return nil, util.ErrNodeNotFound()
 		}
 		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
@@ -267,10 +267,10 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 		if len(rns.Nodes) == 0 {
-			return nil, util.ErrNodeNotFound
+			return nil, util.ErrNodeNotFound()
 		}
 		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
@@ -297,7 +297,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		var rsc, ok = entity.(*block.StateChange)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if rsc.Block != b.Hash {
@@ -305,7 +305,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				zap.Error(errors.New("block hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return nil, block.ErrBlockHashMismatch
+			return nil, block.ErrBlockHashMismatch()
 		}
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
@@ -313,7 +313,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				zap.Error(errors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return nil, block.ErrBlockStateHashMismatch
+			return nil, block.ErrBlockStateHashMismatch()
 		}
 
 		var root = rsc.GetRoot()

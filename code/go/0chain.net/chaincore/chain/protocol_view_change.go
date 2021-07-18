@@ -597,13 +597,13 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	var seri util.Serializable
 	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		err = errors.Newf("", "get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
 		return
 	}
 
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		err = nil // not a real error, Miner SC just is not started (yet)
 		return
 	}

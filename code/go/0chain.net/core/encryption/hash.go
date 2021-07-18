@@ -7,8 +7,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-//ErrInvalidHash - hash is invalid error
-var ErrInvalidHash = errors.New("invalid_hash", "Invalid hash")
+//ErrInvalidHash() - hash is invalid error
+var ErrInvalidHash = errors.Register("invalid_hash", "Invalid hash")
 
 const HASH_LENGTH = 32
 

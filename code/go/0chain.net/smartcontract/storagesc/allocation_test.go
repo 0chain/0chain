@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -196,7 +197,7 @@ func TestSelectBlobbers(t *testing.T) {
 			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, tt.want.errMsg, err.Error())
+				require.EqualValues(t, tt.want.errMsg, errors.ExcludeLocation(err))
 				return
 			}
 
@@ -229,7 +230,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	if _, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
 	}
-	if err != util.ErrValueNotPresent {
+	if err != util.ErrValueNotPresent() {
 		t.Fatal("unexpected error:", err)
 	}
 	alloc = new(StorageAllocation)
@@ -403,7 +404,7 @@ func TestTransferAllocation(t *testing.T) {
 			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(&wp, nil).Twice()
 		} else {
 			balances.On("GetTrieNode", writePoolKey(ssc.ID, p.info.NewOwnerId)).Return(
-				nil, util.ErrValueNotPresent).Twice()
+				nil, util.ErrValueNotPresent()).Twice()
 		}
 
 		balances.On(
@@ -529,7 +530,7 @@ func TestTransferAllocation(t *testing.T) {
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
+				require.EqualValues(t, test.want.errMsg, errors.ExcludeLocation(err))
 				return
 			}
 			require.EqualValues(t, args.txn.Hash, resp)

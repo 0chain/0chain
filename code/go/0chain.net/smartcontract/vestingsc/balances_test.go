@@ -69,7 +69,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {
-		return 0, util.ErrValueNotPresent
+		return 0, util.ErrValueNotPresent()
 	}
 	return
 }
@@ -84,7 +84,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 
 	var ok bool
 	if node, ok = tb.tree[key]; !ok {
-		return nil, util.ErrValueNotPresent
+		return nil, util.ErrValueNotPresent()
 	}
 	return
 }
@@ -98,7 +98,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	if t.ClientID != tb.txn.ClientID && t.ClientID != tb.txn.ToClientID {
-		return state.ErrInvalidTransfer
+		return state.ErrInvalidTransfer()
 	}
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount

@@ -48,7 +48,7 @@ func validateStateChangesRoot(b *Block) error {
 			computedRoot = bsc.GetRoot().GetHash()
 		}
 		logging.Logger.Error("block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
-		return ErrStateMismatch
+		return ErrStateMismatch()
 	}
 	return nil
 }

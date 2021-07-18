@@ -154,7 +154,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 	var commitReadBytes util.Serializable
 	commitReadBytes, err = balances.GetTrieNode(commitRead.GetKey(ssc.ID))
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return nil, common.NewErrInternal(err, "can't get read marker")
 	}
 

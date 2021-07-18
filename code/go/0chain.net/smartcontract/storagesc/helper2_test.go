@@ -76,7 +76,7 @@ func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
 	var val, ok = sc.store[key]
 	if !ok {
-		return nil, util.ErrValueNotPresent
+		return nil, util.ErrValueNotPresent()
 	}
 	return val, nil
 }

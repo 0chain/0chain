@@ -156,11 +156,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 	if roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
-		return ErrRoundMismatch
+		return ErrRoundMismatch()
 	}
 	if roundTimeout {
 		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
-		return ErrRoundTimeout
+		return ErrRoundTimeout()
 	}
 	if ierr != nil {
 		logging.Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))

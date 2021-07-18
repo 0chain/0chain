@@ -471,13 +471,13 @@ func (ssc *StorageSmartContract) getConfig(
 
 	var confb []byte
 	confb, err = ssc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return
 	}
 
 	conf = new(scConfig)
 
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		if !setup {
 			return // value not present
 		}
@@ -485,7 +485,7 @@ func (ssc *StorageSmartContract) getConfig(
 	}
 
 	if err = conf.Decode(confb); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return
 }
@@ -499,12 +499,12 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	var conf *scConfig
 	conf, err = ssc.getConfig(balances, false)
 
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		res, err := getConfiguredConfig()
 		if err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)

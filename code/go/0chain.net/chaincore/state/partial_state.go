@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrHashMismatch = errors.New("Root hash mistatch")
+var ErrHashMismatch = errors.Register("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
@@ -159,13 +159,13 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 		}
 	} else {
 		logging.Logger.Error("unmarshal json - no hash", zap.Any("obj", obj))
-		return common.ErrInvalidData
+		return common.ErrInvalidData()
 	}
 	if str, ok := obj["version"].(string); ok {
 		ps.Version = str
 	} else {
 		logging.Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
-		return common.ErrInvalidData
+		return common.ErrInvalidData()
 	}
 	if nodes, ok := obj["nodes"].([]interface{}); ok {
 		ps.Nodes = make([]util.Node, len(nodes))
@@ -183,12 +183,12 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 				}
 			} else {
 				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
-				return common.ErrInvalidData
+				return common.ErrInvalidData()
 			}
 		}
 	} else {
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
-		return common.ErrInvalidData
+		return common.ErrInvalidData()
 	}
 	return nil
 }

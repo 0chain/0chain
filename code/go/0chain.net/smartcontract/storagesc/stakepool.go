@@ -786,7 +786,7 @@ func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
 	usp = newUserStakePools()
 	err = usp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return
 }
@@ -798,11 +798,11 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 	var poolb []byte
 	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return
 	}
 
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		return newUserStakePools(), nil
 	}
 
@@ -837,7 +837,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	sp = newStakePool()
 	err = sp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return
 }
@@ -856,11 +856,11 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return nil, errors.Newf("", "unexpected error: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		sp, err = newStakePool(), nil
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 	}

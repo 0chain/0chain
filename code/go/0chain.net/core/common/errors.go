@@ -8,19 +8,19 @@ import (
 )
 
 var (
-	ErrTemporaryFailure = errors.New("temporary_failure", "Please retry again later")
+	ErrTemporaryFailure = errors.Register("temporary_failure", "Please retry again later")
 
 	// ErrNoResource represents error corresponds to http.StatusNotFound.
-	ErrNoResource = errors.New(ErrNoResourceCode, "can't retrieve resource")
+	ErrNoResource = errors.Register(ErrNoResourceCode, "can't retrieve resource")
 
 	// ErrBadRequest represents error corresponds to http.StatusBadRequest.
-	ErrBadRequest = errors.New(ErrBadRequestCode, "request is invalid")
+	ErrBadRequest = errors.Register(ErrBadRequestCode, "request is invalid")
 
 	// ErrInternal represents error corresponds to http.StatusInternalServerError.
-	ErrInternal = errors.New(ErrInternalCode, "internal server error")
+	ErrInternal = errors.Register(ErrInternalCode, "internal server error")
 
 	// ErrDecoding represents error corresponds to common decoding error
-	ErrDecoding = errors.New("decoding error")
+	ErrDecoding = errors.Register("decoding error")
 )
 
 const (
@@ -37,7 +37,7 @@ func InvalidRequest(msg string) error {
 // NewErrInternal creates new Error with ErrInternalCode.
 func NewErrInternal(err error, msgs ...string) error {
 	if len(msgs) == 0 && err == nil {
-		return ErrNoResource
+		return ErrNoResource()
 	}
 
 	return errors.Wrap(err, errors.New(ErrInternalCode, strings.Join(msgs, ": ")))
@@ -46,7 +46,7 @@ func NewErrInternal(err error, msgs ...string) error {
 // NewErrNoResource creates new Error with ErrNoResourceCode.
 func NewErrNoResource(err error, msgs ...string) error {
 	if len(msgs) == 0 && err == nil {
-		return ErrNoResource
+		return ErrNoResource()
 	}
 
 	return errors.Wrap(err, errors.New(ErrNoResourceCode, strings.Join(msgs, ": ")))
@@ -55,7 +55,7 @@ func NewErrNoResource(err error, msgs ...string) error {
 // NewErrBadRequest creates new Error with ErrBadRequestCode.
 func NewErrBadRequest(err error, msgs ...string) error {
 	if len(msgs) == 0 && err == nil {
-		return ErrBadRequest
+		return ErrBadRequest()
 	}
 
 	return errors.Wrap(err, errors.New(ErrBadRequestCode, strings.Join(msgs, ": ")))

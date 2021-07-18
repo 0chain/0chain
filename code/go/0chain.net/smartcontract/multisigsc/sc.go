@@ -112,7 +112,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	alreadyExisted, err := ms.walletExists(registeringClientID, balances)
 	if err != nil {
 		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		if err != util.ErrValueNotPresent() && err != util.ErrNodeNotFound() {
 			return "", err
 		} //else means no wallet exists
 	}
@@ -135,7 +135,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	err := ms.pruneExpirationQueue(now, balances)
 	if err != nil {
 		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		if err != util.ErrValueNotPresent() && err != util.ErrNodeNotFound() {
 			return "", err
 		} //else there are no expiration queue.
 	}
@@ -228,7 +228,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// execute it.
 	thresholdSignature, err := w.constructTransferSignature(p)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("err_vote_recover", " in signature recovery: "))
+		return "", errors.Wrap(err, errors.New("err_vote_recover", "in signature recovery"))
 	}
 
 	p.ClientSignature = thresholdSignature
@@ -380,7 +380,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		if err != util.ErrValueNotPresent() && err != util.ErrNodeNotFound() {
 			return proposal{}, err
 		} //else we will create a proposal
 	}
@@ -485,7 +485,7 @@ func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.St
 
 	if err != nil {
 		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		if err != util.ErrValueNotPresent() && err != util.ErrNodeNotFound() {
 			return proposal{}, err
 		} //else there are no propsals.
 		return proposal{}, nil
@@ -517,7 +517,7 @@ func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.Stat
 
 	if err != nil {
 		// I/O error.
-		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+		if err != util.ErrValueNotPresent() && err != util.ErrNodeNotFound() {
 			return expirationQueue{}, err
 		} //else we will create queue
 

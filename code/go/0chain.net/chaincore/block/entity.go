@@ -44,17 +44,17 @@ var (
 )
 
 var (
-	ErrBlockHashMismatch      = errors.New("block_hash_mismatch", "block hash mismatch")
-	ErrBlockStateHashMismatch = errors.New("block_state_hash_mismatch", "block state hash mismatch")
+	ErrBlockHashMismatch      = errors.Register("block_hash_mismatch", "block hash mismatch")
+	ErrBlockStateHashMismatch = errors.Register("block_state_hash_mismatch", "block state hash mismatch")
 
-	ErrPreviousStateUnavailable = errors.New("prev_state_unavailable", "Previous state not available")
-	ErrPreviousStateNotComputed = errors.New("prev_state_not_computed", "Previous state not computed")
+	ErrPreviousStateUnavailable = errors.Register("prev_state_unavailable", "Previous state not available")
+	ErrPreviousStateNotComputed = errors.Register("prev_state_not_computed", "Previous state not computed")
 
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
-	ErrPreviousBlockUnavailable = errors.New(PreviousBlockUnavailable,
+	ErrPreviousBlockUnavailable = errors.Register(PreviousBlockUnavailable,
 		"Previous block is not available")
 
-	ErrStateMismatch = errors.New(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
+	ErrStateMismatch = errors.Register(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
 )
 
 const (
@@ -770,7 +770,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			logging.Logger.Error("compute state - previous block not available",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("prev_block", b.PrevHash))
-			return ErrPreviousBlockUnavailable
+			return ErrPreviousBlockUnavailable()
 		}
 	}
 
@@ -789,7 +789,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				return err
 			}
 			if !pb.IsStateComputed() {
-				return ErrPreviousStateUnavailable
+				return ErrPreviousStateUnavailable()
 			}
 			logging.Logger.Debug("fetch previous block state from network successfully",
 				zap.Int64("prev_round", pb.Round),
@@ -824,7 +824,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
-		return ErrPreviousStateUnavailable
+		return ErrPreviousStateUnavailable()
 	}
 
 	// Before continue the the following state update for transactions, the previous
@@ -834,7 +834,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Any("state status", pb.GetStateStatus()))
-		return ErrPreviousStateNotComputed
+		return ErrPreviousStateNotComputed()
 	}
 	b.SetStateDB(pb, c.GetStateDB())
 
@@ -873,7 +873,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
-		return ErrStateMismatch
+		return ErrStateMismatch()
 	}
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
@@ -891,10 +891,10 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	defer b.stateMutex.Unlock()
 
 	if b.Hash != bsc.Block {
-		return ErrBlockHashMismatch
+		return ErrBlockHashMismatch()
 	}
 	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
-		return ErrBlockStateHashMismatch
+		return ErrBlockStateHashMismatch()
 	}
 	root := bsc.GetRoot()
 	if root == nil {

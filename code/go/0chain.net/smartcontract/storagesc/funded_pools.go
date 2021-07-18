@@ -78,14 +78,14 @@ func (ssc *StorageSmartContract) getFundedPools(
 	var err error
 	fp := new(fundedPools)
 	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
-		if err != util.ErrValueNotPresent {
+		if err != util.ErrValueNotPresent() {
 			return nil, err
 		}
 		return fp, nil
 	}
 	err = fp.Decode(poolb)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding(), err)
 	}
 	return fp, nil
 }

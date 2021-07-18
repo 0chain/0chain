@@ -489,7 +489,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			logging.Logger.Error("generate block - round mismatch",
 				zap.Any("round", roundNumber),
 				zap.Any("current_round", mc.GetCurrentRound()))
-			return nil, ErrRoundMismatch
+			return nil, ErrRoundMismatch()
 		}
 
 		txnCount := transaction.GetTransactionCount()
@@ -525,7 +525,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 							logging.Logger.Error("generate block - round mismatch",
 								zap.Any("round", roundNumber),
 								zap.Any("current_round", mc.GetCurrentRound()))
-							return nil, ErrRoundMismatch
+							return nil, ErrRoundMismatch()
 						}
 						if txnCount != transaction.GetTransactionCount() || time.Now().Sub(start) > generationTimeout {
 							makeBlock = true
@@ -558,7 +558,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Int64("round", b.Round),
 				zap.Int64("round_rrs", r.GetRandomSeed()),
 				zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
-			return nil, ErrRRSMismatch
+			return nil, ErrRRSMismatch()
 		}
 
 		mc.AddRoundBlock(r, b)
@@ -858,7 +858,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		return nil, errors.New("fewer_active_replicators", "Number of active replicators not sufficient")
 	}
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
-		return nil, ErrRoundMismatch
+		return nil, ErrRoundMismatch()
 	}
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return mc.SignBlock(ctx, b)
@@ -1019,7 +1019,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 
 		var fb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if fb.Round == 0 {
@@ -1107,7 +1107,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 
 		var fb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if err = fb.Validate(ctx); err != nil {

@@ -29,7 +29,7 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
-var ErrInsufficientBalance = errors.New("insufficient_balance", "Balance not sufficient for transfer")
+var ErrInsufficientBalance = errors.Register("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
@@ -119,7 +119,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	}()
 	select {
 	case <-cctx.Done():
-    return "", errors.Wrap(cctx.Err(), "smart_contract_execution_ctx_err")
+		return "", errors.Wrap(cctx.Err(), "smart_contract_execution_ctx_err")
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
@@ -297,7 +297,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return err
 	}
 	if fs.Balance < amount {
-		return ErrInsufficientBalance
+		return ErrInsufficientBalance()
 	}
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
@@ -418,7 +418,7 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	s.Balance = state.Balance(0)
 	ss, err := clientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if err != util.ErrValueNotPresent {
+		if err != util.ErrValueNotPresent() {
 			return nil, err
 		}
 		return s, err
@@ -452,7 +452,7 @@ func isValid(err error) bool {
 	if err == nil {
 		return true
 	}
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		return true
 	}
 	return false

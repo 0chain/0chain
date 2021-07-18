@@ -1083,8 +1083,8 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ss  = encryption.GetSignatureScheme(ssn)
 	)
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
-		return errors.Newf("invalid_read_marker",
-			"setting owner public key: %v", err)
+		return errors.Wrap(err, errors.New("invalid_read_marker",
+			"setting owner public key"))
 	}
 
 	var (

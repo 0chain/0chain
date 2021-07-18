@@ -259,7 +259,7 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	wp = new(writePool)
 	err = wp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding)
+		return nil, errors.Wrap(err, common.ErrDecoding())
 	}
 	return
 }
@@ -271,10 +271,10 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 ) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		wp = new(writePool)
 	}
 
@@ -302,11 +302,11 @@ func (ssc *StorageSmartContract) createWritePool(
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
-	if err != nil && err != util.ErrValueNotPresent {
+	if err != nil && err != util.ErrValueNotPresent() {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent() {
 		wp = new(writePool)
 	}
 
@@ -353,13 +353,13 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// remembers who funded the write pool, so tokens get returned to funder on unlock
 	if err := ssc.addToFundedPools(t.ClientID, lr.TargetId, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_lock_failed")
 	}
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("write_pool_lock_failed", err.Error())
+		if err != util.ErrValueNotPresent() {
+			return "", errors.Wrap(err, "write_pool_lock_failed")
 		}
 		wp = new(writePool)
 	}
@@ -478,16 +478,16 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
 	if err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 	if !isFunded {
-		return "", common.NewErrorf("read_pool_unlock_failed",
+		return "", errors.Newf("read_pool_unlock_failed",
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(req.PoolOwner, balances); err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
+		return "", errors.Wrap(err, "write_pool_unlock_failed")
 	}
 
 	// don't unlock over min lock demand left

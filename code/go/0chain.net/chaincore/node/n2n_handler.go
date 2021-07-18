@@ -157,7 +157,7 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 	return clientID + ":" + common.TimeToString(ts) + ":" + key
 }
 
-var NoDataErr = errors.New("no_data", "No data")
+var NoDataErr = errors.Register("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
 	io.Copy(ioutil.Discard, reader)
@@ -179,7 +179,7 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 		cbuffer.ReadFrom(r.Body)
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
-			return nil, NoDataErr
+			return nil, NoDataErr()
 		}
 		cbytes, err := compDecomp.Decompress(cbytes)
 		if err != nil {

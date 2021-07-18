@@ -17,9 +17,9 @@ import (
 
 // common fetching errors
 var (
-	ErrBlockFetchQueueFull         = errors.New("block_fetcher", "queue full")
-	ErrBlockFetchMinersQueueFull   = errors.New("block_fetcher", "miners queue full")
-	ErrBlockFetchShardersQueueFull = errors.New("block_fetcher", "sharders queue full")
+	ErrBlockFetchQueueFull         = errors.Register("block_fetcher", "queue full")
+	ErrBlockFetchMinersQueueFull   = errors.Register("block_fetcher", "miners queue full")
+	ErrBlockFetchShardersQueueFull = errors.Register("block_fetcher", "sharders queue full")
 )
 
 // The FetchQueueStat represents numbers of blocks fetch requests to
@@ -171,7 +171,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			}
 
 			if len(fetching) >= total {
-				bf.terminate(ctx, bfr, ErrBlockFetchQueueFull)
+				bf.terminate(ctx, bfr, ErrBlockFetchQueueFull())
 				continue
 			}
 
@@ -183,7 +183,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 					fetching[bfr.hash] = bfr
 					go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
 				} else {
-					bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
+					bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull())
 				}
 				continue
 			}
@@ -195,7 +195,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			} else {
 				// don't try to fetch from sharder on miners full queue
 				// (that's not a reason to fetch from sharders)
-				bf.terminate(ctx, bfr, ErrBlockFetchMinersQueueFull)
+				bf.terminate(ctx, bfr, ErrBlockFetchMinersQueueFull())
 			}
 
 		case rpl := <-got:
@@ -235,7 +235,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			if bf.acquire(ctx, shardersl) {
 				go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
 			} else {
-				bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
+				bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull())
 			}
 		}
 	}
@@ -337,7 +337,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 
 		var gfb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if gfb.ComputeHash() != ticket.LFBHash {
@@ -420,7 +420,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 
 		var nb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity
+			return nil, datastore.ErrInvalidEntity()
 		}
 
 		if nb.ComputeHash() != hash {

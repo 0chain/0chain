@@ -7,7 +7,7 @@ import (
 	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrInvalidMint = errors.New("invalid_mint", "invalid minter")
+var ErrInvalidMint = errors.Register("invalid_mint", "invalid minter")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {
