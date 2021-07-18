@@ -4,9 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       network:
-        description: 'Which network do you want to run regressions against? Valid options: beta | dev | grpc | magma | stream | test'
+        description: 'Which network do you want to run regressions against? Valid options: ${{ env.NETWORKS }}'
         required: true
         default: 'beta'
+
+env:
+  NETWORKS: beta | dev | grpc | magma | stream | test
 
 jobs: 
   api_tests:
@@ -14,7 +17,7 @@ jobs:
     steps:   
       - name: Validate network option
         id: network-check
-        run: (echo "beta dev grpc magma stream test" | grep -w "${{ github.event.inputs.network }}" > /dev/null && echo '::set-output name=VALID_NETWORK::true') || (echo '::set-output name=VALID_NETWORK::false' && echo "INVALID NETWORK [${{ github.event.inputs.network }}] SUPPLIED" && exit 1)
+        run: (echo ${{ env.NETWORKS }} | grep -w "${{ github.event.inputs.network }}" > /dev/null && echo '::set-output name=VALID_NETWORK::true') || (echo '::set-output name=VALID_NETWORK::false' && echo "INVALID NETWORK [${{ github.event.inputs.network }}] SUPPLIED" && exit 1)
    
       - name: checkout
         uses: actions/checkout@v2
@@ -39,7 +42,7 @@ jobs:
         id: time
         uses: nanzm/get-time-action@v1.1  
         with:
-          format: 'YYYY-MM-DD-HH-mm-ss'
+          format: 'YYYY-MM-DD_HH.mm.ss'
 
       - name: Run POSTMAN collection
         run: |
