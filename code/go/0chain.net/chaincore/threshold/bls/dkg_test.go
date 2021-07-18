@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/herumi/bls-go-binary/bls"
+	"github.com/herumi/bls/ffi/go/bls"
 
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/logging"

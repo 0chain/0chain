@@ -26,7 +26,7 @@ which will come apparent when you run your miner.
 
 More likely you have a response similar to
 ```shell
-# github.com/herumi/bls-go-binary/bls
+# github.com/herumi/bls/ffi/go/bls
 cgo: exec gcc: exec: "gcc": executable file not found in $PATH
 # github.com/valyala/gozstd
 cgo: exec gcc: exec: "gcc": executable file not found in $PATH

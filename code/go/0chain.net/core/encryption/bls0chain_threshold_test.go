@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/herumi/bls-go-binary/bls"
+	"github.com/herumi/bls/ffi/go/bls"
 
 	"0chain.net/core/logging"
 )
