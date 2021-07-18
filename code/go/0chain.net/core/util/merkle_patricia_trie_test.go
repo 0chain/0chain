@@ -545,6 +545,10 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
+	readValue := string(val.Encode())
+	if readValue != value {
+		t.Fatalf("Read value doesn't match: %v %v", readValue, value)
+	}
 }
 
 func iterHandler() func(ctx context.Context, path Path, key Key, node Node) error {
