@@ -67,4 +67,4 @@ jobs:
           
       - name: Report Link
         if:  ${{ steps.network-check.outputs.VALID_NETWORK }}
-        run: echo "https://stewartie4.github.io/0chain/${{ github.event.inputs.network }}/latest" 
+        run: echo "https://0chain.github.io/0chain/${{ github.event.inputs.network }}/${{ steps.time.outputs.time }}" 
