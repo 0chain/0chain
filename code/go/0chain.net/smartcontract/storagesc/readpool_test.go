@@ -222,6 +222,9 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 		MaxLockPeriod: 100 * time.Second,
 	}, balances, ssc.ID)
 
+	var fp fundedPools = []string{client.id}
+	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+
 	// 1. no pool
 	_, err = ssc.readPoolLock(&tx, nil, balances)
 	requireErrMsg(t, err, errMsg1)

@@ -67,10 +67,63 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 	return allocationList, nil
 }
 
+func (sc *StorageSmartContract) removeUserAllocation(
+	oldUser string,
+	alloc *StorageAllocation,
+	balances chainstate.StateContextI,
+) error {
+	var err error
+
+	clientAllocation := &ClientAllocation{}
+	clientAllocation.ClientID = oldUser
+	clientAllocation.Allocations, err = sc.getAllocationsList(alloc.Owner, balances)
+	if err != nil {
+		return fmt.Errorf("Failed to get allocation list: %v", err)
+	}
+
+	ok := clientAllocation.Allocations.List.remove(alloc.ID)
+	if !ok {
+		return fmt.Errorf("failed to remove allocation %s from client %s list", alloc.ID, oldUser)
+	}
+
+	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	if err != nil {
+		return fmt.Errorf("saving client allocations list (client: %s): %v", oldUser, err)
+	}
+
+	return nil
+}
+
+func (sc *StorageSmartContract) addUserAllocation(
+	newUser string,
+	alloc *StorageAllocation,
+	balances chainstate.StateContextI,
+) error {
+	var err error
+
+	clientAllocation := &ClientAllocation{}
+	clientAllocation.ClientID = newUser
+	clientAllocation.Allocations, err = sc.getAllocationsList(alloc.Owner, balances)
+	if err != nil {
+		return fmt.Errorf("Failed to get allocation list: %v", err)
+	}
+
+	ok := clientAllocation.Allocations.List.add(alloc.ID)
+	if !ok {
+		return fmt.Errorf("failed to add allocation %s to client %s list", alloc.ID, newUser)
+	}
+
+	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	if err != nil {
+		return fmt.Errorf("saving client allocations list (client: %s): %v", newUser, err)
+	}
+
+	return nil
+}
+
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
-
-	clients, err := sc.getAllocationsList(alloc.Owner, balances)
+	var err error
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"Failed to get allocation list: %v", err)
@@ -90,25 +143,17 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"unexpected error: %v", err)
 	}
 
-	clients.List.add(alloc.ID)
-	all.List.add(alloc.ID)
+	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
+		return "", common.NewError("add_allocation_failed", err.Error())
+	}
 
-	clientAllocation := &ClientAllocation{}
-	clientAllocation.ClientID = alloc.Owner
-	clientAllocation.Allocations = clients
+	all.List.add(alloc.ID)
 
 	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving all allocations list: %v", err)
 	}
 
-	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID),
-		clientAllocation)
-	if err != nil {
-		return "", common.NewErrorf("add_allocation_failed",
-			"saving client allocations list (client: %s): %v",
-			alloc.Owner, err)
-	}
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
@@ -350,7 +395,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
-		return "", common.NewErrorf("free_allocation_failed", "%v", err)
+		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 
 	return resp, err
@@ -1483,8 +1528,16 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 			"only curators can transfer allocations; "+txn.ClientID+" is not a curator")
 	}
 
+	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {
+		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
+	}
+
 	alloc.Owner = tai.NewOwnerId
 	alloc.OwnerPublicKey = tai.NewOwnerPublicKey
+
+	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
+		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
+	}
 
 	if !alloc.hasWritePool(sc, tai.NewOwnerId, balances) {
 		if err = sc.createEmptyWritePool(txn, alloc, balances); err != nil {

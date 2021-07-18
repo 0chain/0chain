@@ -705,6 +705,7 @@ func setupMocksFinishAllocation(
 		Pools: allocationPools{},
 	}
 	var newPool = &allocationPool{}
+	newPool.ID = "first_mock_write_pool"
 	newPool.Balance = state.Balance(0)
 	newPool.AllocationID = sAllocation.ID
 	newPool.Blobbers = blobberPools{}
@@ -719,6 +720,7 @@ func setupMocksFinishAllocation(
 	for i := 0; i < otherWritePools; i++ {
 		var id = strconv.Itoa(i)
 		var newPool = &allocationPool{}
+		newPool.ID = "mock_write_pool_" + id
 		newPool.AllocationID = allocationId + " " + id
 		wPool.Pools.add(newPool)
 	}
