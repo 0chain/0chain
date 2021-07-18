@@ -740,7 +740,7 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
-	UpdateState(b *Block, txn *transaction.Transaction) error
+	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) error
 }
 
 // ComputeState computes block client state
@@ -844,7 +844,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		if err := c.UpdateState(b, txn); err != nil {
+		if err := c.UpdateState(ctx, b, txn); err != nil {
 			b.SetStateStatus(StateFailed)
 			logging.Logger.Error("compute state - update state failed",
 				zap.Int64("round", b.Round),

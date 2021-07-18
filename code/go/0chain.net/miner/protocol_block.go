@@ -54,7 +54,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return errors.New("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(b, txn); err != nil {
+	if err := mc.UpdateState(ctx, b, txn); err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))

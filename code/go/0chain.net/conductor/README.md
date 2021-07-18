@@ -86,19 +86,15 @@ Jump to [Updating conductor tests](#updating-conductor-tests)
 The conductor test suites are configured on yaml files. These test suites can be categorized into 3.
 
 1. `standard tests` - confirms chain continue to function properly despite bad miner and sharder participants
-
-- [conductor.miners.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.miners.yaml)
-- [conductor.sharders.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.sharders.yaml)
-
+- [conductor.miners.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.miners.yaml)
+- [conductor.sharders.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.sharders.yaml)
 2. `view-change tests` - confirms view change (addition and removal of nodes) is working
-
-- [conductor.view-change.fault-tolerance.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.view-change.fault-tolerance.yaml)
-- [conductor.view-change.byzantine.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.view-change.byzantine.yaml)
-
+- [conductor.view-change-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.view-change-1.yaml)
+- [conductor.view-change-2.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.view-change-2.yaml)
+- [conductor.view-change-3.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.view-change-3.yaml)
 3. `blobber tests` - confirms storage functions continue to work despite bad or lost blobber, and confirms expected storage function failures
-
-- [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-1.yaml)
-- [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/feature/conductor-docs/docker.local/config/conductor.blobber-2.yaml)
+- [conductor.blobber-1.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-1.yaml)
+- [conductor.blobber-2.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.blobber-2.yaml)
 
 ## Test cases covered
 

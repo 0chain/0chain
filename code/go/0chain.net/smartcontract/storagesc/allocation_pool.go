@@ -28,6 +28,7 @@ type lockRequest struct {
 	Duration     time.Duration `json:"duration"`
 	AllocationID datastore.Key `json:"allocation_id"`
 	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
+	TargetId     datastore.Key `json:"target_id,omitempty"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {
@@ -42,7 +43,8 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 
 // unlock request used to unlock all tokens of a read pool
 type unlockRequest struct {
-	PoolID datastore.Key `json:"pool_id"`
+	PoolOwner datastore.Key `json:"pool_owner,omitempty"`
+	PoolID    datastore.Key `json:"pool_id"`
 }
 
 func (ur *unlockRequest) decode(input []byte) error {

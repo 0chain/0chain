@@ -42,7 +42,7 @@ else
 
     cd "$ROOT"
 
-    docker "$cmd" --build-arg GIT_COMMIT="$GIT_COMMIT" \
+    docker $cmd --build-arg GIT_COMMIT="$GIT_COMMIT" \
         -f "$DOCKER_FILE" . -t miner --build-arg DEV=no
 fi
 
