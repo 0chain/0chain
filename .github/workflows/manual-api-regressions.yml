@@ -17,7 +17,7 @@ jobs:
     steps:   
       - name: Validate network option
         id: network-check
-        run: (echo ${{ env.NETWORKS }} | grep -w "${{ github.event.inputs.network }}" > /dev/null && echo '::set-output name=VALID_NETWORK::true') || (echo '::set-output name=VALID_NETWORK::false' && echo "INVALID NETWORK [${{ github.event.inputs.network }}] SUPPLIED" && exit 1)
+        run: (echo '${{ env.NETWORKS }}' | grep -w "${{ github.event.inputs.network }}" > /dev/null && echo '::set-output name=VALID_NETWORK::true') || (echo '::set-output name=VALID_NETWORK::false' && echo "INVALID NETWORK [${{ github.event.inputs.network }}] SUPPLIED" && exit 1)
    
       - name: checkout
         uses: actions/checkout@v2
