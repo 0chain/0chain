@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       network:
-        description: 'Which network do you want to run regressions against? Valid options: ${{ env.NETWORKS }}'
+        description: 'Which network do you want to run API regressions against? Valid options: beta | dev | grpc | magma | stream | test'
         required: true
         default: 'beta'
 
