@@ -38,7 +38,8 @@ jobs:
       - name: Get Time
         id: time
         uses: nanzm/get-time-action@v1.1  
-        format: 'YYYY-MM-DD-HH-mm-ss'
+        with:
+          format: 'YYYY-MM-DD-HH-mm-ss'
 
       - name: Run POSTMAN collection
         run: |
