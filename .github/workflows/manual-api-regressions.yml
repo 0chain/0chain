@@ -1,0 +1,75 @@
+name: Manual API Regressions
+
+on: 
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Which network do you want to run API regressions against? Valid options: beta | dev | grpc | magma | stream | test'
+        required: true
+        default: 'beta'
+
+env:
+  NETWORKS: beta | dev | grpc | magma | stream | test
+
+jobs: 
+  api_tests:
+    runs-on: ubuntu-20.04
+    steps:   
+      - name: Validate network option
+        id: network-check
+        run: (echo '${{ env.NETWORKS }}' | grep -w "${{ github.event.inputs.network }}" > /dev/null && echo '::set-output name=VALID_NETWORK::true') || (echo '::set-output name=VALID_NETWORK::false' && echo "INVALID NETWORK [${{ github.event.inputs.network }}] SUPPLIED" && exit 1)
+   
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          repository: 0chain/0chainAPI
+          token: ${{ secrets.SVC_ACCOUNT_SECRET }}
+          
+      - name: Install Node
+        uses: actions/setup-node@v1
+        with: 
+          node-version: '12.x'
+
+      - name: Install newman
+        run: |
+         npm install -g newman
+         npm install -g newman-reporter-htmlextra
+
+      - name: Make Directory for results
+        run: mkdir -p ./${BRANCH}/latest
+        
+      - name: Get Time
+        id: time
+        uses: nanzm/get-time-action@v1.1  
+        with:
+          format: 'YYYY-MM-DD_HH.mm.ss'
+
+      - name: Run POSTMAN collection
+        run: |
+           exit_code=0
+           newman run "./Postman Collections/0chain-regressions.json" -e "./Postman Collections/Environments/${{ github.event.inputs.network }}.postman_environment.json" -r cli,htmlextra --reporter-htmlextra-export "./${{ github.event.inputs.network }}/latest/index.html" --reporter-htmlextra-darkTheme --reporter-htmlextra-showEnvironmentData --reporter-htmlextra-showGlobalData --reporter-htmlextra-logs --reporter-htmlextra-title "0Chain API Regression Tests" --reporter-htmlextra-template "./Postman Collections/Data/0chain-dashboard-template.hbs" --reporter-htmlextra-browserTitle "tested against ${{ github.event.inputs.network }} network"  --color on || exit_code=$? 
+           cp -R ./${{ github.event.inputs.network }}/latest ./${{ github.event.inputs.network }}/${{ steps.time.outputs.time }}
+           exit $exit_code
+    
+      - name: Output the run Details
+        if: always()
+        uses: actions/upload-artifact@v2
+        with: 
+         name: "TestReport-${{ github.event.inputs.network }}-${{ steps.time.outputs.time }}"
+         path: "./${{ github.event.inputs.network }}/latest"
+         
+      - name: Deploy report page
+        if:  always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_branch: test_reports
+          keep_files: true
+          github_token: "${{ secrets.SVC_ACCOUNT_SECRET }}"
+          publish_dir: "./${{ github.event.inputs.network }}"
+          destination_dir: "./${{ github.event.inputs.network }}"
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"    
+          
+      - name: Report Link
+        if:  always()
+        run: echo "https://0chain.github.io/0chain/${{ github.event.inputs.network }}/${{ steps.time.outputs.time }}" 
