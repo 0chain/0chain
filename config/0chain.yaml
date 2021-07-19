@@ -18,6 +18,7 @@ development:
     miner: true
     fee: false
     vesting: true
+    magma: true
   txn_generation:
     wallets: 500
     transactions: 70
