@@ -148,7 +148,7 @@ func TestStakePoolLock(t *testing.T) {
 		var offers = []common.Timestamp{}
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
-		require.EqualValues(t, errors.ExcludeLocation(err), errStakePoolLock+errStakeTooSmall)
+		require.EqualValues(t, errors.PPrint(err), errStakePoolLock+errStakeTooSmall)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {

@@ -90,7 +90,7 @@ func TestAddChallenge(t *testing.T) {
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
 		require.EqualValues(t, want.error, err != nil)
 		if want.error {
-			require.EqualValues(t, want.errorMsg, errors.ExcludeLocation(err))
+			require.EqualValues(t, want.errorMsg, errors.PPrint(err))
 			return
 		}
 		challenge := &StorageChallenge{}
@@ -206,7 +206,7 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, errors.ExcludeLocation(err), errLate)
+		require.EqualValues(t, errors.PPrint(err), errLate)
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
@@ -296,7 +296,7 @@ func TestBlobberPenalty(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, errors.ExcludeLocation(err), errLate)
+		require.EqualValues(t, errors.PPrint(err), errLate)
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {

@@ -137,7 +137,7 @@ func TestRoundStartingStore(t *testing.T) {
 		require.NoError(t, err)
 
 		err = storage.Prune(150)
-		assert.EqualValues(t, errors.ExcludeLocation(err), errors.ExcludeLocation(ErrRoundEntityNotFound()))
+		assert.EqualValues(t, errors.PPrint(err), errors.PPrint(ErrRoundEntityNotFound()))
 
 		err = storage.Prune(0)
 		assert.NoError(t, err)
@@ -145,7 +145,7 @@ func TestRoundStartingStore(t *testing.T) {
 		assert.EqualValues(t, []int64{5, 51, 151, 251}, storage.GetRounds())
 
 		err = storage.Prune(0)
-		assert.EqualValues(t, errors.ExcludeLocation(err), errors.ExcludeLocation(ErrRoundEntityNotFound()))
+		assert.EqualValues(t, errors.PPrint(err), errors.PPrint(ErrRoundEntityNotFound()))
 
 		got := storage.Get(0)
 		assert.Nil(t, got)

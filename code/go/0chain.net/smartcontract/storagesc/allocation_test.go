@@ -197,7 +197,7 @@ func TestSelectBlobbers(t *testing.T) {
 			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
 			require.EqualValues(t, tt.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, tt.want.errMsg, errors.ExcludeLocation(err))
+				require.EqualValues(t, tt.want.errMsg, errors.PPrint(err))
 				return
 			}
 
@@ -530,7 +530,7 @@ func TestTransferAllocation(t *testing.T) {
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.errMsg, errors.ExcludeLocation(err))
+				require.EqualValues(t, test.want.errMsg, errors.PPrint(err))
 				return
 			}
 			require.EqualValues(t, args.txn.Hash, resp)

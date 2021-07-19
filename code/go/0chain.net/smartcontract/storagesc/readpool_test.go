@@ -50,7 +50,7 @@ func mustDecode(t testing.TB, b []byte, val interface{}) {
 func requireErrMsg(t *testing.T, err error, msg string) {
 	t.Helper()
 	require.Error(t, err, "missing error")
-	require.Equal(t, msg, errors.ExcludeLocation(err), "unexpected error")
+	require.Equal(t, msg, errors.PPrint(err), "unexpected error")
 }
 
 func Test_lockRequest_decode(t *testing.T) {

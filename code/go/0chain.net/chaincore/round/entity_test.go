@@ -554,7 +554,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
 			got, got1, err := r.AddNotarizedBlock(tt.args.b)
-			require.Equal(t, errors.ExcludeLocation(tt.wantErr), errors.ExcludeLocation(err))
+			require.Equal(t, errors.PPrint(tt.wantErr), errors.PPrint(err))
 
 			if err != nil {
 				return

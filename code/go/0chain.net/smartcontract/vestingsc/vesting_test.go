@@ -505,7 +505,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Equal(t, errors.ExcludeLocation(common.NewErrNoResource(nil, "can't get pool: value not present")), errors.ExcludeLocation(err))
+	require.Equal(t, errors.PPrint(common.NewErrNoResource(nil, "can't get pool: value not present")), errors.PPrint(err))
 
 	balances.balances[client.id] = 200e10
 

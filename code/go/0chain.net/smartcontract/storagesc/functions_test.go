@@ -228,7 +228,7 @@ func TestMintReward(t *testing.T) {
 			err := mintReward(args.sp, args.value, args.balances)
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
-				require.EqualValues(t, tt.want.errorMsg, errors.ExcludeLocation(err))
+				require.EqualValues(t, tt.want.errorMsg, errors.PPrint(err))
 				return
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))

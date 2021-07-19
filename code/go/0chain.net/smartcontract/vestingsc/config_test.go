@@ -21,7 +21,7 @@ func assertErrMsg(t *testing.T, err error, msg string) {
 	}
 
 	if assert.NotNil(t, err) {
-		assert.Equal(t, msg, errors.ExcludeLocation(err))
+		assert.Equal(t, msg, errors.PPrint(err))
 	}
 }
 

@@ -1025,7 +1025,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	for _, blobber := range allBlobbersList.Nodes {
 		var b *StorageNode
 		b, err = ssc.getBlobber(blobber.ID, ctx)
-		if err != nil && errors.ExcludeLocation(err) == ErrValueNotPresent {
+		if err != nil && errors.PPrint(err) == ErrValueNotPresent {
 			continue
 		}
 		require.NoError(t, err)
