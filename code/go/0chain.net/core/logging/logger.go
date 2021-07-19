@@ -2,6 +2,7 @@ package logging
 
 import (
 	"os"
+	"path/filepath"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -25,11 +26,11 @@ var (
 )
 
 //InitLogging - initialize the logging submodule
-func InitLogging(mode string) {
-	var logName = "log/0chain.log"
-	var n2nLogName = "log/n2n.log"
-	var memLogName = "log/memUsage.log"
-	var hcLogName = "log/hc.log"
+func InitLogging(mode string, wordDir string) {
+	var logName = filepath.Join(wordDir, "log/0chain.log")
+	var n2nLogName = filepath.Join(wordDir, "log/n2n.log")
+	var memLogName = filepath.Join(wordDir, "log/memUsage.log")
+	var hcLogName = filepath.Join(wordDir, "log/hc.log")
 
 	var logWriter = getWriteSyncer(logName)
 	var n2nLogWriter = getWriteSyncer(n2nLogName)

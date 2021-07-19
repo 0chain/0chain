@@ -11,6 +11,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -88,17 +90,19 @@ func main() {
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	minioFile := flag.String("minio_file", "", "minio_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
+	workDir := flag.String("work_dir", "", "work_dir")
+
 	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
-	config.SetupConfig()
-	config.SetupSmartContractConfig()
+	config.SetupConfig(*workDir)
+	config.SetupSmartContractConfig(*workDir)
 
 	if config.Development() {
-		logging.InitLogging("development")
+		logging.InitLogging("development", *workDir)
 	} else {
-		logging.InitLogging("production")
+		logging.InitLogging("production", *workDir)
 	}
 
 	reader, err := os.Open(*minioFile)
@@ -123,7 +127,8 @@ func main() {
 	config.SetServerChainID(config.Configuration.ChainID)
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
-	initEntities()
+
+	initEntities(*workDir)
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
 	err = signatureScheme.ReadKeys(reader)
@@ -135,7 +140,7 @@ func main() {
 
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
-	sc.SetupConfigInfoDB()
+	sc.SetupConfigInfoDB(*workDir)
 	sc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
 	sc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
 	sc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
@@ -144,15 +149,19 @@ func main() {
 	node.ReadConfig()
 
 	if *initialStatesFile == "" {
-		*initialStatesFile = viper.GetString("network.initial_states")
+		*initialStatesFile = path.Join(*workDir, viper.GetString("network.initial_states"))
 	}
 
 	initStates := state.NewInitStates()
 	initStateErr := initStates.Read(*initialStatesFile)
+	if initStateErr != nil {
+		Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
+		return
+	}
 
 	// if there's no magic_block_file commandline flag, use configured then
 	if *magicBlockFile == "" {
-		*magicBlockFile = viper.GetString("network.magic_block_file")
+		*magicBlockFile = path.Join(*workDir, viper.GetString("network.magic_block_file"))
 	}
 
 	var magicBlock *block.MagicBlock
@@ -172,10 +181,10 @@ func main() {
 	}
 
 	if state.Debug() {
-		block.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger(path.Join(*workDir, "/tmp/state.txt"))
 	}
 
-	setupBlockStorageProvider(mConf)
+	setupBlockStorageProvider(mConf, *workDir)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
@@ -198,11 +207,8 @@ func main() {
 		selfNode.Type = node.NodeTypeSharder
 		selfNode.Path = path
 		selfNode.Description = description
-	} else {
-		if initStateErr != nil {
-			Logger.Panic("Failed to read initialStates", zap.Any("Error", initStateErr))
-		}
 	}
+
 	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
@@ -392,14 +398,14 @@ func initHandlers() {
 	serverChain.SetupNodeHandlers()
 }
 
-func initEntities() {
+func initEntities(workDir string) {
 	memoryStorage := memorystore.GetStorageProvider()
 
-	chain.SetupEntity(memoryStorage)
+	chain.SetupEntity(memoryStorage, workDir)
 	block.SetupEntity(memoryStorage)
 
-	round.SetupRoundSummaryDB()
-	block.SetupBlockSummaryDB()
+	round.SetupRoundSummaryDB(workDir)
+	block.SetupBlockSummaryDB(workDir)
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
@@ -438,7 +444,7 @@ func initWorkers(ctx context.Context) {
 	sharder.SetupWorkers(ctx)
 }
 
-func setupBlockStorageProvider(mConf blockstore.MinioConfiguration) {
+func setupBlockStorageProvider(mConf blockstore.MinioConfiguration, workDir string) {
 	// setting up minio client from configs if minio enabled
 	var (
 		mClient blockstore.MinioClient
@@ -465,7 +471,7 @@ func setupBlockStorageProvider(mConf blockstore.MinioConfiguration) {
 		}
 	}
 
-	fsbs := blockstore.NewFSBlockStore("data/blocks", mClient)
+	fsbs := blockstore.NewFSBlockStore(filepath.Join(workDir, "data/blocks"), mClient)
 	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
 	switch blockStorageProvider {
 	case "", "blockstore.FSBlockStore":
@@ -476,7 +482,7 @@ func setupBlockStorageProvider(mConf blockstore.MinioConfiguration) {
 		var bs = []blockstore.BlockStore{
 			fsbs,
 			blockstore.NewBlockDBStore(
-				blockstore.NewFSBlockStore("data/blocksdb", mClient),
+				blockstore.NewFSBlockStore(filepath.Join(workDir, "data/blocksdb"), mClient),
 			),
 		}
 		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))

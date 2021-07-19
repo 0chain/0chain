@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -477,20 +478,28 @@ func (c *Chain) Initialize() {
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity(store datastore.Store) {
+func SetupEntity(store datastore.Store, workDir string) {
 	chainEntityMetadata = datastore.MetadataProvider()
 	chainEntityMetadata.Name = "chain"
 	chainEntityMetadata.Provider = Provider
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
-	SetupStateDB()
+	SetupStateDB(workDir)
 }
 
 var stateDB *util.PNodeDB
 
 //SetupStateDB - setup the state db
-func SetupStateDB() {
-	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
+func SetupStateDB(workDir string) {
+
+	dataDir := filepath.Join(workDir, "data/rocksdb/state")
+
+	logDir := "/0chain/log/rocksdb/state"
+	if len(workDir) > 0 {
+		logDir = filepath.Join(workDir, "log/rocksdb/state")
+	}
+
+	db, err := util.NewPNodeDB(dataDir, logDir)
 	if err != nil {
 		panic(err)
 	}
@@ -504,10 +513,13 @@ func CloseStateDB() {
 
 func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
 
-func (c *Chain) SetupConfigInfoDB() {
+func (c *Chain) SetupConfigInfoDB(workDir string) {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
-	db, err := ememorystore.CreateDB("data/rocksdb/config")
+
+	dataDir := filepath.Join(workDir, "data/rocksdb/config")
+
+	db, err := ememorystore.CreateDB(dataDir)
 	if err != nil {
 		panic(err)
 	}

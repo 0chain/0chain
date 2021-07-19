@@ -76,8 +76,13 @@ func SetupDefaultConfig() {
 }
 
 // SetupConfig setups the main configuration system.
-func SetupConfig() {
+func SetupConfig(workDir string) {
 	file := filepath.Join(".", "config", "0chain.yaml")
+
+	if len(workDir) > 0 {
+		file = filepath.Join(workDir, "config", "0chain.yaml")
+	}
+
 	if err := viper.ReadConfigFile(file); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
@@ -99,8 +104,13 @@ func SetupDefaultSmartContractConfig() {
 }
 
 // SetupSmartContractConfig setups the smart contracts configuration system.
-func SetupSmartContractConfig() {
+func SetupSmartContractConfig(workDir string) {
 	file := filepath.Join(".", "config", "sc.yaml")
+
+	if len(workDir) > 0 {
+		file = filepath.Join(workDir, "config", "sc.yaml")
+	}
+
 	if err := SmartContractConfig.ReadConfigFile(file); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}

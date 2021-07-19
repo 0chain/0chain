@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"sort"
 	"sync"
@@ -492,8 +493,11 @@ func SetupEntity(store datastore.Store) {
 }
 
 //SetupRoundSummaryDB - setup the round summary db
-func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+func SetupRoundSummaryDB(workDir string) {
+
+	dataDir := filepath.Join(workDir, "data/rocksdb/roundsummary")
+
+	db, err := ememorystore.CreateDB(dataDir)
 	if err != nil {
 		panic(err)
 	}

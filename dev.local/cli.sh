@@ -2,6 +2,11 @@
 
 root=$(pwd)
 
+cd ../code/go/0chain.net
+code=$(pwd)
+
+cd $root
+
 
 ips=`ifconfig | grep "inet " | grep 198.18.0 | wc -l`
 
@@ -55,8 +60,8 @@ cleanAll() {
 }
 
 install_debuggger() {
-    [ -d ../.vscode ] || mkdir -p ../.vscode
-    sed "s/Hostname/$hostname/g" launch.json > ../.vscode/launch.json
+    [ -d ../code/go/0chain.net/.vscode ] || mkdir -p ../code/go/0chain.net/.vscode
+    sed "s/Hostname/$hostname/g" launch.json > ../code/go/0chain.net/.vscode/launch.json
     echo "debugbbers are installed"
 }
 
@@ -68,6 +73,32 @@ clean_sharder () {
     rm -rf "./data/sharder$i"
 }
 
+setup_sharder_runtime() {
+    echo ""
+    echo "Prepare sharder $i: config, files, data, log .."
+    cd $root
+    [ -d ./data/sharder$i ] && rm -rf ./data/sharder$i
+
+    mkdir -p ./data/sharder$i
+
+    cp -r ../docker.local/config "./data/sharder$i/"
+
+    cd  ./data/sharder$i
+
+
+    find ./config -name "0chain.yaml" -exec sed -i '' 's/level: "debug"/level: "error"/g' {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/console: false/console: true/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/#    host: cassandra/    host: 127.0.0.1/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' "s/#    port: 9042/    port: 904$i/g" {} \;
+
+
+    [ -d ./data/blocks ] || mkdir -p ./data/blocks
+    [ -d ./data/rocksdb ] || mkdir -p ./data/rocksdb
+    [ -d ./log ] || mkdir ./log
+
+    cd $root
+}
+
 start_sharder_selector() {
 echo "
 **********************************************
@@ -75,21 +106,49 @@ echo "
 **********************************************"
 
     echo " "
-    echo "Please select which shareder are you working on: "
+    echo "Please select which sharder are you working on: "
 
      select i in "1" "2";  do
         case $i in
-            "1"     )   start_sharder_cli;     break;;
-            "2"     )   start_sharder_cli;     break;;
+            "1"     )   setup_sharder_runtime; start_sharder_cli;     break;;
+            "2"     )   setup_sharder_runtime; start_sharder_cli;     break;;
         esac
     done
 
 }
 
+start_sharder(){
+
+    cd $code
+
+    # Build libzstd with local repo
+    # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+    find . -name "go.mod" -exec sed -i '' "/replace github.com\/valyala\/gozstd/d" {} \;
+    echo "replace github.com/valyala/gozstd => ../../../../../valyala/gozstd" >> ./go.mod
+
+
+    cd ./sharder/sharder
+
+    # Build bls with CGO_LDFLAGS and CGO_CPPFLAGS to fix `ld: library not found for -lcrypto`
+    export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+    export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+
+    GIT_COMMIT=$GIT_COMMIT
+    go build -o $root/data/sharder$i/sharder -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
+
+    cd $root/data/sharder$i/
+    ./sharder --deployment_mode 0 --keys_file ./config/b0snode$i_keys.txt --minio_file ./config/minio_config.txt
+}
+
+
 start_sharder_cli() {
+
+
+
+
 echo "
 **********************************************
-            Sharder CLI
+            Sharder $i
 **********************************************"
 
     echo " "
@@ -97,15 +156,12 @@ echo "
 
     select f in "install cassandra" "start sharder" "clean sharder"; do
         case $f in
-            "install cassandra"     )   ./install_cassandra.sh $i;           ;;
-            "start sharder"         )   start_blobber;                  break;;
-            "clean sharder"         )   clean_sharder                        ;;
+            "install cassandra"     )   cd $root && ./install_cassandra.sh $i;      ;;
+            "start sharder"         )   cd $root && start_sharder;                  ;;
+            "clean sharder"         )   cd $root && clean_sharder                   ;;
         esac
     done
-
 }
-
-
 
 
 echo "

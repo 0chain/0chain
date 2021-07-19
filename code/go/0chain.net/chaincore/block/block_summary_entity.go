@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strconv"
 
 	"0chain.net/core/common"
@@ -42,8 +43,11 @@ func SetupBlockSummaryEntity(store datastore.Store) {
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */
-func SetupBlockSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/blocksummary")
+func SetupBlockSummaryDB(workDir string) {
+
+	dataDir := filepath.Join(workDir, "data/rocksdb/blocksummary")
+
+	db, err := ememorystore.CreateDB(dataDir)
 	if err != nil {
 		panic(err)
 	}

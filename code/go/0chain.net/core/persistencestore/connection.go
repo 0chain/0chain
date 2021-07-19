@@ -21,11 +21,19 @@ var KeySpace = "zerochain"
 //ClusterName - name of the cluster used for cassandra or compatible service
 var ClusterName = "cassandra"
 
+var (
+	cassandraDelay   int
+	cassandraRetries int
+	cassandraHost    string
+	cassandraPort    int
+)
+
 func init() {
 	cname := os.Getenv("CASSANDRA_CLUSTER")
 	if cname != "" {
 		ClusterName = cname
 	}
+
 }
 
 var mutex = &sync.Mutex{}
@@ -35,24 +43,34 @@ var Session SessionI
 
 /*InitSession - initialize a storage session */
 func InitSession() {
-	cassandraDelay := viper.GetInt("cassandra.connection.delay")
-	cassandraRetries := viper.GetInt("cassandra.connection.retries")
+
+	cassandraDelay = viper.GetInt("cassandra.connection.delay")
+	cassandraRetries = viper.GetInt("cassandra.connection.retries")
+	cassandraHost = viper.GetString("cassandra.connection.host")
+	cassandraPort = viper.GetInt("cassandra.connection.port")
+
 	delay := time.Duration(cassandraDelay) * time.Second
-	err := initSession(delay, cassandraRetries)
+	err := initSession(delay, cassandraRetries, cassandraHost, cassandraPort)
 	if Session == nil {
 		panic(err)
 	}
 }
 
-func initSession(delay time.Duration, maxTries int) error {
+func initSession(delay time.Duration, maxTries int, host string, port int) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
 		cluster = gocql.NewCluster(ClusterName)
+	} else if len(host) > 0 {
+		cluster = gocql.NewCluster(host)
 	} else {
 		cluster = gocql.NewCluster("127.0.0.1")
+	}
+
+	if port > 0 {
+		cluster.Port = port
 	}
 
 	// Setting the following for now because of https://github.com/gocql/gocql/issues/1200
@@ -63,6 +81,7 @@ func initSession(delay time.Duration, maxTries int) error {
 
 	cluster.ProtoVersion = 4
 	cluster.Keyspace = KeySpace
+
 	start0 := time.Now()
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
 	for tries := 0; tries < maxTries; tries++ {

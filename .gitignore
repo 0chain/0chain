@@ -62,3 +62,5 @@ docker.local/log_dumps
 **/mocks/*
 !**/mocks/mocks.go
 !**/mocks/.gitkeep
+dev.local/data
+.vscode
