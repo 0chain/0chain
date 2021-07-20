@@ -57,5 +57,5 @@ start_miner(){
     go build -o $root/data/miner$i/miner -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
     cd $root/data/miner$i/
-    ./miner --deployment_mode 0 --keys_file $root/data/miner$i/config/b0mnode${i}_keys.txt --dkg_file $root/data/miner$i/config/b0mnode${i}_dkg.json --work_dir $root/data/miner$i
+    ./miner --deployment_mode 0 --keys_file $root/data/miner$i/config/b0mnode${i}_keys.txt --dkg_file $root/data/miner$i/config/b0mnode${i}_dkg.json --work_dir $root/data/miner$i --redis_host 127.0.0.1 --redis_port 63${i}0 --redis_txns_host 127.0.0.1 --redis_txns_port 63${i}1
 }
