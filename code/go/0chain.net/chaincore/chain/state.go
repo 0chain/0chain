@@ -418,7 +418,7 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	s.Balance = state.Balance(0)
 	ss, err := clientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 		return s, err

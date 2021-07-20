@@ -98,7 +98,7 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=%v", string(path), err))
+		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=", string(path)))
 	}
 
 	mpt.mutex.RLock()
