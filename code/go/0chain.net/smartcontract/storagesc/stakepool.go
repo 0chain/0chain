@@ -798,7 +798,7 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 	var poolb []byte
 	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return
 	}
 
@@ -856,7 +856,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return nil, errors.Newf("", "unexpected error: %v", err)
 	}
 

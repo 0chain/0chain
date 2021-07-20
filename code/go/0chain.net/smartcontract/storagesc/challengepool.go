@@ -197,7 +197,7 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 	_, err = ssc.getChallengePoolBytes(allocationID, balances)
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return nil, errors.Wrap(err, "new_challenge_pool_failed")
 	}
 

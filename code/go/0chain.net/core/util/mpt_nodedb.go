@@ -205,7 +205,7 @@ func (mndb *MemoryNodeDB) reachable(node, node2 Node) (ok bool) {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
 		fn, err := mndb.getNode(nodeImpl.NodeKey)
-		if err != nil && err != ErrNodeNotFound() {
+		if err != nil && !errors.Is(err, ErrNodeNotFound()) {
 			panic(err)
 		}
 		if fn == nil {

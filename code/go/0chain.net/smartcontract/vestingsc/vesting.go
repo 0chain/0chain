@@ -247,7 +247,7 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 	var balance state.Balance
 	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return // unexpected error
 	}
 
@@ -626,7 +626,7 @@ func (vsc *VestingSmartContract) stop(t *transaction.Transaction,
 	}
 
 	_, err = vp.vest(t.ToClientID, sr.Destination, t.CreationDate, balances)
-	if err != nil && err != errZeroVesting() {
+	if err != nil && !errors.Is(err, errZeroVesting()) {
 		return "", errors.Wrap(err, "stop_vesting_failed")
 	}
 

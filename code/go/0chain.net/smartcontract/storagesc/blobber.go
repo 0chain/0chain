@@ -355,7 +355,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	lastBlobberClientReadBytes, err = balances.GetTrieNode(
 		commitRead.GetKey(sc.ID))
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return "", errors.Newf("commit_blobber_read",
 			"can't get latest blobber client read: %v", err)
 	}

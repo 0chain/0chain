@@ -83,7 +83,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return "", errors.Newf("add_sharder", "unexpected error: %v", err)
 	}
 
@@ -163,7 +163,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	var ss util.Serializable
 	ss, err = balances.GetTrieNode(getSharderKey(sid))
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return // unexpected error
 	}
 

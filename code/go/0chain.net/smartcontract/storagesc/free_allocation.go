@@ -159,7 +159,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(assignerInfo.Name, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return errors.Wrap(err, "add_free_storage_assigner")
 	}
 	if err == util.ErrValueNotPresent() || assigner == nil {

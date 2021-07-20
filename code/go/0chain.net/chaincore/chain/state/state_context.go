@@ -1,6 +1,8 @@
 package state
 
 import (
+	"github.com/0chain/gosdk/core/common/errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -198,7 +200,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s.Balance = state.Balance(0)
 	ss, err := sc.state.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 		return s, err

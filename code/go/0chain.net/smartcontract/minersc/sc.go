@@ -189,7 +189,7 @@ func getGlobalNode(balances cstate.StateContextI) (
 	gn = new(GlobalNode)
 	var p util.Serializable
 	p, err = balances.GetTrieNode(GlobalNodeKey)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return nil, err
 	}
 
@@ -255,7 +255,7 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	un := NewUserNode()
 	un.ID = id
 	us, err := balances.GetTrieNode(un.GetKey())
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return nil, err
 	}
 	if us == nil {

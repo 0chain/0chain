@@ -141,7 +141,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", errors.Wrap(err, errors.New("add_allocation_failed",
 			"allocation id already used in trie"))
 	}
-	if err != util.ErrValueNotPresent() {
+	if !errors.Is(err, util.ErrValueNotPresent()) {
 		return "", errors.Wrap(err, errors.New("add_allocation_failed",
 			"unexpected error"))
 	}
@@ -1132,7 +1132,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// check out blobber challenges
 		var bc *BlobberChallenge
 		bc, err = sc.getBlobberChallenge(d.BlobberID, balances)
-		if err != nil && err != util.ErrValueNotPresent() {
+		if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, errors.Wrap(err, "getting blobber challenge")
 		}
 		// no blobber challenges, no failures

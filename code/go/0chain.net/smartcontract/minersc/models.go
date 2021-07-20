@@ -1087,7 +1087,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 
@@ -1109,7 +1109,7 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
 	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 
@@ -1191,7 +1191,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, ShardersKeepKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 		return &MinerNodes{}, nil
@@ -1209,7 +1209,7 @@ func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) er
 func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, AllShardersKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 		return &MinerNodes{}, nil

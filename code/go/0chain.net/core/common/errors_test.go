@@ -36,7 +36,7 @@ func TestError_Error(t *testing.T) {
 
 			err := errors.New(tt.fields.Code, tt.fields.Msg)
 
-			if got := err.Error(); got != tt.want {
+			if got := errors.PPrint(err); got != tt.want {
 				t.Errorf("Error() = %v, want %v", got, tt.want)
 			}
 		})
@@ -131,7 +131,7 @@ func TestNewErrorf(t *testing.T) {
 			t.Parallel()
 
 			if got := errors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewErrorf() = %v, want %v", got, tt.want)
+				t.Errorf("NewErrorf() = %v, want %v", errors.PPrint(got), tt.want)
 			}
 		})
 	}

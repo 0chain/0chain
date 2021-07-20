@@ -271,7 +271,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 ) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
 	if err == util.ErrValueNotPresent() {
@@ -302,7 +302,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
 
@@ -358,7 +358,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return "", errors.Wrap(err, "write_pool_lock_failed")
 		}
 		wp = new(writePool)

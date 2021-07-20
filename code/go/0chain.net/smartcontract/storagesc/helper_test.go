@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0chain/gosdk/core/common/errors"
+
 	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -382,7 +384,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		t.Fatal("unexpected error:", err)
 	}
 	if err == util.ErrValueNotPresent() {

@@ -279,7 +279,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return "", errors.Wrap(err, "new_read_pool_failed")
 	}
 
@@ -305,7 +305,7 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	var balance state.Balance
 	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return
 	}
 
@@ -348,7 +348,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
-		if err != util.ErrValueNotPresent() {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return "", errors.Wrap(err, "read_pool_lock_failed")
 		}
 		rp = new(readPool)

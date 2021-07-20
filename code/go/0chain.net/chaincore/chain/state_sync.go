@@ -141,7 +141,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	}
 	err := c.GetLatestFinalizedBlock().ClientState.IterateFrom(ctx, key, handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
 	if err != nil {
-		if err != ErrStopIterator() {
+		if !errors.Is(err, ErrStopIterator()) {
 			return nil, err
 		}
 	}
