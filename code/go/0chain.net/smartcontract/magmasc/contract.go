@@ -130,12 +130,12 @@ func (m *MagmaSmartContract) consumerAcceptTerms(txn *tx.Transaction, blob []byt
 	}
 
 	consumer, err := consumerFetch(m.ID, ackn.Consumer.ExtID, sci)
-	if err != nil || consumer.ID != ackn.Consumer.ID || consumer.ID != txn.ClientID {
+	if err != nil || consumer.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeAcceptTerms, "fetch consumer failed", err)
 	}
 
 	provider, err := providerFetch(m.ID, ackn.Provider.ExtID, sci)
-	if err != nil || provider.ID != ackn.Provider.ID {
+	if err != nil {
 		return "", errors.Wrap(errCodeAcceptTerms, "fetch provider failed", err)
 	}
 	if err = provider.Terms.Validate(); err != nil {
