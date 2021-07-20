@@ -17,7 +17,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 
 	var existingMiner *MinerNode
 	if existingMiner, err = getMinerNode(t.ClientID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("miner_health_check_failed", "can't get the miner "+t.ClientID+": "))
+		return "", errors.Wrap(err, errors.New("miner_health_check_failed", "can't get the miner "+t.ClientID))
 
 	}
 
@@ -32,13 +32,13 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 
 	if err = updateMinersList(balances, all); err != nil {
 		return "", errors.Wrap(err, errors.New("miner_health_check_failed",
-			"can't save all miners list: "))
+			"can't save all miners list"))
 	}
 
 	err = existingMiner.save(balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("miner_health_check_failed",
-			"can't save miner: "))
+			"can't save miner"))
 	}
 
 	return string(existingMiner.Encode()), nil
@@ -50,14 +50,14 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 	all, err := getAllShardersList(balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"Failed to get sharder list: "))
+			"Failed to get sharder list"))
 
 	}
 
 	var existingSharder *MinerNode
 	if existingSharder, err = msc.getSharderNode(t.ClientID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't get the sharder "+t.ClientID+": "))
+			"can't get the sharder "+t.ClientID))
 	}
 
 	existingSharder.LastHealthCheck = t.CreationDate
@@ -71,13 +71,13 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 
 	if err = updateAllShardersList(balances, all); err != nil {
 		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't save all sharders list: "))
+			"can't save all sharders list"))
 	}
 
 	err = existingSharder.save(balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't save sharder: "))
+			"can't save sharder"))
 
 	}
 
