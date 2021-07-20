@@ -27,14 +27,22 @@ var TXN_TIME_TOLERANCE int64
 var TXN_MIN_FEE int64
 
 var transactionCount uint64 = 0
-var redis_txns string
+var redisTxnsHost string
+var redisTxnsPort = 6479
 
 func init() {
-	redis_txns = os.Getenv("REDIS_TXNS")
+	redisTxnsHost = os.Getenv("REDIS_TXNS")
+}
+
+func SetTransactionDB(host string, port int) {
+	if len(host) > 0 && port > 0 {
+		redisTxnsHost = host
+		redisTxnsPort = port
+	}
 }
 
 func SetupTransactionDB() {
-	memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
+	memorystore.AddPool("txndb", memorystore.NewPool(redisTxnsHost, redisTxnsPort))
 }
 
 /*Transaction type for capturing the transaction data */

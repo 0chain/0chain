@@ -15,11 +15,77 @@
                 "--deployment_mode", "0",
                 "--keys_file", "../../../../../dev.local/data/sharder1/config/b0snode1_keys.txt", 
                 "--minio_file", "../../../../../dev.local/data/sharder1/config/minio_config.txt",
-                "--work_dir", "../../../../../dev.local/data/sharder1",
+                "--work_dir", "../../../../../dev.local/data/sharder1"
             ],
             "env": {
                 "CGO_LDFLAGS":"-L/usr/local/opt/openssl@1.1/lib",
-                "CGO_CPPFLAGS":"-I/usr/local/opt/openssl@1.1/include",
+                "CGO_CPPFLAGS":"-I/usr/local/opt/openssl@1.1/include"
+            }
+        },
+        {
+            "name": "debug:minner1",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/miner/miner",
+            "buildFlags":"-tags bn256",
+            "args": [
+                "--deployment_mode", "0",
+                "--keys_file", "../../../../../dev.local/data/miner1/config/b0mnode1_keys.txt", 
+                "--dkg_file", "../../../../../dev.local/data/miner1/config/b0mnode1_dkg.json",
+                "--work_dir", "../../../../../dev.local/data/miner1",
+                "--redis_host","127.0.0.1",
+                "--redis_port","6310",
+                "--redis_txns_host","127.0.0.1",
+                "--redis_txns_port","6311"
+            ],
+            "env": {
+                "CGO_LDFLAGS":"-L/usr/local/opt/openssl@1.1/lib",
+                "CGO_CPPFLAGS":"-I/usr/local/opt/openssl@1.1/include"
+            }
+        },
+        {
+            "name": "debug:minner2",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/miner/miner",
+            "buildFlags":"-tags bn256",
+            "args": [
+                "--deployment_mode", "0",
+                "--keys_file", "../../../../../dev.local/data/miner2/config/b0mnode2_keys.txt", 
+                "--dkg_file", "../../../../../dev.local/data/miner2/config/b0mnode2_dkg.json",
+                "--work_dir", "../../../../../dev.local/data/miner2",
+                "--redis_host","127.0.0.1",
+                "--redis_port","6320",
+                "--redis_txns_host","127.0.0.1",
+                "--redis_txns_port","6321"
+            ],
+            "env": {
+                "CGO_LDFLAGS":"-L/usr/local/opt/openssl@1.1/lib",
+                "CGO_CPPFLAGS":"-I/usr/local/opt/openssl@1.1/include"
+            }
+        },
+        {
+            "name": "debug:minner3",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/miner/miner",
+            "buildFlags":"-tags bn256",
+            "args": [
+                "--deployment_mode", "0",
+                "--keys_file", "../../../../../dev.local/data/miner3/config/b0mnode3_keys.txt", 
+                "--dkg_file", "../../../../../dev.local/data/miner3/config/b0mnode3_dkg.json",
+                "--work_dir", "../../../../../dev.local/data/miner3",
+                "--redis_host","127.0.0.1",
+                "--redis_port","6330",
+                "--redis_txns_host","127.0.0.1",
+                "--redis_txns_port","6331"
+            ],
+            "env": {
+                "CGO_LDFLAGS":"-L/usr/local/opt/openssl@1.1/lib",
+                "CGO_CPPFLAGS":"-I/usr/local/opt/openssl@1.1/include"
             }
         }
     ]

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -382,8 +383,8 @@ func SetupDKGSummary(store datastore.Store) {
 	datastore.RegisterEntityMetadata("dkgsummary", dkgSummaryMetadata)
 }
 
-func SetupDKGDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/dkg")
+func SetupDKGDB(workDir string) {
+	db, err := ememorystore.CreateDB(filepath.Join(workDir, "data/rocksdb/dkg"))
 	if err != nil {
 		panic(err)
 	}

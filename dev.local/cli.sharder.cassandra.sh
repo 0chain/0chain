@@ -7,7 +7,7 @@ root=$(pwd)
 
 [ -d $root/data/$sharder/cassandra ] || mkdir -p $root/data/$sharder/cassandra
 
-num=$(docker ps -a --filter "name=$cassandra" | wc -l)
+num=$(docker ps -a --filter "name=^${cassandra}$" | wc -l)
 
 
 echo -n "[1/5] remove $cassandra: "
@@ -29,7 +29,7 @@ cp -rf ../sql $root/data/$sharder/
 
 
 echo -n "[3/5] remove cassandra_init: "
-num=$(docker ps -a --filter "name=cassandra_init" | wc -l)
+num=$(docker ps -a --filter "name=^cassandra_init$" | wc -l)
 
 [ $num -eq 2 ] && docker rm cassandra_init --force || echo "[SKIP]"
 
