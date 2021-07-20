@@ -36,8 +36,12 @@ const (
 	// consumerRegister represents name for Consumer's registration MagmaSmartContract function.
 	consumerRegister = "consumer_register"
 
+	// consumerSessionStart represents the name of MagmaSmartContract function.
+	// When function is called it means that Consumer starts a new session.
+	consumerSessionStart = "consumer_session_start"
+
 	// consumerSessionStop represents the name of MagmaSmartContract function.
-	// When function is called it means that Consumer stops the session.
+	// When function is called it means that Consumer stops an active session.
 	consumerSessionStop = "consumer_session_stop"
 
 	// consumerUpdate represents name for

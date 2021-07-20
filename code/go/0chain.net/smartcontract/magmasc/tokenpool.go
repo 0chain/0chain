@@ -29,6 +29,11 @@ var (
 	_ util.Serializable = (*tokenPool)(nil)
 )
 
+// newTokenPool returns a new constructed token pool.
+func newTokenPool() *tokenPool {
+	return &tokenPool{}
+}
+
 // Decode implements util.Serializable interface.
 func (m *tokenPool) Decode(blob []byte) error {
 	var pool tokenPool
@@ -51,15 +56,15 @@ func (m *tokenPool) Encode() []byte {
 }
 
 // create creates token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (string, error) {
+func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tokenpool.TokenPoolTransferResponse, error) {
 	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
 	if err != nil {
-		return "", errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
 	m.Balance = state.Balance(ackn.Provider.Terms.GetAmount())
 	if clientBalance < m.Balance {
-		return "", errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
 	m.ID = ackn.SessionID
@@ -68,13 +73,13 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 
 	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, m.Balance)
 	if err = sci.AddTransfer(transfer); err != nil {
-		return "", errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
+		return nil, errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
 	if _, err = sci.InsertTrieNode(m.uid(txn.ToClientID), m); err != nil {
-		return "", errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
+		return nil, errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
 	}
 
-	resp := &tokenpool.TokenPoolTransferResponse{
+	resp := tokenpool.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,
@@ -82,7 +87,7 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 		ToClient:   txn.ToClientID, // delegate transfer to smart contract address
 	}
 
-	return string(resp.Encode()), nil
+	return &resp, nil
 }
 
 // spend spends token pool by given amount.

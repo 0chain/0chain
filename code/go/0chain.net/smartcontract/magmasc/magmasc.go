@@ -56,6 +56,8 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 		return m.consumerAcceptTerms(txn, blob, sci)
 	case consumerRegister:
 		return m.consumerRegister(txn, blob, sci)
+	case consumerSessionStart:
+		return m.consumerSessionStart(txn, blob, sci)
 	case consumerSessionStop:
 		return m.consumerSessionStop(txn, blob, sci)
 	case consumerUpdate:

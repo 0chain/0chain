@@ -15,6 +15,7 @@ const (
 	errCodeInternal       = "internal_error"
 	errCodeProviderReg    = "provider_reg"
 	errCodeProviderUpdate = "provider_update"
+	errCodeSessionStart   = "session_start"
 	errCodeSessionStop    = "session_stop"
 
 	errCodeTokenPoolCreate = "token_pool_create"
