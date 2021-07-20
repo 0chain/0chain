@@ -1,19 +1,111 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/logging"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"math/rand"
 	"testing"
+	"time"
 )
 
-func TestShouldSaveGlobalNode(t *testing.T) {
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	chain.ServerChain = new(chain.Chain)
+	chain.ServerChain.Config = new(chain.Config)
+	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err := signatureScheme.GenerateKeys()
+	if err != nil {
+		panic(err.Error())
+	}
+
+	publicKey = signatureScheme.GetPublicKey()
+
+	logging.Logger = zap.NewNop()
+}
+
+func Test_ShouldSign(t *testing.T) {
+	bytes, err := json.Marshal("sample string")
+	require.NoError(t, err)
+
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err = signatureScheme.GenerateKeys()
+	require.NoError(t, err)
+
+	_, err = signatureScheme.Sign(hex.EncodeToString(bytes))
+	require.NoError(t, err)
+}
+
+func Test_ShouldSignAndVerify(t *testing.T) {
+	bytes, err := json.Marshal("sample string")
+	require.NoError(t, err)
+
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err = signatureScheme.GenerateKeys()
+	require.NoError(t, err)
+
+	hash := hex.EncodeToString(bytes)
+	sig, err := signatureScheme.Sign(hash)
+	require.NoError(t, err)
+	require.NotEmpty(t, sig)
+
+	ok, err := signatureScheme.Verify(sig, hash)
+	require.NoError(t, err)
+	require.Equal(t, true, ok)
+}
+
+func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
+	bytes, err := json.Marshal("sample string")
+	require.NoError(t, err)
+
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err = signatureScheme.GenerateKeys()
+	require.NoError(t, err)
+
+	hash := hex.EncodeToString(bytes)
+	sig, err := signatureScheme.Sign(hash)
+	require.NoError(t, err)
+	require.NotEmpty(t, sig)
+
+	pk := signatureScheme.GetPublicKey()
+	signatureScheme = chain.GetServerChain().GetSignatureScheme()
+	err = signatureScheme.SetPublicKey(pk)
+	require.NoError(t, err)
+
+	ok, err := signatureScheme.Verify(sig, hash)
+	require.NoError(t, err)
+	require.Equal(t, ok, true)
+}
+
+func Test_ShouldVerifySignature(t *testing.T) {
+	mp, pk, err := createMintPayload("p1", "p2")
+	require.NoError(t, err)
+
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err = signatureScheme.SetPublicKey(pk)
+	require.NoError(t, err)
+
+	toSign := mp.getStringToSign()
+	for _, v := range mp.Signatures {
+		ok, err := signatureScheme.Verify(v.Signature, toSign)
+		require.NoError(t, err)
+		require.Equal(t, true, ok)
+	}
+}
+
+func Test_ShouldSaveGlobalNode(t *testing.T) {
 	_, _, err := createStateAndNodeAndAddNodeToState()
 	require.NoError(t, err, "must save the global node in state")
 }
 
-func TestShouldGetGlobalNode(t *testing.T) {
+func Test_ShouldGetGlobalNode(t *testing.T) {
 	balances, node, err := createStateAndNodeAndAddNodeToState()
 	require.NoError(t, err, "must save the global node in state")
 
@@ -23,7 +115,7 @@ func TestShouldGetGlobalNode(t *testing.T) {
 	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)
 }
 
-func TestGlobalNodeEncodeAndDecode(t *testing.T) {
+func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 	node := CreateSmartContractGlobalNode()
 	node.BurnAddress = "11"
 	node.MinMintAmount = 12
@@ -41,7 +133,7 @@ func TestGlobalNodeEncodeAndDecode(t *testing.T) {
 	expected.MinBurnAmount = 13
 }
 
-func TestEmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
+func Test_EmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
 	balances := CreateMockStateContext(clientId)
 	nodes, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
@@ -109,9 +201,9 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 	require.Equal(t, int(target.Balance), 100)
 }
 
-func TestAuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
+func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
-	tr := CreateDefaultTransaction()
+	tr := CreateDefaultTransactionToZcnsc()
 	node := getNewAuthorizer(tr.PublicKey, tr.ClientID)
 	node.Staking.ID = "11"
 	node.Staking.Balance = 100
@@ -128,7 +220,7 @@ func TestAuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 // This will test authorizer node serialization
 func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	// Create authorizer node
-	tr := CreateDefaultTransaction()
+	tr := CreateDefaultTransactionToZcnsc()
 	node := getNewAuthorizer(tr.PublicKey, tr.ClientID)
 	node.Staking.ID = "11"
 	node.Staking.Balance = 100

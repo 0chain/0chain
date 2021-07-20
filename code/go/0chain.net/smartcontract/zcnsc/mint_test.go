@@ -20,7 +20,7 @@ func init() {
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected := createMintPayload()
+	expected := createMintPayload("1", "2", "3")
 	actual := &mintPayload{}
 	err := actual.Decode(expected.Encode())
 	require.NoError(t, err)
@@ -35,17 +35,17 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 	}
 }
 
-
 // TBD
-func FuzzyMintTest(t *testing.T) {
-	payload := createMintPayload()
+func Test_FuzzyMintTest(t *testing.T) {
 	contract := CreateZCNSmartContract()
+	tr := CreateDefaultTransactionToZcnsc()
 	ctx := CreateMockStateContext(clientId)
-	tr := CreateDefaultTransaction()
 
-	addAuthorizer(t, contract, ctx, "1", "pk1")
-	addAuthorizer(t, contract, ctx, "2", "pk2")
-	addAuthorizer(t, contract, ctx, "3", "pk3")
+	addAuthorizer(t, contract, ctx, clientId)
+	addAuthorizer(t, contract, ctx, clientId + "1")
+	addAuthorizer(t, contract, ctx, clientId + "2")
+
+	payload := createMintPayload(clientId, clientId + "1", clientId + "2")
 
 	response, err := contract.mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -56,7 +56,7 @@ func FuzzyMintTest(t *testing.T) {
 // TBD
 func MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	payload := createBurnPayload()
-	tr := CreateDefaultTransaction()
+	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 	ctx := CreateMockStateContext(clientId)
 

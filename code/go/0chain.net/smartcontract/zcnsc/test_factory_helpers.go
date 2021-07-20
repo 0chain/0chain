@@ -1,13 +1,20 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"encoding/json"
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
+)
+
+const (
+	ADD_AUTHORIZER = "addAuthorizer"
 )
 
 var (
@@ -16,11 +23,21 @@ var (
 	clientSignatureScheme         = "bls0chain"
 )
 
-func CreateDefaultTransaction() *transaction.Transaction {
-	return CreateTransaction(clientId, tokens)
+func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
+	return CreateTransactionToZcnsc(clientId, tokens)
 }
 
-func CreateTransaction(fromClient string, amount float64) *transaction.Transaction {
+func addTransactionData(tr *transaction.Transaction, methodName string, input []byte) {
+	sn := smartcontractinterface.SmartContractTransactionData{FunctionName: methodName, InputData: input}
+	snBytes, err := json.Marshal(sn)
+	if err != nil {
+		panic(fmt.Sprintf("create smart contract failed due to invalid data. %s", err.Error()))
+	}
+	tr.TransactionType = transaction.TxnTypeSmartContract
+	tr.TransactionData = string(snBytes)
+}
+
+func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Transaction {
 	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
 	err := sigScheme.GenerateKeys()
 	if err != nil {
@@ -42,11 +59,19 @@ func CreateTransaction(fromClient string, amount float64) *transaction.Transacti
 		TransactionData:       "",
 		Signature:             "",
 		Fee:                   0,
-		TransactionType:       0,
+		TransactionType:       transaction.TxnTypeSmartContract,
 		TransactionOutput:     "",
 		OutputHash:            "",
 		Status:                0,
 	}
+
+	publicKey := &PublicKey{Key: txn.PublicKey}
+	pkBytes, err := json.Marshal(publicKey)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	addTransactionData(txn, ADD_AUTHORIZER, pkBytes)
 
 	return txn
 }
@@ -80,34 +105,47 @@ func createBurnPayload() *burnPayload {
 	}
 }
 
-func createMintPayload() *mintPayload {
-	return &mintPayload{
+func createMintPayload(authorizerId ...string) (*mintPayload, string, error) {
+	m := &mintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
 		Nonce:             1,
-		Signatures:        createTransactionSignatures(),
 		ReceivingClientID: "Client0",
 	}
+
+	signatures, pk, err := createTransactionSignatures(m, authorizerId...)
+	if err != nil {
+		return nil, pk, err
+	}
+
+	m.Signatures = signatures
+
+	return m, pk, nil
 }
 
-func createTransactionSignatures() []*authorizerSignature {
+func createTransactionSignatures(m *mintPayload, authorizerId ...string) ([]*authorizerSignature, string, error) {
 	var sigs []*authorizerSignature
-	sigs = append(
-		sigs,
-		&authorizerSignature{
-			ID:        "1",
-			Signature: "sig1",
-		},
-		&authorizerSignature{
-			ID:        "2",
-			Signature: "sig2",
-		},
-		&authorizerSignature{
-			ID:        "3",
-			Signature: "sig3",
-		})
 
-	return sigs
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	err := signatureScheme.GenerateKeys()
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, id := range authorizerId {
+		signature, err := signatureScheme.Sign(m.getStringToSign())
+		if err != nil {
+			return nil, "", err
+		}
+		sigs = append(
+			sigs,
+			&authorizerSignature{
+				ID:        id,
+				Signature: signature,
+			})
+	}
+
+	return sigs, signatureScheme.GetPublicKey(), nil
 }
 
 func createUserNode(id string, nonce int64) *userNode {
@@ -117,12 +155,25 @@ func createUserNode(id string, nonce int64) *userNode {
 	}
 }
 
-func addAuthorizer(t *testing.T, contract *ZCNSmartContract, ctx state.StateContextI, clientId, pk string) {
-	publicKey := &PublicKey{Key: pk}
-	tr := CreateTransaction(clientId, 10)
-	tr.PublicKey = publicKey.Key
-	tr.ClientID = clientId
+func addAuthorizer(
+	t *testing.T,
+	contract *ZCNSmartContract,
+	ctx state.StateContextI,
+	clientId string,
+	pk ...string,
+) {
+	tr := CreateTransactionToZcnsc(clientId, 10)
+	var publicKey *PublicKey
+
+	if len(pk) != 0 {
+		publicKey = &PublicKey{Key: pk[0]}
+		tr.PublicKey = publicKey.Key
+	} else {
+		publicKey = &PublicKey{Key: tr.PublicKey}
+	}
+
 	data, _ := publicKey.Encode()
+
 	resp, err := contract.addAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)

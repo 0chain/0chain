@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -113,6 +114,9 @@ func (mp *mintPayload) Decode(input []byte) error {
 
 	id, ok := objMap["ethereum_txn_id"]
 	if ok {
+		if id == nil {
+			return errors.New("ethereum_txn_id is missing in the payload")
+		}
 		var value *string
 		err = json.Unmarshal(*id, &value)
 		if err != nil {
@@ -123,6 +127,9 @@ func (mp *mintPayload) Decode(input []byte) error {
 
 	id, ok = objMap["nonce"]
 	if ok {
+		if id == nil {
+			return errors.New("nonce is missing in the payload")
+		}
 		var value *int64
 		err = json.Unmarshal(*id, &value)
 		if err != nil {
@@ -133,6 +140,9 @@ func (mp *mintPayload) Decode(input []byte) error {
 
 	id, ok = objMap["amount"]
 	if ok {
+		if id == nil {
+			return errors.New("amount is missing in the payload")
+		}
 		var value *int64
 		err = json.Unmarshal(*id, &value)
 		if err != nil {
@@ -143,6 +153,9 @@ func (mp *mintPayload) Decode(input []byte) error {
 
 	id, ok = objMap["receiving_client_id"]
 	if ok {
+		if id == nil {
+			return errors.New("receiving_client_id is missing in the payload")
+		}
 		var value *string
 		err = json.Unmarshal(*id, &value)
 		if err != nil {
@@ -153,6 +166,9 @@ func (mp *mintPayload) Decode(input []byte) error {
 
 	id, ok = objMap["signatures"]
 	if ok {
+		if id == nil {
+			return errors.New("signatures is missing in the payload")
+		}
 		var sigs []*json.RawMessage
 		err = json.Unmarshal(*id, &sigs)
 		if err != nil {
