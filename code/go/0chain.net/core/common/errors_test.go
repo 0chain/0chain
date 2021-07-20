@@ -95,7 +95,7 @@ func TestNewError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := errors.Register(tt.args.code, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := errors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewError() = %v, want %v", got, tt.want)
 			}
 		})

@@ -1,7 +1,6 @@
 package smartcontract
 
 import (
-	"fmt"
 	"strings"
 
 	"0chain.net/core/common"
@@ -39,6 +38,6 @@ func NewErrNoResourceOrErrInternal(err error, defaultInternal bool, msgs ...stri
 			return err
 		}
 
-		return errors.Wrap(err, fmt.Sprintf("%s: ", strings.Join(msgs, ":")))
+		return errors.Wrap(err, strings.Join(msgs, ":"))
 	}
 }

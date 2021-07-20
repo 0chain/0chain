@@ -131,11 +131,11 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 	balances chainstate.StateContextI) (cp *clientPools, err error) {
 
 	cp, err = vsc.getClientPools(clientID, balances)
-	if err != nil && err != util.ErrValueNotPresent() {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return // unexpected error
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return new(clientPools), nil // create new
 	}
 
