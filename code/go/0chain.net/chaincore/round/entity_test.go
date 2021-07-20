@@ -554,6 +554,17 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
 			got, got1, err := r.AddNotarizedBlock(tt.args.b)
+
+			fmt.Println("------------------------------------------------------- 1")
+			fmt.Println(tt.wantErr)
+			fmt.Println("------------------------------------------------------- 2")
+			fmt.Println(errors.PPrint(tt.wantErr))
+			fmt.Println("------------------------------------------------------- 3")
+			fmt.Println(err)
+			fmt.Println("------------------------------------------------------- 4")
+			fmt.Println(errors.PPrint(err))
+			fmt.Println("------------------------------------------------------- 5")
+
 			require.Equal(t, errors.PPrint(tt.wantErr), errors.PPrint(err))
 
 			if err != nil {

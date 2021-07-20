@@ -59,6 +59,14 @@ github.com/0chain/gosdk v1.2.77-0.20210718193927-ab9f316eb04c h1:X+I1pHnL9S5kzKn
 github.com/0chain/gosdk v1.2.77-0.20210718193927-ab9f316eb04c/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/0chain/gosdk v1.2.77-0.20210718194108-0ff4cc7d1811 h1:EAsbjbgRYj353Gnez5ZaUXxf1zUnhRgeC7hrbBJYzmI=
 github.com/0chain/gosdk v1.2.77-0.20210718194108-0ff4cc7d1811/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210719035432-892222601c1d h1:J0tvIZk+I0hzgixvZ88Y1FRqivRlQThbKrpB9lI7bsE=
+github.com/0chain/gosdk v1.2.77-0.20210719035432-892222601c1d/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210719043245-8102d9d79b97 h1:QnZ1IZY5Kr+5ikcP58T565qp9Xb6PPIkYYJs7GSKCXY=
+github.com/0chain/gosdk v1.2.77-0.20210719043245-8102d9d79b97/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210719165936-a258537dcf68 h1:3mB/TB3uNBuq/d0QvIQ2E4XdajIc0SkY3j8zsGpdu8A=
+github.com/0chain/gosdk v1.2.77-0.20210719165936-a258537dcf68/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210719171650-bf517f7bad91 h1:KF1mPHMAR/xhf5MGVoPEPegMOiRf8ZRSD92YUH8b6fw=
+github.com/0chain/gosdk v1.2.77-0.20210719171650-bf517f7bad91/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=

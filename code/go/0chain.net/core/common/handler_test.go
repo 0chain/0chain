@@ -47,9 +47,8 @@ func TestRespond(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 				data["error"] = err.Error()
-				if cerr, ok := err.(*errors.Error); ok {
-					data["code"] = cerr.Code
-				}
+				data["code"] = err.Code
+
 				buf := bytes.NewBuffer(nil)
 				if err := json.NewEncoder(buf).Encode(data); err != nil {
 					t.Fatal(err)
