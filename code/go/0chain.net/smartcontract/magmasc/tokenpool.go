@@ -8,7 +8,7 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
+	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -17,7 +17,7 @@ import (
 type (
 	// tokenPool represents token pool wrapper implementation.
 	tokenPool struct {
-		tokenpool.ZcnPool // embedded token pool
+		tp.ZcnPool // embedded token pool
 
 		PayerID datastore.Key `json:"payer_id"`
 		PayeeID datastore.Key `json:"payee_id"`
@@ -56,7 +56,7 @@ func (m *tokenPool) Encode() []byte {
 }
 
 // create creates token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tokenpool.TokenPoolTransferResponse, error) {
+func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
 	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
 	if err != nil {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
@@ -79,7 +79,7 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 		return nil, errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
 	}
 
-	resp := tokenpool.TokenPoolTransferResponse{
+	resp := tp.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,

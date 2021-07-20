@@ -10,7 +10,7 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
+	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 )
 
@@ -102,7 +102,7 @@ func Test_tokenPool_create(t *testing.T) {
 	txn.Value = amount
 	txn.ClientID = ackn.Consumer.ID
 
-	resp := &tokenpool.TokenPoolTransferResponse{
+	tptResp := tp.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     ackn.SessionID,
 		Value:      state.Balance(amount),
@@ -122,7 +122,7 @@ func Test_tokenPool_create(t *testing.T) {
 		ackn  *bmp.Acknowledgment
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  string
+		want  *tp.TokenPoolTransferResponse
 		error bool
 	}{
 		{
@@ -131,7 +131,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn:  ackn,
 			pool:  &tokenPool{},
 			sci:   sci,
-			want:  string(resp.Encode()),
+			want:  &tptResp,
 			error: false,
 		},
 		{
@@ -174,8 +174,8 @@ func Test_tokenPool_create(t *testing.T) {
 			t.Parallel()
 
 			got, err := test.pool.create(test.txn, test.ackn, test.sci)
-			if err == nil && got != test.want {
-				t.Errorf("create() got: %v | want: %v", got, test.want)
+			if err == nil && !reflect.DeepEqual(got, test.want) {
+				t.Errorf("create() got: %#v | want: %#v", got, test.want)
 				return
 			}
 			if (err != nil) != test.error {

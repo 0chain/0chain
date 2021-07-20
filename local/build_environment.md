@@ -69,9 +69,9 @@ tested docker file wants to install an old version of RocksDB,
 so we will do that.
 ```shell
 cd ~/Downloads
-wget https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz
-tar -xf v5.18.3.tar.gz
-cd rocksdb-5.18.3
+wget https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz
+tar -xf v6.15.5.tar.gz
+cd rocksdb-6.15.5
 make OPT=-g0 USE_RTTI=1
 sudo make install
 ```
@@ -110,17 +110,19 @@ sudo apt-get install libssl-dev
 > you downgrade to version 1.0 or upgrade to version 1.1.1j or higher.
 
 ```shell
-wget https://github.com/herumi/mcl/archive/v0.98.tar.gz
-tar -xf v0.98.tar.gz
+wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
+tar -xf master.tar.gz
 mv mcl* mcl
-wget https://github.com/herumi/bls/archive/2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz 
-tar -xf 2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz
-mv bls* bls 
 cd mcl
 make -j $(nproc) lib/libmclbn256.so 
 sudo make install
 sudo cp lib/libmclbn256.so /usr/local/lib 
-cd ../bls
+```
+```shell
+wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz
+tar -xf master.tar.gz
+mv bls* bls
+cd bls
 make 
 sudo make install
 ```
