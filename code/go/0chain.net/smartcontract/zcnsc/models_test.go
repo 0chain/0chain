@@ -20,14 +20,6 @@ func init() {
 	chain.ServerChain.Config = new(chain.Config)
 	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	err := signatureScheme.GenerateKeys()
-	if err != nil {
-		panic(err.Error())
-	}
-
-	publicKey = signatureScheme.GetPublicKey()
-
 	logging.Logger = zap.NewNop()
 }
 
