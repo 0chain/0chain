@@ -34,7 +34,7 @@ func (tss *BLS0ChainThresholdScheme) GetID() string {
 func BLS0GenerateThresholdKeyShares(t, n int, originalKey SignatureScheme) ([]ThresholdSignatureScheme, error) {
 	b0ss, ok := originalKey.(*BLS0ChainScheme)
 	if !ok {
-		return nil, ErrInvalidSignatureScheme
+		return nil, ErrInvalidSignatureScheme()
 	}
 
 	var b0original bls.SecretKey
@@ -84,7 +84,7 @@ func NewBLS0ChainReconstruction(t, n int) *BLS0ChainReconstruction {
 func (rec *BLS0ChainReconstruction) Add(tss ThresholdSignatureScheme, signature string) error {
 	b0tss, ok := tss.(*BLS0ChainThresholdScheme)
 	if !ok {
-		return ErrInvalidSignatureScheme
+		return ErrInvalidSignatureScheme()
 	}
 
 	sig, err := b0tss.GetSignature(signature)

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func TestError_Error(t *testing.T) {
@@ -32,11 +34,9 @@ func TestError_Error(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := &Error{
-				Code: tt.fields.Code,
-				Msg:  tt.fields.Msg,
-			}
-			if got := err.Error(); got != tt.want {
+			err := errors.New(tt.fields.Code, tt.fields.Msg)
+
+			if got := errors.PPrint(err); got != tt.want {
 				t.Errorf("Error() = %v, want %v", got, tt.want)
 			}
 		})
@@ -57,7 +57,7 @@ func TestInvalidRequest(t *testing.T) {
 		{
 			name: "",
 			args: args{msg: "msg"},
-			want: NewError("invalid_request", fmt.Sprintf("Invalid request (%v)", "msg")),
+			want: errors.New("invalid_request", fmt.Sprintf("Invalid request (%v)", "msg")),
 		},
 	}
 	for _, tt := range tests {
@@ -65,7 +65,7 @@ func TestInvalidRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
 				t.Errorf("InvalidRequest() error = %#v, want = %#v", got, tt.want)
 			}
 		})
@@ -82,12 +82,12 @@ func TestNewError(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *Error
+		want *errors.Error
 	}{
 		{
 			name: "Test_NewError_OK",
 			args: args{code: "code", msg: "msg"},
-			want: &Error{Code: "code", Msg: "msg"},
+			want: &errors.Error{Code: "code", Msg: "msg"},
 		},
 	}
 	for _, tt := range tests {
@@ -95,7 +95,7 @@ func TestNewError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := NewError(tt.args.code, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := errors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
 				t.Errorf("NewError() = %v, want %v", got, tt.want)
 			}
 		})
@@ -113,7 +113,7 @@ func TestNewErrorf(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *Error
+		want *errors.Error
 	}{
 		{
 			name: "Test_NewErrorf_OK",
@@ -122,7 +122,7 @@ func TestNewErrorf(t *testing.T) {
 				format: "format %v",
 				args:   []interface{}{1},
 			},
-			want: &Error{Code: "code", Msg: fmt.Sprintf("format %v", 1)},
+			want: &errors.Error{Code: "code", Msg: fmt.Sprintf("format %v", 1)},
 		},
 	}
 	for _, tt := range tests {
@@ -130,8 +130,8 @@ func TestNewErrorf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := NewErrorf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewErrorf() = %v, want %v", got, tt.want)
+			if got := errors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
+				t.Errorf("NewErrorf() = %v, want %v", errors.PPrint(got), tt.want)
 			}
 		})
 	}

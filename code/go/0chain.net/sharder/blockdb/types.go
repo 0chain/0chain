@@ -2,11 +2,12 @@ package blockdb
 
 import (
 	"context"
-	"errors"
 	"io"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrKeyNotFound = errors.New("key not found")
+var ErrKeyNotFound = errors.Register("key not found")
 
 //Key - type for the record's identifier
 type Key string

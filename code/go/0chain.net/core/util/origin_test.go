@@ -1,9 +1,10 @@
 package util
 
 import (
-	"errors"
 	"io"
 	"testing"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 type testWriter struct{}

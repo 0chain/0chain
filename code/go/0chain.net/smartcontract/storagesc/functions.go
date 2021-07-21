@@ -5,7 +5,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
-	"fmt"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 type payment struct {
@@ -21,7 +21,7 @@ func transferReward(
 	balances cstate.StateContextI,
 ) (state.Balance, error) {
 	if zcnPool.Balance < value {
-		return 0, fmt.Errorf("not enough tokens in pool %s: %d < %d",
+		return 0, errors.Newf("","not enough tokens in pool %s: %d < %d",
 			zcnPool.ID, zcnPool.Balance, value)
 	}
 
@@ -33,11 +33,11 @@ func transferReward(
 		var transfer *state.Transfer
 		transfer, _, err = zcnPool.DrainPool(sscKey, payment.to, payment.amount, nil)
 		if err != nil {
-			return 0, fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
+			return 0, errors.Newf("","transferring tokens challenge_pool(%s) -> "+
 				"stake_pool_holder(%s): %v", zcnPool.ID, payment.to, err)
 		}
 		if err = balances.AddTransfer(transfer); err != nil {
-			return 0, fmt.Errorf("adding transfer: %v", err)
+			return 0, errors.Newf("","adding transfer: %v", err)
 		}
 	}
 	return state.Balance(moved), nil
@@ -58,7 +58,7 @@ func mintReward(
 			ToClientID: payment.to,     // delegate wallet
 			Amount:     payment.amount, // move total mints at once
 		}); err != nil {
-			return fmt.Errorf("minting rewards: %v", err)
+			return errors.Newf("","minting rewards: %v", err)
 		}
 	}
 	return nil
@@ -87,7 +87,7 @@ func getPayments(sp *stakePool, value float64) ([]payment, float64, error) {
 	}
 
 	if len(sp.Pools) == 0 {
-		return nil, 0, fmt.Errorf("no stake pools to move tokens to")
+		return nil, 0, errors.Newf("","no stake pools to move tokens to")
 	}
 
 	valueLeft := float64(value) - serviceCharge

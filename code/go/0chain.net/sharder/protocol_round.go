@@ -3,8 +3,9 @@ package sharder
 import (
 	"bytes"
 	"context"
-	"errors"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"

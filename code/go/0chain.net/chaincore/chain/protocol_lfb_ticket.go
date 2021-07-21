@@ -11,9 +11,9 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -377,7 +377,7 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	if !chain.verifyLFBTicket(&ticket) {
 		logging.Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
 			zap.Int64("round", ticket.Round))
-		return nil, common.NewError("lfb_ticket_handler", "can't verify")
+		return nil, errors.New("lfb_ticket_handler", "can't verify")
 	}
 
 	logging.Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),

@@ -4,10 +4,10 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 //
@@ -69,7 +69,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {
-		return 0, util.ErrValueNotPresent
+		return 0, util.ErrValueNotPresent()
 	}
 	return
 }
@@ -78,13 +78,13 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
-		return nil, common.NewError("failed to get trie node",
+		return nil, errors.New("failed_to_get_trie_node",
 			"key is too short")
 	}
 
 	var ok bool
 	if node, ok = tb.tree[key]; !ok {
-		return nil, util.ErrValueNotPresent
+		return nil, util.ErrValueNotPresent()
 	}
 	return
 }
@@ -98,7 +98,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	if t.ClientID != tb.txn.ClientID && t.ClientID != tb.txn.ToClientID {
-		return state.ErrInvalidTransfer
+		return state.ErrInvalidTransfer()
 	}
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount

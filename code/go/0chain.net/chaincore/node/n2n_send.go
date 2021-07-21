@@ -13,11 +13,12 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
-var ErrSendingToSelf = common.NewError("sending_to_self", "Message can't be sent to oneself")
+var ErrSendingToSelf = errors.Register("sending_to_self", "Message can't be sent to oneself")
 
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
 var MaxConcurrentRequests = 2
@@ -36,10 +37,10 @@ func (np *Pool) SendAll(handler SendHandler) []*Node {
 func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	recepient := np.GetNode(to)
 	if recepient == nil {
-		return false, ErrNodeNotFound
+		return false, ErrNodeNotFound()
 	}
 	if Self.IsEqual(recepient) {
-		return false, ErrSendingToSelf
+		return false, ErrSendingToSelf()
 	}
 	return handler(recepient), nil
 }
@@ -56,7 +57,7 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 	if len(sentTo) == len(nodes) {
 		return true, nil
 	}
-	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
+	return false, errors.New("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
 /*SendToMultipleNodes - send to multiple nodes */
@@ -391,7 +392,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		entity, err := getRequestEntity(r, entityMetadata)
 		if err != nil {
-			if err == NoDataErr {
+			if errors.Is(err, NoDataErr()) {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.AddReceived(1)
 				return

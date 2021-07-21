@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -22,6 +21,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -44,17 +44,17 @@ var (
 )
 
 var (
-	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "block hash mismatch")
-	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "block state hash mismatch")
+	ErrBlockHashMismatch      = errors.Register("block_hash_mismatch", "block hash mismatch")
+	ErrBlockStateHashMismatch = errors.Register("block_state_hash_mismatch", "block state hash mismatch")
 
-	ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
-	ErrPreviousStateNotComputed = common.NewError("prev_state_not_computed", "Previous state not computed")
+	ErrPreviousStateUnavailable = errors.Register("prev_state_unavailable", "Previous state not available")
+	ErrPreviousStateNotComputed = errors.Register("prev_state_not_computed", "Previous state not computed")
 
 	// ErrPreviousBlockUnavailable - error for previous block is not available.
-	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
+	ErrPreviousBlockUnavailable = errors.Register(PreviousBlockUnavailable,
 		"Previous block is not available")
 
-	ErrStateMismatch = common.NewError(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
+	ErrStateMismatch = errors.Register(StateMismatch, "Computed state hash doesn't match with the state hash of the block")
 )
 
 const (
@@ -239,31 +239,31 @@ func (b *Block) Validate(ctx context.Context) error {
 	}
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
-		return common.NewError("unknown_miner", "Do not know this miner")
+		return errors.New("unknown_miner", "Do not know this miner")
 	}
 	if b.ChainWeight > float64(b.Round) {
-		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
+		return errors.New("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
 
 	b.mutexTxns.RLock()
 	if b.TxnsMap != nil {
 		if len(b.Txns) != len(b.TxnsMap) {
 			b.mutexTxns.RUnlock()
-			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
+			return errors.New("duplicate_transactions", "Block has duplicate transactions")
 		}
 	}
 	b.mutexTxns.RUnlock()
 
 	hash := b.ComputeHash()
 	if b.Hash != hash {
-		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
+		return errors.New("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
 	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)
 	if err != nil {
 		return err
 	} else if !ok {
-		return common.NewError("signature invalid", "The block wasn't signed correctly")
+		return errors.New("signature_invalid", "The block wasn't signed correctly")
 	}
 	return nil
 }
@@ -770,7 +770,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			logging.Logger.Error("compute state - previous block not available",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("prev_block", b.PrevHash))
-			return ErrPreviousBlockUnavailable
+			return ErrPreviousBlockUnavailable()
 		}
 	}
 
@@ -779,7 +779,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("computing block state",
 			zap.String("error", "block_prev points to itself, or its state mutex does it"),
 			zap.Int64("round", b.Round))
-		return common.NewError("computing block state",
+		return errors.New("computing_block_state",
 			"prev_block points to itself, or its state mutex does it")
 	}
 	if !pb.IsStateComputed() {
@@ -789,7 +789,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				return err
 			}
 			if !pb.IsStateComputed() {
-				return ErrPreviousStateUnavailable
+				return ErrPreviousStateUnavailable()
 			}
 			logging.Logger.Debug("fetch previous block state from network successfully",
 				zap.Int64("prev_round", pb.Round),
@@ -824,7 +824,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
-		return ErrPreviousStateUnavailable
+		return ErrPreviousStateUnavailable()
 	}
 
 	// Before continue the the following state update for transactions, the previous
@@ -834,7 +834,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Any("state status", pb.GetStateStatus()))
-		return ErrPreviousStateNotComputed
+		return ErrPreviousStateNotComputed()
 	}
 	b.SetStateDB(pb, c.GetStateDB())
 
@@ -853,7 +853,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				zap.String("prev_block", b.PrevHash),
 				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
 				zap.Error(err))
-			return common.NewError("state_update_error", "error updating state")
+			return errors.New("state_update_error", "error updating state")
 		}
 	}
 
@@ -873,7 +873,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
-		return ErrStateMismatch
+		return ErrStateMismatch()
 	}
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
@@ -891,17 +891,17 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	defer b.stateMutex.Unlock()
 
 	if b.Hash != bsc.Block {
-		return ErrBlockHashMismatch
+		return ErrBlockHashMismatch()
 	}
 	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
-		return ErrBlockStateHashMismatch
+		return ErrBlockStateHashMismatch()
 	}
 	root := bsc.GetRoot()
 	if root == nil {
 		if b.PrevBlock != nil && bytes.Equal(b.PrevBlock.ClientStateHash, b.ClientStateHash) {
 			return nil
 		}
-		return common.NewError("state_root_error", "state root not correct")
+		return errors.New("state_root_error", "state root not correct")
 	}
 	if b.ClientState == nil {
 		b.CreateState(c.GetStateDB(), root.GetHashBytes())
@@ -941,7 +941,7 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 			c.GetStateDB().(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
 		}
 	default:
-		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
+		return errors.New("state_save_without_success", "State can't be saved without successful computation")
 	}
 	duration := time.Since(ts)
 	StateSaveTimer.UpdateSince(ts)

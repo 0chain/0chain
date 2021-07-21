@@ -3,13 +3,14 @@ package chain
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"go.uber.org/zap"
 
@@ -596,19 +597,19 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	var seri util.Serializable
 	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
-	if err != nil && err != util.ErrValueNotPresent {
-		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+		err = errors.Newf("", "get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
 		return
 	}
 
-	if err == util.ErrValueNotPresent {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		err = nil // not a real error, Miner SC just is not started (yet)
 		return
 	}
 
 	if err = pn.Decode(seri.Encode()); err != nil {
-		err = fmt.Errorf("get_block_phase -- can't decode: %v, block %d",
+		err = errors.Newf("", "get_block_phase -- can't decode: %v, block %d",
 			err, b.Round)
 		return
 	}

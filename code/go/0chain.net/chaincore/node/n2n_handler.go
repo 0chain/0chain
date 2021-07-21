@@ -15,6 +15,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 
@@ -156,7 +157,7 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 	return clientID + ":" + common.TimeToString(ts) + ":" + key
 }
 
-var NoDataErr = common.NewError("no_data", "No data")
+var NoDataErr = errors.Register("no_data", "No data")
 
 func readAndClose(reader io.ReadCloser) {
 	io.Copy(ioutil.Discard, reader)
@@ -178,7 +179,7 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 		cbuffer.ReadFrom(r.Body)
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
-			return nil, NoDataErr
+			return nil, NoDataErr()
 		}
 		cbytes, err := compDecomp.Decompress(cbytes)
 		if err != nil {
@@ -232,7 +233,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 		return entity, nil
 	}
 	logging.N2n.Error("unknown_encoding", zap.String("encoding", codec))
-	return nil, common.NewError("unkown_encoding", "unknown encoding")
+	return nil, errors.New("unkown_encoding", "unknown encoding")
 }
 
 func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {

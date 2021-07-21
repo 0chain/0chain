@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +18,7 @@ func TestRespond(t *testing.T) {
 	t.Parallel()
 
 	var (
-		err  = error(NewError("code", "msg"))
+		err  = errors.New("code", "msg")
 		data = map[string]string{
 			"key": "value",
 		}
@@ -46,9 +47,8 @@ func TestRespond(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 				data["error"] = err.Error()
-				if cerr, ok := err.(*Error); ok {
-					data["code"] = cerr.Code
-				}
+				data["code"] = err.Code
+
 				buf := bytes.NewBuffer(nil)
 				if err := json.NewEncoder(buf).Encode(data); err != nil {
 					t.Fatal(err)

@@ -1,15 +1,16 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
 	"context"
-	"errors"
 	"net/url"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 )
 
 type config struct {
@@ -71,7 +72,7 @@ func (vsc *VestingSmartContract) getConfigHandler(context.Context,
 
 	res, err := getConfig()
 	if err != nil {
-		return nil, common.NewErrInternal("can't get config", err.Error())
+		return nil, common.NewErrInternal(err, "can't get config")
 	}
 	return res, nil
 }

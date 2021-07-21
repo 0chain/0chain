@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"container/ring"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"go.uber.org/zap"
 
@@ -38,7 +39,7 @@ const notifySyncLFRStateTimeout = 3 * time.Second
 const genesisRandomSeed = 839695260482366273
 
 var (
-	ErrInsufficientChain = common.NewError("insufficient_chain",
+	ErrInsufficientChain = errors.Register("insufficient_chain",
 		"Chain length not sufficient to perform the logic")
 )
 
@@ -201,7 +202,7 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 	defer mc.stateMutex.Unlock()
 
 	if block.ClientState == nil {
-		return nil, common.NewErrorf("get_block_state_node",
+		return nil, errors.Newf("get_block_state_node",
 			"client state is nil, round %d", block.Round)
 	}
 
@@ -602,7 +603,7 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 /*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
 	if b.GetRoundRandomSeed() == 0 {
-		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
+		return nil, nil, errors.New("add_notarized_block_to_round", "block has no seed")
 	}
 
 	c.blocksMutex.Lock()
@@ -713,7 +714,7 @@ func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error)
 	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
 	}
-	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
+	return nil, errors.New(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
 }
 
 /*DeleteBlock - delete a block from the cache */
@@ -950,7 +951,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	if false {
 		logging.Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	}
-	return false, ErrInsufficientChain
+	return false, ErrInsufficientChain()
 }
 
 func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
@@ -1255,7 +1256,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
 
-		if err == util.ErrNodeNotFound {
+		if errors.Is(err, util.ErrNodeNotFound()) {
 			// get state from network
 			logging.Logger.Info("init block state by synching block state from network")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -1355,7 +1356,7 @@ func (c *Chain) IsActiveInChain() bool {
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
-		return common.NewError("failed to update magic block",
+		return errors.New("failed_to_update_magic_block",
 			"there are no miners in the magic block")
 	}
 
@@ -1371,7 +1372,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		logging.Logger.Error("failed to update magic block",
 			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
-		return common.NewError("failed to update magic block",
+		return errors.New("failed_to_update_magic_block",
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
 	}
 
@@ -1583,7 +1584,7 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 	// extract and send DKG phase first
 	var pn minersc.PhaseNode
 	if pn, err = c.GetPhaseOfBlock(lfb); err != nil {
-		return common.NewErrorf("view_change", "getting phase node: %v", err)
+		return errors.Newf("view_change", "getting phase node: %v", err)
 	}
 
 	// even if it executed on a shader we don't treat this phase as obtained

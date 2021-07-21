@@ -2,13 +2,14 @@ package util
 
 import (
 	"context"
-	"errors"
 	"io"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-//ErrIteratingChildNodes - indicates an error iterting the child nodes
-var ErrIteratingChildNodes = errors.New("Error iterating child nodes")
+//ErrIteratingChildNodes() - indicates an error iterting the child nodes
+var ErrIteratingChildNodes = errors.Register("Error iterating child nodes")
 
 //Path - a type for the path of the merkle patricia trie
 type Path []byte

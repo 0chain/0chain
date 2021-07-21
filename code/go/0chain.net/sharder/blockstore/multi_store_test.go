@@ -1,9 +1,10 @@
 package blockstore
 
 import (
-	"errors"
 	"reflect"
 	"testing"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"

@@ -2,16 +2,16 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
@@ -161,12 +161,12 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	lfmb := c.GetLatestFinalizedMagicBlockBrief()
 
 	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		return common.NewError("repair_mb_chain", "already have such MB")
+		return errors.New("repair_mb_chain", "already have such MB")
 	}
 
 	if newMB.MagicBlockNumber == lfmb.MagicBlockNumber+1 {
 		if newMB.PreviousMagicBlockHash != lfmb.MagicBlockHash {
-			return common.NewError("repair_mb_chain", "invalid prev-MB ref.")
+			return errors.New("repair_mb_chain", "invalid prev-MB ref.")
 		}
 		return // it's just next MB
 	}
@@ -180,7 +180,7 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	// until the end of the days
 	if err = c.VerifyChainHistoryAndRepair(ctx, newMB, saveFunc); err != nil {
 		Logger.Error("repair_mb_chain", zap.Error(err))
-		return common.NewErrorf("repair_mb_chain", err.Error())
+		return errors.Wrap(err, "repair_mb_chain")
 	}
 
 	// the VerifyChainHistoryAndRepair doesn't save the newMB
@@ -482,7 +482,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	// until we have got all MB from our from store to latest given
 	for currentLFMB.Hash != latestMagicBlock.Hash {
 		if currentLFMB.MagicBlockNumber > latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify chain history failed, latest magic block ")
+			err = errors.New("verify_chain_history_failed, latest magic block ")
 			Logger.Debug("current lfmb number is greater than new lfmb number",
 				zap.Int64("current_lfmb_number", currentLFMB.MagicBlockNumber),
 				zap.Int64("new lfmb_number", latestMagicBlock.MagicBlockNumber),
@@ -492,7 +492,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		}
 
 		if currentLFMB.MagicBlockNumber == latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify chain history failed, latest magic block does not match")
+			err = errors.New("verify_chain_history_failed, latest magic block does not match")
 			Logger.Error("verify_chain_history failed",
 				zap.Error(err),
 				zap.String("current_lfmb_hash", currentLFMB.Hash),
@@ -509,7 +509,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 				return currentLFMB.VerifyMinersSignatures(b)
 			})
 		if err != nil {
-			return common.NewError("get_lfmb_from_sharders",
+			return errors.New("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to get %d: %v", requestMBNum, err))
 		}
 
@@ -518,7 +518,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 			zap.Any("mb_hash", magicBlock.Hash))
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-			return common.NewError("get_lfmb_from_sharders",
+			return errors.New("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
 		}
 
@@ -527,7 +527,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 
 		if saveHandler != nil {
 			if err = saveHandler(ctx, magicBlock); err != nil {
-				return common.NewError("get_lfmb_from_sharders",
+				return errors.New("get_lfmb_from_sharders",
 					fmt.Sprintf("failed to save updated magic block %d: %v",
 						currentLFMB.MagicBlockNumber, err))
 			}
@@ -610,11 +610,11 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	err = sc.VerifyChainHistoryAndRepair(ctx, block, saveMagicBlock)
 	if err != nil {
-		return fmt.Errorf("failed to verify chain history: %v", err.Error())
+		return errors.Wrap(err, "failed to verify chain history")
 	}
 
 	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
+		return errors.Wrap(err, "failed to update magic block")
 	}
 	sc.SetLatestFinalizedMagicBlock(block)
 

@@ -3,10 +3,10 @@ package datastore
 import (
 	"context"
 
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrInvalidEntity = common.NewError("invalid_entity", "invalid entity")
+var ErrInvalidEntity = errors.Register("invalid_entity", "Invalid entity")
 
 var (
 	/*EntityNotFound code should be used to check whether an entity is found or not */

@@ -3,10 +3,11 @@ package blockdb
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"io"
 	"sort"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 type keyo struct {
@@ -40,7 +41,7 @@ func (mi *mapIndex) GetOffset(key Key) (int64, error) {
 	defer mi.mutex.RUnlock()
 	offset, ok := mi.index[key]
 	if !ok {
-		return -1, ErrKeyNotFound
+		return -1, ErrKeyNotFound()
 	}
 	return offset, nil
 }
@@ -183,7 +184,7 @@ func (fkai *fixedKeyArrayIndex) GetOffset(key Key) (int64, error) {
 			hi = mid - 1
 		}
 	}
-	return -1, ErrKeyNotFound
+	return -1, ErrKeyNotFound()
 }
 
 func (fkai *fixedKeyArrayIndex) GetKeys() []Key {

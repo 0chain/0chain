@@ -2,10 +2,11 @@ package datastore_test
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"

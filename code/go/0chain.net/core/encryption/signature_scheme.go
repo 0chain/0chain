@@ -2,13 +2,14 @@ package encryption
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
+
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
-var ErrKeyRead = errors.New("error reading the keys")
-var ErrInvalidSignatureScheme = errors.New("invalid signature scheme")
+var ErrKeyRead = errors.Register("error reading the keys")
+var ErrInvalidSignatureScheme = errors.Register("invalid signature scheme")
 
 //SignatureScheme - an encryption scheme for signing and verifying messages
 type SignatureScheme interface {

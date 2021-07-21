@@ -14,6 +14,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 var (
@@ -161,7 +162,7 @@ func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
 		cr = sc.GetRound(sc.GetCurrentRound())
 	)
 	if cr == nil {
-		return nil, common.NewError("no_round_info",
+		return nil, errors.New("no_round_info",
 			"cannot retrieve the round info")
 	}
 	return cr, nil

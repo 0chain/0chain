@@ -1,12 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
-	"fmt"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
@@ -42,9 +45,12 @@ func (ssc *StorageSmartContract) isFundedPool(
 ) (bool, error) {
 	pools, err := ssc.getFundedPools(clientId, balances)
 	if err != nil {
-		return false, fmt.Errorf("error getting funded pools: %v", err)
+		return false, errors.Wrap(err, "error getting funded pools")
 	}
+
 	for _, id := range *pools {
+		fmt.Println("id: ", id)
+		fmt.Println("poolId: ", poolId)
 		if id == poolId {
 			return true, nil
 		}
@@ -78,14 +84,14 @@ func (ssc *StorageSmartContract) getFundedPools(
 	var err error
 	fp := new(fundedPools)
 	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
-		if err != util.ErrValueNotPresent {
+		if !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, err
 		}
 		return fp, nil
 	}
 	err = fp.Decode(poolb)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding(), err)
 	}
 	return fp, nil
 }

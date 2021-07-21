@@ -6,7 +6,7 @@ import (
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI) (*ValidatorNodes, error) {
@@ -17,7 +17,7 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 	}
 	err = json.Unmarshal(allValidatorsBytes.Encode(), allValidatorsList)
 	if err != nil {
-		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
+		return nil, errors.New("getValidatorsList_failed", "Failed to retrieve existing validators list")
 	}
 	sort.SliceStable(allValidatorsList.Nodes, func(i, j int) bool {
 		return allValidatorsList.Nodes[i].ID < allValidatorsList.Nodes[j].ID
@@ -28,7 +28,7 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
 	allValidatorsList, err := sc.getValidatorsList(balances)
 	if err != nil {
-		return "", common.NewError("add_validator_failed", "Failed to get validator list."+err.Error())
+		return "", errors.Wrap(err, errors.New("add_validator_failed", "Failed to get validator list"))
 	}
 	newValidator := &ValidationNode{}
 	err = newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
@@ -52,7 +52,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("add_vaidator",
+		return "", errors.Newf("add_vaidator",
 			"can't get SC configurations: %v", err)
 	}
 
@@ -61,12 +61,14 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
 		&newValidator.StakePoolSettings, balances)
 	if err != nil {
-		return "", common.NewError("add_validator_failed",
-			"get or create stake pool error: "+err.Error())
+		return "", errors.Wrap(err, errors.New("add_validator_failed",
+			"get or create stake pool error"))
+
 	}
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("add_validator_failed",
-			"saving stake pool error: "+err.Error())
+		return "", errors.Wrap(err, errors.New("add_validator_failed",
+			"saving stake pool error"))
+
 	}
 
 	buff := newValidator.Encode()

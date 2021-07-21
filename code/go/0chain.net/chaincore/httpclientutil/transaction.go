@@ -1,8 +1,6 @@
 package httpclientutil
 
-import (
-	"0chain.net/core/common"
-)
+import "0chain.net/core/common"
 
 //Transaction entity that encapsulates the transaction related data and meta data
 type Transaction struct {

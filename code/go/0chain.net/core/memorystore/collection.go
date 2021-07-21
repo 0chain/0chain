@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"github.com/0chain/gosdk/core/common/errors"
 	"go.uber.org/zap"
 )
 
@@ -65,7 +66,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		}
 		offset += count
 		if !ok {
-			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
+			return errors.New("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
 		for i := 0; i < count; i++ {
 			bucket[i] = entityMetadata.Instance()

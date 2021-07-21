@@ -91,11 +91,11 @@ func (sc *StateChange) UnmarshalJSON(data []byte) error {
 	if block, ok := obj["block"]; ok {
 		if sc.Block, ok = block.(string); !ok {
 			logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
-			return common.ErrInvalidData
+			return common.ErrInvalidData()
 		}
 	} else {
 		logging.Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
-		return common.ErrInvalidData
+		return common.ErrInvalidData()
 	}
 	return sc.UnmarshalPartialState(obj)
 }

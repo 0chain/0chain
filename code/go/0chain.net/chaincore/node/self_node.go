@@ -1,11 +1,12 @@
 package node
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/0chain/gosdk/core/common/errors"
 
 	"0chain.net/core/build"
 	"0chain.net/core/common"

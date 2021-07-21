@@ -1,7 +1,6 @@
 package faucetsc
 
 import (
-	"0chain.net/core/common"
 	"context"
 	"net/url"
 	"time"
@@ -9,6 +8,7 @@ import (
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 )
 
 type faucetConfig struct {
@@ -42,7 +42,7 @@ func (fc *FaucetSmartContract) getConfigHandler(context.Context,
 	url.Values, chainstate.StateContextI) (interface{}, error) {
 	res, err := getConfig()
 	if err != nil {
-		return nil, common.NewErrNoResource(cantGetConfig, err.Error())
+		return nil, common.NewErrNoResource(err, cantGetConfig)
 	}
 	return res, nil
 }

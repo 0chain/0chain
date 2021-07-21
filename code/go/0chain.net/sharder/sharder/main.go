@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,6 +37,7 @@ import (
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error) {
@@ -48,30 +48,30 @@ func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error)
 	)
 
 	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, errors.New("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 	mConf.StorageServiceURL = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, errors.New("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.AccessKeyID = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, errors.New("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.SecretAccessKey = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, errors.New("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.BucketName = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, errors.New("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
 	mConf.BucketLocation = scanner.Text()
@@ -209,7 +209,7 @@ func main() {
 
 	// start sharding from the LFB stored
 	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
+		Logger.Error(errors.Wrap(err, "load latest blocks from store").Error())
 		return
 	}
 

@@ -2,11 +2,11 @@ package block
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 /*SetupHandlers sets up the necessary API end points */
@@ -25,7 +25,7 @@ const BLOCK_TIME_TOLERANCE = 5
 func PutBlock(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*Block)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", entity)
+		return nil, errors.Newf("", "invalid request %T", entity)
 	}
 	if !common.Within(int64(txn.CreationDate), BLOCK_TIME_TOLERANCE) {
 		return nil, common.InvalidRequest("Block creation time not within tolerance")

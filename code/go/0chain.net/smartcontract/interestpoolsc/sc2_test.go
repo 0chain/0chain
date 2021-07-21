@@ -1,6 +1,11 @@
 package interestpoolsc
 
 import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -10,11 +15,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"encoding/json"
+	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
-	"time"
 )
 
 type lockFlags struct {
@@ -49,14 +51,14 @@ const (
 	startMinted          = 10
 	clientStartZCN       = 777
 	txHash               = "tx hash"
-	errLock              = "failed locking tokens: "
+	errLock              = "failed_locking_tokens: "
 	errInsufficientFunds = "insufficent amount to dig an interest pool"
 	errNoTokens          = "you have no tokens to your name"
 	errLockGtBalance     = "lock amount is greater than balance"
 	errDurationToLong    = "is longer than max lock period"
 	errDurationToShort   = "is shorter than min lock period"
 	errMaxMint           = "can't mint anymore"
-	errUnlock            = "failed to unlock tokens"
+	errUnlock            = "failed_to_unlock_tokens"
 	errEmptyingPool      = "error emptying pool"
 	errPoolLocked        = "pool is still locked"
 	errPoolNotExist      = "doesn't exist"
@@ -113,7 +115,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, globalNode, err = testLock(t, flags.tokens, flags.duration, clientStartZCN, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLock+errInsufficientFunds)
+		require.EqualValues(t, errors.PPrint(err), errLock+errInsufficientFunds)
 		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, zcnToBalance(startMinted))
 	})
 
@@ -124,7 +126,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, _, err = testLock(t, flags.tokens, flags.duration, 0, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLock+errNoTokens)
+		require.EqualValues(t, errors.PPrint(err), errLock+errNoTokens)
 	})
 
 	t.Run(errLockGtBalance, func(t *testing.T) {
@@ -134,7 +136,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, _, err = testLock(t, flags.tokens, flags.duration, flags.tokens-0.001, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, err.Error(), errLock+errLockGtBalance)
+		require.EqualValues(t, errors.PPrint(err), errLock+errLockGtBalance)
 	})
 
 	t.Run(errDurationToLong, func(t *testing.T) {
@@ -366,7 +368,7 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock       
 
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
-		return 0, util.ErrValueNotPresent
+		return 0, util.ErrValueNotPresent()
 	}
 	return sc.clientStartBalance, nil
 }
