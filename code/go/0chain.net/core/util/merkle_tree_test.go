@@ -10,30 +10,30 @@ import (
 )
 
 type Txn struct {
-	data string
+	Data string
 }
 
 func (t *Txn) GetHash() string {
-	return t.data
+	return t.Data
 }
 
 func (t *Txn) GetHashBytes() []byte {
-	return encryption.RawHash(t.data)
+	return encryption.RawHash(t.Data)
 }
 
 func (t *Txn) Encode() []byte {
-	return []byte(t.data)
+	return []byte(t.Data)
 }
 
 func (t *Txn) Decode(data []byte) error {
-	t.data = string(data)
+	t.Data = string(data)
 	return nil
 }
 
 func TestMerkleTreeComputeTree(t *testing.T) {
 	txns := make([]Hashable, 100)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("%v", 1001-i)}
+		txns[i] = &Txn{fmt.Sprintf("%v", 1001-i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
@@ -46,7 +46,7 @@ func TestMerkleTreeComputeTree(t *testing.T) {
 func TestMerkleTreeGetNVerifyPath(t *testing.T) {
 	txns := make([]Hashable, 101)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("1000%v", i)}
+		txns[i] = &Txn{fmt.Sprintf("1000%v", i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
@@ -61,7 +61,7 @@ func TestMerkleTreeGetNVerifyPath(t *testing.T) {
 func TestMerkleTreeSetTree(t *testing.T) {
 	txns := make([]Hashable, 100)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("%v", 1001-i)}
+		txns[i] = &Txn{fmt.Sprintf("%v", 1001-i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
@@ -77,7 +77,7 @@ func TestMerkleTreeSetTree(t *testing.T) {
 func BenchmarkMerkleTreeComputeTree(b *testing.B) {
 	txns := make([]Hashable, 10000)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("%v", len(txns)-i)}
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
 	}
 	for i := 0; i < b.N; i++ {
 		var mt MerkleTreeI = &MerkleTree{}
@@ -88,7 +88,7 @@ func BenchmarkMerkleTreeComputeTree(b *testing.B) {
 func BenchmarkMerkleTreeGetPath(b *testing.B) {
 	txns := make([]Hashable, 10000)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("%v", len(txns)-i)}
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
@@ -101,7 +101,7 @@ func BenchmarkMerkleTreeGetPath(b *testing.B) {
 func BenchmarkMerkleTreeVerifyPath(b *testing.B) {
 	txns := make([]Hashable, 10000)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{data: fmt.Sprintf("%v", len(txns)-i)}
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
@@ -168,7 +168,7 @@ func TestMerkleTree_computeSize(t *testing.T) {
 func TestMerkleTree_ComputeTree(t *testing.T) {
 	t.Parallel()
 
-	txn := &Txn{data: encryption.Hash("data")}
+	txn := &Txn{encryption.Hash("data")}
 
 	type fields struct {
 		tree        []string
