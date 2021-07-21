@@ -2,13 +2,14 @@ package storagesc
 
 import (
 	"encoding/json"
-	"errors"
+
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"github.com/0chain/gosdk/core/common/errors"
 )
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
@@ -44,9 +45,12 @@ func (ssc *StorageSmartContract) isFundedPool(
 ) (bool, error) {
 	pools, err := ssc.getFundedPools(clientId, balances)
 	if err != nil {
-		return false, fmt.Errorf("error getting funded pools: %v", err)
+		return false, errors.Wrap(err, "error getting funded pools")
 	}
+
 	for _, id := range *pools {
+		fmt.Println("id: ", id)
+		fmt.Println("poolId: ", poolId)
 		if id == poolId {
 			return true, nil
 		}

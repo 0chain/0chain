@@ -802,7 +802,7 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 		return
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return newUserStakePools(), nil
 	}
 
@@ -860,7 +860,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 		return nil, errors.Newf("", "unexpected error: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		sp, err = newStakePool(), nil
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 	}

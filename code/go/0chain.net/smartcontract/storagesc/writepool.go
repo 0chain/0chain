@@ -274,7 +274,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		wp = new(writePool)
 	}
 
@@ -306,7 +306,7 @@ func (ssc *StorageSmartContract) createWritePool(
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		wp = new(writePool)
 	}
 

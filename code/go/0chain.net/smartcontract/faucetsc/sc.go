@@ -74,7 +74,7 @@ func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _
 
 func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return false, errors.New("invalid_request", "faucet has no tokens and needs to be refilled")
 	}
 	if err != nil {

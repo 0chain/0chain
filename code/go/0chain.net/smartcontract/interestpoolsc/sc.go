@@ -80,7 +80,7 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 		return "", errors.New("failed locking tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return "", errors.New("failed locking tokens", "you have no tokens to your name")
 	}
 	if state.Balance(t.Value) > balance {
@@ -205,7 +205,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-	if err == util.ErrValueNotPresent() && funcName != "updateVariables" {
+	if errors.Is(err, util.ErrValueNotPresent()) && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}
 	return gn

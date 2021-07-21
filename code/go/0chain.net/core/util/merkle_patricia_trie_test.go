@@ -574,7 +574,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	val, err := mpt.GetNodeValue(Path(key))
 	if value == "" {
-		if !(val == nil || err == ErrValueNotPresent()) {
+		if !(val == nil || errors.Is(err, ErrValueNotPresent())) {
 			t.Fatalf("setting value to blank didn't return nil value: %v, %v",
 				val, err)
 		}
@@ -609,7 +609,7 @@ func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Nod
 func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
 
 	newRoot, err := mpt.Delete([]byte(key))
-	if err != expErr {
+	if errors.PPrint(err) != errors.PPrint(expErr) {
 		t.Fatalf("expect err: %v, got err: %v", expErr, err)
 		return
 	}

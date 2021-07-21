@@ -170,7 +170,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 	sn = NewMinerNode()
 	sn.ID = sid
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return // with error ErrValueNotPresent (that's very stupid)
 	}
 

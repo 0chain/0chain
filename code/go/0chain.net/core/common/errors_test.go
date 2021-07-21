@@ -65,7 +65,7 @@ func TestInvalidRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
 				t.Errorf("InvalidRequest() error = %#v, want = %#v", got, tt.want)
 			}
 		})
@@ -95,7 +95,7 @@ func TestNewError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := errors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := errors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
 				t.Errorf("NewError() = %v, want %v", got, tt.want)
 			}
 		})
@@ -130,7 +130,7 @@ func TestNewErrorf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := errors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(got, tt.want) {
+			if got := errors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
 				t.Errorf("NewErrorf() = %v, want %v", errors.PPrint(got), tt.want)
 			}
 		})

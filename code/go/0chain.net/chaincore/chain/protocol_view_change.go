@@ -603,7 +603,7 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 		return
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		err = nil // not a real error, Miner SC just is not started (yet)
 		return
 	}

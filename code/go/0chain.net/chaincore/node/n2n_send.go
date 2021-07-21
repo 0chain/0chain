@@ -392,7 +392,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		entity, err := getRequestEntity(r, entityMetadata)
 		if err != nil {
-			if err == NoDataErr() {
+			if errors.Is(err, NoDataErr()) {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.AddReceived(1)
 				return

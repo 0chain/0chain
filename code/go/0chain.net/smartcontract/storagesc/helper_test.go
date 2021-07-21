@@ -387,7 +387,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 		t.Fatal("unexpected error:", err)
 	}
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}

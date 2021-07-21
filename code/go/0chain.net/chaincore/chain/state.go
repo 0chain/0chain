@@ -452,7 +452,7 @@ func isValid(err error) bool {
 	if err == nil {
 		return true
 	}
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return true
 	}
 	return false

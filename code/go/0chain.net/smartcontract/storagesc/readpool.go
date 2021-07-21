@@ -309,7 +309,7 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 		return
 	}
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		return errors.New("no tokens to lock")
 	}
 

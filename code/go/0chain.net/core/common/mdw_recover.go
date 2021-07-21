@@ -31,9 +31,12 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 				)
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
-				data["error"] = fmt.Sprintf("%v", err)
+
 				if are, ok := err.(*errors.Error); ok {
 					data["code"] = are.Code
+					data["error"] = errors.PPrint(are)
+				} else {
+					data["error"] = fmt.Sprintf("%v", err)
 				}
 				buf := bytes.NewBuffer(nil)
 				json.NewEncoder(buf).Encode(data)

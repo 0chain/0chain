@@ -3,7 +3,6 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -34,7 +33,7 @@ func TestRecover(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 				err := errors.New("code", "msg")
-				data["error"] = fmt.Sprintf("%v", err)
+				data["error"] = errors.PPrint(err)
 				data["code"] = err.Code
 				buf := bytes.NewBuffer(nil)
 				if err := json.NewEncoder(buf).Encode(data); err != nil {
@@ -62,7 +61,6 @@ func TestRecover(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/", nil)
 			handler := Recover(panHandler)
 			handler(w, r)
-
 			if !reflect.DeepEqual(w, tt.want) {
 				t.Errorf("ToJSONResponse() = %#v, want %#v", w, tt.want)
 			}

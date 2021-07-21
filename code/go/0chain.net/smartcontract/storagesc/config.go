@@ -477,7 +477,7 @@ func (ssc *StorageSmartContract) getConfig(
 
 	conf = new(scConfig)
 
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		if !setup {
 			return // value not present
 		}
@@ -504,7 +504,7 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	}
 
 	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent() {
+	if errors.Is(err, util.ErrValueNotPresent()) {
 		res, err := getConfiguredConfig()
 		if err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)

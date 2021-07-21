@@ -611,7 +611,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			return nil, errors.Newf("adding_challenge_error",
 				"unexpected error getting allocation: %v", err)
 		}
-		if err == util.ErrValueNotPresent() {
+		if errors.Is(err, util.ErrValueNotPresent()) {
 			Logger.Error("client state has invalid allocations",
 				zap.Any("allocation_list", all.List),
 				zap.Any("selected_allocation", all.List[i]))

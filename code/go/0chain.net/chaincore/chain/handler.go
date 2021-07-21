@@ -836,7 +836,7 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
 			return nil, errors.Newf("", "can't get %s node: %v", ks.name, err)
 		}
-		if err == util.ErrValueNotPresent() {
+		if errors.Is(err, util.ErrValueNotPresent()) {
 			err = nil // reset the error and leave the value blank
 			continue
 		}

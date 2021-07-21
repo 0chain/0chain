@@ -771,7 +771,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 			npath := append(path, pe)
 			if err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes); err != nil {
-				if err == ErrNodeNotFound() || err == ErrIteratingChildNodes() {
+				if errors.Is(err, ErrNodeNotFound()) || errors.Is(err, ErrIteratingChildNodes()) {
 					ecount++
 				} else {
 					Logger.Error("iterate - child node", zap.Error(err))
@@ -918,7 +918,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		ps.BelowVersion = count
 		ps.MissingNodes = missingNodes
 	}
-	if err == nil || err == ErrNodeNotFound() || err == ErrIteratingChildNodes() {
+	if err == nil || errors.Is(err, ErrNodeNotFound()) || errors.Is(err, ErrIteratingChildNodes()) {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
 				Logger.Error("update version - multi put - last batch", zap.Error(err))
