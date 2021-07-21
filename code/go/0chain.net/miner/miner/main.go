@@ -295,7 +295,7 @@ func main() {
 	miner.SetupWorkers(ctx)
 
 	if config.Development() {
-		go TransactionGenerator(mc.Chain)
+		go TransactionGenerator(mc.Chain, *workDir)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {

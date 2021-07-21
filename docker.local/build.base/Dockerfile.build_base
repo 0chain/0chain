@@ -1,6 +1,6 @@
 # docker.local
 FROM golang:1.13.1-alpine3.10
-RUN apk add bash build-base grep git
+RUN apk add ca-certificates bash build-base grep git
 
 # Install RocksDB
 RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev && \

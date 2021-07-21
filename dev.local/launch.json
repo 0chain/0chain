@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/sharder/sharder",
-            "buildFlags":"-tags bn256",
+            "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
             "args": [
                 "--deployment_mode", "0",
                 "--keys_file", "../../../../../dev.local/data/sharder1/config/b0snode1_keys.txt", 
@@ -23,12 +23,12 @@
             }
         },
         {
-            "name": "debug:minner1",
+            "name": "debug:miner1",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/miner/miner",
-            "buildFlags":"-tags bn256",
+            "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
             "args": [
                 "--deployment_mode", "0",
                 "--keys_file", "../../../../../dev.local/data/miner1/config/b0mnode1_keys.txt", 
@@ -45,12 +45,12 @@
             }
         },
         {
-            "name": "debug:minner2",
+            "name": "debug:miner2",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/miner/miner",
-            "buildFlags":"-tags bn256",
+            "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
             "args": [
                 "--deployment_mode", "0",
                 "--keys_file", "../../../../../dev.local/data/miner2/config/b0mnode2_keys.txt", 
@@ -67,12 +67,12 @@
             }
         },
         {
-            "name": "debug:minner3",
+            "name": "debug:miner3",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/miner/miner",
-            "buildFlags":"-tags bn256",
+            "buildFlags":"-tags 'bn256 development' -ldflags '-X 0chain.net/core/build.BuildTag=vscode'",
             "args": [
                 "--deployment_mode", "0",
                 "--keys_file", "../../../../../dev.local/data/miner3/config/b0mnode3_keys.txt", 

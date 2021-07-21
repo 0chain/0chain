@@ -64,3 +64,4 @@ docker.local/log_dumps
 !**/mocks/.gitkeep
 dev.local/data
 .vscode
+code/go/0chain.net/vendor

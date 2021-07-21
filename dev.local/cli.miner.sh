@@ -18,12 +18,20 @@ setup_miner_runtime() {
 
     cd  ./data/miner$i
 
-
     find ./config -name "0chain.yaml" -exec sed -i '' 's/level: "debug"/level: "error"/g' {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/console: false/console: true/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/#    host: cassandra/    host: 127.0.0.1/g" {} \;
     find ./config -name "0chain.yaml" -exec sed -i '' "s/#    port: 9042/    port: 904$i/g" {} \;
+    find ./config -name "0chain.yaml" -exec sed -i '' 's/threshold_by_count: 66/threshold_by_count: 40/g' {} \;
 
+
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' 's/198.18.0.71/127.0.0.1/g' {} \;
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.73/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.74/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.81/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.82/127.0.0.1/g" {} \;
+    
 
     [ -d ./data/rocksdb/state/dkg ] || mkdir -p ./data/rocksdb/state/dkg
     [ -d ./data/rocksdb/mb ] || mkdir -p ./data/rocksdb/mb
@@ -53,8 +61,8 @@ start_miner(){
     export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
     export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
 
-    GIT_COMMIT=$GIT_COMMIT
-    go build -o $root/data/miner$i/miner -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
+    GIT_COMMIT=$(git rev-list -1 HEAD)
+    go build -mod mod -o $root/data/miner$i/miner -v -tags "bn256 development" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
     cd $root/data/miner$i/
     ./miner --deployment_mode 0 --keys_file $root/data/miner$i/config/b0mnode${i}_keys.txt --dkg_file $root/data/miner$i/config/b0mnode${i}_dkg.json --work_dir $root/data/miner$i --redis_host 127.0.0.1 --redis_port 63${i}0 --redis_txns_host 127.0.0.1 --redis_txns_port 63${i}1
