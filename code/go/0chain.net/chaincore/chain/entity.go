@@ -1356,7 +1356,7 @@ func (c *Chain) IsActiveInChain() bool {
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
-		return errors.New("failed to update magic block",
+		return errors.New("failed_to_update_magic_block",
 			"there are no miners in the magic block")
 	}
 
@@ -1372,7 +1372,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		logging.Logger.Error("failed to update magic block",
 			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
-		return errors.New("failed to update magic block",
+		return errors.New("failed_to_update_magic_block",
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
 	}
 

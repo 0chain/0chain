@@ -34,7 +34,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	err := txn.Validate(ctx)
 
 	if err != nil {
-		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
+		logging.Logger.Error("put_transaction_error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
 	}
 	if debugTxn {
@@ -42,7 +42,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	cli, err := txn.GetClient(ctx)
 	if err != nil || cli == nil || cli.PublicKey == "" {
-		return nil, errors.New("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
+		return nil, errors.New("put_transaction_error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
 	if datastore.DoAsync(ctx, txn) {
 		IncTransactionCount()

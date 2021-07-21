@@ -52,7 +52,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		if err != nil {
 			return err
 		}
-		return errors.New("process fee transaction", "transaction already exists")
+		return errors.New("process_fee_transaction", "transaction already exists")
 	}
 	if err := mc.UpdateState(ctx, b, txn); err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),

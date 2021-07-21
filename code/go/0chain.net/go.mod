@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
-	github.com/0chain/gosdk v1.2.77-0.20210720142625-b1487ff560f8 // indirect
+	github.com/0chain/gosdk v1.2.77-0.20210721181952-c6866ff423c7 // indirect
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect

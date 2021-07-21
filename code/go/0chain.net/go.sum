@@ -69,6 +69,10 @@ github.com/0chain/gosdk v1.2.77-0.20210719171650-bf517f7bad91 h1:KF1mPHMAR/xhf5M
 github.com/0chain/gosdk v1.2.77-0.20210719171650-bf517f7bad91/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/0chain/gosdk v1.2.77-0.20210720142625-b1487ff560f8 h1:OFAD2KLFYhQdwnJvjWkmmvdprjG4swLZFULEnTAt8FM=
 github.com/0chain/gosdk v1.2.77-0.20210720142625-b1487ff560f8/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210721180646-6024737de0d8 h1:ojVk+DH9Zo9M7m1opCVToi+kvGDW1xi/F07S3JhAfo0=
+github.com/0chain/gosdk v1.2.77-0.20210721180646-6024737de0d8/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk v1.2.77-0.20210721181952-c6866ff423c7 h1:B1qpopQ5wiKa1oTKwSZQqZbw6hG5eIHCaFvyPIaFyVA=
+github.com/0chain/gosdk v1.2.77-0.20210721181952-c6866ff423c7/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=

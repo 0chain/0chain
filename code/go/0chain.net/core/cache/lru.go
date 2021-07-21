@@ -35,7 +35,7 @@ func (c *LRU) Get(key string) (interface{}, error) {
 	value, ok := c.Cache.Get(key)
 	if !ok {
 		c.Miss++
-		return nil, errors.New("missing key", "key not found")
+		return nil, errors.New("missing_key", "key not found")
 	}
 	c.Hit++
 	return value, nil

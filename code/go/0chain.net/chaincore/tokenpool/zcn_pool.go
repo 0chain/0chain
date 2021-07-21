@@ -37,7 +37,7 @@ func (p *ZcnPool) GetID() datastore.Key {
 
 func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if txn.Value < 0 {
-		return nil, "", errors.New("digging pool failed", "insufficient funds")
+		return nil, "", errors.New("digging_pool_failed", "insufficient funds")
 	}
 	p.TokenPool.ID = id
 	p.TokenPool.Balance = state.Balance(txn.Value)
@@ -48,7 +48,7 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if txn.Value <= 0 {
-		return nil, "", errors.New("filling pool failed", "insufficient funds")
+		return nil, "", errors.New("filling_pool_failed", "insufficient funds")
 	}
 	p.Balance += state.Balance(txn.Value)
 	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: state.Balance(txn.Value)}
@@ -79,7 +79,7 @@ func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.
 
 func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error) {
 	if p.Balance == 0 {
-		return nil, "", errors.New("emptying pool failed", "pool already empty")
+		return nil, "", errors.New("emptying_pool_failed", "pool already empty")
 	}
 	transfer := state.NewTransfer(fromClientID, toClientID, p.Balance)
 	tpr := &TokenPoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: p.Balance, FromPool: p.ID}

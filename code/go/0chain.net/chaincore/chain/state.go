@@ -69,7 +69,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 //SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
-		err := errors.New("block state not computed")
+		err := errors.New("block_state_not_computed")
 		logging.Logger.Error("save changes failed", zap.Error(err),
 			zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash))

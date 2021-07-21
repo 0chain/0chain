@@ -67,7 +67,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	case state.Shares.IsBad(state, nodeID):
 		params.Add("secret_share", revertString(secShare.GetHexString()))
 	default:
-		return errors.New("failed to send DKG share", "skipped by tests")
+		return errors.New("failed_to_send_DKG_share", "skipped by tests")
 	}
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (

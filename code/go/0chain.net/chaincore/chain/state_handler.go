@@ -79,10 +79,10 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	key := r.FormValue("key")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
-		return nil, errors.New("failed to get sc state", "finalized block doesn't exist")
+		return nil, errors.New("failed_to_get_sc_state", "finalized block doesn't exist")
 	}
 	if lfb.ClientState == nil {
-		return nil, errors.New("failed to get sc state", "finalized block's state doesn't exist")
+		return nil, errors.New("failed_to_get_sc_state", "finalized block's state doesn't exist")
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()

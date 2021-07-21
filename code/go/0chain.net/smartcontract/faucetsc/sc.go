@@ -241,6 +241,6 @@ func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName stri
 	case "refill":
 		return fc.refill(t, balances, gn)
 	default:
-		return "", errors.New("failed execution", "no function with that name")
+		return "", errors.New("failed_execution", "no function with that name")
 	}
 }

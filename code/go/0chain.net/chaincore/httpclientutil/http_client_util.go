@@ -340,7 +340,7 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 
 	// get the entity type
 	if entity == nil {
-		return errors.New("SCRestAPI - decode failed", "empty entity")
+		return errors.New("SCRestAPI-decode_failed", "empty entity")
 	}
 
 	entityType := reflect.TypeOf(entity).Elem()
@@ -603,7 +603,7 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 
 	select {
 	case <-cctx.Done():
-		return nil, errors.New("fetch_magic_block_from_sharders - could not get magic block from sharders", cctx.Err().Error())
+		return nil, errors.Newf("", "fetch_magic_block_from_sharders - could not get magic block from sharders, error: %v, ", cctx.Err().Error())
 	case b, ok := <-recv:
 		if !ok {
 			return nil, errors.Newf("fetch_magic_block_from_sharders", "could not get magic block from sharders")

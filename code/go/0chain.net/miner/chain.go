@@ -381,12 +381,12 @@ func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface
 	mb := mc.GetMagicBlock(int64(r))
 	if mb == nil || !mb.Miners.HasNode(nodeID) {
 		logging.Logger.Error("failed to send start chain", zap.Any("id", nodeID))
-		return nil, errors.New("failed to send start chain", "miner is not in active set")
+		return nil, errors.New("failed_to_send_start_chain", "miner is not in active set")
 	}
 
 	if mc.GetCurrentRound() != int64(r) {
 		logging.Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", r))
-		return nil, errors.New("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
+		return nil, errors.New("failed_to_send_start_chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
 	message.Start = !mc.isStarted()
@@ -407,7 +407,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		startChain, ok := entity.(*StartChain)
 		if !ok {
-			err := errors.New("invalid object", fmt.Sprintf("entity: %v", entity))
+			err := errors.New("invalid_object", fmt.Sprintf("entity: %v", entity))
 			logging.Logger.Error("failed to request start chain", zap.Any("error", err))
 			return nil, err
 		}

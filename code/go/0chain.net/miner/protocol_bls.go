@@ -87,7 +87,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	}
 
 	if summary.SecretShares == nil {
-		return errors.New("failed to set dkg from store",
+		return errors.New("failed_to_set_dkg_from_store",
 			"no saved shares for dkg")
 	}
 
@@ -96,7 +96,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	newDKG.StartingRound = mb.StartingRound
 
 	if mb.Miners == nil {
-		return errors.New("failed to set dkg from store", "miners pool is not initialized in magic block")
+		return errors.New("failed_to_set_dkg_from_store", "miners pool is not initialized in magic block")
 	}
 
 	for k := range mb.Miners.CopyNodesMap() {
@@ -110,7 +110,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	}
 
 	if !newDKG.HasAllSecretShares() {
-		return errors.New("failed to set dkg from store",
+		return errors.New("failed_to_set_dkg_from_store",
 			"not enough secret shares for dkg")
 	}
 

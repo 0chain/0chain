@@ -158,7 +158,7 @@ func main() {
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		logging.Logger.Panic("node not configured as miner")
 	}
-	err = errors.New("saving self as client", "client save")
+	err = errors.New("saving_self_as_client", "client save")
 	for err != nil {
 		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
 	}

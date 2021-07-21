@@ -822,20 +822,20 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 	dkgs = &bls.DKGSummary{SecretShares: make(map[string]string)}
 	if path == "" {
-		return nil, errors.New("Error reading dkg file", "path is blank")
+		return nil, errors.New("error_reading_dkg_file", "path is blank")
 	}
 
 	if ext := filepath.Ext(path); ext != ".json" {
-		return nil, errors.New("Error reading dkg file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
+		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
 	}
 
 	var b []byte
 	if b, err = ioutil.ReadFile(path); err != nil {
-		return nil, errors.New("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
+		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("reading dkg summary file: %v", err))
 	}
 
 	if err = dkgs.Decode(b); err != nil {
-		return nil, errors.New("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
+		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("decoding dkg summary file: %v", err))
 	}
 
 	logging.Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))

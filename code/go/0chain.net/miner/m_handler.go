@@ -116,7 +116,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	// skip all VRFS before LFB-ticket (sharders' LFB)
 	var tk = mc.GetLatestLFBTicket(ctx)
 	if tk == nil {
-		return nil, errors.New("Reject VRFShare", "context done")
+		return nil, errors.New("Reject_VRFShare", "context done")
 	}
 	var (
 		lfb   = mc.GetLatestFinalizedBlock()

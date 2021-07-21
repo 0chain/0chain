@@ -223,7 +223,7 @@ func (dkg *DKG) AddSecretShare(id PartyID, share string, force bool) error {
 
 	if shareFound, ok := dkg.receivedSecretShares[id]; ok && !secretShare.IsEqual(&shareFound) {
 		if !force {
-			return errors.New("failed to add secret share", "share already exists for miner")
+			return errors.New("failed_to_add_secret_share", "share already exists for miner")
 		}
 	}
 
@@ -412,11 +412,11 @@ func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) e
 		var sij Key
 		share := dkgSummary.SecretShares[k.GetHexString()]
 		if share == "" {
-			return errors.New("failed to verify dkg summary", "share is nil")
+			return errors.New("failed_to_verify_dkg_summary", "share is nil")
 		}
 		sij.SetHexString(share)
 		if !ValidateShare(v, sij, id) {
-			return errors.New("failed to verify dkg summary", fmt.Sprintf("share unable to verify: %v", share))
+			return errors.New("failed_to_verify_dkg_summary", fmt.Sprintf("share unable to verify: %v", share))
 		}
 	}
 	return nil

@@ -263,7 +263,7 @@ func (b *Block) Validate(ctx context.Context) error {
 	if err != nil {
 		return err
 	} else if !ok {
-		return errors.New("signature invalid", "The block wasn't signed correctly")
+		return errors.New("signature_invalid", "The block wasn't signed correctly")
 	}
 	return nil
 }
@@ -779,7 +779,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("computing block state",
 			zap.String("error", "block_prev points to itself, or its state mutex does it"),
 			zap.Int64("round", b.Round))
-		return errors.New("computing block state",
+		return errors.New("computing_block_state",
 			"prev_block points to itself, or its state mutex does it")
 	}
 	if !pb.IsStateComputed() {

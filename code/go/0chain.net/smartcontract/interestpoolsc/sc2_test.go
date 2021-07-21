@@ -51,14 +51,14 @@ const (
 	startMinted          = 10
 	clientStartZCN       = 777
 	txHash               = "tx hash"
-	errLock              = "failed locking tokens: "
+	errLock              = "failed_locking_tokens: "
 	errInsufficientFunds = "insufficent amount to dig an interest pool"
 	errNoTokens          = "you have no tokens to your name"
 	errLockGtBalance     = "lock amount is greater than balance"
 	errDurationToLong    = "is longer than max lock period"
 	errDurationToShort   = "is shorter than min lock period"
 	errMaxMint           = "can't mint anymore"
-	errUnlock            = "failed to unlock tokens"
+	errUnlock            = "failed_to_unlock_tokens"
 	errEmptyingPool      = "error emptying pool"
 	errPoolLocked        = "pool is still locked"
 	errPoolNotExist      = "doesn't exist"

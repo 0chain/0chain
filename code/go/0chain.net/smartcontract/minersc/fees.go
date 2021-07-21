@@ -411,7 +411,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", err
 			}
 		} else {
-			return "", errors.New("pay fees", "cannot find latest magic bock")
+			return "", errors.New("pay_fees", "cannot find latest magic bock")
 		}
 	}
 

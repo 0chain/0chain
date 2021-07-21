@@ -78,7 +78,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
-		return nil, errors.New("failed to get trie node",
+		return nil, errors.New("failed_to_get_trie_node",
 			"key is too short")
 	}
 
