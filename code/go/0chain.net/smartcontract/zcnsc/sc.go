@@ -65,16 +65,16 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 }
 
 // Execute ...
-func (zcn *ZCNSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) Execute(trans *transaction.Transaction, funcName string, inputData []byte, balances cstate.StateContextI) (string, error) {
 	switch funcName {
 	case "mint":
-		return zcn.mint(t, inputData, balances)
+		return zcn.mint(trans, inputData, balances)
 	case "burn":
-		return zcn.burn(t, inputData, balances)
+		return zcn.burn(trans, inputData, balances)
 	case "addAuthorizer":
-		return zcn.addAuthorizer(t, inputData, balances)
+		return zcn.addAuthorizer(trans, inputData, balances)
 	case "deleteAuthorizer":
-		return zcn.deleteAuthorizer(t, inputData, balances)
+		return zcn.deleteAuthorizer(trans, inputData, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}

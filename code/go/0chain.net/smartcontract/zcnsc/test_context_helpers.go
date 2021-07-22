@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	clientId             = "fred"
-	txHash               = "tx hash"
-	startTime            = common.Timestamp(100)
+	clientId  = "fred"
+	txHash    = "tx hash"
+	startTime = common.Timestamp(100)
 )
 
 const x10 = 10 * 1000 * 1000 * 1000
@@ -36,21 +36,12 @@ type mockStateContext struct {
 	store              map[datastore.Key]util.Serializable
 }
 
-func CreateStateContext(clientId string) *cstate.StateContext {
-
-	var txn = &transaction.Transaction{
-		HashIDField:  datastore.HashIDField{Hash: txHash},
-		ClientID:     clientId,
-		ToClientID:   zcnAddressId,
-		CreationDate: startTime,
-		Value:        int64(zcnToBalance(tokens)),
-	}
-
+func UpdateStateContext(tr *transaction.Transaction) *cstate.StateContext {
 	return cstate.NewStateContext(
 		nil,
 		&util.MerklePatriciaTrie{},
 		&state.Deserializer{},
-		txn,
+		tr,
 		nil,
 		nil,
 		nil,
@@ -58,11 +49,77 @@ func CreateStateContext(clientId string) *cstate.StateContext {
 	)
 }
 
+func CreateStateContext(fromClientId string) *cstate.StateContext {
+	var txn = &transaction.Transaction{
+		HashIDField:  datastore.HashIDField{Hash: txHash},
+		ClientID:     fromClientId,
+		ToClientID:   zcnAddressId,
+		CreationDate: startTime,
+		Value:        int64(zcnToBalance(tokens)),
+	}
+
+	return UpdateStateContext(txn)
+}
+
+var store map[datastore.Key]util.Serializable
+
+func UpdateMockStateContext(tr *transaction.Transaction) cstate.StateContextI {
+	if store == nil {
+		return CreateMockStateContextFromTransaction(tr)
+	}
+
+	m := &mockStateContext{
+		ctx:                *UpdateStateContext(tr),
+		clientStartBalance: zcnToBalance(3),
+		store:              store,
+	}
+
+	node := createUserNode(tr.ClientID, int64(0))
+
+	_, err := getUserNode(node.ID, m)
+	if err != nil {
+		err := node.save(m)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return m
+}
+
+func CreateMockStateContextFromTransaction(tr *transaction.Transaction) cstate.StateContextI {
+	store = make(map[datastore.Key]util.Serializable)
+
+	m := &mockStateContext{
+		ctx:                *UpdateStateContext(tr),
+		clientStartBalance: zcnToBalance(3),
+		store:              store,
+	}
+
+	node := createUserNode(tr.ClientID, int64(0))
+	err := node.save(m)
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 1; i <= 5; i++ {
+		node := createUserNode(strconv.Itoa(i), int64(i))
+		err := node.save(m)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return m
+}
+
 func CreateMockStateContext(clientId string) cstate.StateContextI {
+	store = make(map[datastore.Key]util.Serializable)
+
 	m := &mockStateContext{
 		ctx:                *CreateStateContext(clientId),
 		clientStartBalance: zcnToBalance(3),
-		store:              make(map[datastore.Key]util.Serializable),
+		store:              store,
 	}
 
 	node := createUserNode(clientId, int64(0))
@@ -85,10 +142,8 @@ func CreateMockStateContext(clientId string) cstate.StateContextI {
 func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block           { return nil }
 func (sc *mockStateContext) GetBlock() *block.Block                                { return nil }
 func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return sc.ctx.GetTransaction() }
 func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
-func (sc *mockStateContext) GetMints() []*state.Mint                               { return nil }
 func (sc *mockStateContext) Validate() error                                       { return nil }
 func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string              { return nil }
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
@@ -104,6 +159,7 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, er
 }
 
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI   { return nil }
 
 func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
 	var val, ok = sc.store[key]
@@ -128,4 +184,8 @@ func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 
 func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
+}
+
+func (sc *mockStateContext) GetMints() []*state.Mint {
+	return sc.ctx.GetMints()
 }

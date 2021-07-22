@@ -31,9 +31,8 @@ func init() {
 }
 
 func Test_TransferStateAfterAddingAuthorizer(t *testing.T) {
-	sc := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
-	addAuthorizer(t, sc, ctx, clientId, "pk")
+	contract := CreateZCNSmartContract()
+	addAuthorizer(t, contract, clientId)
 }
 
 func Test_AddingAuthorizer_Adds_Transfers_To_Context(t *testing.T) {

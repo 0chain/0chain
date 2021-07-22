@@ -59,6 +59,18 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 	}
 	err = balances.AddTransfer(transfer)
 	if err != nil {
+		currTr := balances.GetTransaction()
+		err = common.NewError(
+			"failed to add transfer",
+			fmt.Sprintf(
+				"Error: '%v', Trans.ClientId: '%s', Trans.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'",
+				err.Error(),
+				currTr.ClientID,
+				currTr.ToClientID,
+				transfer.ClientID,
+				transfer.ToClientID,
+			),
+		)
 		return
 	}
 	err = ans.addAuthorizer(an)

@@ -192,16 +192,31 @@ func (mp *mintPayload) getStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *mintPayload) verifySignatures(ans *authorizerNodes) (ok bool) {
+func (mp *mintPayload) verifySignatures(ans *authorizerNodes) (err error) {
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	toSign := mp.getStringToSign()
 	for _, v := range mp.Signatures {
-		_ = signatureScheme.SetPublicKey(ans.NodeMap[v.ID].PublicKey)
-		ok, _ = signatureScheme.Verify(v.Signature, toSign)
-		if !ok {
-			return
+		if v.ID == "" {
+			return errors.New("authorizer ID is empty in a signature")
+		}
+
+		if ans.NodeMap[v.ID] == nil {
+			return errors.New(fmt.Sprintf("authorizer %s not found in authorizers", v.ID))
+		}
+
+		key := ans.NodeMap[v.ID].PublicKey
+		_ = signatureScheme.SetPublicKey(key)
+
+		if key == "" {
+			return errors.New("authorizer public key is empty")
+		}
+
+		ok, err := signatureScheme.Verify(v.Signature, toSign)
+		if !ok || err != nil {
+			return err
 		}
 	}
+
 	return
 }
 

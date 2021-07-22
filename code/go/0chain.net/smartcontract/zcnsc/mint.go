@@ -10,7 +10,7 @@ import (
 )
 
 // inputData - is a mintPayload
-func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := getGlobalNode(balances)
 
 	payload := &mintPayload{}
@@ -26,15 +26,28 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	}
 
 	// get user node
-	un, err := getUserNode(t.ClientID, balances)
+	un, err := getUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
 		err = common.NewError("failed to mint", fmt.Sprintf("get user node error (%v)", err.Error()))
 		return
 	}
 
+	if un == nil {
+		err = common.NewError("failed to mint", "user node is nil")
+		return
+	}
+
 	// check nonce is correct (current + 1)
 	if un.Nonce+1 != payload.Nonce {
-		err = common.NewError("failed to mint", fmt.Sprintf("nonce given (%v) is more than 1 higher than current (%v)", payload.Nonce, un.Nonce))
+		err = common.NewError(
+			"failed to mint",
+			fmt.Sprintf(
+				"nonce given (%v) is more than 1 higher than current (%v) for Node.ID: '%s'",
+				payload.Nonce,
+				un.Nonce,
+				un.ID,
+			),
+		)
 		return
 	}
 
@@ -52,8 +65,9 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	}
 
 	// verify signatures of authorizers
-	if !payload.verifySignatures(ans) {
-		err = common.NewError("failed to mint", "failed to verify signatures")
+	err = payload.verifySignatures(ans)
+	if err != nil {
+		err = common.NewError("failed to mint", "failed to verify signatures with error: "+err.Error())
 		return
 	}
 
@@ -64,7 +78,7 @@ func (zcn *ZCNSmartContract) mint(t *transaction.Transaction, inputData []byte, 
 	err = balances.AddMint(
 		&state.Mint{
 			Minter:     gn.ID,
-			ToClientID: t.ClientID,
+			ToClientID: trans.ClientID,
 			Amount:     payload.Amount,
 		})
 

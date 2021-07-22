@@ -77,7 +77,7 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 }
 
 func Test_ShouldVerifySignature(t *testing.T) {
-	mp, pk, err := createMintPayload("p1", "p2")
+	mp, pk, err := createMintPayload([]string{"p1", "p2"})
 	require.NoError(t, err)
 
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()

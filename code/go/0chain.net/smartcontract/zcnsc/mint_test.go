@@ -20,7 +20,7 @@ func init() {
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected, _, err := createMintPayload("1", "2", "3")
+	expected, _, err := createMintPayload([]string{"1", "2", "3"})
 	require.NoError(t, err)
 	actual := &mintPayload{}
 	err = actual.Decode(expected.Encode())
@@ -36,34 +36,29 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 	}
 }
 
-// TBD
 func Test_FuzzyMintTest(t *testing.T) {
+	CreateMockStateContext("default")
 	contract := CreateZCNSmartContract()
-	tr1 := CreateTransactionToZcnsc(clientId, tokens)
-	//tr2 := CreateTransactionToZcnsc(clientId + "1", tokens)
-	//tr3 := CreateTransactionToZcnsc(clientId + "2", tokens)
 
-	ctx := CreateMockStateContext(clientId)
+	authorizers := []string{clientId, clientId + "1", clientId + "2"}
 
-	addAuthorizer(t, contract, ctx, clientId)
-	//addAuthorizer(t, contract, ctx, clientId + "1")
-	//addAuthorizer(t, contract, ctx, clientId + "2")
-
-	payload, _, err := createMintPayload(clientId, clientId + "1", clientId + "2")
+	payload, _, err := createMintPayload(authorizers)
 	require.NoError(t, err)
 
-	response, err := contract.mint(tr1, payload.Encode(), ctx)
-	require.NoError(t, err)
-	require.NotNil(t, response)
-	require.NotEmpty(t, response)
-	//response, err = contract.mint(tr2, payload.Encode(), ctx)
-	//require.NoError(t, err)
-	//require.NotNil(t, response)
-	//require.NotEmpty(t, response)
-	//response, err = contract.mint(tr3, payload.Encode(), ctx)
-	//require.NoError(t, err)
-	//require.NotNil(t, response)
-	//require.NotEmpty(t, response)
+	for _, authorizer := range authorizers {
+		addAuthorizer(t, contract, authorizer)
+	}
+
+	for _, authorizer := range authorizers {
+		transaction := CreateTransactionToZcnsc(authorizer, tokens)
+		ctx := UpdateMockStateContext(transaction)
+
+		response, err := contract.mint(transaction, payload.Encode(), ctx)
+
+		require.NoError(t, err, "Testing authorizer: '%s'", authorizer)
+		require.NotNil(t, response)
+		require.NotEmpty(t, response)
+	}
 }
 
 // TBD

@@ -2,7 +2,6 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -105,7 +104,7 @@ func createBurnPayload() *burnPayload {
 	}
 }
 
-func createMintPayload(authorizerId ...string) (*mintPayload, string, error) {
+func createMintPayload(authorizers []string) (*mintPayload, string, error) {
 	m := &mintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
@@ -113,7 +112,7 @@ func createMintPayload(authorizerId ...string) (*mintPayload, string, error) {
 		ReceivingClientID: "Client0",
 	}
 
-	signatures, pk, err := createTransactionSignatures(m, authorizerId...)
+	signatures, pk, err := createTransactionSignatures(m, authorizers)
 	if err != nil {
 		return nil, pk, err
 	}
@@ -123,7 +122,7 @@ func createMintPayload(authorizerId ...string) (*mintPayload, string, error) {
 	return m, pk, nil
 }
 
-func createTransactionSignatures(m *mintPayload, authorizerId ...string) ([]*authorizerSignature, string, error) {
+func createTransactionSignatures(m *mintPayload, authorizers []string) ([]*authorizerSignature, string, error) {
 	var sigs []*authorizerSignature
 
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
@@ -132,11 +131,12 @@ func createTransactionSignatures(m *mintPayload, authorizerId ...string) ([]*aut
 		return nil, "", err
 	}
 
-	for _, id := range authorizerId {
-		signature, err := signatureScheme.Sign(m.getStringToSign())
-		if err != nil {
-			return nil, "", err
-		}
+	signature, err := signatureScheme.Sign(m.getStringToSign())
+	if err != nil {
+		return nil, "", err
+	}
+
+	for _, id := range authorizers {
 		sigs = append(
 			sigs,
 			&authorizerSignature{
@@ -158,20 +158,12 @@ func createUserNode(id string, nonce int64) *userNode {
 func addAuthorizer(
 	t *testing.T,
 	contract *ZCNSmartContract,
-	ctx state.StateContextI,
 	clientId string,
-	pk ...string,
 ) {
 	tr := CreateTransactionToZcnsc(clientId, 10)
-	var publicKey *PublicKey
+	ctx := UpdateMockStateContext(tr)
 
-	if len(pk) != 0 {
-		publicKey = &PublicKey{Key: pk[0]}
-		tr.PublicKey = publicKey.Key
-	} else {
-		publicKey = &PublicKey{Key: tr.PublicKey}
-	}
-
+	publicKey := &PublicKey{Key: tr.PublicKey}
 	data, _ := publicKey.Encode()
 
 	resp, err := contract.addAuthorizer(tr, data, ctx)
