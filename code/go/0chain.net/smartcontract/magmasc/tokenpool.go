@@ -91,9 +91,9 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 }
 
 // spend spends token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) error {
+func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
 	if bill.Amount < 0 {
-		return errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
 	}
 
 	payee, amount := m.PayeeID, state.Balance(bill.Amount)
@@ -103,7 +103,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 
 	case amount < m.Balance: // spend part of token pool to payee
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
-			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return nil, errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		m.Balance -= amount
 		payee = m.PayerID // refund remaining token pool balance to payer
@@ -111,14 +111,22 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 
 	// spend token pool by balance
 	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, m.Balance)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 	m.Balance = 0
 	if _, err := sci.DeleteTrieNode(m.uid(txn.ToClientID)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "delete token pool failed", err)
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "delete token pool failed", err)
 	}
 
-	return nil
+	resp := tp.TokenPoolTransferResponse{
+		TxnHash:    txn.Hash,
+		FromPool:   m.ID,
+		Value:      amount,
+		FromClient: m.PayerID,
+		ToClient:   m.PayeeID,
+	}
+
+	return &resp, nil
 }
 
 // uid returns uniq id used to saving token pool into chain state.

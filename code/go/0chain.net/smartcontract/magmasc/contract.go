@@ -290,7 +290,9 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if err != nil {
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
-	if err = pool.spend(txn, &ackn.Billing, sci); err != nil { // spend token pool to provider
+
+	resp, err := pool.spend(txn, &ackn.Billing, sci)
+	if err != nil { // spend token pool to provider
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
 	if err = m.activeAcknowledgmentComplete(ackn, sci); err != nil {
@@ -308,7 +310,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "update providers list failed", err)
 	}
 
-	return string(ackn.Encode()), nil
+	return string(resp.Encode()), nil
 }
 
 // consumerUpdate updates the consumer data.
