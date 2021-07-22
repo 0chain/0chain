@@ -160,11 +160,11 @@ func (c *Chain) reachedNotarization(round int64,
 		}
 	}
 
-	logging.Logger.Info("Reached notarization!!!",
+	logging.Logger.Error("Reached notarization!!!",
 		zap.Int64("mb_sr", mb.StartingRound),
 		zap.Int("active_miners", num),
 		zap.Int64("round", round),
-		zap.Int64("current_cound", c.GetCurrentRound()),
+		zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
 		zap.Int("threshold", threshold))
 

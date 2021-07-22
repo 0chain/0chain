@@ -85,7 +85,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			return entity, nil
 		}
 		start := time.Now()
-		_, err := handler(ctx, entity)
+		_, err := handler(pctx, entity)
 		duration := time.Since(start)
 		if err != nil {
 			logging.N2n.Error("message pull", zap.Int("from", nd.SetIndex),
@@ -151,7 +151,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			break
 		}
 		requestNode.requested = true
-		result := rhandler(requestNode.node)
+		result := rhandler(ctx, requestNode.node)
 		if result {
 			pcde.state = pullStateDone
 			break

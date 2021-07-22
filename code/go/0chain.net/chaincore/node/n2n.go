@@ -15,7 +15,7 @@ f m n  where f is a function that takes a message m and a node n to send the mes
 When this function is partially applied, we get the send handler, i.e., a closure that has the message and can
 be repeatedly applied to different nodes
 */
-type SendHandler func(n *Node) bool
+type SendHandler func(ctx context.Context, n *Node) bool
 
 /*EntitySendHandler is used to send an entity to a given node
 

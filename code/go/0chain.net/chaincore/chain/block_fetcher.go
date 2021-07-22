@@ -405,23 +405,19 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 	b *block.Block, err error) {
 
-	var (
-		cround = c.GetCurrentRound()
-		params = make(url.Values)
-	)
-
+	params := make(url.Values)
 	params.Add("block", hash)
 
 	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel() // terminate the context after all anyway
+	blockC := make(chan *block.Block, 1)
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (
+	logging.Logger.Info("fetch_nb_from_miners",
+		zap.String("block", hash),
+		zap.Int64("current_round", c.GetCurrentRound()))
+
+	var handler = func(_ context.Context, entity datastore.Entity) (
 		_ interface{}, err error) {
-
-		logging.Logger.Info("fetch_nb_from_miners",
-			zap.String("block", hash),
-			zap.Int64("cround", cround),
-			zap.Int64("current_round", c.GetCurrentRound()))
 
 		var nb, ok = entity.(*block.Block)
 		if !ok {
@@ -451,24 +447,30 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 			return nil, err
 		}
 
-		logging.Logger.Debug("fetch_nb_from_miners -- ok",
-			zap.String("block", nb.Hash),
-			zap.Int64("round", nb.Round),
-			zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
-
 		// stop requesting on first block accepted
 		cancel()
-		b = nb
+		select {
+		case blockC <- nb:
+		default:
+		}
 
 		return // (nil, nil), don't return the block back
 	}
 
 	c.RequestEntityFromMiners(lctx, MinerNotarizedBlockRequestor, &params, handler)
+	select {
+	case b = <-blockC:
+	default:
+	}
 
 	if b == nil {
 		return nil, common.NewError("get_notarized_block", "no block given")
 	}
 
+	logging.Logger.Debug("fetch_nb_from_miners -- ok",
+		zap.String("block", b.Hash),
+		zap.Int64("round", b.Round),
+		zap.Int("verification_tickers", b.VerificationTicketsSize()))
 	return
 }
 
