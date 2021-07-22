@@ -118,12 +118,12 @@ Below are the basic setup required to run the test suites.
 ```
 
 NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
-
+  
 ```sh
 (cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
 ```
 
-3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config.yaml`
+3. Confirm that view change rounds are set to 50 on `0chain/docker.local/config/sc.yaml`
 
 ```yaml
 start_rounds: 50
@@ -149,7 +149,7 @@ wait_rounds: 50
 
 ## Running view-change tests
 
-1. Set `view_change: true` on `0chain/docker.local/config.yaml`
+1. Set `view_change: true` on `0chain/docker.local/config/0chain.yaml`
 2. Run view-change tests
 
 ```sh
