@@ -61,15 +61,15 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 	return &bmp.Acknowledgment{
 		SessionID:     "session_id",
 		AccessPointID: "access_point_id",
+		Billing:       mockBilling(),
 		Consumer:      mockConsumer(),
 		Provider:      mockProvider(),
 	}
 }
 
-func mockBilling() *bmp.Billing {
-	return &bmp.Billing{
+func mockBilling() bmp.Billing {
+	return bmp.Billing{
 		DataUsage: mockDataUsage(),
-		SessionID: "session_id",
 	}
 }
 
@@ -95,8 +95,8 @@ func mockConsumers() *Consumers {
 	return list
 }
 
-func mockDataUsage() *bmp.DataUsage {
-	return &bmp.DataUsage{
+func mockDataUsage() bmp.DataUsage {
+	return bmp.DataUsage{
 		DownloadBytes: 3 * million,
 		UploadBytes:   2 * million,
 		SessionID:     "session_id",
@@ -219,10 +219,6 @@ func mockStateContextI() *mockStateContext {
 	ackn := mockAcknowledgment()
 	ackn.SessionID = "cannot_insert_id"
 	stateContext.store[nodeUID(msc.ID, ackn.SessionID, acknowledgment)] = ackn
-
-	bill := mockBilling()
-	bill.SessionID = "cannot_insert_id"
-	stateContext.store[nodeUID(msc.ID, bill.SessionID, datausage)] = bill
 
 	stateContext.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {

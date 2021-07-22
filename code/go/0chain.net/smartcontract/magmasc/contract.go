@@ -13,7 +13,6 @@ import (
 	chain "0chain.net/chaincore/chain/state"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 )
 
 // acknowledgment tries to extract Acknowledgment with given id param.
@@ -70,6 +69,57 @@ func (m *MagmaSmartContract) acknowledgmentExist(_ context.Context, vals url.Val
 	return got != nil, nil
 }
 
+// activeAcknowledgmentAppend tries to append a new active acknowledgment to list
+// and stores the acknowledgment and updated list into provided state.StateContextI.
+func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
+	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+	if err != nil {
+		return err
+	}
+	if err = list.append(ackn, sci); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// activeAcknowledgmentComplete tries to delete an active acknowledgment from list
+// and stores the acknowledgment and updated list into provided state.StateContextI.
+func (m *MagmaSmartContract) activeAcknowledgmentComplete(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
+	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+	if err != nil {
+		return err
+	}
+	if err = list.remove(ackn, sci); err != nil {
+		return err
+	}
+
+	ackn.Billing.CompletedAt = time.Now()
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// activeAcknowledgments tries to extract Acknowledgments list with current status active
+// filtered by given external id param and returns it.
+func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
+	acknowledgments, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+	if err != nil {
+		return nil, err
+	}
+
+	extID, list := vals.Get("ext_id"), ActiveAcknowledgments{}
+	for _, ackn := range acknowledgments.Nodes {
+		if ackn.Consumer.ExtID == extID || ackn.Provider.ExtID == extID {
+			list.Nodes = append(list.Nodes, ackn)
+		}
+	}
+
+	return list.Nodes, nil
+}
+
 // allConsumers represents MagmaSmartContract handler.
 // Returns all registered Consumer's nodes stores in
 // provided state.StateContextI with AllConsumersKey.
@@ -92,33 +142,6 @@ func (m *MagmaSmartContract) allProviders(_ context.Context, _ url.Values, sci c
 	}
 
 	return providers.Nodes.Sorted, nil
-}
-
-// billing tries to extract Billing data with given id param.
-func (m *MagmaSmartContract) billing(id datastore.Key, sci chain.StateContextI) (*bmp.Billing, error) {
-	bill := &bmp.Billing{SessionID: id}
-
-	data, err := sci.GetTrieNode(nodeUID(m.ID, id, datausage))
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
-		return bill, errors.Wrap(errCodeFetchData, "fetch billing data failed", err)
-	}
-	if data != nil { // decode saved data
-		if err = bill.Decode(data.Encode()); err != nil {
-			return bill, errors.Wrap(errCodeFetchData, "decode billing data failed", err)
-		}
-	}
-
-	return bill, nil
-}
-
-// billingFetch tries to fetch Billing data with given id param.
-func (m *MagmaSmartContract) billingFetch(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
-	bill, err := m.billing(vals.Get("id"), sci)
-	if err != nil {
-		return nil, err
-	}
-
-	return bill, nil
 }
 
 // consumerAcceptTerms checks input for validity
@@ -222,6 +245,9 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "create token pool failed", err)
 	}
+	if err = m.activeAcknowledgmentAppend(ackn, sci); err != nil {
+		return "", errors.Wrap(errCodeAcceptTerms, "append acknowledgment failed", err)
+	}
 
 	list, err := fetchProviders(AllProvidersKey, sci)
 	if err != nil {
@@ -260,22 +286,15 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "fetch provider failed", err)
 	}
 
-	bill, err := m.billing(ackn.SessionID, sci)
-	if err != nil {
-		return "", errors.New(errCodeSessionStop, err.Error())
-	}
-
 	pool, err := m.tokenPollFetch(ackn, sci)
 	if err != nil {
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
-	if err = pool.spend(txn, bill, sci); err != nil { // spend token pool to provider
+	if err = pool.spend(txn, &ackn.Billing, sci); err != nil { // spend token pool to provider
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
-
-	bill.CompletedAt = time.Now()
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, bill.SessionID, datausage), bill); err != nil {
-		return "", errors.Wrap(errCodeSessionStop, "delete billing data failed", err)
+	if err = m.activeAcknowledgmentComplete(ackn, sci); err != nil {
+		return "", errors.Wrap(errCodeAcceptTerms, "append acknowledgment failed", err)
 	}
 
 	list, err := fetchProviders(AllProvidersKey, sci)
@@ -289,7 +308,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "update providers list failed", err)
 	}
 
-	return string(bill.Encode()), nil
+	return string(ackn.Encode()), nil
 }
 
 // consumerUpdate updates the consumer data.
@@ -317,7 +336,7 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 
 // providerDataUsage updates the Provider billing session.
 func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	dataUsage := &bmp.DataUsage{}
+	dataUsage := bmp.DataUsage{}
 	if err := dataUsage.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "decode data usage failed", err)
 	}
@@ -332,21 +351,17 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 		return "", errors.Wrap(errCodeDataUsage, "fetch provider failed", err)
 	}
 
-	bill, err := m.billing(dataUsage.SessionID, sci)
-	if err != nil && !errors.Is(err, util.ErrNodeNotFound) {
-		return "", errors.Wrap(errCodeDataUsage, "fetch billing data failed", err)
-	}
-	if err = bill.Validate(dataUsage); err != nil {
+	if err = ackn.Billing.Validate(&dataUsage); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "validate data usage failed", err)
 	}
 
-	bill.DataUsage = dataUsage
-	bill.CalcAmount(ackn.Provider.Terms)
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, bill.SessionID, datausage), bill); err != nil { // update billing data
+	ackn.Billing.DataUsage = dataUsage
+	ackn.Billing.CalcAmount(ackn.Provider.Terms)
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil { // update billing data
 		return "", errors.Wrap(errCodeDataUsage, "insert billing data failed", err)
 	}
 
-	return string(bill.Encode()), nil
+	return string(ackn.Encode()), nil
 }
 
 // providerExist tries to extract registered provider

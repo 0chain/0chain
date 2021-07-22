@@ -13,11 +13,12 @@ const (
 )
 
 const (
+	// ActiveAcknowledgmentsKey is a concatenated Address
+	// and SHA3-256 hex encoded hash of "active_acknowledgments" string.
+	ActiveAcknowledgmentsKey = Address + "471fa23cccf23b1fbdd12c3311038bcdff30db27c29ff0452c74151735ff6564"
+
 	// acknowledgment contents a value of acknowledgment string type.
 	acknowledgment = "acknowledgment"
-
-	// datausage contents a value of datausage string type.
-	datausage = "datausage"
 )
 
 // These constants used to identify smart contract functions by Consumer.

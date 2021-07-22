@@ -32,9 +32,9 @@ func NewMagmaSmartContract() sci.SmartContractInterface {
 	msc.RestHandlers["/acknowledgmentAccepted"] = msc.acknowledgmentAccepted
 	msc.RestHandlers["/acknowledgmentAcceptedVerify"] = msc.acknowledgmentAcceptedVerify
 	msc.RestHandlers["/acknowledgmentExist"] = msc.acknowledgmentExist
+	msc.RestHandlers["/activeAcknowledgments"] = msc.activeAcknowledgments
 	msc.RestHandlers["/allConsumers"] = msc.allConsumers
 	msc.RestHandlers["/allProviders"] = msc.allProviders
-	msc.RestHandlers["/billingFetch"] = msc.billingFetch
 	msc.RestHandlers["/consumerExist"] = msc.consumerExist
 	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
 	msc.RestHandlers["/providerExist"] = msc.providerExist

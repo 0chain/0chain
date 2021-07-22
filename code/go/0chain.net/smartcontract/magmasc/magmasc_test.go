@@ -2,13 +2,62 @@ package magmasc
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
 
+	"github.com/rcrowley/go-metrics"
+
 	chain "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	tx "0chain.net/chaincore/transaction"
 )
+
+func TestNewMagmaSmartContract(t *testing.T) {
+	t.Parallel()
+
+	msc := &MagmaSmartContract{SmartContract: smartcontractinterface.NewSC(Address)}
+
+	// Magma smart contract REST handlers
+	msc.RestHandlers["/acknowledgmentAccepted"] = msc.acknowledgmentAccepted
+	msc.RestHandlers["/acknowledgmentAcceptedVerify"] = msc.acknowledgmentAcceptedVerify
+	msc.RestHandlers["/acknowledgmentExist"] = msc.acknowledgmentExist
+	msc.RestHandlers["/activeAcknowledgments"] = msc.activeAcknowledgments
+	msc.RestHandlers["/allConsumers"] = msc.allConsumers
+	msc.RestHandlers["/allProviders"] = msc.allProviders
+	msc.RestHandlers["/consumerExist"] = msc.consumerExist
+	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
+	msc.RestHandlers["/providerExist"] = msc.providerExist
+	msc.RestHandlers["/providerFetch"] = msc.providerFetch
+	msc.RestHandlers["/providerTerms"] = msc.providerTerms
+
+	// metrics setup section
+	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
+	msc.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+providerRegister, nil)
+
+	tests := [1]struct {
+		name string
+		want smartcontractinterface.SmartContractInterface
+	}{
+		{
+			name: "OK",
+			want: msc,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, want := NewMagmaSmartContract().(*MagmaSmartContract), test.want.(*MagmaSmartContract)
+			if fmt.Sprintf("%#v", got.SmartContract) != fmt.Sprintf("%#v", want.SmartContract) {
+				t.Errorf("NewMagmaSmartContract() got: %#v | want: %#v", got.SmartContract, want.SmartContract)
+			}
+		})
+	}
+}
 
 func Test_MagmaSmartContract_Execute(t *testing.T) {
 	t.Parallel()
@@ -16,7 +65,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 	msc, sci := mockSmartContractI(), mockStateContextI()
 	blob, cons, prov := make([]byte, 0), mockConsumer(), mockProvider()
 
-	tests := [8]struct {
+	tests := [9]struct {
 		name  string
 		txn   *tx.Transaction
 		call  string
@@ -38,6 +87,15 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 			name:  "Consumer_Register_OK",
 			txn:   &tx.Transaction{ClientID: cons.ID},
 			call:  consumerRegister,
+			blob:  nil,
+			sci:   sci,
+			msc:   msc,
+			error: false,
+		},
+		{
+			name:  "Consumer_Session_Start_OK",
+			txn:   &tx.Transaction{ClientID: cons.ID},
+			call:  consumerSessionStart,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -187,6 +245,8 @@ func TestMagmaSmartContract_GetName(t *testing.T) {
 
 	msc := mockMagmaSmartContract()
 	t.Run("OK", func(t *testing.T) {
+		t.Parallel()
+
 		if got := msc.GetName(); got != Name {
 			t.Errorf("GetName() got: %v | want: %v", got, Name)
 		}
@@ -198,6 +258,8 @@ func TestMagmaSmartContract_GetRestPoints(t *testing.T) {
 
 	msc := mockMagmaSmartContract()
 	t.Run("OK", func(t *testing.T) {
+		t.Parallel()
+
 		if got := msc.GetRestPoints(); !reflect.DeepEqual(got, msc.RestHandlers) {
 			t.Errorf("GetRestPoints() got: %#v | want: %#v", got, msc.RestHandlers)
 		}
