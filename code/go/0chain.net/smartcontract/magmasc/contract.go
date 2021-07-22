@@ -79,6 +79,9 @@ func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment
 	if err = list.append(ackn, sci); err != nil {
 		return err
 	}
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+		return err
+	}
 
 	return nil
 }

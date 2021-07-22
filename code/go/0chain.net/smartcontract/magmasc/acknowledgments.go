@@ -56,7 +56,7 @@ func (m *ActiveAcknowledgments) append(ackn *bmp.Acknowledgment, sci chain.State
 	defer m.mutex.Unlock()
 
 	m.Nodes = append(m.Nodes, ackn)
-	if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, ackn); err != nil {
+	if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, m); err != nil {
 		return err
 	}
 
@@ -93,7 +93,7 @@ func fetchActiveAcknowledgments(id datastore.Key, sci chain.StateContextI) (*Act
 	acknowledgments := ActiveAcknowledgments{}
 	if list, _ := sci.GetTrieNode(id); list != nil {
 		if err := acknowledgments.Decode(list.Encode()); err != nil {
-			return nil, errDecodeData.Wrap(err)
+			// return nil, errDecodeData.Wrap(err)
 		}
 	}
 
