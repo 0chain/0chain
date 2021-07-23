@@ -14,6 +14,8 @@ setup_miner_runtime() {
     cd $root
     [ -d ./data/miner$i ] || mkdir -p ./data/miner$i
 
+    [ -d ./data/miner$i/config ] && rm -rf ./data/miner$i/config
+
     cp -r ../docker.local/config "./data/miner$i/"
 
     cd  ./data/miner$i
@@ -25,12 +27,12 @@ setup_miner_runtime() {
     find ./config -name "0chain.yaml" -exec sed -i '' 's/threshold_by_count: 66/threshold_by_count: 40/g' {} \;
 
 
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' 's/198.18.0.71/127.0.0.1/g' {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.73/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.74/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.81/127.0.0.1/g" {} \;
-    find ./config -name "b0magicBlock_4_miners_2_sharders.json" -exec sed -i '' "s/198.18.0.82/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' 's/198.18.0.71/127.0.0.1/g' {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' "s/198.18.0.72/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' "s/198.18.0.73/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' "s/198.18.0.74/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' "s/198.18.0.81/127.0.0.1/g" {} \;
+    find ./config -name "b0magicBlock_4_miners_1_sharder.json" -exec sed -i '' "s/198.18.0.82/127.0.0.1/g" {} \;
     
 
     [ -d ./data/rocksdb/state/dkg ] || mkdir -p ./data/rocksdb/state/dkg
@@ -61,9 +63,20 @@ start_miner(){
     export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
     export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
 
-    GIT_COMMIT=$(git rev-list -1 HEAD)
+    GIT_COMMIT="cli"
     go build -mod mod -o $root/data/miner$i/miner -v -tags "bn256 development" -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
+
+    keys_file=$root/data/miner$i/config/b0mnode${i}_keys.txt
+    dkg_file=$root/data/miner$i/config/b0mnode${i}_dkg.json
+    redis_port=63${i}0
+    redis_txns_port=63${i}1
+
+    echo $keys_file
+    echo $dkg_file
+    echo $redis_port
+    echo $redis_txns_port
+
     cd $root/data/miner$i/
-    ./miner --deployment_mode 0 --keys_file $root/data/miner$i/config/b0mnode${i}_keys.txt --dkg_file $root/data/miner$i/config/b0mnode${i}_dkg.json --work_dir $root/data/miner$i --redis_host 127.0.0.1 --redis_port 63${i}0 --redis_txns_host 127.0.0.1 --redis_txns_port 63${i}1
+    ./miner --deployment_mode 0 --keys_file $keys_file --dkg_file $dkg_file --work_dir $root/data/miner$i --redis_host 127.0.0.1 --redis_port $redis_port --redis_txns_host 127.0.0.1 --redis_txns_port $redis_txns_port
 }

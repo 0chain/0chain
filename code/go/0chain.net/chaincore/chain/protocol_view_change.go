@@ -40,7 +40,7 @@ const (
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-// RegisterClient registers client on BC.
+// RegisterClient register self on BC. broadcast self information to other miners that is registered on MagicBlock from local file or 0dns.
 func (mc *Chain) RegisterClient() {
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var (

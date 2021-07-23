@@ -60,9 +60,14 @@ start_sharder(){
     export CGO_LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
     export CGO_CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
 
-    GIT_COMMIT=$(git rev-list -1 HEAD)
+    GIT_COMMIT="cli"
     go build -mod mod -o $root/data/sharder$i/sharder -v -tags bn256 -gcflags "all=-N -l" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT" 
 
     cd $root/data/sharder$i/
-    ./sharder --deployment_mode 0 --keys_file $root/data/sharder$i/config/b0snode${i}_keys.txt --minio_file $root/data/sharder$i/config/minio_config.txt --work_dir $root/data/sharder$i
+    keys_file=$root/data/sharder$i/config/b0snode${i}_keys.txt
+    minio_file=$root/data/sharder$i/config/minio_config.txt
+    echo $keys_file
+
+
+    ./sharder --deployment_mode 0 --keys_file $keys_file --minio_file $minio_file --work_dir $root/data/sharder$i
 }
