@@ -645,12 +645,11 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
 
-	newRoot, err := mpt.Insert(Path(key), &Txn{value})
+	_, err := mpt.Insert(Path(key), &Txn{value})
 	if err != nil {
 		t.Error(err)
 	}
 
-	mpt.SetRoot(newRoot)
 	doGetStrValue(t, mpt, key, value)
 }
 
