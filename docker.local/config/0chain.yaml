@@ -2,7 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
-  console: false # printing log to console is only supported in development mode
+  console: true # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
 
@@ -117,10 +117,10 @@ server_chain:
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder_piers.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0
-  dns_url: "" # http://198.18.0.98:9091
+  dns_url: "" # http://198.18.0.98:9091 http://192.168.1.100:9091
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
