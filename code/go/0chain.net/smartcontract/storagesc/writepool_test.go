@@ -164,6 +164,9 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		MaxLockPeriod: 2 * time.Hour,
 	}, balances, ssc.ID)
 
+	var fp fundedPools = []string{client.id}
+	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
+
 	var alloc = StorageAllocation{
 		ID: allocID,
 		BlobberDetails: []*BlobberAllocation{
