@@ -11,7 +11,7 @@ import (
 
 // inputData - is a burnPayload
 func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := getGlobalNode(balances)
+	config := getSmartContractConfig()
 
 	payload := &burnPayload{}
 	err = payload.Decode(inputData)
@@ -22,8 +22,8 @@ func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []by
 	payload.TxnID = trans.Hash
 
 	// check burn amount
-	if trans.Value < gn.MinBurnAmount {
-		err = common.NewError("failed to burn", fmt.Sprintf("amount requested(%v) is lower than min amount for burn (%v)", trans.Value, gn.MinBurnAmount))
+	if trans.Value < config.MinBurnAmount {
+		err = common.NewError("failed to burn", fmt.Sprintf("amount requested(%v) is lower than min amount for burn (%v)", trans.Value, config.MinBurnAmount))
 		return
 	}
 
@@ -57,7 +57,7 @@ func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []by
 	}
 
 	// burn the tokens
-	err = balances.AddTransfer(state.NewTransfer(trans.ClientID, gn.BurnAddress, state.Balance(trans.Value)))
+	err = balances.AddTransfer(state.NewTransfer(trans.ClientID, config.BurnAddress, state.Balance(trans.Value)))
 	if err != nil {
 		return "", err
 	}

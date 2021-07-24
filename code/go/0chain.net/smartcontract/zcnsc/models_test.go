@@ -98,10 +98,10 @@ func Test_ShouldSaveGlobalNode(t *testing.T) {
 }
 
 func Test_ShouldGetGlobalNode(t *testing.T) {
-	balances, node, err := createStateAndNodeAndAddNodeToState()
+	_, node, err := createStateAndNodeAndAddNodeToState()
 	require.NoError(t, err, "must save the global node in state")
 
-	expected := getGlobalNode(balances)
+	expected := getSmartContractConfig()
 
 	require.Equal(t, node.ID, expected.ID)
 	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)
@@ -258,10 +258,10 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.
 	require.NotNil(t, target.NodeMap)
 }
 
-func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *globalNode, error) {
+func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *smartContractConfig, error) {
 	node := CreateSmartContractGlobalNode()
 	node.MinBurnAmount = 111
 	balances := CreateMockStateContext(clientId)
-	err := node.save(balances)
-	return balances, node, err
+	//err := node.save(balances)
+	return balances, node, nil
 }
