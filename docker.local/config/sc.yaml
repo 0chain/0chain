@@ -154,10 +154,10 @@ smart_contracts:
     block_reward:
       block_reward: 1
       qualifying_stake: 1
-      sharder_ratio: 80
-      miner_ratio: 20
-      blobber_capacity_ratio: 20
-      blobber_usage_ratio: 80
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_capacity_ratio: 10
+      blobber_usage_ratio: 40
   vestingsc:
     min_lock: 0.01
     min_duration: "2m"
