@@ -52,7 +52,7 @@ jobs:
       - name: Run POSTMAN collection
         run: |
            exit_code=0           
-           (echo ${{ env.NETWORK }} | grep -w "custom" > /dev/null && custom_network=$(echo ${{ github.event.inputs.custom_network }} | xargs | sed -E 's/^\s*.*:\/\///g') && sed -i "0,/REPLACE/s//$custom_network/" './Postman Collections/Environments/custom.postman_environment.json') || custom_network=""
+           (echo ${{ env.NETWORK }} | grep -w "custom" > /dev/null && custom_network=$(echo ${{ github.event.inputs.custom_network }} | xargs | sed -E 's/^\s*.*:\/\///g' | sed 's:/*$::') && sed -i "0,/REPLACE/s//$custom_network/" './Postman Collections/Environments/custom.postman_environment.json') || custom_network=""
            newman run "./Postman Collections/0chain-regressions.json" -e "./Postman Collections/Environments/${{ env.NETWORK }}.postman_environment.json" -r cli,htmlextra --reporter-htmlextra-export "./${{ env.NETWORK }}/latest/index.html" --reporter-htmlextra-darkTheme --reporter-htmlextra-showEnvironmentData --reporter-htmlextra-showGlobalData --reporter-htmlextra-logs --reporter-htmlextra-title "0Chain API Regression Tests" --reporter-htmlextra-template "./Postman Collections/Data/0chain-dashboard-template.hbs" --reporter-htmlextra-browserTitle "tested against ${{ env.NETWORK }} network ${{ github.event.inputs.custom_network }}"  --color on || exit_code=$? 
            cp -R ./${{ env.NETWORK }}/latest ./${{ env.NETWORK }}/${{ steps.time.outputs.time }}
            exit $exit_code
