@@ -406,9 +406,14 @@ func getAuthorizerNodes(balances cstate.StateContextI) (*authorizerNodes, error)
 	an := &authorizerNodes{}
 	av, err := balances.GetTrieNode(allAuthorizerKey)
 	if err != nil {
-		an.NodeMap = make(map[string]*authorizerNode)
-		return an, nil
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		} else {
+			an.NodeMap = make(map[string]*authorizerNode)
+			return an, nil
+		}
 	}
+
 	err = an.Decode(av.Encode())
 	return an, err
 }
