@@ -83,7 +83,7 @@ func CreateZCNSmartContract() *ZCNSmartContract {
 	return msc
 }
 
-func CreateSmartContractGlobalNode() *smartContractConfig {
+func CreateSmartContractConfig() *smartContractConfig {
 	return &smartContractConfig{
 		ID:                 ADDRESS,
 		MinMintAmount:      111,

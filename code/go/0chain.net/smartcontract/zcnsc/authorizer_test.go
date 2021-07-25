@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 	"math/rand"
@@ -161,10 +162,7 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	tr := CreateDefaultTransactionToZcnsc()
 	tr.Value = 99
 
-	node := CreateSmartContractGlobalNode()
-	node.MinStakeAmount = 100
-	//err := node.save(balances)
-	//require.NoError(t, err)
+	config.SmartContractConfig.Set("smart_contracts.zcn.min_stake_amount", 100)
 
 	resp, err := sc.addAuthorizer(tr, data, balances)
 	require.Empty(t, resp)

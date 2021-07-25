@@ -2,7 +2,6 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/chain"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	"encoding/hex"
@@ -92,28 +91,13 @@ func Test_ShouldVerifySignature(t *testing.T) {
 	}
 }
 
-func Test_ShouldSaveGlobalNode(t *testing.T) {
-	_, _, err := createStateAndNodeAndAddNodeToState()
-	require.NoError(t, err, "must save the global node in state")
-}
-
-func Test_ShouldGetGlobalNode(t *testing.T) {
-	_, node, err := createStateAndNodeAndAddNodeToState()
-	require.NoError(t, err, "must save the global node in state")
-
-	expected := getSmartContractConfig()
-
-	require.Equal(t, node.ID, expected.ID)
-	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)
-}
-
 func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
-	node := CreateSmartContractGlobalNode()
+	node := CreateSmartContractConfig()
 	node.BurnAddress = "11"
 	node.MinMintAmount = 12
 	node.MinBurnAmount = 13
 
-	expected := CreateSmartContractGlobalNode()
+	expected := CreateSmartContractConfig()
 
 	bytes := node.Encode()
 	err := expected.Decode(bytes)
@@ -256,12 +240,4 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.
 	require.NoError(t, err)
 	require.NotNil(t, target)
 	require.NotNil(t, target.NodeMap)
-}
-
-func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *smartContractConfig, error) {
-	node := CreateSmartContractGlobalNode()
-	node.MinBurnAmount = 111
-	balances := CreateMockStateContext(clientId)
-	//err := node.save(balances)
-	return balances, node, nil
 }
