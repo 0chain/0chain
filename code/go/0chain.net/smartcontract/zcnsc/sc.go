@@ -37,7 +37,7 @@ func (zcn *ZCNSmartContract) InitSC() {}
 // SetSC ...
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
-	zcn.SmartContract.RestHandlers["/globalPerodicLimit"] = zcn.globalPerodicLimit
+	zcn.SmartContract.RestHandlers["/globalPeriodicLimit"] = zcn.globalPeriodicLimit
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.getAuthorizerNodes
 }
 

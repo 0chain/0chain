@@ -60,7 +60,7 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
-	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit
+	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
 	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
 	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
 	fc.SmartContractExecutionStats["updateLimits"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "updateLimits"), nil)

@@ -8,7 +8,7 @@ import (
 	// "0chain.net/core/common"
 )
 
-func (zcn *ZCNSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (zcn *ZCNSmartContract) globalPeriodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	config := getSmartContractConfig()
 	return config, nil
 }
