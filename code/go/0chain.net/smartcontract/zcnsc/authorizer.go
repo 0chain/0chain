@@ -28,9 +28,12 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 		return
 	}
 
+	//get global node
+	gn := getGlobalNode(balances)
+
 	//compare the global min of an Authorizer to that of the transaction amount
-	if config.MinStakeAmount > t.Value {
-		err = common.NewError("failed to add authorizer", fmt.Sprintf("amount to stake (%v) is lower than min amount (%v)", t.Value, config.MinStakeAmount))
+	if gn.MinStakeAmount > t.Value {
+		err = common.NewError("failed to add authorizer", fmt.Sprintf("amount to stake (%v) is lower than min amount (%v)", t.Value, gn.MinStakeAmount))
 		return
 	}
 
@@ -93,11 +96,11 @@ func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, _ []by
 		return
 	}
 
-	config := getSmartContractConfig()
+	gn := getGlobalNode(balances)
 
 	//empty the authorizer's pool
 	var transfer *state.Transfer
-	transfer, resp, err = ans.NodeMap[t.ClientID].Staking.EmptyPool(config.ID, t.ClientID, t)
+	transfer, resp, err = ans.NodeMap[t.ClientID].Staking.EmptyPool(gn.ID, t.ClientID, t)
 	if err != nil {
 		err = common.NewError("failed to delete authorizer", fmt.Sprintf("error emptying pool(%v)", err.Error()))
 		return

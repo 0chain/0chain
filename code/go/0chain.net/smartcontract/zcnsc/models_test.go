@@ -91,6 +91,21 @@ func Test_ShouldVerifySignature(t *testing.T) {
 	}
 }
 
+func Test_ShouldSaveGlobalNode(t *testing.T) {
+	_, _, err := createStateAndNodeAndAddNodeToState()
+	require.NoError(t, err, "must save the global node in state")
+}
+
+func Test_ShouldGetGlobalNode(t *testing.T) {
+	balances, node, err := createStateAndNodeAndAddNodeToState()
+	require.NoError(t, err, "must save the global node in state")
+
+	expected := getGlobalNode(balances)
+
+	require.Equal(t, node.ID, expected.ID)
+	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)
+}
+
 func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
 	node := CreateSmartContractConfig()
 	node.BurnAddress = "11"
@@ -240,4 +255,12 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.
 	require.NoError(t, err)
 	require.NotNil(t, target)
 	require.NotNil(t, target.NodeMap)
+}
+
+func createStateAndNodeAndAddNodeToState() (cstate.StateContextI, *globalNode, error) {
+	node := CreateSmartContractGlobalNode()
+	node.MinBurnAmount = 111
+	balances := CreateMockStateContext(clientId)
+	err := node.save(balances)
+	return balances, node, err
 }

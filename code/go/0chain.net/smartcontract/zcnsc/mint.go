@@ -11,7 +11,7 @@ import (
 
 // inputData - is a mintPayload
 func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	config := getSmartContractConfig()
+	gn := getGlobalNode(balances)
 
 	payload := &mintPayload{}
 	err = payload.Decode(inputData)
@@ -20,8 +20,8 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// check mint amount
-	if payload.Amount < config.MinMintAmount {
-		err = common.NewError("failed to mint", fmt.Sprintf("amount requested(%v) is lower than min amount for mint (%v)", payload.Amount, config.MinMintAmount))
+	if payload.Amount < gn.MinMintAmount {
+		err = common.NewError("failed to mint", fmt.Sprintf("amount requested(%v) is lower than min amount for mint (%v)", payload.Amount, gn.MinMintAmount))
 		return
 	}
 
@@ -58,7 +58,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// check number of authorizers
-	signaturesNeeded := int(config.PercentAuthorizers * float64(len(ans.NodeMap)))
+	signaturesNeeded := int(gn.PercentAuthorizers * float64(len(ans.NodeMap)))
 	if signaturesNeeded > len(payload.Signatures) {
 		err = common.NewError("failed to mint", fmt.Sprintf("number of authorizers(%v) is lower than need signatures (%v)", len(payload.Signatures), signaturesNeeded))
 		return
@@ -77,7 +77,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	// mint the tokens
 	err = balances.AddMint(
 		&state.Mint{
-			Minter:     config.ID,
+			Minter:     gn.ID,
 			ToClientID: trans.ClientID,
 			Amount:     payload.Amount,
 		})

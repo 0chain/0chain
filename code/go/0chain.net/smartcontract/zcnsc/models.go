@@ -23,7 +23,7 @@ var (
 	allAuthorizerKey = ADDRESS + encryption.Hash("all_authorizers")
 )
 
-type smartContractConfig struct {
+type globalNode struct {
 	ID                 string        `json:"id"`
 	MinMintAmount      state.Balance `json:"min_mint_amount"`
 	PercentAuthorizers float64       `json:"percent_authorizers"`
@@ -33,26 +33,49 @@ type smartContractConfig struct {
 	MinAuthorizers     int64         `json:"min_authorizers"`
 }
 
-func (gn *smartContractConfig) GetHash() string {
+func (gn *globalNode) GetKey() datastore.Key {
+	return ADDRESS + gn.ID
+}
+
+func (gn *globalNode) GetHash() string {
 	return util.ToHex(gn.GetHashBytes())
 }
 
-func (gn *smartContractConfig) GetHashBytes() []byte {
+func (gn *globalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
 }
 
-func (gn *smartContractConfig) Encode() []byte {
+func (gn *globalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *smartContractConfig) Decode(input []byte) error {
+func (gn *globalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
 }
 
-func getSmartContractConfig() *smartContractConfig {
-	gn := &smartContractConfig{ID: ADDRESS}
+func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
+	return
+}
+
+func getGlobalSavedNode(balances cstate.StateContextI) (*globalNode, error) {
+	gn := &globalNode{ID: ADDRESS}
+	gv, err := balances.GetTrieNode(gn.GetKey())
+	if err != nil {
+		return gn, err
+	}
+	_ = gn.Decode(gv.Encode())
+	return gn, err
+}
+
+// getGlobalNode - returns global node
+func getGlobalNode(balances cstate.StateContextI) *globalNode {
+	gn, err := getGlobalSavedNode(balances)
+	if err == nil {
+		return gn
+	}
 
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
 	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64("smart_contracts.zcn.percent_authorizers")

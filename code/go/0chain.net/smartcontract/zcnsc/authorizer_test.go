@@ -162,7 +162,10 @@ func TestShould_Fail_If_TransactionValue_Less_Then_GlobalNode_MinStake(t *testin
 	tr := CreateDefaultTransactionToZcnsc()
 	tr.Value = 99
 
-	config.SmartContractConfig.Set("smart_contracts.zcn.min_stake_amount", 100)
+	node := CreateSmartContractGlobalNode()
+	node.MinStakeAmount = 100
+	err := node.save(balances)
+	require.NoError(t, err)
 
 	resp, err := sc.addAuthorizer(tr, data, balances)
 	require.Empty(t, resp)
@@ -265,14 +268,14 @@ func Test_Can_DigPool(t *testing.T) {
 }
 
 func Test_Can_EmptyPool(t *testing.T) {
-	CreateMockStateContext(clientId)
+	balances := CreateMockStateContext(clientId)
 	tr := CreateDefaultTransactionToZcnsc()
-	config := getSmartContractConfig()
+	gn := getGlobalNode(balances)
 
 	an := getNewAuthorizer("key", tr.ClientID)
 
 	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
-	_, _, err := an.Staking.EmptyPool(config.ID, tr.ClientID, tr)
+	_, _, err := an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 
 	require.NoError(t, err)
 }
@@ -437,8 +440,8 @@ func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
 	ans, err := getAuthorizerNodes(balances)
 	require.NoError(t, err)
 
-	config := getSmartContractConfig()
-	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(config.ID, tr.ClientID, tr)
+	gn := getGlobalNode(balances)
+	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 
 	transferEmptyPoolEqualityCheck(t, transfer, tr)

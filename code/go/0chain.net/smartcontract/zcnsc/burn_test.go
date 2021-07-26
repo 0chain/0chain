@@ -213,11 +213,11 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	transfers := ctx.GetTransfers()
 	require.Equal(t, len(transfers), 1)
 
-	config := getSmartContractConfig()
-	require.NotNil(t, config)
+	gn := getGlobalNode(ctx)
+	require.NotNil(t, gn)
 
 	transfer := transfers[0]
 	require.Equal(t, int64(transfer.Amount), tr.Value)
 	require.Equal(t, transfer.ClientID, tr.ClientID)
-	require.Equal(t, transfer.ToClientID, config.BurnAddress)
+	require.Equal(t, transfer.ToClientID, gn.BurnAddress)
 }
