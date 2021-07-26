@@ -164,11 +164,13 @@ func newAllocationPool(
 		return nil, fmt.Errorf("digging write pool: %v", err)
 	}
 	if mintNewTokens {
-		balances.AddMint(&state.Mint{
+		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,
 			ToClientID: ADDRESS,
 			Amount:     state.Balance(t.Value),
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("minting tokens for write pool: %v", err)
+		}
 	} else {
 		if err = balances.AddTransfer(transfer); err != nil {
 			return nil, fmt.Errorf("adding transfer to write pool: %v", err)
