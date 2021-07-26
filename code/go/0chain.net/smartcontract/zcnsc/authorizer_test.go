@@ -2,7 +2,6 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 	"math/rand"

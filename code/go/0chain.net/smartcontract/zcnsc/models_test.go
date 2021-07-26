@@ -2,6 +2,7 @@ package zcnsc
 
 import (
 	"0chain.net/chaincore/chain"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	"encoding/hex"
@@ -107,12 +108,12 @@ func Test_ShouldGetGlobalNode(t *testing.T) {
 }
 
 func Test_GlobalNodeEncodeAndDecode(t *testing.T) {
-	node := CreateSmartContractConfig()
+	node := CreateSmartContractGlobalNode()
 	node.BurnAddress = "11"
 	node.MinMintAmount = 12
 	node.MinBurnAmount = 13
 
-	expected := CreateSmartContractConfig()
+	expected := CreateSmartContractGlobalNode()
 
 	bytes := node.Encode()
 	err := expected.Decode(bytes)

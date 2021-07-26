@@ -16,8 +16,6 @@ import (
 // ContractMap contains all the SC addresses
 // ToClient is a SC address
 func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	config := getSmartContractConfig()
-
 	// check for authorizer already there
 	ans, err := getAuthorizerNodes(balances)
 	if err != nil {
