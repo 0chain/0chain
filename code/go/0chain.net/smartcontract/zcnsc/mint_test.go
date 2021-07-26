@@ -1,8 +1,9 @@
-package zcnsc
+package zcnsc_test
 
 import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/logging"
+	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"math/rand"
@@ -20,9 +21,9 @@ func init() {
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected, _, err := createMintPayload([]string{"1", "2", "3"})
+	expected, _, err := CreateMintPayload([]string{"1", "2", "3"})
 	require.NoError(t, err)
-	actual := &mintPayload{}
+	actual := &MintPayload{}
 	err = actual.Decode(expected.Encode())
 	require.NoError(t, err)
 	require.Equal(t, expected.Nonce, actual.Nonce)
@@ -42,7 +43,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 
 	authorizers := []string{clientId, clientId + "1", clientId + "2"}
 
-	payload, _, err := createMintPayload(authorizers)
+	payload, _, err := CreateMintPayload(authorizers)
 	require.NoError(t, err)
 
 	for _, authorizer := range authorizers {
@@ -53,7 +54,7 @@ func Test_FuzzyMintTest(t *testing.T) {
 		transaction := CreateTransactionToZcnsc(authorizer, tokens)
 		ctx := UpdateMockStateContext(transaction)
 
-		response, err := contract.mint(transaction, payload.Encode(), ctx)
+		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 
 		require.NoError(t, err, "Testing authorizer: '%s'", authorizer)
 		require.NotNil(t, response)
@@ -69,13 +70,13 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	ctx := CreateMockStateContext(clientId)
 
 	payload.Nonce = 1
-	node, err := getUserNode(clientId, ctx)
+	node, err := GetUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce - 1
-	require.NoError(t, node.save(ctx))
+	require.NoError(t, node.Save(ctx))
 
-	resp, err := contract.mint(tr, payload.Encode(), ctx)
+	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 }

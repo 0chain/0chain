@@ -8,6 +8,6 @@ import (
 )
 
 func (zcn *ZCNSmartContract) getAuthorizerNodes(_ context.Context, _ url.Values, balances cState.StateContextI) (interface{}, error) {
-	an, err := getAuthorizerNodes(balances)
+	an, err := GetAuthorizerNodes(balances)
 	return an, err
 }

@@ -1,4 +1,4 @@
-package zcnsc
+package zcnsc_test
 
 import (
 	"0chain.net/chaincore/chain"
@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	. "0chain.net/smartcontract/zcnsc"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/require"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	ADD_AUTHORIZER = "addAuthorizer"
+	ADD_AUTHORIZER = "AddAuthorizer"
 )
 
 var (
@@ -83,8 +84,8 @@ func CreateZCNSmartContract() *ZCNSmartContract {
 	return msc
 }
 
-func CreateSmartContractGlobalNode() *globalNode {
-	return &globalNode{
+func CreateSmartContractGlobalNode() *GlobalNode {
+	return &GlobalNode{
 		ID:                 ADDRESS,
 		MinMintAmount:      111,
 		PercentAuthorizers: 70,
@@ -95,8 +96,8 @@ func CreateSmartContractGlobalNode() *globalNode {
 	}
 }
 
-func createBurnPayload() *burnPayload {
-	return &burnPayload{
+func createBurnPayload() *BurnPayload {
+	return &BurnPayload{
 		TxnID:           txHash,
 		Nonce:           1,
 		Amount:          100,
@@ -104,8 +105,8 @@ func createBurnPayload() *burnPayload {
 	}
 }
 
-func createMintPayload(authorizers []string) (*mintPayload, string, error) {
-	m := &mintPayload{
+func CreateMintPayload(authorizers []string) (*MintPayload, string, error) {
+	m := &MintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
 		Nonce:             1,
@@ -122,8 +123,8 @@ func createMintPayload(authorizers []string) (*mintPayload, string, error) {
 	return m, pk, nil
 }
 
-func createTransactionSignatures(m *mintPayload, authorizers []string) ([]*authorizerSignature, string, error) {
-	var sigs []*authorizerSignature
+func createTransactionSignatures(m *MintPayload, authorizers []string) ([]*AuthorizerSignature, string, error) {
+	var sigs []*AuthorizerSignature
 
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	err := signatureScheme.GenerateKeys()
@@ -131,7 +132,7 @@ func createTransactionSignatures(m *mintPayload, authorizers []string) ([]*autho
 		return nil, "", err
 	}
 
-	signature, err := signatureScheme.Sign(m.getStringToSign())
+	signature, err := signatureScheme.Sign(m.GetStringToSign())
 	if err != nil {
 		return nil, "", err
 	}
@@ -139,7 +140,7 @@ func createTransactionSignatures(m *mintPayload, authorizers []string) ([]*autho
 	for _, id := range authorizers {
 		sigs = append(
 			sigs,
-			&authorizerSignature{
+			&AuthorizerSignature{
 				ID:        id,
 				Signature: signature,
 			})
@@ -148,8 +149,8 @@ func createTransactionSignatures(m *mintPayload, authorizers []string) ([]*autho
 	return sigs, signatureScheme.GetPublicKey(), nil
 }
 
-func createUserNode(id string, nonce int64) *userNode {
-	return &userNode{
+func createUserNode(id string, nonce int64) *UserNode {
+	return &UserNode{
 		ID:    id,
 		Nonce: nonce,
 	}
@@ -166,7 +167,7 @@ func addAuthorizer(
 	publicKey := &PublicKey{Key: tr.PublicKey}
 	data, _ := publicKey.Encode()
 
-	resp, err := contract.addAuthorizer(tr, data, ctx)
+	resp, err := contract.AddAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp)

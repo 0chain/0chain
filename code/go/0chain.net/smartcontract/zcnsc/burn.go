@@ -9,11 +9,11 @@ import (
 	"0chain.net/core/common"
 )
 
-// inputData - is a burnPayload
-func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := getGlobalNode(balances)
+// inputData - is a BurnPayload
+func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+	gn := GetGlobalNode(balances)
 
-	payload := &burnPayload{}
+	payload := &BurnPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
 		return
@@ -30,7 +30,7 @@ func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []by
 	payload.Amount = trans.Value
 
 	// get user node
-	un, err := getUserNode(trans.ClientID, balances)
+	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
 		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v)", err.Error()))
 		return
@@ -50,8 +50,8 @@ func (zcn *ZCNSmartContract) burn(trans *transaction.Transaction, inputData []by
 	// increase the nonce
 	un.Nonce++
 
-	// save the user node
-	err = un.save(balances)
+	// Save the user node
+	err = un.Save(balances)
 	if err != nil {
 		return
 	}

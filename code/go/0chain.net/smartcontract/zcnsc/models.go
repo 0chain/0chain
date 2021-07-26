@@ -20,10 +20,10 @@ import (
 )
 
 var (
-	allAuthorizerKey = ADDRESS + encryption.Hash("all_authorizers")
+	AllAuthorizerKey = ADDRESS + encryption.Hash("all_authorizers")
 )
 
-type globalNode struct {
+type GlobalNode struct {
 	ID                 string        `json:"id"`
 	MinMintAmount      state.Balance `json:"min_mint_amount"`
 	PercentAuthorizers float64       `json:"percent_authorizers"`
@@ -33,35 +33,35 @@ type globalNode struct {
 	MinAuthorizers     int64         `json:"min_authorizers"`
 }
 
-func (gn *globalNode) GetKey() datastore.Key {
+func (gn *GlobalNode) GetKey() datastore.Key {
 	return ADDRESS + gn.ID
 }
 
-func (gn *globalNode) GetHash() string {
+func (gn *GlobalNode) GetHash() string {
 	return util.ToHex(gn.GetHashBytes())
 }
 
-func (gn *globalNode) GetHashBytes() []byte {
+func (gn *GlobalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
 }
 
-func (gn *globalNode) Encode() []byte {
+func (gn *GlobalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) Decode(input []byte) error {
+func (gn *GlobalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
 }
 
-func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
+func (gn *GlobalNode) Save(balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 	return
 }
 
-func getGlobalSavedNode(balances cstate.StateContextI) (*globalNode, error) {
-	gn := &globalNode{ID: ADDRESS}
+func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
+	gn := &GlobalNode{ID: ADDRESS}
 	gv, err := balances.GetTrieNode(gn.GetKey())
 	if err != nil {
 		return gn, err
@@ -70,9 +70,9 @@ func getGlobalSavedNode(balances cstate.StateContextI) (*globalNode, error) {
 	return gn, err
 }
 
-// getGlobalNode - returns global node
-func getGlobalNode(balances cstate.StateContextI) *globalNode {
-	gn, err := getGlobalSavedNode(balances)
+// GetGlobalNode - returns global node
+func GetGlobalNode(balances cstate.StateContextI) *GlobalNode {
+	gn, err := GetGlobalSavedNode(balances)
 	if err == nil {
 		return gn
 	}
@@ -87,25 +87,25 @@ func getGlobalNode(balances cstate.StateContextI) *globalNode {
 	return gn
 }
 
-type authorizerSignature struct {
+type AuthorizerSignature struct {
 	ID        string `json:"authorizer_id"`
 	Signature string `json:"signature"`
 }
 
-type mintPayload struct {
-	EthereumTxnID     string                `json:"ethereum_txn_id"`
-	Amount            state.Balance         `json:"amount"`
-	Nonce             int64                 `json:"nonce"`
-	Signatures        []*authorizerSignature `json:"signatures"`
-	ReceivingClientID string                `json:"receiving_client_id"`
+type MintPayload struct {
+	EthereumTxnID     string                 `json:"ethereum_txn_id"`
+	Amount            state.Balance          `json:"amount"`
+	Nonce             int64                  `json:"nonce"`
+	Signatures        []*AuthorizerSignature `json:"signatures"`
+	ReceivingClientID string                 `json:"receiving_client_id"`
 }
 
-func (mp *mintPayload) Encode() []byte {
+func (mp *MintPayload) Encode() []byte {
 	buff, _ := json.Marshal(mp)
 	return buff
 }
 
-func (mp *mintPayload) Decode(input []byte) error {
+func (mp *MintPayload) Decode(input []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -176,7 +176,7 @@ func (mp *mintPayload) Decode(input []byte) error {
 		}
 
 		for _, raw := range sigs {
-			sig := &authorizerSignature{}
+			sig := &AuthorizerSignature{}
 			err = json.Unmarshal(*raw, sig)
 			if err != nil {
 				return err
@@ -188,13 +188,13 @@ func (mp *mintPayload) Decode(input []byte) error {
 	return err
 }
 
-func (mp *mintPayload) getStringToSign() string {
+func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *mintPayload) verifySignatures(ans *authorizerNodes) (err error) {
+func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	toSign := mp.getStringToSign()
+	toSign := mp.GetStringToSign()
 	for _, v := range mp.Signatures {
 		if v.ID == "" {
 			return errors.New("authorizer ID is empty in a signature")
@@ -220,19 +220,19 @@ func (mp *mintPayload) verifySignatures(ans *authorizerNodes) (err error) {
 	return
 }
 
-type burnPayload struct {
+type BurnPayload struct {
 	TxnID           string `json:"0chain_txn_id"`
 	Nonce           int64  `json:"nonce"`
 	Amount          int64  `json:"amount"`
 	EthereumAddress string `json:"ethereum_address"`
 }
 
-func (bp *burnPayload) Encode() []byte {
+func (bp *BurnPayload) Encode() []byte {
 	buff, _ := json.Marshal(bp)
 	return buff
 }
 
-func (bp *burnPayload) Decode(input []byte) error {
+func (bp *BurnPayload) Decode(input []byte) error {
 	err := json.Unmarshal(input, bp)
 	return err
 }
@@ -251,18 +251,18 @@ func (pk *PublicKey) Decode(input []byte) error {
 	return err
 }
 
-type authorizerNode struct {
+type AuthorizerNode struct {
 	ID        string                    `json:"id"`
 	PublicKey string                    `json:"public_key"`
 	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
 }
 
-func (an *authorizerNode) Encode() []byte {
+func (an *AuthorizerNode) Encode() []byte {
 	bytes, _ := json.Marshal(an)
 	return bytes
 }
 
-func (an *authorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -308,8 +308,8 @@ func (an *authorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 }
 
 // To review: tokenLock init values
-func getNewAuthorizer(pk string, id string) *authorizerNode {
-	return &authorizerNode{
+func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
+	return &AuthorizerNode{
 		PublicKey: pk,
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
@@ -318,7 +318,7 @@ func getNewAuthorizer(pk string, id string) *authorizerNode {
 					Balance: 0,
 				},
 			},
-			TokenLockInterface: tokenLock{
+			TokenLockInterface: TokenLock{
 				StartTime: 0,
 				Duration:  0,
 				Owner:     id,
@@ -328,13 +328,13 @@ func getNewAuthorizer(pk string, id string) *authorizerNode {
 	}
 }
 
-type authorizerNodes struct {
-	NodeMap map[string]*authorizerNode `json:"node_map"`
+type AuthorizerNodes struct {
+	NodeMap map[string]*AuthorizerNode `json:"node_map"`
 }
 
-func (an *authorizerNodes) Decode(input []byte) error {
+func (an *AuthorizerNodes) Decode(input []byte) error {
 	if an.NodeMap == nil {
-		an.NodeMap = make(map[string]*authorizerNode)
+		an.NodeMap = make(map[string]*AuthorizerNode)
 	}
 
 	var objMap map[string]json.RawMessage
@@ -352,13 +352,13 @@ func (an *authorizerNodes) Decode(input []byte) error {
 		}
 
 		for _, raw := range authorizerNodes {
-			target := &authorizerNode{}
-			err := target.Decode(raw, &tokenLock{})
+			target := &AuthorizerNode{}
+			err := target.Decode(raw, &TokenLock{})
 			if err != nil {
 				return err
 			}
 
-			err = an.addAuthorizer(target)
+			err = an.AddAuthorizer(target)
 			if err != nil {
 				return err
 			}
@@ -368,25 +368,25 @@ func (an *authorizerNodes) Decode(input []byte) error {
 	return nil
 }
 
-func (an *authorizerNodes) Encode() []byte {
+func (an *AuthorizerNodes) Encode() []byte {
 	buff, _ := json.Marshal(an)
 	return buff
 }
 
-func (an *authorizerNodes) GetHash() string {
+func (an *AuthorizerNodes) GetHash() string {
 	return util.ToHex(an.GetHashBytes())
 }
 
-func (an *authorizerNodes) GetHashBytes() []byte {
+func (an *AuthorizerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(an.Encode())
 }
 
-func (an *authorizerNodes) save(balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(allAuthorizerKey, an)
+func (an *AuthorizerNodes) Save(balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(AllAuthorizerKey, an)
 	return
 }
 
-func (an *authorizerNodes) deleteAuthorizer(id string) (err error) {
+func (an *AuthorizerNodes) DeleteAuthorizer(id string) (err error) {
 	if an.NodeMap[id] == nil {
 		err = common.NewError("failed to delete authorizer", fmt.Sprintf("authorizer (%v) does not exist", id))
 		return
@@ -395,7 +395,7 @@ func (an *authorizerNodes) deleteAuthorizer(id string) (err error) {
 	return
 }
 
-func (an *authorizerNodes) addAuthorizer(node *authorizerNode) (err error) {
+func (an *AuthorizerNodes) AddAuthorizer(node *AuthorizerNode) (err error) {
 	if node == nil {
 		err = common.NewError("failed to add authorizer", "authorizerNode is not initialized")
 		return
@@ -416,7 +416,7 @@ func (an *authorizerNodes) addAuthorizer(node *authorizerNode) (err error) {
 	return
 }
 
-func (an *authorizerNodes) updateAuthorizer(node *authorizerNode) (err error) {
+func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 	if an.NodeMap[node.ID] == nil {
 		err = common.NewError("failed to update authorizer", fmt.Sprintf("authorizer (%v) does not exist", node.ID))
 		return
@@ -425,14 +425,14 @@ func (an *authorizerNodes) updateAuthorizer(node *authorizerNode) (err error) {
 	return
 }
 
-func getAuthorizerNodes(balances cstate.StateContextI) (*authorizerNodes, error) {
-	an := &authorizerNodes{}
-	av, err := balances.GetTrieNode(allAuthorizerKey)
+func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
+	an := &AuthorizerNodes{}
+	av, err := balances.GetTrieNode(AllAuthorizerKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		} else {
-			an.NodeMap = make(map[string]*authorizerNode)
+			an.NodeMap = make(map[string]*AuthorizerNode)
 			return an, nil
 		}
 	}
@@ -441,40 +441,40 @@ func getAuthorizerNodes(balances cstate.StateContextI) (*authorizerNodes, error)
 	return an, err
 }
 
-type userNode struct {
+type UserNode struct {
 	ID    string `json:"id"`
 	Nonce int64  `json:"nonce"`
 }
 
-func (un *userNode) GetKey(globalKey string) datastore.Key {
+func (un *UserNode) GetKey(globalKey string) datastore.Key {
 	return globalKey + un.ID
 }
 
-func (un *userNode) GetHash() string {
+func (un *UserNode) GetHash() string {
 	return util.ToHex(un.GetHashBytes())
 }
 
-func (un *userNode) GetHashBytes() []byte {
+func (un *UserNode) GetHashBytes() []byte {
 	return encryption.RawHash(un.Encode())
 }
 
-func (un *userNode) Encode() []byte {
+func (un *UserNode) Encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff
 }
 
-func (un *userNode) Decode(input []byte) error {
+func (un *UserNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, un)
 	return err
 }
 
-func (un *userNode) save(balances cstate.StateContextI) (err error) {
+func (un *UserNode) Save(balances cstate.StateContextI) (err error) {
 	_, err = balances.InsertTrieNode(un.GetKey(ADDRESS), un)
 	return
 }
 
-func getUserNode(id string, balances cstate.StateContextI) (*userNode, error) {
-	un := &userNode{ID: id}
+func GetUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
+	un := &UserNode{ID: id}
 	uv, err := balances.GetTrieNode(un.GetKey(ADDRESS))
 	if err != nil {
 		return un, err
@@ -486,13 +486,13 @@ func getUserNode(id string, balances cstate.StateContextI) (*userNode, error) {
 	return un, err
 }
 
-type tokenLock struct {
+type TokenLock struct {
 	StartTime common.Timestamp `json:"start_time"`
 	Duration  time.Duration    `json:"duration"`
 	Owner     datastore.Key    `json:"owner"`
 }
 
-func (tl tokenLock) IsLocked(entity interface{}) bool {
+func (tl TokenLock) IsLocked(entity interface{}) bool {
 	txn, ok := entity.(*transaction.Transaction)
 	if ok {
 		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
@@ -500,7 +500,7 @@ func (tl tokenLock) IsLocked(entity interface{}) bool {
 	return true
 }
 
-func (tl tokenLock) LockStats(entity interface{}) []byte {
+func (tl TokenLock) LockStats(entity interface{}) []byte {
 	txn, ok := entity.(*transaction.Transaction)
 	if ok {
 		p := &poolStat{

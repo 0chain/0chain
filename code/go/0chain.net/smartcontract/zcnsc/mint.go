@@ -9,11 +9,11 @@ import (
 	"0chain.net/core/common"
 )
 
-// inputData - is a mintPayload
-func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := getGlobalNode(balances)
+// inputData - is a MintPayload
+func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+	gn := GetGlobalNode(balances)
 
-	payload := &mintPayload{}
+	payload := &MintPayload{}
 	err = payload.Decode(inputData)
 	if err != nil {
 		return
@@ -26,7 +26,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// get user node
-	un, err := getUserNode(trans.ClientID, balances)
+	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
 		err = common.NewError("failed to mint", fmt.Sprintf("get user node error (%v)", err.Error()))
 		return
@@ -52,7 +52,7 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// get the authorizers
-	ans, err := getAuthorizerNodes(balances)
+	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
 		return
 	}
@@ -86,8 +86,8 @@ func (zcn *ZCNSmartContract) mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// save the user node
-	err = un.save(balances)
+	// Save the user node
+	err = un.Save(balances)
 	if err != nil {
 		return
 	}

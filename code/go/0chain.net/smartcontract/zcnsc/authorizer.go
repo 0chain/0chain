@@ -9,15 +9,15 @@ import (
 	"0chain.net/core/common"
 )
 
-// addAuthorizer sc API function
+// AddAuthorizer sc API function
 // Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
 // inputData is a publicKey in case public key in Tx is missing. Either PK or inputData must be present
 // balances have `GetTriedNode` implemented to get nodes
 // ContractMap contains all the SC addresses
 // ToClient is a SC address
-func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	// check for authorizer already there
-	ans, err := getAuthorizerNodes(balances)
+	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
 		return resp, err
 	}
@@ -27,7 +27,7 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 	}
 
 	//get global node
-	gn := getGlobalNode(balances)
+	gn := GetGlobalNode(balances)
 
 	//compare the global min of an Authorizer to that of the transaction amount
 	if gn.MinStakeAmount > t.Value {
@@ -48,7 +48,7 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 	} else {
 		key = t.PublicKey
 	}
-	an := getNewAuthorizer(key, t.ClientID)
+	an := GetNewAuthorizer(key, t.ClientID)
 
 	//dig pool for authorizer
 	var transfer *state.Transfer
@@ -73,18 +73,18 @@ func (zcn *ZCNSmartContract) addAuthorizer(t *transaction.Transaction, inputData
 		)
 		return
 	}
-	err = ans.addAuthorizer(an)
+	err = ans.AddAuthorizer(an)
 	if err != nil {
 		return
 	}
-	//save authorizer
-	err = ans.save(balances)
+	//Save authorizer
+	err = ans.Save(balances)
 	return
 }
 
-func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, _ []byte, balances cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) DeleteAuthorizer(t *transaction.Transaction, _ []byte, balances cstate.StateContextI) (resp string, err error) {
 	//check for authorizer
-	ans, err := getAuthorizerNodes(balances)
+	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
 		return
 	}
@@ -94,7 +94,7 @@ func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, _ []by
 		return
 	}
 
-	gn := getGlobalNode(balances)
+	gn := GetGlobalNode(balances)
 
 	//empty the authorizer's pool
 	var transfer *state.Transfer
@@ -108,10 +108,10 @@ func (zcn *ZCNSmartContract) deleteAuthorizer(t *transaction.Transaction, _ []by
 	_ = balances.AddTransfer(transfer)
 
 	//delete authorizer node
-	err = ans.deleteAuthorizer(t.ClientID)
+	err = ans.DeleteAuthorizer(t.ClientID)
 	if err != nil {
 		return
 	}
-	err = ans.save(balances)
+	err = ans.Save(balances)
 	return
 }

@@ -1,4 +1,4 @@
-package zcnsc
+package zcnsc_test
 
 // StateContextI implementation
 
@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	. "0chain.net/smartcontract/zcnsc"
 	"strconv"
 )
 
@@ -76,9 +77,9 @@ func UpdateMockStateContext(tr *transaction.Transaction) cstate.StateContextI {
 
 	node := createUserNode(tr.ClientID, int64(0))
 
-	_, err := getUserNode(node.ID, m)
+	_, err := GetUserNode(node.ID, m)
 	if err != nil {
-		err := node.save(m)
+		err := node.Save(m)
 		if err != nil {
 			panic(err)
 		}
@@ -97,14 +98,14 @@ func CreateMockStateContextFromTransaction(tr *transaction.Transaction) cstate.S
 	}
 
 	node := createUserNode(tr.ClientID, int64(0))
-	err := node.save(m)
+	err := node.Save(m)
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 1; i <= 5; i++ {
 		node := createUserNode(strconv.Itoa(i), int64(i))
-		err := node.save(m)
+		err := node.Save(m)
 		if err != nil {
 			panic(err)
 		}
@@ -123,14 +124,14 @@ func CreateMockStateContext(clientId string) cstate.StateContextI {
 	}
 
 	node := createUserNode(clientId, int64(0))
-	err := node.save(m)
+	err := node.Save(m)
 	if err != nil {
 		panic(err)
 	}
 
 	for i := 1; i <= 5; i++ {
 		node := createUserNode(strconv.Itoa(i), int64(i))
-		err := node.save(m)
+		err := node.Save(m)
 		if err != nil {
 			panic(err)
 		}
