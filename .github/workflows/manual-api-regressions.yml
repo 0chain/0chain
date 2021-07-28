@@ -75,7 +75,11 @@ jobs:
           destination_dir: "./${{ env.NETWORK }}"
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"    
-          
+      
+      - name: Wait for report deployment to complete
+        if:  always()
+        run: sleep 10
+    
       - name: Report Link
         if:  always()
-        run: sleep 10 && echo "https://0chain.github.io/0chain/${{ env.NETWORK }}/${{ steps.time.outputs.time }}/index.html" 
+        run: echo "https://0chain.github.io/0chain/${{ env.NETWORK }}/${{ steps.time.outputs.time }}/index.html" 
