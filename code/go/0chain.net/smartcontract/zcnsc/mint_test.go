@@ -21,7 +21,7 @@ func init() {
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected, _, err := CreateMintPayload([]string{"1", "2", "3"})
+	expected, _, err := CreateMintPayload("client0", []string{"1", "2", "3"})
 	require.NoError(t, err)
 	actual := &MintPayload{}
 	err = actual.Decode(expected.Encode())
@@ -38,21 +38,14 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 }
 
 func Test_FuzzyMintTest(t *testing.T) {
-	CreateMockStateContext("default")
+	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
 
-	authorizers := []string{clientId, clientId + "1", clientId + "2"}
-
-	payload, _, err := CreateMintPayload(authorizers)
+	payload, _, err := CreateMintPayload("client0", authorizers)
 	require.NoError(t, err)
 
 	for _, authorizer := range authorizers {
-		addAuthorizer(t, contract, authorizer)
-	}
-
-	for _, authorizer := range authorizers {
 		transaction := CreateTransactionToZcnsc(authorizer, tokens)
-		ctx := UpdateMockStateContext(transaction)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 

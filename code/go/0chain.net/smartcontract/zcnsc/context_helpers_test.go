@@ -66,35 +66,20 @@ func CreateStateContext(fromClientId string) *cstate.StateContext {
 
 var store map[datastore.Key]util.Serializable
 
-func UpdateMockStateContext(tr *transaction.Transaction) cstate.StateContextI {
-	if store == nil {
-		return CreateMockStateContextFromTransaction(tr)
-	}
-
-	m := &mockStateContext{
-		ctx:                *UpdateStateContext(tr),
-		clientStartBalance: zcnToBalance(3),
-		store:              store,
-	}
-
-	node := createUserNode(tr.ClientID, int64(0))
-
-	_, err := GetUserNode(node.ID, m)
-	if err != nil {
-		err := node.Save(m)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return m
-}
-
-func MakeMockStateContextFromTransaction() *mocks.StateContextI {
-	mintPayload, _, _ := CreateMintPayload([]string{clientId, clientId + "1", clientId + "2"})
+func MakeMockStateContext() *mocks.StateContextI {
 	globalNode := &GlobalNode{ID: ADDRESS}
 
 	ctx := mocks.StateContextI{}
+
+	ans := &AuthorizerNodes{}
+	ans.NodeMap = make(map[string]*AuthorizerNode)
+
+	for _, authorizer := range authorizers {
+		err := ans.AddAuthorizer(CreateMockAuthorizer(authorizer))
+		if err != nil {
+			panic(err.Error())
+		}
+	}
 
 	ctx.
 		On("GetClientBalance", mock.AnythingOfType("string")).
@@ -108,65 +93,98 @@ func MakeMockStateContextFromTransaction() *mocks.StateContextI {
 
 	ctx.
 		On("GetTrieNode", AllAuthorizerKey).
-		Return(nil, util.ErrValueNotPresent)
+		Return(
+			func(_ datastore.Key) util.Serializable {
+				return ans
+			},
+			func(_ datastore.Key) error {
+				return nil
+			})
 
 	ctx.
 		On("GetTrieNode", globalNode.GetKey()).
-		Return(nil, util.ErrValueNotPresent)
+		Return(
+			func(_ datastore.Key) util.Serializable {
+				return nil
+			},
+			func(_ datastore.Key) error {
+				return util.ErrValueNotPresent
+			})
 
-	userNode := createUserNode(clientId, int64(0))
+	for _, client := range authorizers {
+		userNode := createUserNode(client, int64(0))
 
-	ctx.
-		On("GetTrieNode", userNode.GetKey(ADDRESS)).
-		Return(userNode, nil)
+		ctx.
+			On("GetTrieNode", userNode.GetKey(ADDRESS)).
+			Return(
+				func(_ datastore.Key) util.Serializable {
+					return userNode
+				},
+				func(_ datastore.Key) error {
+					return nil
+				})
+	}
 
 	/// InsertTrieNode
 
 	ctx.
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
+		Return(
+			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+				return ""
+			},
+			func(_ datastore.Key, _ util.Serializable) error {
+				return nil
+			})
+
+	ctx.
 		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.GlobalNode")).
-		Return("", nil)
+		Return(
+			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+				return ""
+			},
+			func(_ datastore.Key, _ util.Serializable) error {
+				return nil
+			})
 
 	ctx.
 		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNodes")).
-		Return("", nil)
+		Return(
+			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+				return ""
+			},
+			func(_ datastore.Key, _ util.Serializable) error {
+				return nil
+			})
 
 	ctx.
 		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")).
-		Return("", nil)
+		Return(
+			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+				return ""
+			},
+			func(_ datastore.Key, _ util.Serializable) error {
+				return nil
+			})
 
 	////////////////////////////
 
-	ctx.
-		On("AddMint", &mintPayload).
-		Return(nil).Once()
+	for _, authorizer := range authorizers {
+		client := authorizer
+		mintPayload, _, _ := CreateMintPayload(client, authorizers)
+
+		mint := &state.Mint{
+			Minter:     globalNode.ID,
+			ToClientID: mintPayload.ReceivingClientID,
+			Amount:     mintPayload.Amount,
+		}
+
+		ctx.
+			On("AddMint", mint).
+			Return(nil).Once()
+	}
 
 	return &ctx
-}
-
-func CreateMockStateContextFromTransaction(tr *transaction.Transaction) cstate.StateContextI {
-	store = make(map[datastore.Key]util.Serializable)
-
-	m := &mockStateContext{
-		ctx:                *UpdateStateContext(tr),
-		clientStartBalance: zcnToBalance(3),
-		store:              store,
-	}
-
-	node := createUserNode(tr.ClientID, int64(0))
-	err := node.Save(m)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 1; i <= 5; i++ {
-		node := createUserNode(strconv.Itoa(i), int64(i))
-		err := node.Save(m)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return m
 }
 
 func CreateMockStateContext(clientId string) cstate.StateContextI {

@@ -21,6 +21,7 @@ var (
 	zcnAddressId                  = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
 	tokens                float64 = 10
 	clientSignatureScheme         = "bls0chain"
+	authorizers                   = []string{clientId, clientId + "1", clientId + "2"}
 )
 
 func CreateDefaultTransactionToZcnsc() *transaction.Transaction {
@@ -105,12 +106,12 @@ func createBurnPayload() *BurnPayload {
 	}
 }
 
-func CreateMintPayload(authorizers []string) (*MintPayload, string, error) {
+func CreateMintPayload(receiverId string, authorizers []string) (*MintPayload, string, error) {
 	m := &MintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
 		Nonce:             1,
-		ReceivingClientID: "Client0",
+		ReceivingClientID: receiverId,
 	}
 
 	signatures, pk, err := createTransactionSignatures(m, authorizers)
@@ -162,7 +163,7 @@ func addAuthorizer(
 	clientId string,
 ) {
 	tr := CreateTransactionToZcnsc(clientId, 10)
-	ctx := UpdateMockStateContext(tr)
+	ctx := MakeMockStateContext()
 
 	publicKey := &PublicKey{Key: tr.PublicKey}
 	data, _ := publicKey.Encode()
@@ -171,4 +172,9 @@ func addAuthorizer(
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp)
+}
+
+func CreateMockAuthorizer(clientId string) *AuthorizerNode {
+	tr := CreateTransactionToZcnsc(clientId, 10)
+	return GetNewAuthorizer(tr.PublicKey, clientId)
 }

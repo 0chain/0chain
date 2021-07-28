@@ -30,8 +30,25 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
+func Test_AuthorizersShouldBeInitialized(t *testing.T) {
+	ctx := MakeMockStateContext()
+	nodes, err := ctx.GetTrieNode(AllAuthorizerKey)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+	an := nodes.(*AuthorizerNodes)
+	require.Equal(t, 3, len(an.NodeMap))
+}
+
+func Test_BasicAuthorizersShouldBeInitialized(t *testing.T) {
+	ctx := MakeMockStateContext()
+	nodes, err := GetAuthorizerNodes(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+	require.Equal(t, 3, len(nodes.NodeMap))
+}
+
 func Test_Basic_GetGlobalNode_InitsNode(t *testing.T) {
-	ctx := MakeMockStateContextFromTransaction()
+	ctx := MakeMockStateContext()
 
 	node, err := GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
@@ -40,7 +57,7 @@ func Test_Basic_GetGlobalNode_InitsNode(t *testing.T) {
 }
 
 func Test_Basic_GetAuthorizerNode_InitsNode(t *testing.T) {
-	ctx := MakeMockStateContextFromTransaction()
+	ctx := MakeMockStateContext()
 
 	nodes, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
@@ -48,7 +65,7 @@ func Test_Basic_GetAuthorizerNode_InitsNode(t *testing.T) {
 }
 
 func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
-	ctx := MakeMockStateContextFromTransaction()
+	ctx := MakeMockStateContext()
 
 	node, err := GetUserNode(clientId, ctx)
 	require.NoError(t, err)
@@ -57,24 +74,17 @@ func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
 	require.Equal(t, ADDRESS+clientId, node.GetKey(ADDRESS))
 }
 
-func Test_TransferStateAfterAddingAuthorizer2(t *testing.T) {
+func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	contract := CreateZCNSmartContract()
-
+	ctx := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc(clientId, 10)
-	ctx := MakeMockStateContextFromTransaction()
 
 	publicKey := &PublicKey{Key: tr.PublicKey}
 	data, _ := publicKey.Encode()
 
-	resp, err := contract.AddAuthorizer(tr, data, ctx)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.NotEmpty(t, resp)
-}
-
-func Test_TransferStateAfterAddingAuthorizer(t *testing.T) {
-	contract := CreateZCNSmartContract()
-	addAuthorizer(t, contract, clientId)
+	_, err := contract.AddAuthorizer(tr, data, ctx)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "already exists")
 }
 
 func Test_AddingAuthorizer_Adds_Transfers_To_Context(t *testing.T) {
