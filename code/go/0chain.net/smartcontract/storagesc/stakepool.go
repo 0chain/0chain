@@ -15,7 +15,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -179,10 +178,6 @@ func stakePoolKey(scKey, blobberID string) datastore.Key {
 	return datastore.Key(scKey + ":stakepool:" + blobberID)
 }
 
-func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
-}
-
 // Encode to []byte
 func (sp *stakePool) Encode() (b []byte) {
 	var err error
@@ -252,7 +247,11 @@ func (sp *stakePool) updateRewardMints(
 ) error {
 	mintInfo, err := getBlockRewardMints(ssc, balances)
 	if err != nil {
-		return fmt.Errorf("Error getting mint info: %v", err)
+		if err != util.ErrValueNotPresent {
+			return fmt.Errorf("Error getting mint info: %v", err)
+		} else {
+			return nil
+		}
 	}
 
 	err = mintInfo.mintRewardsForBlobber(sp, blobberId, balances)

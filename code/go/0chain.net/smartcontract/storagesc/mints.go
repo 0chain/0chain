@@ -97,7 +97,10 @@ func getBlockRewardMints(
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		return mi, mi.populate(ssc, balances)
+		if err := mi.populate(ssc, balances); err != nil {
+			return nil, err
+		}
+		return mi, nil
 	}
 	err = mi.Decode(bsBytes)
 	if err != nil {

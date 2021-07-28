@@ -109,12 +109,15 @@ func TestSelectBlobbers(t *testing.T) {
 			).Return(&sp, nil).Once()
 		}
 
+		balances.On("GetTrieNode", BLOCK_REWARD_MINTS).Return(nil, util.ErrValueNotPresent)
+
 		var conf = &scConfig{
 			TimeUnit:         confTimeUnit,
 			MinAllocSize:     confMinAllocSize,
 			MinAllocDuration: confMinAllocDuration,
+			BlockReward:      &blockReward{},
 		}
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 
 		return ssc, sa, sNodes, balances
 	}
@@ -219,19 +222,15 @@ func TestSelectBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		randomSeed                  = 1
 		mockURL                     = "mock_url"
 		mockOwner                   = "mock owner"
-		mockNotTheOwner             = "mock not the owner"
 		mockWpOwner                 = "mock write pool owner"
 		mockPublicKey               = "mock public key"
 		mockBlobberId               = "mock_blobber_id"
 		mockPoolId                  = "mock pool id"
 		mockAllocationId            = "mock allocation id"
 		mockMinPrice                = 0
-		confTimeUnit                = 720 * time.Hour
 		confMinAllocSize            = 1024
-		confMinAllocDuration        = 5 * time.Minute
 		mockMaxOffDuration          = 744 * time.Hour
 		mocksSize                   = 10000000000
 		mockDataShards              = 2
@@ -242,7 +241,6 @@ func TestExtendAllocation(t *testing.T) {
 		mockChallengeCompletionTime = 1 * time.Hour
 		mockMinLockDemmand          = 0.1
 		mockTimeUnit                = 1 * time.Hour
-		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
@@ -356,6 +354,11 @@ func TestExtendAllocation(t *testing.T) {
 				balances.On(
 					"GetTrieNode", stakePoolKey(ssc.ID, mockBlobber.ID),
 				).Return(&sp, nil).Once()
+
+				var conf = &scConfig{
+					BlockReward: &blockReward{},
+				}
+				balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 				balances.On(
 					"InsertTrieNode",
 					stakePoolKey(ssc.ID, mockBlobber.ID),
@@ -363,6 +366,15 @@ func TestExtendAllocation(t *testing.T) {
 				).Return("", nil).Once()
 			}
 		}
+		balances.On(
+			"GetTrieNode", BLOCK_REWARD_MINTS,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"InsertTrieNode", ALL_BLOBBER_STAKES_KEY, mock.Anything,
+		).Return("", nil)
 
 		require.EqualValues(t, len(args.poolFunds), len(args.poolCount))
 		for i, funds := range args.poolFunds {
@@ -838,7 +850,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 }
 
 func Test_newAllocationRequest_storageAllocation(t *testing.T) {
-	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
+	const clientID, clientPk = "client_hex", "pk"
 	var nar newAllocationRequest
 	nar.DataShards = 2
 	nar.ParityShards = 3
@@ -905,6 +917,7 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
 		require.NoError(t, err)
 	}
+	setConfig(t, balances)
 	// add the offers
 	require.NoError(t, ssc.addBlobbersOffers(&alloc, blobbers, balances))
 	// check out all
@@ -1064,6 +1077,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
 	conf.TimeUnit = 2 * time.Minute
+	conf.BlockReward = &blockReward{}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
@@ -1362,6 +1376,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
+	conf.BlockReward = &blockReward{}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
@@ -1473,8 +1488,6 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 			"client_hex", "pub_key_hex", "close_tx_hash"
 
 		errMsg1 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
-		errMsg2 = "allocation_closing_failed: " +
 			"doesn't need to close allocation is about to expire"
 	)
 

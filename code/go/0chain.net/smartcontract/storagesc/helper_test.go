@@ -372,6 +372,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		InterestInterval: 5 * time.Second,
 	}
 
+	conf.BlockReward = &blockReward{}
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
 }

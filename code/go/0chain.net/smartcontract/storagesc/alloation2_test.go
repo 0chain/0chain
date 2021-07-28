@@ -40,6 +40,7 @@ func TestNewAllocation(t *testing.T) {
 		MinAllocDuration:           5 * time.Minute,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		MaxStake:                   zcnToBalance(100.0),
+		BlockReward:                &blockReward{},
 	}
 	var blobberYaml = mockBlobberYaml{
 		readPrice:               0.01,
@@ -121,6 +122,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
+		BlockReward:                     &blockReward{},
 	}
 	var now = common.Timestamp(scYaml.MaxChallengeCompletionTime) * 5
 	var blobberYaml = mockBlobberYaml{
@@ -275,6 +277,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		TimeUnit:                        720 * time.Hour,
 		FailedChallengesToRevokeMinLock: 10,
 		MaxStake:                        zcnToBalance(100.0),
+		BlockReward:                     &blockReward{},
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,
