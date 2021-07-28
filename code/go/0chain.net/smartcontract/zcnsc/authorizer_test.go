@@ -30,6 +30,48 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
+func Test_Basic_GetGlobalNode_InitsNode(t *testing.T) {
+	ctx := MakeMockStateContextFromTransaction()
+
+	node, err := GetGlobalSavedNode(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	require.Equal(t, ADDRESS, node.ID)
+}
+
+func Test_Basic_GetAuthorizerNode_InitsNode(t *testing.T) {
+	ctx := MakeMockStateContextFromTransaction()
+
+	nodes, err := GetAuthorizerNodes(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, nodes)
+}
+
+func Test_Basic_GetUserNode_ReturnsUserNode(t *testing.T) {
+	ctx := MakeMockStateContextFromTransaction()
+
+	node, err := GetUserNode(clientId, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	require.Equal(t, clientId, node.ID)
+	require.Equal(t, ADDRESS+clientId, node.GetKey(ADDRESS))
+}
+
+func Test_TransferStateAfterAddingAuthorizer2(t *testing.T) {
+	contract := CreateZCNSmartContract()
+
+	tr := CreateTransactionToZcnsc(clientId, 10)
+	ctx := MakeMockStateContextFromTransaction()
+
+	publicKey := &PublicKey{Key: tr.PublicKey}
+	data, _ := publicKey.Encode()
+
+	resp, err := contract.AddAuthorizer(tr, data, ctx)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp)
+}
+
 func Test_TransferStateAfterAddingAuthorizer(t *testing.T) {
 	contract := CreateZCNSmartContract()
 	addAuthorizer(t, contract, clientId)

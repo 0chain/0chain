@@ -5,6 +5,7 @@ package zcnsc_test
 import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -12,6 +13,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	. "0chain.net/smartcontract/zcnsc"
+	"github.com/stretchr/testify/mock"
 	"strconv"
 )
 
@@ -86,6 +88,59 @@ func UpdateMockStateContext(tr *transaction.Transaction) cstate.StateContextI {
 	}
 
 	return m
+}
+
+func MakeMockStateContextFromTransaction() *mocks.StateContextI {
+	mintPayload, _, _ := CreateMintPayload([]string{clientId, clientId + "1", clientId + "2"})
+	globalNode := &GlobalNode{ID: ADDRESS}
+
+	ctx := mocks.StateContextI{}
+
+	ctx.
+		On("GetClientBalance", mock.AnythingOfType("string")).
+		Return(5, nil)
+
+	ctx.
+		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).
+		Return(nil)
+
+	/// GetTrieNode
+
+	ctx.
+		On("GetTrieNode", AllAuthorizerKey).
+		Return(nil, util.ErrValueNotPresent)
+
+	ctx.
+		On("GetTrieNode", globalNode.GetKey()).
+		Return(nil, util.ErrValueNotPresent)
+
+	userNode := createUserNode(clientId, int64(0))
+
+	ctx.
+		On("GetTrieNode", userNode.GetKey(ADDRESS)).
+		Return(userNode, nil)
+
+	/// InsertTrieNode
+
+	ctx.
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.GlobalNode")).
+		Return("", nil)
+
+	ctx.
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNodes")).
+		Return("", nil)
+
+	ctx.
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")).
+		Return("", nil)
+
+	////////////////////////////
+
+	ctx.
+		On("AddMint", &mintPayload).
+		Return(nil).Once()
+
+	return &ctx
 }
 
 func CreateMockStateContextFromTransaction(tr *transaction.Transaction) cstate.StateContextI {

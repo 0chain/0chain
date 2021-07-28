@@ -9,7 +9,7 @@ import (
 	"0chain.net/core/common"
 )
 
-// inputData - is a MintPayload
+// Mint inputData - is a MintPayload
 func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := GetGlobalNode(balances)
 

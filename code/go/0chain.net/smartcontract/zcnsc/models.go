@@ -64,7 +64,11 @@ func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: ADDRESS}
 	gv, err := balances.GetTrieNode(gn.GetKey())
 	if err != nil {
-		return gn, err
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		} else {
+			return gn, nil
+		}
 	}
 	_ = gn.Decode(gv.Encode())
 	return gn, err
@@ -307,7 +311,7 @@ func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 	return nil
 }
 
-// To review: tokenLock init values
+// GetNewAuthorizer To review: tokenLock init values
 func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
 	return &AuthorizerNode{
 		PublicKey: pk,

@@ -26,7 +26,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData
 		return
 	}
 
-	//get global node
 	gn := GetGlobalNode(balances)
 
 	//compare the global min of an Authorizer to that of the transaction amount
