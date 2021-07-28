@@ -78,4 +78,4 @@ jobs:
           
       - name: Report Link
         if:  always()
-        run: echo "https://0chain.github.io/0chain/${{ env.NETWORK }}/${{ steps.time.outputs.time }}" 
+        run: sleep 10 && echo "https://0chain.github.io/0chain/${{ env.NETWORK }}/${{ steps.time.outputs.time }}/index.html" 
