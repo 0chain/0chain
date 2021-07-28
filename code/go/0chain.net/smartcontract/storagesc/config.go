@@ -57,6 +57,7 @@ type blockReward struct {
 	MinerWeight           float64       `json:"miner_weight"`
 	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
 	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
+	MaxRewardsTotal       state.Balance `json:"max_reward"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
@@ -72,7 +73,6 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 		br.BlobberCapacityWeight = bCapcacityRatio / total
 		br.BlobberUsageWeight = bUsageRatio / total
 	}
-
 }
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
@@ -304,6 +304,10 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
+	if sc.BlockReward.MaxRewardsTotal < 0 {
+		return fmt.Errorf("negative block_reward.max_total_rewards: %v",
+			sc.BlockReward.BlobberUsageWeight)
+	}
 	return
 }
 
@@ -437,14 +441,14 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlockReward.SharderWeight = scc.GetFloat64(pfx + "block_reward.sharder_weight")
 	conf.BlockReward.MinerWeight = scc.GetFloat64(pfx + "block_reward.miner_weight")
 	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
-	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight" +
-		"blobber_usage_weight")
+	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight")
 	conf.BlockReward.setWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
 	)
+	conf.BlockReward.MaxRewardsTotal = state.Balance(scc.GetFloat64(pfx+"max_rewards_total") * 1e10)
 
 	err = conf.validate()
 	return

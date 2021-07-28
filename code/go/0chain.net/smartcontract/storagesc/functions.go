@@ -47,21 +47,23 @@ func mintReward(
 	sp *stakePool,
 	value float64,
 	balances cstate.StateContextI,
-) error {
+) (state.Balance, error) {
 	payments, _, err := getPayments(sp, value)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	var total state.Balance
 	for _, payment := range payments {
 		if err := balances.AddMint(&state.Mint{
 			Minter:     ADDRESS,        // storage SC
 			ToClientID: payment.to,     // delegate wallet
 			Amount:     payment.amount, // move total mints at once
 		}); err != nil {
-			return fmt.Errorf("minting rewards: %v", err)
+			return 0, fmt.Errorf("minting rewards: %v", err)
 		}
+		total += payment.amount
 	}
-	return nil
+	return total, nil
 }
 
 // moveToBlobber moves tokens to blobber or validator

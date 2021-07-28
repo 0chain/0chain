@@ -217,9 +217,50 @@ func (sp *stakePool) offersStake(now common.Timestamp, dry bool) (
 // save the stake pool
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
+	if err := sp.updateBlobberStakes(blobberID, balances); err != nil {
+		return err
+	}
 
 	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
 	return
+}
+
+func (sp *stakePool) updateBlobberStakes(
+	blobberId string,
+	balances chainstate.StateContextI,
+) error {
+	blobberStakes, err := getBlobberStakes(balances)
+	if err != nil {
+		return fmt.Errorf("error getting blobber stakes: %v", err)
+	}
+
+	var total state.Balance
+	for _, pool := range sp.Pools {
+		total += pool.GetBalance()
+	}
+	blobberStakes[blobberId] = total
+	if err := blobberStakes.save(balances); err != nil {
+		return fmt.Errorf("error saving blobber stakes: %v", err)
+	}
+	return nil
+}
+
+func (sp *stakePool) updateRewardMints(
+	ssc *StorageSmartContract,
+	blobberId string,
+	balances chainstate.StateContextI,
+) error {
+	mintInfo, err := getBlockRewardMints(ssc, balances)
+	if err != nil {
+		return fmt.Errorf("Error getting mint info: %v", err)
+	}
+
+	err = mintInfo.mintRewardsForBlobber(sp, blobberId, balances)
+	if err != nil {
+		return fmt.Errorf("error minting blobber rewards: %v", err)
+	}
+
+	return nil
 }
 
 // The cleanStake() is stake amount without delegate pools want to unstake.
@@ -414,20 +455,6 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 	op.Lock = newLock
 	op.Expire = alloc.Until()
 	return
-}
-
-func maxBalance(a, b state.Balance) state.Balance {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func minBalance(a, b state.Balance) state.Balance {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 type stakePoolUpdateInfo struct {
@@ -636,7 +663,7 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(conf *scConfig, sscKey string,
+func (sp *stakePool) stat(conf *scConfig, _ string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
@@ -842,6 +869,9 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	err = sp.Decode(poolb)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	if err := sp.updateRewardMints(ssc, blobberID, balances); err != nil {
+		return nil, err
 	}
 	return
 }
@@ -1139,7 +1169,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 const cantGetStakePoolMsg = "can't get related stake pool"
 
 // statistic for all locked tokens of a stake pool
-func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getStakePoolStatHandler(_ context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
@@ -1170,7 +1200,7 @@ type userPoolStat struct {
 }
 
 // user oriented statistic
-func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getUserStakePoolStatHandler(_ context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 

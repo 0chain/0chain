@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-type blobberStakes []int64
+type mockBlobberStakes []int64
 
 const (
 	errValueNotPresent   = "value not present"
@@ -33,7 +33,7 @@ const (
 )
 
 func TestNewAllocation(t *testing.T) {
-	var stakes = blobberStakes{}
+	var stakes = mockBlobberStakes{}
 	var now = common.Timestamp(10000)
 	scYaml = &scConfig{
 		MinAllocSize:               1027,
@@ -951,7 +951,7 @@ func (f *formulaeFinalizeAllocation) setFinilizationPassRates() {
 }
 
 func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sortedBlobbers,
-	scYaml scConfig, blobberYaml mockBlobberYaml, stakes blobberStakes,
+	scYaml scConfig, blobberYaml mockBlobberYaml, stakes mockBlobberStakes,
 ) (err error) {
 	require.EqualValues(t, len(blobbers), len(stakes))
 	var f = formulaeCommitNewAllocation{
@@ -1050,7 +1050,7 @@ type formulaeCommitNewAllocation struct {
 	blobberYaml mockBlobberYaml
 	request     newAllocationRequest
 	blobbers    sortedBlobbers
-	stakes      blobberStakes
+	stakes      mockBlobberStakes
 }
 
 func (f formulaeCommitNewAllocation) blobbersUsed() int {

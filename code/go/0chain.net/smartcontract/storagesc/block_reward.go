@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"fmt"
 )
 
 func (ssc *StorageSmartContract) payBlobberBlockRewards(
@@ -20,66 +21,50 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		return nil
 	}
 
-	allBlobbers, err := ssc.getBlobbersList(balances)
+	blobberStakes, err := getBlobberStakes(balances)
 	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"cannot get all blobbers list: "+err.Error())
+		return common.NewErrorf("blobber_block_rewards_failed",
+			"cannot get blobbers stakes: %v", err)
 	}
 
 	// filter out blobbers with stake too low to qualify for rewards
-	var qualifyingBlobberIds []string
-	var stakePools []*stakePool
-	var stakeTotals []float64
+	var qualifyingBlobberIds = make([]string, 0, len(blobberStakes))
+	var stakeTotals = make([]float64, 0, len(blobberStakes))
 	var totalQStake float64
-	for _, blobber := range allBlobbers.Nodes {
-		var sp *stakePool
-		if sp, err = ssc.getStakePool(blobber.ID, balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"can't get related stake pool: "+err.Error())
-		}
-		var stake float64
-		for _, delegate := range sp.Pools {
-			stake += float64(delegate.Balance)
-		}
-		if state.Balance(stake) >= conf.BlockReward.QualifyingStake {
-			qualifyingBlobberIds = append(qualifyingBlobberIds, blobber.ID)
-			stakePools = append(stakePools, sp)
-			stakeTotals = append(stakeTotals, stake)
-			totalQStake += stake
+	for blobberId, stakes := range blobberStakes {
+		if state.Balance(stakes) >= conf.BlockReward.QualifyingStake {
+			qualifyingBlobberIds = append(qualifyingBlobberIds, blobberId)
+			stakeTotals = append(stakeTotals, float64(stakes))
+			totalQStake += float64(stakes)
 		}
 	}
 
-	for i, qsp := range stakePools {
+	mints, err := getBlockRewardMints(ssc, balances)
+	if err != nil {
+		return fmt.Errorf("Error getting mint info: %v", err)
+	}
+
+	for i, blobberId := range qualifyingBlobberIds {
 		var ratio float64
 		if totalQStake > 0 {
 			ratio = stakeTotals[i] / totalQStake
 		} else {
-			ratio = 1.0 / float64(len(stakePools))
+			ratio = 1.0 / float64(len(blobberStakes))
 		}
 
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
-		if err := mintReward(qsp, capacityReward, balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed", "minting capacity reward"+err.Error())
-		}
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
-		if err := mintReward(qsp, usageReward, balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed", "minting usage reward"+err.Error())
-		}
-		qsp.Rewards.Blobber += state.Balance(capacityReward + usageReward)
-	}
-
-	for i, qsp := range stakePools {
-		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
-			return common.NewError("blobber_block_rewards_failed",
-				"saving stake pool: "+err.Error())
+		if err := mints.addMint(blobberId, capacityReward+usageReward); err != nil {
+			return common.NewErrorf("blobber_block_rewards_failed",
+				"error minting for blobber %v: %v", blobberId, err)
 		}
 	}
 
-	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return common.NewError("blobber_block_rewards_failed",
-			"saving configurations: "+err.Error())
+	// block rewards for each blobber
+	// will be minted next time getStakePool is called.
+	if err := mints.save(balances); err != nil {
+		return common.NewErrorf("blobber_block_rewards_failed",
+			"cannot save block reward mints: %v", err)
 	}
 
 	return nil

@@ -223,12 +223,13 @@ func TestMintReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			args := setup(t, tt.parameters)
-			err := mintReward(args.sp, args.value, args.balances)
+			minted, err := mintReward(args.sp, args.value, args.balances)
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errorMsg, err.Error())
 				return
 			}
+			require.EqualValues(t, 1, minted)
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}

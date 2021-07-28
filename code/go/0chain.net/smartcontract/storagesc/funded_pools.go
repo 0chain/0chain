@@ -56,7 +56,6 @@ func (fp *fundedPools) Decode(p []byte) error {
 	return json.Unmarshal(p, fp)
 }
 
-// getReadPoolBytes of a client
 func (ssc *StorageSmartContract) getFundedPoolsBytes(
 	clientID datastore.Key,
 	balances cstate.StateContextI,
@@ -69,7 +68,6 @@ func (ssc *StorageSmartContract) getFundedPoolsBytes(
 	return val.Encode(), nil
 }
 
-// getReadPool of current client
 func (ssc *StorageSmartContract) getFundedPools(
 	clientID datastore.Key,
 	balances cstate.StateContextI,

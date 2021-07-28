@@ -20,10 +20,12 @@ import (
 )
 
 var (
-	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY       = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_BLOBBER_STAKES_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers_stakes"))
+	BLOCK_REWARD_MINTS     = datastore.Key(ADDRESS + encryption.Hash("block_reward_mints"))
+	ALL_VALIDATORS_KEY     = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY      = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
 )
 
 type ClientAllocation struct {
@@ -492,7 +494,7 @@ type BlobberAllocation struct {
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
+func (d *BlobberAllocation) upload(size int64, _ common.Timestamp,
 	rdtu float64) (move state.Balance) {
 
 	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
@@ -503,7 +505,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
-func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
+func (d *BlobberAllocation) delete(size int64, _ common.Timestamp,
 	rdtu float64) (move state.Balance) {
 
 	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
@@ -1256,7 +1258,7 @@ type StorageStats struct {
 	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
 }
 
-func (sn *StorageStats) GetKey(globalKey string) datastore.Key {
+func (sn *StorageStats) GetKey(_ string) datastore.Key {
 	return STORAGE_STATS_KEY
 }
 
