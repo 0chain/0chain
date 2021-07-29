@@ -2,11 +2,13 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 	"encoding/json"
+	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
@@ -34,6 +36,140 @@ func Test_stakePool_Encode_Decode(t *testing.T) {
 	var spe, spd = newStakePool(), new(stakePool)
 	require.NoError(t, spd.Decode(spe.Encode()))
 	assert.EqualValues(t, spe, spd)
+}
+
+func TestUpdateRewardMints(t *testing.T) {
+	const (
+		mockBlobberId       = "mock blobber id"
+		mockServiceCharge   = 0.1
+		mockStakePoolWallet = "mock blobber wallet"
+		mockNoiseBlobbers   = 10
+		mockStakeTotal      = 23
+	)
+	type parameters struct {
+		reward float64
+		stakes []float64
+	}
+	type args struct {
+		sp        *stakePool
+		ssc       *StorageSmartContract
+		blobberId string
+		balances  cstate.StateContextI
+	}
+	var setExpectations = func(
+		t *testing.T, p parameters,
+	) args {
+		var balances = &mocks.StateContextI{}
+		var ssc = &StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+
+		brm := &blockRewardMints{
+			UnProcessedMints: map[string]float64{
+				mockBlobberId: p.reward * 1e10,
+			},
+		}
+		for i := 0; i < mockNoiseBlobbers; i++ {
+			brm.UnProcessedMints[mockBlobberId+strconv.Itoa(i)] = mockStakeTotal * 1e10
+		}
+		balances.On(
+			"GetTrieNode", BLOCK_REWARD_MINTS,
+		).Return(brm, nil)
+
+		var totalStake state.Balance
+		var sp = newStakePool()
+		for i, stake := range p.stakes {
+			pool := &delegatePool{}
+			pool.ID = strconv.Itoa(i)
+			pool.DelegateID = "delegate id" + pool.ID
+			pool.Balance = zcnToBalance(stake)
+			sp.Pools[pool.ID] = pool
+			totalStake += pool.Balance
+		}
+		sp.Settings.ServiceCharge = mockServiceCharge
+		sp.Settings.DelegateWallet = mockStakePoolWallet
+
+		var ratios = make(map[string]float64)
+		for id, pool := range sp.Pools {
+			ratios[id] = float64(pool.Balance) / float64(totalStake)
+		}
+
+		var minted state.Balance
+		balances.On("AddMint", &state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: mockStakePoolWallet,
+			Amount:     zcnToBalance(p.reward * mockServiceCharge),
+		}).Return(nil).Once()
+		minted += zcnToBalance(p.reward * mockServiceCharge)
+		tokensToSplit := float64(zcnToBalance(p.reward) - minted)
+		for _, pool := range sp.Pools {
+			toMint := tokensToSplit * float64(ratios[pool.ID])
+			balances.On("AddMint", &state.Mint{
+				Minter:     ADDRESS,
+				ToClientID: pool.DelegateID,
+				Amount:     state.Balance(toMint),
+			}).Return(nil).Once()
+			minted += state.Balance(toMint)
+		}
+
+		balances.On(
+			"InsertTrieNode",
+			BLOCK_REWARD_MINTS,
+			mock.MatchedBy(func(b *blockRewardMints) bool {
+				return brm.MintedRewards == b.MintedRewards &&
+					brm.MaxRewardsTotal == b.MaxRewardsTotal &&
+					b.UnProcessedMints[mockBlobberId] == p.reward*1e10-float64(minted)
+			}),
+		).Return("", nil).Once()
+
+		return args{
+			sp:        sp,
+			ssc:       ssc,
+			blobberId: mockBlobberId,
+			balances:  balances,
+		}
+	}
+
+	type want struct {
+		error    bool
+		errorMsg string
+	}
+	tests := []struct {
+		name       string
+		parameters parameters
+		want       want
+	}{
+		{
+			name: "ok_1_stakeholder",
+			parameters: parameters{
+				reward: 7.5,
+				stakes: []float64{10},
+			},
+		},
+		{
+			name: "ok_5_stakeholders",
+			parameters: parameters{
+				reward: 9,
+				stakes: []float64{10, 5, 8, 20, 1},
+			},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			args := setExpectations(t, test.parameters)
+
+			err := args.sp.updateRewardMints(args.ssc, args.blobberId, args.balances)
+
+			require.EqualValues(t, test.want.error, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.errorMsg, err.Error())
+				return
+			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
+		})
+	}
 }
 
 func Test_stakePool_offersStake(t *testing.T) {
@@ -235,10 +371,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	var usp = newUserStakePools()
 	require.NoError(t, usp.save(ssc.ID, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
-
-	//_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scConfig{
-	//	BlockReward: &blockReward{},
-	//})
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {

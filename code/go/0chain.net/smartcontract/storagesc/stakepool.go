@@ -164,6 +164,8 @@ type stakePool struct {
 	Rewards stakePoolRewards `json:"rewards"`
 	// Settings of the stake pool.
 	Settings stakePoolSettings `json:"settings"`
+	// Used to check if the values have been updated
+	totalStakes state.Balance
 }
 
 func newStakePool() *stakePool {
@@ -212,8 +214,10 @@ func (sp *stakePool) offersStake(now common.Timestamp, dry bool) (
 // save the stake pool
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
-	if err := sp.updateBlobberStakes(blobberID, balances); err != nil {
-		return err
+	if sp.totalStakes != sp.stake() {
+		if err := sp.updateBlobberStakes(blobberID, balances); err != nil {
+			return err
+		}
 	}
 
 	_, err = balances.InsertTrieNode(stakePoolKey(sscKey, blobberID), sp)
@@ -258,6 +262,8 @@ func (sp *stakePool) updateRewardMints(
 	if err != nil {
 		return fmt.Errorf("error minting blobber rewards: %v", err)
 	}
+
+	mintInfo.save(balances)
 
 	return nil
 }
@@ -872,6 +878,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	if err := sp.updateRewardMints(ssc, blobberID, balances); err != nil {
 		return nil, err
 	}
+	sp.totalStakes = sp.stake()
 	return
 }
 
