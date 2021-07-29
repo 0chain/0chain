@@ -21,17 +21,17 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		return nil
 	}
 
-	blobberStakes, err := getBlobberStakes(balances)
+	blobberStakes, err := getBlobberStakeTotals(balances)
 	if err != nil {
 		return common.NewErrorf("blobber_block_rewards_failed",
 			"cannot get blobbers stakes: %v", err)
 	}
 
 	// filter out blobbers with stake too low to qualify for rewards
-	var qualifyingBlobberIds = make([]string, 0, len(blobberStakes))
-	var stakeTotals = make([]float64, 0, len(blobberStakes))
+	var qualifyingBlobberIds = make([]string, 0, len(blobberStakes.Totals))
+	var stakeTotals = make([]float64, 0, len(blobberStakes.Totals))
 	var totalQStake float64
-	for blobberId, stakes := range blobberStakes {
+	for blobberId, stakes := range blobberStakes.Totals {
 		if state.Balance(stakes) >= conf.BlockReward.QualifyingStake {
 			qualifyingBlobberIds = append(qualifyingBlobberIds, blobberId)
 			stakeTotals = append(stakeTotals, float64(stakes))
@@ -49,12 +49,12 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		if totalQStake > 0 {
 			ratio = stakeTotals[i] / totalQStake
 		} else {
-			ratio = 1.0 / float64(len(blobberStakes))
+			ratio = 1.0 / float64(len(blobberStakes.Totals))
 		}
 
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
-		if err := mints.addMint(blobberId, capacityReward+usageReward); err != nil {
+		if err := mints.addMint(blobberId, capacityReward+usageReward, conf); err != nil {
 			return common.NewErrorf("blobber_block_rewards_failed",
 				"error minting for blobber %v: %v", blobberId, err)
 		}
@@ -65,6 +65,13 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	if err := mints.save(balances); err != nil {
 		return common.NewErrorf("blobber_block_rewards_failed",
 			"cannot save block reward mints: %v", err)
+	}
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return common.NewError("blobber_block_rewards_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	return nil

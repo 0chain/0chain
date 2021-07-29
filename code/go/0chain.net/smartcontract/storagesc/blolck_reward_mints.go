@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 	"encoding/json"
@@ -12,12 +13,12 @@ type blockRewardMints struct {
 	MintedRewards   float64 `json:"minted_rewards"`
 	MaxRewardsTotal float64 `json:"max_rewards_total"`
 	// the max mint check is made before adding to UnMintedBlockRewards map
-	UnMintedBlockRewards map[string]float64 `json:"un_minted_block_rewards"`
+	UnProcessedMints map[string]float64 `json:"un_minted_block_rewards"`
 }
 
 func newBlockRewardsMints() *blockRewardMints {
 	return &blockRewardMints{
-		UnMintedBlockRewards: make(map[string]float64),
+		UnProcessedMints: make(map[string]float64),
 	}
 }
 
@@ -38,27 +39,28 @@ func (mi *blockRewardMints) mintRewardsForBlobber(
 	blobberId string,
 	balances cstate.StateContextI,
 ) error {
-	unMinted, ok := mi.UnMintedBlockRewards[blobberId]
+	unMinted, ok := mi.UnProcessedMints[blobberId]
 	if ok && unMinted > 0 {
 		minted, err := mintReward(sp, unMinted, balances)
 		if err != nil {
 			return fmt.Errorf("error miniting block rewards: %v", err)
 		}
-		mi.UnMintedBlockRewards[blobberId] = unMinted - float64(minted)
+		mi.UnProcessedMints[blobberId] = unMinted - float64(minted)
 	}
 	return nil
 }
 
-func (mi *blockRewardMints) addMint(blobberId string, amount float64) error {
+func (mi *blockRewardMints) addMint(blobberId string, amount float64, config *scConfig) error {
 	if mi.MintedRewards+amount > mi.MaxRewardsTotal {
 		return fmt.Errorf("minted rewards exceed max allowed: %f", mi.MaxRewardsTotal)
 	}
-	mi.UnMintedBlockRewards[blobberId] += amount
+	mi.UnProcessedMints[blobberId] += amount
 	mi.MintedRewards += amount
+	config.Minted += state.Balance(amount)
 	return nil
 }
 
-func (mi blockRewardMints) populate(
+func (mi *blockRewardMints) populate(
 	ssc *StorageSmartContract,
 	balances cstate.StateContextI,
 ) error {

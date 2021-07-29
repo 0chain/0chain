@@ -10,30 +10,35 @@ import (
 )
 
 // blobber id x delegate id
-type blobberStakes map[string]state.Balance
-
-func newBlobberStakes() blobberStakes {
-	return blobberStakes(make(map[string]state.Balance))
+type blobberStakeTotals struct {
+	Totals map[string]state.Balance `json:"Totals"`
 }
 
-func (bs *blobberStakes) Encode() []byte {
+func newBlobberStakeTotals() *blobberStakeTotals {
+	return &blobberStakeTotals{Totals: make(map[string]state.Balance)}
+}
+
+func (bs *blobberStakeTotals) Encode() []byte {
 	var b, err = json.Marshal(bs)
+	ss := string(b)
+	fmt.Println("bst mashal", ss)
+
 	if err != nil {
 		panic(err) // must never happens
 	}
 	return b
 }
 
-func (bs *blobberStakes) Decode(p []byte) error {
+func (bs *blobberStakeTotals) Decode(p []byte) error {
 	return json.Unmarshal(p, bs)
 }
 
-func (bs *blobberStakes) save(balances cstate.StateContextI) error {
+func (bs *blobberStakeTotals) save(balances cstate.StateContextI) error {
 	_, err := balances.InsertTrieNode(ALL_BLOBBER_STAKES_KEY, bs)
 	return err
 }
 
-func getBlobberStakesBytes(balances cstate.StateContextI) ([]byte, error) {
+func getBlobberStakeTotalsBytes(balances cstate.StateContextI) ([]byte, error) {
 	var val util.Serializable
 	val, err := balances.GetTrieNode(ALL_BLOBBER_STAKES_KEY)
 	if err != nil {
@@ -42,11 +47,11 @@ func getBlobberStakesBytes(balances cstate.StateContextI) ([]byte, error) {
 	return val.Encode(), nil
 }
 
-func getBlobberStakes(balances cstate.StateContextI) (blobberStakes, error) {
+func getBlobberStakeTotals(balances cstate.StateContextI) (*blobberStakeTotals, error) {
 	var bsBytes []byte
 	var err error
-	bs := newBlobberStakes()
-	if bsBytes, err = getBlobberStakesBytes(balances); err != nil {
+	bs := newBlobberStakeTotals()
+	if bsBytes, err = getBlobberStakeTotalsBytes(balances); err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
