@@ -57,10 +57,12 @@ func Test_FuzzyMintTest(t *testing.T) {
 
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
-	payload := createBurnPayload()
+	payload, _, err := CreateMintPayload(clientId, authorizers)
+	require.NoError(t, err)
+
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
 	node, err := GetUserNode(clientId, ctx)

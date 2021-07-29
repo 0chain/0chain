@@ -15,6 +15,7 @@ import (
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/mock"
 	"strconv"
+	"testing"
 )
 
 const (
@@ -66,8 +67,13 @@ func CreateStateContext(fromClientId string) *cstate.StateContext {
 
 var store map[datastore.Key]util.Serializable
 
-func MakeMockStateContext() *mocks.StateContextI {
-	globalNode := &GlobalNode{ID: ADDRESS}
+func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
+	var t0 *testing.T
+	if len(t) > 0 {
+		t0 = t[0]
+	}
+
+	globalNode := &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
 
 	ctx := mocks.StateContextI{}
 
@@ -95,6 +101,9 @@ func MakeMockStateContext() *mocks.StateContextI {
 		On("GetTrieNode", AllAuthorizerKey).
 		Return(
 			func(_ datastore.Key) util.Serializable {
+				if t0 != nil {
+					t0.Log("GetTrieNode+AllAuthorizerKey")
+				}
 				return ans
 			},
 			func(_ datastore.Key) error {
@@ -105,10 +114,13 @@ func MakeMockStateContext() *mocks.StateContextI {
 		On("GetTrieNode", globalNode.GetKey()).
 		Return(
 			func(_ datastore.Key) util.Serializable {
-				return nil
+				if t0 != nil {
+					t0.Log("GetTrieNode+globalNode.GetKey()")
+				}
+				return globalNode
 			},
 			func(_ datastore.Key) error {
-				return util.ErrValueNotPresent
+				return nil
 			})
 
 	for _, client := range authorizers {
@@ -118,6 +130,9 @@ func MakeMockStateContext() *mocks.StateContextI {
 			On("GetTrieNode", userNode.GetKey(ADDRESS)).
 			Return(
 				func(_ datastore.Key) util.Serializable {
+					if t0 != nil {
+						t0.Log("GetTrieNode+userNode")
+					}
 					return userNode
 				},
 				func(_ datastore.Key) error {
@@ -128,9 +143,10 @@ func MakeMockStateContext() *mocks.StateContextI {
 	/// InsertTrieNode
 
 	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
+		On("InsertTrieNode", AllAuthorizerKey, mock.AnythingOfType("*zcnsc.AuthorizerNodes")).
 		Return(
-			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+			func(_ datastore.Key, nodes util.Serializable) datastore.Key {
+				ans = nodes.(*AuthorizerNodes)
 				return ""
 			},
 			func(_ datastore.Key, _ util.Serializable) error {
@@ -138,7 +154,21 @@ func MakeMockStateContext() *mocks.StateContextI {
 			})
 
 	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.GlobalNode")).
+		On("InsertTrieNode", globalNode.GetKey(), mock.AnythingOfType("*zcnsc.GlobalNode")).
+		Return(
+			func(_ datastore.Key, node util.Serializable) datastore.Key {
+				if t0 != nil {
+					t0.Log("InsertTrieNode+globalNode")
+				}
+				globalNode = node.(*GlobalNode)
+				return ""
+			},
+			func(_ datastore.Key, _ util.Serializable) error {
+				return nil
+			})
+
+	ctx.
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
 		Return(
 			func(_ datastore.Key, _ util.Serializable) datastore.Key {
 				return ""
