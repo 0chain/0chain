@@ -119,6 +119,7 @@ func TestStakePoolLock(t *testing.T) {
 			InterestInterval: 1 * time.Minute,
 			MinLock:          int64(zcnToBalance(0.1)),
 		},
+		BlockReward: &blockReward{},
 	}
 
 	t.Run("stake pool lock", func(t *testing.T) {
@@ -234,6 +235,10 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	var usp = newUserStakePools()
 	require.NoError(t, usp.save(ssc.ID, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
+
+	//_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &scConfig{
+	//	BlockReward: &blockReward{},
+	//})
 
 	resp, err := ssc.stakePoolLock(txn, input, ctx)
 	if err != nil {

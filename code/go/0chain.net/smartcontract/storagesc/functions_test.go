@@ -229,7 +229,7 @@ func TestMintReward(t *testing.T) {
 				require.EqualValues(t, tt.want.errorMsg, err.Error())
 				return
 			}
-			require.EqualValues(t, 1, minted)
+			require.EqualValues(t, args.value, minted)
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
