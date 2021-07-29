@@ -197,9 +197,8 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	node := GetNewAuthorizerWithBalance(tr.PublicKey, tr.ClientID, 100)
 	node.Staking.ID = "11"
-	node.Staking.Balance = 100
 
 	// Deserialize it into new instance
 	target := &AuthorizerNode{}

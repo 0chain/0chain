@@ -316,7 +316,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := GetNewAuthorizer("key", tr.ClientID)
+	an := GetNewAuthorizerWithBalance("key", tr.ClientID, 100)
 
 	_, _, err := an.Staking.DigPool(tr.Hash, tr)
 	require.NoError(t, err)

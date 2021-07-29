@@ -9,8 +9,6 @@ import (
 	. "0chain.net/smartcontract/zcnsc"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const (
@@ -36,6 +34,12 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	}
 	tr.TransactionType = transaction.TxnTypeSmartContract
 	tr.TransactionData = string(snBytes)
+}
+
+func GetNewAuthorizerWithBalance(pk string, id string, amount float64) *AuthorizerNode {
+	node := GetNewAuthorizer(pk, id)
+	node.Staking.Balance = zcnToBalance(amount)
+	return node
 }
 
 func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Transaction {
@@ -157,24 +161,7 @@ func createUserNode(id string, nonce int64) *UserNode {
 	}
 }
 
-func addAuthorizer(
-	t *testing.T,
-	contract *ZCNSmartContract,
-	clientId string,
-) {
-	tr := CreateTransactionToZcnsc(clientId, 10)
-	ctx := MakeMockStateContext()
-
-	publicKey := &PublicKey{Key: tr.PublicKey}
-	data, _ := publicKey.Encode()
-
-	resp, err := contract.AddAuthorizer(tr, data, ctx)
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.NotEmpty(t, resp)
-}
-
 func CreateMockAuthorizer(clientId string) *AuthorizerNode {
 	tr := CreateTransactionToZcnsc(clientId, 10)
-	return GetNewAuthorizer(tr.PublicKey, clientId)
+	return GetNewAuthorizerWithBalance(tr.PublicKey, clientId, 100)
 }
