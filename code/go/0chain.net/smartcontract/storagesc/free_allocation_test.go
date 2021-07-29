@@ -47,6 +47,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 	var conf = &scConfig{
 		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
 		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
+		BlockReward:                 &blockReward{},
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
@@ -192,6 +193,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			MaxChallengeCompletionTime: 1 * time.Hour,
 			MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 			FreeAllocationSettings:     mockFreeAllocationSettings,
+			BlockReward:                &blockReward{},
 		}
 		now                         = common.Timestamp(23000000)
 		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -344,6 +346,16 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.ExpireAt == common.Timestamp(common.ToTime(txn.CreationDate).Add(
 						conf.FreeAllocationSettings.Duration).Unix())+toSeconds(mockChallengeCompletionTime)
 			})).Return("", nil).Once()
+
+		balances.On(
+			"GetTrieNode", BLOCK_REWARD_MINTS,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"InsertTrieNode", ALL_BLOBBER_STAKES_KEY, mock.Anything,
+		).Return("", nil)
 
 		return args{ssc, txn, input, balances}
 	}
@@ -502,6 +514,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
+		BlockReward:                &blockReward{},
 	}
 	var now = common.Timestamp(29000000)
 	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -579,7 +592,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			).Return(&p.assigner, nil).Once()
 		}
 
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
 			mockAllBlobbers, nil,
@@ -672,6 +685,16 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					len(pool.Blobbers) == mockNumBlobbers
 			}),
 		).Return("", nil).Once()
+
+		balances.On(
+			"GetTrieNode", BLOCK_REWARD_MINTS,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
+		).Return(nil, util.ErrValueNotPresent)
+		balances.On(
+			"InsertTrieNode", ALL_BLOBBER_STAKES_KEY, mock.Anything,
+		).Return("", nil)
 
 		return args{ssc, txn, input, balances}
 	}
