@@ -182,6 +182,7 @@ func TestBlobberReward(t *testing.T) {
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
+		BlockReward:                &blockReward{},
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,
@@ -264,6 +265,7 @@ func TestBlobberPenalty(t *testing.T) {
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
 		TimeUnit:                   720 * time.Hour,
+		BlockReward:                &blockReward{},
 	}
 	var blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.30,

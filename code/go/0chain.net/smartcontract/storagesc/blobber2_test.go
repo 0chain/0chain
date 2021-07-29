@@ -372,6 +372,12 @@ func testCommitBlobberRead(
 	_, err = ctx.InsertTrieNode(ss.GetKey(ssc.ID), ss)
 	require.NoError(t, err)
 
+	conf := scConfig{
+		BlockReward: &blockReward{},
+	}
+	_, err = ctx.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	require.NoError(t, err)
+
 	resp, err := ssc.commitBlobberRead(txn, input, ctx)
 	if err != nil {
 		return err
