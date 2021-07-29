@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,6 +47,11 @@ func (as *AState) Decode(buf []byte) error {
 // receives a list of values
 type valuesSponge struct {
 	values []string
+}
+
+// receives a list of paths
+type pathNodesSponge struct {
+	paths []string
 }
 
 func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
@@ -224,11 +230,10 @@ func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value i
 
 	state := &AState{}
 	state.balance = value
-	newRoot, err := mpt.Insert([]byte(key), state)
+	_, err := mpt.Insert([]byte(key), state)
 	if err != nil {
 		t.Error(err)
 	}
-	mpt.SetRoot(newRoot)
 
 	doGetStateValue(t, mpt, key, value)
 }
@@ -253,10 +258,36 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	}
 }
 
-func dbIteratorHandler() func(ctx context.Context, key Key, node Node) error {
+func dbIteratorHandler() NodeDBIteratorHandler {
 	return func(ctx context.Context, key Key, node Node) error {
 		return nil
 	}
+}
+
+// collect db keys
+func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
+	return func(ctx context.Context, key Key, node Node) error {
+		if node == nil || key == nil {
+			return fmt.Errorf("stop")
+		}
+		sponge.values = append(sponge.values, string(hex.EncodeToString(key)))
+		return nil
+	}
+}
+
+// calculates hash of all sorted keys in the NodeDB
+func calculateKeysHash(t *testing.T, ndb NodeDB) string {
+	sponge := valuesSponge{}
+	err := ndb.Iterate(context.TODO(), dbKeysSpongeHandler(&sponge))
+	require.NoError(t, err)
+	sort.Strings(sponge.values)
+	hash := sha3.New256()
+	for _, key := range sponge.values {
+		b, err := hex.DecodeString(key)
+		require.NoError(t, err)
+		hash.Write(b)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
@@ -435,6 +466,11 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	doStrValInsert(t, mpt2, "123456", "12345")
 	doStrValInsert(t, mpt2, "123467", "12346")
 	doStrValInsert(t, mpt2, "02", "2")
+
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"}) // pointing to "1234"
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
 	sponge := sha3.New256()
 	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
@@ -453,13 +489,24 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 			rootHash, exp)
 	}
 	doStrValInsert(t, mpt2, "1234", "123")
+	// node paths are same changed, value was added to full node at "1234"
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
 	doStrValInsert(t, mpt2, "223456", "22345")
 	doStrValInsert(t, mpt2, "223467", "22346")
 	doStrValInsert(t, mpt2, "223478", "22347")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "2"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347"})
 	doStrValInsert(t, mpt2, "23", "23")
 	doStrValInsert(t, mpt2, "123456", "12345.1")
 	doStrValInsert(t, mpt2, "2234", "2234")
 	doStrValInsert(t, mpt2, "22", "22")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "223"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2", "22", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347", "23"})
 	rootHash = hex.EncodeToString(mpt2.Root)
 	exp = "3624e73be093af74c884eea162070ff5eabcbad4a0fb605d8208cada970117a9"
 	if rootHash != exp {
@@ -641,6 +688,15 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 	}
 }
 
+func checkNodePaths(t *testing.T, mpt MerklePatriciaTrieI, visitNodeTypes byte, values []string) {
+	t.Helper()
+
+	pathsSponge := pathNodesSponge{}
+	err := mpt.Iterate(context.TODO(), iterPathNodesSpongeHandler(&pathsSponge), visitNodeTypes)
+	require.NoError(t, err)
+	require.Equal(t, values, pathsSponge.paths)
+}
+
 func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
@@ -675,7 +731,7 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 }
 
 // aggregate into hash
-func iterSpongeHandler(sponge hash.Hash) func(ctx context.Context, path Path, key Key, node Node) error {
+func iterSpongeHandler(sponge hash.Hash) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
@@ -695,7 +751,7 @@ func iterSpongeHandler(sponge hash.Hash) func(ctx context.Context, path Path, ke
 }
 
 // aggregate into a list of values
-func iterValuesSpongeHandler(sponge *valuesSponge) func(ctx context.Context, path Path, key Key, node Node) error {
+func iterValuesSpongeHandler(sponge *valuesSponge) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
@@ -707,6 +763,18 @@ func iterValuesSpongeHandler(sponge *valuesSponge) func(ctx context.Context, pat
 				return fmt.Errorf("value node expected")
 			}
 			sponge.values = append(sponge.values, string(vn.Value.Encode()))
+		}
+		return nil
+	}
+}
+
+func iterPathNodesSpongeHandler(sponge *pathNodesSponge) MPTIteratorHandler {
+	return func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			return fmt.Errorf("stop")
+		}
+		if key != nil {
+			sponge.paths = append(sponge.paths, string(path))
 		}
 		return nil
 	}
