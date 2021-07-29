@@ -319,7 +319,7 @@ func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
 					ID:      id,
-					Balance: 0,
+					Balance: 100,
 				},
 			},
 			TokenLockInterface: TokenLock{

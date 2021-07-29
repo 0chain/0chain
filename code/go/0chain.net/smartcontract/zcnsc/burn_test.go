@@ -125,11 +125,11 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 	require.NotEmpty(t, resp)
 }
 
-func Test_userNodeNonceShouldIncrement(t *testing.T) {
+func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 	payload := createBurnPayload()
-	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
+	tr := CreateTransactionToZcnsc(authorizers[0], 10)
 
 	node, err := GetUserNode(tr.ClientID, ctx)
 	require.NoError(t, err)
@@ -149,15 +149,8 @@ func Test_userNodeNonceShouldIncrement(t *testing.T) {
 	require.Equal(t, node.Nonce, nonce + 1)
 }
 
-func Test_getUserNode(t *testing.T) {
-	ctx := CreateMockStateContext(clientId)
-	node, err := GetUserNode(clientId, ctx)
-	require.NoError(t, err)
-	require.NotNil(t, node)
-}
-
-func Test_updateUserNode(t *testing.T) {
-	ctx := CreateMockStateContext(clientId)
+func Test_UpdateUserNode(t *testing.T) {
+	ctx := MakeMockStateContext()
 	node, err := GetUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)

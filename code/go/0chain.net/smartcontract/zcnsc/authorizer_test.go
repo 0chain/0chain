@@ -202,7 +202,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 }
 
 func Test_Basic_ShouldSaveGlobalNode(t *testing.T){
-	ctx := MakeMockStateContext(t)
+	ctx := MakeMockStateContext()
 
 	globalNode, err := GetGlobalSavedNode(ctx)
 	require.NoError(t, err)
@@ -439,44 +439,46 @@ func Test_AddedAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 
 func Test_Can_Delete_Authorizer(t *testing.T) {
 	var data []byte
-	tr := CreateTransactionToZcnsc("client0", 10)
-	balances := MakeMockStateContext()
+	ctx := MakeMockStateContext()
 	sc := CreateZCNSmartContract()
 
-	ans, err := GetAuthorizerNodes(balances)
+	ans, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
-	require.NotNil(t, ans.NodeMap[tr.ClientID])
-	require.NotNil(t, ans.NodeMap[tr.ClientID].Staking)
+	require.Equal(t, 3, len(ans.NodeMap))
 
-	tr = CreateTransactionToZcnsc("another client", 10)
-
-	_, err = sc.DeleteAuthorizer(tr, data, balances)
-	//require.NotEmpty(t, authorizer)
+	tr := CreateTransactionToZcnsc(authorizers[0], 10)
+	_, err = sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
+
+	ans, err = GetAuthorizerNodes(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(ans.NodeMap))
 }
 
 func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 	var data []byte
-	tr := CreateTransactionToZcnsc("client0", 10)
-	balances := MakeMockStateContext()
+	ctx := MakeMockStateContext()
 	sc := CreateZCNSmartContract()
+	tr := CreateTransactionToZcnsc(authorizers[0], 10)
 
-	// This method is translated below
-	resp, err := sc.DeleteAuthorizer(tr, data, balances)
+	ans, err := GetAuthorizerNodes(ctx)
+	require.NoError(t, err)
+	_, _, err = ans.NodeMap[authorizers[0]].Staking.EmptyPool(ADDRESS, tr.ClientID, tr)
+	require.NoError(t, err)
+
+	resp, err := sc.DeleteAuthorizer(tr, data, ctx)
 	require.NoError(t, err)
 	require.NotEmpty(t, resp)
-
-	require.NoError(t, err)
 }
 
 func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
-	tr := CreateTransactionToZcnsc("client0", 10)
-	balances := MakeMockStateContext()
+	ctx := MakeMockStateContext()
+	tr := CreateTransactionToZcnsc(authorizers[0], 10)
 
-	ans, err := GetAuthorizerNodes(balances)
+	ans, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
 
-	gn := GetGlobalNode(balances)
+	gn := GetGlobalNode(ctx)
 	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 

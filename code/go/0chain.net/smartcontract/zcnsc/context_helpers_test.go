@@ -15,7 +15,6 @@ import (
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/mock"
 	"strconv"
-	"testing"
 )
 
 const (
@@ -67,13 +66,9 @@ func CreateStateContext(fromClientId string) *cstate.StateContext {
 
 var store map[datastore.Key]util.Serializable
 
-func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
-	var t0 *testing.T
-	if len(t) > 0 {
-		t0 = t[0]
-	}
-
+func MakeMockStateContext() *mocks.StateContextI {
 	globalNode := &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
+	//userNode := createUserNode(clientId, int64(0))
 
 	ctx := mocks.StateContextI{}
 
@@ -101,9 +96,6 @@ func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
 		On("GetTrieNode", AllAuthorizerKey).
 		Return(
 			func(_ datastore.Key) util.Serializable {
-				if t0 != nil {
-					t0.Log("GetTrieNode+AllAuthorizerKey")
-				}
 				return ans
 			},
 			func(_ datastore.Key) error {
@@ -114,9 +106,6 @@ func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
 		On("GetTrieNode", globalNode.GetKey()).
 		Return(
 			func(_ datastore.Key) util.Serializable {
-				if t0 != nil {
-					t0.Log("GetTrieNode+globalNode.GetKey()")
-				}
 				return globalNode
 			},
 			func(_ datastore.Key) error {
@@ -130,9 +119,6 @@ func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
 			On("GetTrieNode", userNode.GetKey(ADDRESS)).
 			Return(
 				func(_ datastore.Key) util.Serializable {
-					if t0 != nil {
-						t0.Log("GetTrieNode+userNode")
-					}
 					return userNode
 				},
 				func(_ datastore.Key) error {
@@ -157,9 +143,6 @@ func MakeMockStateContext(t ...*testing.T) *mocks.StateContextI {
 		On("InsertTrieNode", globalNode.GetKey(), mock.AnythingOfType("*zcnsc.GlobalNode")).
 		Return(
 			func(_ datastore.Key, node util.Serializable) datastore.Key {
-				if t0 != nil {
-					t0.Log("InsertTrieNode+globalNode")
-				}
 				globalNode = node.(*GlobalNode)
 				return ""
 			},
