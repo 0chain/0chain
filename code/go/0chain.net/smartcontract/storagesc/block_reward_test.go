@@ -14,6 +14,7 @@ import (
 
 func TestPayBlobberBlockRewards(t *testing.T) {
 	const mockMaxRewardsTotal = 1500000.0
+	const mockMaxMint = 1500000.0 * 5
 	type parameters struct {
 		blobberStakes        []float64
 		blockReward          float64
@@ -69,6 +70,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var conf = &scConfig{
+			MaxMint: zcnToBalance(mockMaxMint),
 			BlockReward: &blockReward{
 				BlockReward:     zcnToBalance(p.blockReward),
 				QualifyingStake: zcnToBalance(p.qualifyingStake),

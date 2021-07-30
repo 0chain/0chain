@@ -9,7 +9,7 @@ chain -> storagesc : pay_blobber_block_rewards
     storagesc -> storagesc : calculate rewards
     MPT -> storagesc : pending mints\nmap[blobberId]float64
     storagesc -> storagesc : add rewards to pending mints
-    alt max mint not exceeded
+    alt max mint exceeded
     storagesc -> chain : error\nmax mint exceeded
     end
     storagesc -> MPT : save pending mints
