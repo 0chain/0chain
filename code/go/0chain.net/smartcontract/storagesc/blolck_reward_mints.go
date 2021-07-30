@@ -51,7 +51,7 @@ func (mi *blockRewardMints) mintRewardsForBlobber(
 }
 
 func (mi *blockRewardMints) addMint(blobberId string, amount float64, config *scConfig) error {
-	if mi.MintedRewards+amount > mi.MaxMintRewards {
+	if mi.MaxMintRewards > 0 && mi.MintedRewards+amount > mi.MaxMintRewards {
 		return fmt.Errorf("minted rewards exceed max allowed: %f", mi.MaxMintRewards)
 	}
 	mi.UnProcessedMints[blobberId] += amount
