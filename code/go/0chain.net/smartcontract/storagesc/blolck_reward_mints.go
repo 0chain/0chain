@@ -57,6 +57,9 @@ func (mi *blockRewardMints) addMint(blobberId string, amount float64, config *sc
 	mi.UnProcessedMints[blobberId] += amount
 	mi.MintedRewards += amount
 	config.Minted += state.Balance(amount)
+	if config.Minted > config.MaxMint {
+		return fmt.Errorf("minted tokens exceed max allowed: %f", config.MaxMint)
+	}
 	return nil
 }
 

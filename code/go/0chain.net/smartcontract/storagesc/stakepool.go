@@ -214,8 +214,9 @@ func (sp *stakePool) offersStake(now common.Timestamp, dry bool) (
 // save the stake pool
 func (sp *stakePool) save(sscKey, blobberID string,
 	balances chainstate.StateContextI) (err error) {
-	if sp.totalStakes != sp.stake() {
-		if err := sp.updateBlobberStakes(blobberID, balances); err != nil {
+	currentTotal := sp.stake()
+	if sp.totalStakes != currentTotal {
+		if err := sp.updateBlobberStakes(blobberID, currentTotal, balances); err != nil {
 			return err
 		}
 	}
@@ -226,6 +227,7 @@ func (sp *stakePool) save(sscKey, blobberID string,
 
 func (sp *stakePool) updateBlobberStakes(
 	blobberId string,
+	total state.Balance,
 	balances chainstate.StateContextI,
 ) error {
 	blobberStakes, err := getBlobberStakeTotals(balances)
@@ -233,10 +235,6 @@ func (sp *stakePool) updateBlobberStakes(
 		return fmt.Errorf("error getting blobber stakes: %v", err)
 	}
 
-	var total state.Balance
-	for _, pool := range sp.Pools {
-		total += pool.GetBalance()
-	}
 	blobberStakes.Totals[blobberId] = total
 	if err := blobberStakes.save(balances); err != nil {
 		return fmt.Errorf("error saving blobber stakes: %v", err)
