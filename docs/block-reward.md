@@ -41,6 +41,5 @@ alt total stake has changed
 MPT -> save : total stakes, all blobbers\nmap[blobberIds]state.Balance 
 save -> save : update total stakes this blobber
 save -> MPT : save total stakes, all blobbers
-
 end
 ```

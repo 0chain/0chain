@@ -11,7 +11,7 @@ import (
 
 // blobber id x delegate id
 type blobberStakeTotals struct {
-	Totals map[string]state.Balance `json:"Totals"`
+	Totals map[string]state.Balance `json:"totals"`
 }
 
 func newBlobberStakeTotals() *blobberStakeTotals {
