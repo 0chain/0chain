@@ -7,13 +7,15 @@ smart_contracts:
     global_reset: 48h # in hours
   interestpoolsc:
     min_lock: 10 
-    interest_rate: 0.5
+    interest_rate: 0.0
     min_lock_period: 2190h # max units hours
     max_lock_period: 8760h # max units hours
-    max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
+  minersc:
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
   storagesc:
     # max_mint
-    max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC
@@ -39,7 +41,7 @@ smart_contracts:
       # minimal lock for a delegate pool
       min_lock: 10
       # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.1
+      interest_rate: 0.0
       # interest_interval is interval to pay interests for a stake
       interest_interval: 1m
     # following settings are for free storage rewards
