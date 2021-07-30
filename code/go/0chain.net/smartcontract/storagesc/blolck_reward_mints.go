@@ -11,9 +11,9 @@ import (
 
 type blockRewardMints struct {
 	MintedRewards  float64 `json:"minted_rewards"`
-	MaxMintRewards float64 `json:"max_mint_reward"`
+	MaxMintRewards float64 `json:"max_mint_rewards"`
 	// the max mint check is made before adding to UnMintedBlockRewards map
-	UnProcessedMints map[string]float64 `json:"un_minted_block_rewards"`
+	UnProcessedMints map[string]float64 `json:"un_processed_mints"`
 }
 
 func newBlockRewardsMints() *blockRewardMints {
