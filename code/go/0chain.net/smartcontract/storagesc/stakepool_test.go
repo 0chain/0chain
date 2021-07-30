@@ -117,7 +117,7 @@ func TestUpdateRewardMints(t *testing.T) {
 			BLOCK_REWARD_MINTS,
 			mock.MatchedBy(func(b *blockRewardMints) bool {
 				return brm.MintedRewards == b.MintedRewards &&
-					brm.MaxRewardsTotal == b.MaxRewardsTotal &&
+					brm.MaxMintRewards == b.MaxMintRewards &&
 					b.UnProcessedMints[mockBlobberId] == p.reward*1e10-float64(minted)
 			}),
 		).Return("", nil).Once()

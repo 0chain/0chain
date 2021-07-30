@@ -57,7 +57,7 @@ type blockReward struct {
 	MinerWeight           float64       `json:"miner_weight"`
 	BlobberCapacityWeight float64       `json:"blobber_capacity_weight"`
 	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
-	MaxRewardsTotal       state.Balance `json:"max_reward"`
+	MaxMintRewards        state.Balance `json:"max_mint_reward"`
 }
 
 func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
@@ -304,7 +304,7 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative block_reward.bobber_usage_weight: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
-	if sc.BlockReward.MaxRewardsTotal < 0 {
+	if sc.BlockReward.MaxMintRewards < 0 {
 		return fmt.Errorf("negative block_reward.max_total_rewards: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
@@ -448,7 +448,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
 	)
-	conf.BlockReward.MaxRewardsTotal = state.Balance(scc.GetFloat64(pfx+"max_rewards_total") * 1e10)
+	conf.BlockReward.MaxMintRewards = state.Balance(scc.GetFloat64(pfx+"max_rewards_total") * 1e10)
 
 	err = conf.validate()
 	return

@@ -72,7 +72,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			BlockReward: &blockReward{
 				BlockReward:     zcnToBalance(p.blockReward),
 				QualifyingStake: zcnToBalance(p.qualifyingStake),
-				MaxRewardsTotal: zcnToBalance(mockMaxRewardsTotal),
+				MaxMintRewards:  zcnToBalance(mockMaxRewardsTotal),
 			},
 		}
 		conf.BlockReward.setWeightsFromRatio(p.sharderRatio, p.minerRatio, p.blobberCapacityRatio, p.blobberUsageRatio)
@@ -96,7 +96,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 						return false
 					}
 				}
-				return brm.MintedRewards == mintTotal && brm.MaxRewardsTotal == mockMaxRewardsTotal*1e10
+				return brm.MintedRewards == mintTotal && brm.MaxMintRewards == mockMaxRewardsTotal*1e10
 			}),
 		).Return("", nil).Once()
 

@@ -10,8 +10,8 @@ import (
 )
 
 type blockRewardMints struct {
-	MintedRewards   float64 `json:"minted_rewards"`
-	MaxRewardsTotal float64 `json:"max_rewards_total"`
+	MintedRewards  float64 `json:"minted_rewards"`
+	MaxMintRewards float64 `json:"max_mint_reward"`
 	// the max mint check is made before adding to UnMintedBlockRewards map
 	UnProcessedMints map[string]float64 `json:"un_minted_block_rewards"`
 }
@@ -51,8 +51,8 @@ func (mi *blockRewardMints) mintRewardsForBlobber(
 }
 
 func (mi *blockRewardMints) addMint(blobberId string, amount float64, config *scConfig) error {
-	if mi.MintedRewards+amount > mi.MaxRewardsTotal {
-		return fmt.Errorf("minted rewards exceed max allowed: %f", mi.MaxRewardsTotal)
+	if mi.MintedRewards+amount > mi.MaxMintRewards {
+		return fmt.Errorf("minted rewards exceed max allowed: %f", mi.MaxMintRewards)
 	}
 	mi.UnProcessedMints[blobberId] += amount
 	mi.MintedRewards += amount
@@ -69,7 +69,7 @@ func (mi *blockRewardMints) populate(
 		return common.NewErrorf("allocation_creation_failed",
 			"can't get config: %v", err)
 	}
-	mi.MaxRewardsTotal = float64(conf.BlockReward.MaxRewardsTotal)
+	mi.MaxMintRewards = float64(conf.BlockReward.MaxMintRewards)
 
 	return nil
 }
