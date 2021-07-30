@@ -47,6 +47,17 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
 	return blobbers, nil
 }
 
+// GetBlobberStakeTotalsHandler returns list of all blobbers with the total of staked tokens
+func (ssc *StorageSmartContract) GetBlobberStakeTotalsHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	blobbersStakes, err := getBlobberStakeTotals(balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers stake totals")
+	}
+	return blobbersStakes, nil
+}
+
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
