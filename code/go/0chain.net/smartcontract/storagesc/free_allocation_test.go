@@ -351,10 +351,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 			"GetTrieNode", BLOCK_REWARD_MINTS,
 		).Return(nil, util.ErrValueNotPresent)
 		balances.On(
-			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
-		).Return(nil, util.ErrValueNotPresent)
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBER_STAKES_KEY, mock.Anything,
+			"InsertTrieNode", BLOCK_REWARD_MINTS, mock.Anything,
 		).Return("", nil)
 
 		return args{ssc, txn, input, balances}
@@ -690,10 +687,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"GetTrieNode", BLOCK_REWARD_MINTS,
 		).Return(nil, util.ErrValueNotPresent)
 		balances.On(
-			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
-		).Return(nil, util.ErrValueNotPresent)
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBER_STAKES_KEY, mock.Anything,
+			"InsertTrieNode", BLOCK_REWARD_MINTS, mock.Anything,
 		).Return("", nil)
 
 		return args{ssc, txn, input, balances}
