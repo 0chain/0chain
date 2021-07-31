@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Allocate interactive TTY to allow Ctrl-C.
+INTERACTIVE="-it"
+
 cmd="build"
 build_dockerfile="docker.local/build.unit_test/Dockerfile"
 
@@ -9,8 +12,7 @@ do
     case $arg in
         -m1|--m1|m1)
         echo "The build will be performed for Apple M1 chip"
-        cmd="buildx build --platform linux/amd64"
-        build_dockerfile="docker.local/build.unit_test/Dockerfile.m1"
+        cmd="buildx build --platform linux/arm64"
         shift
         ;;
     esac
