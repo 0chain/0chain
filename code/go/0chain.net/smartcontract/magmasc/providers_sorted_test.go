@@ -65,7 +65,7 @@ func Test_ProvidersSorted_add(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running
 			// the particular order of tests is important
-			if got := test.list.add(test.pros); got != test.ret {
+			if _, got := test.list.add(test.pros); got != test.ret {
 				t.Errorf("add() return: %v | want: %v", got, test.ret)
 			}
 			if !reflect.DeepEqual(test.list.Sorted, test.want) {
@@ -78,7 +78,7 @@ func Test_ProvidersSorted_add(t *testing.T) {
 func Test_ProvidersSorted_get(t *testing.T) {
 	t.Parallel()
 
-	list := mockProviders().Nodes
+	list := &mockProviders().Nodes
 	pros := list.Sorted[0]
 
 	tests := [2]struct {
@@ -123,7 +123,7 @@ func Test_ProvidersSorted_get(t *testing.T) {
 func Test_ProvidersSorted_getIndex(t *testing.T) {
 	t.Parallel()
 
-	idx, list := 0, mockProviders().Nodes
+	idx, list := 0, &mockProviders().Nodes
 	id := list.Sorted[idx].ExtID
 
 	tests := [2]struct {

@@ -32,9 +32,9 @@ func NewMagmaSmartContract() sci.SmartContractInterface {
 	msc.RestHandlers["/acknowledgmentAccepted"] = msc.acknowledgmentAccepted
 	msc.RestHandlers["/acknowledgmentAcceptedVerify"] = msc.acknowledgmentAcceptedVerify
 	msc.RestHandlers["/acknowledgmentExist"] = msc.acknowledgmentExist
+	msc.RestHandlers["/activeAcknowledgments"] = msc.activeAcknowledgments
 	msc.RestHandlers["/allConsumers"] = msc.allConsumers
 	msc.RestHandlers["/allProviders"] = msc.allProviders
-	msc.RestHandlers["/billingFetch"] = msc.billingFetch
 	msc.RestHandlers["/consumerExist"] = msc.consumerExist
 	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
 	msc.RestHandlers["/providerExist"] = msc.providerExist
@@ -52,10 +52,10 @@ func NewMagmaSmartContract() sci.SmartContractInterface {
 func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []byte, sci chain.StateContextI) (string, error) {
 	switch call {
 	// consumer's function list
-	case consumerAcceptTerms:
-		return m.consumerAcceptTerms(txn, blob, sci)
 	case consumerRegister:
 		return m.consumerRegister(txn, blob, sci)
+	case consumerSessionStart:
+		return m.consumerSessionStart(txn, blob, sci)
 	case consumerSessionStop:
 		return m.consumerSessionStop(txn, blob, sci)
 	case consumerUpdate:

@@ -10,7 +10,7 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
+	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 )
 
@@ -102,14 +102,6 @@ func Test_tokenPool_create(t *testing.T) {
 	txn.Value = amount
 	txn.ClientID = ackn.Consumer.ID
 
-	resp := &tokenpool.TokenPoolTransferResponse{
-		TxnHash:    txn.Hash,
-		ToPool:     ackn.SessionID,
-		Value:      state.Balance(amount),
-		FromClient: ackn.Consumer.ID,
-		ToClient:   txn.ToClientID,
-	}
-
 	acknClientBalanceErr := mockAcknowledgment()
 	acknClientBalanceErr.Consumer.ID = ""
 
@@ -122,16 +114,22 @@ func Test_tokenPool_create(t *testing.T) {
 		ackn  *bmp.Acknowledgment
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  string
+		want  *tp.TokenPoolTransferResponse
 		error bool
 	}{
 		{
-			name:  "OK",
-			txn:   txn,
-			ackn:  ackn,
-			pool:  &tokenPool{},
-			sci:   sci,
-			want:  string(resp.Encode()),
+			name: "OK",
+			txn:  txn,
+			ackn: ackn,
+			pool: &tokenPool{},
+			sci:  sci,
+			want: &tp.TokenPoolTransferResponse{
+				TxnHash:    txn.Hash,
+				ToPool:     ackn.SessionID,
+				Value:      state.Balance(amount),
+				FromClient: ackn.Consumer.ID,
+				ToClient:   txn.ToClientID,
+			},
 			error: false,
 		},
 		{
@@ -140,6 +138,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn:  acknClientBalanceErr,
 			pool:  &tokenPool{},
 			sci:   sci,
+			want:  nil,
 			error: true,
 		},
 		{
@@ -148,6 +147,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn:  acknInsufficientFundsErr,
 			pool:  &tokenPool{},
 			sci:   sci,
+			want:  nil,
 			error: true,
 		},
 		{
@@ -156,6 +156,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn:  ackn,
 			pool:  &tokenPool{},
 			sci:   sci,
+			want:  nil,
 			error: true,
 		},
 		{
@@ -164,6 +165,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn:  ackn,
 			pool:  &tokenPool{},
 			sci:   sci,
+			want:  nil,
 			error: true,
 		},
 	}
@@ -174,8 +176,8 @@ func Test_tokenPool_create(t *testing.T) {
 			t.Parallel()
 
 			got, err := test.pool.create(test.txn, test.ackn, test.sci)
-			if err == nil && got != test.want {
-				t.Errorf("create() got: %v | want: %v", got, test.want)
+			if err == nil && !reflect.DeepEqual(got, test.want) {
+				t.Errorf("create() got: %#v | want: %#v", got, test.want)
 				return
 			}
 			if (err != nil) != test.error {
@@ -198,35 +200,47 @@ func Test_tokenPool_spend(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	poolInvalid := mockTokenPool()
-	poolInvalid.ID = "not_present_id"
-
 	txn := sci.GetTransaction()
 	txnInvalid := txn.Clone()
 	txnInvalid.ToClientID = "not_present_id"
 
-	tests := [6]struct {
+	tests := [5]struct {
 		name  string
 		txn   *tx.Transaction
 		bill  *bmp.Billing
 		sci   chain.StateContextI
 		pool  *tokenPool
+		want  *tp.TokenPoolTransferResponse
 		error bool
 	}{
 		{
-			name:  "OK",
-			txn:   txn,
-			bill:  &bmp.Billing{Amount: int64(pool.Balance - pool.Balance/2)},
-			sci:   sci,
-			pool:  pool,
+			name: "OK",
+			txn:  txn,
+			bill: &bmp.Billing{Amount: int64(pool.Balance - pool.Balance/2)},
+			sci:  sci,
+			pool: pool,
+			want: &tp.TokenPoolTransferResponse{
+				TxnHash:    txn.Hash,
+				FromPool:   pool.ID,
+				Value:      pool.Balance - pool.Balance/2,
+				FromClient: pool.PayerID,
+				ToClient:   pool.PayeeID,
+			},
 			error: false,
 		},
 		{
-			name:  "Billing_Amount_Zero_Value_OK",
-			txn:   txn,
-			bill:  &bmp.Billing{Amount: 0},
-			sci:   sci,
-			pool:  mockTokenPool(),
+			name: "Billing_Amount_Zero_Value_OK",
+			txn:  txn,
+			bill: &bmp.Billing{Amount: 0},
+			sci:  sci,
+			pool: mockTokenPool(),
+			want: &tp.TokenPoolTransferResponse{
+				TxnHash:    txn.Hash,
+				FromPool:   mockTokenPool().ID,
+				Value:      0,
+				FromClient: pool.PayerID,
+				ToClient:   pool.PayeeID,
+			},
 			error: false,
 		},
 		{
@@ -235,6 +249,7 @@ func Test_tokenPool_spend(t *testing.T) {
 			bill:  &bmp.Billing{Amount: -1},
 			sci:   sci,
 			pool:  mockTokenPool(),
+			want:  nil,
 			error: true,
 		},
 		{
@@ -243,6 +258,7 @@ func Test_tokenPool_spend(t *testing.T) {
 			bill:  &bmp.Billing{Amount: 1},
 			sci:   sci,
 			pool:  mockTokenPool(),
+			want:  nil,
 			error: true,
 		},
 		{
@@ -253,14 +269,6 @@ func Test_tokenPool_spend(t *testing.T) {
 			pool:  mockTokenPool(),
 			error: true,
 		},
-		{
-			name:  "Delete_Trie_Node_ERR",
-			txn:   txn,
-			bill:  &bmp.Billing{Amount: 1000},
-			sci:   sci,
-			pool:  poolInvalid,
-			error: true,
-		},
 	}
 
 	for idx := range tests {
@@ -268,9 +276,13 @@ func Test_tokenPool_spend(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if err := test.pool.spend(test.txn, test.bill, test.sci); (err != nil) != test.error {
+			got, err := test.pool.spend(test.txn, test.bill, test.sci)
+			if err == nil && !reflect.DeepEqual(got, test.want) {
+				t.Errorf("create() got: %#v | want: %#v", got, test.want)
+				return
+			}
+			if (err != nil) != test.error {
 				t.Errorf("spend() error: %v | want: %v", err, test.error)
-				t.Errorf("sci: %#v", sci.store)
 			}
 		})
 	}

@@ -15,7 +15,9 @@ func Test_Consumers_Decode(t *testing.T) {
 	t.Parallel()
 
 	list := mockConsumers()
+	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -60,7 +62,9 @@ func Test_Consumers_Encode(t *testing.T) {
 	t.Parallel()
 
 	list := mockConsumers()
+	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -99,12 +103,9 @@ func Test_Consumers_add(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	cons := mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ID, consumerType), cons); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
+	consRegistered, _ := list.Nodes.getByIndex(0)
 
-	tests := [3]struct {
+	tests := [4]struct {
 		name  string
 		cons  *bmp.Consumer
 		list  *Consumers
@@ -113,22 +114,29 @@ func Test_Consumers_add(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			cons:  cons,
+			cons:  mockConsumer(),
 			list:  list,
 			sci:   sci,
 			error: false,
 		},
 		{
+			name:  "Consumer_Host_Already_Registered_ERR",
+			cons:  consRegistered,
+			list:  list,
+			sci:   sci,
+			error: true,
+		},
+		{
 			name:  "Consumer_Insert_Trie_Node_ERR",
 			cons:  &bmp.Consumer{ExtID: "cannot_insert_id"},
-			list:  mockConsumers(),
+			list:  list,
 			sci:   sci,
 			error: true,
 		},
 		{
 			name:  "List_Insert_Trie_Node_ERR",
 			cons:  &bmp.Consumer{ExtID: "cannot_insert_list"},
-			list:  mockConsumers(),
+			list:  list,
 			sci:   sci,
 			error: true,
 		},
@@ -172,7 +180,7 @@ func Test_fetchConsumers(t *testing.T) {
 			name:  "Not_Present_OK",
 			id:    "not_present_id",
 			sci:   mockStateContextI(),
-			want:  &Consumers{Nodes: &consumersSorted{}},
+			want:  &Consumers{},
 			error: false,
 		},
 		{

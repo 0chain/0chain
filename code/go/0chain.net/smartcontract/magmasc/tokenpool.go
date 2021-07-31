@@ -8,7 +8,7 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
+	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -17,7 +17,7 @@ import (
 type (
 	// tokenPool represents token pool wrapper implementation.
 	tokenPool struct {
-		tokenpool.ZcnPool // embedded token pool
+		tp.ZcnPool // embedded token pool
 
 		PayerID datastore.Key `json:"payer_id"`
 		PayeeID datastore.Key `json:"payee_id"`
@@ -28,6 +28,11 @@ var (
 	// Make sure tokenPool implements Serializable interface.
 	_ util.Serializable = (*tokenPool)(nil)
 )
+
+// newTokenPool returns a new constructed token pool.
+func newTokenPool() *tokenPool {
+	return &tokenPool{}
+}
 
 // Decode implements util.Serializable interface.
 func (m *tokenPool) Decode(blob []byte) error {
@@ -50,16 +55,19 @@ func (m *tokenPool) Encode() []byte {
 	return blob
 }
 
-// create creates token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (string, error) {
-	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
-	if err != nil {
-		return "", errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+// create tries to create a new token poll by given acknowledgment.
+func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
+	m.Balance = state.Balance(ackn.Provider.Terms.GetAmount())
+	if m.Balance < 0 {
+		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
 	}
 
-	m.Balance = state.Balance(ackn.Provider.Terms.GetAmount())
+	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		return nil, errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
+	}
 	if clientBalance < m.Balance {
-		return "", errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
 	m.ID = ackn.SessionID
@@ -68,13 +76,13 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 
 	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, m.Balance)
 	if err = sci.AddTransfer(transfer); err != nil {
-		return "", errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
+		return nil, errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
 	if _, err = sci.InsertTrieNode(m.uid(txn.ToClientID), m); err != nil {
-		return "", errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
+		return nil, errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
 	}
 
-	resp := &tokenpool.TokenPoolTransferResponse{
+	resp := tp.TokenPoolTransferResponse{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,
@@ -82,13 +90,13 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 		ToClient:   txn.ToClientID, // delegate transfer to smart contract address
 	}
 
-	return string(resp.Encode()), nil
+	return &resp, nil
 }
 
-// spend spends token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) error {
+// spend tries to spend the token pool by given amount.
+func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
 	if bill.Amount < 0 {
-		return errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
 	}
 
 	payee, amount := m.PayeeID, state.Balance(bill.Amount)
@@ -98,7 +106,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 
 	case amount < m.Balance: // spend part of token pool to payee
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
-			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return nil, errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		m.Balance -= amount
 		payee = m.PayerID // refund remaining token pool balance to payer
@@ -106,14 +114,23 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 
 	// spend token pool by balance
 	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, m.Balance)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
-	}
-	m.Balance = 0
-	if _, err := sci.DeleteTrieNode(m.uid(txn.ToClientID)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "delete token pool failed", err)
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 
-	return nil
+	m.Balance = 0
+	if _, err := sci.InsertTrieNode(m.uid(txn.ToClientID), m); err != nil {
+		return nil, errors.Wrap(errCodeTokenPoolSpend, "delete token pool failed", err)
+	}
+
+	resp := tp.TokenPoolTransferResponse{
+		TxnHash:    txn.Hash,
+		FromPool:   m.ID,
+		Value:      amount,
+		FromClient: m.PayerID,
+		ToClient:   m.PayeeID,
+	}
+
+	return &resp, nil
 }
 
 // uid returns uniq id used to saving token pool into chain state.

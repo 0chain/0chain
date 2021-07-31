@@ -15,7 +15,9 @@ func Test_Providers_Decode(t *testing.T) {
 	t.Parallel()
 
 	list := mockProviders()
+	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -60,7 +62,9 @@ func Test_Providers_Encode(t *testing.T) {
 	t.Parallel()
 
 	list := mockProviders()
+	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -104,7 +108,9 @@ func Test_Providers_add(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [3]struct {
+	provRegistered, _ := list.Nodes.getByIndex(0)
+
+	tests := [4]struct {
 		name  string
 		prov  *bmp.Provider
 		list  *Providers
@@ -119,16 +125,23 @@ func Test_Providers_add(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "Insert_Trie_Node_ERR",
-			prov:  &bmp.Provider{ExtID: "cannot_insert_id"},
-			list:  mockProviders(),
+			name:  "Provider_Host_Already_Registered_ERR",
+			prov:  provRegistered,
+			list:  list,
 			sci:   sci,
 			error: true,
 		},
 		{
-			name:  "Insert_Trie_Node_ERR",
+			name:  "Provider_Insert_Trie_Node_ERR",
+			prov:  &bmp.Provider{ExtID: "cannot_insert_id"},
+			list:  list,
+			sci:   sci,
+			error: true,
+		},
+		{
+			name:  "List_Insert_Trie_Node_ERR",
 			prov:  &bmp.Provider{ExtID: "cannot_insert_list"},
-			list:  mockProviders(),
+			list:  list,
 			sci:   sci,
 			error: true,
 		},
@@ -172,7 +185,7 @@ func Test_fetchProviders(t *testing.T) {
 			name:  "Not_Present_OK",
 			id:    "not_present_id",
 			sci:   mockStateContextI(),
-			want:  &Providers{Nodes: &providersSorted{}},
+			want:  &Providers{},
 			error: false,
 		},
 		{

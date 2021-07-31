@@ -14,13 +14,13 @@ type (
 	// consumersSorted allows O(logN) access.
 	consumersSorted struct {
 		Sorted []*bmp.Consumer `json:"sorted"`
-		mux    sync.RWMutex
+		mutex  sync.RWMutex
 	}
 )
 
-func (m *consumersSorted) add(consumer *bmp.Consumer) bool {
-	m.mux.Lock()
-	defer m.mux.Unlock()
+func (m *consumersSorted) add(consumer *bmp.Consumer) (int, bool) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if m.Sorted == nil {
 		m.Sorted = make([]*bmp.Consumer, 0)
@@ -29,7 +29,7 @@ func (m *consumersSorted) add(consumer *bmp.Consumer) bool {
 	size := len(m.Sorted)
 	if size == 0 {
 		m.Sorted = append(m.Sorted, consumer)
-		return true // appended
+		return 0, true // appended
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
@@ -37,18 +37,18 @@ func (m *consumersSorted) add(consumer *bmp.Consumer) bool {
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, consumer)
-		return true // appended
+		return idx, true // appended
 	}
 	if m.Sorted[idx].ExtID == consumer.ExtID { // the same
 		m.Sorted[idx] = consumer // replace
-		return false             // already have
+		return idx, false        // already have
 	}
 
 	// insert
 	left, right := m.Sorted[:idx], append([]*bmp.Consumer{consumer}, m.Sorted[idx:]...)
 	m.Sorted = append(left, right...)
 
-	return true // inserted
+	return idx, true // inserted
 }
 
 func (m *consumersSorted) get(id datastore.Key) (*bmp.Consumer, bool) {
@@ -57,20 +57,41 @@ func (m *consumersSorted) get(id datastore.Key) (*bmp.Consumer, bool) {
 		return nil, false // not found
 	}
 
-	m.mux.RLock()
+	m.mutex.RLock()
 	consumer := m.Sorted[idx]
-	m.mux.RUnlock()
+	m.mutex.RUnlock()
 
 	return consumer, true // found
 }
 
-func (m *consumersSorted) getIndex(id datastore.Key) (int, bool) {
-	m.mux.RLock()
-	defer m.mux.RUnlock()
+func (m *consumersSorted) getByHost(host string) (*bmp.Consumer, bool) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 
-	if m.Sorted == nil {
-		m.Sorted = make([]*bmp.Consumer, 0)
+	for _, item := range m.Sorted {
+		if item.Host == host {
+			return item, true // found
+		}
 	}
+
+	return nil, false // not found
+}
+
+func (m *consumersSorted) getByIndex(idx int) (*bmp.Consumer, bool) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if idx < len(m.Sorted) {
+		consumer := *m.Sorted[idx] // copy provider
+		return &consumer, true
+	}
+
+	return nil, false // not found
+}
+
+func (m *consumersSorted) getIndex(id datastore.Key) (int, bool) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 
 	size := len(m.Sorted)
 	if size > 0 {
@@ -85,6 +106,18 @@ func (m *consumersSorted) getIndex(id datastore.Key) (int, bool) {
 	return -1, false // not found
 }
 
+func (m *consumersSorted) getSorted() (sorted []*bmp.Consumer) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.Sorted != nil {
+		sorted = make([]*bmp.Consumer, len(m.Sorted))
+		copy(sorted, m.Sorted)
+	}
+
+	return sorted
+}
+
 func (m *consumersSorted) remove(id datastore.Key) bool {
 	idx, found := m.getIndex(id)
 	if found {
@@ -95,8 +128,8 @@ func (m *consumersSorted) remove(id datastore.Key) bool {
 }
 
 func (m *consumersSorted) removeByIndex(idx int) *bmp.Consumer {
-	m.mux.Lock()
-	defer m.mux.Unlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	consumer := *m.Sorted[idx] // copy consumer
 	m.Sorted = append(m.Sorted[:idx], m.Sorted[idx+1:]...)
@@ -104,12 +137,24 @@ func (m *consumersSorted) removeByIndex(idx int) *bmp.Consumer {
 	return &consumer
 }
 
+func (m *consumersSorted) setSorted(sorted []*bmp.Consumer) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if sorted == nil {
+		m.Sorted = nil
+	} else {
+		m.Sorted = make([]*bmp.Consumer, len(sorted))
+		copy(m.Sorted, sorted)
+	}
+}
+
 func (m *consumersSorted) update(consumer *bmp.Consumer) bool {
 	idx, found := m.getIndex(consumer.ExtID)
 	if found {
-		m.mux.Lock()
+		m.mutex.Lock()
 		m.Sorted[idx] = consumer // replace if found
-		m.mux.Unlock()
+		m.mutex.Unlock()
 	}
 
 	return found

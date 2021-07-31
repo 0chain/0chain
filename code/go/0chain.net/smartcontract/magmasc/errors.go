@@ -15,6 +15,7 @@ const (
 	errCodeInternal       = "internal_error"
 	errCodeProviderReg    = "provider_reg"
 	errCodeProviderUpdate = "provider_update"
+	errCodeSessionStart   = "session_start"
 	errCodeSessionStop    = "session_stop"
 
 	errCodeTokenPoolCreate = "token_pool_create"
@@ -59,4 +60,8 @@ var (
 	// errNegativeValue represents an error that can occur while
 	// a checked value is negative.
 	errNegativeValue = errors.New(errCodeBadRequest, "negative value")
+
+	// errNilPointerValue represents an error that can occur while
+	// a checked value is a nil pointer.
+	errNilPointerValue = errors.New(errCodeInternal, "nil pointer value")
 )

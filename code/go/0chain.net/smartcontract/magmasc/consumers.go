@@ -15,7 +15,7 @@ type (
 	// Consumers represents sorted Consumer nodes, used to inserting,
 	// removing or getting from state.StateContextI with AllConsumersKey.
 	Consumers struct {
-		Nodes *consumersSorted `json:"nodes"`
+		Nodes consumersSorted `json:"nodes"`
 	}
 )
 
@@ -30,28 +30,40 @@ func (m *Consumers) Decode(blob []byte) error {
 	if err := json.Unmarshal(blob, &sorted); err != nil {
 		return errDecodeData.Wrap(err)
 	}
-	if sorted != nil {
-		m.Nodes = &consumersSorted{Sorted: sorted}
-	}
+
+	m.Nodes.setSorted(sorted)
 
 	return nil
 }
 
 // Encode implements util.Serializable interface.
 func (m *Consumers) Encode() []byte {
-	blob, _ := json.Marshal(m.Nodes.Sorted)
+	blob, _ := json.Marshal(m.Nodes.getSorted())
 	return blob
 }
 
-// add tries to append consumer to nodes list.
+// add tries to append a new consumer to nodes list.
 func (m *Consumers) add(scID datastore.Key, cons *bmp.Consumer, sci chain.StateContextI) error {
+	if _, found := m.Nodes.getByHost(cons.Host); found {
+		return errors.New(errCodeInternal, "consumer host already registered: "+cons.Host)
+	}
+
+	return m.update(scID, cons, sci)
+}
+
+// update tries to update the consumer into nodes list.
+func (m *Consumers) update(scID datastore.Key, cons *bmp.Consumer, sci chain.StateContextI) error {
 	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ExtID, consumerType), cons); err != nil {
 		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
 	}
-	m.Nodes.add(cons)
-	if _, err := sci.InsertTrieNode(AllConsumersKey, m); err != nil {
+
+	list := &Consumers{Nodes: consumersSorted{Sorted: m.Nodes.getSorted()}}
+	list.Nodes.add(cons)
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
 		return errors.Wrap(errCodeInternal, "insert consumers list failed", err)
 	}
+
+	m.Nodes.setSorted(list.Nodes.Sorted)
 
 	return nil
 }
@@ -61,12 +73,12 @@ func (m *Consumers) add(scID datastore.Key, cons *bmp.Consumer, sci chain.StateC
 // fetchConsumers returns error if state.StateContextI does not contain
 // consumers or stored bytes have invalid format.
 func fetchConsumers(id datastore.Key, sci chain.StateContextI) (*Consumers, error) {
-	consumers := Consumers{Nodes: &consumersSorted{}}
+	consumers := &Consumers{}
 	if list, _ := sci.GetTrieNode(id); list != nil {
 		if err := consumers.Decode(list.Encode()); err != nil {
 			return nil, errDecodeData.Wrap(err)
 		}
 	}
 
-	return &consumers, nil
+	return consumers, nil
 }

@@ -13,11 +13,12 @@ const (
 )
 
 const (
+	// ActiveAcknowledgmentsKey is a concatenated Address
+	// and SHA3-256 hex encoded hash of "active_acknowledgments" string.
+	ActiveAcknowledgmentsKey = Address + "471fa23cccf23b1fbdd12c3311038bcdff30db27c29ff0452c74151735ff6564"
+
 	// acknowledgment contents a value of acknowledgment string type.
 	acknowledgment = "acknowledgment"
-
-	// datausage contents a value of datausage string type.
-	datausage = "datausage"
 )
 
 // These constants used to identify smart contract functions by Consumer.
@@ -29,15 +30,15 @@ const (
 	// consumerType contents a value of type of Consumer's node.
 	consumerType = "consumer"
 
-	// consumerAcceptTerms represents the name of MagmaSmartContract function.
-	// When function is called it means that Consumer accepted Provider terms.
-	consumerAcceptTerms = "consumer_accept_terms"
-
 	// consumerRegister represents name for Consumer's registration MagmaSmartContract function.
 	consumerRegister = "consumer_register"
 
+	// consumerSessionStart represents the name of MagmaSmartContract function.
+	// When function is called it means that Consumer starts a new session.
+	consumerSessionStart = "consumer_session_start"
+
 	// consumerSessionStop represents the name of MagmaSmartContract function.
-	// When function is called it means that Consumer stops the session.
+	// When function is called it means that Consumer stops an active session.
 	consumerSessionStop = "consumer_session_stop"
 
 	// consumerUpdate represents name for

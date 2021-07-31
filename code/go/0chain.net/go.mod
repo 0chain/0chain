@@ -3,7 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
-	github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210719100922-64ae6ffcc9c3
+	github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210730161700-6dc34253257e
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
@@ -19,8 +19,8 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
-	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
+	github.com/herumi/bls v0.0.0-20210731023914-2ffc4ffc1a53
+	github.com/herumi/mcl v0.0.0-20210728010142-36a3013cae4d
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magma/augmented-networks/accounting/protos v0.1.1

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	// million (Mega) is a unit prefix in metric systems
+	// One million (Mega) is a unit prefix in metric systems
 	// of units denoting a factor of one million (1e6 or 1_000_000).
 	million = 1e6
 )
@@ -36,7 +36,7 @@ type (
 		store map[datastore.Key]util.Serializable
 	}
 
-	// mockSmartContract implements mocked mocked smart contract interface.
+	// mockSmartContract implements mocked smart contract interface.
 	mockSmartContract struct {
 		mocks.SmartContractInterface
 		ID string
@@ -61,15 +61,39 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 	return &bmp.Acknowledgment{
 		SessionID:     "session_id",
 		AccessPointID: "access_point_id",
+		Billing:       mockBilling(),
 		Consumer:      mockConsumer(),
 		Provider:      mockProvider(),
 	}
 }
 
-func mockBilling() *bmp.Billing {
-	return &bmp.Billing{
+func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
+	list := &ActiveAcknowledgments{Nodes: make(map[string]*bmp.Acknowledgment, size)}
+
+	list.mutex.Lock()
+	defer list.mutex.Unlock()
+
+	for i := 0; i < size; i++ {
+		id := strconv.Itoa(i)
+		ackn := mockAcknowledgment()
+		ackn.SessionID += id
+		ackn.AccessPointID += id
+		ackn.Billing.DataUsage.SessionID += id
+		ackn.Provider.ID += id
+		ackn.Provider.ExtID += id
+		ackn.Provider.Host += id
+		ackn.Consumer.ID += id
+		ackn.Consumer.ExtID += id
+		ackn.Consumer.Host += id
+		list.Nodes[ackn.SessionID] = ackn
+	}
+
+	return list
+}
+
+func mockBilling() bmp.Billing {
+	return bmp.Billing{
 		DataUsage: mockDataUsage(),
-		SessionID: "session_id",
 	}
 }
 
@@ -82,21 +106,21 @@ func mockConsumer() *bmp.Consumer {
 }
 
 func mockConsumers() *Consumers {
-	list := &Consumers{Nodes: &consumersSorted{}}
+	list := &Consumers{}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
 		list.Nodes.add(&bmp.Consumer{
 			ID:    "consumer_id" + id,
 			ExtID: "ext_id" + id,
-			Host:  "localhost:801" + id,
+			Host:  "localhost:8010" + id,
 		})
 	}
 
 	return list
 }
 
-func mockDataUsage() *bmp.DataUsage {
-	return &bmp.DataUsage{
+func mockDataUsage() bmp.DataUsage {
+	return bmp.DataUsage{
 		DownloadBytes: 3 * million,
 		UploadBytes:   2 * million,
 		SessionID:     "session_id",
@@ -150,13 +174,13 @@ func mockProvider() *bmp.Provider {
 }
 
 func mockProviders() *Providers {
-	list := &Providers{Nodes: &providersSorted{}}
+	list := &Providers{}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
 		list.Nodes.add(&bmp.Provider{
 			ID:    "provider_id" + id,
 			ExtID: "ext_id" + id,
-			Host:  "localhost:802" + id,
+			Host:  "localhost:8020" + id,
 			Terms: mockProviderTerms(),
 		})
 	}
@@ -219,10 +243,6 @@ func mockStateContextI() *mockStateContext {
 	ackn := mockAcknowledgment()
 	ackn.SessionID = "cannot_insert_id"
 	stateContext.store[nodeUID(msc.ID, ackn.SessionID, acknowledgment)] = ackn
-
-	bill := mockBilling()
-	bill.SessionID = "cannot_insert_id"
-	stateContext.store[nodeUID(msc.ID, bill.SessionID, datausage)] = bill
 
 	stateContext.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
@@ -292,12 +312,15 @@ func mockStateContextI() *mockStateContext {
 			if _, ok := stateContext.store[id]; ok {
 				return nil
 			}
-			return util.ErrNodeNotFound
+			return util.ErrValueNotPresent
 		},
 	)
 
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Acknowledgment")).
 		Return(funcInsertID, errFuncInsertID)
+
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ActiveAcknowledgments")).
+		Return(funcInsertList, errFuncInsertList)
 
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Billing")).
 		Return(funcInsertID, errFuncInsertID)

@@ -15,7 +15,7 @@ type (
 	// Providers represents sorted Provider nodes, used to inserting,
 	// removing or getting from state.StateContextI with AllProvidersKey.
 	Providers struct {
-		Nodes *providersSorted `json:"nodes"`
+		Nodes providersSorted `json:"nodes"`
 	}
 )
 
@@ -30,28 +30,40 @@ func (m *Providers) Decode(blob []byte) error {
 	if err := json.Unmarshal(blob, &sorted); err != nil {
 		return errDecodeData.Wrap(err)
 	}
-	if sorted != nil {
-		m.Nodes = &providersSorted{Sorted: sorted}
-	}
+
+	m.Nodes.setSorted(sorted)
 
 	return nil
 }
 
 // Encode implements util.Serializable interface.
 func (m *Providers) Encode() []byte {
-	blob, _ := json.Marshal(m.Nodes.Sorted)
+	blob, _ := json.Marshal(m.Nodes.getSorted())
 	return blob
 }
 
-// add tries to append consumer to nodes list.
+// add tries to add a new provider to nodes list.
 func (m *Providers) add(scID datastore.Key, prov *bmp.Provider, sci chain.StateContextI) error {
+	if _, found := m.Nodes.getByHost(prov.Host); found {
+		return errors.New(errCodeInternal, "provider host already registered: "+prov.Host)
+	}
+
+	return m.update(scID, prov, sci)
+}
+
+// update tries to update the provider into nodes list.
+func (m *Providers) update(scID datastore.Key, prov *bmp.Provider, sci chain.StateContextI) error {
 	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
 	}
-	m.Nodes.add(prov)
-	if _, err := sci.InsertTrieNode(AllProvidersKey, m); err != nil {
+
+	list := &Providers{Nodes: providersSorted{Sorted: m.Nodes.getSorted()}}
+	list.Nodes.add(prov)
+	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
 		return errors.Wrap(errCodeInternal, "insert providers list failed", err)
 	}
+
+	m.Nodes.setSorted(list.Nodes.Sorted)
 
 	return nil
 }
@@ -61,12 +73,12 @@ func (m *Providers) add(scID datastore.Key, prov *bmp.Provider, sci chain.StateC
 // fetchProviders returns error if state.StateContextI does not contain
 // providers or stored bytes have invalid format.
 func fetchProviders(id datastore.Key, sci chain.StateContextI) (*Providers, error) {
-	providers := Providers{Nodes: &providersSorted{}}
+	providers := &Providers{}
 	if list, _ := sci.GetTrieNode(id); list != nil {
 		if err := providers.Decode(list.Encode()); err != nil {
 			return nil, errDecodeData.Wrap(err)
 		}
 	}
 
-	return &providers, nil
+	return providers, nil
 }
