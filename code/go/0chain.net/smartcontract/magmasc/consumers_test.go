@@ -1,0 +1,210 @@
+package magmasc
+
+import (
+	"encoding/json"
+	"reflect"
+	"testing"
+
+	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+
+	chain "0chain.net/chaincore/chain/state"
+	"0chain.net/core/datastore"
+)
+
+func Test_Consumers_Decode(t *testing.T) {
+	t.Parallel()
+
+	list := mockConsumers()
+	list.Nodes.mutex.RLock()
+	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
+	}
+
+	tests := [2]struct {
+		name  string
+		blob  []byte
+		want  *Consumers
+		error bool
+	}{
+		{
+			name:  "OK",
+			blob:  blob,
+			want:  list,
+			error: false,
+		},
+		{
+			name:  "Decode_ERR",
+			blob:  []byte(":"), // invalid json
+			want:  &Consumers{},
+			error: true,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := &Consumers{}
+			if err := got.Decode(test.blob); (err != nil) != test.error {
+				t.Errorf("Decode() error: %v | want: %v", err, nil)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("Decode() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func Test_Consumers_Encode(t *testing.T) {
+	t.Parallel()
+
+	list := mockConsumers()
+	list.Nodes.mutex.RLock()
+	blob, err := json.Marshal(list.Nodes.Sorted)
+	list.Nodes.mutex.RUnlock()
+	if err != nil {
+		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
+	}
+
+	tests := [1]struct {
+		name string
+		list *Consumers
+		want []byte
+	}{
+		{
+			name: "OK",
+			list: list,
+			want: blob,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := test.list.Encode(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("Encode() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func Test_Consumers_add(t *testing.T) {
+	t.Parallel()
+
+	const scID = "sc_id"
+
+	list, sci := mockConsumers(), mockStateContextI()
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	consRegistered, _ := list.Nodes.getByIndex(0)
+
+	tests := [4]struct {
+		name  string
+		cons  *bmp.Consumer
+		list  *Consumers
+		sci   chain.StateContextI
+		error bool
+	}{
+		{
+			name:  "OK",
+			cons:  mockConsumer(),
+			list:  list,
+			sci:   sci,
+			error: false,
+		},
+		{
+			name:  "Consumer_Host_Already_Registered_ERR",
+			cons:  consRegistered,
+			list:  list,
+			sci:   sci,
+			error: true,
+		},
+		{
+			name:  "Consumer_Insert_Trie_Node_ERR",
+			cons:  &bmp.Consumer{ExtID: "cannot_insert_id"},
+			list:  list,
+			sci:   sci,
+			error: true,
+		},
+		{
+			name:  "List_Insert_Trie_Node_ERR",
+			cons:  &bmp.Consumer{ExtID: "cannot_insert_list"},
+			list:  list,
+			sci:   sci,
+			error: true,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if err := test.list.add(scID, test.cons, test.sci); (err != nil) != test.error {
+				t.Errorf("add() error: %v | want: %v", err, test.error)
+			}
+		})
+	}
+}
+
+func Test_fetchConsumers(t *testing.T) {
+	t.Parallel()
+
+	sci, list := mockStateContextI(), mockConsumers()
+	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	tests := [3]struct {
+		name  string
+		id    datastore.Key
+		sci   chain.StateContextI
+		want  *Consumers
+		error bool
+	}{
+		{
+			name:  "OK",
+			id:    AllConsumersKey,
+			sci:   sci,
+			want:  list,
+			error: false,
+		},
+		{
+			name:  "Not_Present_OK",
+			id:    "not_present_id",
+			sci:   mockStateContextI(),
+			want:  &Consumers{},
+			error: false,
+		},
+		{
+			name:  "Decode_ERR",
+			id:    "invalid_json_id",
+			sci:   sci,
+			want:  nil,
+			error: true,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := fetchConsumers(test.id, test.sci)
+			if err == nil && !reflect.DeepEqual(got, test.want) {
+				t.Errorf("fetchConsumers() got: %#v | want: %#v", got, test.want)
+				return
+			}
+			if (err != nil) != test.error {
+				t.Errorf("fetchConsumers() error: %v | want: %v", err, test.error)
+			}
+		})
+	}
+}
