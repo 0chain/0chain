@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS zerochain.magic_block_map (
-    id bigint,
+    id text,
     hash text,
     block_round bigint,
     PRIMARY KEY (id)
