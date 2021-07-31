@@ -518,7 +518,8 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 		}
 	}
 
-	if len(sendFail) > 0 {
+	failNum := len(sendFail)
+	if failNum > 0 && (len(sendTo)-failNum) < mb.K {
 		return nil, common.NewErrorf("failed to send sijs",
 			"failed to send share to miners: %v", sendFail)
 	}
