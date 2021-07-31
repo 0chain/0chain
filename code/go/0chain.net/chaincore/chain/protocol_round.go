@@ -265,8 +265,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
-	_ *block.Block) {
+func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
 	var (
 		rn     = r.GetRoundNumber()
@@ -275,12 +274,12 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 	params.Add("round", fmt.Sprintf("%v", rn))
 
-	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
+	cctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
 
+	notarizedBlockC := make(chan *block.Block, 1)
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
-
 		logging.Logger.Info("get notarized block for round", zap.Int64("round", rn),
 			zap.String("block", entity.GetKey()))
 
@@ -300,54 +299,69 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 				"Block not from the requested round")
 		}
 
-		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(), rn)
+		err = c.VerifyNotarization(cctx, nb, nb.GetVerificationTickets(), rn)
 		if err != nil {
 			logging.Logger.Error("get notarized block for round - validate notarization",
 				zap.Int64("round", rn), zap.String("block", nb.Hash),
 				zap.Error(err))
 			return
 		}
-		if err = nb.Validate(ctx); err != nil {
+		if err = nb.Validate(cctx); err != nil {
 			logging.Logger.Error("get notarized block for round - validate",
 				zap.Int64("round", rn), zap.String("block", nb.Hash),
 				zap.Error(err))
 			return
 		}
 
-		if nb.RoundTimeoutCount != r.GetTimeoutCount() {
-			logging.Logger.Info("Timeout count on Round and NB are out-of-sync",
-				zap.Int64("round", rn),
-				zap.Int("nb_toc", nb.RoundTimeoutCount),
-				zap.Int("round_toc", r.GetTimeoutCount()))
+		select {
+		case notarizedBlockC <- nb:
+		default:
 		}
-
-		var b *block.Block
-		// This is a notarized block. So, use this method to sync round info with the notarized block.
-		b, r, err = c.AddNotarizedBlockToRound(r, nb)
-		if err != nil {
-			logging.Logger.Error("get notarized block for round failed",
-				zap.Int64("round", rn),
-				zap.String("block", nb.Hash),
-				zap.String("miner", nb.MinerID),
-				zap.Error(err))
-			return
-		}
-
-		// TODO: this may not be the best round block or the best chain weight
-		// block. Do we do that extra work?
-		b, _, err = r.AddNotarizedBlock(b)
-		if err != nil {
-			logging.Logger.Error("get notarized block for round failed",
-				zap.Int64("round", rn),
-				zap.String("block", nb.Hash),
-				zap.String("miner", nb.MinerID),
-				zap.Error(err))
-			return
-		}
-		return b, nil
+		cancel()
+		return nb, nil
 	}
 
-	c.RequestEntityFromMinersOnMB(lctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
+	var nb *block.Block
+	select {
+	case nb = <-notarizedBlockC:
+	default:
+	}
+
+	if nb == nil {
+		return nil
+	}
+
+	if nb.RoundTimeoutCount != r.GetTimeoutCount() {
+		logging.Logger.Info("Timeout count on Round and NB are out-of-sync",
+			zap.Int64("round", rn),
+			zap.Int("nb_toc", nb.RoundTimeoutCount),
+			zap.Int("round_toc", r.GetTimeoutCount()))
+	}
+
+	var b *block.Block
+	// This is a notarized block. So, use this method to sync round info with the notarized block.
+	b, r, err := c.AddNotarizedBlockToRound(r, nb)
+	if err != nil {
+		logging.Logger.Error("get notarized block for round failed",
+			zap.Int64("round", rn),
+			zap.String("block", nb.Hash),
+			zap.String("miner", nb.MinerID),
+			zap.Error(err))
+		return nil
+	}
+
+	// TODO: this may not be the best round block or the best chain weight
+	// block. Do we do that extra work?
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("get notarized block for round failed",
+			zap.Int64("round", rn),
+			zap.String("block", nb.Hash),
+			zap.String("miner", nb.MinerID),
+			zap.Error(err))
+		return nil
+	}
 	return r.GetHeaviestNotarizedBlock()
 }
 
