@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -241,7 +242,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				zap.Any("phase", pn.Phase),
 				zap.Int64("phase start round", pn.StartRound),
 				zap.Int64("phase current round", pn.CurrentRound),
-				zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
 			msc.RestartDKG(pn, balances)
@@ -501,6 +501,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
+	logging.Logger.Debug("create magic block for wait", zap.Int64("view change", magicBlock.StartingRound))
 	gn.ViewChange = magicBlock.StartingRound
 	mpks = block.NewMpks()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
@@ -568,7 +569,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	mpks, err := getMinersMPKs(balances)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
@@ -692,28 +693,28 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
-		return "", common.NewErrorf("wait",
+		return "", common.NewErrorf("msc - wait",
 			"can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Wait {
-		return "", common.NewErrorf("wait", "this is not the"+
+		return "", common.NewErrorf("msc - wait", "this is not the"+
 			" correct phase to wait: %s", pn.Phase)
 	}
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
-		return "", common.NewErrorf("wait", "can't get DKG miners: %v", err)
+		return "", common.NewErrorf("msc - wait", "can't get DKG miners: %v", err)
 	}
 
 	if already, ok := dmn.Waited[t.ClientID]; ok && already {
-		return "", common.NewError("wait", "already checked in")
+		return "", common.NewError("msc - wait", "already checked in")
 	}
 
 	dmn.Waited[t.ClientID] = true
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
-		return "", common.NewErrorf("wait", "saving DKG miners: %v", err)
+		return "", common.NewErrorf("msc - wait", "saving DKG miners: %v", err)
 	}
 
 	return
