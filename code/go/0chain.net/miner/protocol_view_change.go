@@ -86,7 +86,6 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
-
 	// DKG process constants
 	const (
 		repeat = 5 * time.Second // repeat phase from sharders
@@ -115,10 +114,16 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 	defer ticker.Stop()
 
+	// initPhaseTimer fetches the phase from sharders immediately so that the phase could start
+	// immediately instead of waiting for the 5 seconds ticker.
+	initPhaseTimer := time.NewTimer(0)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-initPhaseTimer.C:
+			go mc.GetPhaseFromSharders(ctx)
 		case tp := <-ticker.C:
 			if tp.Sub(lastPhaseEventTime) <= repeat || len(phaseEventsChan) > 0 {
 				continue // already have a fresh phase
@@ -158,7 +163,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		logging.Logger.Debug("dkg process: trying",
 			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("next_phase", pn),
+			zap.Any("next_phase", pn.Phase.String()),
 			zap.Bool("active", active),
 			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
@@ -175,7 +180,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		logging.Logger.Info("dkg process: start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("next_phase", pn),
+			zap.Any("next_phase", pn.Phase.String()),
 			zap.Any("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
 		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
@@ -193,7 +198,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
 				zap.Any("current_phase", mc.CurrentPhase()),
-				zap.Any("next_phase", pn),
+				zap.Any("next_phase", pn.Phase.String()),
 				zap.Any("error", err),
 			)
 			if pn.Phase != minersc.Share {
@@ -666,10 +671,12 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	var magicBlock *block.MagicBlock
 	if magicBlock, err = mc.GetMagicBlockFromSC(ctx, lfb, mb, active); err != nil {
+		logging.Logger.Error("chain wait failed", zap.Error(err))
 		return // error
 	}
 
 	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
+		logging.Logger.Error("chain wait failed, magic miners does not have self node")
 		mc.viewChangeProcess.clearViewChange()
 		return // node leaves BC, don't do anything here
 	}
