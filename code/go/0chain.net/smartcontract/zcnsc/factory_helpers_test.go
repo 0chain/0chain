@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ADD_AUTHORIZER = "AddAuthorizer"
+	AddAuthorizer = "AddAuthorizer"
 )
 
 var (
@@ -36,12 +36,6 @@ func addTransactionData(tr *transaction.Transaction, methodName string, input []
 	tr.TransactionData = string(snBytes)
 }
 
-func GetNewAuthorizerWithBalance(pk string, id string, amount float64) *AuthorizerNode {
-	node := GetNewAuthorizer(pk, id)
-	node.Staking.Balance = zcnToBalance(amount)
-	return node
-}
-
 func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Transaction {
 	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
 	err := sigScheme.GenerateKeys()
@@ -52,7 +46,7 @@ func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Tr
 	pk := sigScheme.GetPublicKey()
 
 	var txn = &transaction.Transaction{
-		HashIDField:           datastore.HashIDField{Hash: txHash},
+		HashIDField:           datastore.HashIDField{Hash: txHash + "_transaction"},
 		CollectionMemberField: datastore.CollectionMemberField{},
 		VersionField:          datastore.VersionField{},
 		ClientID:              fromClient,
@@ -76,7 +70,7 @@ func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Tr
 		panic(err.Error())
 	}
 
-	addTransactionData(txn, ADD_AUTHORIZER, pkBytes)
+	addTransactionData(txn, AddAuthorizer, pkBytes)
 
 	return txn
 }
@@ -162,6 +156,8 @@ func createUserNode(id string, nonce int64) *UserNode {
 }
 
 func CreateMockAuthorizer(clientId string) *AuthorizerNode {
-	tr := CreateTransactionToZcnsc(clientId, 10)
-	return GetNewAuthorizerWithBalance(tr.PublicKey, clientId, 100)
+	tr := CreateTransactionToZcnsc(clientId, 100)
+	authorizerNode := GetNewAuthorizer(tr.PublicKey, clientId)
+	_, _, _ = authorizerNode.Staking.DigPool(tr.Hash, tr)
+	return authorizerNode
 }

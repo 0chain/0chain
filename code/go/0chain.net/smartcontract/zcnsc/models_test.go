@@ -139,7 +139,7 @@ func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) 
 	balances := MakeMockStateContext()
 
 	nodes, err := GetAuthorizerNodes(balances)
-	require.NoError(t, err, )
+	require.NoError(t, err)
 	err = nodes.AddAuthorizer(authorizer)
 	require.NoError(t, err, "must add authorizer")
 
@@ -197,7 +197,8 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizerWithBalance(tr.PublicKey, tr.ClientID, 100)
+	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 	node.Staking.ID = "11"
 
 	// Deserialize it into new instance
@@ -206,7 +207,7 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	err := target.Decode(node.Encode(), &TokenLock{})
 	require.NoError(t, err)
 	require.Equal(t, target.Staking.ID, "11")
-	require.Equal(t, int(target.Staking.Balance), 100)
+	require.Equal(t, int64(target.Staking.Balance), tr.Value)
 }
 
 // This will test authorizer node serialization

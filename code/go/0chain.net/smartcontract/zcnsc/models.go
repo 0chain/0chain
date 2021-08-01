@@ -318,7 +318,7 @@ func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					ID:      id,
+					ID:      "", // must be filled when DigPool is invoked
 					Balance: 0,
 				},
 			},

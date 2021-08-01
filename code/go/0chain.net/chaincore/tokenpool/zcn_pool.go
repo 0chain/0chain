@@ -56,8 +56,8 @@ func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, strin
 	return transfer, string(tpr.Encode()), nil
 }
 
-//ZcnPool to ZcnPool transfer
-func (p *ZcnPool) TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error) {
+// TransferTo ZcnPool to ZcnPool transfer
+func (p *ZcnPool) TransferTo(op TokenPoolI, value state.Balance, _ interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("pool-to-pool transfer failed", "value exceeds balance")
 	}
@@ -67,7 +67,7 @@ func (p *ZcnPool) TransferTo(op TokenPoolI, value state.Balance, entity interfac
 	return nil, string(tpr.Encode()), nil
 }
 
-func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, _ interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("draining pool failed", "value exceeds balance")
 	}
@@ -77,7 +77,7 @@ func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.
 	return transfer, string(tpr.Encode()), nil
 }
 
-func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error) {
+func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key, _ interface{}) (*state.Transfer, string, error) {
 	if p.Balance == 0 {
 		return nil, "", common.NewError("emptying pool failed", "pool already empty")
 	}

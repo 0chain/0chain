@@ -150,7 +150,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 }
 
 func Test_UpdateUserNode(t *testing.T) {
-	ctx := MakeMockStateContext()
+	ctx := MakeMockStateContext(t)
 	node, err := GetUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)

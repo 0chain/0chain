@@ -316,8 +316,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := GetNewAuthorizerWithBalance("key", tr.ClientID, 100)
-
+	an := GetNewAuthorizer("key", tr.ClientID)
 	_, _, err := an.Staking.DigPool(tr.Hash, tr)
 	require.NoError(t, err)
 }
@@ -377,7 +376,7 @@ func Test_GetAuthorizerNodes_ShouldBeAbleToReturnNodes(t *testing.T) {
 	require.NotNil(t, node)
 	require.NotNil(t, node.Staking.TokenLockInterface)
 
-	// without saving it won't be possible to get nodes
+	// without saving, it won't be possible to get nodes
 	err = ans.Save(balances)
 	require.NoError(t, err)
 
@@ -473,7 +472,7 @@ func Test_Authorizer_With_EmptyPool_Cannot_Be_Deleted(t *testing.T) {
 
 func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
 	ctx := MakeMockStateContext()
-	tr := CreateTransactionToZcnsc(authorizers[0], 10)
+	tr := CreateTransactionToZcnsc(authorizers[0], 100)
 
 	ans, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
