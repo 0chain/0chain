@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	Seperator = smartcontractinterface.Seperator
+	Separator = smartcontractinterface.Seperator
 	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
 	name      = "zrc20"
 )
@@ -33,12 +33,12 @@ func NewZRC20SmartContract() smartcontractinterface.SmartContractInterface {
 	return zrcCopy
 }
 
-func (ipsc *ZRC20SmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (zrc *ZRC20SmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return zrc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *ZRC20SmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (zrc *ZRC20SmartContract) GetExecutionStats() map[string]interface{} {
+	return zrc.SmartContractExecutionStats
 }
 
 func (zrc *ZRC20SmartContract) setSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {

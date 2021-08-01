@@ -9,7 +9,7 @@ import (
 	"0chain.net/core/common"
 )
 
-// inputData - is a BurnPayload
+// Burn inputData - is a BurnPayload
 func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := GetGlobalNode(balances)
 
