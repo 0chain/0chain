@@ -10,16 +10,21 @@ root_path := $(patsubst %/, %, $(dir $(make_path)))
 .PHONY: pre-push go-mod check-commit
 pre-push: go-mod check-commit
 
+.PHONY: check-commit go-get run-test
+check-commit: go-get run-test
+
 go-mod:
 	@echo "Prepare Go mod files..."
 	@cd $(root_path)/code/go/0chain.net && go mod tidy -v
 	@cd $(root_path)/code/go/0chain.net && go mod download -x
 	@echo "Go mod files completed."
 
-check-commit:
+go-get:
 	@echo "Load dependencies..."
 	@cd $(root_path)/code/go/0chain.net && go get -d ./...
 	@echo "Dependencies loaded."
+
+run-test:
 	@echo "Start testing..."
-	@cd $(root_path)/code/go/0chain.net && go test ./...
+	@cd $(root_path)/code/go/0chain.net && go test -tags bn256 -cover ./...
 	@echo "Tests completed."

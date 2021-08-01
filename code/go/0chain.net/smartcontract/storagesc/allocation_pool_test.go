@@ -151,8 +151,6 @@ func Test_allocationPools(t *testing.T) {
 	require.Nil(t, ap)
 	require.False(t, ok)
 
-	require.False(t, aps.remove("alloc_id"))
-
 	var (
 		a1, a2, a3, a4, a5 = "a1", "a2", "a3", "a4", "a5"
 		random             = []string{a4, a1, a3, a5, a2}
@@ -185,12 +183,6 @@ func Test_allocationPools(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, aps[i], ap)
 
-	aps.removeByIndex(i)
-	aps.remove(a4)
-	for i, o := range []string{a1, a1, a2, a2, a3, a4, a5, a5} {
-		require.Equal(t, aps[i].AllocationID, o)
-	}
-
 	// special methods
 
 	//
@@ -212,10 +204,12 @@ func Test_allocationPools(t *testing.T) {
 	cut = aps.allocationCut(a3)
 	require.EqualValues(t, []*allocationPool{
 		&allocationPool{AllocationID: a3},
+		&allocationPool{AllocationID: a3},
 	}, cut)
 
 	cut = aps.allocationCut(a4)
 	require.EqualValues(t, []*allocationPool{
+		&allocationPool{AllocationID: a4},
 		&allocationPool{AllocationID: a4},
 	}, cut)
 

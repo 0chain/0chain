@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/common"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
+	"0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
 )
 
@@ -111,19 +111,19 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 		err := sc.storeTransactions(ctx, sTxns)
 		if err != nil {
 			delay = 2 * delay
-			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
+			logging.Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
-
-		} else {
-			Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
-			break
+			continue
 		}
+
+		logging.Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
+		break
 	}
 	duration := time.Since(ts)
 	txnSaveTimer.UpdateSince(ts)
 	p95 := txnSaveTimer.Percentile(.95)
 	if txnSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		Logger.Info("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		logging.Logger.Info("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	}
 	return nil
 }
@@ -135,7 +135,6 @@ func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity
 	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 }
 
-var txnTableIndexed = false
 var txnSummaryMV = false
 var roundToHashMVTable = "round_to_hash"
 
@@ -144,17 +143,11 @@ func txnSummaryCreateMV(targetTable string, srcTable string) string {
 		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
 		targetTable, srcTable)
 }
-func getCreateIndex(table string, column string) string {
-	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS ON %v(%v)", table, column)
-}
 
 func getSelectCountTxn(table string, column string) string {
 	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=?", table, column)
 }
 
-func getSelectTxn(table string, column string) string {
-	return fmt.Sprintf("SELECT round FROM %v where %v=?", table, column)
-}
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
@@ -165,50 +158,15 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 		if err == nil {
 			txnSummaryMV = true
 		} else {
-			Logger.Info("create mv", zap.Error(err))
+			logging.Logger.Info("create mv", zap.Error(err))
 			txnSummaryMV = true
 			return 0, err
 		}
 	}
 	// Get the query to get the select count transactions.
-	q := c.Query(getSelectCountTxn(roundToHashMVTable, "round"))
-	q.Bind(r)
-	iter := q.Iter()
 	var count int
-	valid := iter.Scan(&count)
-	if !valid {
-		return 0, common.NewError("txns_count_failed", fmt.Sprintf("txn count retrieval for round = %v failed", r))
-	}
-	if err := iter.Close(); err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-func (sc *Chain) getTxnAndCountForRound(ctx context.Context, r int64) (int, error) {
-	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
-	defer persistencestore.Close(tctx)
-	c := persistencestore.GetCon(tctx)
-	if !txnTableIndexed {
-		err := c.Query(getCreateIndex(txnSummaryEntityMetadata.GetName(), "round")).Exec()
-		if err == nil {
-			txnTableIndexed = true
-		} else {
-			return 0, err
-		}
-	}
-	// Get the
-	q := c.Query(getSelectTxn(txnSummaryEntityMetadata.GetName(), "round"))
-	q.Bind(r)
-	// Now iterate
-	iter := q.Iter()
-	var round int
-	var count int
-	for iter.Scan(&round) {
-		count++
-	}
-	if err := iter.Close(); err != nil {
-		return 0, err
+	if err := c.Query(getSelectCountTxn(roundToHashMVTable, "round"), r).Scan(&count); err != nil {
+		return 0, common.NewError("txns_count_failed", fmt.Sprintf("round: %v, err: %v", r, err))
 	}
 	return count, nil
 }
