@@ -36,7 +36,7 @@ func Test_FuzzyBurnTest(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -48,7 +48,7 @@ func Test_BurnPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
 	node, err := GetUserNode(clientId, ctx)
@@ -66,7 +66,7 @@ func Test_PayloadNonceLessOrEqualThanUserNonce_Fails(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
 
@@ -104,7 +104,7 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	burn, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.Error(t, err)
@@ -118,7 +118,7 @@ func Test_EthereumAddressShouldBeFilled(t *testing.T) {
 
 	tr = CreateDefaultTransactionToZcnsc()
 	contract = CreateZCNSmartContract()
-	ctx = CreateMockStateContext(clientId)
+	ctx = MakeMockStateContext()
 
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -150,7 +150,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 }
 
 func Test_UpdateUserNode(t *testing.T) {
-	ctx := MakeMockStateContext(t)
+	ctx := MakeMockStateContext()
 	node, err := GetUserNode(clientId, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
@@ -175,11 +175,11 @@ func Test_UserNodeEncode_Decode(t *testing.T) {
 	require.Equal(t, node.Nonce, actual.Nonce)
 }
 
-func Test_burn_should_return_encoded_payload(t *testing.T) {
+func Test_Burn_should_return_encoded_payload(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
@@ -197,7 +197,7 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	payload := createBurnPayload()
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := CreateMockStateContext(clientId)
+	ctx := MakeMockStateContext()
 
 	resp, err := contract.Burn(tr, payload.Encode(), ctx)
 	require.NoError(t, err)

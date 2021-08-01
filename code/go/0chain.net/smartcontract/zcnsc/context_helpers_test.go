@@ -25,19 +25,21 @@ func zcnToBalance(token float64) state.Balance {
 }
 
 func MakeMockStateContext() *mocks.StateContextI {
+	ctx := mocks.StateContextI{}
 
+	// Global Node
 	globalNode := &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
+
+	// User Node
 	userNodes := make(map[string]*UserNode)
 	for _, client := range authorizers {
 		userNode := createUserNode(client, int64(0))
 		userNodes[userNode.GetKey(ADDRESS)] = userNode
 	}
 
-	ctx := mocks.StateContextI{}
-
+	// AuthorizerNodes
 	ans := &AuthorizerNodes{}
 	ans.NodeMap = make(map[string]*AuthorizerNode)
-
 	for _, authorizer := range authorizers {
 		err := ans.AddAuthorizer(CreateMockAuthorizer(authorizer))
 		if err != nil {
@@ -45,13 +47,33 @@ func MakeMockStateContext() *mocks.StateContextI {
 		}
 	}
 
+	// Transfers
+	var transfers []*state.Transfer
+
+	/// GetClientBalance
+
 	ctx.
 		On("GetClientBalance", mock.AnythingOfType("string")).
 		Return(5, nil)
 
+	/// AddTransfer
+
 	ctx.
 		On("AddTransfer", mock.AnythingOfType("*state.Transfer")).
-		Return(nil)
+		Return(
+			func(transfer *state.Transfer) error {
+				transfers = append(transfers, transfer)
+				return nil
+			})
+
+	/// GetTransfers
+
+	ctx.
+		On("GetTransfers").
+		Return(
+			func() []*state.Transfer {
+				return transfers
+			})
 
 	/// GetTrieNode
 
@@ -143,7 +165,7 @@ func MakeMockStateContext() *mocks.StateContextI {
 				return nil
 			})
 
-	////////////////////////////
+	/// AddMint
 
 	for _, authorizer := range authorizers {
 		client := authorizer
