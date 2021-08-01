@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +18,7 @@ func TestRespond(t *testing.T) {
 	t.Parallel()
 
 	var (
-		err  = errors.New("code", "msg")
+		err  = zchainErrors.New("code", "msg")
 		data = map[string]string{
 			"key": "value",
 		}

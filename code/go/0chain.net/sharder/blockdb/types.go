@@ -4,10 +4,10 @@ import (
 	"context"
 	"io"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
-var ErrKeyNotFound = errors.Register("key not found")
+var ErrKeyNotFound = zchainErrors.New("key not found")
 
 //Key - type for the record's identifier
 type Key string

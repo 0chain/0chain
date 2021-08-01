@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"gopkg.in/yaml.v2"
 
 	"0chain.net/conductor/conductrpc"
@@ -264,14 +264,14 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 
 	if !r.waitNoViewChange.IsZero() {
 		if r.waitNoViewChange.Round <= vce.Round {
-			return errors.Newf("","no VC until %d round is expected, but got on %d",
+			return zchainErrors.Newf("", "no VC until %d round is expected, but got on %d",
 				r.waitNoViewChange.Round, vce.Round)
 		}
 	}
 
 	r.printViewChange(vce) // if verbose
 	if !r.conf.Nodes.Has(vce.Sender) {
-		return errors.Newf("","unknown node %q sends view change", vce.Sender)
+		return zchainErrors.Newf("", "unknown node %q sends view change", vce.Sender)
 	}
 	log.Println("view change:", vce.Round, vce.Sender)
 	// don't wait a VC
@@ -293,19 +293,19 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	if rnan := emb.RoundNextVCAfter; rnan != "" {
 		var rna, ok = r.rounds[rnan]
 		if !ok {
-			return errors.Newf("","unknown round name: %q", rnan)
+			return zchainErrors.Newf("", "unknown round name: %q", rnan)
 		}
 		var vcr = vce.Round // VC round
 		if vcr != r.conf.ViewChange+rna {
-			return errors.Newf("","VC expected at %d, but given at %d",
+			return zchainErrors.Newf("", "VC expected at %d, but given at %d",
 				r.conf.ViewChange+rna, vcr)
 		}
 		// ok, accept
 	} else if emb.Round != 0 && vce.Round != emb.Round {
-		return errors.Newf("","VC expected at %d, but given at %d",
+		return zchainErrors.Newf("", "VC expected at %d, but given at %d",
 			emb.Round, vce.Round)
 	} else if emb.Number != 0 && vce.Number != emb.Number {
-		return errors.Newf("","VC expected with %d number, but given number is %d",
+		return zchainErrors.Newf("", "VC expected with %d number, but given number is %d",
 			emb.Number, vce.Number)
 	}
 	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
@@ -332,7 +332,7 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	}
 
 	if !okm || !oks {
-		return errors.Newf("","unexpected MB miners/sharders (see logs)")
+		return zchainErrors.Newf("", "unexpected MB miners/sharders (see logs)")
 	}
 
 	log.Println("[OK] view change", vce.Round)
@@ -347,7 +347,7 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		return // not the monitor node
 	}
 	if !r.conf.Nodes.Has(pe.Sender) {
-		return errors.Newf("","unknown 'phase' sender: %s", pe.Sender)
+		return zchainErrors.Newf("", "unknown 'phase' sender: %s", pe.Sender)
 	}
 	if r.verbose {
 		log.Print(" [INF] phase ", pe.Phase.String(), " ", pe.Sender)
@@ -364,13 +364,13 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	)
 	if vcrn := r.waitPhase.ViewChangeRound; vcrn != "" {
 		if vcr, ok = r.rounds[vcrn]; !ok {
-			return errors.Newf("","unknown view_change_round of phase: %s", vcrn)
+			return zchainErrors.Newf("", "unknown view_change_round of phase: %s", vcrn)
 		}
 		if vcr < r.lastVCRound {
 			return // wait one more view change
 		}
 		if vcr >= r.lastVCRound+r.conf.ViewChange {
-			return errors.Newf("","got phase %s, but after %s (%d) view change, "+
+			return zchainErrors.Newf("", "got phase %s, but after %s (%d) view change, "+
 				"last known view change: %d", pe.Phase.String(), vcrn, vcr,
 				r.lastVCRound)
 		}
@@ -390,10 +390,10 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 		added, aok  = r.conf.Nodes.NodeByName(addm.Miner)
 	)
 	if !sok {
-		return errors.Newf("","unexpected add_miner sender: %q", addm.Sender)
+		return zchainErrors.Newf("", "unexpected add_miner sender: %q", addm.Sender)
 	}
 	if !aok {
-		return errors.Newf("","unexpected miner %q added by add_miner of %q",
+		return zchainErrors.Newf("", "unexpected miner %q added by add_miner of %q",
 			addm.Miner, sender.Name)
 	}
 
@@ -420,10 +420,10 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 		added, aok  = r.conf.Nodes.NodeByName(adds.Sharder)
 	)
 	if !sok {
-		return errors.Newf("","unexpected add_sharder sender: %q", adds.Sender)
+		return zchainErrors.Newf("", "unexpected add_sharder sender: %q", adds.Sender)
 	}
 	if !aok {
-		return errors.Newf("","unexpected sharder %q added by add_sharder of %q",
+		return zchainErrors.Newf("", "unexpected sharder %q added by add_sharder of %q",
 			adds.Sharder, sender.Name)
 	}
 
@@ -452,10 +452,10 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 		added, aok  = r.conf.Nodes.NodeByName(addb.Blobber)
 	)
 	if !sok {
-		return errors.Newf("","unexpected add_miner sender: %q", addb.Sender)
+		return zchainErrors.Newf("", "unexpected add_miner sender: %q", addb.Sender)
 	}
 	if !aok {
-		return errors.Newf("","unexpected blobber %q added by add_blobber of %q",
+		return zchainErrors.Newf("", "unexpected blobber %q added by add_blobber of %q",
 			addb.Blobber, sender.Name)
 	}
 
@@ -484,10 +484,10 @@ func (r *Runner) acceptSharderKeep(ske *conductrpc.SharderKeepEvent) (
 		added, aok  = r.conf.Nodes.NodeByName(ske.Sharder)
 	)
 	if !sok {
-		return errors.Newf("","unexpected sharder_keep sender: %q", ske.Sender)
+		return zchainErrors.Newf("", "unexpected sharder_keep sender: %q", ske.Sender)
 	}
 	if !aok {
-		return errors.Newf("","unexpected sharder %q added by sharder_keep of %q",
+		return zchainErrors.Newf("", "unexpected sharder %q added by sharder_keep of %q",
 			ske.Sharder, sender.Name)
 	}
 
@@ -509,14 +509,14 @@ func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 	if _, ok := r.waitNodes[nodeName]; !ok {
 		var n, ok = r.conf.Nodes.NodeByName(nodeName)
 		if !ok {
-			return errors.Newf("","unexpected and unknown node: %s", nodeName)
+			return zchainErrors.Newf("", "unexpected and unknown node: %s", nodeName)
 		}
-		return errors.Newf("","unexpected node: %s (%s)", n.Name, nodeName)
+		return zchainErrors.Newf("", "unexpected node: %s (%s)", n.Name, nodeName)
 	}
 	delete(r.waitNodes, nodeName)
 	var n, ok = r.conf.Nodes.NodeByName(nodeName)
 	if !ok {
-		return errors.Newf("","unknown node: %s", nodeName)
+		return zchainErrors.Newf("", "unknown node: %s", nodeName)
 	}
 	log.Println("[OK] node ready", nodeName, n.Name)
 	return
@@ -530,7 +530,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if !r.waitNoProgressUntil.IsZero() {
 		r.waitNoPreogressCount++
 		if r.waitNoPreogressCount >= noProgressRounds {
-			return errors.Newf("","got round %d, but 'no progress' is expected"+
+			return zchainErrors.Newf("", "got round %d, but 'no progress' is expected"+
 				" (got > %d rounds)", re.Round, r.waitNoPreogressCount)
 		}
 	}
@@ -544,13 +544,13 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if !r.waitViewChange.IsZero() {
 		var vcr = r.waitViewChange.ExpectMagicBlock.Round
 		if vcr != 0 && vcr < re.Round {
-			return errors.Newf("","missing VC at %d", vcr)
+			return zchainErrors.Newf("", "missing VC at %d", vcr)
 		}
 	}
 
 	var _, ok = r.conf.Nodes.NodeByName(re.Sender)
 	if !ok {
-		return errors.Newf("","unknown 'round' sender: %s", re.Sender)
+		return zchainErrors.Newf("", "unknown 'round' sender: %s", re.Sender)
 	}
 	if r.verbose {
 		// log.Print(" [INF] round ", re.Round, " ", n.Name)
@@ -570,7 +570,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		log.Print("[OK] accept round ", re.Round)
 		r.waitRound.Round = 0 // doesn't wait anymore
 	case r.waitRound.Round < re.Round:
-		return errors.Newf("","missing round: %d, got %d", r.waitRound.Round,
+		return zchainErrors.Newf("", "missing round: %d, got %d", r.waitRound.Round,
 			re.Round)
 	}
 
@@ -590,11 +590,11 @@ func (r *Runner) acceptContributeMPK(cmpke *conductrpc.ContributeMPKEvent) (
 	)
 	_, ok = r.conf.Nodes.NodeByName(cmpke.Sender)
 	if !ok {
-		return errors.Newf("","unknown 'c mpk' sender: %s", cmpke.Sender)
+		return zchainErrors.Newf("", "unknown 'c mpk' sender: %s", cmpke.Sender)
 	}
 	miner, ok = r.conf.Nodes.NodeByName(cmpke.Miner)
 	if !ok {
-		return errors.Newf("","unknown 'c mpk' miner: %s", cmpke.Miner)
+		return zchainErrors.Newf("", "unknown 'c mpk' miner: %s", cmpke.Miner)
 	}
 
 	if r.verbose {
@@ -628,11 +628,11 @@ func (r *Runner) acceptShareOrSignsShares(
 	)
 	_, ok = r.conf.Nodes.NodeByName(sosse.Sender)
 	if !ok {
-		return errors.Newf("","unknown 'soss' sender: %s", sosse.Sender)
+		return zchainErrors.Newf("", "unknown 'soss' sender: %s", sosse.Sender)
 	}
 	miner, ok = r.conf.Nodes.NodeByName(sosse.Miner)
 	if !ok {
-		return errors.Newf("","unknown 'soss' miner: %s", sosse.Miner)
+		return zchainErrors.Newf("", "unknown 'soss' miner: %s", sosse.Miner)
 	}
 
 	if r.verbose {
@@ -688,7 +688,7 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptShareOrSignsShares(sosse)
 		case err = <-r.waitCommand:
 			if err != nil {
-				err = errors.Newf("","executing command: %v", err)
+				err = zchainErrors.Newf("", "executing command: %v", err)
 			}
 			r.waitCommand = nil // reset
 		case timeout := <-tm.C:
@@ -699,7 +699,7 @@ func (r *Runner) proceedWaiting() (err error) {
 					return
 				}
 			}
-			return errors.Newf("","timeout error")
+			return zchainErrors.Newf("", "timeout error")
 		}
 		if err != nil {
 			return

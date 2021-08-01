@@ -5,7 +5,8 @@ package miner
 import (
 	"context"
 	"fmt"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 	"math"
 	"math/rand"
 	"time"
@@ -19,7 +20,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -32,7 +33,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 	var state = crpc.Client().State()
 
 	if !state.SignOnlyCompetingBlocks.IsCompetingGroupMember(state, b.MinerID) {
-		return nil, errors.New("skip block signing -- not competing block")
+		return nil, zchainErrors.New("skip block signing -- not competing block")
 	}
 
 	// regular or competing signing
@@ -258,7 +259,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", count),
 				zap.Int32("block_size", blockSize))
-			return errors.New(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
+			return zchainErrors.New(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
@@ -296,7 +297,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		cl := clients[txn.ClientID]
 		if cl == nil || cl.PublicKey == "" {
 			logging.Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
-			return errors.New("invalid_client", "client not available")
+			return zchainErrors.New("invalid_client", "client not available")
 		}
 		txn.PublicKey = cl.PublicKey
 		txn.ClientID = datastore.EmptyKey

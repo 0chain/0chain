@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"0chain.net/core/encryption"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // A SignedTransfer is a balance transfer from one client to another that has
@@ -12,8 +12,8 @@ import (
 type SignedTransfer struct {
 	Transfer
 	SchemeName string
-	PublicKey string
-	Sig string
+	PublicKey  string
+	Sig        string
 }
 
 func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
@@ -32,7 +32,7 @@ func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
 // Verify that the signature on the transfer is correct.
 func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 	if !encryption.IsValidSignatureScheme(st.SchemeName) {
-		return errors.New("invalid_signature_scheme", "invalid signature scheme")
+		return zchainErrors.New("invalid_signature_scheme", "invalid signature scheme")
 	}
 
 	if requireSendersSignature {
@@ -46,7 +46,7 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 
 	err := sigScheme.SetPublicKey(st.PublicKey)
 	if err != nil {
-		return errors.New("invalid_public_key", "invalid public key")
+		return zchainErrors.New("invalid_public_key", "invalid public key")
 	}
 
 	hash := st.computeTransferHash()
@@ -56,7 +56,7 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 		return err
 	}
 	if !correctSignature {
-		return errors.New("invalid_transfer_signature", "Invalid signature on transfer")
+		return zchainErrors.New("invalid_transfer_signature", "Invalid signature on transfer")
 	}
 
 	return nil
@@ -65,11 +65,11 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 func (st SignedTransfer) verifyPublicKey() error {
 	publicKeyBytes, err := hex.DecodeString(st.PublicKey)
 	if err != nil {
-		return errors.New("invalid_public_key", "invalid public key format")
+		return zchainErrors.New("invalid_public_key", "invalid public key format")
 	}
 
 	if encryption.Hash(publicKeyBytes) != st.Transfer.ClientID {
-		return errors.New("wrong_public_key", "public key does not match client id")
+		return zchainErrors.New("wrong_public_key", "public key does not match client id")
 	}
 
 	return nil

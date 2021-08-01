@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
-var ErrKeyRead = errors.Register("error reading the keys")
-var ErrInvalidSignatureScheme = errors.Register("invalid signature scheme")
+var ErrKeyRead = zchainErrors.New("error reading the keys")
+var ErrInvalidSignatureScheme = zchainErrors.New("invalid signature scheme")
 
 //SignatureScheme - an encryption scheme for signing and verifying messages
 type SignatureScheme interface {

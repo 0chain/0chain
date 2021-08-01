@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"github.com/stretchr/testify/mock"
 
@@ -173,7 +173,7 @@ func TestGetEntityHandler(t *testing.T) {
 	)
 	e.On("Read", context.Context(nil), mock.AnythingOfType("string")).Return(
 		func(ctx context.Context, _ datastore.Key) error {
-			return errors.New("")
+			return zchainErrors.New("")
 		},
 	)
 

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type keyo struct {
@@ -41,7 +41,7 @@ func (mi *mapIndex) GetOffset(key Key) (int64, error) {
 	defer mi.mutex.RUnlock()
 	offset, ok := mi.index[key]
 	if !ok {
-		return -1, ErrKeyNotFound()
+		return -1, ErrKeyNotFound
 	}
 	return offset, nil
 }
@@ -74,7 +74,7 @@ func (mi *mapIndex) Encode(writer io.Writer) error {
 			return err
 		}
 		if n != len(key) {
-			return errors.New("written bytes length doesn't match the key length")
+			return zchainErrors.New("written bytes length doesn't match the key length")
 		}
 		err = binary.Write(buffer, binary.LittleEndian, offset)
 		if err != nil {
@@ -106,7 +106,7 @@ func (mi *mapIndex) Decode(reader io.Reader) error {
 			return err
 		}
 		if int8(n) != klen {
-			return errors.New("coudld not read the required number of bytes")
+			return zchainErrors.New("coudld not read the required number of bytes")
 		}
 		var key = Key(buf)
 		var offset int64
@@ -152,7 +152,7 @@ func (fkai *fixedKeyArrayIndex) getKeySize() int8 {
 
 //SetOffset - set the offset of the given record
 func (fkai *fixedKeyArrayIndex) SetOffset(_ Key, _ int64) error {
-	return errors.New("method not supported for this implementation")
+	return zchainErrors.New("method not supported for this implementation")
 }
 
 //GetOffset - get the offset of the given record */
@@ -184,7 +184,7 @@ func (fkai *fixedKeyArrayIndex) GetOffset(key Key) (int64, error) {
 			hi = mid - 1
 		}
 	}
-	return -1, ErrKeyNotFound()
+	return -1, ErrKeyNotFound
 }
 
 func (fkai *fixedKeyArrayIndex) GetKeys() []Key {
@@ -218,7 +218,7 @@ func (fkai *fixedKeyArrayIndex) Decode(reader io.Reader) error {
 		return err
 	}
 	if n != sz {
-		return errors.New("couldn't read the entire index")
+		return zchainErrors.New("couldn't read the entire index")
 	}
 	/*
 		for i := int32(0); i < numKeys; i++ {

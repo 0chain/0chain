@@ -7,7 +7,8 @@ import (
 	"sort"
 
 	"0chain.net/smartcontract"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -140,14 +141,14 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return
 	}
 	if sps.ServiceCharge < 0.0 {
-		return errors.New("negative service charge")
+		return zchainErrors.New("negative service charge")
 	}
 	if sps.ServiceCharge > conf.MaxCharge {
-		return errors.Newf("", "service_charge (%f) is greater than"+
+		return zchainErrors.Newf("", "service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.NumDelegates <= 0 {
-		return errors.New("num_delegates <= 0")
+		return zchainErrors.New("num_delegates <= 0")
 	}
 	return
 }
@@ -282,7 +283,7 @@ func (sp *stakePool) timeToUnstake(dp *delegatePool) (
 	tp common.Timestamp, err error) {
 
 	if len(sp.Offers) == 0 {
-		return 0, errors.Newf("", "invalid state: no offer, but can't unlock"+
+		return 0, zchainErrors.Newf("", "invalid state: no offer, but can't unlock"+
 			" tokens trying to mark them as 'unstake': %s", dp.ID)
 	}
 
@@ -346,17 +347,17 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
-		return "", 0, errors.Newf("", "no such delegate pool: %q", poolID)
+		return "", 0, zchainErrors.Newf("", "no such delegate pool: %q", poolID)
 	}
 
 	if dp.DelegateID != clientID {
-		return "", 0, errors.New("trying to unlock not by delegate pool owner")
+		return "", 0, zchainErrors.New("trying to unlock not by delegate pool owner")
 	}
 
 	if info.stake-info.offers-dp.Balance < 0 {
 		// is marked as 'unstake'
 		if dp.Unstake > 0 {
-			return "", 0, errors.New("the stake pool locked for opened " +
+			return "", 0, zchainErrors.New("the stake pool locked for opened " +
 				"offers and already marked as 'unstake'")
 		}
 		if unstake, err = sp.timeToUnstake(dp); err != nil {
@@ -408,7 +409,7 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 			float64(balloc.Terms.WritePrice))
 	)
 	if op == nil {
-		return errors.New("missing offer pool for " + alloc.ID)
+		return zchainErrors.New("missing offer pool for " + alloc.ID)
 	}
 	// unlike a write pool, here we can reduce a lock
 	op.Lock = newLock
@@ -461,7 +462,7 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	})
 
 	if err != nil {
-		return mint, errors.Newf("", "adding mint: %v", err)
+		return mint, zchainErrors.Newf("", "adding mint: %v", err)
 	}
 
 	dp.Interests += mint
@@ -583,7 +584,7 @@ func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
 			continue
 		}
 		if _, _, err = dp.TransferTo(ap, one, nil); err != nil {
-			return 0, errors.Newf("", "transferring blobber slash: %v", err)
+			return 0, zchainErrors.Newf("", "transferring blobber slash: %v", err)
 		}
 		dp.Penalty += one
 		move += one
@@ -786,7 +787,7 @@ func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
 	usp = newUserStakePools()
 	err = usp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding())
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 	return
 }
@@ -798,11 +799,11 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 	var poolb []byte
 	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return newUserStakePools(), nil
 	}
 
@@ -837,7 +838,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	sp = newStakePool()
 	err = sp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding())
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 	return
 }
@@ -851,16 +852,16 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
 	if err = settings.validate(conf); err != nil {
-		return nil, errors.Newf("", "invalid stake_pool settings: %v", err)
+		return nil, zchainErrors.Newf("", "invalid stake_pool settings: %v", err)
 	}
 
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
-		return nil, errors.Newf("", "unexpected error: %v", err)
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		return nil, zchainErrors.Newf("", "unexpected error: %v", err)
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		sp, err = newStakePool(), nil
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 	}
@@ -877,15 +878,15 @@ func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
 
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(ba.BlobberID, balances); err != nil {
-		return errors.Newf("", "can't get stake pool of %s: %v", ba.BlobberID,
+		return zchainErrors.Newf("", "can't get stake pool of %s: %v", ba.BlobberID,
 			err)
 	}
 	if err = sp.extendOffer(alloc, ba); err != nil {
-		return errors.Newf("", "can't change stake pool offer %s: %v", ba.BlobberID,
+		return zchainErrors.Newf("", "can't change stake pool offer %s: %v", ba.BlobberID,
 			err)
 	}
 	if err = sp.save(ssc.ID, ba.BlobberID, balances); err != nil {
-		return errors.Newf("", "can't save stake pool of %s: %v", ba.BlobberID,
+		return zchainErrors.Newf("", "can't save stake pool of %s: %v", ba.BlobberID,
 			err)
 	}
 
@@ -919,29 +920,29 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"can't get SC configurations: %v", err)
 	}
 
 	if t.Value < int64(conf.StakePool.MinLock) {
-		return "", errors.New("stake_pool_lock_failed",
+		return "", zchainErrors.New("stake_pool_lock_failed",
 			"too small stake to lock")
 	}
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"invalid request: %v", err)
 	}
 
 	var sp *stakePool
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
 
 	if len(sp.Pools) >= conf.MaxDelegates {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"max_delegates reached: %v, no more stake pools allowed",
 			conf.MaxDelegates)
 	}
@@ -949,24 +950,24 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	var info *stakePoolUpdateInfo
 	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"updating stake pool: %v", err)
 	}
 	conf.Minted += info.minted
 	if conf.Minted >= conf.MaxMint {
-		return "", errors.Newf("stake_pool_lock_failed", "reached max mint")
+		return "", zchainErrors.Newf("stake_pool_lock_failed", "reached max mint")
 	}
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"saving configurations: %v", err)
 	}
 
 	var dp *delegatePool // created delegate pool
 	if resp, dp, err = sp.dig(t, balances); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"stake pool digging error: %v", err)
 	}
 
@@ -974,18 +975,18 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	var usp *userStakePools
 	usp, err = ssc.getOrCreateUserStakePool(t.ClientID, balances)
 	if err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"can't get user pools list: %v", err)
 	}
 	usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
 
 	if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"saving user pools: %v", err)
 	}
 
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
-		return "", errors.Newf("stake_pool_lock_failed",
+		return "", zchainErrors.Newf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
 	}
 
@@ -1004,23 +1005,23 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"can't decode request: %v", err)
 	}
 
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"can't get SC configurations: %v", err)
 	}
 
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
 
 	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"updating stake pool: %v", err)
 	}
 	conf.Minted += info.minted
@@ -1028,14 +1029,14 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"saving configuration: %v", err)
 	}
 
 	var usp *userStakePools
 	usp, err = ssc.getUserStakePool(t.ClientID, balances)
 	if err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"can't get related user stake pools: %v", err)
 	}
 
@@ -1043,7 +1044,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info,
 		balances)
 	if err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
 	}
 
@@ -1052,7 +1053,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	if unstake > 0 {
 		// save the pool and return special result
 		if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
-			return "", errors.Newf("stake_pool_unlock_failed",
+			return "", zchainErrors.Newf("stake_pool_unlock_failed",
 				"saving stake pool: %v", err)
 		}
 		return toJson(&unlockResponse{Unstake: unstake}), nil
@@ -1065,13 +1066,13 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	}
 
 	if err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"saving user pools: %v", err)
 	}
 
 	// save the pool
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
-		return "", errors.Newf("stake_pool_unlock_failed",
+		return "", zchainErrors.Newf("stake_pool_unlock_failed",
 			"saving stake pool: %v", err)
 	}
 
@@ -1089,41 +1090,41 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 	)
 
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get SC configurations"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"can't get SC configurations").Error())
 
 	}
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get SC configurations"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"can't get SC configurations").Error())
 	}
 
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get related stake pool"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"can't get related stake pool").Error())
 	}
 
 	var info *stakePoolUpdateInfo
 	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"updating stake pool"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"updating stake pool").Error())
 	}
 	conf.Minted += info.minted
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"saving configurations"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"saving configurations").Error())
 	}
 
 	// save the pool
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"saving stake pool"))
+		return "", errors.Wrap(err, zchainErrors.New("stake_pool_take_rewards_failed",
+			"saving stake pool").Error())
 	}
 
 	return "interests has payed", nil

@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 
 	"0chain.net/core/datastore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
-var ErrInvalidMint = errors.Register("invalid_mint", "invalid minter")
+var ErrInvalidMint = zchainErrors.New("invalid_mint", "invalid minter")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {

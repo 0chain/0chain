@@ -3,7 +3,8 @@ package minersc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
@@ -11,13 +12,13 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	resp string, err error) {
 	all, err := getMinersList(balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("miner_health_check_failed", "Failed to get miner list"))
+		return "", errors.Wrap(err, zchainErrors.New("miner_health_check_failed", "Failed to get miner list").Error())
 
 	}
 
 	var existingMiner *MinerNode
 	if existingMiner, err = getMinerNode(t.ClientID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("miner_health_check_failed", "can't get the miner "+t.ClientID))
+		return "", errors.Wrap(err, zchainErrors.New("miner_health_check_failed", "can't get the miner "+t.ClientID).Error())
 
 	}
 
@@ -31,14 +32,14 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	if err = updateMinersList(balances, all); err != nil {
-		return "", errors.Wrap(err, errors.New("miner_health_check_failed",
-			"can't save all miners list"))
+		return "", errors.Wrap(err, zchainErrors.New("miner_health_check_failed",
+			"can't save all miners list").Error())
 	}
 
 	err = existingMiner.save(balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("miner_health_check_failed",
-			"can't save miner"))
+		return "", errors.Wrap(err, zchainErrors.New("miner_health_check_failed",
+			"can't save miner").Error())
 	}
 
 	return string(existingMiner.Encode()), nil
@@ -49,15 +50,15 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 	resp string, err error) {
 	all, err := getAllShardersList(balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"Failed to get sharder list"))
+		return "", errors.Wrap(err, zchainErrors.New("sharder_health_check_failed",
+			"Failed to get sharder list").Error())
 
 	}
 
 	var existingSharder *MinerNode
 	if existingSharder, err = msc.getSharderNode(t.ClientID, balances); err != nil {
-		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't get the sharder "+t.ClientID))
+		return "", errors.Wrap(err, zchainErrors.New("sharder_health_check_failed",
+			"can't get the sharder "+t.ClientID).Error())
 	}
 
 	existingSharder.LastHealthCheck = t.CreationDate
@@ -70,14 +71,14 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 	}
 
 	if err = updateAllShardersList(balances, all); err != nil {
-		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't save all sharders list"))
+		return "", errors.Wrap(err, zchainErrors.New("sharder_health_check_failed",
+			"can't save all sharders list").Error())
 	}
 
 	err = existingSharder.save(balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("sharder_health_check_failed",
-			"can't save sharder"))
+		return "", errors.Wrap(err, zchainErrors.New("sharder_health_check_failed",
+			"can't save sharder").Error())
 
 	}
 

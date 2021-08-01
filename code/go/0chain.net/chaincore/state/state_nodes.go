@@ -116,7 +116,7 @@ func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 		ns.Version = str
 	} else {
 		logging.Logger.Error("unmarshal json - no version", zap.Any("obj", obj))
-		return common.ErrInvalidData()
+		return common.ErrInvalidData
 	}
 	if nodes, ok := obj["nodes"].([]interface{}); ok {
 		ns.Nodes = make([]util.Node, len(nodes))
@@ -134,12 +134,12 @@ func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 				}
 			} else {
 				logging.Logger.Error("unmarshal json - invalid node", zap.Int("idx", idx), zap.Any("node", nd), zap.Any("obj", obj))
-				return common.ErrInvalidData()
+				return common.ErrInvalidData
 			}
 		}
 	} else {
 		logging.Logger.Error("unmarshal json - no nodes", zap.Any("obj", obj))
-		return common.ErrInvalidData()
+		return common.ErrInvalidData
 	}
 	return nil
 }

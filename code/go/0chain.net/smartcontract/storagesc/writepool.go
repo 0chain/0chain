@@ -7,7 +7,8 @@ import (
 	"net/url"
 
 	"0chain.net/smartcontract"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -72,7 +73,7 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	var cut = wp.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
-		return errors.Newf("", "no tokens in write pool for allocation: %s,"+
+		return zchainErrors.Newf("", "no tokens in write pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
 
@@ -107,7 +108,7 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	}
 
 	if value != 0 {
-		return errors.Newf("", "not enough tokens in write pool for allocation: %s,"+
+		return zchainErrors.Newf("", "not enough tokens in write pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
 
@@ -124,7 +125,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
 			if ap.ExpireAt >= now {
-				return nil, errors.New("the pool is not expired yet")
+				return nil, zchainErrors.New("the pool is not expired yet")
 			}
 			took = ap
 			continue // delete
@@ -134,7 +135,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	wp.Pools = wp.Pools[:i]
 
 	if took == nil {
-		return nil, errors.New("pool not found")
+		return nil, zchainErrors.New("pool not found")
 	}
 	return
 }
@@ -186,7 +187,7 @@ func (wp *writePool) fill(
 	var ap allocationPool
 	var transfer *state.Transfer
 	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-		return "", errors.Newf("", "digging write pool: %v", err)
+		return "", zchainErrors.Newf("", "digging write pool: %v", err)
 	}
 	if mintNewTokens {
 		balances.AddMint(&state.Mint{
@@ -196,7 +197,7 @@ func (wp *writePool) fill(
 		})
 	} else {
 		if err = balances.AddTransfer(transfer); err != nil {
-			return "", errors.Newf("", "adding transfer to write pool: %v", err)
+			return "", zchainErrors.Newf("", "adding transfer to write pool: %v", err)
 		}
 	}
 
@@ -259,7 +260,7 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	wp = new(writePool)
 	err = wp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding())
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 	return
 }
@@ -271,10 +272,10 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 ) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
-		return errors.Newf("", "getting client write pool: %v", err)
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		return zchainErrors.Newf("", "getting client write pool: %v", err)
 	}
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		wp = new(writePool)
 	}
 
@@ -287,7 +288,7 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 	wp.Pools.add(&ap)
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
-		return errors.Newf("", "saving write pool: %v", err)
+		return zchainErrors.Newf("", "saving write pool: %v", err)
 	}
 
 	return
@@ -302,17 +303,17 @@ func (ssc *StorageSmartContract) createWritePool(
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
-		return errors.Newf("", "getting client write pool: %v", err)
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		return zchainErrors.Newf("", "getting client write pool: %v", err)
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		wp = new(writePool)
 	}
 
 	var mld = alloc.restMinLockDemand()
 	if t.Value < int64(mld) {
-		return errors.Newf("", "not enough tokens to honor the min lock demand"+
+		return zchainErrors.Newf("", "not enough tokens to honor the min lock demand"+
 			" (%d < %d)", t.Value, mld)
 	}
 
@@ -324,7 +325,7 @@ func (ssc *StorageSmartContract) createWritePool(
 	}
 
 	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
-		return errors.Newf("", "saving write pool: %v", err)
+		return zchainErrors.Newf("", "saving write pool: %v", err)
 	}
 
 	return
@@ -336,8 +337,8 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	var conf *writePoolConfig
 	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
-		return "", errors.Wrap(err, errors.New("write_pool_lock_failed",
-			"can't get configs"))
+		return "", errors.Wrap(err, zchainErrors.New("write_pool_lock_failed",
+			"can't get configs").Error())
 	}
 
 	// lock request & user balance
@@ -358,30 +359,30 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
 			return "", errors.Wrap(err, "write_pool_lock_failed")
 		}
 		wp = new(writePool)
 	}
 
 	if lr.AllocationID == "" {
-		return "", errors.New("write_pool_lock_failed",
+		return "", zchainErrors.New("write_pool_lock_failed",
 			"missing allocation ID in request")
 	}
 
 	if t.Value < conf.MinLock {
-		return "", errors.New("write_pool_lock_failed",
+		return "", zchainErrors.New("write_pool_lock_failed",
 			"insufficient amount to lock")
 	}
 
 	if lr.Duration < conf.MinLockPeriod {
-		return "", errors.New("write_pool_lock_failed",
+		return "", zchainErrors.New("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
 				lr.Duration.String(), conf.MinLockPeriod.String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
-		return "", errors.New("write_pool_lock_failed",
+		return "", zchainErrors.New("write_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
 				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
@@ -395,8 +396,8 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("write_pool_lock_failed",
-			"can't get allocation"))
+		return "", errors.Wrap(err, zchainErrors.New("write_pool_lock_failed",
+			"can't get allocation").Error())
 
 	}
 
@@ -405,7 +406,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	// lock for allocation -> blobber (particular blobber locking)
 	if lr.BlobberID != "" {
 		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
-			return "", errors.New("write_pool_lock_failed",
+			return "", zchainErrors.New("write_pool_lock_failed",
 				fmt.Sprintf("no such blobber %s in allocation %s",
 					lr.BlobberID, lr.AllocationID))
 		}
@@ -481,7 +482,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 	if !isFunded {
-		return "", errors.Newf("read_pool_unlock_failed",
+		return "", zchainErrors.Newf("read_pool_unlock_failed",
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 
@@ -493,15 +494,15 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	// don't unlock over min lock demand left
 	var ap = wp.getPool(req.PoolID)
 	if ap == nil {
-		return "", errors.New("write_pool_unlock_failed",
+		return "", zchainErrors.New("write_pool_unlock_failed",
 			"no such write pool")
 	}
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(ap.AllocationID, balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("write_pool_unlock_failed",
-			"can't get related allocation"))
+		return "", errors.Wrap(err, zchainErrors.New("write_pool_unlock_failed",
+			"can't get related allocation").Error())
 
 	}
 
@@ -512,7 +513,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
 		)
 		if leave < want && ap.ExpireAt >= unitl {
-			return "", errors.New("write_pool_unlock_failed",
+			return "", zchainErrors.New("write_pool_unlock_failed",
 				"can't unlock, because min lock demand is not paid yet")
 		}
 	}

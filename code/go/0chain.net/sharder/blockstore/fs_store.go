@@ -17,7 +17,7 @@ import (
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 const fileExt = ".dat.zlib"
@@ -119,7 +119,7 @@ func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Bl
 func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err error) {
 	// check out hash can be ""
 	if len(hash) != 64 {
-		return nil, errors.New("fbs_store_read", "invalid block hash length given")
+		return nil, zchainErrors.New("fbs_store_read", "invalid block hash length given")
 	}
 
 	return fbs.read(hash, round)
@@ -143,7 +143,7 @@ func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err err
 				fi, err = os.Stat(path)
 				if err != nil {
 					if os.IsNotExist(err) {
-						// can't use errors.Is(err, os.ErrNotExist) with go1.12
+						// can't use zchainErrors.Is(err, os.ErrNotExist) with go1.12
 						return nil // not an error (continue)
 					}
 					return err // filesystem error
@@ -174,7 +174,7 @@ func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err err
 
 func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	if len(hash) != 64 {
-		return nil, encryption.ErrInvalidHash()
+		return nil, encryption.ErrInvalidHash
 	}
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
@@ -211,7 +211,7 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 
 // Delete - delete from the hash of the block
 func (fbs *FSBlockStore) Delete(hash string) error {
-	return errors.New("interface_not_implemented", "FSBlockStore cannote provide this interface")
+	return zchainErrors.New("interface_not_implemented", "FSBlockStore cannote provide this interface")
 }
 
 // DeleteBlock - delete the given block from the file system

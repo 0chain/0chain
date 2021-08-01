@@ -19,7 +19,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
@@ -262,7 +262,7 @@ func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.
 			return
 		}
 		if n == nil {
-			return nil, errors.New("key_not_found", "key was not found")
+			return nil, zchainErrors.New("key_not_found", "key was not found")
 		}
 
 		mpks = block.NewMpks()
@@ -288,7 +288,7 @@ func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.
 		})
 
 	if mpks, ok = got.(*block.Mpks); !ok {
-		return nil, errors.New("get_mpks_from_sharders", "no MPKs given")
+		return nil, zchainErrors.New("get_mpks_from_sharders", "no MPKs given")
 	}
 
 	return
@@ -305,7 +305,7 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 			return
 		}
 		if n == nil {
-			return nil, errors.New("key_not_found", "key was not found")
+			return nil, zchainErrors.New("key_not_found", "key was not found")
 		}
 
 		dmn = minersc.NewDKGMinerNodes()
@@ -342,7 +342,7 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 		})
 
 	if dmn, ok = got.(*minersc.DKGMinerNodes); !ok {
-		return nil, errors.New("get_dkg_miner_nodes_from_sharders",
+		return nil, zchainErrors.New("get_dkg_miner_nodes_from_sharders",
 			"no DKG miner nodes given")
 	}
 
@@ -353,7 +353,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 	active bool) (err error) {
 
 	if !mc.viewChangeProcess.isDKGSet() {
-		return errors.New("createSijs", "DKG is not set")
+		return zchainErrors.New("createSijs", "DKG is not set")
 	}
 
 	if !mc.viewChangeProcess.isNeedCreateSijs() {
@@ -430,7 +430,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 	defer mc.viewChangeProcess.Unlock()
 
 	if !mc.viewChangeProcess.isDKGSet() {
-		return nil, errors.New("dkg_not_set", "send_sijs: DKG is not set")
+		return nil, zchainErrors.New("dkg_not_set", "send_sijs: DKG is not set")
 	}
 
 	var dkgMiners *minersc.DKGMinerNodes
@@ -514,7 +514,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	}
 
 	if len(sendFail) > 0 {
-		return nil, errors.Newf("failed to send sijs",
+		return nil, zchainErrors.Newf("failed to send sijs",
 			"failed to send share to miners: %v", sendFail)
 	}
 
@@ -531,7 +531,7 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 			return // error
 		}
 		if n == nil {
-			return nil, errors.New("key_not_found", "key was not found")
+			return nil, zchainErrors.New("key_not_found", "key was not found")
 		}
 
 		magicBlock = block.NewMagicBlock()
@@ -567,7 +567,7 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 		})
 
 	if magicBlock, ok = got.(*block.MagicBlock); !ok {
-		return nil, errors.New("get_magic_block_from_sharders",
+		return nil, zchainErrors.New("get_magic_block_from_sharders",
 			"no magic block given")
 	}
 
@@ -611,7 +611,7 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
 			zap.Any("state", lfb.ClientStateHash))
-		return 0, errors.Newf("block_next_vc",
+		return 0, zchainErrors.Newf("block_next_vc",
 			"can't get miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
@@ -622,7 +622,7 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
 			zap.Any("state", lfb.ClientStateHash))
-		return 0, errors.Newf("block_next_vc",
+		return 0, zchainErrors.Newf("block_next_vc",
 			"can't decode miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
@@ -661,7 +661,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	defer mc.viewChangeProcess.Unlock()
 
 	if !mc.viewChangeProcess.isDKGSet() {
-		return nil, errors.New("vc_wait", "DKG is not set")
+		return nil, zchainErrors.New("vc_wait", "DKG is not set")
 	}
 
 	var magicBlock *block.MagicBlock
@@ -696,7 +696,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
 				true)
 			if err != nil {
-				return nil, errors.Newf("vc_wait",
+				return nil, zchainErrors.Newf("vc_wait",
 					"adding secret share: %v", err)
 			}
 		}
@@ -720,11 +720,11 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// save DKG and MB
 	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
-		return nil, errors.Newf("vc_wait", "saving DKG summary: %v", err)
+		return nil, zchainErrors.Newf("vc_wait", "saving DKG summary: %v", err)
 	}
 
 	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-		return nil, errors.Newf("vc_wait", "saving MB data: %v", err)
+		return nil, zchainErrors.Newf("vc_wait", "saving MB data: %v", err)
 	}
 
 	// don't set DKG until MB finalized
@@ -733,7 +733,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {
-		return nil, errors.Newf("vc_wait",
+		return nil, zchainErrors.Newf("vc_wait",
 			"sending 'wait' transaction: %v", err)
 	}
 
@@ -822,20 +822,20 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 	dkgs = &bls.DKGSummary{SecretShares: make(map[string]string)}
 	if path == "" {
-		return nil, errors.New("error_reading_dkg_file", "path is blank")
+		return nil, zchainErrors.New("error_reading_dkg_file", "path is blank")
 	}
 
 	if ext := filepath.Ext(path); ext != ".json" {
-		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
+		return nil, zchainErrors.New("error_reading_dkg_file", fmt.Sprintf("unexpected dkg summary file extension: %q, expected '.json'", ext))
 	}
 
 	var b []byte
 	if b, err = ioutil.ReadFile(path); err != nil {
-		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("reading dkg summary file: %v", err))
+		return nil, zchainErrors.New("error_reading_dkg_file", fmt.Sprintf("reading dkg summary file: %v", err))
 	}
 
 	if err = dkgs.Decode(b); err != nil {
-		return nil, errors.New("error_reading_dkg_file", fmt.Sprintf("decoding dkg summary file: %v", err))
+		return nil, zchainErrors.New("error_reading_dkg_file", fmt.Sprintf("decoding dkg summary file: %v", err))
 	}
 
 	logging.Logger.Info("read dkg summary file", zap.Any("ID", dkgs.ID))
@@ -868,7 +868,7 @@ func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 	}
 
 	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {
-		return nil, errors.Newf("load_latest_mb",
+		return nil, zchainErrors.Newf("load_latest_mb",
 			"decoding error: %v, key: %q", err, string(iter.Key().Data()))
 	}
 

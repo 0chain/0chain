@@ -15,7 +15,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -115,7 +114,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, globalNode, err = testLock(t, flags.tokens, flags.duration, clientStartZCN, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errLock+errInsufficientFunds)
+		require.EqualValues(t, err.Error(), errLock+errInsufficientFunds)
 		require.EqualValues(t, globalNode.SimpleGlobalNode.TotalMinted, zcnToBalance(startMinted))
 	})
 
@@ -126,7 +125,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, _, err = testLock(t, flags.tokens, flags.duration, 0, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errLock+errNoTokens)
+		require.EqualValues(t, err.Error(), errLock+errNoTokens)
 	})
 
 	t.Run(errLockGtBalance, func(t *testing.T) {
@@ -136,7 +135,7 @@ func TestLock(t *testing.T) {
 		}
 		_, _, _, err = testLock(t, flags.tokens, flags.duration, flags.tokens-0.001, startMinted)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errLock+errLockGtBalance)
+		require.EqualValues(t, err.Error(), errLock+errLockGtBalance)
 	})
 
 	t.Run(errDurationToLong, func(t *testing.T) {
@@ -368,7 +367,7 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock       
 
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
-		return 0, util.ErrValueNotPresent()
+		return 0, util.ErrValueNotPresent
 	}
 	return sc.clientStartBalance, nil
 }

@@ -3,11 +3,11 @@ package round
 import (
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var (
-	ErrRoundEntityNotFound = errors.Register("round entity not found")
+	ErrRoundEntityNotFound = zchainErrors.New("round entity not found")
 )
 
 type RoundStorageEntity = interface{}
@@ -157,7 +157,7 @@ func (s *roundStartingStorage) Prune(round int64) error {
 	defer s.mu.Unlock()
 	_, found := s.items[round]
 	if !found {
-		return ErrRoundEntityNotFound()
+		return ErrRoundEntityNotFound
 	}
 	pruneIndex := -1
 	pruneRounds := make([]int64, 0)
@@ -169,7 +169,7 @@ func (s *roundStartingStorage) Prune(round int64) error {
 		}
 	}
 	if pruneIndex == -1 {
-		return ErrRoundEntityNotFound()
+		return ErrRoundEntityNotFound
 	}
 
 	for _, roundRemove := range pruneRounds {

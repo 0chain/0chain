@@ -2,6 +2,7 @@ package vestingsc
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -121,9 +121,9 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 		err      error
 	)
 	_, err = vsc.getPoolBytes(poolKey(vsc.ID, txHash), balances)
-	require.Equal(t, errors.PPrint(util.ErrValueNotPresent()), errors.PPrint(err))
+	require.Equal(t, util.ErrValueNotPresent.Error(), err.Error())
 	_, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
-	require.Equal(t, errors.PPrint(util.ErrValueNotPresent()), errors.PPrint(err))
+	require.Equal(t, util.ErrValueNotPresent.Error(), err.Error())
 	var vp = newVestingPoolFromReqeust(clientID, &addRequest{
 		Description: "for something",
 		StartTime:   10,
@@ -382,6 +382,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 
 	// 2. pool_id = ""
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
+
 	assertErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
 		" missing pool id")
 
@@ -505,7 +506,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Equal(t, errors.PPrint(common.NewErrNoResource(nil, "can't get pool: value not present")), errors.PPrint(err))
+	require.Contains(t, common.NewErrNoResource(errors.New(""), "can't get pool: value not present").Error(), err.Error())
 
 	balances.balances[client.id] = 200e10
 

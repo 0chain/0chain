@@ -12,7 +12,6 @@ import (
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +49,7 @@ func mustDecode(t testing.TB, b []byte, val interface{}) {
 func requireErrMsg(t *testing.T, err error, msg string) {
 	t.Helper()
 	require.Error(t, err, "missing error")
-	require.Equal(t, msg, errors.PPrint(err), "unexpected error")
+	require.Equal(t, msg, err.Error(), "unexpected error")
 }
 
 func Test_lockRequest_decode(t *testing.T) {

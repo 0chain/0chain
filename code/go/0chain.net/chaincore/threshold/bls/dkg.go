@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
@@ -59,7 +59,7 @@ var dkgSummaryMetadata *datastore.EntityMetadataImpl
 func init() {
 	err := bls.Init(int(bls.CurveFp254BNb))
 	if err != nil {
-		panic(errors.Newf("", "bls initialization error: %v", err))
+		panic(zchainErrors.Newf("", "bls initialization error: %v", err))
 	}
 }
 
@@ -223,7 +223,7 @@ func (dkg *DKG) AddSecretShare(id PartyID, share string, force bool) error {
 
 	if shareFound, ok := dkg.receivedSecretShares[id]; ok && !secretShare.IsEqual(&shareFound) {
 		if !force {
-			return errors.New("failed_to_add_secret_share", "share already exists for miner")
+			return zchainErrors.New("failed_to_add_secret_share", "share already exists for miner")
 		}
 	}
 
@@ -297,7 +297,7 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	}
 
 	if len(idVec) == 0 || len(signVec) == 0 {
-		return Sign{}, errors.New("empty id or share")
+		return Sign{}, zchainErrors.New("empty id or share")
 	}
 
 	return dkg.RecoverGroupSig(idVec, signVec)
@@ -412,11 +412,11 @@ func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) e
 		var sij Key
 		share := dkgSummary.SecretShares[k.GetHexString()]
 		if share == "" {
-			return errors.New("failed_to_verify_dkg_summary", "share is nil")
+			return zchainErrors.New("failed_to_verify_dkg_summary", "share is nil")
 		}
 		sij.SetHexString(share)
 		if !ValidateShare(v, sij, id) {
-			return errors.New("failed_to_verify_dkg_summary", fmt.Sprintf("share unable to verify: %v", share))
+			return zchainErrors.New("failed_to_verify_dkg_summary", fmt.Sprintf("share unable to verify: %v", share))
 		}
 	}
 	return nil

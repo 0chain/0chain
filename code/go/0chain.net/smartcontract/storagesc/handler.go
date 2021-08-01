@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
@@ -93,7 +93,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal(err, "can't get blobbers list")
 	}
 	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewErrInternal(errors.New("can't get blobbers list"), "no blobbers found")
+		return "", common.NewErrInternal(zchainErrors.New("can't get blobbers list"), "no blobbers found")
 	}
 
 	var sa = request.storageAllocation()
@@ -154,7 +154,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 	var commitReadBytes util.Serializable
 	commitReadBytes, err = balances.GetTrieNode(commitRead.GetKey(ssc.ID))
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return nil, common.NewErrInternal(err, "can't get read marker")
 	}
 

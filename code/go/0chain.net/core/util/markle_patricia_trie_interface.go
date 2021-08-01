@@ -5,11 +5,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 //ErrIteratingChildNodes() - indicates an error iterting the child nodes
-var ErrIteratingChildNodes = errors.Register("Error iterating child nodes")
+var ErrIteratingChildNodes = zchainErrors.New("Error iterating child nodes")
 
 //Path - a type for the path of the merkle patricia trie
 type Path []byte

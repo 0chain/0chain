@@ -20,7 +20,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -40,13 +41,13 @@ const (
 
 var (
 	// ErrRoundMismatch - an error object for mismatched round error.
-	ErrRoundMismatch = errors.Register(RoundMismatch, "Current round number"+
+	ErrRoundMismatch = zchainErrors.NewRoundMismatch, "Current round number"+
 		" of the chain doesn't match the block generation round")
 	// ErrRRSMismatch - and error when rrs mismatch happens.
-	ErrRRSMismatch = errors.Register(RRSMismatch, "RRS for current round"+
+	ErrRRSMismatch = zchainErrors.NewRRSMismatch, "RRS for current round"+
 		" of the chain doesn't match the block rrs")
 	// ErrRoundTimeout - an error object for round timeout error.
-	ErrRoundTimeout = errors.Register(RoundTimeout, "round timed out")
+	ErrRoundTimeout = zchainErrors.NewRoundTimeout, "round timed out")
 
 	minerChain = &Chain{}
 )
@@ -273,7 +274,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	)
 
 	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-		return errors.Newf("view_change", "getting nvc: %v", err)
+		return zchainErrors.Newf("view_change", "getting nvc: %v", err)
 	}
 
 	// set / update the next view change of protocol view change (RAM)
@@ -297,7 +298,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	// view change
 
 	if err = mc.UpdateMagicBlock(mb); err != nil {
-		return errors.Newf("view_change", "updating MB: %v", err)
+		return zchainErrors.Newf("view_change", "updating MB: %v", err)
 	}
 
 	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
@@ -381,12 +382,12 @@ func StartChainRequestHandler(ctx context.Context, req *http.Request) (interface
 	mb := mc.GetMagicBlock(int64(r))
 	if mb == nil || !mb.Miners.HasNode(nodeID) {
 		logging.Logger.Error("failed to send start chain", zap.Any("id", nodeID))
-		return nil, errors.New("failed_to_send_start_chain", "miner is not in active set")
+		return nil, zchainErrors.New("failed_to_send_start_chain", "miner is not in active set")
 	}
 
 	if mc.GetCurrentRound() != int64(r) {
 		logging.Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", r))
-		return nil, errors.New("failed_to_send_start_chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
+		return nil, zchainErrors.New("failed_to_send_start_chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), r))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
 	message.Start = !mc.isStarted()
@@ -407,7 +408,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		startChain, ok := entity.(*StartChain)
 		if !ok {
-			err := errors.New("invalid_object", fmt.Sprintf("entity: %v", entity))
+			err := zchainErrors.New("invalid_object", fmt.Sprintf("entity: %v", entity))
 			logging.Logger.Error("failed to request start chain", zap.Any("error", err))
 			return nil, err
 		}

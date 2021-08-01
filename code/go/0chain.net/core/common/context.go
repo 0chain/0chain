@@ -9,11 +9,11 @@ import (
 	"time"
 
 	. "0chain.net/core/logging"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
-var ErrStop = errors.Register("stop_error", "Stop signal error")
+var ErrStop = zchainErrors.New("stop_error", "Stop signal error")
 
 var rootContext context.Context
 var rootCancel context.CancelFunc

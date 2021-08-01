@@ -4,7 +4,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -137,7 +136,7 @@ func TestRoundStartingStore(t *testing.T) {
 		require.NoError(t, err)
 
 		err = storage.Prune(150)
-		assert.EqualValues(t, errors.PPrint(err), errors.PPrint(ErrRoundEntityNotFound()))
+		assert.EqualValues(t, err.Error(), ErrRoundEntityNotFound.Error())
 
 		err = storage.Prune(0)
 		assert.NoError(t, err)
@@ -145,7 +144,7 @@ func TestRoundStartingStore(t *testing.T) {
 		assert.EqualValues(t, []int64{5, 51, 151, 251}, storage.GetRounds())
 
 		err = storage.Prune(0)
-		assert.EqualValues(t, errors.PPrint(err), errors.PPrint(ErrRoundEntityNotFound()))
+		assert.EqualValues(t, err.Error(), ErrRoundEntityNotFound.Error())
 
 		got := storage.Get(0)
 		assert.Nil(t, got)

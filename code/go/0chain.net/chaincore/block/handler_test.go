@@ -11,7 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 func init() {
@@ -67,7 +67,7 @@ func TestPutBlock(t *testing.T) {
 	)
 	store.On("Write", context.TODO(), b).Return(
 		func(_ context.Context, _ datastore.Entity) error {
-			return errors.New("")
+			return zchainErrors.New("")
 		},
 	)
 

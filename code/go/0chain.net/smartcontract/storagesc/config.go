@@ -15,7 +15,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 )
 
 func scConfigKey(scKey string) datastore.Key {
@@ -161,148 +162,148 @@ type scConfig struct {
 
 func (sc *scConfig) validate() (err error) {
 	if sc.TimeUnit <= 1*time.Second {
-		return errors.Newf("", "time_unit less than 1s: %s", sc.TimeUnit)
+		return zchainErrors.Newf("", "time_unit less than 1s: %s", sc.TimeUnit)
 	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
-		return errors.Newf("", "validator_reward not in [0; 1] range: %v",
+		return zchainErrors.Newf("", "validator_reward not in [0; 1] range: %v",
 			sc.ValidatorReward)
 	}
 	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
-		return errors.Newf("", "blobber_slash not in [0; 1] range: %v",
+		return zchainErrors.Newf("", "blobber_slash not in [0; 1] range: %v",
 			sc.BlobberSlash)
 	}
 	if sc.MinBlobberCapacity < 0 {
-		return errors.Newf("", "negative min_blobber_capacity: %v",
+		return zchainErrors.Newf("", "negative min_blobber_capacity: %v",
 			sc.MinBlobberCapacity)
 	}
 	if sc.MinOfferDuration < 0 {
-		return errors.Newf("", "negative min_offer_duration: %v",
+		return zchainErrors.Newf("", "negative min_offer_duration: %v",
 			sc.MinOfferDuration)
 	}
 	if sc.MaxChallengeCompletionTime < 0 {
-		return errors.Newf("", "negative max_challenge_completion_time: %v",
+		return zchainErrors.Newf("", "negative max_challenge_completion_time: %v",
 			sc.MaxChallengeCompletionTime)
 	}
 	if sc.MinAllocDuration < 0 {
-		return errors.Newf("", "negative min_alloc_duration: %v",
+		return zchainErrors.Newf("", "negative min_alloc_duration: %v",
 			sc.MinAllocDuration)
 	}
 	if sc.MaxMint < 0 {
-		return errors.Newf("", "negative max_mint: %v", sc.MaxMint)
+		return zchainErrors.Newf("", "negative max_mint: %v", sc.MaxMint)
 	}
 	if sc.MinAllocSize < 0 {
-		return errors.Newf("", "negative min_alloc_size: %v", sc.MinAllocSize)
+		return zchainErrors.Newf("", "negative min_alloc_size: %v", sc.MinAllocSize)
 	}
 	if sc.MaxReadPrice < 0 {
-		return errors.Newf("", "negative max_read_price: %v", sc.MaxReadPrice)
+		return zchainErrors.Newf("", "negative max_read_price: %v", sc.MaxReadPrice)
 	}
 	if sc.MaxWritePrice < 0 {
-		return errors.Newf("", "negative max_write_price: %v", sc.MaxWritePrice)
+		return zchainErrors.Newf("", "negative max_write_price: %v", sc.MaxWritePrice)
 	}
 	if sc.StakePool.MinLock <= 1 {
-		return errors.Newf("", "invalid stakepool.min_lock: %v <= 1",
+		return zchainErrors.Newf("", "invalid stakepool.min_lock: %v <= 1",
 			sc.StakePool.MinLock)
 	}
 	if sc.StakePool.InterestRate < 0 {
-		return errors.Newf("", "negative stakepool.interest_rate: %v",
+		return zchainErrors.Newf("", "negative stakepool.interest_rate: %v",
 			sc.StakePool.InterestRate)
 	}
 	if sc.StakePool.InterestInterval <= 0 {
-		return errors.Newf("", "invalid stakepool.interest_interval <= 0: %v",
+		return zchainErrors.Newf("", "invalid stakepool.interest_interval <= 0: %v",
 			sc.StakePool.InterestInterval)
 	}
 
 	if sc.MaxTotalFreeAllocation < 0 {
-		return errors.Newf("", "negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
+		return zchainErrors.Newf("", "negative max_total_free_allocation: %v", sc.MaxTotalFreeAllocation)
 	}
 	if sc.MaxIndividualFreeAllocation < 0 {
-		return errors.Newf("", "negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
+		return zchainErrors.Newf("", "negative max_individual_free_allocation: %v", sc.MaxIndividualFreeAllocation)
 	}
 
 	if sc.FreeAllocationSettings.DataShards < 0 {
-		return errors.Newf("", "negative free_allocation_settings.data_shards: %v",
+		return zchainErrors.Newf("", "negative free_allocation_settings.data_shards: %v",
 			sc.FreeAllocationSettings.DataShards)
 	}
 	if sc.FreeAllocationSettings.ParityShards < 0 {
-		return errors.Newf("", "negative free_allocation_settings.parity_shards: %v",
+		return zchainErrors.Newf("", "negative free_allocation_settings.parity_shards: %v",
 			sc.FreeAllocationSettings.ParityShards)
 	}
 	if sc.FreeAllocationSettings.Size < 0 {
-		return errors.Newf("", "negative free_allocation_settings.size: %v",
+		return zchainErrors.Newf("", "negative free_allocation_settings.size: %v",
 			sc.FreeAllocationSettings.Size)
 	}
 	if sc.FreeAllocationSettings.Duration <= 0 {
-		return errors.Newf("", "negative free_allocation_settings.expiration_date: %v",
+		return zchainErrors.Newf("", "negative free_allocation_settings.expiration_date: %v",
 			sc.FreeAllocationSettings.Duration)
 	}
 	if !sc.FreeAllocationSettings.ReadPriceRange.isValid() {
-		return errors.Newf("", "invalid free_allocation_settings.read_price_range: %v",
+		return zchainErrors.Newf("", "invalid free_allocation_settings.read_price_range: %v",
 			sc.FreeAllocationSettings.ReadPriceRange)
 	}
 	if !sc.FreeAllocationSettings.WritePriceRange.isValid() {
-		return errors.Newf("", "invalid free_allocation_settings.write_price_range: %v",
+		return zchainErrors.Newf("", "invalid free_allocation_settings.write_price_range: %v",
 			sc.FreeAllocationSettings.WritePriceRange)
 	}
 	if sc.FreeAllocationSettings.MaxChallengeCompletionTime < 0 {
-		return errors.Newf("", "negative free_allocation_settings.max_challenge_completion_time: %v",
+		return zchainErrors.Newf("", "negative free_allocation_settings.max_challenge_completion_time: %v",
 			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
 
 	if sc.FailedChallengesToCancel < 0 {
-		return errors.Newf("", "negative failed_challenges_to_cancel: %v",
+		return zchainErrors.Newf("", "negative failed_challenges_to_cancel: %v",
 			sc.FailedChallengesToCancel)
 	}
 	if sc.FailedChallengesToRevokeMinLock < 0 {
-		return errors.Newf("", "negative failed_challenges_to_revoke_min_lock: %v",
+		return zchainErrors.Newf("", "negative failed_challenges_to_revoke_min_lock: %v",
 			sc.FailedChallengesToRevokeMinLock)
 	}
 	if sc.MaxChallengesPerGeneration <= 0 {
-		return errors.Newf("", "invalid max_challenges_per_generation <= 0: %v",
+		return zchainErrors.Newf("", "invalid max_challenges_per_generation <= 0: %v",
 			sc.MaxChallengesPerGeneration)
 	}
 	if sc.ChallengeGenerationRate < 0 {
-		return errors.Newf("", "negative challenge_rate_per_mb_min: %v",
+		return zchainErrors.Newf("", "negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)
 	}
 	if sc.MinStake < 0 {
-		return errors.Newf("", "negative min_stake: %v", sc.MinStake)
+		return zchainErrors.Newf("", "negative min_stake: %v", sc.MinStake)
 	}
 	if sc.MaxStake < sc.MinStake {
-		return errors.Newf("", "max_stake less than min_stake: %v < %v", sc.MinStake,
+		return zchainErrors.Newf("", "max_stake less than min_stake: %v < %v", sc.MinStake,
 			sc.MaxStake)
 	}
 	if sc.MaxDelegates < 1 {
-		return errors.Newf("", "max_delegates is too small %v", sc.MaxDelegates)
+		return zchainErrors.Newf("", "max_delegates is too small %v", sc.MaxDelegates)
 	}
 	if sc.MaxCharge < 0 {
-		return errors.Newf("", "negative max_charge: %v", sc.MaxCharge)
+		return zchainErrors.Newf("", "negative max_charge: %v", sc.MaxCharge)
 	}
 	if sc.MaxCharge > 1.0 {
-		return errors.Newf("", "max_change >= 1.0 (> 100%%, invalid): %v",
+		return zchainErrors.Newf("", "max_change >= 1.0 (> 100%%, invalid): %v",
 			sc.MaxCharge)
 	}
 	if sc.BlockReward.BlockReward < 0 {
-		return errors.Newf("", "negative block_reward.block_reward: %v",
+		return zchainErrors.Newf("", "negative block_reward.block_reward: %v",
 			sc.BlockReward.BlockReward)
 	}
 	if sc.BlockReward.QualifyingStake < 0 {
-		return errors.Newf("", "negative block_reward.qualifying_stake: %v",
+		return zchainErrors.Newf("", "negative block_reward.qualifying_stake: %v",
 			sc.BlockReward.QualifyingStake)
 	}
 	if sc.BlockReward.SharderWeight < 0 {
-		return errors.Newf("", "negative block_reward.sharder_weight: %v",
+		return zchainErrors.Newf("", "negative block_reward.sharder_weight: %v",
 			sc.BlockReward.SharderWeight)
 	}
 	if sc.BlockReward.MinerWeight < 0 {
-		return errors.Newf("", "negative block_reward.miner_weight: %v",
+		return zchainErrors.Newf("", "negative block_reward.miner_weight: %v",
 			sc.BlockReward.MinerWeight)
 	}
 	if sc.BlockReward.BlobberCapacityWeight < 0 {
-		return errors.Newf("", "negative block_reward.blobber_capacity_weight: %v",
+		return zchainErrors.Newf("", "negative block_reward.blobber_capacity_weight: %v",
 			sc.BlockReward.BlobberCapacityWeight)
 	}
 	if sc.BlockReward.BlobberUsageWeight < 0 {
-		return errors.Newf("", "negative block_reward.bobber_usage_weight: %v",
+		return zchainErrors.Newf("", "negative block_reward.bobber_usage_weight: %v",
 			sc.BlockReward.BlobberUsageWeight)
 	}
 	return
@@ -314,15 +315,15 @@ func (conf *scConfig) canMint() bool {
 
 func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	if min < conf.MinStake {
-		return errors.Newf("", "min_stake is less than allowed by SC: %v < %v", min,
+		return zchainErrors.Newf("", "min_stake is less than allowed by SC: %v < %v", min,
 			conf.MinStake)
 	}
 	if max > conf.MaxStake {
-		return errors.Newf("", "max_stake is greater than allowed by SC: %v > %v",
+		return zchainErrors.Newf("", "max_stake is greater than allowed by SC: %v > %v",
 			max, conf.MaxStake)
 	}
 	if max < min {
-		return errors.Newf("", "max_stake less than min_stake: %v < %v", min, max)
+		return zchainErrors.Newf("", "max_stake less than min_stake: %v < %v", min, max)
 	}
 	return
 }
@@ -471,13 +472,13 @@ func (ssc *StorageSmartContract) getConfig(
 
 	var confb []byte
 	confb, err = ssc.getConfigBytes(balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return
 	}
 
 	conf = new(scConfig)
 
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		if !setup {
 			return // value not present
 		}
@@ -485,7 +486,7 @@ func (ssc *StorageSmartContract) getConfig(
 	}
 
 	if err = conf.Decode(confb); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding())
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 	return
 }
@@ -499,12 +500,12 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 	var conf *scConfig
 	conf, err = ssc.getConfig(balances, false)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
 	// return configurations from sc.yaml not saving them
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		res, err := getConfiguredConfig()
 		if err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
@@ -521,14 +522,14 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
 	if t.ClientID != owner {
-		return "", errors.New("update_config",
+		return "", zchainErrors.New("update_config",
 			"unauthorized access - only the owner can update the variables")
 	}
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", errors.Wrap(err, errors.New("update_config",
-			"can't get config"))
+		return "", errors.Wrap(err, zchainErrors.New("update_config",
+			"can't get config").Error())
 
 	}
 

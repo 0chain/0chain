@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 const (
@@ -165,7 +165,7 @@ func parseOrder(order string) (ords []string, err error) {
 		switch s {
 		case "dm", "wm", "rm":
 		default:
-			return nil, errors.Newf("","unknown marker name: %q", s)
+			return nil, zchainErrors.Newf("", "unknown marker name: %q", s)
 		}
 	}
 	return

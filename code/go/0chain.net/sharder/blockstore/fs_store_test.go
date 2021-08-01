@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"github.com/minio/minio-go"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +46,7 @@ type (
 
 func (mock minioClientMock) FPutObject(_ string, hash string, _ string, _ minio.PutObjectOptions) (int64, error) {
 	if len(hash) != 64 {
-		return 0, errors.New("hash must be 64 size")
+		return 0, zchainErrors.New("hash must be 64 size")
 	}
 
 	return 0, nil
@@ -58,7 +58,7 @@ func (mock minioClientMock) FGetObject(_ string, _ string, _ string, _ minio.Get
 
 func (mock minioClientMock) StatObject(_ string, hash string, _ minio.StatObjectOptions) (minio.ObjectInfo, error) {
 	if len(hash) != 64 {
-		return minio.ObjectInfo{}, errors.New("hash must be 64 size")
+		return minio.ObjectInfo{}, zchainErrors.New("hash must be 64 size")
 	}
 	return minio.ObjectInfo{}, nil
 }

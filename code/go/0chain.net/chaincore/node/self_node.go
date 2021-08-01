@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/build"
 	"0chain.net/core/common"
@@ -77,14 +77,14 @@ func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 func ValidateSignatureTime(data string) (bool, error) {
 	segs := strings.Split(data, ":")
 	if len(segs) < 2 {
-		return false, errors.New("invalid data")
+		return false, zchainErrors.New("invalid data")
 	}
 	ts, err := strconv.ParseInt(segs[1], 10, 64)
 	if err != nil {
 		return false, err
 	}
 	if !common.Within(ts, 3) {
-		return false, errors.New("timestamp not within tolerance")
+		return false, zchainErrors.New("timestamp not within tolerance")
 	}
 	return true, nil
 }

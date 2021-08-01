@@ -7,7 +7,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // testBalance implements state.StateContextI  intended for using
@@ -76,7 +76,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 
 	var ok bool
 	if b, ok = tb.balances[clientID]; !ok {
-		return 0, util.ErrValueNotPresent()
+		return 0, util.ErrValueNotPresent
 	}
 	return
 }
@@ -84,12 +84,12 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 	if encryption.IsHash(key) {
-		return nil, errors.New("failed_to_get_trie_node",
+		return nil, zchainErrors.New("failed_to_get_trie_node",
 			"key is too short")
 	}
 	var ok bool
 	if node, ok = tb.tree[key]; !ok {
-		return nil, util.ErrValueNotPresent()
+		return nil, util.ErrValueNotPresent
 	}
 	return
 }
@@ -98,7 +98,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 	node util.Serializable) (_ datastore.Key, _ error) {
 	//@TODO add mutex to secure reading and writing into the map
 	if encryption.IsHash(key) {
-		return "", errors.New("failed_to_insert_trie_node",
+		return "", zchainErrors.New("failed_to_insert_trie_node",
 			"key is too short")
 	}
 	tb.tree[key] = node
@@ -107,7 +107,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	if t.ClientID != tb.txn.ClientID && t.ClientID != tb.txn.ToClientID {
-		return state.ErrInvalidTransfer()
+		return state.ErrInvalidTransfer
 	}
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount
@@ -117,7 +117,7 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 
 func (tb *testBalances) AddMint(mint *state.Mint) error {
 	if mint.Minter != ADDRESS {
-		return errors.Newf("", "invalid miner: %v", mint.Minter)
+		return zchainErrors.Newf("", "invalid miner: %v", mint.Minter)
 	}
 	tb.balances[mint.ToClientID] += mint.Amount // mint!
 	return nil

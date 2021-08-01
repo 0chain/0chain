@@ -11,11 +11,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool
-var ErrNodeNotFound = errors.Register("node_not_found", "Requested node is not found")
+var ErrNodeNotFound = zchainErrors.New("node_not_found", "Requested node is not found")
 
 func atomicLoadFloat64(addr *uint64) float64 {
 	return math.Float64frombits(atomic.LoadUint64(addr))

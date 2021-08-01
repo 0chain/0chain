@@ -12,7 +12,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -68,15 +68,15 @@ func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData
 	newRequest := &tokenNode{}
 	err := newRequest.Decode(inputData)
 	if err != nil {
-		return errors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
+		return zchainErrors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
 	}
 
 	if !newRequest.validate() {
-		return errors.New("bad_request", "token cannot be created, request is not filled out correctly").Error(), nil
+		return zchainErrors.New("bad_request", "token cannot be created, request is not filled out correctly").Error(), nil
 	}
 	token, _ := zrc.getTokenNode(newRequest.TokenName, balances)
 	if token != nil {
-		return errors.New("bad_request", "token already exists").Error(), nil
+		return zchainErrors.New("bad_request", "token already exists").Error(), nil
 	}
 	newRequest.Available = newRequest.TotalSupply
 	balances.InsertTrieNode(newRequest.getKey(zrc.ID), newRequest)
@@ -101,7 +101,7 @@ func (zrc *ZRC20SmartContract) digPool(t *transaction.Transaction, inputData []b
 	}
 	tokensRequested := (transfer.Amount / token.ExchangeRate.ZCN) * token.ExchangeRate.Other
 	if tokensRequested > token.Available {
-		return errors.New("digging_pool_failed", "tokens requested exceeds availble tokens").Error(), nil
+		return zchainErrors.New("digging_pool_failed", "tokens requested exceeds availble tokens").Error(), nil
 	}
 	balances.AddTransfer(transfer)
 	token.Available -= tokensRequested
@@ -130,7 +130,7 @@ func (zrc *ZRC20SmartContract) fillPool(t *transaction.Transaction, inputData []
 	}
 	tokensRequested := (transfer.Amount / token.ExchangeRate.ZCN) * token.ExchangeRate.Other
 	if tokensRequested > token.Available {
-		return errors.New("filling_pool_failed", "tokens requested exceeds availble tokens").Error(), nil
+		return zchainErrors.New("filling_pool_failed", "tokens requested exceeds availble tokens").Error(), nil
 	}
 	balances.AddTransfer(transfer)
 	token.Available -= tokensRequested
@@ -169,7 +169,7 @@ func (zrc *ZRC20SmartContract) drainPool(t *transaction.Transaction, inputData [
 	var newRequest zrc20TransferRequest
 	err := newRequest.decode(inputData)
 	if err != nil {
-		return errors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
+		return zchainErrors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
 	}
 	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
@@ -195,7 +195,7 @@ func (zrc *ZRC20SmartContract) emptyPool(t *transaction.Transaction, inputData [
 	var newRequest zrc20TransferRequest
 	err := newRequest.decode(inputData)
 	if err != nil {
-		return errors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
+		return zchainErrors.New("bad_request", "token cannot be created, request not formated correctly").Error(), nil
 	}
 	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
@@ -226,7 +226,7 @@ func (zrc *ZRC20SmartContract) getPool(tokenName string, id datastore.Key, balan
 		return nil, err
 	}
 	if poolBytes == nil {
-		return nil, errors.New("zrc20sc_get_pool", "pool doesn't exist")
+		return nil, zchainErrors.New("zrc20sc_get_pool", "pool doesn't exist")
 	}
 	err = zrcPool.Decode(poolBytes.Encode())
 	if err != nil {
@@ -243,7 +243,7 @@ func (zrc *ZRC20SmartContract) getTokenNode(tokenName string, balances c_state.S
 		return nil, err
 	}
 	if tokenBytes == nil {
-		return nil, errors.New("zrc20sc get node", "token node doesn't exist")
+		return nil, zchainErrors.New("zrc20sc get node", "token node doesn't exist")
 	}
 	err = token.Decode(tokenBytes.Encode())
 	if err != nil {
@@ -267,6 +267,6 @@ func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName stri
 	case "emptyPool":
 		return zrc.emptyPool(t, inputData, balances)
 	default:
-		return errors.New("failed_execution", "no function with that name").Error(), nil
+		return zchainErrors.New("failed_execution", "no function with that name").Error(), nil
 	}
 }

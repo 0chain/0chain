@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 func TestError_Error(t *testing.T) {
@@ -34,9 +34,9 @@ func TestError_Error(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := errors.New(tt.fields.Code, tt.fields.Msg)
+			err := zchainErrors.New(tt.fields.Code, tt.fields.Msg)
 
-			if got := errors.PPrint(err); got != tt.want {
+			if got := err.Error(); got != tt.want {
 				t.Errorf("Error() = %v, want %v", got, tt.want)
 			}
 		})
@@ -57,7 +57,7 @@ func TestInvalidRequest(t *testing.T) {
 		{
 			name: "",
 			args: args{msg: "msg"},
-			want: errors.New("invalid_request", fmt.Sprintf("Invalid request (%v)", "msg")),
+			want: zchainErrors.New("invalid_request", fmt.Sprintf("Invalid request (%v)", "msg")),
 		},
 	}
 	for _, tt := range tests {
@@ -65,7 +65,7 @@ func TestInvalidRequest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
+			if got := InvalidRequest(tt.args.msg); !reflect.DeepEqual(got.Error(), tt.want.Error()) {
 				t.Errorf("InvalidRequest() error = %#v, want = %#v", got, tt.want)
 			}
 		})
@@ -82,12 +82,12 @@ func TestNewError(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *errors.Error
+		want *zchainErrors.Error
 	}{
 		{
 			name: "Test_NewError_OK",
 			args: args{code: "code", msg: "msg"},
-			want: &errors.Error{Code: "code", Msg: "msg"},
+			want: &zchainErrors.Error{Code: "code", Msg: "msg"},
 		},
 	}
 	for _, tt := range tests {
@@ -95,7 +95,7 @@ func TestNewError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := errors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
+			if got := zchainErrors.New(tt.args.code, tt.args.msg); !reflect.DeepEqual(got.Error(), tt.want.Error()) {
 				t.Errorf("NewError() = %v, want %v", got, tt.want)
 			}
 		})
@@ -113,7 +113,7 @@ func TestNewErrorf(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *errors.Error
+		want *zchainErrors.Error
 	}{
 		{
 			name: "Test_NewErrorf_OK",
@@ -122,7 +122,7 @@ func TestNewErrorf(t *testing.T) {
 				format: "format %v",
 				args:   []interface{}{1},
 			},
-			want: &errors.Error{Code: "code", Msg: fmt.Sprintf("format %v", 1)},
+			want: &zchainErrors.Error{Code: "code", Msg: fmt.Sprintf("format %v", 1)},
 		},
 	}
 	for _, tt := range tests {
@@ -130,8 +130,8 @@ func TestNewErrorf(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := errors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(errors.PPrint(got), errors.PPrint(tt.want)) {
-				t.Errorf("NewErrorf() = %v, want %v", errors.PPrint(got), tt.want)
+			if got := zchainErrors.Newf(tt.args.code, tt.args.format, tt.args.args...); !reflect.DeepEqual(got.Error(), tt.want.Error()) {
+				t.Errorf("NewErrorf() = %v, want %v", got.Error(), tt.want)
 			}
 		})
 	}

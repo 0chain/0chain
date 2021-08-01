@@ -10,7 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -98,7 +99,7 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=", string(path)))
+		return nil, errors.Wrap(err, zchainErrors.Newf("", "invalid hex path: path=%q, err=", string(path)).Error())
 	}
 
 	mpt.mutex.RLock()
@@ -106,7 +107,7 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 
 	rootKey := []byte(mpt.Root)
 	if rootKey == nil || len(rootKey) == 0 {
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	}
 
 	rootNode, err := mpt.db.GetNode(rootKey)
@@ -114,14 +115,14 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 		return nil, err
 	}
 	if rootNode == nil {
-		return nil, ErrNodeNotFound()
+		return nil, ErrNodeNotFound
 	}
 	v, err := mpt.getNodeValue(path, rootNode)
 	if err != nil {
 		return nil, err
 	}
 	if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	}
 	return v, err
 }
@@ -197,11 +198,11 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
 			return []Node{node}, nil
 		}
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	case *FullNode:
 		ckey := nodeImpl.GetChild(path[0])
 		if ckey == nil {
-			return nil, ErrValueNotPresent()
+			return nil, ErrValueNotPresent
 		}
 		npath, err := mpt.getPathNodes(ckey, path[1:])
 		if err != nil {
@@ -212,7 +213,7 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 	case *ExtensionNode:
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
-			return nil, ErrValueNotPresent()
+			return nil, ErrValueNotPresent
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			npath, err := mpt.getPathNodes(nodeImpl.NodeKey, path[len(prefix):])
@@ -222,7 +223,7 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 			npath = append(npath, node)
 			return npath, nil
 		}
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	default:
 		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
@@ -308,14 +309,14 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
 			return nodeImpl.GetValue(), nil
 		}
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	case *FullNode:
 		if len(path) == 0 {
 			return nodeImpl.GetValue(), nil
 		}
 		ckey := nodeImpl.GetChild(path[0])
 		if ckey == nil {
-			return nil, ErrValueNotPresent()
+			return nil, ErrValueNotPresent
 		}
 
 		nnode, err := mpt.db.GetNode(ckey)
@@ -331,13 +332,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
 					zap.Error(err))
 			}
-			return nil, ErrNodeNotFound()
+			return nil, ErrNodeNotFound
 		}
 		return mpt.getNodeValue(path[1:], nnode)
 	case *ExtensionNode:
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
-			return nil, ErrValueNotPresent()
+			return nil, ErrValueNotPresent
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
@@ -345,11 +346,11 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 				if err != nil {
 					Logger.Error("extension node get node failed", zap.Error(err))
 				}
-				return nil, ErrNodeNotFound()
+				return nil, ErrNodeNotFound
 			}
 			return mpt.getNodeValue(path[len(prefix):], nnode)
 		}
-		return nil, ErrValueNotPresent()
+		return nil, ErrValueNotPresent
 	default:
 		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
@@ -624,11 +625,11 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, prefix, path Path) (Node,
 			return mpt.deleteAfterPathTraversal(node)
 		}
 
-		return nil, nil, ErrValueNotPresent() // There is nothing to delete
+		return nil, nil, ErrValueNotPresent // There is nothing to delete
 	case *ExtensionNode:
 		matchPrefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if !bytes.Equal(matchPrefix, nodeImpl.Path) {
-			return nil, nil, ErrValueNotPresent() // There is nothing to delete
+			return nil, nil, ErrValueNotPresent // There is nothing to delete
 		}
 
 		plen := len(matchPrefix)
@@ -771,7 +772,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 			npath := append(path, pe)
 			if err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes); err != nil {
-				if errors.Is(err, ErrNodeNotFound()) || errors.Is(err, ErrIteratingChildNodes()) {
+				if zchainErrors.Is(err, ErrNodeNotFound) || zchainErrors.Is(err, ErrIteratingChildNodes) {
 					ecount++
 				} else {
 					Logger.Error("iterate - child node", zap.Error(err))
@@ -780,7 +781,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 		}
 		if ecount != 0 {
-			return ErrIteratingChildNodes()
+			return ErrIteratingChildNodes
 		}
 	case *ExtensionNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeExtensionNode) {
@@ -918,7 +919,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		ps.BelowVersion = count
 		ps.MissingNodes = missingNodes
 	}
-	if err == nil || errors.Is(err, ErrNodeNotFound()) || errors.Is(err, ErrIteratingChildNodes()) {
+	if err == nil || zchainErrors.Is(err, ErrNodeNotFound) || zchainErrors.Is(err, ErrIteratingChildNodes) {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
 				Logger.Error("update version - multi put - last batch", zap.Error(err))
@@ -946,7 +947,7 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		switch err {
-		case ErrNodeNotFound(), ErrIteratingChildNodes():
+		case ErrNodeNotFound, ErrIteratingChildNodes:
 			Logger.Debug("Find missing nodes err", zap.Error(err))
 		default:
 			Logger.Error("Find missing node with unexpected err", zap.Error(err))
@@ -1010,7 +1011,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return errors.Newf("", FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
+			return zchainErrors.Newf("", FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
 		}
 	}
 	return nil
@@ -1033,13 +1034,13 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	newLNDB, ok := newDB.(*LevelNodeDB)
 	if !ok {
 		Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
-		return errors.New("invalid mpt db")
+		return zchainErrors.New("invalid mpt db")
 	}
 
 	preDB := newLNDB.GetPrev()
 	if preDB != mpt.GetNodeDB() {
 		Logger.Error("MergeMPTChanges does not merge direct child mpt")
-		return errors.New("mpt does not merge changes from its child")
+		return zchainErrors.New("mpt does not merge changes from its child")
 	}
 
 	changes := mpt2.GetChangeCollector().GetChanges()

@@ -5,7 +5,8 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 )
 
 // NewErrNoResource()OrErrInternal() wraps err, passed in args, in common.ErrInternal() or in common.ErrNoResource(), depending on
@@ -25,9 +26,9 @@ import (
 // NewErrNoResource()OrErrInternal() returns provided error without wrapping.
 func NewErrNoResourceOrErrInternal(err error, defaultInternal bool, msgs ...string) error {
 	switch {
-	case errors.Is(err, common.ErrDecoding()):
+	case zchainErrors.Is(err, common.ErrDecoding):
 		return common.NewErrInternal(err, msgs...)
-	case errors.Is(err, util.ErrValueNotPresent()), errors.Is(err, util.ErrNodeNotFound()):
+	case zchainErrors.Is(err, util.ErrValueNotPresent), zchainErrors.Is(err, util.ErrNodeNotFound):
 		return common.NewErrNoResource(err, msgs...)
 	default:
 		if defaultInternal {

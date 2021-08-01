@@ -1,8 +1,6 @@
 package state
 
 import (
-	"github.com/0chain/gosdk/core/common/errors"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -10,6 +8,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var (
@@ -114,7 +113,7 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 //AddTransfer - add the transfer
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
-		return state.ErrInvalidTransfer()
+		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
 	return nil
@@ -129,7 +128,7 @@ func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
 	if !sc.isApprovedMinter(m) {
-		return state.ErrInvalidMint()
+		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
 	return nil
@@ -167,11 +166,11 @@ func (sc *StateContext) Validate() error {
 			amount += transfer.Amount
 		} else {
 			if transfer.ClientID != sc.txn.ToClientID {
-				return state.ErrInvalidTransfer()
+				return state.ErrInvalidTransfer
 			}
 		}
 		if transfer.Amount < 0 {
-			return state.ErrInvalidTransfer()
+			return state.ErrInvalidTransfer
 		}
 	}
 	totalValue := state.Balance(sc.txn.Value)
@@ -179,7 +178,7 @@ func (sc *StateContext) Validate() error {
 		totalValue += state.Balance(sc.txn.Fee)
 	}
 	if amount > totalValue {
-		return state.ErrInvalidTransfer()
+		return state.ErrInvalidTransfer
 	}
 
 	for _, signedTransfer := range sc.signedTransfers {
@@ -188,7 +187,7 @@ func (sc *StateContext) Validate() error {
 			return err
 		}
 		if signedTransfer.Amount <= 0 {
-			return state.ErrInvalidTransfer()
+			return state.ErrInvalidTransfer
 		}
 	}
 
@@ -200,7 +199,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s.Balance = state.Balance(0)
 	ss, err := sc.state.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return s, err

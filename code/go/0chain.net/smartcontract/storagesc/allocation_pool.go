@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -36,7 +36,7 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 		return
 	}
 	if lr.AllocationID == "" {
-		return errors.New("missing allocation_id in request")
+		return zchainErrors.New("missing allocation_id in request")
 	}
 	return // ok
 }

@@ -13,7 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"go.uber.org/zap"
 
@@ -158,7 +159,7 @@ func main() {
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		logging.Logger.Panic("node not configured as miner")
 	}
-	err = errors.New("saving_self_as_client", "client save")
+	err = zchainErrors.New("saving_self_as_client", "client save")
 	for err != nil {
 		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
 	}
@@ -317,7 +318,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, "", "", errors.New("error reading Host")
+		return "", "", 0, "", "", zchainErrors.New("error reading Host")
 	}
 
 	h := scanner.Text()
@@ -325,7 +326,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, "", "", errors.New("error reading n2n host")
+		return "", "", 0, "", "", zchainErrors.New("error reading n2n host")
 	}
 
 	n2nh := scanner.Text()

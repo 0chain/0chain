@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
-
 	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -23,6 +21,7 @@ import (
 
 	"go.uber.org/zap"
 
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -384,10 +383,10 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		t.Fatal("unexpected error:", err)
 	}
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		blobberChall = new(BlobberChallenge)
 		blobberChall.BlobberID = blobberID
 	}

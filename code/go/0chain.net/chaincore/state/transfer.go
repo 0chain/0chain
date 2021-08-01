@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 
 	"0chain.net/core/datastore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
-var ErrInvalidTransfer = errors.Register("invalid_transfer", "invalid transfer of state")
+var ErrInvalidTransfer = zchainErrors.New("invalid_transfer", "invalid transfer of state")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Transfer struct {

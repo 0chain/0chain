@@ -6,7 +6,7 @@ package storagesc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // insert new blobber, filling its stake pool
@@ -23,7 +23,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// check params
 	if err = blobber.validate(conf); err != nil {
-		return errors.Newf("","invalid blobber params: %v", err)
+		return zchainErrors.Newf("", "invalid blobber params: %v", err)
 	}
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
@@ -33,11 +33,11 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
 		&blobber.StakePoolSettings, balances)
 	if err != nil {
-		return errors.Newf("","creating stake pool: %v", err)
+		return zchainErrors.Newf("", "creating stake pool: %v", err)
 	}
 
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
-		return errors.Newf("","saving stake pool: %v", err)
+		return zchainErrors.Newf("", "saving stake pool: %v", err)
 	}
 
 	// update the list

@@ -11,7 +11,8 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	. "0chain.net/core/logging"
 	"github.com/rcrowley/go-metrics"
@@ -43,7 +44,7 @@ func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *GlobalNode,
 		}
 		var mint = state.NewMint(ADDRESS, pool.DelegateID, amount)
 		if err = balances.AddMint(mint); err != nil {
-			return errors.Newf("pay_fees/pay_interests",
+			return zchainErrors.Newf("pay_fees/pay_interests",
 				"error adding mint for stake %v-%v: %v", mn.ID, pool.ID, err)
 		}
 		msc.addMint(gn, mint.Amount) //
@@ -59,7 +60,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 
 	var un *UserNode
 	if un, err = msc.getUserNode(delegateID, balances); err != nil {
-		return errors.Newf("", "getting user node: %v", err)
+		return zchainErrors.Newf("", "getting user node: %v", err)
 	}
 
 	var pools, ok = un.Pools[nodeID]
@@ -83,7 +84,7 @@ func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
 	}
 
 	if err = un.save(balances); err != nil {
-		return errors.Newf("", "saving user node: %v", err)
+		return zchainErrors.Newf("", "saving user node: %v", err)
 	}
 
 	return
@@ -99,10 +100,10 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 	var transfer *state.Transfer
 	transfer, resp, err = pool.EmptyPool(ADDRESS, pool.DelegateID, nil)
 	if err != nil {
-		return "", errors.Newf("", "error emptying delegate pool: %v", err)
+		return "", zchainErrors.Newf("", "error emptying delegate pool: %v", err)
 	}
 	if err = balances.AddTransfer(transfer); err != nil {
-		return "", errors.Newf("", "adding transfer: %v", err)
+		return "", zchainErrors.Newf("", "adding transfer: %v", err)
 	}
 
 	err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, pool.ID, balances)
@@ -160,11 +161,11 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 
 	var miners, sharders *MinerNodes
 	if miners, err = getMinersList(balances); err != nil {
-		return errors.Newf("", "getting all miners list: %v", err)
+		return zchainErrors.Newf("", "getting all miners list: %v", err)
 	}
 	sharders, err = getAllShardersList(balances)
 	if err != nil {
-		return errors.Newf("", "getting all sharders list: %v", err)
+		return zchainErrors.Newf("", "getting all sharders list: %v", err)
 	}
 
 	var (
@@ -185,7 +186,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	// miners
 	for _, mn := range miners.Nodes {
 		if mn, err = getMinerNode(mn.ID, balances); err != nil {
-			return errors.Newf("", "missing miner node: %v", err)
+			return zchainErrors.Newf("", "missing miner node: %v", err)
 		}
 		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
@@ -207,7 +208,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	// sharders
 	for _, mn := range sharders.Nodes {
 		if mn, err = msc.getSharderNode(mn.ID, balances); err != nil {
-			return errors.Newf("", "missing sharder node: %v", err)
+			return zchainErrors.Newf("", "missing sharder node: %v", err)
 		}
 		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
@@ -253,7 +254,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
-		return errors.Newf("adjust_view_change",
+		return zchainErrors.Newf("adjust_view_change",
 			"can't get DKG miners: %v", err)
 	}
 
@@ -268,7 +269,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	err = dmn.reduceNodes(true, gn, balances)
 	if err == nil && waited < dmn.K {
-		err = errors.Newf("", "< K miners succeed 'wait' phase: %d < %d",
+		err = zchainErrors.Newf("", "< K miners succeed 'wait' phase: %d < %d",
 			waited, dmn.K)
 	}
 	if err != nil {
@@ -291,7 +292,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
 	if err := updateDKGMinersList(balances, dmn); err != nil {
-		return errors.Newf("adjust_view_change",
+		return zchainErrors.Newf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
 	}
 
@@ -307,7 +308,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return
 	}
 	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-		return "", errors.Newf("pay_fees",
+		return "", zchainErrors.Newf("pay_fees",
 			"error inserting phase node: %v", err)
 	}
 
@@ -317,24 +318,24 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	var mb = balances.GetBlock()
 	if mb.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
-		return "", errors.Newf("pay_fee",
+		return "", zchainErrors.Newf("pay_fee",
 			"can't set magic mb round=%d viewChange=%d",
 			mb.Round, gn.ViewChange)
 	}
 
 	if t.ClientID != mb.MinerID {
-		return "", errors.New("pay_fee", "not mb generator")
+		return "", zchainErrors.New("pay_fee", "not mb generator")
 	}
 
 	if mb.Round <= gn.LastRound {
-		return "", errors.New("pay_fee", "jumped back in time?")
+		return "", zchainErrors.New("pay_fee", "jumped back in time?")
 	}
 
 	// the mb generator
 	var mn *MinerNode
 	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
 		// TODO: remove this debug info after issue is fixed.
-		return "", errors.Newf("pay_fee", "can't get generator '%s': %v",
+		return "", zchainErrors.Newf("pay_fee", "can't get generator '%s': %v",
 			mb.MinerID, err)
 	}
 
@@ -399,7 +400,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// save node first, for the VC pools work
 	if err = mn.save(balances); err != nil {
-		return "", errors.Newf("pay_fees",
+		return "", zchainErrors.Newf("pay_fees",
 			"saving generator node: %v", err)
 	}
 
@@ -411,13 +412,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", err
 			}
 		} else {
-			return "", errors.New("pay_fees", "cannot find latest magic bock")
+			return "", zchainErrors.New("pay_fees", "cannot find latest magic bock")
 		}
 	}
 
 	gn.setLastRound(mb.Round)
 	if err = gn.save(balances); err != nil {
-		return "", errors.Newf("pay_fees",
+		return "", zchainErrors.Newf("pay_fees",
 			"saving global node: %v", err)
 	}
 
@@ -522,7 +523,7 @@ func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
 
 		var transfer = state.NewTransfer(ADDRESS, pool.DelegateID, userFee)
 		if err = balances.AddTransfer(transfer); err != nil {
-			return "", errors.Newf("", "adding transfer: %v", err)
+			return "", zchainErrors.Newf("", "adding transfer: %v", err)
 		}
 
 		pool.AddRewards(userFee)
@@ -536,7 +537,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
 	if block.PrevBlock == nil {
-		return nil, errors.Newf("", "missing previous block in state context %d, %s",
+		return nil, zchainErrors.Newf("", "missing previous block in state context %d, %s",
 			block.Round, block.Hash)
 	}
 
@@ -548,8 +549,8 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	for _, sid := range sids {
 		var sn *MinerNode
 		sn, err = msc.getSharderNode(sid, balances)
-		if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
-			return nil, errors.Newf("", "unexpected error: %v", err)
+		if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+			return nil, zchainErrors.Newf("", "unexpected error: %v", err)
 		}
 		sharders, err = append(sharders, sn), nil // even if it's nil, reset err
 	}
@@ -590,7 +591,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 			sresp, err = msc.payStakeHolders(delegateFees, sh, true, balances)
 			if err != nil {
-				return "", errors.Newf("pay_fees/pay_sharders",
+				return "", zchainErrors.Newf("pay_fees/pay_sharders",
 					"paying block sharder fees: %v", err)
 			}
 
@@ -598,7 +599,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 
 			sresp, err = msc.mintStakeHolders(delegateBr, sh, gn, true, balances)
 			if err != nil {
-				return "", errors.Newf("pay_fees/mint_sharders",
+				return "", zchainErrors.Newf("pay_fees/mint_sharders",
 					"minting block sharder reward: %v", err)
 			}
 			resp += sresp
@@ -611,7 +612,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(fee, mint state.Balance,
 		}
 
 		if err = sh.save(balances); err != nil {
-			return "", errors.Newf("pay_fees/pay_sharders",
+			return "", zchainErrors.Newf("pay_fees/pay_sharders",
 				"saving sharder node: %v", err)
 		}
 	}
@@ -644,7 +645,7 @@ func (msc *MinerSmartContract) payNode(reward, fee state.Balance, mn *MinerNode,
 		mn.Stat.GeneratorFees += fee
 		var transfer = state.NewTransfer(ADDRESS, mn.DelegateWallet, fee)
 		if err = balances.AddTransfer(transfer); err != nil {
-			return "", errors.Newf("", "adding transfer: %v", err)
+			return "", zchainErrors.Newf("", "adding transfer: %v", err)
 		}
 		resp += string(transfer.Encode())
 	}

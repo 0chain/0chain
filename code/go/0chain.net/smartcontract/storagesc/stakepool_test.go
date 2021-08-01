@@ -17,7 +17,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -148,7 +147,7 @@ func TestStakePoolLock(t *testing.T) {
 		var offers = []common.Timestamp{}
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errStakePoolLock+errStakeTooSmall)
+		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {

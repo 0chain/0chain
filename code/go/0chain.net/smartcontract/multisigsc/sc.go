@@ -16,7 +16,8 @@ import (
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -104,7 +105,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	}
 	if !isValid {
 		//if there are no errors, it should be valid
-		return "err_register_invalid: invalid request", errors.New("err_register_invalid", "invalid request")
+		return "err_register_invalid: invalid request", zchainErrors.New("err_register_invalid", "invalid request")
 	}
 
 	// If you want to replace a multi-sig wallet, you have to delete the
@@ -112,12 +113,12 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	alreadyExisted, err := ms.walletExists(registeringClientID, balances)
 	if err != nil {
 		// I/O error.
-		if !errors.Is(err, util.ErrValueNotPresent()) && !errors.Is(err, util.ErrNodeNotFound()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) && !zchainErrors.Is(err, util.ErrNodeNotFound) {
 			return "", err
 		} //else means no wallet exists
 	}
 	if alreadyExisted {
-		return "err_register_exists: multi-sig wallet already exists", errors.New("err_register_exists", "multi-sig wallet already exists")
+		return "err_register_exists: multi-sig wallet already exists", zchainErrors.New("err_register_exists", "multi-sig wallet already exists")
 	}
 
 	err = ms.putWallet(w, balances)
@@ -135,7 +136,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	err := ms.pruneExpirationQueue(now, balances)
 	if err != nil {
 		// I/O error.
-		if !errors.Is(err, util.ErrValueNotPresent()) && !errors.Is(err, util.ErrNodeNotFound()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) && !zchainErrors.Is(err, util.ErrNodeNotFound) {
 			return "", err
 		} //else there are no expiration queue.
 	}
@@ -149,13 +150,13 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Play nice.
 	if !v.notTooBig() {
-		return "", errors.New("err_vote_too_big", "an input field exceeded allowable length")
+		return "", zchainErrors.New("err_vote_too_big", "an input field exceeded allowable length")
 	}
 	if !v.hasValidAmount() {
-		return "", errors.New("err_vote_invalid_tokens", "invalid number of tokens to send")
+		return "", zchainErrors.New("err_vote_invalid_tokens", "invalid number of tokens to send")
 	}
 	if !v.hasSignature() {
-		return "", errors.New("err_vote_no_signature", " must sign vote")
+		return "", zchainErrors.New("err_vote_no_signature", " must sign vote")
 	}
 
 	// Every vote is associated with a proposal. If an appropriate proposal does
@@ -168,7 +169,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Ensure all voters are on the same page.
 	if !v.isCompatibleWithProposal(p) {
-		return "", errors.New("err_vote_not_compatible", " previous votes for same proposal differed")
+		return "", zchainErrors.New("err_vote_not_compatible", " previous votes for same proposal differed")
 	}
 
 	// Check if the proposal was already finished, making this vote unnecessary.
@@ -183,17 +184,17 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 		return "", err
 	}
 	if w.isEmpty() {
-		return "", errors.New("err_vote_wallet_not_registered", " wallet not registered")
+		return "", zchainErrors.New("err_vote_wallet_not_registered", " wallet not registered")
 	}
 
 	// Check that the voter is registered on the wallet and that the signature
 	// is valid.
 	signerThresholdID := w.thresholdIdForSigner(signingClientID)
 	if signerThresholdID == "" {
-		return "", errors.New("err_vote_auth", " authorization failure")
+		return "", zchainErrors.New("err_vote_auth", " authorization failure")
 	}
 	if !w.isVoteAuthorized(signingClientID, v) {
-		return "", errors.New("err_vote_auth", " authorization failure")
+		return "", zchainErrors.New("err_vote_auth", " authorization failure")
 	}
 
 	remaining := w.NumRequired - len(p.SignerSignatures)
@@ -228,7 +229,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// execute it.
 	thresholdSignature, err := w.constructTransferSignature(p)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("err_vote_recover", "in signature recovery"))
+		return "", errors.Wrap(err, zchainErrors.New("err_vote_recover", "in signature recovery").Error())
 	}
 
 	p.ClientSignature = thresholdSignature
@@ -362,7 +363,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 		if err != nil {
 			return proposal{}, err
 		}
-		return proposal{}, errors.New("proposal_expired", "proposal is expired")
+		return proposal{}, zchainErrors.New("proposal_expired", "proposal is expired")
 	}
 
 	// If it didn't exist or was expired, create it and update expiration queue.
@@ -380,7 +381,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent()) && !errors.Is(err, util.ErrNodeNotFound()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) && !zchainErrors.Is(err, util.ErrNodeNotFound) {
 			return proposal{}, err
 		} //else we will create a proposal
 	}
@@ -485,7 +486,7 @@ func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.St
 
 	if err != nil {
 		// I/O error.
-		if !errors.Is(err, util.ErrValueNotPresent()) && !errors.Is(err, util.ErrNodeNotFound()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) && !zchainErrors.Is(err, util.ErrNodeNotFound) {
 			return proposal{}, err
 		} //else there are no propsals.
 		return proposal{}, nil
@@ -517,7 +518,7 @@ func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.Stat
 
 	if err != nil {
 		// I/O error.
-		if !errors.Is(err, util.ErrValueNotPresent()) && !errors.Is(err, util.ErrNodeNotFound()) {
+		if !zchainErrors.Is(err, util.ErrValueNotPresent) && !zchainErrors.Is(err, util.ErrNodeNotFound) {
 			return expirationQueue{}, err
 		} //else we will create queue
 

@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -286,7 +286,7 @@ func (r *Round) GetVRFOutput() string {
 // verifying as well as notarization message from others.
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	if b.GetRoundRandomSeed() == 0 {
-		return nil, false, errors.New("add_notarized_block", "block has no seed")
+		return nil, false, zchainErrors.New("add_notarized_block", "block has no seed")
 	}
 
 	r.mutex.Lock()

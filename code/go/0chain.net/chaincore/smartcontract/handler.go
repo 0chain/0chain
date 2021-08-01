@@ -12,7 +12,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/logging"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -27,11 +27,11 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 		//add bc context here
 		handler, restpathok := scI.GetRestPoints()[restpath]
 		if !restpathok {
-			return nil, errors.New("invalid_path", "Invalid path")
+			return nil, zchainErrors.New("invalid_path", "Invalid path")
 		}
 		return handler(ctx, params, balances)
 	}
-	return nil, errors.New("invalid_sc", "Invalid Smart contract address")
+	return nil, zchainErrors.New("invalid_sc", "Invalid Smart contract address")
 }
 
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
@@ -90,5 +90,5 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balan
 		}
 		return transactionOutput, nil
 	}
-	return "", errors.New("invalid_smart_contract_address", "Invalid Smart Contract address")
+	return "", zchainErrors.New("invalid_smart_contract_address", "Invalid Smart Contract address")
 }

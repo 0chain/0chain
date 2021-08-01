@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // common types
@@ -48,7 +48,7 @@ func ParsePhase(ps string) (ph Phase, err error) {
 	case "wait":
 		return PhaseWait, nil
 	}
-	return 0, errors.Newf("", "unknown phase: %q", ps)
+	return 0, zchainErrors.Newf("", "unknown phase: %q", ps)
 }
 
 // String implements standard fmt.Stringer interface.
@@ -140,7 +140,7 @@ func (c *Config) IsSkipWait(name NodeName) (ok bool) {
 func (c *Config) Execute(name string) (err error) {
 	var n, ok = c.Commands[name]
 	if !ok {
-		return errors.Newf("", "unknown system command: %q", name)
+		return zchainErrors.Newf("", "unknown system command: %q", name)
 	}
 
 	if n.WorkDir == "" {
@@ -167,7 +167,7 @@ func (c *Config) Execute(name string) (err error) {
 
 	if err == nil {
 		if n.ShouldFail {
-			return errors.Newf("", "command %q success (but should fail)", name)
+			return zchainErrors.Newf("", "command %q success (but should fail)", name)
 		}
 		return nil // ok
 	}
@@ -208,7 +208,7 @@ func (c *Config) IsEnabled(set *Set) bool {
 // CleanupBC used to execute the configured cleanup_command.
 func (c *Config) CleanupBC() (err error) {
 	if c.CleanupCommand == "" {
-		return errors.New("no cleanup_command given in conductor.yaml")
+		return zchainErrors.New("no cleanup_command given in conductor.yaml")
 	}
 
 	var (

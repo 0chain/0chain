@@ -5,12 +5,12 @@ import (
 	"net/rpc"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/conductor/config"
 )
 
-var ErrShutdown = errors.Register("server shutdown")
+var ErrShutdown = zchainErrors.New("server shutdown")
 
 // type aliases
 type (
@@ -202,7 +202,7 @@ func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
 
 	var ok bool
 	if ns, ok = s.nodes[name]; !ok {
-		return nil, errors.Newf("", "(node state) unexpected node: %s", name)
+		return nil, zchainErrors.Newf("", "(node state) unexpected node: %s", name)
 	}
 	ns.counter++
 	return
@@ -218,7 +218,7 @@ func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
 
 	var n, ok = s.nodes[name]
 	if !ok {
-		return errors.Newf("", "(update state) unexpected node: %s", name)
+		return zchainErrors.Newf("", "(update state) unexpected node: %s", name)
 	}
 
 	update(n.state) // update
@@ -376,7 +376,7 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 
 	var name, ok = s.names[id]
 	if !ok {
-		return errors.Newf("", "unknown node ID: %s", id)
+		return zchainErrors.Newf("", "unknown node ID: %s", id)
 	}
 
 	var ns *nodeState
@@ -389,7 +389,7 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 		select {
 		case s.onNodeReady <- name:
 		case <-s.quit:
-			return ErrShutdown()
+			return ErrShutdown
 		}
 	}
 
@@ -397,7 +397,7 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 	case x := <-ns.poll:
 		(*state) = (*x)
 	case <-s.quit:
-		return ErrShutdown()
+		return ErrShutdown
 	}
 	return
 }

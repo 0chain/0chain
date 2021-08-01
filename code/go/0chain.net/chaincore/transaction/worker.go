@@ -8,7 +8,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -44,7 +44,7 @@ func CleanupWorker(ctx context.Context) {
 			invalidTxns = append(invalidTxns, txn)
 		}
 		err := transactionEntityMetadata.GetStore().Read(ctx, txn.Hash, txn)
-		cerr, ok := err.(*errors.Error)
+		cerr, ok := err.(*zchainErrors.Error)
 		if ok && cerr.Code == datastore.EntityNotFound {
 			invalidHashes = append(invalidHashes, txn)
 		}

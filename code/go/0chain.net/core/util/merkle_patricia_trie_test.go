@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/0chain/gorocksdb"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
@@ -488,9 +488,9 @@ func TestMPTDelete(t *testing.T) {
 	doStrValInsert(t, mpt2, "612345", "")
 
 	// delete not existent node
-	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound())
-	doDelete(t, mpt2, "61251234", ErrNodeNotFound())
-	doDelete(t, mpt2, "613512", ErrNodeNotFound())
+	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound)
+	doDelete(t, mpt2, "61251234", ErrNodeNotFound)
+	doDelete(t, mpt2, "613512", ErrNodeNotFound)
 }
 
 func TestMPTUniverse(t *testing.T) {
@@ -574,7 +574,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	val, err := mpt.GetNodeValue(Path(key))
 	if value == "" {
-		if !(val == nil || errors.Is(err, ErrValueNotPresent())) {
+		if !(val == nil || zchainErrors.Is(err, ErrValueNotPresent)) {
 			t.Fatalf("setting value to blank didn't return nil value: %v, %v",
 				val, err)
 		}
@@ -591,7 +591,7 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func iterHandler() func(ctx context.Context, path Path, key Key, node Node) error {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			return errors.Newf("", "stop")
+			return zchainErrors.Newf("", "stop")
 		}
 		return nil
 	}
@@ -600,7 +600,7 @@ func iterHandler() func(ctx context.Context, path Path, key Key, node Node) erro
 func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Node) error {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			return errors.Newf("", "stop")
+			return zchainErrors.Newf("", "stop")
 		}
 		return nil
 	}
@@ -609,7 +609,7 @@ func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Nod
 func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
 
 	newRoot, err := mpt.Delete([]byte(key))
-	if errors.PPrint(err) != errors.PPrint(expErr) {
+	if err != expErr {
 		t.Fatalf("expect err: %v, got err: %v", expErr, err)
 		return
 	}

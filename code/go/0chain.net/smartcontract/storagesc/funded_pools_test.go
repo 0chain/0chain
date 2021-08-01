@@ -39,7 +39,7 @@ func TestAddToFundedPools(t *testing.T) {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(nil, util.ErrValueNotPresent()).Once()
+			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
 		balances.On(
@@ -135,7 +135,7 @@ func TestIsFundedPool(t *testing.T) {
 			balances.On(
 				"GetTrieNode",
 				fundedPoolsKey(ssc.ID, p.client),
-			).Return(nil, util.ErrValueNotPresent()).Once()
+			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
 		return ssc, balances

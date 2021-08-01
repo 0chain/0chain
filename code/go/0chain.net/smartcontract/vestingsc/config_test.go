@@ -7,7 +7,6 @@ import (
 
 	configpkg "0chain.net/chaincore/config"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,7 @@ func assertErrMsg(t *testing.T, err error, msg string) {
 	}
 
 	if assert.NotNil(t, err) {
-		assert.Equal(t, msg, errors.PPrint(err))
+		assert.Equal(t, msg, err.Error())
 	}
 }
 

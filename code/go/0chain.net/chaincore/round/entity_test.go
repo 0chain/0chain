@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -518,7 +518,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 			args:    args{b: b3},
 			want:    b,
 			want1:   false,
-			wantErr: errors.New("add_notarized_block", "block has no seed"),
+			wantErr: zchainErrors.New("add_notarized_block", "block has no seed"),
 		},
 		{
 			name: "TRUE",
@@ -554,7 +554,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				vrfStartTime:     tt.fields.vrfStartTime,
 			}
 			got, got1, err := r.AddNotarizedBlock(tt.args.b)
-			require.Equal(t, errors.PPrint(tt.wantErr), errors.PPrint(err))
+			require.Equal(t, tt.wantErr, err)
 
 			if err != nil {
 				return

@@ -7,7 +7,8 @@ import (
 	"sort"
 
 	"0chain.net/smartcontract"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
@@ -121,7 +122,7 @@ func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 
 	cp = new(clientPools)
 	if err = cp.Decode(listb); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding())
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 
 	return
@@ -131,11 +132,11 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 	balances chainstate.StateContextI) (cp *clientPools, err error) {
 
 	cp, err = vsc.getClientPools(clientID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent()) {
+	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return // unexpected error
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent()) {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
 		return new(clientPools), nil // create new
 	}
 

@@ -73,6 +73,12 @@ github.com/0chain/gosdk v1.2.77-0.20210721180646-6024737de0d8 h1:ojVk+DH9Zo9M7m1
 github.com/0chain/gosdk v1.2.77-0.20210721180646-6024737de0d8/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
 github.com/0chain/gosdk v1.2.77-0.20210721181952-c6866ff423c7 h1:B1qpopQ5wiKa1oTKwSZQqZbw6hG5eIHCaFvyPIaFyVA=
 github.com/0chain/gosdk v1.2.77-0.20210721181952-c6866ff423c7/go.mod h1:EntD+g2xA5SLUAm6JABMhkYAlTOmp0XhSnf/5xfwnV4=
+github.com/0chain/gosdk/errors v0.0.0-20210731055239-d549fa4b69ea h1:zcy7q29lcadgkUz4e8e0fb7QX+4Qua7DK9z79f0Ez6w=
+github.com/0chain/gosdk/errors v0.0.0-20210731055239-d549fa4b69ea/go.mod h1:xiiGUOoJqx/NA9YRNVxs6VgduRbuFpp4fuAB1cLrNbQ=
+github.com/0chain/gosdk/errors v0.0.0-20210731142158-7b06c91d5111 h1:3wQbCeEck+Tvy2PfVLK+3ZphtZCGS2CjtHj/yXTRiYQ=
+github.com/0chain/gosdk/errors v0.0.0-20210731142158-7b06c91d5111/go.mod h1:xiiGUOoJqx/NA9YRNVxs6VgduRbuFpp4fuAB1cLrNbQ=
+github.com/0chain/gosdk/errors v0.0.0-20210731152847-357a120cda36 h1:s4FjqKwR8If60FuorGwzz+fAN9OE6GXtvqAwkk0UQXU=
+github.com/0chain/gosdk/errors v0.0.0-20210731152847-357a120cda36/go.mod h1:xiiGUOoJqx/NA9YRNVxs6VgduRbuFpp4fuAB1cLrNbQ=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=

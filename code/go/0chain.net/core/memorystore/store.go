@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"0chain.net/core/datastore"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 /*BATCH_SIZE size of the batch */
@@ -38,7 +38,7 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	}
 
 	if data == nil {
-		return errors.New(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), redisKey))
+		return zchainErrors.New(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), redisKey))
 	}
 	datastore.FromJSON(data, entity)
 	entity.ComputeProperties()
@@ -66,7 +66,7 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 		return err
 	}
 	if val, ok := data.(int64); ok && val == 0 {
-		return errors.New("duplicate_entity", fmt.Sprintf("%v with key %v already exists", emd.GetName(), entity.GetKey()))
+		return zchainErrors.New("duplicate_entity", fmt.Sprintf("%v with key %v already exists", emd.GetName(), entity.GetKey()))
 	}
 	ce, ok := entity.(datastore.CollectionEntity)
 	if !ok {
@@ -146,7 +146,7 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 	}
 	array, ok := data.([]interface{})
 	if !ok {
-		return errors.Newf("", "not a valid entity json: (%v)", rkeys)
+		return zchainErrors.Newf("", "not a valid entity json: (%v)", rkeys)
 	}
 	for idx, ae := range array {
 		if ae == nil {
@@ -256,7 +256,7 @@ func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata dat
 	for idx, entity := range entities {
 		ce, ok := entity.(datastore.CollectionEntity)
 		if !ok {
-			return errors.New("dev_error", "Entity needs to be CollectionEntity")
+			return zchainErrors.New("dev_error", "Entity needs to be CollectionEntity")
 		}
 		ind := offset + 2*idx
 		score := ce.GetCollectionScore()
@@ -360,7 +360,7 @@ func (ms *Store) multiDeleteFromCollectionAux(ctx context.Context, entityMetadat
 	for idx, entity := range entities {
 		ce, ok := entity.(datastore.CollectionEntity)
 		if !ok {
-			return errors.New("dev_error", "Entity needs to be CollectionEntity")
+			return zchainErrors.New("dev_error", "Entity needs to be CollectionEntity")
 		}
 		keys[idx+1] = ce.GetKey()
 	}

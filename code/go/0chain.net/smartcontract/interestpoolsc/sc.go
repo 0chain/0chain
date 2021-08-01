@@ -16,7 +16,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"github.com/rcrowley/go-metrics"
 )
@@ -74,26 +75,26 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	npr := &newPoolRequest{}
 	err := npr.decode(inputData)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("failed_locking_tokens", "request not formatted correctly"))
+		return "", errors.Wrap(err, zchainErrors.New("failed_locking_tokens", "request not formatted correctly").Error())
 	}
 	if t.Value < int64(gn.MinLock) {
-		return "", errors.New("failed_locking_tokens", "insufficent amount to dig an interest pool")
+		return "", zchainErrors.New("failed_locking_tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
-	if errors.Is(err, util.ErrValueNotPresent()) {
-		return "", errors.New("failed_locking_tokens", "you have no tokens to your name")
+	if zchainErrors.Is(err, util.ErrValueNotPresent) {
+		return "", zchainErrors.New("failed_locking_tokens", "you have no tokens to your name")
 	}
 	if state.Balance(t.Value) > balance {
-		return "", errors.New("failed_locking_tokens", "lock amount is greater than balance")
+		return "", zchainErrors.New("failed_locking_tokens", "lock amount is greater than balance")
 	}
 	if npr.Duration > YEAR {
-		return "", errors.New("failed_locking_tokens", fmt.Sprintf("duration (%v) is longer than max lock period (%v)", npr.Duration.String(), YEAR.String()))
+		return "", zchainErrors.New("failed_locking_tokens", fmt.Sprintf("duration (%v) is longer than max lock period (%v)", npr.Duration.String(), YEAR.String()))
 	}
 	if npr.Duration < gn.MinLockPeriod {
-		return "", errors.New("failed_locking_tokens", fmt.Sprintf("duration (%v) is shorter than min lock period (%v)", npr.Duration.String(), gn.MinLockPeriod.String()))
+		return "", zchainErrors.New("failed_locking_tokens", fmt.Sprintf("duration (%v) is shorter than min lock period (%v)", npr.Duration.String(), gn.MinLockPeriod.String()))
 	}
 	if !gn.canMint() {
-		return "", errors.New("failed_locking_tokens", "can't mint anymore")
+		return "", zchainErrors.New("failed_locking_tokens", "can't mint anymore")
 	}
 	pool := newInterestPool()
 	pool.TokenLockInterface = &tokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
@@ -128,34 +129,34 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 	ps := &poolStat{}
 	err := ps.decode(inputData)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "input not formatted correctly"))
+		return "", errors.Wrap(err, zchainErrors.New("failed_to_unlock_tokens", "input not formatted correctly").Error())
 
 	}
 	pool, ok := un.Pools[ps.ID]
 	if ok {
 		transfer, response, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
 		if err != nil {
-			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error emptying pool"))
+			return "", errors.Wrap(err, zchainErrors.New("failed_to_unlock_tokens", "error emptying pool").Error())
 		}
 		err = un.deletePool(pool.ID)
 		if err != nil {
-			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error deleting pool from user node"))
+			return "", errors.Wrap(err, zchainErrors.New("failed_to_unlock_tokens", "error deleting pool from user node").Error())
 		}
 		balances.AddTransfer(transfer)
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
 		return response, nil
 	}
-	return "", errors.New("failed_to_unlock_tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
+	return "", zchainErrors.New("failed_to_unlock_tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 }
 
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
 	if t.ClientID != owner {
-		return "", errors.New("failed_to_update_variables", "unauthorized access - only the owner can update the variables")
+		return "", zchainErrors.New("failed_to_update_variables", "unauthorized access - only the owner can update the variables")
 	}
 	newGn := &GlobalNode{SimpleGlobalNode: &SimpleGlobalNode{}}
 	err := newGn.Decode(inputData)
 	if err != nil {
-		return "", errors.New("failed_to_update_variables", "request not formatted correctly")
+		return "", zchainErrors.New("failed_to_update_variables", "request not formatted correctly")
 	}
 	const pfx = "smart_contracts.interestpoolsc."
 	var conf = config.SmartContractConfig
@@ -205,7 +206,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-	if errors.Is(err, util.ErrValueNotPresent()) && funcName != "updateVariables" {
+	if zchainErrors.Is(err, util.ErrValueNotPresent) && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}
 	return gn
@@ -222,6 +223,6 @@ func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcNam
 	case "updateVariables":
 		return ip.updateVariables(t, gn, inputData, balances)
 	default:
-		return "", errors.New("failed_execution", "no function with that name")
+		return "", zchainErrors.New("failed_execution", "no function with that name")
 	}
 }

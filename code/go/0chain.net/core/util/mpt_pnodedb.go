@@ -73,7 +73,7 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 	defer data.Free()
 	buf := data.Data()
 	if buf == nil || len(buf) == 0 {
-		return nil, ErrNodeNotFound()
+		return nil, ErrNodeNotFound
 	}
 	return CreateNode(bytes.NewReader(buf))
 }

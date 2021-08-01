@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 //
@@ -62,7 +62,7 @@ func (r *Runner) Start(names []NodeName, lock bool,
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
 		if !ok {
-			return errors.Newf("","(start): unknown node: %q", name)
+			return zchainErrors.Newf("", "(start): unknown node: %q", name)
 		}
 
 		// miners and sharders, but skip blobbers
@@ -72,7 +72,7 @@ func (r *Runner) Start(names []NodeName, lock bool,
 		}
 
 		if err = n.Start(r.conf.Logs); err != nil {
-			return errors.Newf("","starting %s: %v", n.Name, err)
+			return zchainErrors.Newf("", "starting %s: %v", n.Name, err)
 		}
 	}
 	return
@@ -89,7 +89,7 @@ func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 		state.IsLock = false
 	})
 	if err != nil {
-		return errors.Newf("","unlocking nodes: %v", err)
+		return zchainErrors.Newf("", "unlocking nodes: %v", err)
 	}
 	return
 }
@@ -103,7 +103,7 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
 		if !ok {
-			return errors.Newf("","(stop): unknown node: %q", name)
+			return zchainErrors.Newf("", "(stop): unknown node: %q", name)
 		}
 		log.Print("stopping ", n.Name, "...")
 		if err := n.Stop(); err != nil {
@@ -149,7 +149,7 @@ func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 			// by a named round
 			var rx, ok = r.rounds[wr.Name]
 			if !ok {
-				return errors.Newf("",
+				return zchainErrors.Newf("",
 					"wait_round: no round with %q name is registered",
 					wr.Name)
 			}
@@ -157,7 +157,7 @@ func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 			if wr.Shift != 0 {
 				wr.Round += wr.Shift // shift the named round
 			} else {
-				return errors.Newf("",
+				return zchainErrors.Newf("",
 					"wait_round: wait named round %q without a shift",
 					wr.Name)
 			}
@@ -185,7 +185,7 @@ func (r *Runner) WaitContributeMpk(wcmpk config.WaitContributeMpk,
 
 	var miner, ok = r.conf.Nodes.NodeByName(wcmpk.Miner)
 	if !ok {
-		return errors.Newf("","unknown miner: %q", wcmpk.Miner)
+		return zchainErrors.Newf("", "unknown miner: %q", wcmpk.Miner)
 	}
 
 	if r.verbose {
@@ -206,7 +206,7 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 
 	var miner, ok = r.conf.Nodes.NodeByName(ssos.Miner)
 	if !ok {
-		return errors.Newf("","unknown miner: %v", ssos.Miner)
+		return zchainErrors.Newf("", "unknown miner: %v", ssos.Miner)
 	}
 
 	if r.verbose {
@@ -263,7 +263,7 @@ func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
 		state.VRFS = vrfs
 	})
 	if err != nil {
-		return errors.Newf("","setting VRFS: %v", err)
+		return zchainErrors.Newf("", "setting VRFS: %v", err)
 	}
 	return
 }
@@ -275,7 +275,7 @@ func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
 		state.RoundTimeout = rt
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong round timeout': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong round timeout': %v", err)
 	}
 	return
 }
@@ -287,7 +287,7 @@ func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
 		state.CompetingBlock = cb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'competing block': %v", err)
+		return zchainErrors.Newf("", "setting 'competing block': %v", err)
 	}
 	return
 }
@@ -299,7 +299,7 @@ func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
 		state.SignOnlyCompetingBlocks = socb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'sign only competing block': %v", err)
+		return zchainErrors.Newf("", "setting 'sign only competing block': %v", err)
 	}
 	return
 }
@@ -311,7 +311,7 @@ func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
 		state.DoubleSpendTransaction = dst
 	})
 	if err != nil {
-		return errors.Newf("","setting 'double spend transaction': %v", err)
+		return zchainErrors.Newf("", "setting 'double spend transaction': %v", err)
 	}
 	return
 }
@@ -323,7 +323,7 @@ func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
 		state.WrongBlockSignHash = wbsh
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong block sign hash': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong block sign hash': %v", err)
 	}
 	return
 }
@@ -335,7 +335,7 @@ func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
 		state.WrongBlockSignKey = wbsk
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong block sign key': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong block sign key': %v", err)
 	}
 	return
 }
@@ -347,7 +347,7 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 		state.WrongBlockHash = wbh
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong block hash': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong block hash': %v", err)
 	}
 	return
 }
@@ -359,7 +359,7 @@ func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
 		state.VerificationTicketGroup = vtg
 	})
 	if err != nil {
-		return errors.Newf("","setting 'verification_ticket_group': %v", err)
+		return zchainErrors.Newf("", "setting 'verification_ticket_group': %v", err)
 	}
 	return
 }
@@ -371,7 +371,7 @@ func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
 		state.WrongVerificationTicketHash = wvth
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong verification ticket hash': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong verification ticket hash': %v", err)
 	}
 	return
 }
@@ -383,7 +383,7 @@ func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
 		state.WrongVerificationTicketKey = wvtk
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong verification ticket key': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong verification ticket key': %v", err)
 	}
 	return
 }
@@ -395,7 +395,7 @@ func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
 		state.WrongNotarizedBlockHash = wnbh
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong notarized block hash': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong notarized block hash': %v", err)
 	}
 	return
 }
@@ -407,7 +407,7 @@ func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
 		state.WrongNotarizedBlockKey = wnbk
 	})
 	if err != nil {
-		return errors.Newf("","setting 'wrong notarized block key': %v", err)
+		return zchainErrors.Newf("", "setting 'wrong notarized block key': %v", err)
 	}
 	return
 }
@@ -419,7 +419,7 @@ func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
 		state.NotarizeOnlyCompetingBlock = ncb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'notarized only competing block': %v", err)
+		return zchainErrors.Newf("", "setting 'notarized only competing block': %v", err)
 	}
 	return
 }
@@ -431,7 +431,7 @@ func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
 		state.NotarizedBlock = nb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'notarized block': %v", err)
+		return zchainErrors.Newf("", "setting 'notarized block': %v", err)
 	}
 	return
 }
@@ -451,7 +451,7 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 		state.IsRevealed = pin
 	})
 	if err != nil {
-		return errors.Newf("","setting revealed to %t nodes: %v", pin, err)
+		return zchainErrors.Newf("", "setting revealed to %t nodes: %v", pin, err)
 	}
 	return
 }
@@ -463,7 +463,7 @@ func (r *Runner) MPK(mpk *config.Bad) (err error) {
 		state.MPK = mpk
 	})
 	if err != nil {
-		return errors.Newf("","setting 'MPK': %v", err)
+		return zchainErrors.Newf("", "setting 'MPK': %v", err)
 	}
 	return
 }
@@ -475,7 +475,7 @@ func (r *Runner) Shares(s *config.Bad) (err error) {
 		state.Shares = s
 	})
 	if err != nil {
-		return errors.Newf("","setting 'shares': %v", err)
+		return zchainErrors.Newf("", "setting 'shares': %v", err)
 	}
 	return
 }
@@ -487,7 +487,7 @@ func (r *Runner) Signatures(s *config.Bad) (err error) {
 		state.Signatures = s
 	})
 	if err != nil {
-		return errors.Newf("","setting 'signatures': %v", err)
+		return zchainErrors.Newf("", "setting 'signatures': %v", err)
 	}
 	return
 }
@@ -499,7 +499,7 @@ func (r *Runner) Publish(p *config.Bad) (err error) {
 		state.Publish = p
 	})
 	if err != nil {
-		return errors.Newf("","setting 'publish': %v", err)
+		return zchainErrors.Newf("", "setting 'publish': %v", err)
 	}
 	return
 }
@@ -515,7 +515,7 @@ func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
 		state.FinalizedBlock = fb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'finalized block': %v", err)
+		return zchainErrors.Newf("", "setting 'finalized block': %v", err)
 	}
 	return
 }
@@ -527,7 +527,7 @@ func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
 		state.MagicBlock = mb
 	})
 	if err != nil {
-		return errors.Newf("","setting 'magic block': %v", err)
+		return zchainErrors.Newf("", "setting 'magic block': %v", err)
 	}
 	return
 }
@@ -539,7 +539,7 @@ func (r *Runner) VerifyTransaction(vt *config.Bad) (err error) {
 		state.VerifyTransaction = vt
 	})
 	if err != nil {
-		return errors.Newf("","setting bad 'verify transaction': %v", err)
+		return zchainErrors.Newf("", "setting bad 'verify transaction': %v", err)
 	}
 	return
 }
@@ -576,7 +576,7 @@ func (r *Runner) asyncCommand(name string) (reply chan error) {
 func (r *Runner) runAsyncCommand(reply chan error, name string) {
 	var err = r.conf.Execute(name)
 	if err != nil {
-		err = errors.Newf("","%q: %v", name, err)
+		err = zchainErrors.Newf("", "%q: %v", name, err)
 	}
 	reply <- err // nil or error
 }
@@ -594,7 +594,7 @@ func (r *Runner) StorageTree(st *config.Bad) (err error) {
 		state.StorageTree = st
 	})
 	if err != nil {
-		return errors.Newf("","setting bad 'storage_tree': %v", err)
+		return zchainErrors.Newf("", "setting bad 'storage_tree': %v", err)
 	}
 	return
 }
@@ -608,7 +608,7 @@ func (r *Runner) ValidatorProof(vp *config.Bad) (err error) {
 		state.ValidatorProof = vp
 	})
 	if err != nil {
-		return errors.Newf("","setting bad 'storage_tree': %v", err)
+		return zchainErrors.Newf("", "setting bad 'storage_tree': %v", err)
 	}
 	return
 }
@@ -622,7 +622,7 @@ func (r *Runner) Challenges(cs *config.Bad) (err error) {
 		state.Challenges = cs
 	})
 	if err != nil {
-		return errors.Newf("","setting bad 'challenges': %v", err)
+		return zchainErrors.Newf("", "setting bad 'challenges': %v", err)
 	}
 	return
 }

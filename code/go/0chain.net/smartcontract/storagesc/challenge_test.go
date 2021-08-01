@@ -17,7 +17,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -90,7 +89,7 @@ func TestAddChallenge(t *testing.T) {
 	validate := func(t *testing.T, resp string, err error, p parameters, want want) {
 		require.EqualValues(t, want.error, err != nil)
 		if want.error {
-			require.EqualValues(t, want.errorMsg, errors.PPrint(err))
+			require.EqualValues(t, want.errorMsg, err.Error())
 			return
 		}
 		challenge := &StorageChallenge{}
@@ -206,7 +205,7 @@ func TestBlobberReward(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errLate)
+		require.EqualValues(t, err.Error(), errLate)
 	})
 
 	t.Run(errTokensChallengePool, func(t *testing.T) {
@@ -296,7 +295,7 @@ func TestBlobberPenalty(t *testing.T) {
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
-		require.EqualValues(t, errors.PPrint(err), errLate)
+		require.EqualValues(t, err.Error(), errLate)
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {

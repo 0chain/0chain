@@ -16,7 +16,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1025,7 +1024,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	for _, blobber := range allBlobbersList.Nodes {
 		var b *StorageNode
 		b, err = ssc.getBlobber(blobber.ID, ctx)
-		if err != nil && errors.PPrint(err) == ErrValueNotPresent {
+		if err != nil && err.Error() == ErrValueNotPresent {
 			continue
 		}
 		require.NoError(t, err)

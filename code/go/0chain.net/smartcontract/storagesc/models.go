@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -245,29 +246,29 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 // validate a received terms
 func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ReadPrice < 0 {
-		return errors.New("negative read_price")
+		return zchainErrors.New("negative read_price")
 	}
 	if t.WritePrice < 0 {
-		return errors.New("negative write_price")
+		return zchainErrors.New("negative write_price")
 	}
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
-		return errors.New("invalid min_lock_demand")
+		return zchainErrors.New("invalid min_lock_demand")
 	}
 	if t.MaxOfferDuration < conf.MinOfferDuration {
-		return errors.New("insufficient max_offer_duration")
+		return zchainErrors.New("insufficient max_offer_duration")
 	}
 	if t.ChallengeCompletionTime < 0 {
-		return errors.New("negative challenge_completion_time")
+		return zchainErrors.New("negative challenge_completion_time")
 	}
 	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge_completion_time is greater than max " +
+		return zchainErrors.New("challenge_completion_time is greater than max " +
 			"allowed by SC")
 	}
 	if t.ReadPrice > conf.MaxReadPrice {
-		return errors.New("read_price is greater than max_read_price allowed")
+		return zchainErrors.New("read_price is greater than max_read_price allowed")
 	}
 	if t.WritePrice > conf.MaxWritePrice {
-		return errors.New("write_price is greater than max_write_price allowed")
+		return zchainErrors.New("write_price is greater than max_write_price allowed")
 	}
 	return // nil
 }
@@ -288,11 +289,11 @@ type StorageNodeGeolocation struct {
 
 func (sng StorageNodeGeolocation) validate() error {
 	if sng.Latitude < MinLatitude || MaxLatitude < sng.Latitude {
-		return errors.Newf("out_of_range_geolocation",
+		return zchainErrors.Newf("out_of_range_geolocation",
 			"latitude %f should be in range [-90, 90]", sng.Latitude)
 	}
 	if sng.Longitude < MinLongitude || MaxLongitude < sng.Longitude {
-		return errors.Newf("out_of_range_geolocation",
+		return zchainErrors.Newf("out_of_range_geolocation",
 			"latitude %f should be in range [-180, 180]", sng.Longitude)
 	}
 	return nil
@@ -318,12 +319,12 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return
 	}
 	if sn.Capacity <= conf.MinBlobberCapacity {
-		return errors.New("insufficient blobber capacity")
+		return zchainErrors.New("insufficient blobber capacity")
 	}
 
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
-		return errors.New("invalid blobber base url")
+		return zchainErrors.New("invalid blobber base url")
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -615,29 +616,29 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 	conf *scConfig) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
-		return errors.New("invalid read_price range")
+		return zchainErrors.New("invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write_price range")
+		return zchainErrors.New("invalid write_price range")
 	}
 	if sa.Size < conf.MinAllocSize {
-		return errors.New("insufficient allocation size")
+		return zchainErrors.New("insufficient allocation size")
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 	if dur < conf.MinAllocDuration {
-		return errors.New("insufficient allocation duration")
+		return zchainErrors.New("insufficient allocation duration")
 	}
 
 	if sa.DataShards <= 0 {
-		return errors.New("invalid number of data shards")
+		return zchainErrors.New("invalid number of data shards")
 	}
 
 	if sa.OwnerPublicKey == "" {
-		return errors.New("missing owner public key")
+		return zchainErrors.New("missing owner public key")
 	}
 
 	if sa.Owner == "" {
-		return errors.New("missing owner id")
+		return zchainErrors.New("missing owner id")
 	}
 
 	return // nil
@@ -943,14 +944,14 @@ func (bc *BlobberCloseConnection) Verify() bool {
 	}
 
 	if bc.WriteMarker.AllocationRoot != bc.AllocationRoot {
-		// return "", errors.New("invalid_parameters",
+		// return "", zchainErrors.New("invalid_parameters",
 		//     "Invalid Allocation root. Allocation root in write marker " +
 		//     "does not match the commit")
 		return false
 	}
 
 	if bc.WriteMarker.PreviousAllocationRoot != bc.PrevAllocationRoot {
-		// return "", errors.New("invalid_parameters",
+		// return "", zchainErrors.New("invalid_parameters",
 		//     "Invalid Previous Allocation root. Previous Allocation root " +
 		//     "in write marker does not match the commit")
 		return false
@@ -1054,27 +1055,27 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 	clientID string) (err error) {
 
 	if at.AllocationID != alloc.ID {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Allocation ID mismatch")
 	}
 
 	if at.ClientID != clientID && len(at.ClientID) > 0 {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Client ID mismatch")
 	}
 
 	if at.Expiration < at.Timestamp || at.Expiration < now {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Expired ticket")
 	}
 
 	if at.OwnerID != alloc.Owner {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Owner ID mismatch")
 	}
 
 	if at.Timestamp > now+2 {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Timestamp in future")
 	}
 
@@ -1083,8 +1084,8 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ss  = encryption.GetSignatureScheme(ssn)
 	)
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
-		return errors.Wrap(err, errors.New("invalid_read_marker",
-			"setting owner public key"))
+		return errors.Wrap(err, zchainErrors.New("invalid_read_marker",
+			"setting owner public key").Error())
 	}
 
 	var (
@@ -1092,7 +1093,7 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ok      bool
 	)
 	if ok, err = ss.Verify(at.Signature, sighash); err != nil || !ok {
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"Invalid auth ticket. Signature verification failed")
 	}
 
@@ -1136,7 +1137,7 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
 	}
 	// 3rd party payment
 	if rm.AuthTicket == nil {
-		return errors.New("invalid_read_marker", "missing auth. ticket")
+		return zchainErrors.New("invalid_read_marker", "missing auth. ticket")
 	}
 	return rm.AuthTicket.verify(alloc, now, rm.PayerID)
 }
@@ -1153,7 +1154,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
 		rm.Timestamp == 0 {
 
-		return errors.New("invalid_read_marker",
+		return zchainErrors.New("invalid_read_marker",
 			"length validations of fields failed")
 	}
 
@@ -1162,7 +1163,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 			rm.Timestamp < prevRM.Timestamp ||
 			rm.ReadCounter < prevRM.ReadCounter {
 
-			return errors.New("invalid_read_marker",
+			return zchainErrors.New("invalid_read_marker",
 				"validations with previous marker failed.")
 		}
 	}
@@ -1171,7 +1172,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 		return nil
 	}
 
-	return errors.New("invalid_read_marker",
+	return zchainErrors.New("invalid_read_marker",
 		"Signature verification failed for the read marker")
 }
 

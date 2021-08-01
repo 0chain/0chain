@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 /*NodeChange - track a change to the node */
@@ -168,7 +168,7 @@ func (cc *ChangeCollector) Validate() error {
 	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
-			return errors.New("key present in both add and delete")
+			return zchainErrors.New("key present in both add and delete")
 		}
 	}
 	return nil

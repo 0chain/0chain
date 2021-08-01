@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type Directive map[string]interface{}
@@ -47,7 +47,7 @@ func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
 
 	var name, val, ok = d.unwrap()
 	if !ok {
-		return errors.New("invalid empty flow"), false
+		return zchainErrors.New("invalid empty flow"), false
 	}
 
 	var mf bool = false
@@ -56,10 +56,10 @@ func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
 		if tmsi, ok := msi["timeout"]; ok {
 			tms, ok := tmsi.(string)
 			if !ok {
-				return errors.Newf("","invalid 'timeout' type: %T", tmsi), false
+				return zchainErrors.Newf("", "invalid 'timeout' type: %T", tmsi), false
 			}
 			if tm, err = time.ParseDuration(tms); err != nil {
-				return errors.Newf("","paring 'timeout' %q: %v", tms, err), false
+				return zchainErrors.Newf("", "paring 'timeout' %q: %v", tms, err), false
 			}
 			delete(msi, "timeout")
 		}
@@ -68,7 +68,7 @@ func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
 		if mfmsi, ok := msi["must_fail"]; ok {
 			mf, ok = mfmsi.(bool)
 			if !ok {
-				return errors.Newf("","invalid 'must_fail' type: %T", mfmsi), false
+				return zchainErrors.Newf("", "invalid 'must_fail' type: %T", mfmsi), false
 			}
 			delete(msi, "must_fail")
 		}
@@ -83,7 +83,7 @@ func execute(name string, ex Executor, val interface{}, tm time.Duration) (
 
 	var fn, ok = flowRegistry[name]
 	if !ok {
-		return errors.Newf("","unknown flow directive: %q", name)
+		return zchainErrors.Newf("", "unknown flow directive: %q", name)
 	}
 
 	return fn(name, ex, val, tm)

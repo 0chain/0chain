@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 /*AppErrorHeader - a http response header to send an application error code */
@@ -37,16 +37,16 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 		w.Header().Set("Content-Type", "application/json")
 		data := make(map[string]interface{}, 2)
 		data["error"] = err.Error()
-		if cErr, ok := err.(*errors.Error); ok {
+		if cErr, ok := err.(*zchainErrors.Error); ok {
 			data["code"] = cErr.Code
 		}
 
 		switch {
-		case errors.Is(err, ErrBadRequest()):
+		case zchainErrors.Is(err, ErrBadRequest):
 			w.WriteHeader(http.StatusBadRequest)
-		case errors.Is(err, ErrInternal()):
+		case zchainErrors.Is(err, ErrInternal):
 			w.WriteHeader(http.StatusInternalServerError)
-		case errors.Is(err, ErrNoResource()):
+		case zchainErrors.Is(err, ErrNoResource):
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			w.WriteHeader(http.StatusBadRequest)
@@ -174,7 +174,7 @@ func JSONString(json map[string]interface{}, field string, required bool) (strin
 	val, ok := json[field]
 	if !ok {
 		if required {
-			return "", errors.Newf("", "input %v is required", field)
+			return "", zchainErrors.Newf("", "input %v is required", field)
 		}
 		return "", nil
 	}

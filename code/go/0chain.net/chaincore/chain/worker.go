@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/httpclientutil"
@@ -161,12 +162,12 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	lfmb := c.GetLatestFinalizedMagicBlockBrief()
 
 	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		return errors.New("repair_mb_chain", "already have such MB")
+		return zchainErrors.New("repair_mb_chain", "already have such MB")
 	}
 
 	if newMB.MagicBlockNumber == lfmb.MagicBlockNumber+1 {
 		if newMB.PreviousMagicBlockHash != lfmb.MagicBlockHash {
-			return errors.New("repair_mb_chain", "invalid prev-MB ref.")
+			return zchainErrors.New("repair_mb_chain", "invalid prev-MB ref.")
 		}
 		return // it's just next MB
 	}
@@ -482,7 +483,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	// until we have got all MB from our from store to latest given
 	for currentLFMB.Hash != latestMagicBlock.Hash {
 		if currentLFMB.MagicBlockNumber > latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify_chain_history_failed, latest magic block ")
+			err = zchainErrors.New("verify_chain_history_failed, latest magic block ")
 			Logger.Debug("current lfmb number is greater than new lfmb number",
 				zap.Int64("current_lfmb_number", currentLFMB.MagicBlockNumber),
 				zap.Int64("new lfmb_number", latestMagicBlock.MagicBlockNumber),
@@ -492,7 +493,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		}
 
 		if currentLFMB.MagicBlockNumber == latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify_chain_history_failed, latest magic block does not match")
+			err = zchainErrors.New("verify_chain_history_failed, latest magic block does not match")
 			Logger.Error("verify_chain_history failed",
 				zap.Error(err),
 				zap.String("current_lfmb_hash", currentLFMB.Hash),
@@ -509,7 +510,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 				return currentLFMB.VerifyMinersSignatures(b)
 			})
 		if err != nil {
-			return errors.New("get_lfmb_from_sharders",
+			return zchainErrors.New("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to get %d: %v", requestMBNum, err))
 		}
 
@@ -518,7 +519,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 			zap.Any("mb_hash", magicBlock.Hash))
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-			return errors.New("get_lfmb_from_sharders",
+			return zchainErrors.New("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
 		}
 
@@ -527,7 +528,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 
 		if saveHandler != nil {
 			if err = saveHandler(ctx, magicBlock); err != nil {
-				return errors.New("get_lfmb_from_sharders",
+				return zchainErrors.New("get_lfmb_from_sharders",
 					fmt.Sprintf("failed to save updated magic block %d: %v",
 						currentLFMB.MagicBlockNumber, err))
 			}

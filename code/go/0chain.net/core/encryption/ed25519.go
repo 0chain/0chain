@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -38,13 +38,13 @@ func (ed *ED25519Scheme) ReadKeys(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
 	result := scanner.Scan()
 	if result == false {
-		return ErrKeyRead()
+		return ErrKeyRead
 	}
 	publicKey := scanner.Text()
 	ed.SetPublicKey(publicKey)
 	result = scanner.Scan()
 	if result == false {
-		return ErrKeyRead()
+		return ErrKeyRead
 	}
 	privateKey := scanner.Text()
 	privateKeyBytes, err := hex.DecodeString(privateKey)
@@ -66,7 +66,7 @@ func (ed *ED25519Scheme) WriteKeys(writer io.Writer) error {
 //SetPublicKey - implement interface
 func (ed *ED25519Scheme) SetPublicKey(publicKey string) error {
 	if len(ed.privateKey) > 0 {
-		return errors.New("cannot set public key when there is a private key")
+		return zchainErrors.New("cannot set public key when there is a private key")
 	}
 	publicKeyBytes, err := hex.DecodeString(publicKey)
 	if err != nil {

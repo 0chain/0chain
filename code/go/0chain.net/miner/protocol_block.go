@@ -19,7 +19,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/smartcontract/minersc"
 
@@ -52,7 +52,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		if err != nil {
 			return err
 		}
-		return errors.New("process_fee_transaction", "transaction already exists")
+		return zchainErrors.New("process_fee_transaction", "transaction already exists")
 	}
 	if err := mc.UpdateState(ctx, b, txn); err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
@@ -119,7 +119,7 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 			err := txn.VerifyOutputHash(ctx)
 			if err != nil {
 				logging.Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
-				return errors.New("txn_output_verification_failed", "Transaction output hash verification failed")
+				return zchainErrors.New("txn_output_verification_failed", "Transaction output hash verification failed")
 			}
 		}
 	}
@@ -139,17 +139,17 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 	)
 
 	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
-		return errors.New("verify_block_mb_reference",
+		return zchainErrors.New("verify_block_mb_reference",
 			"required MB missing or still not finalized")
 	}
 
 	if b.LatestFinalizedMagicBlockHash != lfmbr.Hash {
-		return errors.New("verify_block_mb_reference",
+		return zchainErrors.New("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_hash")
 	}
 
 	if b.LatestFinalizedMagicBlockRound != lfmbr.Round {
-		return errors.New("verify_block_mb_reference",
+		return zchainErrors.New("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_round")
 	}
 
@@ -173,7 +173,7 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if !b.IsStateComputed() {
-		return errors.Newf("verify_block_mb",
+		return zchainErrors.Newf("verify_block_mb",
 			"block state is not computed or synced %d", b.Round)
 	}
 
@@ -181,13 +181,13 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 	// get fresh NVC value
 	if b.ClientState == nil {
 		if err = mc.InitBlockState(b); err != nil {
-			return errors.Newf("verify_block_mb",
+			return zchainErrors.Newf("verify_block_mb",
 				"can't initialize block state %d: %v", b.Round, err)
 		}
 	}
 
 	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-		return errors.Newf("verify_block_mb",
+		return zchainErrors.Newf("verify_block_mb",
 			"can't get NVC of the block %d: %v", b.Round, err)
 	}
 
@@ -195,14 +195,14 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 		zap.Int64("mb_sr", mb.StartingRound), zap.Int64("nvc", nvc))
 
 	if mb.StartingRound != b.Round {
-		return errors.Newf("verify_block_mb", "got block with invalid "+
+		return zchainErrors.Newf("verify_block_mb", "got block with invalid "+
 			"MB, MB starting round not equal to the block round: R: %d, SR: %d",
 			b.Round, mb.StartingRound)
 	}
 
 	// check out next view change (miner SC MB rejection)
 	if mb.StartingRound != nvc {
-		return errors.Newf("verify_block_mb",
+		return zchainErrors.Newf("verify_block_mb",
 			"got block with MB rejected by miner SC: %d, %d",
 			mb.StartingRound, nvc)
 	}
@@ -215,13 +215,13 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 
 	// get stored MB
 	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-		return errors.Newf("verify_block_mb",
+		return zchainErrors.Newf("verify_block_mb",
 			"can't load related MB from store: %v", err)
 	}
 
 	// compare given MB and the stored one (should be equal)
 	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-		return errors.New("verify_block_mb",
+		return zchainErrors.New("verify_block_mb",
 			"MB given doesn't match the stored one")
 	}
 
@@ -360,10 +360,10 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	for result := range validChannel {
 		if roundMismatch {
 			logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
-			return errors.New(RoundMismatch, "current round different from generation round")
+			return zchainErrors.New(RoundMismatch, "current round different from generation round")
 		}
 		if !result {
-			return errors.New("txn_validation_failed", "Transaction validation failed")
+			return zchainErrors.New("txn_validation_failed", "Transaction validation failed")
 		}
 		count++
 		if count == numWorkers {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 /*Key - a type for the entity key */
@@ -37,7 +37,7 @@ func (k *IDField) ComputeProperties() {
 
 /*Read - abstract method for memory store read */
 func (k *IDField) Read(ctx context.Context, key string) error {
-	return errors.New("abstract_read", "Calling entity.Read() requires implementing the method")
+	return zchainErrors.New("abstract_read", "Calling entity.Read() requires implementing the method")
 }
 
 /*GetScore - abstract method for score when writing*/
@@ -47,12 +47,12 @@ func (k *IDField) GetScore() int64 {
 
 /*Write - abstract method for memory store write */
 func (k *IDField) Write(ctx context.Context) error {
-	return errors.New("abstract_write", "Calling entity.Write() requires implementing the method")
+	return zchainErrors.New("abstract_write", "Calling entity.Write() requires implementing the method")
 }
 
 /*Delete - abstract method for memory store delete */
 func (k *IDField) Delete(ctx context.Context) error {
-	return errors.New("abstract_delete", "Calling entity.Delete() requires implementing the method")
+	return zchainErrors.New("abstract_delete", "Calling entity.Delete() requires implementing the method")
 }
 
 /*NOIDFied - used when we just want to create a datastore entity that doesn't
@@ -62,7 +62,7 @@ type NOIDField struct {
 
 /*Read - abstract method for memory store read */
 func (nif *NOIDField) Read(ctx context.Context, key string) error {
-	return errors.New("abstract_read", "Calling entity.Read() requires implementing the method")
+	return zchainErrors.New("abstract_read", "Calling entity.Read() requires implementing the method")
 }
 
 /*GetScore - abstract method for score when writing*/
@@ -72,12 +72,12 @@ func (nif *NOIDField) GetScore() int64 {
 
 /*Write - abstract method for memory store write */
 func (nif *NOIDField) Write(ctx context.Context) error {
-	return errors.New("abstract_write", "Calling entity.Write() requires implementing the method")
+	return zchainErrors.New("abstract_write", "Calling entity.Write() requires implementing the method")
 }
 
 /*Delete - abstract method for memory store delete */
 func (nif *NOIDField) Delete(ctx context.Context) error {
-	return errors.New("abstract_delete", "Calling entity.Delete() requires implementing the method")
+	return zchainErrors.New("abstract_delete", "Calling entity.Delete() requires implementing the method")
 }
 
 /*GetKey - implementing the interface */

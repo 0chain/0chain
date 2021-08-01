@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -9,7 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"time"
 )
 
 type mockStateContext struct {
@@ -76,7 +77,7 @@ func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
 func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
 	var val, ok = sc.store[key]
 	if !ok {
-		return nil, util.ErrValueNotPresent()
+		return nil, util.ErrValueNotPresent
 	}
 	return val, nil
 }

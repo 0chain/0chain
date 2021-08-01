@@ -8,7 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/encryption"
 )
@@ -25,7 +25,7 @@ const (
 const Separator = ':'
 
 //ErrInvalidEncoding - error to indicate invalid encoding
-var ErrInvalidEncoding = errors.Register("invalid node encoding")
+var ErrInvalidEncoding = zchainErrors.New("invalid node encoding")
 
 //PathElements - all the bytes that can be used as path elements as ascii characters
 var PathElements = []byte("0123456789abcdef")
@@ -256,7 +256,7 @@ func (ln *LeafNode) encode(buf *bytes.Buffer) {
 func (ln *LeafNode) Decode(buf []byte) error {
 	idx := bytes.IndexByte(buf, Separator)
 	if idx < 0 {
-		return ErrInvalidEncoding()
+		return ErrInvalidEncoding
 	}
 	ln.Prefix = buf[:idx]
 	buf = buf[idx+1:]
@@ -347,7 +347,7 @@ func (fn *FullNode) Decode(buf []byte) error {
 	for i := byte(0); i < 16; i++ {
 		idx := bytes.IndexByte(buf, Separator)
 		if idx < 0 {
-			return ErrInvalidEncoding()
+			return ErrInvalidEncoding
 		}
 		if idx > 0 {
 			key := make([]byte, 32)
@@ -509,7 +509,7 @@ func (en *ExtensionNode) encode(buf *bytes.Buffer) {
 func (en *ExtensionNode) Decode(buf []byte) error {
 	idx := bytes.IndexByte(buf, Separator)
 	if idx < 0 {
-		return ErrInvalidEncoding()
+		return ErrInvalidEncoding
 	}
 	en.Path = buf[:idx]
 	buf = buf[idx+1:]
@@ -563,7 +563,7 @@ func CreateNode(r io.Reader) (Node, error) {
 		return nil, err
 	}
 	if n == 0 {
-		return nil, ErrInvalidEncoding()
+		return nil, ErrInvalidEncoding
 	}
 	code := buf[0]
 	var node Node

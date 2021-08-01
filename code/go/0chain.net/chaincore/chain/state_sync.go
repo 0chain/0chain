@@ -5,7 +5,8 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/pkg/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -16,9 +17,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrNodeNull = errors.Register("node_null", "Node is not available")
+var ErrNodeNull = zchainErrors.New("node_null", "Node is not available")
 
-var ErrStopIterator = errors.Register("stop_iterator", "Stop MPT Iteration")
+var ErrStopIterator = zchainErrors.New("stop_iterator", "Stop MPT Iteration")
 
 var MaxStateNodesForSync = 10000
 
@@ -131,17 +132,17 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	var partialState = state.NewPartialState(key)
 	handler := func(ctx context.Context, path util.Path, key util.Key, node util.Node) error {
 		if node == nil {
-			return ErrNodeNull()
+			return ErrNodeNull
 		}
 		partialState.AddNode(node)
 		if len(partialState.Nodes) >= MaxStateNodesForSync {
-			return ErrStopIterator()
+			return ErrStopIterator
 		}
 		return nil
 	}
 	err := c.GetLatestFinalizedBlock().ClientState.IterateFrom(ctx, key, handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
 	if err != nil {
-		if !errors.Is(err, ErrStopIterator()) {
+		if !zchainErrors.Is(err, ErrStopIterator) {
 			return nil, err
 		}
 	}
@@ -149,7 +150,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 		partialState.ComputeProperties()
 		return partialState, nil
 	}
-	return nil, util.ErrNodeNotFound()
+	return nil, util.ErrNodeNotFound
 }
 
 //GetStateNodesFrom - get the state nodes from db
@@ -168,7 +169,7 @@ func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.
 //SyncPartialState - sync partial state
 func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
 	if ps.GetRoot() == nil {
-		return ErrNodeNull()
+		return ErrNodeNull
 	}
 	c.SavePartialState(ctx, ps)
 	return nil
@@ -199,17 +200,17 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
 		rps, ok := entity.(*state.PartialState)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 		logging.Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
 		if bytes.Compare(key, rps.Hash) != 0 {
 			logging.Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
-			return nil, state.ErrHashMismatch()
+			return nil, state.ErrHashMismatch
 		}
 		root := rps.GetRoot()
 		if root == nil {
 			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(ps.Nodes)))
-			return nil, errors.New("state_root_error", "Partial state root calculcation error")
+			return nil, zchainErrors.New("state_root_error", "Partial state root calculcation error")
 		}
 		cancelf()
 		ps = rps
@@ -217,7 +218,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	}
 	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
 	if ps == nil {
-		return nil, errors.New("partial_state_change_error", "Error getting the partial state")
+		return nil, zchainErrors.New("partial_state_change_error", "Error getting the partial state")
 	}
 	return ps, nil
 }
@@ -234,10 +235,10 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 		if len(rns.Nodes) == 0 {
-			return nil, util.ErrNodeNotFound()
+			return nil, util.ErrNodeNotFound
 		}
 		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
@@ -250,7 +251,7 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		c.RequestEntityFromShardersOnMB(cctx, mb, nsRequestor, params, handler)
 	}
 	if ns == nil {
-		return nil, errors.New("state_nodes_error", "Error getting the state nodes")
+		return nil, zchainErrors.New("state_nodes_error", "Error getting the state nodes")
 	}
 	return ns, nil
 }
@@ -267,10 +268,10 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 		if len(rns.Nodes) == 0 {
-			return nil, util.ErrNodeNotFound()
+			return nil, util.ErrNodeNotFound
 		}
 		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
@@ -279,7 +280,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	}
 	c.RequestEntityFromShardersOnMB(cctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
 	if ns == nil {
-		return nil, errors.New("state_nodes_error", "Error getting the state nodes")
+		return nil, zchainErrors.New("state_nodes_error", "Error getting the state nodes")
 	}
 	return ns, nil
 }
@@ -297,33 +298,33 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		var rsc, ok = entity.(*block.StateChange)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 
 		if rsc.Block != b.Hash {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("block hash mismatch")),
+				zap.Error(zchainErrors.New("block hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return nil, block.ErrBlockHashMismatch()
+			return nil, block.ErrBlockHashMismatch
 		}
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("state hash mismatch")),
+				zap.Error(zchainErrors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
-			return nil, block.ErrBlockStateHashMismatch()
+			return nil, block.ErrBlockStateHashMismatch
 		}
 
 		var root = rsc.GetRoot()
 		if root == nil {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("state root error")),
+				zap.Error(zchainErrors.New("state root error")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))
-			return nil, errors.New("state_root_error",
+			return nil, zchainErrors.New("state_root_error",
 				"block state root calculation error")
 		}
 
@@ -339,7 +340,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	c.RequestEntityFromMinersOnMB(ctx, c.GetMagicBlock(b.Round), BlockStateChangeRequestor, params, handler)
 
 	if bsc == nil {
-		return nil, errors.New("block_state_change_error",
+		return nil, zchainErrors.New("block_state_change_error",
 			"error getting the block state change")
 	}
 

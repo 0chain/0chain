@@ -16,7 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 /*SetupStateHandlers - setup handlers to manage state */
@@ -51,7 +51,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	scRestRE := regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 3 {
-		return nil, errors.New("invalid_path", "Invalid Rest API path")
+		return nil, zchainErrors.New("invalid_path", "Invalid Rest API path")
 	}
 
 	scAddress := pathParams[1]
@@ -61,7 +61,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
-		return nil, errors.New("empty_lfb", "empty latest finalized block or state")
+		return nil, zchainErrors.New("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{})
@@ -79,10 +79,10 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	key := r.FormValue("key")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
-		return nil, errors.New("failed_to_get_sc_state", "finalized block doesn't exist")
+		return nil, zchainErrors.New("failed_to_get_sc_state", "finalized block doesn't exist")
 	}
 	if lfb.ClientState == nil {
-		return nil, errors.New("failed_to_get_sc_state", "finalized block's state doesn't exist")
+		return nil, zchainErrors.New("failed_to_get_sc_state", "finalized block's state doesn't exist")
 	}
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
@@ -91,7 +91,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		return nil, err
 	}
 	if node == nil {
-		return nil, errors.New("key_not_found", "key was not found")
+		return nil, zchainErrors.New("key_not_found", "key was not found")
 	}
 	var retObj interface{}
 	err = json.Unmarshal(node.Encode(), &retObj)
@@ -106,7 +106,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	clientID := r.FormValue("client_id")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
-		return nil, common.ErrTemporaryFailure()
+		return nil, common.ErrTemporaryFailure
 	}
 	state, err := c.GetState(lfb, clientID)
 	if err != nil {

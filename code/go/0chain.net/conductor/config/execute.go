@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -84,7 +84,7 @@ func setMonitor(ex Executor, val interface{}, tm time.Duration) (
 	if ss, ok := getNodeNames(val); ok && len(ss) == 1 {
 		return ex.SetMonitor(ss[0])
 	}
-	return errors.Newf("","invalid 'set_monitor' argument type: %T", val)
+	return zchainErrors.Newf("", "invalid 'set_monitor' argument type: %T", val)
 }
 
 //
@@ -97,7 +97,7 @@ func start(name string, ex Executor, val interface{}, lock bool,
 	if ss, ok := getNodeNames(val); ok {
 		return ex.Start(ss, lock, tm)
 	}
-	return errors.Newf("","invalid '%s' argument type: %T", name, val)
+	return zchainErrors.Newf("", "invalid '%s' argument type: %T", name, val)
 }
 
 func unlock(ex Executor, val interface{}, tm time.Duration) (
@@ -106,7 +106,7 @@ func unlock(ex Executor, val interface{}, tm time.Duration) (
 	if ss, ok := getNodeNames(val); ok {
 		return ex.Unlock(ss, tm)
 	}
-	return errors.Newf("","invalid 'unlock' argument type: %T", val)
+	return zchainErrors.Newf("", "invalid 'unlock' argument type: %T", val)
 }
 
 func stop(ex Executor, val interface{}, tm time.Duration) (
@@ -115,7 +115,7 @@ func stop(ex Executor, val interface{}, tm time.Duration) (
 	if ss, ok := getNodeNames(val); ok {
 		return ex.Stop(ss, tm)
 	}
-	return errors.Newf("","invalid 'stop' argument type: %T", val)
+	return zchainErrors.Newf("", "invalid 'stop' argument type: %T", val)
 }
 
 //
@@ -127,7 +127,7 @@ func waitViewChange(ex Executor, val interface{}, tm time.Duration) (
 
 	var vc WaitViewChange
 	if err = mapstructure.Decode(val, &vc); err != nil {
-		return errors.Newf("","invalid 'wait_view_change' argument type: %T, "+
+		return zchainErrors.Newf("", "invalid 'wait_view_change' argument type: %T, "+
 			"decoding error: %v", val, err)
 	}
 	return ex.WaitViewChange(vc, tm)
@@ -142,12 +142,12 @@ func waitPhase(ex Executor, val interface{}, tm time.Duration) (
 	}
 	var wps waitPhase
 	if err = mapstructure.Decode(val, &wps); err != nil {
-		return errors.Newf("","invalid 'wait_phase' argument type: %T, "+
+		return zchainErrors.Newf("", "invalid 'wait_phase' argument type: %T, "+
 			"decoding error: %v", val, err)
 	}
 	var wp WaitPhase
 	if wp.Phase, err = ParsePhase(wps.Phase); err != nil {
-		return errors.Newf("","parsing phase: %v", err)
+		return zchainErrors.Newf("", "parsing phase: %v", err)
 	}
 	return ex.WaitPhase(wp, tm)
 }
@@ -157,7 +157,7 @@ func waitRound(ex Executor, val interface{}, tm time.Duration) (
 
 	var wr WaitRound
 	if err = mapstructure.Decode(val, &wr); err != nil {
-		return errors.Newf("","decoding 'wait_round': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_round': %v", err)
 	}
 	return ex.WaitRound(wr, tm)
 }
@@ -167,7 +167,7 @@ func waitContributeMpk(ex Executor, val interface{}, tm time.Duration) (
 
 	var wcmpk WaitContributeMpk
 	if err = mapstructure.Decode(val, &wcmpk); err != nil {
-		return errors.Newf("","decoding 'wait_contribute_mpk': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_contribute_mpk': %v", err)
 	}
 	return ex.WaitContributeMpk(wcmpk, tm)
 }
@@ -177,7 +177,7 @@ func waitShareSignsOrShares(ex Executor, val interface{}, tm time.Duration) (
 
 	var wsoss WaitShareSignsOrShares
 	if err = mapstructure.Decode(val, &wsoss); err != nil {
-		return errors.Newf("","decoding 'wait_share_signs_or_shares': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_share_signs_or_shares': %v", err)
 	}
 	return ex.WaitShareSignsOrShares(wsoss, tm)
 }
@@ -187,7 +187,7 @@ func waitAdd(ex Executor, val interface{}, tm time.Duration) (
 
 	var wa WaitAdd
 	if err = mapstructure.Decode(val, &wa); err != nil {
-		return errors.Newf("","decoding 'wait_add': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_add': %v", err)
 	}
 	return ex.WaitAdd(wa, tm)
 }
@@ -197,7 +197,7 @@ func waitNoViewChainge(ex Executor, val interface{},
 
 	var wnvc WaitNoViewChainge
 	if err = mapstructure.Decode(val, &wnvc); err != nil {
-		return errors.Newf("","decoding 'wait_no_view_change': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_no_view_change': %v", err)
 	}
 	return ex.WaitNoViewChainge(wnvc, tm)
 }
@@ -211,7 +211,7 @@ func waitSharderKeep(ex Executor, val interface{},
 
 	var wsk WaitSharderKeep
 	if err = mapstructure.Decode(val, &wsk); err != nil {
-		return errors.Newf("","decoding 'wait_sharder_keep': %v", err)
+		return zchainErrors.Newf("", "decoding 'wait_sharder_keep': %v", err)
 	}
 	return ex.WaitSharderKeep(wsk, tm)
 }
@@ -226,5 +226,5 @@ func setRevealed(name string, ex Executor, val interface{}, pin bool,
 	if ss, ok := getNodeNames(val); ok {
 		return ex.SetRevealed(ss, pin, tm)
 	}
-	return errors.Newf("","invalid '%s' argument type: %T", name, val)
+	return zchainErrors.Newf("", "invalid '%s' argument type: %T", name, val)
 }

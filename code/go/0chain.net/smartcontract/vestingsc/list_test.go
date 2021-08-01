@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/core/util"
 
-	"github.com/0chain/gosdk/core/common/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,10 +78,10 @@ func TestVestingSmartContract(t *testing.T) {
 	)
 
 	_, err = vsc.getClientPoolsBytes(clientID, balances)
-	assert.Equal(t, errors.PPrint(util.ErrValueNotPresent()), errors.PPrint(err))
+	assert.Equal(t, util.ErrValueNotPresent.Error(), err.Error())
 
 	_, err = vsc.getClientPools(clientID, balances)
-	assert.Equal(t, errors.PPrint(util.ErrValueNotPresent()), errors.PPrint(err))
+	assert.Equal(t, util.ErrValueNotPresent.Error(), err.Error())
 
 	get, err = vsc.getOrCreateClientPools(clientID, balances)
 	require.NoError(t, err)

@@ -3,7 +3,7 @@ package wallet
 import (
 	"encoding/hex"
 
-	"github.com/0chain/gosdk/core/common/errors"
+	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/logging"
 
@@ -255,7 +255,7 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 	if !ok {
 		ssv, ok := ss.(*util.SecureSerializableValue)
 		if !ok {
-			return nil, errors.New("unexpected type")
+			return nil, zchainErrors.New("unexpected type")
 		}
 		s := &state.State{}
 		if err := s.Decode(ssv.Encode()); err != nil {
