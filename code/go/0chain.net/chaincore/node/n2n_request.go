@@ -65,7 +65,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 
 		wg.Add(1)
 		go func(n *Node) {
-			if rhandler(n) {
+			if rhandler(ctx, n) {
 				select {
 				case nodeC <- n:
 				default:
@@ -114,7 +114,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 		}
 		wg.Add(1)
 		go func(n *Node) {
-			rhandler(n)
+			rhandler(ctx, n)
 			wg.Done()
 		}(nd)
 	}
@@ -129,7 +129,7 @@ func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityReques
 		logging.Logger.Error("RequestEntityFromNode failed", zap.Error(ctx.Err()))
 		return false
 	default:
-		return rhandler(n)
+		return rhandler(ctx, n)
 	}
 }
 
@@ -154,7 +154,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 //RequestEntityHandler - a handler that requests an entity and uses it
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler {
-		return func(provider *Node) bool {
+		return func(ctx context.Context, provider *Node) bool {
 			timer := provider.GetTimer(uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
@@ -178,8 +178,9 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				eName = entityMetadata.GetName()
 			}
 			SetRequestHeaders(req, options, entityMetadata)
-			ctx, cancel := context.WithCancel(context.TODO())
-			req = req.WithContext(ctx)
+			cctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			req = req.WithContext(cctx)
 			// Keep the number of messages to a node bounded
 
 			var (
@@ -252,8 +253,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			sizer := provider.GetSizeMetric(uri)
 			sizer.Update(int64(size))
 			logging.N2n.Info("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-			ctx = context.TODO()
-			_, err = handler(ctx, entity)
+			_, err = handler(cctx, entity)
 			if err != nil {
 				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
 				return false

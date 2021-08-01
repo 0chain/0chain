@@ -29,12 +29,12 @@ func SetMaxConcurrentRequests(maxConcurrentRequests int) {
 }
 
 /*SendAll - send to every node */
-func (np *Pool) SendAll(handler SendHandler) []*Node {
-	return np.SendAtleast(np.Size(), handler)
+func (np *Pool) SendAll(ctx context.Context, handler SendHandler) []*Node {
+	return np.SendAtleast(ctx, np.Size(), handler)
 }
 
 /*SendTo - send to a specific node */
-func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
+func (np *Pool) SendTo(ctx context.Context, handler SendHandler, to string) (bool, error) {
 	recepient := np.GetNode(to)
 	if recepient == nil {
 		return false, ErrNodeNotFound
@@ -42,18 +42,18 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	if Self.IsEqual(recepient) {
 		return false, ErrSendingToSelf
 	}
-	return handler(recepient), nil
+	return handler(ctx, recepient), nil
 }
 
 /*SendOne - send message to a single node in the pool */
-func (np *Pool) SendOne(handler SendHandler) *Node {
+func (np *Pool) SendOne(ctx context.Context, handler SendHandler) *Node {
 	nodes := np.shuffleNodesLock(false)
-	return np.sendOne(handler, nodes)
+	return np.sendOne(ctx, handler, nodes)
 }
 
 /*SendToMultiple - send to multiple nodes */
-func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error) {
-	sentTo := np.sendTo(len(nodes), nodes, handler)
+func (np *Pool) SendToMultiple(ctx context.Context, handler SendHandler, nodes []*Node) (bool, error) {
+	sentTo := np.sendTo(ctx, len(nodes), nodes, handler)
 	if len(sentTo) == len(nodes) {
 		return true, nil
 	}
@@ -61,27 +61,27 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 }
 
 /*SendToMultipleNodes - send to multiple nodes */
-func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) (result []*Node) {
+func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, nodes []*Node) (result []*Node) {
 	defer func() {
 		if r := recover(); r != nil {
 			logging.Logger.Error("PANIC", zap.Any("error", r))
 		}
 	}()
-	result = np.sendTo(len(nodes), nodes, handler)
+	result = np.sendTo(ctx, len(nodes), nodes, handler)
 	return
 }
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
-func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
+func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodesLock(false)
-	return np.sendTo(numNodes, nodes, handler)
+	return np.sendTo(ctx, numNodes, nodes, handler)
 }
 
-func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node {
+func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler SendHandler) []*Node {
 	const THRESHOLD = 2
 	sentTo := make([]*Node, 0, numNodes)
 	if numNodes == 1 {
-		node := np.sendOne(handler, nodes)
+		node := np.sendOne(ctx, handler, nodes)
 		if node == nil {
 			return sentTo
 		}
@@ -101,7 +101,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
-				valid := handler(node)
+				valid := handler(ctx, node)
 				if valid {
 					validBucket <- node
 				}
@@ -147,12 +147,12 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 	return sentTo
 }
 
-func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
+func (np *Pool) sendOne(ctx context.Context, handler SendHandler, nodes []*Node) *Node {
 	for _, node := range nodes {
 		if node.GetStatus() == NodeStatusInactive {
 			continue
 		}
-		valid := handler(node)
+		valid := handler(ctx, node)
 		if valid {
 			return node
 		}
@@ -193,7 +193,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
 			pushDataCache.Add(key, pdce)
 		}
-		return func(receiver *Node) bool {
+		return func(ctx context.Context, receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
 			url := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
@@ -214,8 +214,9 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetSendHeaders(req, entity, options)
-			ctx, cancel := context.WithCancel(context.TODO())
-			req = req.WithContext(ctx)
+			cctx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			req = req.WithContext(cctx)
 			// Keep the number of messages to a node bounded
 			var (
 				ts       time.Time
@@ -379,7 +380,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				return
 			}
 		}
-		ctx := r.Context()
+		ctx := context.Background()
 		initialNodeID := r.Header.Get(HeaderInitialNodeID)
 		if initialNodeID != "" {
 			initSender := GetNode(initialNodeID)

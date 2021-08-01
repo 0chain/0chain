@@ -491,13 +491,6 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return // zero size write marker -- no tokens movements
 	}
 
-	// write pool
-	wp, err := sc.getWritePool(alloc.Owner, balances)
-	if err != nil {
-		return zchainErrors.New("can't get related write pool")
-	}
-
-	// challenge pool
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
 		return zchainErrors.New("can't get related challenge pool")
@@ -510,22 +503,30 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	// the details will be saved in caller with allocation object (the details
 	// is part of the allocation object)
+	wps, err := alloc.getAllocationPools(sc, balances)
+	if err != nil {
+		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+	}
 
 	if size > 0 {
 		move = details.upload(size, wmTime,
 			alloc.restDurationInTimeUnits(wmTime))
-		// upload (write_pool -> challenge_pool)
-		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
+
+		err = wps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
 		if err != nil {
 			return zchainErrors.Newf("", "can't move tokens to challenge pool: %v", err)
 		}
+
 		alloc.MovedToChallenge += move
 		details.Spent += move
 	} else {
 		// delete (challenge_pool -> write_pool)
-		move = details.delete(-size, wmTime,
-			alloc.restDurationInTimeUnits(wmTime))
-		err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
+		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
+		wp, err := wps.getOwnerWP()
+		if err != nil {
+			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+		}
+		err = cp.moveToWritePool(alloc, details.BlobberID, until, wp, move)
 		if err != nil {
 			return zchainErrors.Newf("", "can't move tokens to write pool: %v", err)
 		}
@@ -533,10 +534,10 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		details.Returned += move
 	}
 
-	// save pools
-	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
-		return zchainErrors.Newf("", "can't save write pool: %v", err)
+	if err := wps.saveWritePools(sc.ID, balances); err != nil {
+		return errors.Wrap(err, "can't move tokens to challenge pool")
 	}
+
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return zchainErrors.Newf("", "can't save challenge pool: %v", err)
 	}

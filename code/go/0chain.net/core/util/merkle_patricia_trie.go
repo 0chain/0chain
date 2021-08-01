@@ -735,7 +735,6 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}
@@ -963,33 +962,6 @@ func (mpt *MerklePatriciaTrie) FindMissingNodes(ctx context.Context) ([]Path, []
 /*IsMPTValid - checks if the merkle tree is in valid state or not */
 func IsMPTValid(mpt MerklePatriciaTrieI) error {
 	return mpt.Iterate(context.TODO(), func(ctxt context.Context, path Path, key Key, node Node) error { return nil }, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
-}
-
-/*GetChanges - get the list of changes */
-func GetChanges(ctx context.Context, ndb NodeDB, start Sequence, end Sequence) (map[Sequence]MerklePatriciaTrieI, error) {
-	mpts := make(map[Sequence]MerklePatriciaTrieI, int64(end-start+1))
-	handler := func(ctx context.Context, key Key, node Node) error {
-		origin := node.GetOrigin()
-		if !(start <= origin && origin <= end) {
-			return nil
-		}
-		mpt, ok := mpts[origin]
-		if !ok {
-			mndb := NewMemoryNodeDB()
-			mpt = NewMerklePatriciaTrie(mndb, origin)
-			mpts[origin] = mpt
-		}
-		mpt.GetNodeDB().PutNode(key, node)
-		return nil
-	}
-	ndb.Iterate(ctx, handler)
-	for _, mpt := range mpts {
-		root := mpt.GetNodeDB().(*MemoryNodeDB).ComputeRoot()
-		if root != nil {
-			mpt.SetRoot(root.GetHashBytes())
-		}
-	}
-	return mpts, nil
 }
 
 //Validate - implement interface - any sort of validations that can tell if the MPT is in a sane state

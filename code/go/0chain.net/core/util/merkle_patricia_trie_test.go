@@ -179,46 +179,6 @@ func TestMerkeTreePruning(t *testing.T) {
 	}
 }
 
-func TestMerkeTreeGetChanges(t *testing.T) {
-	pndb, cleanup := newPNodeDB(t)
-	defer cleanup()
-
-	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
-	var mndb = NewMemoryNodeDB()
-	db := NewLevelNodeDB(mndb, mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
-	origin := 2016
-
-	for i := int64(0); i < 10; i++ {
-		mpt2.ResetChangeCollector(mpt2.GetRoot())
-		mpt2.SetVersion(Sequence(origin))
-
-		doStateValInsert(t, mpt2, "123456", 100+i)
-		doStateValInsert(t, mpt2, "123457", 1000+i)
-		doStateValInsert(t, mpt2, "123458", 1000000+i)
-		doStateValInsert(t, mpt2, "133458", 1000000000+i)
-
-		if err := mpt2.SaveChanges(context.TODO(), pndb, false); err != nil {
-			panic(err)
-		}
-
-		origin++
-	}
-
-	mpts, err := GetChanges(context.TODO(), mndb, Sequence(origin-3),
-		Sequence(origin))
-	if err != nil {
-		t.Error(err)
-	}
-
-	for _, mpt := range mpts {
-		if err := mpt.Iterate(context.TODO(), iterHandler(), NodeTypeValueNode); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-}
-
 func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value int64) {
 
 	state := &AState{}
@@ -1816,50 +1776,6 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 
 	if err := cleanUp(); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestGetChanges(t *testing.T) {
-	t.Parallel()
-
-	ndb := NewMemoryNodeDB()
-	n := NewFullNode(&SecureSerializableValue{Buffer: []byte("data")})
-	err := ndb.PutNode(n.GetHashBytes(), n)
-	require.NoError(t, err)
-
-	type args struct {
-		ctx   context.Context
-		ndb   NodeDB
-		start Sequence
-		end   Sequence
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    map[Sequence]MerklePatriciaTrieI
-		wantErr bool
-	}{
-		{
-			name:    "Test_GetChanges_OK",
-			args:    args{ndb: ndb, start: 1},
-			want:    make(map[Sequence]MerklePatriciaTrieI),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := GetChanges(tt.args.ctx, tt.args.ndb, tt.args.start, tt.args.end)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetChanges() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetChanges() got = %v, want %v", got, tt.want)
-			}
-		})
 	}
 }
 
