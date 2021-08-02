@@ -47,7 +47,7 @@ func (m *ActiveAcknowledgments) Encode() []byte {
 
 // append tires to append a new acknowledgment to active list.
 func (m *ActiveAcknowledgments) append(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
-	if _, exists := m.getByID(ackn.SessionID); exists {
+	if _, found := m.getByID(ackn.SessionID); !found {
 		m.Nodes[ackn.SessionID] = ackn
 		if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, m); err != nil {
 			return errors.Wrap(errCodeInternal, "insert active acknowledgment list failed", err)
@@ -58,14 +58,14 @@ func (m *ActiveAcknowledgments) append(ackn *bmp.Acknowledgment, sci chain.State
 }
 
 // getByID tires to get an acknowledgment form map by given id.
-func (m *ActiveAcknowledgments) getByID(id string) (ackn *bmp.Acknowledgment, exists bool) {
+func (m *ActiveAcknowledgments) getByID(id string) (ackn *bmp.Acknowledgment, found bool) {
 	if m.Nodes != nil {
-		ackn, exists = m.Nodes[id]
+		ackn, found = m.Nodes[id]
 	} else {
 		m.Nodes = make(map[string]*bmp.Acknowledgment)
 	}
 
-	return ackn, exists
+	return ackn, found
 }
 
 // remove tires to remove an acknowledgment form active list.
@@ -73,7 +73,7 @@ func (m *ActiveAcknowledgments) remove(ackn *bmp.Acknowledgment, sci chain.State
 	if ackn == nil {
 		return errors.New(errCodeInternal, "acknowledgment invalid value").Wrap(errNilPointerValue)
 	}
-	if _, exists := m.getByID(ackn.SessionID); exists {
+	if _, found := m.getByID(ackn.SessionID); found {
 		delete(m.Nodes, ackn.SessionID)
 		if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, m); err != nil {
 			return errors.Wrap(errCodeInternal, "insert active acknowledgment list failed", err)
