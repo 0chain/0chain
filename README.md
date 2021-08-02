@@ -362,7 +362,7 @@ This step copies the code from the source path to the destination path.
 
 The RUN command is an image build step which allows installing of application and packages requited for testing while the`go mod download` downloads the specific module versions you've specified in the `go.mod`file.
 
-#### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.5. &&     chmod -R +w . &&  make clean libzstd.a
+#### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.* &&     chmod -R +w . &&  make clean libzstd.a
 
 This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is ran in the last to clean up the code and remove all the compiled object files from the source code
 
