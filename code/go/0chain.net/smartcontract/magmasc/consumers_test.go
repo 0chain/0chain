@@ -141,8 +141,8 @@ func Test_Consumers_add(t *testing.T) {
 	for idx := range tests {
 		test := tests[idx]
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
+			// do not use parallel running to avoid detect race conditions because of
+			// everything is happening in a single smart contract so there is only one thread
 			if err := test.list.add(scID, test.cons, test.sci); (err != nil) != test.error {
 				t.Errorf("add() error: %v | want: %v", err, test.error)
 			}
