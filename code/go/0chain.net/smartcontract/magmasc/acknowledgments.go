@@ -2,7 +2,6 @@ package magmasc
 
 import (
 	"encoding/json"
-	"sync"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
@@ -17,7 +16,6 @@ type (
 	// removing or getting from state.StateContextI with ActiveAcknowledgmentsKey.
 	ActiveAcknowledgments struct {
 		Nodes map[string]*bmp.Acknowledgment `json:"nodes"`
-		mutex sync.RWMutex
 	}
 )
 
@@ -36,29 +34,21 @@ func (m *ActiveAcknowledgments) Decode(blob []byte) error {
 		list.Nodes = make(map[string]*bmp.Acknowledgment)
 	}
 
-	m.mutex.Lock()
 	m.Nodes = list.Nodes
-	m.mutex.Unlock()
 
 	return nil
 }
 
 // Encode implements util.Serializable interface.
 func (m *ActiveAcknowledgments) Encode() []byte {
-	m.mutex.RLock()
 	blob, _ := json.Marshal(m)
-	m.mutex.RUnlock()
-
 	return blob
 }
 
 // append tires to append a new acknowledgment to active list.
 func (m *ActiveAcknowledgments) append(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
 	if _, exists := m.getByID(ackn.SessionID); exists {
-		m.mutex.Lock()
 		m.Nodes[ackn.SessionID] = ackn
-		m.mutex.Unlock()
-
 		if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, m); err != nil {
 			return errors.Wrap(errCodeInternal, "insert active acknowledgment list failed", err)
 		}
@@ -69,9 +59,6 @@ func (m *ActiveAcknowledgments) append(ackn *bmp.Acknowledgment, sci chain.State
 
 // getByID tires to get an acknowledgment form map by given id.
 func (m *ActiveAcknowledgments) getByID(id string) (ackn *bmp.Acknowledgment, exists bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	if m.Nodes != nil {
 		ackn, exists = m.Nodes[id]
 	} else {
@@ -87,10 +74,7 @@ func (m *ActiveAcknowledgments) remove(ackn *bmp.Acknowledgment, sci chain.State
 		return errors.New(errCodeInternal, "acknowledgment invalid value").Wrap(errNilPointerValue)
 	}
 	if _, exists := m.getByID(ackn.SessionID); exists {
-		m.mutex.Lock()
 		delete(m.Nodes, ackn.SessionID)
-		m.mutex.Unlock()
-
 		if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, m); err != nil {
 			return errors.Wrap(errCodeInternal, "insert active acknowledgment list failed", err)
 		}

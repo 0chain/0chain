@@ -152,8 +152,8 @@ func Test_consumersSorted_getIndex(t *testing.T) {
 	for idx := range tests {
 		test := tests[idx]
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
+			// do not use parallel running to avoid detect race conditions because of
+			// everything is happening in a single smart contract so there is only one thread
 			got, ret := test.list.getIndex(test.id)
 			if ret != test.ret {
 				t.Errorf("getIndex() return: %v | want: %v", got, test.ret)
@@ -196,8 +196,8 @@ func Test_consumersSorted_remove(t *testing.T) {
 	for idx := range tests {
 		test := tests[idx]
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
+			// do not use parallel running to avoid detect race conditions because of
+			// everything is happening in a single smart contract so there is only one thread
 			if ret := test.list.remove(test.id); ret != test.ret {
 				t.Errorf("getIndex() return: %v | want: %v", ret, test.ret)
 			}
@@ -290,8 +290,8 @@ func Test_consumersSorted_update(t *testing.T) {
 	for idx := range tests {
 		test := tests[idx]
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
+			// do not use parallel running to avoid detect race conditions because of
+			// everything is happening in a single smart contract so there is only one thread
 			if got := test.list.update(test.cons); got != test.want {
 				t.Errorf("update() got: %v | want: %v", got, test.want)
 			}

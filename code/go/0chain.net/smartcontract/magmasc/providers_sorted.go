@@ -2,7 +2,6 @@ package magmasc
 
 import (
 	"sort"
-	"sync"
 
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
@@ -14,14 +13,10 @@ type (
 	// providersSorted allows O(logN) access.
 	providersSorted struct {
 		Sorted []*bmp.Provider `json:"sorted"`
-		mutex  sync.RWMutex
 	}
 )
 
 func (m *providersSorted) add(provider *bmp.Provider) (int, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	if m.Sorted == nil {
 		m.Sorted = make([]*bmp.Provider, 0)
 	}
@@ -57,17 +52,10 @@ func (m *providersSorted) get(id datastore.Key) (*bmp.Provider, bool) {
 		return nil, false // not found
 	}
 
-	m.mutex.RLock()
-	provider := m.Sorted[idx]
-	m.mutex.RUnlock()
-
-	return provider, true // found
+	return m.Sorted[idx], true // found
 }
 
 func (m *providersSorted) getByHost(host string) (*bmp.Provider, bool) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	for _, item := range m.Sorted {
 		if item.Host == host {
 			return item, true // found
@@ -78,21 +66,14 @@ func (m *providersSorted) getByHost(host string) (*bmp.Provider, bool) {
 }
 
 func (m *providersSorted) getByIndex(idx int) (*bmp.Provider, bool) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	if idx < len(m.Sorted) {
-		provider := *m.Sorted[idx] // copy provider
-		return &provider, true
+		return m.Sorted[idx], true
 	}
 
 	return nil, false // not found
 }
 
 func (m *providersSorted) getIndex(id datastore.Key) (int, bool) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	size := len(m.Sorted)
 	if size > 0 {
 		idx := sort.Search(size, func(idx int) bool {
@@ -107,9 +88,6 @@ func (m *providersSorted) getIndex(id datastore.Key) (int, bool) {
 }
 
 func (m *providersSorted) getSorted() (sorted []*bmp.Provider) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-
 	if m.Sorted != nil {
 		sorted = make([]*bmp.Provider, len(m.Sorted))
 		copy(sorted, m.Sorted)
@@ -128,9 +106,6 @@ func (m *providersSorted) remove(id datastore.Key) bool {
 }
 
 func (m *providersSorted) removeByIndex(idx int) *bmp.Provider {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	provider := *m.Sorted[idx] // copy provider
 	m.Sorted = append(m.Sorted[:idx], m.Sorted[idx+1:]...)
 
@@ -138,9 +113,6 @@ func (m *providersSorted) removeByIndex(idx int) *bmp.Provider {
 }
 
 func (m *providersSorted) setSorted(sorted []*bmp.Provider) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
 	if sorted == nil {
 		m.Sorted = nil
 	} else {
@@ -152,9 +124,7 @@ func (m *providersSorted) setSorted(sorted []*bmp.Provider) {
 func (m *providersSorted) update(provider *bmp.Provider) bool {
 	idx, found := m.getIndex(provider.ExtID)
 	if found {
-		m.mutex.Lock()
 		m.Sorted[idx] = provider // replace if found
-		m.mutex.Unlock()
 	}
 
 	return found

@@ -114,14 +114,11 @@ func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.V
 	}
 
 	extID, list := vals.Get("ext_id"), make([]*bmp.Acknowledgment, 0)
-
-	acknowledgments.mutex.RLock()
 	for _, ackn := range acknowledgments.Nodes {
 		if ackn.Consumer.ExtID == extID || ackn.Provider.ExtID == extID {
 			list = append(list, ackn)
 		}
 	}
-	acknowledgments.mutex.RUnlock()
 
 	return list, nil
 }

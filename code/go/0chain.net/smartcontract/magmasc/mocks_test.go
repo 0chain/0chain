@@ -69,10 +69,6 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 
 func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
 	list := &ActiveAcknowledgments{Nodes: make(map[string]*bmp.Acknowledgment, size)}
-
-	list.mutex.Lock()
-	defer list.mutex.Unlock()
-
 	for i := 0; i < size; i++ {
 		id := strconv.Itoa(i)
 		ackn := mockAcknowledgment()

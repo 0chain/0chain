@@ -15,9 +15,7 @@ func Test_Providers_Decode(t *testing.T) {
 	t.Parallel()
 
 	list := mockProviders()
-	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -62,9 +60,7 @@ func Test_Providers_Encode(t *testing.T) {
 	t.Parallel()
 
 	list := mockProviders()
-	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -97,7 +93,6 @@ func Test_Providers_add(t *testing.T) {
 	t.Parallel()
 
 	const scID = "sc_id"
-
 	list, sci := mockProviders(), mockStateContextI()
 	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)

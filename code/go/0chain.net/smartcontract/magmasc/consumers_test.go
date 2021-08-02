@@ -15,9 +15,7 @@ func Test_Consumers_Decode(t *testing.T) {
 	t.Parallel()
 
 	list := mockConsumers()
-	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -62,9 +60,7 @@ func Test_Consumers_Encode(t *testing.T) {
 	t.Parallel()
 
 	list := mockConsumers()
-	list.Nodes.mutex.RLock()
 	blob, err := json.Marshal(list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}

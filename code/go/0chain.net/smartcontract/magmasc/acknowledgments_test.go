@@ -17,9 +17,7 @@ func TestActiveAcknowledgments_Decode(t *testing.T) {
 	const size = 10
 	list := mockActiveAcknowledgments(size)
 
-	list.mutex.RLock()
 	blob, err := json.Marshal(list)
-	list.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -66,9 +64,7 @@ func TestActiveAcknowledgments_Encode(t *testing.T) {
 	const size = 10
 	list := mockActiveAcknowledgments(size)
 
-	list.mutex.RLock()
 	blob, err := json.Marshal(list)
-	list.mutex.RUnlock()
 	if err != nil {
 		t.Fatalf("json.Marshal() error: %v | want: %v", err, nil)
 	}
@@ -101,13 +97,9 @@ func TestActiveAcknowledgments_append(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
-
 	ackn, sci := mockAcknowledgment(), mockStateContextI()
-
 	want := mockActiveAcknowledgments(size)
-	want.mutex.Lock()
 	want.Nodes[ackn.SessionID] = ackn
-	want.mutex.Unlock()
 
 	tests := [1]struct {
 		name  string
@@ -143,13 +135,9 @@ func TestActiveAcknowledgments_remove(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
-
 	ackn, sci := mockAcknowledgment(), mockStateContextI()
-
 	list := mockActiveAcknowledgments(size)
-	list.mutex.Lock()
 	list.Nodes[ackn.SessionID] = ackn
-	list.mutex.Unlock()
 
 	tests := [1]struct {
 		name  string
@@ -185,7 +173,6 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
-
 	list, sci := mockActiveAcknowledgments(size), mockStateContextI()
 	if _, err := sci.InsertTrieNode(ActiveAcknowledgmentsKey, list); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)

@@ -313,11 +313,8 @@ func Test_MagmaSmartContract_allConsumers(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	list.Nodes.mutex.RLock()
 	sorted := make([]*bmp.Consumer, len(list.Nodes.Sorted))
 	copy(sorted, list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
-
 	tests := [3]struct {
 		name  string
 		msc   *MagmaSmartContract
@@ -386,11 +383,8 @@ func Test_MagmaSmartContract_allProviders(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	list.Nodes.mutex.RLock()
 	sorted := make([]*bmp.Provider, len(list.Nodes.Sorted))
 	copy(sorted, list.Nodes.Sorted)
-	list.Nodes.mutex.RUnlock()
-
 	tests := [3]struct {
 		name  string
 		msc   *MagmaSmartContract
