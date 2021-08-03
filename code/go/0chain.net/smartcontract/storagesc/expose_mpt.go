@@ -26,7 +26,8 @@ func (ssc *StorageSmartContract) GetMptKey(
 	var key = params.Get("key")
 	val, err := balances.GetTrieNode(key)
 	if err != nil {
-		return nil, err
+		return nil, common.NewErrorf("get_mpt_key",
+			"get trie node %s failed: %v", key, err)
 	}
 	return string(val.Encode()), nil
 }
