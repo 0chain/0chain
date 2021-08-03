@@ -13,6 +13,7 @@ import (
 	chain "0chain.net/chaincore/chain/state"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	store "0chain.net/core/ememorystore"
 )
 
 // acknowledgment tries to extract Acknowledgment with given id param.
@@ -71,15 +72,14 @@ func (m *MagmaSmartContract) acknowledgmentExist(_ context.Context, vals url.Val
 
 // activeAcknowledgmentAppend tries to append a new active acknowledgment to list
 // and stores the acknowledgment and updated list into provided state.StateContextI.
-func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
-	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment, db *store.Connection) error {
+	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
 	if err != nil {
+		db.Conn.Destroy()
 		return err
 	}
-	if err = list.append(ackn, sci); err != nil {
-		return err
-	}
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if err = list.append(ackn, db); err != nil {
+		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert acknowledgment failed", err)
 	}
 
@@ -89,11 +89,15 @@ func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment
 // activeAcknowledgmentComplete tries to delete an active acknowledgment from list
 // and stores the acknowledgment and updated list into provided state.StateContextI.
 func (m *MagmaSmartContract) activeAcknowledgmentComplete(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
-	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+	db := store.GetTransaction(m.db)
+
+	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
 	if err != nil {
+		db.Conn.Destroy()
 		return err
 	}
-	if err = list.remove(ackn, sci); err != nil {
+	if err = list.remove(ackn, db); err != nil {
+		_ = db.Conn.Rollback()
 		return err
 	}
 
@@ -107,20 +111,24 @@ func (m *MagmaSmartContract) activeAcknowledgmentComplete(ackn *bmp.Acknowledgme
 
 // activeAcknowledgments tries to extract Acknowledgments list with current status active
 // filtered by given external id param and returns it.
-func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
-	acknowledgments, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, sci)
+func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.Values, _ chain.StateContextI) (interface{}, error) {
+	db := store.GetTransaction(m.db)
+
+	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
 	if err != nil {
+		db.Conn.Destroy()
 		return nil, err
 	}
+	_ = db.Commit()
 
-	extID, list := vals.Get("ext_id"), make([]*bmp.Acknowledgment, 0)
-	for _, ackn := range acknowledgments.Nodes {
+	extID, nodes := vals.Get("ext_id"), make([]*bmp.Acknowledgment, 0)
+	for _, ackn := range list.Nodes {
 		if ackn.Consumer.ExtID == extID || ackn.Provider.ExtID == extID {
-			list = append(list, ackn)
+			nodes = append(nodes, ackn)
 		}
 	}
 
-	return list, nil
+	return nodes, nil
 }
 
 // allConsumers represents MagmaSmartContract handler.
@@ -211,7 +219,7 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.New(errCodeSessionStart, "invalid provider terms")
 	}
 
-	if err = m.activeAcknowledgmentAppend(ackn, sci); err != nil {
+	if err = m.activeAcknowledgmentAppend(ackn, store.GetTransaction(m.db)); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "append acknowledgment failed", err)
 	}
 

@@ -2,6 +2,8 @@ package magmasc
 
 import (
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +21,7 @@ import (
 	"0chain.net/chaincore/state"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	store "0chain.net/core/ememorystore"
 	"0chain.net/core/util"
 )
 
@@ -41,10 +44,15 @@ type (
 		mocks.SmartContractInterface
 		ID string
 		SC *MagmaSmartContract
+		sync.Mutex
 	}
 
 	// mockInvalidJson implements mocked util.Serializable interface for invalid json.
 	mockInvalidJson struct{ ID datastore.Key }
+)
+
+var (
+	mockSCI mockSmartContract
 )
 
 // Decode implements util.Serializable interface.
@@ -68,7 +76,7 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 }
 
 func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
-	list := &ActiveAcknowledgments{Nodes: make(map[string]*bmp.Acknowledgment, size)}
+	list := &ActiveAcknowledgments{Nodes: make([]*bmp.Acknowledgment, size)}
 	for i := 0; i < size; i++ {
 		id := strconv.Itoa(i)
 		ackn := mockAcknowledgment()
@@ -81,7 +89,7 @@ func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
 		ackn.Consumer.ID += id
 		ackn.Consumer.ExtID += id
 		ackn.Consumer.Host += id
-		list.Nodes[ackn.SessionID] = ackn
+		list.Nodes[i] = ackn
 	}
 
 	return list
@@ -152,12 +160,29 @@ func mockSmartContractI() *mockSmartContract {
 }
 
 func mockMagmaSmartContract() *MagmaSmartContract {
-	msc := MagmaSmartContract{SmartContract: sci.NewSC("sc_id")}
+	mockSCI.Lock()
+	defer mockSCI.Unlock()
 
-	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
-	msc.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+providerRegister, nil)
+	if mockSCI.SC == nil {
+		mockSCI.SC = &MagmaSmartContract{SmartContract: sci.NewSC("sc_id")}
+		path := filepath.Join("/tmp", rootPath, storePath)
+		err := os.MkdirAll(path, 0700)
+		if err != nil {
+			panic(err)
+		}
 
-	return &msc
+		mockSCI.SC.db, err = store.CreateDB(path)
+		if err != nil {
+			panic(err)
+		}
+
+		store.AddPool(storeName, mockSCI.SC.db)
+
+		mockSCI.SC.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+mockSCI.SC.ID+":func:"+consumerRegister, nil)
+		mockSCI.SC.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+mockSCI.SC.ID+":func:"+providerRegister, nil)
+	}
+
+	return mockSCI.SC
 }
 
 func mockProvider() *bmp.Provider {
@@ -234,11 +259,9 @@ func mockStateContextI() *mockStateContext {
 		return nil
 	}
 
-	msc := mockMagmaSmartContract()
-
 	ackn := mockAcknowledgment()
 	ackn.SessionID = "cannot_insert_id"
-	stateContext.store[nodeUID(msc.ID, ackn.SessionID, acknowledgment)] = ackn
+	stateContext.store[nodeUID("sc_id", ackn.SessionID, acknowledgment)] = ackn
 
 	stateContext.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
@@ -285,7 +308,7 @@ func mockStateContextI() *mockStateContext {
 		},
 	)
 	stateContext.On("GetTransaction").Return(
-		func() *tx.Transaction { return &tx.Transaction{ToClientID: msc.ID} },
+		func() *tx.Transaction { return &tx.Transaction{ToClientID: "sc_id"} },
 	)
 	stateContext.On("GetTrieNode", argStr).Return(
 		func(id datastore.Key) util.Serializable {

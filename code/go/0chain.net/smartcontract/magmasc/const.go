@@ -8,6 +8,15 @@ const (
 	// Name contents the smart contract name.
 	Name = "magma"
 
+	// rootPath describes the magma smart contract's root path.
+	rootPath = ".0chain.net"
+
+	// storeName describes the magma smart contract's store name.
+	storeName = "magmadb"
+
+	// storePath describes the magma smart contract's store path.
+	storePath = "data/rocksdb/magmasc"
+
 	// colon represents values separator.
 	colon = ":"
 )

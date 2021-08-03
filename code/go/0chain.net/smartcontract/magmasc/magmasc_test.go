@@ -51,7 +51,7 @@ func TestNewMagmaSmartContract(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, want := NewMagmaSmartContract().(*MagmaSmartContract), test.want.(*MagmaSmartContract)
+			got, want := NewMagmaSmartContract(), test.want.(*MagmaSmartContract)
 			if fmt.Sprintf("%#v", got.SmartContract) != fmt.Sprintf("%#v", want.SmartContract) {
 				t.Errorf("NewMagmaSmartContract() got: %#v | want: %#v", got.SmartContract, want.SmartContract)
 			}

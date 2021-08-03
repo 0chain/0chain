@@ -3,18 +3,27 @@ package magmasc
 import (
 	"context"
 	"net/url"
+	"os"
+	"os/user"
+	"path/filepath"
 
+	"github.com/0chain/bandwidth_marketplace/code/core/errors"
+	"github.com/0chain/gorocksdb"
 	"github.com/rcrowley/go-metrics"
 
 	chain "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	tx "0chain.net/chaincore/transaction"
+	store "0chain.net/core/ememorystore"
 )
 
 type (
 	// MagmaSmartContract represents smartcontractinterface.SmartContractInterface
 	// implementation allows interacting with Magma.
-	MagmaSmartContract struct{ *sci.SmartContract }
+	MagmaSmartContract struct {
+		*sci.SmartContract
+		db *gorocksdb.TransactionDB
+	}
 )
 
 var (
@@ -25,7 +34,7 @@ var (
 // NewMagmaSmartContract creates smartcontractinterface.SmartContractInterface
 // and sets provided smartcontractinterface.SmartContract to corresponding
 // MagmaSmartContract field and configures RestHandlers and SmartContractExecutionStats.
-func NewMagmaSmartContract() sci.SmartContractInterface {
+func NewMagmaSmartContract() *MagmaSmartContract {
 	msc := MagmaSmartContract{SmartContract: sci.NewSC(Address)}
 
 	// Magma smart contract REST handlers
@@ -96,4 +105,26 @@ func (m *MagmaSmartContract) GetName() string {
 // GetRestPoints implements smartcontractinterface.SmartContractInterface.
 func (m *MagmaSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return m.RestHandlers
+}
+
+// InitStore inits and configures the magma smart contract environment.
+func (m *MagmaSmartContract) InitStore() error {
+	usr, err := user.Current()
+	if err != nil {
+		return errors.Wrap(errCodeInternal, "init magma smart contract store failed", err)
+	}
+
+	path := filepath.Join(usr.HomeDir, rootPath, storePath)
+	if err = os.MkdirAll(path, 0644); err != nil {
+		return errors.Wrap(errCodeInternal, "create magma smart contract store failed", err)
+	}
+
+	m.db, err = store.CreateDB(path)
+	if err != nil {
+		return errors.Wrap(errCodeInternal, "open magma smart contract store failed", err)
+	}
+
+	store.AddPool(storeName, m.db)
+
+	return nil
 }

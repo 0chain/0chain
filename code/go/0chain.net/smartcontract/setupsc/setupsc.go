@@ -1,6 +1,8 @@
 package setupsc
 
 import (
+	"log"
+
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/viper"
@@ -56,6 +58,9 @@ func SetupSmartContracts() {
 	for _, name := range SCNames {
 		if viper.GetBool("development.smart_contract." + name) {
 			sc := newSmartContract(name)
+			if sc == nil {
+				log.Panic("setup smart contracts failed")
+			}
 			smartcontract.ContractMap[sc.GetAddress()] = sc
 		}
 	}
@@ -83,7 +88,12 @@ func newSmartContract(name string) sci.SmartContractInterface {
 	case Vesting:
 		return vestingsc.NewVestingSmartContract()
 	case Magma:
-		return magmasc.NewMagmaSmartContract()
+		msc := magmasc.NewMagmaSmartContract()
+		if err := msc.InitStore(); err != nil {
+			log.Println(err)
+			return nil
+		}
+		return msc
 
 	default:
 		return nil
