@@ -148,7 +148,7 @@ smart_contracts:
     max_charge: 0.50
     # reward paid out every block
     block_reward:
-      max_mint_reward: 1500000
+      max_mint_rewards: 1500000
       block_reward: 1
       qualifying_stake: 1
       sharder_ratio: 80
