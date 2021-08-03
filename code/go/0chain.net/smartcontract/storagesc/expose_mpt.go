@@ -24,7 +24,7 @@ func (ssc *StorageSmartContract) GetMptKey(
 	}
 
 	var key = params.Get("key")
-	val, err := balances.GetTrieNode(stakePoolKey(ssc.ID, key))
+	val, err := balances.GetTrieNode(key)
 	if err != nil {
 		return nil, err
 	}
