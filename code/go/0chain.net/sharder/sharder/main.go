@@ -207,6 +207,14 @@ func main() {
 		Logger.Panic("node not configured as sharder")
 	}
 
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.Error("load latest blocks from store: " + err.Error())
+		return
+	}
+
+	startBlocksInfoLogs(sc)
+
 	mode := "main net"
 	if config.Development() {
 		mode = "development"
@@ -251,14 +259,6 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 	initWorkers(ctx)
-
-	// start sharding from the LFB stored
-	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.Error("load latest blocks from store: " + err.Error())
-		return
-	}
-
-	startBlocksInfoLogs(sc)
 
 	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 		Logger.Fatal("update LFMB from sharders", zap.Error(err))
