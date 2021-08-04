@@ -9,6 +9,8 @@ func init() {
 }
 
 func TestHealthCheckScan_String(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		e         HealthCheckScan
