@@ -38,7 +38,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params
 	return resp, nil
 }
 
-func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) globalPeriodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil || gn == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
