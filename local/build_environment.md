@@ -64,36 +64,12 @@ sudo apt-get install -y zstd
 sudo apt-get install -y libbz2-dev
 
 ```
-That is the preliminaries out the way. Now install RocksDB. The well
-tested docker file wants to install an old version of RocksDB, 
-so we will do that.
+That is the preliminaries out the way. Now install RocksDB
 ```shell
 cd ~/Downloads
 wget https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz
 tar -xf v6.15.5.tar.gz
 cd rocksdb-6.15.5
-make OPT=-g0 USE_RTTI=1
-sudo make install
-```
-If the `make OPT=-g0 USE_RTTI=1` command fails with 
-```shell
-...
-./db/version_edit.h:86:8: error: implicitly-declared ‘constexpr rocksdb::FileDescriptor::FileDescriptor(const rocksdb::FileDescriptor&)’ is deprecated [-Werror=deprecated-copy]
-...
-cc1plus: all warnings being treated as errors
-make: *** [Makefile:1958: db/builder.o] Error 1
-```
-then your gcc version is too high. You can try this instead:
-```shell
-DISABLE_WARNING_AS_ERROR='yes' make OPT=-g0 USE_RTTI=1
-# or this
-EXTRA_CXXFLAGS='-w' make OPT=-g0 USE_RTTI=1
-```
-But if this fails on stage of linking, it is only left to downgrade your gcc.
-```shell
-sudo apt install g++-7 gcc-7
-export CC=/usr/bin/gcc-7
-export CXX=/usr/bin/g++-7
 make OPT=-g0 USE_RTTI=1
 sudo make install
 ```
@@ -111,7 +87,6 @@ sudo apt-get install libssl-dev
 
 ```shell
 wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
-tar -xf master.tar.gz
 mv mcl* mcl
 cd mcl
 make -j $(nproc) lib/libmclbn256.so 
@@ -120,7 +95,6 @@ sudo cp lib/libmclbn256.so /usr/local/lib
 ```
 ```shell
 wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz
-tar -xf master.tar.gz
 mv bls* bls
 cd bls
 make 
