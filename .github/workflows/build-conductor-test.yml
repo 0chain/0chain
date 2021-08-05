@@ -1,0 +1,35 @@
+name: CONDUCTOR_TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      view_change: 
+        description: 'Type true/false for setting view change.'
+        default: 'false'
+        required: true
+
+jobs:
+  conductor: 
+    name: CONDUCTOR-TEST
+    runs-on: self-hosted
+    
+    steps:
+    - name: Git Checkout
+      uses: actions/checkout@v2
+
+    - name: Get Branch
+      run: |
+        echo "Tag ${TAG}."
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        echo "Branch ${BRANCH}."
+      env:
+        TAG: ${{ github.event.inputs.view_change }}
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh
+    
+    - name: Completing.
+      run: |
+        ls -lha
