@@ -22,11 +22,14 @@ func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if _, ok := m.put(item); !ok {
+	if _, found := m.getIndex(item.ExtID); found {
+		return errors.New(errCodeInternal, "provider already registered: "+item.ExtID)
+	}
+	if _, found := m.getByHost(item.Host); found {
 		return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
 	}
 
-	return m.update(scID, item, db, sci)
+	return m.write(scID, item, db, sci)
 }
 
 func (m *Providers) copy() (list Providers) {
@@ -143,19 +146,16 @@ func (m *Providers) put(item *bmp.Provider) (int, bool) {
 	return idx, true // inserted
 }
 
-func (m *Providers) update(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
+func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
-	}
-	if _, found := m.getIndex(item.ExtID); !found {
-		return errors.New(errCodeInternal, "value not present")
 	}
 
 	list := m.copy()
 	list.put(item) // add or replace
 
 	blob, err := json.Marshal(list.Sorted)
-	if err != nil {
+	if err != nil || blob == nil {
 		return errors.Wrap(errCodeInternal, "encode providers list failed", err)
 	}
 	if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {

@@ -347,7 +347,7 @@ func Test_Providers_put(t *testing.T) {
 	}
 }
 
-func Test_Providers_update(t *testing.T) {
+func Test_Providers_write(t *testing.T) {
 	t.Parallel()
 
 	prov, msc, sci := mockProvider(), mockMagmaSmartContract(), mockStateContextI()
@@ -357,7 +357,7 @@ func Test_Providers_update(t *testing.T) {
 		t.Fatalf("add() error: %v | want: %v", err, nil)
 	}
 
-	tests := [2]struct {
+	tests := [1]struct {
 		name  string
 		prov  *bmp.Provider
 		msc   *MagmaSmartContract
@@ -373,14 +373,6 @@ func Test_Providers_update(t *testing.T) {
 			list:  list,
 			error: false,
 		},
-		{
-			name:  "Not_Present_ERR",
-			prov:  &bmp.Provider{ExtID: "not_present_id"},
-			msc:   msc,
-			sci:   sci,
-			list:  list,
-			error: true,
-		},
 	}
 
 	for idx := range tests {
@@ -388,9 +380,9 @@ func Test_Providers_update(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running to avoid detect race conditions because of
 			// everything is happening in a single smart contract so there is only one thread
-			err := test.list.update(test.msc.ID, test.prov, store.GetTransaction(test.msc.db), test.sci)
+			err := test.list.write(test.msc.ID, test.prov, store.GetTransaction(test.msc.db), test.sci)
 			if (err != nil) != test.error {
-				t.Errorf("update() error: %v | want: %v", err, test.error)
+				t.Errorf("write() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

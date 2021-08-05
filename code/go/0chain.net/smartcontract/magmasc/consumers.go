@@ -22,11 +22,14 @@ func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
-	if _, ok := m.put(item); !ok {
+	if _, found := m.getIndex(item.ExtID); found {
+		return errors.New(errCodeInternal, "consumer already registered: "+item.ExtID)
+	}
+	if _, found := m.getByHost(item.Host); found {
 		return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)
 	}
 
-	return m.update(scID, item, db, sci)
+	return m.write(scID, item, db, sci)
 }
 
 func (m *Consumers) copy() (list Consumers) {
@@ -143,19 +146,16 @@ func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
 	return idx, true // inserted
 }
 
-func (m *Consumers) update(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
+func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
-	}
-	if _, found := m.getIndex(item.ExtID); !found {
-		return errors.New(errCodeInternal, "value not present")
 	}
 
 	list := m.copy()
 	list.put(item) // add or replace
 
 	blob, err := json.Marshal(list.Sorted)
-	if err != nil {
+	if err != nil || blob == nil {
 		return errors.Wrap(errCodeInternal, "encode consumers list failed", err)
 	}
 	if err = db.Conn.Put([]byte(AllConsumersKey), blob); err != nil {

@@ -6,11 +6,11 @@ import (
 
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
-	"0chain.net/core/datastore"
+	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
 )
 
-func Test_ActiveSessions_append(t *testing.T) {
+func Test_ActiveSessions_add(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
@@ -20,17 +20,21 @@ func Test_ActiveSessions_append(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		list  *ActiveSessions
+		msc   *MagmaSmartContract
 		ackn  *bmp.Acknowledgment
 		conn  *store.Connection
+		sci   chain.StateContextI
+		list  *ActiveSessions
 		want  *ActiveSessions
 		error bool
 	}{
 		{
 			name:  "OK",
-			list:  mockActiveSessions(size),
+			msc:   msc,
 			ackn:  ackn,
 			conn:  store.GetTransaction(msc.db),
+			sci:   mockStateContextI(),
+			list:  mockActiveSessions(size),
 			want:  want,
 			error: false,
 		},
@@ -41,7 +45,8 @@ func Test_ActiveSessions_append(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if err := test.list.append(test.ackn, test.conn); (err != nil) != test.error {
+			err := test.list.add(test.msc.ID, test.ackn, test.conn, test.sci)
+			if (err != nil) != test.error {
 				t.Errorf("append() error: %v | want: %v", err, test.error)
 			}
 		})
@@ -58,9 +63,9 @@ func Test_ActiveSessions_remove(t *testing.T) {
 
 	tests := [1]struct {
 		name  string
-		list  *ActiveSessions
 		ackn  *bmp.Acknowledgment
 		conn  *store.Connection
+		list  *ActiveSessions
 		want  *ActiveSessions
 		error bool
 	}{
@@ -79,7 +84,7 @@ func Test_ActiveSessions_remove(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if err := test.list.remove(test.ackn, test.conn); (err != nil) != test.error {
+			if err := test.list.del(test.ackn, test.conn); (err != nil) != test.error {
 				t.Errorf("del() error: %v | want: %v", err, test.error)
 			}
 		})
@@ -90,7 +95,7 @@ func Test_fetchActiveSessions(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
-	msc := mockMagmaSmartContract()
+	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	t.Run("Not_Present_OK", func(t *testing.T) {
 		// do not use parallel running to avoid detect race conditions because of
@@ -107,13 +112,13 @@ func Test_fetchActiveSessions(t *testing.T) {
 	})
 
 	list := mockActiveSessions(size)
-	if err := list.append(mockAcknowledgment(), store.GetTransaction(msc.db)); err != nil {
+	if err := list.add(msc.ID, mockAcknowledgment(), store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [1]struct {
 		name  string
-		id    datastore.Key
+		id    string
 		conn  *store.Connection
 		want  *ActiveSessions
 		error bool

@@ -70,17 +70,18 @@ func (m *MagmaSmartContract) acknowledgmentExist(_ context.Context, vals url.Val
 	return got != nil, nil
 }
 
-// activeSessionAppend tries to append a new active acknowledgment to list
-// and stores the acknowledgment and updated list into provided state.StateContextI.
-func (m *MagmaSmartContract) activeSessionAppend(ackn *bmp.Acknowledgment, db *store.Connection) error {
+// activeSessionRegister tries to register a new active session to list
+// and stores the acknowledgment or update into provided state.StateContextI.
+func (m *MagmaSmartContract) activeSessionRegister(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
+	db := store.GetTransaction(m.db)
 	list, err := fetchActiveSessions(ActiveSessionsKey, db)
 	if err != nil {
 		db.Conn.Destroy()
 		return err
 	}
-	if err = list.append(ackn, db); err != nil {
+	if err = list.add(m.ID, ackn, db, sci); err != nil {
 		_ = db.Conn.Rollback()
-		return errors.Wrap(errCodeInternal, "insert acknowledgment failed", err)
+		return errors.Wrap(errCodeInternal, "add active session failed", err)
 	}
 
 	return nil
@@ -96,7 +97,7 @@ func (m *MagmaSmartContract) activeSessionComplete(ackn *bmp.Acknowledgment, sci
 		db.Conn.Destroy()
 		return err
 	}
-	if err = list.remove(ackn, db); err != nil {
+	if err = list.del(ackn, db); err != nil {
 		_ = db.Conn.Rollback()
 		return err
 	}
@@ -181,9 +182,6 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 	if err != nil {
 		return "", errors.Wrap(errCodeConsumerReg, "fetch consumers list failed", err)
 	}
-	if _, got := list.getIndex(consumer.ExtID); got {
-		return "", errors.Wrap(errCodeConsumerReg, "consumer already registered", err)
-	}
 
 	consumer.ID = txn.ClientID
 	if err = list.add(m.ID, consumer, db, sci); err != nil {
@@ -220,8 +218,8 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.New(errCodeSessionStart, "invalid provider terms")
 	}
 
-	if err = m.activeSessionAppend(ackn, store.GetTransaction(m.db)); err != nil {
-		return "", errors.Wrap(errCodeSessionStart, "append acknowledgment failed", err)
+	if err = m.activeSessionRegister(ackn, sci); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "register active session failed", err)
 	}
 
 	resp, err := newTokenPool().create(txn, ackn, sci)
@@ -234,9 +232,9 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "fetch providers list failed", err)
 	}
-	if prov, found := list.get(ackn.Provider.ExtID); found {
-		prov.Terms.Increase()
-		if err = list.update(m.ID, prov, db, sci); err != nil {
+	if provider, found := list.get(ackn.Provider.ExtID); found {
+		provider.Terms.Increase()
+		if err = list.write(m.ID, provider, db, sci); err != nil {
 			return "", errors.Wrap(errCodeSessionStart, "update providers list failed", err)
 		}
 	}
@@ -261,11 +259,11 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if err != nil {
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
-
 	resp, err := pool.spend(txn, &ackn.Billing, sci)
 	if err != nil { // spend token pool to provider
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
+
 	if err = m.activeSessionComplete(ackn, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionStop, "append acknowledgment failed", err)
 	}
@@ -277,7 +275,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	}
 	if provider, found := list.get(ackn.Provider.ExtID); found {
 		provider.Terms.Decrease()
-		if err = list.update(m.ID, provider, db, sci); err != nil {
+		if err = list.write(m.ID, provider, db, sci); err != nil {
 			return "", errors.Wrap(errCodeSessionStop, "update providers list failed", err)
 		}
 	}
@@ -302,7 +300,7 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 	}
 
 	consumer.ID = txn.ClientID
-	if err = list.update(m.ID, consumer, db, sci); err != nil {
+	if err = list.write(m.ID, consumer, db, sci); err != nil {
 		return "", errors.Wrap(errCodeConsumerUpdate, "update consumer list failed", err)
 	}
 
@@ -368,9 +366,6 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderReg, "fetch providers list failed", err)
 	}
-	if _, got := list.getIndex(provider.ExtID); got {
-		return "", errors.Wrap(errCodeProviderReg, "provider already registered", err)
-	}
 
 	provider.ID = txn.ClientID
 	if err = list.add(m.ID, provider, db, sci); err != nil {
@@ -413,7 +408,7 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch providers list failed", err)
 	}
-	if err = list.update(m.ID, provider, db, sci); err != nil {
+	if err = list.write(m.ID, provider, db, sci); err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "update providers list failed", err)
 	}
 
