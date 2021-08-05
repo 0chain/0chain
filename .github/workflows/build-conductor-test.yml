@@ -1,0 +1,26 @@
+name: CONDUCTOR_TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      view_change: 
+        description: 'Type true/false for setting view change.'
+        default: 'false'
+        required: true
+
+jobs:
+  conductor: 
+    name: CONDUCTOR-TEST
+    runs-on: self-hosted
+    
+    steps:
+    - name: Git Checkout
+      uses: actions/checkout@v2
+
+    - name: Completing Trigger
+      run: |
+        echo "Tag ${TAG}."
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+      env:
+        TAG: ${{ github.event.inputs.view_change }}
