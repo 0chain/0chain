@@ -26,10 +26,11 @@ jobs:
       env:
         TAG: ${{ github.event.inputs.view_change }}
 
-    - name: Build Miner Docker Image For Integration Test.
-      run: |
-        cd 0chain
-    
     - name: Completing.
       run: |
         ls -lha
+        
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd /root/actions-runner/chain/0chain/0chain
+    
