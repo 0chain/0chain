@@ -51,8 +51,8 @@ jobs:
 
     - name: Login To Docker Hub
       run: |
-        # cd /root/0chain/
-        echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+        cd /root/0chain/
+        # echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
 
     - name: Building Base Images
       run: |
