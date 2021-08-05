@@ -28,7 +28,7 @@ jobs:
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
-        cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh
+        cd 0chain/0chain
     
     - name: Completing.
       run: |
