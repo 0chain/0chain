@@ -19,8 +19,8 @@ cloud.google.com/go/storage v1.0.0/go.mod h1:IhtSnM/ZTZV8YYJWCY8RULGVqBDmpoyjwiy
 cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0ZeosJ0Rtdos=
 collectd.org v0.3.0/go.mod h1:A/8DzQBkF6abtvrT2j/AU/4tiBgJWYyh0y/oB/4MlWE=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210730161700-6dc34253257e h1:YT9Pfmxq9ko+SM5zjs83hTs3FkUS55qPkMMVmA0pwjY=
-github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210730161700-6dc34253257e/go.mod h1:pEDROYUA1FlREh/Msa20WE4yVyzvjMwxz+07iOW4VFA=
+github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210805073216-2485ba7e9b67 h1:7SWrU8x7VOhe+kSDKcDFFTkj7Hzl7MLZGRkM/wdbF7k=
+github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210805073216-2485ba7e9b67/go.mod h1:pEDROYUA1FlREh/Msa20WE4yVyzvjMwxz+07iOW4VFA=
 github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481 h1:0lJGENbcCAQW71ZuDyvUhHKbzOuhPeFo0zI5xqiDyts=
 github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481/go.mod h1:3i9d+2Osik7apjXERxpAlKxE7SilJKkHoW9Ihdjdfxs=
 github.com/0chain/gosdk v1.2.78-0.20210718122219-e7a4efa3de23 h1:MPpXStnhtK/9mP+UcHsa12NXkk+Yc+SYxCVuNb+LevA=
