@@ -198,10 +198,6 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	err = sc.VerifyNotarization(ctx, bl.lfb, bl.lfb.GetVerificationTickets(),
 		bl.r.GetRoundNumber())
 	if err != nil {
-		Logger.Error("load_lfb - verify notarization failed",
-			zap.Error(err),
-			zap.Int64("round", bl.lfb.Round),
-			zap.String("block", bl.lfb.Hash))
 		err = nil // not a real error
 		return    // do nothing, if not notarized
 	}
