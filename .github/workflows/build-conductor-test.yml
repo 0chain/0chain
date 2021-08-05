@@ -45,7 +45,7 @@ jobs:
       run: |
         cd /root/0chain/
         git pull
-        git checkout origin $BRANCH
+        git checkout $BRANCH
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
