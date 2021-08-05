@@ -174,8 +174,7 @@ func (m *Consumers) update(scID string, item *bmp.Consumer, db *store.Connection
 	return nil
 }
 
-// fetchConsumers extracts all consumers represented in JSON bytes
-// stored in memory data store with given id.
+// fetchConsumers extracts all consumers stored in memory data store with given id.
 func fetchConsumers(id string, db *store.Connection) (*Consumers, error) {
 	list := &Consumers{}
 

@@ -10,14 +10,13 @@ import (
 )
 
 type (
-	// ActiveSessions represents active acknowledgments list, used to inserting,
-	// removing or getting from state.StateContextI with ActiveAcknowledgmentsKey.
+	// ActiveSessions represents active sessions list
+	// for every registered provider and consumer.
 	ActiveSessions struct {
 		Items []*bmp.Acknowledgment
 	}
 )
 
-// append tires to append a new acknowledgment to active list.
 func (m *ActiveSessions) append(item *bmp.Acknowledgment, db *store.Connection) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "acknowledgment invalid value").Wrap(errNilPointerValue)
@@ -31,7 +30,7 @@ func (m *ActiveSessions) append(item *bmp.Acknowledgment, db *store.Connection) 
 	if err != nil {
 		return errors.Wrap(errCodeInternal, "encode active acknowledgments list failed", err)
 	}
-	if err = db.Conn.Put([]byte(ActiveAcknowledgmentsKey), blob); err != nil {
+	if err = db.Conn.Put([]byte(ActiveSessionsKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "insert active acknowledgment list failed", err)
 	}
 	if err = db.Commit(); err != nil {
@@ -54,7 +53,6 @@ func (m *ActiveSessions) getIndex(id string) (int, bool) {
 	return -1, false
 }
 
-// remove tires to remove an acknowledgment form active list.
 func (m *ActiveSessions) remove(item *bmp.Acknowledgment, db *store.Connection) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "acknowledgment invalid value").Wrap(errNilPointerValue)
@@ -70,7 +68,7 @@ func (m *ActiveSessions) remove(item *bmp.Acknowledgment, db *store.Connection) 
 	if err != nil {
 		return errors.Wrap(errCodeInternal, "encode active acknowledgments list failed", err)
 	}
-	if err = db.Conn.Put([]byte(ActiveAcknowledgmentsKey), blob); err != nil {
+	if err = db.Conn.Put([]byte(ActiveSessionsKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "put active acknowledgments list failed", err)
 	}
 	if err = db.Commit(); err != nil {
@@ -82,11 +80,9 @@ func (m *ActiveSessions) remove(item *bmp.Acknowledgment, db *store.Connection) 
 	return nil
 }
 
-// fetchActiveAcknowledgments extracts active acknowledgments represented in JSON bytes
-// stored in state.StateContextI with provided id.
-// fetchConsumers returns error if state.StateContextI does not contain
-// active acknowledgments or stored bytes have invalid format.
-func fetchActiveAcknowledgments(id string, db *store.Connection) (*ActiveSessions, error) {
+// fetchActiveSessions extracts active sessions list
+// stored in memory data store with given id.
+func fetchActiveSessions(id string, db *store.Connection) (*ActiveSessions, error) {
 	list := &ActiveSessions{}
 
 	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))

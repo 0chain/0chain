@@ -10,12 +10,12 @@ import (
 	store "0chain.net/core/ememorystore"
 )
 
-func TestActiveAcknowledgments_append(t *testing.T) {
+func Test_ActiveSessions_append(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
 	ackn, msc := mockAcknowledgment(), mockMagmaSmartContract()
-	want := mockActiveAcknowledgments(size)
+	want := mockActiveSessions(size)
 	want.Items = append(want.Items, ackn)
 
 	tests := [1]struct {
@@ -28,7 +28,7 @@ func TestActiveAcknowledgments_append(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			list:  mockActiveAcknowledgments(size),
+			list:  mockActiveSessions(size),
 			ackn:  ackn,
 			conn:  store.GetTransaction(msc.db),
 			want:  want,
@@ -48,12 +48,12 @@ func TestActiveAcknowledgments_append(t *testing.T) {
 	}
 }
 
-func TestActiveAcknowledgments_remove(t *testing.T) {
+func Test_ActiveSessions_remove(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
 	ackn, msc := mockAcknowledgment(), mockMagmaSmartContract()
-	list := mockActiveAcknowledgments(size)
+	list := mockActiveSessions(size)
 	list.Items = append(list.Items, ackn)
 
 	tests := [1]struct {
@@ -69,7 +69,7 @@ func TestActiveAcknowledgments_remove(t *testing.T) {
 			list:  list,
 			ackn:  ackn,
 			conn:  store.GetTransaction(msc.db),
-			want:  mockActiveAcknowledgments(size),
+			want:  mockActiveSessions(size),
 			error: false,
 		},
 	}
@@ -86,7 +86,7 @@ func TestActiveAcknowledgments_remove(t *testing.T) {
 	}
 }
 
-func Test_fetchActiveAcknowledgments(t *testing.T) {
+func Test_fetchActiveSessions(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
@@ -95,18 +95,18 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 	t.Run("Not_Present_OK", func(t *testing.T) {
 		// do not use parallel running to avoid detect race conditions because of
 		// everything is happening in a single smart contract so there is only one thread
-		got, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, store.GetTransaction(msc.db))
+		got, err := fetchActiveSessions(ActiveSessionsKey, store.GetTransaction(msc.db))
 		if err != nil {
-			t.Errorf("fetchActiveAcknowledgments() error: %v | want: %v", err, nil)
+			t.Errorf("fetchActiveSessions() error: %v | want: %v", err, nil)
 			return
 		}
 		want := &ActiveSessions{}
 		if !reflect.DeepEqual(got, want) {
-			t.Errorf("fetchActiveAcknowledgments() got: %#v | want: %#v", got, want)
+			t.Errorf("fetchActiveSessions() got: %#v | want: %#v", got, want)
 		}
 	})
 
-	list := mockActiveAcknowledgments(size)
+	list := mockActiveSessions(size)
 	if err := list.append(mockAcknowledgment(), store.GetTransaction(msc.db)); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
@@ -120,7 +120,7 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    ActiveAcknowledgmentsKey,
+			id:    ActiveSessionsKey,
 			conn:  store.GetTransaction(msc.db),
 			want:  list,
 			error: false,
@@ -132,13 +132,13 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running to avoid detect race conditions because of
 			// everything is happening in a single smart contract so there is only one thread
-			got, err := fetchActiveAcknowledgments(test.id, test.conn)
+			got, err := fetchActiveSessions(test.id, test.conn)
 			if (err != nil) != test.error {
-				t.Errorf("fetchActiveAcknowledgments() error: %v | want: %v", err, test.error)
+				t.Errorf("fetchActiveSessions() error: %v | want: %v", err, test.error)
 				return
 			}
 			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("fetchActiveAcknowledgments() got: %#v | want: %#v", got, test.want)
+				t.Errorf("fetchActiveSessions() got: %#v | want: %#v", got, test.want)
 			}
 		})
 	}

@@ -70,10 +70,10 @@ func (m *MagmaSmartContract) acknowledgmentExist(_ context.Context, vals url.Val
 	return got != nil, nil
 }
 
-// activeAcknowledgmentAppend tries to append a new active acknowledgment to list
+// activeSessionAppend tries to append a new active acknowledgment to list
 // and stores the acknowledgment and updated list into provided state.StateContextI.
-func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment, db *store.Connection) error {
-	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
+func (m *MagmaSmartContract) activeSessionAppend(ackn *bmp.Acknowledgment, db *store.Connection) error {
+	list, err := fetchActiveSessions(ActiveSessionsKey, db)
 	if err != nil {
 		db.Conn.Destroy()
 		return err
@@ -86,12 +86,12 @@ func (m *MagmaSmartContract) activeAcknowledgmentAppend(ackn *bmp.Acknowledgment
 	return nil
 }
 
-// activeAcknowledgmentComplete tries to delete an active acknowledgment from list
+// activeSessionComplete tries to delete an active acknowledgment from list
 // and stores the acknowledgment and updated list into provided state.StateContextI.
-func (m *MagmaSmartContract) activeAcknowledgmentComplete(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
+func (m *MagmaSmartContract) activeSessionComplete(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
 	db := store.GetTransaction(m.db)
 
-	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
+	list, err := fetchActiveSessions(ActiveSessionsKey, db)
 	if err != nil {
 		db.Conn.Destroy()
 		return err
@@ -109,12 +109,12 @@ func (m *MagmaSmartContract) activeAcknowledgmentComplete(ackn *bmp.Acknowledgme
 	return nil
 }
 
-// activeAcknowledgments tries to extract Acknowledgments list with current status active
+// activeSessions tries to extract Acknowledgments list with current status active
 // filtered by given external id param and returns it.
-func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.Values, _ chain.StateContextI) (interface{}, error) {
+func (m *MagmaSmartContract) activeSessions(_ context.Context, vals url.Values, _ chain.StateContextI) (interface{}, error) {
 	db := store.GetTransaction(m.db)
 
-	list, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, db)
+	list, err := fetchActiveSessions(ActiveSessionsKey, db)
 	if err != nil {
 		db.Conn.Destroy()
 		return nil, err
@@ -134,7 +134,7 @@ func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.V
 // allConsumers represents MagmaSmartContract handler.
 // Returns all registered Consumer's nodes stores in
 // provided state.StateContextI with AllConsumersKey.
-func (m *MagmaSmartContract) allConsumers(_ context.Context, _ url.Values, sci chain.StateContextI) (interface{}, error) {
+func (m *MagmaSmartContract) allConsumers(context.Context, url.Values, chain.StateContextI) (interface{}, error) {
 	consumers, err := fetchConsumers(AllConsumersKey, store.GetTransaction(m.db))
 	if err != nil {
 		return nil, errors.Wrap(errCodeFetchData, "fetch consumers list failed", err)
@@ -220,7 +220,7 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.New(errCodeSessionStart, "invalid provider terms")
 	}
 
-	if err = m.activeAcknowledgmentAppend(ackn, store.GetTransaction(m.db)); err != nil {
+	if err = m.activeSessionAppend(ackn, store.GetTransaction(m.db)); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "append acknowledgment failed", err)
 	}
 
@@ -266,7 +266,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if err != nil { // spend token pool to provider
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
-	if err = m.activeAcknowledgmentComplete(ackn, sci); err != nil {
+	if err = m.activeSessionComplete(ackn, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionStop, "append acknowledgment failed", err)
 	}
 

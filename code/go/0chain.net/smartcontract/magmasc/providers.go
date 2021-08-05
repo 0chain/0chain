@@ -174,8 +174,7 @@ func (m *Providers) update(scID string, item *bmp.Provider, db *store.Connection
 	return nil
 }
 
-// fetchProviders extracts all providers represented in JSON bytes
-// stored in memory data store with given id.
+// fetchProviders extracts all providers stored in memory data store with given id.
 func fetchProviders(id string, db *store.Connection) (*Providers, error) {
 	list := &Providers{}
 

@@ -41,7 +41,7 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc.RestHandlers["/acknowledgmentAccepted"] = msc.acknowledgmentAccepted
 	msc.RestHandlers["/acknowledgmentAcceptedVerify"] = msc.acknowledgmentAcceptedVerify
 	msc.RestHandlers["/acknowledgmentExist"] = msc.acknowledgmentExist
-	msc.RestHandlers["/activeAcknowledgments"] = msc.activeAcknowledgments
+	msc.RestHandlers["/activeSessions"] = msc.activeSessions
 	msc.RestHandlers["/allConsumers"] = msc.allConsumers
 	msc.RestHandlers["/allProviders"] = msc.allProviders
 	msc.RestHandlers["/consumerExist"] = msc.consumerExist

@@ -76,7 +76,7 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 	}
 }
 
-func mockActiveAcknowledgments(size int) *ActiveSessions {
+func mockActiveSessions(size int) *ActiveSessions {
 	list := &ActiveSessions{Items: make([]*bmp.Acknowledgment, size)}
 	for i := 0; i < size; i++ {
 		id := strconv.Itoa(i)
