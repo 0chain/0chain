@@ -12,7 +12,7 @@ env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base
   SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
-  # MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
+  MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
   DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASS: ${{ secrets.DOCKER_PASSWORD }}
 
