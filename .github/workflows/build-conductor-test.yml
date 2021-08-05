@@ -29,7 +29,7 @@ jobs:
     - name: Build Miner Docker Image For Integration Test.
       run: |
         cd /root/actions-runner/chain/0chain/0chain
-        bash ./docker.local/bin/build.sharders-integration-tests.sh
+        bash /root/actions-runner/chain/0chain/0chain/docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Completing.
       run: |
