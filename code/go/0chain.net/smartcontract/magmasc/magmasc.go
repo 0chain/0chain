@@ -107,8 +107,8 @@ func (m *MagmaSmartContract) GetRestPoints() map[string]sci.SmartContractRestHan
 	return m.RestHandlers
 }
 
-// InitStore inits and configures the magma smart contract environment.
-func (m *MagmaSmartContract) InitStore() error {
+// Setup inits and configures the magma smart contract environment.
+func (m *MagmaSmartContract) Setup() error {
 	usr, err := user.Current()
 	if err != nil {
 		return errors.Wrap(errCodeInternal, "init magma smart contract store failed", err)

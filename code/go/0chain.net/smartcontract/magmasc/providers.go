@@ -2,83 +2,195 @@ package magmasc
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	store "0chain.net/core/ememorystore"
 )
 
 type (
-	// Providers represents sorted Provider nodes, used to inserting,
-	// removing or getting from state.StateContextI with AllProvidersKey.
+	// Providers represents sorted list of providers.
 	Providers struct {
-		Nodes providersSorted `json:"nodes"`
+		Sorted []*bmp.Provider
 	}
 )
 
-var (
-	// Make sure Providers implements Serializable interface.
-	_ util.Serializable = (*Providers)(nil)
-)
-
-// Decode implements util.Serializable interface.
-func (m *Providers) Decode(blob []byte) error {
-	var sorted []*bmp.Provider
-	if err := json.Unmarshal(blob, &sorted); err != nil {
-		return errDecodeData.Wrap(err)
+func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
+	if item == nil {
+		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
+	}
+	if _, ok := m.put(item); !ok {
+		return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
 	}
 
-	m.Nodes.setSorted(sorted)
-
-	return nil
+	return m.update(scID, item, db, sci)
 }
 
-// Encode implements util.Serializable interface.
-func (m *Providers) Encode() []byte {
-	blob, _ := json.Marshal(m.Nodes.getSorted())
-	return blob
-}
-
-// add tries to add a new provider to nodes list.
-func (m *Providers) add(scID datastore.Key, prov *bmp.Provider, sci chain.StateContextI) error {
-	if _, found := m.Nodes.getByHost(prov.Host); found {
-		return errors.New(errCodeInternal, "provider host already registered: "+prov.Host)
+func (m *Providers) copy() (list Providers) {
+	if m.Sorted != nil {
+		list.Sorted = make([]*bmp.Provider, len(m.Sorted))
+		copy(list.Sorted, m.Sorted)
 	}
 
-	return m.update(scID, prov, sci)
+	return list
 }
 
-// update tries to update the provider into nodes list.
-func (m *Providers) update(scID datastore.Key, prov *bmp.Provider, sci chain.StateContextI) error {
-	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
-		return errors.Wrap(errCodeInternal, "insert provider failed", err)
+func (m *Providers) del(id string, db *store.Connection) (*bmp.Provider, error) {
+	idx, found := m.getIndex(id)
+	if found {
+		return m.delByIndex(idx, db)
 	}
 
-	list := &Providers{Nodes: providersSorted{Sorted: m.Nodes.getSorted()}}
-	list.Nodes.add(prov)
-	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
+	return nil, errors.New(errCodeInternal, "value not present")
+}
+
+func (m *Providers) delByIndex(idx int, db *store.Connection) (*bmp.Provider, error) {
+	if idx >= len(m.Sorted) {
+		return nil, errors.New(errCodeInternal, "index out of range")
+	}
+
+	list := m.copy()
+	item := *list.Sorted[idx] // get copy of item
+	list.Sorted = append(list.Sorted[:idx], list.Sorted[idx+1:]...)
+
+	blob, err := json.Marshal(list.Sorted)
+	if err != nil {
+		return nil, errors.Wrap(errCodeInternal, "encode providers list failed", err)
+	}
+	if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
+		return nil, errors.Wrap(errCodeInternal, "insert providers list failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+	}
+
+	m.Sorted = list.Sorted
+
+	return &item, nil
+}
+
+func (m *Providers) get(id string) (*bmp.Provider, bool) {
+	idx, found := m.getIndex(id)
+	if !found {
+		return nil, false // not found
+	}
+
+	return m.Sorted[idx], true // found
+}
+
+func (m *Providers) getByHost(host string) (*bmp.Provider, bool) {
+	for _, item := range m.Sorted {
+		if item.Host == host {
+			return item, true // found
+		}
+	}
+
+	return nil, false // not found
+}
+
+func (m *Providers) getByIndex(idx int) (*bmp.Provider, bool) {
+	if idx < len(m.Sorted) {
+		return m.Sorted[idx], true
+	}
+
+	return nil, false // not found
+}
+
+func (m *Providers) getIndex(id string) (int, bool) {
+	size := len(m.Sorted)
+	if size > 0 {
+		idx := sort.Search(size, func(idx int) bool {
+			return m.Sorted[idx].ExtID >= id
+		})
+		if idx < size && m.Sorted[idx].ExtID == id {
+			return idx, true // found
+		}
+	}
+
+	return -1, false // not found
+}
+
+func (m *Providers) put(item *bmp.Provider) (int, bool) {
+	if item == nil {
+		return 0, false
+	}
+
+	size := len(m.Sorted)
+	if size == 0 {
+		m.Sorted = append(m.Sorted, item)
+		return 0, true // appended
+	}
+
+	idx := sort.Search(size, func(idx int) bool {
+		return m.Sorted[idx].ExtID >= item.ExtID
+	})
+	if idx == size { // out of bounds
+		m.Sorted = append(m.Sorted, item)
+		return idx, true // appended
+	}
+	if m.Sorted[idx].ExtID == item.ExtID { // the same
+		m.Sorted[idx] = item // replace
+		return idx, false    // already have
+	}
+
+	// insert
+	left, right := m.Sorted[:idx], append([]*bmp.Provider{item}, m.Sorted[idx:]...)
+	m.Sorted = append(left, right...)
+
+	return idx, true // inserted
+}
+
+func (m *Providers) update(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
+	if item == nil {
+		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
+	}
+	if _, found := m.getIndex(item.ExtID); !found {
+		return errors.New(errCodeInternal, "value not present")
+	}
+
+	list := m.copy()
+	list.put(item) // add or replace
+
+	blob, err := json.Marshal(list.Sorted)
+	if err != nil {
+		return errors.Wrap(errCodeInternal, "encode providers list failed", err)
+	}
+	if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "insert providers list failed", err)
 	}
+	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, providerType), item); err != nil {
+		_ = db.Conn.Rollback()
+		return errors.Wrap(errCodeInternal, "insert provider failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		return errors.Wrap(errCodeInternal, "commit changes failed", err)
+	}
 
-	m.Nodes.setSorted(list.Nodes.Sorted)
+	m.Sorted = list.Sorted
 
 	return nil
 }
 
 // fetchProviders extracts all providers represented in JSON bytes
-// stored in state.StateContextI with given id.
-// fetchProviders returns error if state.StateContextI does not contain
-// providers or stored bytes have invalid format.
-func fetchProviders(id datastore.Key, sci chain.StateContextI) (*Providers, error) {
-	providers := &Providers{}
-	if list, _ := sci.GetTrieNode(id); list != nil {
-		if err := providers.Decode(list.Encode()); err != nil {
-			return nil, errDecodeData.Wrap(err)
+// stored in memory data store with given id.
+func fetchProviders(id string, db *store.Connection) (*Providers, error) {
+	list := &Providers{}
+
+	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))
+	if err != nil {
+		return list, errors.Wrap(errCodeInternal, "get providers list failed", err)
+	}
+	defer buf.Free()
+
+	blob := buf.Data()
+	if blob != nil {
+		if err = json.Unmarshal(blob, &list.Sorted); err != nil {
+			return list, errors.Wrap(errCodeInternal, "decode providers list failed", err)
 		}
 	}
 
-	return providers, nil
+	return list, nil
 }

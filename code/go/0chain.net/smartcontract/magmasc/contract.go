@@ -122,7 +122,7 @@ func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.V
 	_ = db.Commit()
 
 	extID, nodes := vals.Get("ext_id"), make([]*bmp.Acknowledgment, 0)
-	for _, ackn := range list.Nodes {
+	for _, ackn := range list.Items {
 		if ackn.Consumer.ExtID == extID || ackn.Provider.ExtID == extID {
 			nodes = append(nodes, ackn)
 		}
@@ -135,24 +135,24 @@ func (m *MagmaSmartContract) activeAcknowledgments(_ context.Context, vals url.V
 // Returns all registered Consumer's nodes stores in
 // provided state.StateContextI with AllConsumersKey.
 func (m *MagmaSmartContract) allConsumers(_ context.Context, _ url.Values, sci chain.StateContextI) (interface{}, error) {
-	consumers, err := fetchConsumers(AllConsumersKey, sci)
+	consumers, err := fetchConsumers(AllConsumersKey, store.GetTransaction(m.db))
 	if err != nil {
 		return nil, errors.Wrap(errCodeFetchData, "fetch consumers list failed", err)
 	}
 
-	return consumers.Nodes.Sorted, nil
+	return consumers.Sorted, nil
 }
 
 // allProviders represents MagmaSmartContract handler.
 // Returns all registered Provider's nodes stores in
 // provided state.StateContextI with AllProvidersKey.
-func (m *MagmaSmartContract) allProviders(_ context.Context, _ url.Values, sci chain.StateContextI) (interface{}, error) {
-	providers, err := fetchProviders(AllProvidersKey, sci)
+func (m *MagmaSmartContract) allProviders(context.Context, url.Values, chain.StateContextI) (interface{}, error) {
+	providers, err := fetchProviders(AllProvidersKey, store.GetTransaction(m.db))
 	if err != nil {
 		return nil, errors.Wrap(errCodeFetchData, "fetch providers list failed", err)
 	}
 
-	return providers.Nodes.Sorted, nil
+	return providers.Sorted, nil
 }
 
 // consumerExist tries to extract registered consumer
@@ -176,16 +176,17 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(errCodeConsumerReg, "decode consumer data failed", err)
 	}
 
-	list, err := fetchConsumers(AllConsumersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchConsumers(AllConsumersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeConsumerReg, "fetch consumers list failed", err)
 	}
-	if _, got := list.Nodes.getIndex(consumer.ExtID); got {
+	if _, got := list.getIndex(consumer.ExtID); got {
 		return "", errors.Wrap(errCodeConsumerReg, "consumer already registered", err)
 	}
 
 	consumer.ID = txn.ClientID
-	if err = list.add(m.ID, consumer, sci); err != nil {
+	if err = list.add(m.ID, consumer, db, sci); err != nil {
 		return "", errors.Wrap(errCodeConsumerReg, "register consumer failed", err)
 	}
 
@@ -228,13 +229,14 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.Wrap(errCodeSessionStart, "create token pool failed", err)
 	}
 
-	list, err := fetchProviders(AllProvidersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchProviders(AllProvidersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "fetch providers list failed", err)
 	}
-	if prov, found := list.Nodes.get(ackn.Provider.ExtID); found {
+	if prov, found := list.get(ackn.Provider.ExtID); found {
 		prov.Terms.Increase()
-		if err = list.update(m.ID, prov, sci); err != nil {
+		if err = list.update(m.ID, prov, db, sci); err != nil {
 			return "", errors.Wrap(errCodeSessionStart, "update providers list failed", err)
 		}
 	}
@@ -268,13 +270,14 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "append acknowledgment failed", err)
 	}
 
-	list, err := fetchProviders(AllProvidersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchProviders(AllProvidersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionStop, "fetch providers list failed", err)
 	}
-	if provider, found := list.Nodes.get(ackn.Provider.ExtID); found {
+	if provider, found := list.get(ackn.Provider.ExtID); found {
 		provider.Terms.Decrease()
-		if err = list.update(m.ID, provider, sci); err != nil {
+		if err = list.update(m.ID, provider, db, sci); err != nil {
 			return "", errors.Wrap(errCodeSessionStop, "update providers list failed", err)
 		}
 	}
@@ -292,13 +295,14 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 		return "", errors.Wrap(errCodeConsumerUpdate, "fetch consumer failed", err)
 	}
 
-	list, err := fetchConsumers(AllConsumersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchConsumers(AllConsumersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeConsumerUpdate, "fetch consumer list failed", err)
 	}
 
 	consumer.ID = txn.ClientID
-	if err = list.update(m.ID, consumer, sci); err != nil {
+	if err = list.update(m.ID, consumer, db, sci); err != nil {
 		return "", errors.Wrap(errCodeConsumerUpdate, "update consumer list failed", err)
 	}
 
@@ -359,16 +363,17 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(errCodeProviderReg, "validate provider failed", err)
 	}
 
-	list, err := fetchProviders(AllProvidersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchProviders(AllProvidersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderReg, "fetch providers list failed", err)
 	}
-	if _, got := list.Nodes.getIndex(provider.ExtID); got {
+	if _, got := list.getIndex(provider.ExtID); got {
 		return "", errors.Wrap(errCodeProviderReg, "provider already registered", err)
 	}
 
 	provider.ID = txn.ClientID
-	if err = list.add(m.ID, provider, sci); err != nil {
+	if err = list.add(m.ID, provider, db, sci); err != nil {
 		return "", errors.Wrap(errCodeProviderReg, "register provider failed", err)
 	}
 
@@ -403,11 +408,12 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch provider failed", err)
 	}
 
-	list, err := fetchProviders(AllProvidersKey, sci)
+	db := store.GetTransaction(m.db)
+	list, err := fetchProviders(AllProvidersKey, db)
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch providers list failed", err)
 	}
-	if err = list.update(m.ID, provider, sci); err != nil {
+	if err = list.update(m.ID, provider, db, sci); err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "update providers list failed", err)
 	}
 

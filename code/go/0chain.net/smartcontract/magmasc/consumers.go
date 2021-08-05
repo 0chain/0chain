@@ -2,83 +2,195 @@ package magmasc
 
 import (
 	"encoding/json"
+	"sort"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
+	store "0chain.net/core/ememorystore"
 )
 
 type (
-	// Consumers represents sorted Consumer nodes, used to inserting,
-	// removing or getting from state.StateContextI with AllConsumersKey.
+	// Consumers represents sorted list of consumers.
 	Consumers struct {
-		Nodes consumersSorted `json:"nodes"`
+		Sorted []*bmp.Consumer
 	}
 )
 
-var (
-	// Make sure Consumers implements Serializable interface.
-	_ util.Serializable = (*Consumers)(nil)
-)
-
-// Decode implements util.Serializable interface.
-func (m *Consumers) Decode(blob []byte) error {
-	var sorted []*bmp.Consumer
-	if err := json.Unmarshal(blob, &sorted); err != nil {
-		return errDecodeData.Wrap(err)
+func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
+	if item == nil {
+		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
+	}
+	if _, ok := m.put(item); !ok {
+		return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)
 	}
 
-	m.Nodes.setSorted(sorted)
-
-	return nil
+	return m.update(scID, item, db, sci)
 }
 
-// Encode implements util.Serializable interface.
-func (m *Consumers) Encode() []byte {
-	blob, _ := json.Marshal(m.Nodes.getSorted())
-	return blob
-}
-
-// add tries to append a new consumer to nodes list.
-func (m *Consumers) add(scID datastore.Key, cons *bmp.Consumer, sci chain.StateContextI) error {
-	if _, found := m.Nodes.getByHost(cons.Host); found {
-		return errors.New(errCodeInternal, "consumer host already registered: "+cons.Host)
+func (m *Consumers) copy() (list Consumers) {
+	if m.Sorted != nil {
+		list.Sorted = make([]*bmp.Consumer, len(m.Sorted))
+		copy(list.Sorted, m.Sorted)
 	}
 
-	return m.update(scID, cons, sci)
+	return list
 }
 
-// update tries to update the consumer into nodes list.
-func (m *Consumers) update(scID datastore.Key, cons *bmp.Consumer, sci chain.StateContextI) error {
-	if _, err := sci.InsertTrieNode(nodeUID(scID, cons.ExtID, consumerType), cons); err != nil {
-		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
+func (m *Consumers) del(id string, db *store.Connection) (*bmp.Consumer, error) {
+	idx, found := m.getIndex(id)
+	if found {
+		return m.delByIndex(idx, db)
 	}
 
-	list := &Consumers{Nodes: consumersSorted{Sorted: m.Nodes.getSorted()}}
-	list.Nodes.add(cons)
-	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
+	return nil, errors.New(errCodeInternal, "value not present")
+}
+
+func (m *Consumers) delByIndex(idx int, db *store.Connection) (*bmp.Consumer, error) {
+	if idx >= len(m.Sorted) {
+		return nil, errors.New(errCodeInternal, "index out of range")
+	}
+
+	list := m.copy()
+	item := *list.Sorted[idx] // get copy of item
+	list.Sorted = append(list.Sorted[:idx], list.Sorted[idx+1:]...)
+
+	blob, err := json.Marshal(list.Sorted)
+	if err != nil {
+		return nil, errors.Wrap(errCodeInternal, "encode consumers list failed", err)
+	}
+	if err = db.Conn.Put([]byte(AllConsumersKey), blob); err != nil {
+		return nil, errors.Wrap(errCodeInternal, "insert consumers list failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+	}
+
+	m.Sorted = list.Sorted
+
+	return &item, nil
+}
+
+func (m *Consumers) get(id string) (*bmp.Consumer, bool) {
+	idx, found := m.getIndex(id)
+	if !found {
+		return nil, false // not found
+	}
+
+	return m.Sorted[idx], true // found
+}
+
+func (m *Consumers) getByHost(host string) (*bmp.Consumer, bool) {
+	for _, item := range m.Sorted {
+		if item.Host == host {
+			return item, true // found
+		}
+	}
+
+	return nil, false // not found
+}
+
+func (m *Consumers) getByIndex(idx int) (*bmp.Consumer, bool) {
+	if idx < len(m.Sorted) {
+		return m.Sorted[idx], true
+	}
+
+	return nil, false // not found
+}
+
+func (m *Consumers) getIndex(id string) (int, bool) {
+	size := len(m.Sorted)
+	if size > 0 {
+		idx := sort.Search(size, func(idx int) bool {
+			return m.Sorted[idx].ExtID >= id
+		})
+		if idx < size && m.Sorted[idx].ExtID == id {
+			return idx, true // found
+		}
+	}
+
+	return -1, false // not found
+}
+
+func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
+	if item == nil {
+		return 0, false
+	}
+
+	size := len(m.Sorted)
+	if size == 0 {
+		m.Sorted = append(m.Sorted, item)
+		return 0, true // appended
+	}
+
+	idx := sort.Search(size, func(idx int) bool {
+		return m.Sorted[idx].ExtID >= item.ExtID
+	})
+	if idx == size { // out of bounds
+		m.Sorted = append(m.Sorted, item)
+		return idx, true // appended
+	}
+	if m.Sorted[idx].ExtID == item.ExtID { // the same
+		m.Sorted[idx] = item // replace
+		return idx, false    // already have
+	}
+
+	// insert
+	left, right := m.Sorted[:idx], append([]*bmp.Consumer{item}, m.Sorted[idx:]...)
+	m.Sorted = append(left, right...)
+
+	return idx, true // inserted
+}
+
+func (m *Consumers) update(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
+	if item == nil {
+		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
+	}
+	if _, found := m.getIndex(item.ExtID); !found {
+		return errors.New(errCodeInternal, "value not present")
+	}
+
+	list := m.copy()
+	list.put(item) // add or replace
+
+	blob, err := json.Marshal(list.Sorted)
+	if err != nil {
+		return errors.Wrap(errCodeInternal, "encode consumers list failed", err)
+	}
+	if err = db.Conn.Put([]byte(AllConsumersKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "insert consumers list failed", err)
 	}
+	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, consumerType), item); err != nil {
+		_ = db.Conn.Rollback()
+		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		return errors.Wrap(errCodeInternal, "commit changes failed", err)
+	}
 
-	m.Nodes.setSorted(list.Nodes.Sorted)
+	m.Sorted = list.Sorted
 
 	return nil
 }
 
 // fetchConsumers extracts all consumers represented in JSON bytes
-// stored in state.StateContextI with AllConsumersKey.
-// fetchConsumers returns error if state.StateContextI does not contain
-// consumers or stored bytes have invalid format.
-func fetchConsumers(id datastore.Key, sci chain.StateContextI) (*Consumers, error) {
-	consumers := &Consumers{}
-	if list, _ := sci.GetTrieNode(id); list != nil {
-		if err := consumers.Decode(list.Encode()); err != nil {
-			return nil, errDecodeData.Wrap(err)
+// stored in memory data store with given id.
+func fetchConsumers(id string, db *store.Connection) (*Consumers, error) {
+	list := &Consumers{}
+
+	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))
+	if err != nil {
+		return list, errors.Wrap(errCodeInternal, "get consumers list failed", err)
+	}
+	defer buf.Free()
+
+	blob := buf.Data()
+	if blob != nil {
+		if err = json.Unmarshal(blob, &list.Sorted); err != nil {
+			return list, errors.Wrap(errCodeInternal, "decode consumers list failed", err)
 		}
 	}
 
-	return consumers, nil
+	return list, nil
 }

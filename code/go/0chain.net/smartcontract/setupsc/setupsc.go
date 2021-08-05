@@ -89,7 +89,7 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return vestingsc.NewVestingSmartContract()
 	case Magma:
 		msc := magmasc.NewMagmaSmartContract()
-		if err := msc.InitStore(); err != nil {
+		if err := msc.Setup(); err != nil {
 			log.Println(err)
 			return nil
 		}

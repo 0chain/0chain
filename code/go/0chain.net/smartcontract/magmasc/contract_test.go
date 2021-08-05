@@ -14,6 +14,7 @@ import (
 	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	store "0chain.net/core/ememorystore"
 )
 
 func Test_MagmaSmartContract_acknowledgment(t *testing.T) {
@@ -303,19 +304,15 @@ func Test_MagmaSmartContract_acknowledgmentExist(t *testing.T) {
 func Test_MagmaSmartContract_allConsumers(t *testing.T) {
 	t.Parallel()
 
-	msc, sci, list := mockMagmaSmartContract(), mockStateContextI(), mockConsumers()
-	if _, err := sci.InsertTrieNode(AllConsumersKey, list); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	list, msc, sci := mockConsumers(), mockMagmaSmartContract(), mockStateContextI()
+	if err := list.add(msc.ID, mockConsumer(), store.GetTransaction(msc.db), sci); err != nil {
+		t.Fatalf("add() error: %v | want: %v", err, nil)
 	}
 
-	sciInvalidJSON, node := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sciInvalidJSON.InsertTrieNode(AllConsumersKey, &node); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
+	sorted := make([]*bmp.Consumer, len(list.Sorted))
+	copy(sorted, list.Sorted)
 
-	sorted := make([]*bmp.Consumer, len(list.Nodes.Sorted))
-	copy(sorted, list.Nodes.Sorted)
-	tests := [3]struct {
+	tests := [1]struct {
 		name  string
 		msc   *MagmaSmartContract
 		ctx   context.Context
@@ -332,24 +329,6 @@ func Test_MagmaSmartContract_allConsumers(t *testing.T) {
 			sci:   sci,
 			want:  sorted,
 			error: false,
-		},
-		{
-			name:  "Not_Present_OK",
-			msc:   msc,
-			ctx:   nil,
-			vals:  nil,
-			sci:   mockStateContextI(),
-			want:  Consumers{}.Nodes.Sorted,
-			error: false,
-		},
-		{
-			name:  "Decode_ERR",
-			msc:   msc,
-			ctx:   nil,
-			vals:  nil,
-			sci:   sciInvalidJSON,
-			want:  nil,
-			error: true,
 		},
 	}
 
@@ -373,19 +352,15 @@ func Test_MagmaSmartContract_allConsumers(t *testing.T) {
 func Test_MagmaSmartContract_allProviders(t *testing.T) {
 	t.Parallel()
 
-	msc, sci, list := mockMagmaSmartContract(), mockStateContextI(), mockProviders()
-	if _, err := sci.InsertTrieNode(AllProvidersKey, list); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	list, msc, sci := mockProviders(), mockMagmaSmartContract(), mockStateContextI()
+	if err := list.add(msc.ID, mockProvider(), store.GetTransaction(msc.db), sci); err != nil {
+		t.Fatalf("add() error: %v | want: %v", err, nil)
 	}
 
-	sciInvalidJSON, node := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sciInvalidJSON.InsertTrieNode(AllProvidersKey, &node); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
+	sorted := make([]*bmp.Provider, len(list.Sorted))
+	copy(sorted, list.Sorted)
 
-	sorted := make([]*bmp.Provider, len(list.Nodes.Sorted))
-	copy(sorted, list.Nodes.Sorted)
-	tests := [3]struct {
+	tests := [1]struct {
 		name  string
 		msc   *MagmaSmartContract
 		ctx   context.Context
@@ -399,27 +374,9 @@ func Test_MagmaSmartContract_allProviders(t *testing.T) {
 			msc:   msc,
 			ctx:   nil,
 			vals:  nil,
-			sci:   sci,
+			sci:   nil,
 			want:  sorted,
 			error: false,
-		},
-		{
-			name:  "Not_Present_OK",
-			msc:   msc,
-			ctx:   nil,
-			vals:  nil,
-			sci:   mockStateContextI(),
-			want:  Providers{}.Nodes.Sorted,
-			error: false,
-		},
-		{
-			name:  "Decode_ERR",
-			msc:   msc,
-			ctx:   nil,
-			vals:  nil,
-			sci:   sciInvalidJSON,
-			want:  nil,
-			error: true,
 		},
 	}
 
@@ -624,12 +581,12 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	ackn, msc, sci := mockAcknowledgment(), mockMagmaSmartContract(), mockStateContextI()
 
 	consList := Consumers{}
-	if err := consList.add(msc.ID, ackn.Consumer, sci); err != nil {
+	if err := consList.add(msc.ID, ackn.Consumer, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Consumers.add() error: %v | want: %v", err, nil)
 	}
 
 	provList := Providers{}
-	if err := provList.add(msc.ID, ackn.Provider, sci); err != nil {
+	if err := provList.add(msc.ID, ackn.Provider, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
@@ -706,12 +663,12 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 	}
 
 	consList := Consumers{}
-	if err := consList.add(msc.ID, ackn.Consumer, sci); err != nil {
+	if err := consList.add(msc.ID, ackn.Consumer, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Consumers.add() error: %v | want: %v", err, nil)
 	}
 
 	provList := Providers{}
-	if err := provList.add(msc.ID, ackn.Provider, sci); err != nil {
+	if err := provList.add(msc.ID, ackn.Provider, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
@@ -777,7 +734,7 @@ func Test_MagmaSmartContract_consumerUpdate(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	cons, list := mockConsumer(), Consumers{}
-	if err := list.add(msc.ID, cons, sci); err != nil {
+	if err := list.add(msc.ID, cons, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
@@ -830,7 +787,7 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 	}
 
 	provList := Providers{}
-	if err := provList.add(msc.ID, ackn.Provider, sci); err != nil {
+	if err := provList.add(msc.ID, ackn.Provider, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
@@ -863,7 +820,6 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 			got, err := test.msc.providerDataUsage(test.txn, test.blob, test.sci)
 			if (err != nil) != test.error {
 				t.Errorf("providerDataUsage() error: %v | want: %v", err, test.error)
-				t.Errorf("blob: %v", string(test.blob))
 				return
 			}
 			if got != test.want {
@@ -987,7 +943,7 @@ func Test_MagmaSmartContract_providerRegister(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [4]struct {
+	tests := [3]struct {
 		name  string
 		txn   *tx.Transaction
 		blob  []byte
@@ -1010,15 +966,6 @@ func Test_MagmaSmartContract_providerRegister(t *testing.T) {
 			txn:   nil,
 			blob:  nil,
 			sci:   sciInvalid,
-			msc:   msc,
-			want:  "",
-			error: true,
-		},
-		{
-			name:  "List_Insert_Trie_Node_ERR",
-			txn:   &tx.Transaction{ClientID: "cannot_insert_list"},
-			blob:  nil,
-			sci:   mockStateContextI(),
 			msc:   msc,
 			want:  "",
 			error: true,
@@ -1057,7 +1004,7 @@ func Test_MagmaSmartContract_providerTerms(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	prov, provList := mockProvider(), Providers{}
-	if err := provList.add(msc.ID, prov, sci); err != nil {
+	if err := provList.add(msc.ID, prov, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
@@ -1110,14 +1057,13 @@ func Test_MagmaSmartContract_providerTerms(t *testing.T) {
 func Test_MagmaSmartContract_providerUpdate(t *testing.T) {
 	t.Parallel()
 
-	msc, sci := mockMagmaSmartContract(), mockStateContextI()
+	list, msc, sci := Providers{}, mockMagmaSmartContract(), mockStateContextI()
 
-	prov, list := mockProvider(), Providers{}
-	if err := list.add(msc.ID, prov, sci); err != nil {
-		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
+	prov := mockProvider()
+	if err := list.add(msc.ID, prov, store.GetTransaction(msc.db), sci); err != nil {
+		t.Fatalf("add() error: %v | want: %v", err, nil)
 	}
 
-	prov = mockProvider()
 	prov.Terms.Increase()
 	blob := prov.Encode()
 
@@ -1148,7 +1094,7 @@ func Test_MagmaSmartContract_providerUpdate(t *testing.T) {
 
 			got, err := test.msc.providerUpdate(test.txn, test.blob, test.sci)
 			if (err != nil) != test.error {
-				t.Errorf("providerUpdate() error = %v, error %v", err, test.error)
+				t.Errorf("providerUpdate() error: %v | want: %v", err, test.error)
 				return
 			}
 			if got != test.want {
@@ -1206,7 +1152,7 @@ func Test_MagmaSmartContract_tokenPollFetch(t *testing.T) {
 
 			got, err := test.msc.tokenPollFetch(test.ackn, test.sci)
 			if (err != nil) != test.error {
-				t.Errorf("tokenPollFetch() error = %v, error %v", err, test.error)
+				t.Errorf("tokenPollFetch() error: %v | want: %v", err, test.error)
 				return
 			}
 			if !reflect.DeepEqual(got, test.want) {

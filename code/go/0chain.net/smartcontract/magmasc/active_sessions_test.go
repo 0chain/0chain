@@ -16,14 +16,14 @@ func TestActiveAcknowledgments_append(t *testing.T) {
 	const size = 10
 	ackn, msc := mockAcknowledgment(), mockMagmaSmartContract()
 	want := mockActiveAcknowledgments(size)
-	want.Nodes = append(want.Nodes, ackn)
+	want.Items = append(want.Items, ackn)
 
 	tests := [1]struct {
 		name  string
-		list  *ActiveAcknowledgments
+		list  *ActiveSessions
 		ackn  *bmp.Acknowledgment
 		conn  *store.Connection
-		want  *ActiveAcknowledgments
+		want  *ActiveSessions
 		error bool
 	}{
 		{
@@ -54,14 +54,14 @@ func TestActiveAcknowledgments_remove(t *testing.T) {
 	const size = 10
 	ackn, msc := mockAcknowledgment(), mockMagmaSmartContract()
 	list := mockActiveAcknowledgments(size)
-	list.Nodes = append(list.Nodes, ackn)
+	list.Items = append(list.Items, ackn)
 
 	tests := [1]struct {
 		name  string
-		list  *ActiveAcknowledgments
+		list  *ActiveSessions
 		ackn  *bmp.Acknowledgment
 		conn  *store.Connection
-		want  *ActiveAcknowledgments
+		want  *ActiveSessions
 		error bool
 	}{
 		{
@@ -80,7 +80,7 @@ func TestActiveAcknowledgments_remove(t *testing.T) {
 			t.Parallel()
 
 			if err := test.list.remove(test.ackn, test.conn); (err != nil) != test.error {
-				t.Errorf("remove() error: %v | want: %v", err, test.error)
+				t.Errorf("del() error: %v | want: %v", err, test.error)
 			}
 		})
 	}
@@ -90,7 +90,23 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 	t.Parallel()
 
 	const size = 10
-	list, msc := mockActiveAcknowledgments(size), mockMagmaSmartContract()
+	msc := mockMagmaSmartContract()
+
+	t.Run("Not_Present_OK", func(t *testing.T) {
+		// do not use parallel running to avoid detect race conditions because of
+		// everything is happening in a single smart contract so there is only one thread
+		got, err := fetchActiveAcknowledgments(ActiveAcknowledgmentsKey, store.GetTransaction(msc.db))
+		if err != nil {
+			t.Errorf("fetchActiveAcknowledgments() error: %v | want: %v", err, nil)
+			return
+		}
+		want := &ActiveSessions{}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("fetchActiveAcknowledgments() got: %#v | want: %#v", got, want)
+		}
+	})
+
+	list := mockActiveAcknowledgments(size)
 	if err := list.append(mockAcknowledgment(), store.GetTransaction(msc.db)); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
@@ -99,7 +115,7 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 		name  string
 		id    datastore.Key
 		conn  *store.Connection
-		want  *ActiveAcknowledgments
+		want  *ActiveSessions
 		error bool
 	}{
 		{
@@ -123,7 +139,6 @@ func Test_fetchActiveAcknowledgments(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, test.want) {
 				t.Errorf("fetchActiveAcknowledgments() got: %#v | want: %#v", got, test.want)
-				t.Errorf("fetchActiveAcknowledgments() got len: %v | want len: %v", len(got.Nodes), len(test.want.Nodes))
 			}
 		})
 	}

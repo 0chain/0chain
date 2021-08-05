@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
-	"github.com/0chain/bandwidth_marketplace/code/core/time"
+	ts "github.com/0chain/bandwidth_marketplace/code/core/time"
 	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
@@ -52,7 +53,7 @@ type (
 )
 
 var (
-	mockSCI mockSmartContract
+	mutexMockMSC sync.Mutex
 )
 
 // Decode implements util.Serializable interface.
@@ -75,8 +76,8 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 	}
 }
 
-func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
-	list := &ActiveAcknowledgments{Nodes: make([]*bmp.Acknowledgment, size)}
+func mockActiveAcknowledgments(size int) *ActiveSessions {
+	list := &ActiveSessions{Items: make([]*bmp.Acknowledgment, size)}
 	for i := 0; i < size; i++ {
 		id := strconv.Itoa(i)
 		ackn := mockAcknowledgment()
@@ -89,7 +90,7 @@ func mockActiveAcknowledgments(size int) *ActiveAcknowledgments {
 		ackn.Consumer.ID += id
 		ackn.Consumer.ExtID += id
 		ackn.Consumer.Host += id
-		list.Nodes[i] = ackn
+		list.Items[i] = ackn
 	}
 
 	return list
@@ -113,7 +114,7 @@ func mockConsumers() *Consumers {
 	list := &Consumers{}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
-		list.Nodes.add(&bmp.Consumer{
+		list.put(&bmp.Consumer{
 			ID:    "consumer_id" + id,
 			ExtID: "ext_id" + id,
 			Host:  "localhost:8010" + id,
@@ -160,35 +161,36 @@ func mockSmartContractI() *mockSmartContract {
 }
 
 func mockMagmaSmartContract() *MagmaSmartContract {
-	mockSCI.Lock()
-	defer mockSCI.Unlock()
+	mutexMockMSC.Lock()
+	defer mutexMockMSC.Unlock()
 
-	if mockSCI.SC == nil {
-		mockSCI.SC = &MagmaSmartContract{SmartContract: sci.NewSC("sc_id")}
-		path := filepath.Join("/tmp", rootPath, storePath)
-		err := os.MkdirAll(path, 0700)
-		if err != nil {
-			panic(err)
-		}
+	const prefix = "test."
 
-		mockSCI.SC.db, err = store.CreateDB(path)
-		if err != nil {
-			panic(err)
-		}
-
-		store.AddPool(storeName, mockSCI.SC.db)
-
-		mockSCI.SC.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+mockSCI.SC.ID+":func:"+consumerRegister, nil)
-		mockSCI.SC.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+mockSCI.SC.ID+":func:"+providerRegister, nil)
+	msc := &MagmaSmartContract{SmartContract: sci.NewSC("sc_id")}
+	path := filepath.Join("/tmp", rootPath, prefix+time.Now().Format(time.RFC3339Nano))
+	err := os.MkdirAll(path, 0755)
+	if err != nil {
+		panic(err)
 	}
 
-	return mockSCI.SC
+	msc.db, err = store.CreateDB(path)
+	if err != nil {
+		panic(err)
+	}
+
+	store.AddPool(storeName, msc.db)
+
+	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
+	msc.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+providerRegister, nil)
+
+	return msc
 }
 
 func mockProvider() *bmp.Provider {
+	now := time.Now().Format(time.RFC3339)
 	return &bmp.Provider{
-		ID:    "provider_id",
-		ExtID: "ext_id",
+		ID:    "provider_id:" + now,
+		ExtID: "ext_id:" + now,
 		Host:  "localhost:8020",
 		Terms: mockProviderTerms(),
 	}
@@ -198,7 +200,7 @@ func mockProviders() *Providers {
 	list := &Providers{}
 	for i := 0; i < 10; i++ {
 		id := strconv.Itoa(i)
-		list.Nodes.add(&bmp.Provider{
+		list.put(&bmp.Provider{
 			ID:    "provider_id" + id,
 			ExtID: "ext_id" + id,
 			Host:  "localhost:8020" + id,
@@ -220,8 +222,8 @@ func mockProviderTerms() bmp.ProviderTerms {
 			DownloadMbps: 0.001,
 			UploadMbps:   0.001,
 		},
-		ProlongDuration: 1 * 60 * 60,                // 1 hour
-		ExpiredAt:       time.Now() + (1 * 60 * 60), // 1 hour from now
+		ProlongDuration: 1 * 60 * 60,              // 1 hour
+		ExpiredAt:       ts.Now() + (1 * 60 * 60), // 1 hour from now
 	}
 }
 
@@ -283,8 +285,8 @@ func mockStateContextI() *mockStateContext {
 		func(id datastore.Key) error {
 			stateContext.Lock()
 			defer stateContext.Unlock()
-			defer delete(stateContext.store, id)
 			if _, ok := stateContext.store[id]; ok {
+				delete(stateContext.store, id)
 				return nil
 			}
 			return util.ErrValueNotPresent
@@ -338,7 +340,7 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Acknowledgment")).
 		Return(funcInsertID, errFuncInsertID)
 
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ActiveAcknowledgments")).
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ActiveSessions")).
 		Return(funcInsertList, errFuncInsertList)
 
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Billing")).

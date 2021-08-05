@@ -3,7 +3,10 @@ package magmasc
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -14,7 +17,19 @@ import (
 	tx "0chain.net/chaincore/transaction"
 )
 
-func TestNewMagmaSmartContract(t *testing.T) {
+func TestMain(m *testing.M) {
+	code := m.Run()
+
+	// clean up
+	path := filepath.Join("/tmp", rootPath)
+	if err := os.RemoveAll(path); err != nil {
+		log.Println("cannot clean up path: " + path + " - please remove it manually")
+	}
+
+	os.Exit(code)
+}
+
+func Test_NewMagmaSmartContract(t *testing.T) {
 	t.Parallel()
 
 	msc := &MagmaSmartContract{SmartContract: smartcontractinterface.NewSC(Address)}
@@ -165,7 +180,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 	}
 }
 
-func TestMagmaSmartContract_GetAddress(t *testing.T) {
+func Test_MagmaSmartContract_GetAddress(t *testing.T) {
 	t.Parallel()
 
 	msc := mockMagmaSmartContract()
@@ -178,7 +193,7 @@ func TestMagmaSmartContract_GetAddress(t *testing.T) {
 	})
 }
 
-func TestMagmaSmartContract_GetExecutionStats(t *testing.T) {
+func Test_MagmaSmartContract_GetExecutionStats(t *testing.T) {
 	t.Parallel()
 
 	msc := mockMagmaSmartContract()
@@ -191,7 +206,7 @@ func TestMagmaSmartContract_GetExecutionStats(t *testing.T) {
 	})
 }
 
-func TestMagmaSmartContract_GetHandlerStats(t *testing.T) {
+func Test_MagmaSmartContract_GetHandlerStats(t *testing.T) {
 	t.Parallel()
 
 	msc := mockMagmaSmartContract()
@@ -231,7 +246,7 @@ func TestMagmaSmartContract_GetHandlerStats(t *testing.T) {
 	}
 }
 
-func TestMagmaSmartContract_GetName(t *testing.T) {
+func Test_MagmaSmartContract_GetName(t *testing.T) {
 	t.Parallel()
 
 	msc := mockMagmaSmartContract()
@@ -244,7 +259,7 @@ func TestMagmaSmartContract_GetName(t *testing.T) {
 	})
 }
 
-func TestMagmaSmartContract_GetRestPoints(t *testing.T) {
+func Test_MagmaSmartContract_GetRestPoints(t *testing.T) {
 	t.Parallel()
 
 	msc := mockMagmaSmartContract()
