@@ -8,19 +8,68 @@ on:
         default: 'false'
         required: true
 
+env:
+  ZCHAIN_BUILDBASE: zchain_build_base
+  ZCHAIN_BUILDRUN: zchain_run_base
+  SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
+  # MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
+  DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASS: ${{ secrets.DOCKER_PASSWORD }}
+
 jobs:
   conductor: 
     name: CONDUCTOR-TEST
     runs-on: self-hosted
     
     steps:
-    - name: Git Checkout
       uses: actions/checkout@v2
 
-    - name: Completing Trigger
+    - name: Get Branch
+      id: get_info
       run: |
-        echo "Tag ${TAG}."
         BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        echo ::set-output name=BRANCH::${BRANCH}
+        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+        echo "Branch == ${BRANCH}"
+        echo "Image-Tag == ${SHORT_SHA}"
+        echo "View_Change == ${VIEW_CHANGE}."
+        echo "Sharder Registry == $SHARDER_REGISTRY"
+        echo "Sharder Registry == ${SHARDER_REGISTRY}"
+        echo "Docker-User == $DOCKER_USER"
+        echo "Docker-User == ${DOCKER_USER}"
       env:
-        TAG: ${{ github.event.inputs.view_change }}
+        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
+
+    - name: Git Checkout
+      run: |
+        cd /root/0chain/
+        git pull
+        git checkout origin $BRANCH
+      env:
+        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
+    - name: Login To Docker Hub
+      run: |
+        # cd /root/0chain/
+        echo $$DOCKER_PASS | docker login --username $$DOCKER_USER
+
+    - name: Building Base Images
+      run: |
+        cd /root/0chain/
+        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        cd /root/0chain/
+        bash ./docker.local/bin/build.miners-integration-tests.sh
+
+    # - name: View Change Rounds
+    #   run: |
+    #     cd /root/0chain/
+    #     cat ./docker.local/config.yaml
+
+    - name: Completing.
+      run: |
+        ls -lha
