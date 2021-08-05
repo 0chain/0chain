@@ -26,16 +26,11 @@ jobs:
       env:
         TAG: ${{ github.event.inputs.view_change }}
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
     - name: Build Miner Docker Image For Integration Test.
       run: |
         cd /root/0chain/
-        bash /root/0chain/docker.local/bin/build.sharders-integration-tests.sh
+        ls -lha
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
         cat docker.local/bin/build.sharders-integration-tests.sh
 
     - name: Completing.
