@@ -7,7 +7,6 @@ import (
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/core/datastore"
 )
 
 func Test_providerFetch(t *testing.T) {
@@ -27,7 +26,7 @@ func Test_providerFetch(t *testing.T) {
 
 	tests := [3]struct {
 		name  string
-		id    datastore.Key
+		id    string
 		sci   chain.StateContextI
 		want  *bmp.Provider
 		error bool

@@ -12,12 +12,11 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	tx "0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	store "0chain.net/core/ememorystore"
 )
 
 // acknowledgment tries to extract Acknowledgment with given id param.
-func (m *MagmaSmartContract) acknowledgment(id datastore.Key, sci chain.StateContextI) (*bmp.Acknowledgment, error) {
+func (m *MagmaSmartContract) acknowledgment(id string, sci chain.StateContextI) (*bmp.Acknowledgment, error) {
 	data, err := sci.GetTrieNode(nodeUID(m.ID, id, acknowledgment))
 	if err != nil {
 		return nil, err
@@ -68,68 +67,6 @@ func (m *MagmaSmartContract) acknowledgmentAcceptedVerify(_ context.Context, val
 func (m *MagmaSmartContract) acknowledgmentExist(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
 	got, _ := sci.GetTrieNode(nodeUID(m.ID, vals.Get("id"), acknowledgment))
 	return got != nil, nil
-}
-
-// activeSessionRegister tries to register a new active session to list
-// and stores the acknowledgment or update into provided state.StateContextI.
-func (m *MagmaSmartContract) activeSessionRegister(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
-	db := store.GetTransaction(m.db)
-	list, err := fetchActiveSessions(ActiveSessionsKey, db)
-	if err != nil {
-		db.Conn.Destroy()
-		return err
-	}
-	if err = list.add(m.ID, ackn, db, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return errors.Wrap(errCodeInternal, "add active session failed", err)
-	}
-
-	return nil
-}
-
-// activeSessionComplete tries to delete an active acknowledgment from list
-// and stores the acknowledgment and updated list into provided state.StateContextI.
-func (m *MagmaSmartContract) activeSessionComplete(ackn *bmp.Acknowledgment, sci chain.StateContextI) error {
-	db := store.GetTransaction(m.db)
-
-	list, err := fetchActiveSessions(ActiveSessionsKey, db)
-	if err != nil {
-		db.Conn.Destroy()
-		return err
-	}
-	if err = list.del(ackn, db); err != nil {
-		_ = db.Conn.Rollback()
-		return err
-	}
-
-	ackn.Billing.CompletedAt = time.Now()
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
-		return errors.Wrap(errCodeInternal, "insert acknowledgment failed", err)
-	}
-
-	return nil
-}
-
-// activeSessions tries to extract Acknowledgments list with current status active
-// filtered by given external id param and returns it.
-func (m *MagmaSmartContract) activeSessions(_ context.Context, vals url.Values, _ chain.StateContextI) (interface{}, error) {
-	db := store.GetTransaction(m.db)
-
-	list, err := fetchActiveSessions(ActiveSessionsKey, db)
-	if err != nil {
-		db.Conn.Destroy()
-		return nil, err
-	}
-	_ = db.Commit()
-
-	extID, nodes := vals.Get("ext_id"), make([]*bmp.Acknowledgment, 0)
-	for _, ackn := range list.Items {
-		if ackn.Consumer.ExtID == extID || ackn.Provider.ExtID == extID {
-			nodes = append(nodes, ackn)
-		}
-	}
-
-	return nodes, nil
 }
 
 // allConsumers represents MagmaSmartContract handler.
@@ -217,9 +154,8 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	if err = ackn.Provider.Terms.Validate(); err != nil {
 		return "", errors.New(errCodeSessionStart, "invalid provider terms")
 	}
-
-	if err = m.activeSessionRegister(ackn, sci); err != nil {
-		return "", errors.Wrap(errCodeSessionStart, "register active session failed", err)
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "insert acknowledgment failed", err)
 	}
 
 	resp, err := newTokenPool().create(txn, ackn, sci)
@@ -259,13 +195,15 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if err != nil {
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
+
 	resp, err := pool.spend(txn, &ackn.Billing, sci)
 	if err != nil { // spend token pool to provider
 		return "", errors.New(errCodeSessionStop, err.Error())
 	}
 
-	if err = m.activeSessionComplete(ackn, sci); err != nil {
-		return "", errors.Wrap(errCodeSessionStop, "append acknowledgment failed", err)
+	ackn.Billing.CompletedAt = time.Now()
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+		return "", errors.Wrap(errCodeSessionStop, "update acknowledgment failed", err)
 	}
 
 	db := store.GetTransaction(m.db)
@@ -408,6 +346,8 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch providers list failed", err)
 	}
+
+	provider.ID = txn.ClientID
 	if err = list.write(m.ID, provider, db, sci); err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "update providers list failed", err)
 	}
@@ -443,6 +383,6 @@ func (m *MagmaSmartContract) tokenPollFetch(ackn *bmp.Acknowledgment, sci chain.
 
 // nodeUID returns an uniq id for Node interacting with magma smart contract.
 // Should be used while inserting, removing or getting Node in state.StateContextI
-func nodeUID(scID, nodeID, nodeType datastore.Key) datastore.Key {
+func nodeUID(scID, nodeID, nodeType string) string {
 	return "sc:" + scID + colon + nodeType + colon + nodeID
 }

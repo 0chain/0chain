@@ -22,10 +22,7 @@ func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
-	if _, found := m.getIndex(item.ExtID); found {
-		return errors.New(errCodeInternal, "consumer already registered: "+item.ExtID)
-	}
-	if _, found := m.getByHost(item.Host); found {
+	if cons, _ := consumerFetch(scID, item.Host, sci); cons != nil {
 		return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)
 	}
 
@@ -164,6 +161,10 @@ func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection,
 	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, consumerType), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
+	}
+	if _, err = sci.InsertTrieNode(nodeUID(scID, item.Host, consumerType), item); err != nil {
+		_ = db.Conn.Rollback()
+		return errors.Wrap(errCodeInternal, "insert consumer host failed", err)
 	}
 	if err = db.Commit(); err != nil {
 		return errors.Wrap(errCodeInternal, "commit changes failed", err)

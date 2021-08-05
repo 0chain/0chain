@@ -13,7 +13,6 @@ import (
 	"0chain.net/chaincore/state"
 	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	store "0chain.net/core/ememorystore"
 )
 
@@ -38,7 +37,7 @@ func Test_MagmaSmartContract_acknowledgment(t *testing.T) {
 
 	tests := [4]struct {
 		name  string
-		id    datastore.Key
+		id    string
 		sci   chain.StateContextI
 		msc   *MagmaSmartContract
 		want  *bmp.Acknowledgment

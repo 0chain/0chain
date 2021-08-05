@@ -7,7 +7,6 @@ import (
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/core/datastore"
 	store "0chain.net/core/ememorystore"
 )
 
@@ -16,6 +15,9 @@ func Test_Consumers_add(t *testing.T) {
 
 	list, msc, sci := mockConsumers(), mockMagmaSmartContract(), mockStateContextI()
 	consRegistered, _ := list.getByIndex(0)
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, consRegistered.Host, consumerType), consRegistered); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
 
 	tests := [3]struct {
 		name  string
@@ -398,7 +400,7 @@ func Test_fetchConsumers(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		id    datastore.Key
+		id    string
 		msc   *MagmaSmartContract
 		want  *Consumers
 		error bool

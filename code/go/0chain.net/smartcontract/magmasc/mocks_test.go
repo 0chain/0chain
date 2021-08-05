@@ -21,7 +21,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	tx "0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	store "0chain.net/core/ememorystore"
 	"0chain.net/core/util"
 )
@@ -37,7 +36,7 @@ type (
 	mockStateContext struct {
 		mocks.StateContextI
 		sync.Mutex
-		store map[datastore.Key]util.Serializable
+		store map[string]util.Serializable
 	}
 
 	// mockSmartContract implements mocked smart contract interface.
@@ -49,7 +48,7 @@ type (
 	}
 
 	// mockInvalidJson implements mocked util.Serializable interface for invalid json.
-	mockInvalidJson struct{ ID datastore.Key }
+	mockInvalidJson struct{ ID string }
 )
 
 var (
@@ -74,26 +73,6 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 		Consumer:      mockConsumer(),
 		Provider:      mockProvider(),
 	}
-}
-
-func mockActiveSessions(size int) *ActiveSessions {
-	list := &ActiveSessions{Items: make([]*bmp.Acknowledgment, size)}
-	for i := 0; i < size; i++ {
-		id := strconv.Itoa(i)
-		ackn := mockAcknowledgment()
-		ackn.SessionID += id
-		ackn.AccessPointID += id
-		ackn.Billing.DataUsage.SessionID += id
-		ackn.Provider.ID += id
-		ackn.Provider.ExtID += id
-		ackn.Provider.Host += id
-		ackn.Consumer.ID += id
-		ackn.Consumer.ExtID += id
-		ackn.Consumer.Host += id
-		list.Items[i] = ackn
-	}
-
-	return list
 }
 
 func mockBilling() bmp.Billing {
@@ -229,8 +208,8 @@ func mockProviderTerms() bmp.ProviderTerms {
 
 func mockStateContextI() *mockStateContext {
 	argStr := mock.AnythingOfType("string")
-	stateContext := mockStateContext{store: make(map[datastore.Key]util.Serializable)}
-	funcInsertID := func(id datastore.Key, val util.Serializable) datastore.Key {
+	stateContext := mockStateContext{store: make(map[string]util.Serializable)}
+	funcInsertID := func(id string, val util.Serializable) string {
 		if !strings.Contains(id, "cannot_insert_id") {
 			stateContext.Lock()
 			stateContext.store[id] = val
@@ -238,13 +217,13 @@ func mockStateContextI() *mockStateContext {
 		}
 		return ""
 	}
-	errFuncInsertID := func(id datastore.Key, _ util.Serializable) error {
+	errFuncInsertID := func(id string, _ util.Serializable) error {
 		if strings.Contains(id, "cannot_insert_id") {
 			return errors.New(errCodeInternal, errTextUnexpected)
 		}
 		return nil
 	}
-	funcInsertList := func(id datastore.Key, val util.Serializable) datastore.Key {
+	funcInsertList := func(id string, val util.Serializable) string {
 		json := string(val.Encode())
 		if !strings.Contains(json, "cannot_insert_list") {
 			stateContext.Lock()
@@ -253,7 +232,7 @@ func mockStateContextI() *mockStateContext {
 		}
 		return ""
 	}
-	errFuncInsertList := func(_ datastore.Key, val util.Serializable) error {
+	errFuncInsertList := func(_ string, val util.Serializable) error {
 		json := string(val.Encode())
 		if strings.Contains(json, "cannot_insert_list") {
 			return errors.New(errCodeInternal, errTextUnexpected)
@@ -274,7 +253,7 @@ func mockStateContextI() *mockStateContext {
 		},
 	)
 	stateContext.On("DeleteTrieNode", argStr).Return(
-		func(id datastore.Key) datastore.Key {
+		func(id string) string {
 			stateContext.Lock()
 			defer stateContext.Unlock()
 			if _, ok := stateContext.store[id]; ok {
@@ -282,7 +261,7 @@ func mockStateContextI() *mockStateContext {
 			}
 			return ""
 		},
-		func(id datastore.Key) error {
+		func(id string) error {
 			stateContext.Lock()
 			defer stateContext.Unlock()
 			if _, ok := stateContext.store[id]; ok {
@@ -293,13 +272,13 @@ func mockStateContextI() *mockStateContext {
 		},
 	)
 	stateContext.On("GetClientBalance", argStr).Return(
-		func(id datastore.Key) state.Balance {
+		func(id string) state.Balance {
 			if id == "consumer_id" {
 				return 1000 * 1e9 // 1000 * 1e9 units equal to one thousand coins
 			}
 			return 0
 		},
-		func(id datastore.Key) error {
+		func(id string) error {
 			if id == "" {
 				return util.ErrNodeNotFound
 			}
@@ -313,7 +292,7 @@ func mockStateContextI() *mockStateContext {
 		func() *tx.Transaction { return &tx.Transaction{ToClientID: "sc_id"} },
 	)
 	stateContext.On("GetTrieNode", argStr).Return(
-		func(id datastore.Key) util.Serializable {
+		func(id string) util.Serializable {
 			stateContext.Lock()
 			defer stateContext.Unlock()
 			if val, ok := stateContext.store[id]; ok {
@@ -321,7 +300,7 @@ func mockStateContextI() *mockStateContext {
 			}
 			return nil
 		},
-		func(id datastore.Key) error {
+		func(id string) error {
 			if strings.Contains(id, "not_present_id") {
 				return util.ErrValueNotPresent
 			}

@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/state"
 	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
-	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
 
@@ -19,8 +18,8 @@ type (
 	tokenPool struct {
 		tp.ZcnPool // embedded token pool
 
-		PayerID datastore.Key `json:"payer_id"`
-		PayeeID datastore.Key `json:"payee_id"`
+		PayerID string `json:"payer_id"`
+		PayeeID string `json:"payee_id"`
 	}
 )
 
@@ -134,6 +133,6 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 }
 
 // uid returns uniq id used to saving token pool into chain state.
-func (m *tokenPool) uid(scID datastore.Key) datastore.Key {
+func (m *tokenPool) uid(scID string) string {
 	return "sc:" + scID + ":tokenpool:" + m.ID
 }

@@ -22,10 +22,7 @@ func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if _, found := m.getIndex(item.ExtID); found {
-		return errors.New(errCodeInternal, "provider already registered: "+item.ExtID)
-	}
-	if _, found := m.getByHost(item.Host); found {
+	if prov, _ := providerFetch(scID, item.Host, sci); prov != nil {
 		return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
 	}
 
@@ -164,6 +161,10 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, providerType), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
+	}
+	if _, err = sci.InsertTrieNode(nodeUID(scID, item.Host, providerType), item); err != nil {
+		_ = db.Conn.Rollback()
+		return errors.Wrap(errCodeInternal, "insert provider host failed", err)
 	}
 	if err = db.Commit(); err != nil {
 		return errors.Wrap(errCodeInternal, "commit changes failed", err)
