@@ -11,14 +11,14 @@ on:
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base
-  SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
+  # SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
   # MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
-  DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASS: ${{ secrets.DOCKER_PASSWORD }}
+  DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+  DOCKER_PASS: ${{ secrets.DOCKERHUB_PASSWORD }}
 
 jobs:
-  conductor: 
-    name: CONDUCTOR-TEST
+  conductor_build: 
+    name: CONDUCTOR-BUILD
     runs-on: self-hosted
     
     steps:
@@ -35,9 +35,7 @@ jobs:
         echo "Branch == ${BRANCH}"
         echo "Image-Tag == ${IMAGE_TAG}"
         echo "View_Change == ${VIEW_CHANGE}."
-        echo "Sharder Registry == $SHARDER_REGISTRY"
-        echo "Sharder Registry == ${SHARDER_REGISTRY}"
-        echo "Docker-User == $DOCKER_USER"
+        # echo "Sharder Registry == ${SHARDER_REGISTRY}"
         echo "Docker-User == ${DOCKER_USER}"
       env:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
@@ -67,6 +65,11 @@ jobs:
         cd /root/0chain/
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        cd /root/0chain/
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
+
     # - name: View Change Rounds
     #   run: |
     #     cd /root/0chain/
@@ -75,3 +78,44 @@ jobs:
     - name: Completing.
       run: |
         ls -lha
+
+  conductor_standard_tests:
+    name: CONDUCTOR-STANDARD-TESTS
+    runs-on: self-hosted
+    
+    needs:
+    - conductor_build
+
+    steps:
+    - name: Running Standard Tests for Miners.
+      run: |
+        cd /root/0chain/
+        bash ./docker.local/bin/start.conductor.sh miners
+
+    - name: Running Standard Tests for Sharders.
+      run: |
+        cd /root/0chain/
+        # bash ./docker.local/bin/start.conductor.sh sharders
+  
+  conductor_vc_tests:
+    name: CONDUCTOR-VIEW-CHANGE-TESTS
+    runs-on: self-hosted
+    
+    needs:
+    - conductor_standard_tests
+    
+    steps:
+    - name: Running View Change Fault Tolerance Tests.
+      run: |
+        cd /root/0chain/
+        # bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+
+    - name: Running View Change Byzantine Tests.
+      run: |
+        cd /root/0chain/
+        # bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+
+    - name: Running View Change-3 Tests.
+      run: |
+        cd /root/0chain/
+        # bash ./docker.local/bin/start.conductor.sh view-change-3
