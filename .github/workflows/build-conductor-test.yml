@@ -90,7 +90,7 @@ jobs:
     - name: Running Standard Tests for Miners.
       run: |
         cd /root/0chain/
-        bash ./docker.local/bin/start.conductor.sh miners
+        ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
