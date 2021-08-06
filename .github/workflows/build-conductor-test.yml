@@ -46,6 +46,7 @@ jobs:
         git pull
         git checkout $BRANCH
         git checkout rrrooommmaaa/conductor-peter
+        source ~/.profile
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
@@ -90,12 +91,12 @@ jobs:
     - name: Running Standard Tests for Miners.
       run: |
         cd /root/0chain/
-        ./docker.local/bin/start.conductor.sh miners
+        bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
         cd /root/0chain/
-        # bash ./docker.local/bin/start.conductor.sh sharders
+        bash ./docker.local/bin/start.conductor.sh sharders
   
   conductor_vc_tests:
     name: CONDUCTOR-VIEW-CHANGE-TESTS
