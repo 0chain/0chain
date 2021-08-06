@@ -50,7 +50,7 @@ jobs:
 
     - name: Setting Up View Change
       run: |
-        cd /home/ubuntu/codebase/0chain/docker.local/config
+        cd /root/0chain/docker.local/config
         filename='0chain.yaml'
         # Check the new text is empty or not
         if ! grep -q view_changes "$filename"; then
