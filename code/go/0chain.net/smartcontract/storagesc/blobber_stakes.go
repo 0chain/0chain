@@ -11,7 +11,9 @@ import (
 
 // blobber id x delegate id
 type blobberStakeTotals struct {
-	Totals map[string]state.Balance `json:"totals"`
+	Totals     map[string]state.Balance `json:"totals"`
+	Capacities map[string]int64         `json:"capacities"`
+	Used       map[string]int64         `json:"used"`
 }
 
 func newBlobberStakeTotals() *blobberStakeTotals {
@@ -20,11 +22,8 @@ func newBlobberStakeTotals() *blobberStakeTotals {
 
 func (bs *blobberStakeTotals) Encode() []byte {
 	var b, err = json.Marshal(bs)
-	ss := string(b)
-	fmt.Println("bst mashal", ss)
-
 	if err != nil {
-		panic(err) // must never happens
+		panic(err)
 	}
 	return b
 }

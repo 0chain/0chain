@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -166,6 +167,7 @@ func (ssc *StorageSmartContract) statDecr(name string) {
 }
 
 // functions execution
+var blockRewardMutex = sync.Mutex{}
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances chainstate.StateContextI) (
@@ -239,8 +241,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "update_blobber_settings":
 		resp, err = sc.updateBlobberSettings(t, input, balances)
 	case "pay_blobber_block_rewards":
+		blockRewardMutex.Lock()
 		err = sc.payBlobberBlockRewards(balances)
-
+		blockRewardMutex.Unlock()
 	// read_pool
 
 	case "new_read_pool":

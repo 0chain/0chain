@@ -1,21 +1,22 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
-	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net/url"
-	"sort"
-
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"go.uber.org/zap"
+	"net/url"
+	"sort"
 )
 
 // A userStakePools collects stake pools references for a user.
@@ -248,6 +249,10 @@ func (sp *stakePool) updateRewardMints(
 	balances chainstate.StateContextI,
 ) error {
 	mintInfo, err := getBlockRewardMints(ssc, balances)
+	logging.Logger.Info("updateRewardMints before",
+		zap.Any("getBlockRewardMints", mintInfo),
+		zap.Any("err", err),
+	)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return fmt.Errorf("Error getting mint info: %v", err)
@@ -257,6 +262,10 @@ func (sp *stakePool) updateRewardMints(
 	}
 
 	err = mintInfo.mintRewardsForBlobber(sp, blobberId, balances)
+	logging.Logger.Info("updateRewardMints after",
+		zap.Any("getBlockRewardMints", mintInfo),
+		zap.Any("err", err),
+	)
 	if err != nil {
 		return fmt.Errorf("error minting blobber rewards: %v", err)
 	}
@@ -870,6 +879,9 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	}
 	sp = newStakePool()
 	err = sp.Decode(poolb)
+	logging.Logger.Info("updateRewardMints getStakePool",
+		zap.Any("err", err),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}

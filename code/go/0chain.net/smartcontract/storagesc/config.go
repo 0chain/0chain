@@ -451,7 +451,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
 	)
-	conf.BlockReward.MaxMintRewards = state.Balance(scc.GetFloat64(pfx+"max_mint_rewards") * 1e10)
+	conf.BlockReward.MaxMintRewards = state.Balance(scc.GetFloat64(pfx+"block_reward.max_mint_rewards") * 1e10)
 	conf.ExposeMpt = scc.GetBool(pfx + "expose_mpt")
 
 	err = conf.validate()

@@ -59,6 +59,7 @@ smart_contracts:
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
     time_unit: "720h"
+    expose_mpt: true
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
@@ -150,7 +151,7 @@ smart_contracts:
     block_reward:
       max_mint_rewards: 1500000
       block_reward: 1
-      qualifying_stake: 1
+      qualifying_stake: 0.05
       sharder_ratio: 80
       miner_ratio: 20
       blobber_capacity_ratio: 20
