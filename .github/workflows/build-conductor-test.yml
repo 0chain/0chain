@@ -27,12 +27,13 @@ jobs:
     - name: Get Branch
       id: get_info
       run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+        BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
         echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+        echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
         echo "Branch == ${BRANCH}"
-        echo "Image-Tag == ${SHORT_SHA}"
+        echo "Image-Tag == ${IMAGE_TAG}"
         echo "View_Change == ${VIEW_CHANGE}."
         echo "Sharder Registry == $SHARDER_REGISTRY"
         echo "Sharder Registry == ${SHARDER_REGISTRY}"
@@ -45,7 +46,8 @@ jobs:
       run: |
         cd /root/0chain/
         git pull
-        git checkout $BRANCH
+        #  git checkout $BRANCH
+        git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
