@@ -10,8 +10,7 @@ smart_contracts:
     min_lock: 10
     apr: 0.1
     min_lock_period: 1m
-    max_mint: 4000000.0
-
+    max_mint: 1500000.0
   minersc:
     # miners
     max_n: 7 # 100
@@ -34,7 +33,7 @@ smart_contracts:
     publish_rounds: 50
     wait_rounds: 50
     # stake interests, will be declined every epoch
-    interest_rate: 0.000000555 # [0; 1)
+    interest_rate: 0.0 # [0; 1)
     # reward rate for generators, will be declined every epoch
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1
@@ -51,7 +50,7 @@ smart_contracts:
     # decline interests every new epoch by this value (the interest_rate)
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
-    max_mint: 4000000.0 # tokens
+    max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
 
@@ -63,7 +62,7 @@ smart_contracts:
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
-    max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC
@@ -89,7 +88,7 @@ smart_contracts:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
       # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.0000334
+      interest_rate: 0.0
       # interest_interval is interval to pay interests for a stake
       interest_interval: 1m
     # following settings are for free storage rewards
