@@ -35,24 +35,33 @@ jobs:
         echo "Branch == ${BRANCH}"
         echo "Image-Tag == ${IMAGE_TAG}"
         echo "View_Change == ${VIEW_CHANGE}."
-        # echo "Sharder Registry == ${SHARDER_REGISTRY}"
-        echo "Docker-User == ${DOCKER_USER}"
       env:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
     - name: Git Checkout
       run: |
         cd /root/0chain/
+        git checkout .
         git pull
         git checkout $BRANCH
         git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
-    - name: Login To Docker Hub
+    - name: Setting Up View Change
       run: |
-        cd /root/0chain/
+        cd /home/ubuntu/codebase/0chain/docker.local/config
+        filename='0chain.yaml'
+        # Check the new text is empty or not
+        if ! grep -q view_changes "$filename"; then
+          sed -i "12 a \  view_changes: $VIEW_CHANGE" $filename
+        else
+          sed -i '/view_changes/d' $filename
+          sed -i "12 a \  view_changes: $VIEW_CHANGE" $filename
+        fi
         # echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
+      env:
+        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
     - name: Building Base Images
       run: |
@@ -70,14 +79,11 @@ jobs:
         cd /root/0chain/
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    # - name: View Change Rounds
-    #   run: |
-    #     cd /root/0chain/
-    #     cat ./docker.local/config.yaml
-
-    - name: Completing.
+    - name: View Change Rounds
       run: |
-        ls -lha
+        cd /root/0chain/
+        awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
@@ -109,14 +115,15 @@ jobs:
     - name: Running View Change Fault Tolerance Tests.
       run: |
         cd /root/0chain/
-        # bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        source ~/.profile
+        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
 
     - name: Running View Change Byzantine Tests.
       run: |
         cd /root/0chain/
-        # bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        bash ./docker.local/bin/start.conductor.sh view-change.byzantine
 
     - name: Running View Change-3 Tests.
       run: |
         cd /root/0chain/
-        # bash ./docker.local/bin/start.conductor.sh view-change-3
+        bash ./docker.local/bin/start.conductor.sh view-change-3
