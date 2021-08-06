@@ -53,13 +53,12 @@ jobs:
         cd /root/0chain/docker.local/config
         filename='0chain.yaml'
         # Check the new text is empty or not
-        if ! grep -q view_changes "$filename"; then
-          sed -i "12 a \  view_changes: $VIEW_CHANGE" $filename
+        if ! grep -q view_change "$filename"; then
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
         else
-          sed -i '/view_changes/d' $filename
-          sed -i "12 a \  view_changes: $VIEW_CHANGE" $filename
+          sed -i '/view_change/d' $filename
+          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
         fi
-        # echo $DOCKER_PASS | docker login --username $DOCKER_USER --password-stdin
       env:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
