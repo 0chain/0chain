@@ -102,6 +102,7 @@ smart_contracts:
       miner_ratio: 20
       blobber_capacity_ratio: 20
       blobber_usage_ratio: 80
+    expose_mpt: true
   vestingsc:
     min_lock: 0.01
     min_duration: '2m'

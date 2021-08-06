@@ -64,36 +64,12 @@ sudo apt-get install -y zstd
 sudo apt-get install -y libbz2-dev
 
 ```
-That is the preliminaries out the way. Now install RocksDB. The well
-tested docker file wants to install an old version of RocksDB, 
-so we will do that.
+That is the preliminaries out the way. Now install RocksDB
 ```shell
 cd ~/Downloads
-wget https://github.com/facebook/rocksdb/archive/v5.18.3.tar.gz
-tar -xf v5.18.3.tar.gz
-cd rocksdb-5.18.3
-make OPT=-g0 USE_RTTI=1
-sudo make install
-```
-If the `make OPT=-g0 USE_RTTI=1` command fails with 
-```shell
-...
-./db/version_edit.h:86:8: error: implicitly-declared ‘constexpr rocksdb::FileDescriptor::FileDescriptor(const rocksdb::FileDescriptor&)’ is deprecated [-Werror=deprecated-copy]
-...
-cc1plus: all warnings being treated as errors
-make: *** [Makefile:1958: db/builder.o] Error 1
-```
-then your gcc version is too high. You can try this instead:
-```shell
-DISABLE_WARNING_AS_ERROR='yes' make OPT=-g0 USE_RTTI=1
-# or this
-EXTRA_CXXFLAGS='-w' make OPT=-g0 USE_RTTI=1
-```
-But if this fails on stage of linking, it is only left to downgrade your gcc.
-```shell
-sudo apt install g++-7 gcc-7
-export CC=/usr/bin/gcc-7
-export CXX=/usr/bin/g++-7
+wget https://github.com/facebook/rocksdb/archive/v6.15.5.tar.gz
+tar -xf v6.15.5.tar.gz
+cd rocksdb-6.15.5
 make OPT=-g0 USE_RTTI=1
 sudo make install
 ```
@@ -110,17 +86,17 @@ sudo apt-get install libssl-dev
 > you downgrade to version 1.0 or upgrade to version 1.1.1j or higher.
 
 ```shell
-wget https://github.com/herumi/mcl/archive/v0.98.tar.gz
-tar -xf v0.98.tar.gz
+wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz
 mv mcl* mcl
-wget https://github.com/herumi/bls/archive/2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz 
-tar -xf 2e9e496ad85e74ecaee91559e2dcf95ba571382d.tar.gz
-mv bls* bls 
 cd mcl
 make -j $(nproc) lib/libmclbn256.so 
 sudo make install
 sudo cp lib/libmclbn256.so /usr/local/lib 
-cd ../bls
+```
+```shell
+wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz
+mv bls* bls
+cd bls
 make 
 sudo make install
 ```
