@@ -11,10 +11,6 @@ on:
 env:
   ZCHAIN_BUILDBASE: zchain_build_base
   ZCHAIN_BUILDRUN: zchain_run_base
-  # SHARDER_REGISTRY: ${{ secrets.SHARDER_REGISTRY }}
-  # MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
-  DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-  DOCKER_PASS: ${{ secrets.DOCKERHUB_PASSWORD }}
 
 jobs:
   conductor_build: 
@@ -33,10 +29,6 @@ jobs:
         echo ::set-output name=BRANCH::${BRANCH}
         echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
         echo "Branch == ${BRANCH}"
-        echo "Image-Tag == ${IMAGE_TAG}"
-        echo "View_Change == ${VIEW_CHANGE}."
-      env:
-        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
     - name: Git Checkout
       run: |
@@ -44,7 +36,6 @@ jobs:
         git checkout .
         git pull
         git checkout $BRANCH
-        git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
