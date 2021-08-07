@@ -1557,9 +1557,10 @@ func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage
 			logging.Logger.Debug("prune storage -- skip. disabled")
 			continue
 		}
-		countRounds := storage.Count()
+		rounds := storage.GetRounds()
+		countRounds := len(rounds)
 		if countRounds > targetCount {
-			r := storage.GetRounds()[countRounds-targetCount-1]
+			r := rounds[countRounds-targetCount-1]
 			if err := storage.Prune(r); err != nil {
 				logging.Logger.Error("failed to prune storage",
 					zap.Int("count_rounds", countRounds),
