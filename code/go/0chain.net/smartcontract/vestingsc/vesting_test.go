@@ -2,10 +2,11 @@ package vestingsc
 
 import (
 	"context"
-	"errors"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"

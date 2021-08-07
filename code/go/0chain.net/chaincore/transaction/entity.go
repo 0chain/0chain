@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
@@ -18,7 +20,6 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -252,7 +253,7 @@ func (t *Transaction) ComputeHash() string {
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
 		logging.Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
-		return zchainErrors.New("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
+		return errors.New("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
 	}
 	return nil
 }
@@ -268,7 +269,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 		return err
 	}
 	if !correctSignature {
-		return zchainErrors.New("invalid_signature", "Invalid Signature")
+		return errors.New("invalid_signature", "Invalid Signature")
 	}
 	return nil
 }
@@ -365,7 +366,7 @@ func (t *Transaction) ComputeOutputHash() string {
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
 		logging.Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
-		return zchainErrors.New("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
+		return errors.New("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil
 }

@@ -5,11 +5,11 @@ package miner
 import (
 	"context"
 	"fmt"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -17,6 +17,7 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -33,7 +34,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 	var state = crpc.Client().State()
 
 	if !state.SignOnlyCompetingBlocks.IsCompetingGroupMember(state, b.MinerID) {
-		return nil, zchainErrors.New("skip block signing -- not competing block")
+		return nil, errors.New("skip block signing -- not competing block")
 	}
 
 	// regular or competing signing
@@ -259,7 +260,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", count),
 				zap.Int32("block_size", blockSize))
-			return zchainErrors.New(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
+			return errors.New(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
@@ -297,7 +298,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		cl := clients[txn.ClientID]
 		if cl == nil || cl.PublicKey == "" {
 			logging.Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
-			return zchainErrors.New("invalid_client", "client not available")
+			return errors.New("invalid_client", "client not available")
 		}
 		txn.PublicKey = cl.PublicKey
 		txn.ClientID = datastore.EmptyKey

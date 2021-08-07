@@ -2,6 +2,7 @@ package interestpoolsc
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"reflect"
 	"testing"
@@ -52,6 +53,12 @@ func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
 				SmartContract: tt.fields.SmartContract,
 			}
 			got, err := ip.getPoolsStats(tt.args.ctx, tt.args.params, tt.args.balances)
+
+			fmt.Println("--------------------------- 1")
+			fmt.Println(err == nil)
+			fmt.Println(err)
+			fmt.Println("--------------------------- 1")
+
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPoolsStats() error = %v, wantErr %v", err, tt.wantErr)
 				return

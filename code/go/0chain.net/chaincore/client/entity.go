@@ -5,12 +5,13 @@ import (
 	"encoding/hex"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var clientSignatureScheme string
@@ -210,7 +211,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	co, ok := entity.(*Client)
 	if !ok {
-		return nil, zchainErrors.New("entity_invalid_type", "Invalid entity type")
+		return nil, errors.New("entity_invalid_type", "Invalid entity type")
 	}
 	response, err := datastore.PutEntityHandler(ctx, entity)
 	if err != nil {

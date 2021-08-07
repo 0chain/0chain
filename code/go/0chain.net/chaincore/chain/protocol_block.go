@@ -7,11 +7,11 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +35,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 	bvt []*block.VerificationTicket, round int64) (err error) {
 
 	if bvt == nil {
-		return zchainErrors.New("no_verification_tickets",
+		return errors.New("no_verification_tickets",
 			"No verification tickets for this block")
 	}
 
@@ -48,17 +48,17 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		if vt == nil {
 			logging.Logger.Error("verify notarization - null ticket",
 				zap.String("block", b.Hash))
-			return zchainErrors.New("null_ticket", "Verification ticket is null")
+			return errors.New("null_ticket", "Verification ticket is null")
 		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
-			return zchainErrors.New("duplicate_ticket_signature",
+			return errors.New("duplicate_ticket_signature",
 				"Found duplicate signatures in the notarization of the block")
 		}
 		ticketsMap[vt.VerifierID] = true
 	}
 
 	if !c.reachedNotarization(round, bvt) {
-		return zchainErrors.New("block_not_notarized",
+		return errors.New("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
 
@@ -87,7 +87,7 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 	)
 
 	if mb.StartingRound != relatedmbr {
-		return zchainErrors.Newf("verify_related_mb_presence",
+		return errors.Newf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
 			relatedmbr, mb.StartingRound)
 	}

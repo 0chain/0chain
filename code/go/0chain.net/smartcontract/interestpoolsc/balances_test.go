@@ -7,7 +7,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 // testBalance implements state.StateContextI  intended for using
@@ -84,7 +84,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 	if encryption.IsHash(key) {
-		return nil, zchainErrors.New("failed_to_get_trie_node",
+		return nil, errors.New("failed_to_get_trie_node",
 			"key is too short")
 	}
 	var ok bool
@@ -98,7 +98,7 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 	node util.Serializable) (_ datastore.Key, _ error) {
 	//@TODO add mutex to secure reading and writing into the map
 	if encryption.IsHash(key) {
-		return "", zchainErrors.New("failed_to_insert_trie_node",
+		return "", errors.New("failed_to_insert_trie_node",
 			"key is too short")
 	}
 	tb.tree[key] = node
@@ -117,7 +117,7 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 
 func (tb *testBalances) AddMint(mint *state.Mint) error {
 	if mint.Minter != ADDRESS {
-		return zchainErrors.Newf("", "invalid miner: %v", mint.Minter)
+		return errors.Newf("", "invalid miner: %v", mint.Minter)
 	}
 	tb.balances[mint.ToClientID] += mint.Amount // mint!
 	return nil

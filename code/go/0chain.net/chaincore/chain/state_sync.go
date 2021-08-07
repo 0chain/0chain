@@ -5,8 +5,7 @@ import (
 	"context"
 	"net/url"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -17,9 +16,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrNodeNull = zchainErrors.New("node_null", "Node is not available")
+var ErrNodeNull = errors.New("node_null", "Node is not available")
 
-var ErrStopIterator = zchainErrors.New("stop_iterator", "Stop MPT Iteration")
+var ErrStopIterator = errors.New("stop_iterator", "Stop MPT Iteration")
 
 var MaxStateNodesForSync = 10000
 
@@ -142,7 +141,7 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	}
 	err := c.GetLatestFinalizedBlock().ClientState.IterateFrom(ctx, key, handler, util.NodeTypeLeafNode|util.NodeTypeFullNode|util.NodeTypeExtensionNode)
 	if err != nil {
-		if !zchainErrors.Is(err, ErrStopIterator) {
+		if !errors.Is(err, ErrStopIterator) {
 			return nil, err
 		}
 	}
@@ -211,7 +210,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		root := rps.GetRoot()
 		if root == nil {
 			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(rps.Nodes)))
-			return nil, zchainErrors.New("state_root_error", "Partial state root calculcation error")
+			return nil, errors.New("state_root_error", "Partial state root calculcation error")
 		}
 		cancel()
 		select {
@@ -227,7 +226,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	default:
 	}
 	if ps == nil {
-		return nil, zchainErrors.New("partial_state_change_error", "Error getting the partial state")
+		return nil, errors.New("partial_state_change_error", "Error getting the partial state")
 	}
 
 	logging.Logger.Info("get partial state",
@@ -278,7 +277,7 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	}
 
 	if ns == nil {
-		return nil, zchainErrors.New("state_nodes_error", "error getting the state nodes")
+		return nil, errors.New("state_nodes_error", "error getting the state nodes")
 	}
 
 	logging.Logger.Info("get state nodes",
@@ -320,7 +319,7 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	}
 
 	if ns == nil {
-		return nil, zchainErrors.New("state_nodes_error", "error getting the state nodes")
+		return nil, errors.New("state_nodes_error", "error getting the state nodes")
 	}
 
 	logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
@@ -344,7 +343,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		if rsc.Block != b.Hash {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(zchainErrors.New("block hash mismatch")),
+				zap.Error(errors.New("block hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
@@ -352,7 +351,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(zchainErrors.New("state hash mismatch")),
+				zap.Error(errors.New("state hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, block.ErrBlockStateHashMismatch
@@ -361,11 +360,11 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		var root = rsc.GetRoot()
 		if root == nil {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(zchainErrors.New("state root error")),
+				zap.Error(errors.New("state root error")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))
-			return nil, zchainErrors.New("state_root_error",
+			return nil, errors.New("state_root_error",
 				"block state root calculation error")
 		}
 
@@ -384,7 +383,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	default:
 	}
 	if bsc == nil {
-		return nil, zchainErrors.New("block_state_change_error",
+		return nil, errors.New("block_state_change_error",
 			"error getting the block state change")
 	}
 

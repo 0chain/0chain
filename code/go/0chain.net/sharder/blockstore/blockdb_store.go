@@ -4,11 +4,12 @@ import (
 	"context"
 	"io"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockdb"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // BlockDBStore is a block store backed by blockdb.
@@ -145,11 +146,11 @@ func (bdbs *BlockDBStore) DeleteBlock(b *block.Block) error {
 }
 
 func (bdbs *BlockDBStore) UploadToCloud(hash string, round int64) error {
-	return zchainErrors.New("interface_not_implemented", "BlockDBStore cannote provide this interface")
+	return errors.New("interface_not_implemented", "BlockDBStore cannote provide this interface")
 }
 
 func (bdbs *BlockDBStore) DownloadFromCloud(hash string, round int64) error {
-	return zchainErrors.New("interface_not_implemented", "BlockDBStore cannote provide this interface")
+	return errors.New("interface_not_implemented", "BlockDBStore cannote provide this interface")
 }
 
 func (bdbs *BlockDBStore) CloudObjectExists(hash string) bool {

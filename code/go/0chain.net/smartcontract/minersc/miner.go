@@ -5,8 +5,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -16,7 +15,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
 	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 			zap.String("key", pkey))
 		return false
@@ -34,12 +33,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	var newMiner = NewMinerNode()
 	if err = newMiner.Decode(inputData); err != nil {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"decoding request: %v", err)
 	}
 
 	if err = newMiner.Validate(); err != nil {
-		return "", zchainErrors.Newf("add_miner", "invalid input: %v", err)
+		return "", errors.Newf("add_miner", "invalid input: %v", err)
 	}
 
 	lockAllMiners.Lock()
@@ -51,7 +50,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if err != nil {
 		logging.Logger.Error("add_miner: Error in getting list from the DB",
 			zap.Error(err))
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"failed to get miner list: %v", err)
 	}
 
@@ -79,40 +78,40 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
 		logging.Logger.Error("add_miner: public key or ID is empty")
-		return "", zchainErrors.New("add_miner",
+		return "", errors.New("add_miner",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	if newMiner.ServiceCharge < 0 {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"invalid negative service charge: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.ServiceCharge > gn.MaxCharge {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"max_charge is greater than allowed by SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxCharge)
 	}
 
 	if newMiner.NumberOfDelegates < 0 {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"invalid negative number_of_delegates: %v", newMiner.ServiceCharge)
 	}
 
 	if newMiner.NumberOfDelegates > gn.MaxDelegates {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			newMiner.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if newMiner.MinStake < gn.MinStake {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"min_stake is less than allowed by SC: %v > %v",
 			newMiner.MinStake, gn.MinStake)
 	}
 
 	if newMiner.MaxStake < gn.MaxStake {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newMiner.MaxStake, gn.MaxStake)
 	}
@@ -120,7 +119,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	newMiner.NodeType = NodeTypeMiner // set node type
 
 	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_miner", "").Error())
+		return "", errors.Wrap(err, errors.New("add_miner", "").Error())
 	}
 
 	allMap := make(map[string]struct{}, len(allMiners.Nodes))
@@ -133,7 +132,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
 		if err = updateMinersList(balances, allMiners); err != nil {
-			return "", zchainErrors.Newf("add_miner",
+			return "", errors.Newf("add_miner",
 				"saving all miners list: %v", err)
 		}
 		update = true
@@ -141,7 +140,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if !msc.doesMinerExist(newMiner.getKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
-			return "", errors.Wrap(err, zchainErrors.New("add_miner", "").Error())
+			return "", errors.Wrap(err, errors.New("add_miner", "").Error())
 
 		}
 
@@ -163,40 +162,40 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 
 	var update = NewMinerNode()
 	if err = update.Decode(inputData); err != nil {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"decoding request: %v", err)
 	}
 
 	if update.ServiceCharge < 0 {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"invalid negative service charge: %v", update.ServiceCharge)
 	}
 
 	if update.ServiceCharge > gn.MaxCharge {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"max_charge is greater than allowed by SC: %v > %v",
 			update.ServiceCharge, gn.MaxCharge)
 	}
 
 	if update.NumberOfDelegates < 0 {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"invalid negative number_of_delegates: %v", update.ServiceCharge)
 	}
 
 	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", zchainErrors.Newf("add_miner",
+		return "", errors.Newf("add_miner",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			update.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if update.MinStake < gn.MinStake {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"min_stake is less than allowed by SC: %v > %v",
 			update.MinStake, gn.MinStake)
 	}
 
 	if update.MaxStake < gn.MaxStake {
-		return "", zchainErrors.Newf("update_settings",
+		return "", errors.Newf("update_settings",
 			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
 	}
@@ -208,7 +207,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	}
 
 	if mn.DelegateWallet != t.ClientID {
-		return "", zchainErrors.New("update_setings", "access denied")
+		return "", errors.New("update_setings", "access denied")
 	}
 
 	mn.ServiceCharge = update.ServiceCharge
@@ -217,7 +216,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	mn.MaxStake = update.MaxStake
 
 	if err = mn.save(balances); err != nil {
-		return "", zchainErrors.Newf("update_setings", "saving: %v", err)
+		return "", errors.Newf("update_setings", "saving: %v", err)
 	}
 
 	return string(mn.Encode()), nil

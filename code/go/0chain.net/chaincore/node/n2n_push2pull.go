@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/cache"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -67,7 +68,7 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 	pcde, err := pushDataCache.Get(key)
 	if err != nil {
 		logging.N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
-		return nil, zchainErrors.New("request_data_not_found", "Requested data is not found")
+		return nil, errors.New("request_data_not_found", "Requested data is not found")
 	}
 	//N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil

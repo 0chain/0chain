@@ -8,8 +8,7 @@ import (
 	"sync"
 
 	"0chain.net/chaincore/smartcontract"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -145,7 +144,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	}
 	scFunc, found := msc.smartContractFunctions[funcName]
 	if !found {
-		return zchainErrors.New("failed_execution", "no function with that name").Error(), nil
+		return errors.New("failed_execution", "no function with that name").Error(), nil
 	}
 	return scFunc(t, input, gn, balances)
 }
@@ -161,12 +160,12 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	}
 
 	if u.Scheme != "http" { //|| u.scheme == "https"  we don't support
-		return hostName, port, zchainErrors.New(burl + " is not a valid url. It does not have scheme http")
+		return hostName, port, errors.New(burl + " is not a valid url. It does not have scheme http")
 	}
 
 	sp := u.Port()
 	if sp == "" {
-		return hostName, port, zchainErrors.New(burl + " is not a valid url. It does not have port number")
+		return hostName, port, errors.New(burl + " is not a valid url. It does not have port number")
 	}
 
 	p, err := strconv.Atoi(sp)
@@ -181,7 +180,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	}
 
 	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
-	return "", 0, zchainErrors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
+	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
 func getGlobalNode(balances cstate.StateContextI) (
@@ -190,7 +189,7 @@ func getGlobalNode(balances cstate.StateContextI) (
 	gn = new(GlobalNode)
 	var p util.Serializable
 	p, err = balances.GetTrieNode(GlobalNodeKey)
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return nil, err
 	}
 
@@ -220,23 +219,23 @@ func getGlobalNode(balances cstate.StateContextI) (
 
 	// check bounds
 	if gn.MinN < 1 {
-		return nil, zchainErrors.Newf("", "min_n is too small: %d", gn.MinN)
+		return nil, errors.Newf("", "min_n is too small: %d", gn.MinN)
 	}
 	if gn.MaxN < gn.MinN {
-		return nil, zchainErrors.Newf("", "max_n is less than min_n: %d < %d",
+		return nil, errors.Newf("", "max_n is less than min_n: %d < %d",
 			gn.MaxN, gn.MinN)
 	}
 
 	if gn.MinS < 1 {
-		return nil, zchainErrors.Newf("", "min_s is too small: %d", gn.MinS)
+		return nil, errors.Newf("", "min_s is too small: %d", gn.MinS)
 	}
 	if gn.MaxS < gn.MinS {
-		return nil, zchainErrors.Newf("", "max_s is less than min_s: %d < %d",
+		return nil, errors.Newf("", "max_s is less than min_s: %d < %d",
 			gn.MaxS, gn.MinS)
 	}
 
 	if gn.MaxDelegates <= 0 {
-		return nil, zchainErrors.Newf("", "max_delegates is too small: %d", gn.MaxDelegates)
+		return nil, errors.Newf("", "max_delegates is too small: %d", gn.MaxDelegates)
 	}
 
 	gn.InterestRate = conf.GetFloat64(pfx + "interest_rate")
@@ -256,7 +255,7 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	un := NewUserNode()
 	un.ID = id
 	us, err := balances.GetTrieNode(un.GetKey())
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return nil, err
 	}
 	if us == nil {

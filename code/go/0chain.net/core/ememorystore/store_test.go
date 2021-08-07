@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"github.com/0chain/gorocksdb"
 	"github.com/stretchr/testify/assert"
@@ -55,7 +55,7 @@ func initDBs() error {
 
 		_, ok := pools[entityName]
 		if ok {
-			return zchainErrors.New("trying to init existing db")
+			return errors.New("trying to init existing db")
 		}
 		pools[entityName] = db
 	}

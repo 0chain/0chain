@@ -3,11 +3,12 @@ package state
 import (
 	"encoding/json"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/datastore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
-var ErrInvalidMint = zchainErrors.New("invalid_mint", "invalid minter")
+var ErrInvalidMint = errors.New("invalid_mint", "invalid minter")
 
 //Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {

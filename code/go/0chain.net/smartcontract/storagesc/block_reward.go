@@ -3,8 +3,7 @@ package storagesc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 )
 
 func (ssc *StorageSmartContract) payBlobberBlockRewards(
@@ -12,7 +11,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 ) (err error) {
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed",
+		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
 			"cannot get smart contract configurations").Error())
 	}
 
@@ -23,7 +22,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 	allBlobbers, err := ssc.getBlobbersList(balances)
 	if err != nil {
-		return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed",
+		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
 			"cannot get all blobbers list").Error())
 	}
 
@@ -35,7 +34,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	for _, blobber := range allBlobbers.Nodes {
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(blobber.ID, balances); err != nil {
-			return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed",
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
 				"can't get related stake pool").Error())
 		}
 		var stake float64
@@ -60,11 +59,11 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
 		if err := mintReward(qsp, capacityReward, balances); err != nil {
-			return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed", "minting capacity reward").Error())
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting capacity reward").Error())
 		}
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
 		if err := mintReward(qsp, usageReward, balances); err != nil {
-			return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed", "minting usage reward").Error())
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting usage reward").Error())
 
 		}
 		qsp.Rewards.Blobber += state.Balance(capacityReward + usageReward)
@@ -72,7 +71,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 	for i, qsp := range stakePools {
 		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
-			return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed",
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
 				"saving stake pool").Error())
 
 		}
@@ -81,7 +80,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
-		return errors.Wrap(err, zchainErrors.New("blobber_block_rewards_failed",
+		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
 			"saving configurations").Error())
 
 	}

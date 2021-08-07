@@ -1,7 +1,7 @@
 package encryption
 
 import (
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"github.com/herumi/bls/ffi/go/bls"
 )
@@ -67,7 +67,7 @@ func (b0a BLS0ChainAggregateSignatureScheme) Verify() (bool, error) {
 	asigG1.Deserialize(asig.Serialize())
 	bls.Pairing(&agg, &asigG1, GenG2)
 	if !agg.IsEqual(agtmul) {
-		return false, zchainErrors.New("aggregate signature validation failed")
+		return false, errors.New("aggregate signature validation failed")
 	}
 	return true, nil
 }

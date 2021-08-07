@@ -1,7 +1,7 @@
 package persistencestore
 
 import (
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"github.com/gocql/gocql"
 )
@@ -46,7 +46,7 @@ func (s *session) NewBatch(typ gocql.BatchType) BatchI {
 func (s *session) ExecuteBatch(b BatchI) error {
 	bat, ok := b.(*batch)
 	if !ok {
-		return zchainErrors.New("unknown batch")
+		return errors.New("unknown batch")
 	}
 
 	return s.Session.ExecuteBatch(bat.Batch)

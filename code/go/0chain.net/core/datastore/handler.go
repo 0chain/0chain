@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"0chain.net/core/common"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 /*EntityProvider - returns an entity */
@@ -54,7 +54,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 func PrintEntityHandler(ctx context.Context, entity Entity) (interface{}, error) {
 	emd := entity.GetEntityMetadata()
 	if emd == nil {
-		return nil, zchainErrors.New("unknown_entity", "Entity with nil entity metadata")
+		return nil, errors.New("unknown_entity", "Entity with nil entity metadata")
 	}
 	fmt.Printf("%v: %v\n", emd.GetName(), ToJSON(entity))
 	return nil, nil
@@ -78,7 +78,7 @@ func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata Entit
 func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
 	entity, ok := object.(Entity)
 	if !ok {
-		return nil, zchainErrors.Newf("", "invalid request %T", object)
+		return nil, errors.Newf("", "invalid request %T", object)
 	}
 	entity.ComputeProperties()
 	if err := entity.Validate(ctx); err != nil {

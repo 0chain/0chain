@@ -10,7 +10,7 @@ import (
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"go.uber.org/zap"
 )
@@ -68,7 +68,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 					return nil, err
 				}
 			} else {
-				return nil, zchainErrors.New("block_not_available", "Block not available")
+				return nil, errors.New("block_not_available", "Block not available")
 			}
 		} else {
 			b = bi.(*block.Block)
@@ -187,14 +187,14 @@ func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	)
 
 	if err = cql.Query(query).Scan(&number); err != nil {
-		return nil, zchainErrors.Newf("get_highest_mbm",
+		return nil, errors.Newf("get_highest_mbm",
 			"scanning CQL result: %v", err)
 	}
 
 	var mbn = strconv.FormatInt(number, 10)
 	err = mbmemd.GetStore().Read(mctx, datastore.ToKey(mbn), mbm)
 	if err != nil {
-		return nil, zchainErrors.Newf("get_highest_mbm",
+		return nil, errors.Newf("get_highest_mbm",
 			"getting latest MB map: %v", err)
 	}
 

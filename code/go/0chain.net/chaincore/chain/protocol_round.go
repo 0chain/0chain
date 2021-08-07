@@ -3,6 +3,8 @@ package chain
 import (
 	"context"
 
+	"github.com/0chain/errors"
+
 	"fmt"
 	"net/url"
 	"sort"
@@ -14,7 +16,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -296,7 +297,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 		}
 
 		if nb.Round != rn {
-			return nil, zchainErrors.New("invalid_block",
+			return nil, errors.New("invalid_block",
 				"Block not from the requested round")
 		}
 
@@ -406,7 +407,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
-		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
+		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("github.com/0chain/errors", errs))
 	}
 
 	if len(magicBlocks) == 0 {

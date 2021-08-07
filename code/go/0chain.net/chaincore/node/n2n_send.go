@@ -9,16 +9,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
+
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
-var ErrSendingToSelf = zchainErrors.New("sending_to_self", "Message can't be sent to oneself")
+var ErrSendingToSelf = errors.New("sending_to_self", "Message can't be sent to oneself")
 
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
 var MaxConcurrentRequests = 2
@@ -57,7 +59,7 @@ func (np *Pool) SendToMultiple(ctx context.Context, handler SendHandler, nodes [
 	if len(sentTo) == len(nodes) {
 		return true, nil
 	}
-	return false, zchainErrors.New("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
+	return false, errors.New("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
 /*SendToMultipleNodes - send to multiple nodes */
@@ -393,7 +395,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		entity, err := getRequestEntity(r, entityMetadata)
 		if err != nil {
-			if zchainErrors.Is(err, NoDataErr) {
+			if errors.Is(err, NoDataErr) {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.AddReceived(1)
 				return

@@ -3,13 +3,14 @@ package minersc
 import (
 	"testing"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/stretchr/testify/require"
 )
 
@@ -137,7 +138,7 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 
 	if encryption.IsHash(key) {
-		return nil, zchainErrors.New("failed_to_get_trie_node",
+		return nil, errors.New("failed_to_get_trie_node",
 			"key is too short")
 	}
 

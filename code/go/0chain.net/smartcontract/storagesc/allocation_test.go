@@ -10,7 +10,8 @@ import (
 
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	zchainErrors "github.com/0chain/gosdk/errors"
+
+	"github.com/0chain/errors"
 	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -518,7 +519,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	if _, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
 	}
-	if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if !errors.Is(err, util.ErrValueNotPresent) {
 		t.Fatal("unexpected error:", err)
 	}
 	alloc = new(StorageAllocation)

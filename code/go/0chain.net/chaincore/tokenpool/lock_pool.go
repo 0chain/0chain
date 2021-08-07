@@ -3,10 +3,11 @@ package tokenpool
 import (
 	"encoding/json"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type ZcnLockingPool struct {
@@ -47,21 +48,21 @@ func (p *ZcnLockingPool) FillPool(txn *transaction.Transaction) (*state.Transfer
 
 func (p *ZcnLockingPool) TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error) {
 	if p.IsLocked(entity) {
-		return nil, "", zchainErrors.New("pool-to-pool transfer failed", "pool is still locked")
+		return nil, "", errors.New("pool-to-pool transfer failed", "pool is still locked")
 	}
 	return p.ZcnPool.TransferTo(op, value, entity)
 }
 
 func (p *ZcnLockingPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error) {
 	if p.IsLocked(entity) {
-		return nil, "", zchainErrors.New("draining_pool_failed", "pool is still locked")
+		return nil, "", errors.New("draining_pool_failed", "pool is still locked")
 	}
 	return p.ZcnPool.DrainPool(fromClientID, toClientID, value, entity)
 }
 
 func (p *ZcnLockingPool) EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error) {
 	if p.IsLocked(entity) {
-		return nil, "", zchainErrors.New("emptying_pool_failed", "pool is still locked")
+		return nil, "", errors.New("emptying_pool_failed", "pool is still locked")
 	}
 	return p.ZcnPool.EmptyPool(fromClientID, toClientID, entity)
 }

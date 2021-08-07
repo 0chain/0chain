@@ -9,8 +9,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 )
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
@@ -85,14 +84,14 @@ func (ssc *StorageSmartContract) getFundedPools(
 	var err error
 	fp := new(fundedPools)
 	if poolb, err = ssc.getFundedPoolsBytes(clientID, balances); err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return fp, nil
 	}
 	err = fp.Decode(poolb)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding.Error(), err)
+		return nil, errors.Wrap(err, common.ErrDecoding.Error())
 	}
 	return fp, nil
 }

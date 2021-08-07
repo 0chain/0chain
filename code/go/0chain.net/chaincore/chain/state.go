@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
@@ -30,7 +29,7 @@ func init() {
 	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
-var ErrInsufficientBalance = zchainErrors.New("insufficient_balance", "Balance not sufficient for transfer")
+var ErrInsufficientBalance = errors.New("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
@@ -70,7 +69,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 //SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
-		err := zchainErrors.New("block_state_not_computed")
+		err := errors.New("block_state_not_computed")
 		logging.Logger.Error("save changes failed", zap.Error(err),
 			zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash))
@@ -159,7 +158,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {
-		return zchainErrors.Newf("update_state_failed",
+		return errors.Newf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, b.ClientStateHash, b.ClientState.GetRoot(), b.Round)
 	}
@@ -196,7 +195,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return zchainErrors.Newf("", "invalid transaction type: %v", txn.TransactionType)
+		return errors.Newf("", "invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -377,7 +376,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return common.NewError("mint_amount - get state", err.Error())
+		return errors.Wrap(err, "mint_amount - get state")
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
@@ -400,7 +399,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return common.NewError("mint_amount - insert", err.Error())
+		return errors.Wrap(err, "mint_amount - insert")
 	}
 	return nil
 }
@@ -414,13 +413,13 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
-		return nil, zchainErrors.New("getState", "client state does not exist")
+		return nil, errors.New("getState", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
 	ss, err := clientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return s, err
@@ -438,11 +437,11 @@ func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) 
 	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
 		if !b.IsStateComputed() {
-			return nil, zchainErrors.New("state_not_yet_computed", "State is not yet computed")
+			return nil, errors.New("state_not_yet_computed", "State is not yet computed")
 		}
 		ps := c.GetPruneStats()
 		if ps != nil && ps.MissingNodes > 0 {
-			return nil, zchainErrors.New("state_not_synched", "State sync is not yet complete")
+			return nil, errors.New("state_not_synched", "State sync is not yet complete")
 		}
 		return nil, err
 	}
@@ -454,7 +453,7 @@ func isValid(err error) bool {
 	if err == nil {
 		return true
 	}
-	if zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if errors.Is(err, util.ErrValueNotPresent) {
 		return true
 	}
 	return false

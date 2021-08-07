@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	errors "github.com/0chain/errors"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +32,7 @@ func Recover(handler ReqRespHandlerf) ReqRespHandlerf {
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
 
-				if are, ok := err.(*zchainErrors.Error); ok {
+				if are, ok := err.(*errors.Error); ok {
 					data["code"] = are.Code
 					data["error"] = are.Error()
 				} else {

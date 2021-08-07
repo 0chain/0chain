@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"go.uber.org/zap"
 
@@ -279,7 +279,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {
-		return nil, zchainErrors.New("only sharder")
+		return nil, errors.New("only sharder")
 	}
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
 		mc.ID, selfNode.PublicKey)
@@ -597,19 +597,19 @@ func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
 
 	var seri util.Serializable
 	seri, err = c.GetBlockStateNode(b, minersc.PhaseKey)
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
-		err = zchainErrors.Newf("", "get_block_phase -- can't get: %v, block %d",
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		err = errors.Newf("", "get_block_phase -- can't get: %v, block %d",
 			err, b.Round)
 		return
 	}
 
-	if zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if errors.Is(err, util.ErrValueNotPresent) {
 		err = nil // not a real error, Miner SC just is not started (yet)
 		return
 	}
 
 	if err = pn.Decode(seri.Encode()); err != nil {
-		err = zchainErrors.Newf("", "get_block_phase -- can't decode: %v, block %d",
+		err = errors.Newf("", "get_block_phase -- can't decode: %v, block %d",
 			err, b.Round)
 		return
 	}

@@ -7,7 +7,7 @@ import (
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 )
 
 func (ip *InterestPoolSmartContract) getPoolsStats(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {

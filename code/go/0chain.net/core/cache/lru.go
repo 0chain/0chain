@@ -3,7 +3,8 @@ package cache
 import (
 	"sync"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
+
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -35,7 +36,7 @@ func (c *LRU) Get(key string) (interface{}, error) {
 	value, ok := c.Cache.Get(key)
 	if !ok {
 		c.Miss++
-		return nil, zchainErrors.New("missing_key", "key not found")
+		return nil, errors.New("missing_key", "key not found")
 	}
 	c.Hit++
 	return value, nil

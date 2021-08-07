@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
@@ -23,7 +25,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"go.uber.org/zap"
 )
@@ -415,13 +416,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {
 		logging.Logger.Error("generate round block - no prior round", zap.Any("round", roundNumber-1))
-		return nil, zchainErrors.New("invalid_round,", "Round not available")
+		return nil, errors.New("invalid_round,", "Round not available")
 	}
 
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		logging.Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
-		return nil, zchainErrors.New("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+		return nil, errors.New("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
 
 	if !pb.IsStateComputed() {
@@ -449,7 +450,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Int64("round", rn),
 			zap.Int64("lfmbr_sr", lfmbr.StartingRound),
 		)
-		return nil, zchainErrors.New("gen_block",
+		return nil, errors.New("gen_block",
 			"required MB missing or still not finalized")
 	}
 
@@ -469,7 +470,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	roundSeed := r.GetRandomSeed()
 	if roundSeed == 0 {
 		logging.Logger.Error("Round seed reset to zero", zap.Int64("round", rn))
-		return nil, zchainErrors.New("gen_block", "round seed reset to zero")
+		return nil, errors.New("gen_block", "round seed reset to zero")
 	}
 
 	b.SetRoundRandomSeed(roundSeed)
@@ -489,7 +490,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			logging.Logger.Error("generate block - round mismatch",
 				zap.Any("round", roundNumber),
 				zap.Any("current_round", mc.GetCurrentRound()))
-			return nil, ErrRoundMismatch()
+			return nil, ErrRoundMismatch
 		}
 
 		txnCount := transaction.GetTransactionCount()
@@ -505,7 +506,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
-			cerr, ok := err.(*zchainErrors.Error)
+			cerr, ok := err.(*errors.Error)
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
@@ -525,7 +526,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 							logging.Logger.Error("generate block - round mismatch",
 								zap.Any("round", roundNumber),
 								zap.Any("current_round", mc.GetCurrentRound()))
-							return nil, ErrRoundMismatch()
+							return nil, ErrRoundMismatch
 						}
 						if txnCount != transaction.GetTransactionCount() || time.Now().Sub(start) > generationTimeout {
 							makeBlock = true
@@ -558,7 +559,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Int64("round", b.Round),
 				zap.Int64("round_rrs", r.GetRandomSeed()),
 				zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
-			return nil, ErrRRSMismatch()
+			return nil, ErrRRSMismatch
 		}
 
 		mc.AddRoundBlock(r, b)
@@ -748,7 +749,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			switch err {
 			case context.Canceled:
 			default:
-				if cerr, ok := err.(*zchainErrors.Error); ok {
+				if cerr, ok := err.(*errors.Error); ok {
 					if cerr.Code == RoundMismatch {
 						logging.Logger.Debug("verify round block",
 							zap.Any("round", r.Number), zap.Any("block", b.Hash),
@@ -852,13 +853,13 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 /*VerifyRoundBlock - given a block is verified for a round*/
 func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.Block) (*block.BlockVerificationTicket, error) {
 	if !mc.CanShardBlocks(r.GetRoundNumber()) {
-		return nil, zchainErrors.New("fewer_active_sharders", "Number of active sharders not sufficient")
+		return nil, errors.New("fewer_active_sharders", "Number of active sharders not sufficient")
 	}
 	if !mc.CanReplicateBlock(b) {
-		return nil, zchainErrors.New("fewer_active_replicators", "Number of active replicators not sufficient")
+		return nil, errors.New("fewer_active_replicators", "Number of active replicators not sufficient")
 	}
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
-		return nil, ErrRoundMismatch()
+		return nil, ErrRoundMismatch
 	}
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return mc.SignBlock(ctx, b)
@@ -1019,7 +1020,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 
 		var fb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 
 		if fb.Round == 0 {
@@ -1107,7 +1108,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 
 		var fb, ok = entity.(*block.Block)
 		if !ok {
-			return nil, datastore.ErrInvalidEntity()
+			return nil, datastore.ErrInvalidEntity
 		}
 
 		if err = fb.Validate(ctx); err != nil {

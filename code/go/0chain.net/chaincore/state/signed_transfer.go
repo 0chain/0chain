@@ -3,8 +3,9 @@ package state
 import (
 	"encoding/hex"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/encryption"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 // A SignedTransfer is a balance transfer from one client to another that has
@@ -32,7 +33,7 @@ func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
 // Verify that the signature on the transfer is correct.
 func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 	if !encryption.IsValidSignatureScheme(st.SchemeName) {
-		return zchainErrors.New("invalid_signature_scheme", "invalid signature scheme")
+		return errors.New("invalid_signature_scheme", "invalid signature scheme")
 	}
 
 	if requireSendersSignature {
@@ -46,7 +47,7 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 
 	err := sigScheme.SetPublicKey(st.PublicKey)
 	if err != nil {
-		return zchainErrors.New("invalid_public_key", "invalid public key")
+		return errors.New("invalid_public_key", "invalid public key")
 	}
 
 	hash := st.computeTransferHash()
@@ -56,7 +57,7 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 		return err
 	}
 	if !correctSignature {
-		return zchainErrors.New("invalid_transfer_signature", "Invalid signature on transfer")
+		return errors.New("invalid_transfer_signature", "Invalid signature on transfer")
 	}
 
 	return nil
@@ -65,11 +66,11 @@ func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
 func (st SignedTransfer) verifyPublicKey() error {
 	publicKeyBytes, err := hex.DecodeString(st.PublicKey)
 	if err != nil {
-		return zchainErrors.New("invalid_public_key", "invalid public key format")
+		return errors.New("invalid_public_key", "invalid public key format")
 	}
 
 	if encryption.Hash(publicKeyBytes) != st.Transfer.ClientID {
-		return zchainErrors.New("wrong_public_key", "public key does not match client id")
+		return errors.New("wrong_public_key", "public key does not match client id")
 	}
 
 	return nil

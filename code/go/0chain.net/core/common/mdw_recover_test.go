@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 	"go.uber.org/zap"
 
 	"0chain.net/core/logging"
@@ -32,7 +32,7 @@ func TestRecover(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				data := make(map[string]interface{}, 2)
-				err := zchainErrors.New("code", "msg")
+				err := errors.New("code", "msg")
 				data["error"] = err.Error()
 				data["code"] = err.Code
 				buf := bytes.NewBuffer(nil)
@@ -54,7 +54,7 @@ func TestRecover(t *testing.T) {
 			t.Parallel()
 
 			panHandler := func(w http.ResponseWriter, r *http.Request) {
-				panic(zchainErrors.New("code", "msg"))
+				panic(errors.New("code", "msg"))
 			}
 
 			w := httptest.NewRecorder()

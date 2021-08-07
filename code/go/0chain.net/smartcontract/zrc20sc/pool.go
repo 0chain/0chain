@@ -3,12 +3,13 @@ package zrc20sc
 import (
 	"encoding/json"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type zrc20Pool struct {
@@ -44,11 +45,11 @@ func (zrc *zrc20Pool) GetID() datastore.Key {
 
 func (zrc *zrc20Pool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if zrc == nil {
-		return nil, "", zchainErrors.New("digging_pool_failed", "token info not set")
+		return nil, "", errors.New("digging_pool_failed", "token info not set")
 	}
 	zcnUsed := (state.Balance(txn.Value) / zrc.ExchangeRate.ZCN) * zrc.ExchangeRate.ZCN
 	if zcnUsed == 0 {
-		return nil, "", zchainErrors.New("digging_pool_failed", "insufficient funds to swap tokens")
+		return nil, "", errors.New("digging_pool_failed", "insufficient funds to swap tokens")
 	}
 	newTokens := (zcnUsed / zrc.ExchangeRate.ZCN) * zrc.ExchangeRate.Other
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, zcnUsed)
@@ -60,11 +61,11 @@ func (zrc *zrc20Pool) DigPool(id datastore.Key, txn *transaction.Transaction) (*
 
 func (zrc *zrc20Pool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if zrc == nil {
-		return nil, "", zchainErrors.New("filling_pool_failed", "token info not set")
+		return nil, "", errors.New("filling_pool_failed", "token info not set")
 	}
 	zcnUsed := (state.Balance(txn.Value) / zrc.ExchangeRate.ZCN) * zrc.ExchangeRate.ZCN
 	if zcnUsed == 0 {
-		return nil, "", zchainErrors.New("filling_pool_failed", "insufficient funds to swap tokens")
+		return nil, "", errors.New("filling_pool_failed", "insufficient funds to swap tokens")
 	}
 	newTokens := (zcnUsed / zrc.ExchangeRate.ZCN) * zrc.ExchangeRate.Other
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, zcnUsed)
@@ -75,10 +76,10 @@ func (zrc *zrc20Pool) FillPool(txn *transaction.Transaction) (*state.Transfer, s
 
 func (zrc *zrc20Pool) TransferTo(op *zrc20Pool, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if zrc == nil || op == nil {
-		return nil, "", zchainErrors.New("pool-to-pool transfer failed", "one of the pools doesn't exist")
+		return nil, "", errors.New("pool-to-pool transfer failed", "one of the pools doesn't exist")
 	}
 	if value > zrc.Balance {
-		return nil, "", zchainErrors.New("pool-to-pool transfer failed", "value exceeds balance")
+		return nil, "", errors.New("pool-to-pool transfer failed", "value exceeds balance")
 	}
 	if zrc.TokenName != op.TokenName {
 		return zrc.interPoolTransfer(op, value, txn)
@@ -93,11 +94,11 @@ func (zrc *zrc20Pool) interPoolTransfer(op *zrc20Pool, value state.Balance, txn 
 	otherUsed := (value / zrc.ExchangeRate.Other) * zrc.ExchangeRate.Other
 	zcnWorth := (otherUsed / zrc.ExchangeRate.Other) * zrc.ExchangeRate.ZCN
 	if zcnWorth == 0 {
-		return nil, "", zchainErrors.New("interpool_transfer_failed", "insufficent funds to exchange from this pool")
+		return nil, "", errors.New("interpool_transfer_failed", "insufficent funds to exchange from this pool")
 	}
 	zcnOtherToken := (zcnWorth / op.ExchangeRate.ZCN) * op.ExchangeRate.ZCN
 	if zcnOtherToken == 0 {
-		return nil, "", zchainErrors.New("interpool_transfer_failed", "insufficent funds to exchange to another pool")
+		return nil, "", errors.New("interpool_transfer_failed", "insufficent funds to exchange to another pool")
 	}
 	leftOver := zcnWorth - zcnOtherToken
 	transfer := state.NewTransfer(txn.ToClientID, txn.ClientID, leftOver)
@@ -110,15 +111,15 @@ func (zrc *zrc20Pool) interPoolTransfer(op *zrc20Pool, value state.Balance, txn 
 
 func (zrc *zrc20Pool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance) (*state.Transfer, string, error) {
 	if zrc == nil {
-		return nil, "", zchainErrors.New("draining pool failed", "pool doesn't exist")
+		return nil, "", errors.New("draining pool failed", "pool doesn't exist")
 	}
 	if value > zrc.GetBalance() {
-		return nil, "", zchainErrors.New("draining pool failed", "value exceeds balance")
+		return nil, "", errors.New("draining pool failed", "value exceeds balance")
 	}
 	otherUsed := (value / zrc.ExchangeRate.Other) * zrc.ExchangeRate.Other
 	zcnUsed := (value / zrc.ExchangeRate.Other) * zrc.ExchangeRate.ZCN
 	if zcnUsed == 0 {
-		return nil, "", zchainErrors.New("draining pool failed", "insufficient funds to swap tokens")
+		return nil, "", errors.New("draining pool failed", "insufficient funds to swap tokens")
 	}
 	transfer := state.NewTransfer(fromClientID, toClientID, zcnUsed)
 	zrc.Balance -= otherUsed
@@ -128,11 +129,11 @@ func (zrc *zrc20Pool) DrainPool(fromClientID, toClientID datastore.Key, value st
 
 func (zrc *zrc20Pool) EmptyPool(fromClientID, toClientID datastore.Key) (*state.Transfer, string, error) {
 	if zrc == nil {
-		return nil, "", zchainErrors.New("emptying_pool_failed", "pool doesn't exist")
+		return nil, "", errors.New("emptying_pool_failed", "pool doesn't exist")
 	}
 	zcnUsed := (zrc.Balance / zrc.ExchangeRate.Other) * zrc.ExchangeRate.ZCN
 	if zcnUsed == 0 {
-		return nil, "", zchainErrors.New("emptying_pool_failed", "insufficient funds to swap tokens")
+		return nil, "", errors.New("emptying_pool_failed", "insufficient funds to swap tokens")
 	}
 	transfer := state.NewTransfer(fromClientID, toClientID, zcnUsed)
 	zrc.Balance = 0

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"0chain.net/core/viper"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 var (
@@ -80,7 +80,7 @@ func SetupDefaultConfig() {
 func SetupConfig() {
 	file := filepath.Join(".", "config", "0chain.yaml")
 	if err := viper.ReadConfigFile(file); err != nil {
-		panic(zchainErrors.Newf("", "fatal error config file: %s", err))
+		panic(errors.Newf("", "fatal error config file: %s", err))
 	}
 	setupDevConfig()
 }
@@ -103,7 +103,7 @@ func SetupDefaultSmartContractConfig() {
 func SetupSmartContractConfig() {
 	file := filepath.Join(".", "config", "sc.yaml")
 	if err := SmartContractConfig.ReadConfigFile(file); err != nil {
-		panic(zchainErrors.Newf("", "fatal error config file: %s", err))
+		panic(errors.Newf("", "fatal error config file: %s", err))
 	}
 }
 
@@ -170,7 +170,7 @@ func SetServerChainID(chain string) {
 	} else {
 		ServerChainID = chain
 	}
-	ErrSupportedChain = zchainErrors.Newf("", "chain %v is not supported by this server", chain)
+	ErrSupportedChain = errors.Newf("", "chain %v is not supported by this server", chain)
 }
 
 /*GetServerChainID - get the chain this server is responsible for processing */

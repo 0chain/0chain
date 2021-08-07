@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 func Host(address string) (addr string, err error) {
@@ -24,7 +24,7 @@ func Host(address string) (addr string, err error) {
 	}
 	var ip = strings.TrimSpace(string(stdout))
 	if net.ParseIP(ip) == nil {
-		return "", zchainErrors.Newf("", "invalid 'host.docker.internal' resolution: %s",
+		return "", errors.Newf("", "invalid 'host.docker.internal' resolution: %s",
 			ip)
 	}
 	return ip + ":" + port, nil // host

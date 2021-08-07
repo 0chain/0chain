@@ -1,8 +1,7 @@
 package minersc
 
 import (
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -25,17 +24,17 @@ func (msc *MinerSmartContract) AddSharder(
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
 		logging.Logger.Error("Error in decoding the input", zap.Error(err))
-		return "", zchainErrors.Newf("add_sharder", "decoding request: %v", err)
+		return "", errors.Newf("add_sharder", "decoding request: %v", err)
 	}
 
 	if err = newSharder.Validate(); err != nil {
-		return "", zchainErrors.Newf("add_sharder", "invalid input: %v", err)
+		return "", errors.Newf("add_sharder", "invalid input: %v", err)
 	}
 
 	allSharders, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("add_sharder: failed to get sharders list", zap.Error(err))
-		return "", zchainErrors.Newf("add_sharder", "getting all sharders list: %v", err)
+		return "", errors.Newf("add_sharder", "getting all sharders list: %v", err)
 	}
 
 	verifyAllShardersState(balances, "Checking all sharders list in the beginning")
@@ -61,31 +60,31 @@ func (msc *MinerSmartContract) AddSharder(
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
-		return "", zchainErrors.New("add_sharder",
+		return "", errors.New("add_sharder",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	if newSharder.NumberOfDelegates < 0 {
-		return "", zchainErrors.Newf("add_sharder",
+		return "", errors.Newf("add_sharder",
 			"invalid negative number_of_delegates: %v",
 			newSharder.ServiceCharge)
 	}
 
 	if newSharder.MinStake < gn.MinStake {
-		return "", zchainErrors.Newf("add_sharder",
+		return "", errors.Newf("add_sharder",
 			"min_stake is less than allowed by SC: %v > %v",
 			newSharder.MinStake, gn.MinStake)
 	}
 
 	if newSharder.MaxStake < gn.MaxStake {
-		return "", zchainErrors.Newf("add_sharder",
+		return "", errors.Newf("add_sharder",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newSharder.MaxStake, gn.MaxStake)
 	}
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
-		return "", zchainErrors.Newf("add_sharder", "unexpected error: %v", err)
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		return "", errors.Newf("add_sharder", "unexpected error: %v", err)
 	}
 
 	// if found
@@ -101,7 +100,7 @@ func (msc *MinerSmartContract) AddSharder(
 	newSharder.NodeType = NodeTypeSharder // set node type
 
 	if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_sharder", "").Error())
+		return "", errors.Wrap(err, errors.New("add_sharder", "").Error())
 	}
 
 	allSharders.Nodes = append(allSharders.Nodes, newSharder)
@@ -109,12 +108,12 @@ func (msc *MinerSmartContract) AddSharder(
 	// save the added sharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
-		return "", zchainErrors.Newf("add_sharder", "saving sharder: %v", err)
+		return "", errors.Newf("add_sharder", "saving sharder: %v", err)
 	}
 
 	// save all sharders list
 	if err = updateAllShardersList(balances, allSharders); err != nil {
-		return "", zchainErrors.Newf("add_sharder", "saving all sharders list: %v", err)
+		return "", errors.Newf("add_sharder", "saving all sharders list: %v", err)
 	}
 
 	msc.verifyMinerState(balances, "checking all sharders list after insert")
@@ -164,19 +163,19 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	var ss util.Serializable
 	ss, err = balances.GetTrieNode(getSharderKey(sid))
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return // unexpected error
 	}
 
 	sn = NewMinerNode()
 	sn.ID = sid
 
-	if zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if errors.Is(err, util.ErrValueNotPresent) {
 		return // with error ErrValueNotPresent (that's very stupid)
 	}
 
 	if err = sn.Decode(ss.Encode()); err != nil {
-		return nil, zchainErrors.Newf("", "invalid state: decoding sharder: %v", err)
+		return nil, errors.Newf("", "invalid state: decoding sharder: %v", err)
 	}
 
 	return // got it!
@@ -191,7 +190,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		return "", err
 	}
 	if pn.Phase != Contribute {
-		return "", zchainErrors.New("sharder_keep",
+		return "", errors.New("sharder_keep",
 			"this is not the correct phase to contribute (sharder keep)")
 	}
 
@@ -203,13 +202,13 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	}
 
 	if err = newSharder.Validate(); err != nil {
-		return "", zchainErrors.Newf("sharder_keep", "invalid input: %v", err)
+		return "", errors.Newf("sharder_keep", "invalid input: %v", err)
 	}
 
 	sharderKeepList, err := getShardersKeepList(balances)
 	if err != nil {
 		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", zchainErrors.Newf("sharder_keep",
+		return "", errors.Newf("sharder_keep",
 			"Failed to get miner list: %v", err)
 	}
 	verifyShardersKeepState(balances, "Checking sharderKeepList in the beginning")
@@ -222,18 +221,18 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
-		return "", zchainErrors.New("PublicKey or the ID is empty. Cannot proceed")
+		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	//check new sharder
 	allShardersList, err := getAllShardersList(balances)
 	if err != nil {
 		logging.Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", zchainErrors.Newf("sharder_keep",
+		return "", errors.Newf("sharder_keep",
 			"Failed to get miner list: %v", err)
 	}
 	if allShardersList.FindNodeById(newSharder.ID) == nil {
-		return "", zchainErrors.Newf("sharder_keep", "unknown sharder: %v", newSharder.ID)
+		return "", errors.Newf("sharder_keep", "unknown sharder: %v", newSharder.ID)
 	}
 
 	if sharderKeepList.FindNodeById(newSharder.ID) != nil {

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/datastore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"github.com/gocql/gocql"
 )
 
@@ -59,7 +60,7 @@ func (ps *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	var json string
 	valid := iter.Scan(&json)
 	if !valid {
-		return zchainErrors.New(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), key))
+		return errors.New(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), key))
 	}
 	datastore.FromJSON(json, entity)
 	if err := iter.Close(); err != nil {
@@ -126,7 +127,7 @@ func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 		valid := iter.Scan(&json)
 		if !valid {
 			break
-			//return zchainErrors.New("not_all_keys_found", "Did not find entities for all the keys")
+			//return errors.New("not_all_keys_found", "Did not find entities for all the keys")
 		}
 		datastore.FromJSON(json, entities[i])
 		keyIdx[entities[i].GetKey()] = entities[i]

@@ -7,6 +7,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -14,7 +15,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"github.com/0chain/gorocksdb"
 
@@ -138,7 +138,7 @@ func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, e
 		fromStore = true
 	}
 	if r.BlockHash == "" {
-		err = zchainErrors.Newf("", "round %d has empty block hash", roundNumber)
+		err = errors.Newf("", "round %d has empty block hash", roundNumber)
 		Logger.Error("get_block_hash",
 			zap.Int64("round", roundNumber),
 			zap.Bool("from_store", fromStore),
@@ -178,13 +178,13 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		bl.lfb.SetStateStatus(0)
 		Logger.Info("load_lfb -- can't initialize stored block state",
 			zap.Error(err))
-		// return zchainErrors.Newf("load_lfb",
+		// return errors.Newf("load_lfb",
 		//	"can't init block state: %v", err) // fatal
 	}
 
 	// setup lfmb first
 	if err = sc.UpdateMagicBlock(bl.lfmb.MagicBlock); err != nil {
-		return zchainErrors.Newf("load_lfb",
+		return errors.Newf("load_lfb",
 			"can't update magic block: %v", err) // fatal
 	}
 
@@ -217,7 +217,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
 		if err = sc.UpdateMagicBlock(bl.nlfmb.MagicBlock); err != nil {
-			return zchainErrors.Newf("load_lfb",
+			return errors.Newf("load_lfb",
 				"can't update newer magic block: %v", err) // fatal
 		}
 		sc.SetLatestFinalizedMagicBlock(bl.nlfmb) // the real latest
@@ -232,14 +232,14 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	// check out lfmb magic block hash
 
 	if lfb.LatestFinalizedMagicBlockHash == "" {
-		return nil, zchainErrors.New("load_lfb",
+		return nil, errors.New("load_lfb",
 			"empty LatestFinalizedMagicBlockHash field") // fatal or genesis
 	}
 
 	if lfb.LatestFinalizedMagicBlockHash == lfb.Hash {
 		if lfb.MagicBlock == nil {
 			// fatal
-			return nil, zchainErrors.New("load_lfb", "missing MagicBlock field")
+			return nil, errors.New("load_lfb", "missing MagicBlock field")
 		}
 		return lfb, nil // the same
 	}
@@ -256,14 +256,14 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 		lfb.LatestFinalizedMagicBlockRound)
 	if err != nil {
 		// fatality, can't find related LFMB
-		return nil, zchainErrors.Newf("load_lfb",
+		return nil, errors.Newf("load_lfb",
 			"related magic block not found: %v", err)
 	}
 
 	// with current implementation it's a case
 	if lfmb == nil {
 		// fatality, can't find related LFMB
-		return nil, zchainErrors.New("load_lfb",
+		return nil, errors.New("load_lfb",
 			"related magic block not found (no error)")
 	}
 
@@ -272,7 +272,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 
 	if lfmb.MagicBlock == nil {
 		// fatal
-		return nil, zchainErrors.New("load_lfb", "missing MagicBlock field")
+		return nil, errors.New("load_lfb", "missing MagicBlock field")
 	}
 
 	return
@@ -288,7 +288,7 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 
 	var hmbm *block.MagicBlockMap
 	if hmbm, err = sc.GetHighestMagicBlockMap(ctx); err != nil {
-		return nil, zchainErrors.Newf("load_lfb",
+		return nil, errors.Newf("load_lfb",
 			"getting highest MB map: %v", err) // critical
 	}
 
@@ -299,7 +299,7 @@ func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
 	var bl *block.Block
 	bl, err = sc.GetBlockFromStore(hmbm.Hash, hmbm.BlockRound)
 	if err != nil {
-		return nil, zchainErrors.Newf("load_lfb",
+		return nil, errors.Newf("load_lfb",
 			"getting block with highest MB: %v", err) // critical
 	}
 
@@ -315,7 +315,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 	for ; iter.Valid(); iter.Prev() {
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
-			return nil, zchainErrors.Newf("load_lfb",
+			return nil, errors.Newf("load_lfb",
 				"decoding round info: %v", err) // critical
 		}
 
@@ -343,7 +343,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 		return // got it
 	}
 
-	return nil, zchainErrors.New("load_lfb", "no valid lfb found")
+	return nil, errors.New("load_lfb", "no valid lfb found")
 }
 
 // iterate over rounds from latest to zero looking for LFB and ignoring

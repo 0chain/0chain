@@ -6,8 +6,7 @@ import (
 	"net/url"
 
 	"0chain.net/smartcontract"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -83,7 +82,7 @@ func (cp *challengePool) moveToWritePool(
 	}
 
 	if cp.Balance < value {
-		return zchainErrors.Newf("", "not enough tokens in challenge pool %s: %d < %d",
+		return errors.Newf("", "not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
 	}
 
@@ -124,14 +123,14 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 
 	for i, sp := range vsps {
 		if cp.Balance < oneReward {
-			return 0, zchainErrors.Newf("", "not enough tokens in challenge pool: %v < %v",
+			return 0, errors.Newf("", "not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
 		var oneMove state.Balance
 		oneMove, err = transferReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
 		sp.Rewards.Validator += oneMove
 		if err != nil {
-			return 0, zchainErrors.Newf("", "moving to validator %s: %v",
+			return 0, errors.Newf("", "moving to validator %s: %v",
 				validatos[i], err)
 		}
 		moved += oneMove
@@ -204,12 +203,12 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 	_, err = ssc.getChallengePoolBytes(allocationID, balances)
 
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return nil, errors.Wrap(err, "new_challenge_pool_failed")
 	}
 
 	if err == nil {
-		return nil, zchainErrors.New("new_challenge_pool_failed",
+		return nil, errors.New("new_challenge_pool_failed",
 			"already exist")
 	}
 
@@ -230,14 +229,14 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate, alloc.Until(),
 		balances)
 	if err != nil {
-		return zchainErrors.Newf("", "can't create challenge pool: %v", err)
+		return errors.Newf("", "can't create challenge pool: %v", err)
 	}
 
 	// don't lock anything here
 
 	// save the challenge pool
 	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
-		return zchainErrors.Newf("", "can't save challenge pool: %v", err)
+		return errors.Newf("", "can't save challenge pool: %v", err)
 	}
 
 	return
@@ -259,7 +258,7 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	)
 
 	if allocationID == "" {
-		err := zchainErrors.New("missing allocation_id URL query parameter")
+		err := errors.New("missing allocation_id URL query parameter")
 		return nil, common.NewErrBadRequest(err, "")
 	}
 

@@ -4,11 +4,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 const (
@@ -54,41 +55,41 @@ func getWalletKey(clientID string) datastore.Key {
 
 func (w Wallet) valid(forClientID string) (bool, error) {
 	if w.ClientID != forClientID {
-		return false, zchainErrors.New("client_id_doesnot_match", "Multisig Wallet client ID is different than the requesting client ID")
+		return false, errors.New("client_id_doesnot_match", "Multisig Wallet client ID is different than the requesting client ID")
 	}
 
 	if !isPublicKeyForClientID(w.PublicKey, w.ClientID) {
-		return false, zchainErrors.New("client_id_public_key_no_match", "the client id and the public key in the wallet do not match")
+		return false, errors.New("client_id_public_key_no_match", "the client id and the public key in the wallet do not match")
 	}
 
 	numIds := len(w.SignerThresholdIDs)
 	numKeys := len(w.SignerPublicKeys)
 
 	if numIds != numKeys {
-		return false, zchainErrors.New("signers_id_and_signer_public_key_no_match", "number of signer client ids and the the signer public keys do not match")
+		return false, errors.New("signers_id_and_signer_public_key_no_match", "number of signer client ids and the the signer public keys do not match")
 	}
 	if numIds > MaxSigners {
-		return false, zchainErrors.New("num_ids_too-many", "number of signer client ids is more than the maximum number of signers")
+		return false, errors.New("num_ids_too-many", "number of signer client ids is more than the maximum number of signers")
 	}
 
 	if w.NumRequired < MinSigners {
-		return false, zchainErrors.New("signers_required_too_less", "number of signers required is less than 2")
+		return false, errors.New("signers_required_too_less", "number of signers required is less than 2")
 	}
 	if w.NumRequired > numIds {
-		return false, zchainErrors.New("too_many_signers_required", "number of signers required is less than 2")
+		return false, errors.New("too_many_signers_required", "number of signers required is less than 2")
 	}
 
 	if hasDuplicates(w.SignerThresholdIDs) {
-		return false, zchainErrors.New("duplicate_signer_ids", "duplicate threshold ids present")
+		return false, errors.New("duplicate_signer_ids", "duplicate threshold ids present")
 	}
 	if hasDuplicates(w.SignerPublicKeys) {
-		return false, zchainErrors.New("duplicate_signers", "duplicate signers are present")
+		return false, errors.New("duplicate_signers", "duplicate signers are present")
 	}
 
 	if !encryption.IsValidSignatureScheme(w.SignatureScheme) ||
 		!encryption.IsValidThresholdSignatureScheme(w.SignatureScheme) ||
 		!encryption.IsValidReconstructSignatureScheme(w.SignatureScheme) {
-		return false, zchainErrors.New("signature_scheme_not_supported", "signature scheme of the wallet does not support multisig")
+		return false, errors.New("signature_scheme_not_supported", "signature scheme of the wallet does not support multisig")
 	}
 
 	for _, key := range w.SignerPublicKeys {
@@ -102,16 +103,16 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 	if len(w.ClientID) > MaxFieldSize ||
 		len(w.SignatureScheme) > MaxFieldSize ||
 		len(w.PublicKey) > MaxFieldSize {
-		return false, zchainErrors.New("too_many_signers", "Wallet has more than 256 ClientIDs or signature schemes or public keys")
+		return false, errors.New("too_many_signers", "Wallet has more than 256 ClientIDs or signature schemes or public keys")
 	}
 	for _, id := range w.SignerThresholdIDs {
 		if len(id) > MaxFieldSize {
-			return false, zchainErrors.New("too_many_threshold_ids", "wallet has more than 256 threshold id fields")
+			return false, errors.New("too_many_threshold_ids", "wallet has more than 256 threshold id fields")
 		}
 	}
 	for _, key := range w.SignerPublicKeys {
 		if len(key) > MaxFieldSize {
-			return false, zchainErrors.New("too_many_signer_keys", "wallet has more than 256 signer key fields")
+			return false, errors.New("too_many_signer_keys", "wallet has more than 256 signer key fields")
 		}
 	}
 
@@ -226,7 +227,7 @@ func (w Wallet) constructTransferSignature(p proposal) (string, error) {
 		publicKey := w.publicKeyForThresholdID(id)
 		if publicKey == "" {
 			// Logic error?
-			return "", zchainErrors.New("wallet_sc_signature_reconstruction", "couldn't find public key for id")
+			return "", errors.New("wallet_sc_signature_reconstruction", "couldn't find public key for id")
 		}
 
 		tss := encryption.GetThresholdSignatureScheme(w.SignatureScheme)

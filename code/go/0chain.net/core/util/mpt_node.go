@@ -8,7 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/core/encryption"
 )
@@ -25,7 +25,7 @@ const (
 const Separator = ':'
 
 //ErrInvalidEncoding - error to indicate invalid encoding
-var ErrInvalidEncoding = zchainErrors.New("invalid node encoding")
+var ErrInvalidEncoding = errors.New("invalid node encoding")
 
 //PathElements - all the bytes that can be used as path elements as ascii characters
 var PathElements = []byte("0123456789abcdef")

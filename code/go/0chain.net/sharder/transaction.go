@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
+
+	"github.com/0chain/errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
@@ -16,7 +17,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var txnSaveTimer metrics.Timer
@@ -167,7 +167,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 	// Get the query to get the select count transactions.
 	var count int
 	if err := c.Query(getSelectCountTxn(roundToHashMVTable, "round"), r).Scan(&count); err != nil {
-		return 0, common.NewError("txns_count_failed", fmt.Sprintf("round: %v, err: %v", r, err))
+		return 0, errors.Wrap(err, errors.Newf("txns_count_failed", "round: %v", r).Error())
 	}
 	return count, nil
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"go.uber.org/atomic"
 
@@ -28,10 +28,10 @@ const (
 // common errors
 var (
 	// ErrNodeNotFound() - error indicating that the node is not found.
-	ErrNodeNotFound = zchainErrors.New("node not found")
+	ErrNodeNotFound = errors.New("node not found")
 	// ErrValueNotPresent() - error indicating given path is not present in the
 	// db.
-	ErrValueNotPresent = zchainErrors.New("value not present")
+	ErrValueNotPresent = errors.New("value not present")
 )
 
 // global node db version
@@ -205,7 +205,7 @@ func (mndb *MemoryNodeDB) reachable(node, node2 Node) (ok bool) {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
 		fn, err := mndb.getNode(nodeImpl.NodeKey)
-		if err != nil && !zchainErrors.Is(err, ErrNodeNotFound) {
+		if err != nil && !errors.Is(err, ErrNodeNotFound) {
 			panic(err)
 		}
 		if fn == nil {
@@ -306,7 +306,7 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 			Logger.Error("mndb validate",
 				zap.String("node_type", fmt.Sprintf("%T", node)),
 				zap.String("node_key", node.GetHash()))
-			return zchainErrors.New("nodes_outside_tree", "not all nodes are from the root")
+			return errors.New("nodes_outside_tree", "not all nodes are from the root")
 		}
 		return nil
 	})

@@ -3,8 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -79,7 +78,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 ) (err error) {
 	// check terms
 	if err = blobber.Terms.validate(conf); err != nil {
-		return zchainErrors.Newf("", "invalid blobber terms: %v", err)
+		return errors.Newf("", "invalid blobber terms: %v", err)
 	}
 
 	if blobber.Capacity <= 0 {
@@ -88,13 +87,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// check params
 	if err = blobber.validate(conf); err != nil {
-		return zchainErrors.Newf("", "invalid blobber params: %v", err)
+		return errors.Newf("", "invalid blobber params: %v", err)
 	}
 
 	// get saved blobber
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
-		return zchainErrors.Newf("", "can't get or decode saved blobber: %v", err)
+		return errors.Newf("", "can't get or decode saved blobber: %v", err)
 	}
 
 	blobber.LastHealthCheck = t.CreationDate
@@ -113,11 +112,11 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update stake pool settings
 	var sp *stakePool
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
-		return zchainErrors.Newf("", "can't get stake pool:  %v", err)
+		return errors.Newf("", "can't get stake pool:  %v", err)
 	}
 
 	if err = blobber.StakePoolSettings.validate(conf); err != nil {
-		return zchainErrors.Newf("", "invalid new stake pool settings:  %v", err)
+		return errors.Newf("", "invalid new stake pool settings:  %v", err)
 	}
 
 	sp.Settings.MinStake = blobber.StakePoolSettings.MinStake
@@ -127,7 +126,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
-		return zchainErrors.Newf("", "saving stake pool: %v", err)
+		return errors.Newf("", "saving stake pool: %v", err)
 	}
 
 	return
@@ -140,7 +139,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	// get saved blobber
 	savedBlobber, err := sc.getBlobber(blobber.ID, balances)
 	if err != nil {
-		return zchainErrors.Newf("", "can't get or decode saved blobber: %v", err)
+		return errors.Newf("", "can't get or decode saved blobber: %v", err)
 	}
 
 	// set to zero explicitly, for "direct" calls
@@ -170,21 +169,21 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_or_update_blobber_failed",
+		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
 			"can't get config").Error())
 	}
 
 	// get registered blobbers
 	blobbers, err := sc.getBlobbersList(balances)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_or_update_blobber_failed",
+		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
 			"Failed to get blobber list").Error())
 	}
 
 	// set blobber
 	var blobber = new(StorageNode)
 	if err = blobber.Decode(input); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_or_update_blobber_failed",
+		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
 			"malformed request").Error())
 	}
 
@@ -200,14 +199,14 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// save all the blobbers
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, blobbers)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_or_update_blobber_failed",
+		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
 			"saving all blobbers").Error())
 	}
 
 	// save the blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("add_or_update_blobber_failed",
+		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
 			"saving blobber").Error())
 	}
 
@@ -221,41 +220,41 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"can't get config").Error())
 	}
 
 	var blobbers *StorageNodes
 	if blobbers, err = sc.getBlobbersList(balances); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"failed to get blobber list").Error())
 	}
 
 	var updatedBlobber = new(StorageNode)
 	if err = updatedBlobber.Decode(input); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"malformed request").Error())
 	}
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"can't get the blobber").Error())
 	}
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"can't get related stake pool").Error())
 	}
 
 	if sp.Settings.DelegateWallet == "" {
-		return "", zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.New("update_blobber_settings_failed",
 			"blobber's delegate_wallet is not set")
 	}
 
 	if t.ClientID != sp.Settings.DelegateWallet {
-		return "", zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.New("update_blobber_settings_failed",
 			"access denied, allowed for delegate_wallet owner only")
 	}
 
@@ -269,7 +268,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	// save all the blobbers
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, blobbers)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"saving all blobbers").Error())
 
 	}
@@ -277,7 +276,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	// save blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("update_blobber_settings_failed",
+		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
 			"saving blobber").Error())
 	}
 
@@ -295,14 +294,14 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 ) (string, error) {
 	all, err := sc.getBlobbersList(balances)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("blobber_health_check_failed",
+		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
 			"Failed to get blobber list").Error())
 
 	}
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("blobber_health_check_failed",
+		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID).Error())
 
 	}
@@ -313,20 +312,20 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	// if blobber has been removed, then it shouldn't send the health check
 	// transactions
 	if !ok {
-		return "", zchainErrors.New("blobber_health_check_failed", "blobber "+
+		return "", errors.New("blobber_health_check_failed", "blobber "+
 			t.ClientID+" not found in all blobbers list")
 	}
 	var found = all.Nodes[i]
 	found.LastHealthCheck = t.CreationDate
 	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("blobber_health_check_failed",
+		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
 			"can't save all blobbers list").Error())
 	}
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("blobber_health_check_failed",
+		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
 			"can't save blobber").Error())
 	}
 
@@ -338,12 +337,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	var commitRead = &ReadConnection{}
 	if err = commitRead.Decode(input); err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"decoding input: %v", err)
 	}
 
 	if commitRead.ReadMarker == nil {
-		return "", zchainErrors.New("commit_blobber_read",
+		return "", errors.New("commit_blobber_read",
 			"malformed request: missing read_marker")
 	}
 
@@ -356,8 +355,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	lastBlobberClientReadBytes, err = balances.GetTrieNode(
 		commitRead.GetKey(sc.ID))
 
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
-		return "", zchainErrors.Newf("commit_blobber_read",
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		return "", errors.Newf("commit_blobber_read",
 			"can't get latest blobber client read: %v", err)
 	}
 
@@ -370,7 +369,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't verify read marker: %v", err)
 	}
 
@@ -378,15 +377,15 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't get related allocation: %v", err)
 	}
 
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
-		return "", zchainErrors.New("commit_blobber_read",
+		return "", errors.New("commit_blobber_read",
 			"early reading, allocation not started yet")
 	} else if commitRead.ReadMarker.Timestamp > alloc.Until() {
-		return "", zchainErrors.New("commit_blobber_read",
+		return "", errors.New("commit_blobber_read",
 			"late reading, allocation expired")
 	}
 
@@ -399,7 +398,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	if details == nil {
-		return "", zchainErrors.New("commit_blobber_read",
+		return "", errors.New("commit_blobber_read",
 			"blobber doesn't belong to allocation")
 	}
 
@@ -422,21 +421,21 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	// move tokens from read pool to blobber
 	var rp *readPool
 	if rp, err = sc.getReadPool(userID, balances); err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't get related read pool: %v", err)
 	}
 
 	var sp *stakePool
 	sp, err = sc.getStakePool(commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't get related stake pool: %v", err)
 	}
 
 	resp, err = rp.moveToBlobber(sc.ID, commitRead.ReadMarker.AllocationID,
 		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value, balances)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't transfer tokens from read pool to stake pool: %v", err)
 	}
 	details.ReadReward += value // stat
@@ -445,19 +444,19 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	// save pools
 	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't save stake pool: %v", err)
 	}
 
 	if err = rp.save(sc.ID, userID, balances); err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't save read pool: %v", err)
 	}
 
 	// save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_blobber_read",
+		return "", errors.Newf("commit_blobber_read",
 			"can't save allocation: %v", err)
 	}
 
@@ -493,7 +492,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
-		return zchainErrors.New("can't get related challenge pool")
+		return errors.New("can't get related challenge pool")
 	}
 
 	var (
@@ -505,7 +504,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	// is part of the allocation object)
 	wps, err := alloc.getAllocationPools(sc, balances)
 	if err != nil {
-		return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+		return errors.Wrap(err, "can't move tokens to challenge pool")
 	}
 
 	if size > 0 {
@@ -514,7 +513,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 		err = wps.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
 		if err != nil {
-			return zchainErrors.Newf("", "can't move tokens to challenge pool: %v", err)
+			return errors.Newf("", "can't move tokens to challenge pool: %v", err)
 		}
 
 		alloc.MovedToChallenge += move
@@ -524,11 +523,11 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		move = details.delete(-size, wmTime, alloc.restDurationInTimeUnits(wmTime))
 		wp, err := wps.getOwnerWP()
 		if err != nil {
-			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+			return errors.Wrap(err, "can't move tokens to challenge pool")
 		}
 		err = cp.moveToWritePool(alloc, details.BlobberID, until, wp, move)
 		if err != nil {
-			return zchainErrors.Newf("", "can't move tokens to write pool: %v", err)
+			return errors.Wrap(err, "can't move tokens to write pool")
 		}
 		alloc.MovedBack += move
 		details.Returned += move
@@ -539,7 +538,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	}
 
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
-		return zchainErrors.Newf("", "can't save challenge pool: %v", err)
+		return errors.Newf("", "can't save challenge pool: %v", err)
 	}
 
 	return
@@ -552,48 +551,48 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("commit_connection_failed",
+		return "", errors.Wrap(err, errors.New("commit_connection_failed",
 			"malformed input").Error())
 
 	}
 
 	if commitConnection.WriteMarker == nil {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"invalid input: missing write_marker")
 	}
 
 	if !commitConnection.Verify() {
-		return "", zchainErrors.New("commit_connection_failed", "Invalid input")
+		return "", errors.New("commit_connection_failed", "Invalid input")
 	}
 
 	if commitConnection.WriteMarker.BlobberID != t.ClientID {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
 	alloc, err := sc.getAllocation(commitConnection.WriteMarker.AllocationID,
 		balances)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("commit_connection_failed",
+		return "", errors.Wrap(err, errors.New("commit_connection_failed",
 			"can't get allocation").Error())
 
 	}
 
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
-		return "", zchainErrors.New("commit_connection_failed", "write marker has"+
+		return "", errors.New("commit_connection_failed", "write marker has"+
 			" to be by the same client as owner of the allocation")
 	}
 
 	details, ok := alloc.BlobberMap[t.ClientID]
 	if !ok {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"Blobber is not part of the allocation")
 	}
 
 	detailsBytes, err := json.Marshal(details)
 
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey) {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"Invalid signature for write marker")
 	}
 
@@ -606,14 +605,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if details.AllocationRoot != commitConnection.PrevAllocationRoot {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"Previous allocation root does not match the latest allocation root")
 	}
 
 	if details.Stats.UsedSize+commitConnection.WriteMarker.Size >
 		details.Size {
 
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"Size for blobber allocation exceeded maximum")
 	}
 
@@ -627,27 +626,27 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"write marker time is before allocation created")
 	}
 
 	if commitConnection.WriteMarker.Timestamp > alloc.Expiration {
 
-		return "", zchainErrors.New("commit_connection_failed",
+		return "", errors.New("commit_connection_failed",
 			"write marker time is after allocation expires")
 	}
 
 	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
 		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_connection_failed",
+		return "", errors.Newf("commit_connection_failed",
 			"moving tokens: %v", err)
 	}
 
 	// save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", zchainErrors.Newf("commit_connection_failed",
+		return "", errors.Newf("commit_connection_failed",
 			"saving allocation object: %v", err)
 	}
 

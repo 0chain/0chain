@@ -3,10 +3,10 @@ package datastore
 import (
 	"context"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
-var ErrInvalidEntity = zchainErrors.New("invalid_entity", "Invalid entity")
+var ErrInvalidEntity = errors.New("invalid_entity", "Invalid entity")
 
 var (
 	/*EntityNotFound code should be used to check whether an entity is found or not */

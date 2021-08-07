@@ -4,10 +4,11 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type StoreCustom struct {
@@ -36,7 +37,7 @@ func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
 	name := entity.GetEntityMetadata().GetName()
 
 	if (name == "block" || name == "block_summary") && len(entity.GetKey()) != 64 {
-		return zchainErrors.New("key must be 64 size")
+		return errors.New("key must be 64 size")
 	}
 
 	if name == "magic_block_map" || name == "round" {
@@ -45,7 +46,7 @@ func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
 			return err
 		}
 		if n < 0 {
-			return zchainErrors.New("key can not be negative")
+			return errors.New("key can not be negative")
 		}
 	}
 

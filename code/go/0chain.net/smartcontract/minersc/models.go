@@ -11,8 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -551,7 +550,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.ID = params.Get("id")
 
 	if mn.N2NHost == "" || mn.ID == "" {
-		return zchainErrors.New("BaseURL or ID is not specified")
+		return errors.New("BaseURL or ID is not specified")
 	}
 	return nil
 
@@ -659,7 +658,7 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	case "sharder":
 		(*nt) = NodeTypeSharder
 	default:
-		err = zchainErrors.Newf("", "unknown node type: %q", nts)
+		err = errors.Newf("", "unknown node type: %q", nts)
 	}
 	return
 }
@@ -924,7 +923,7 @@ func HasPool(pools map[string]*sci.DelegatePool, poolID datastore.Key) bool {
 
 func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
 	if HasPool(pools, pool.ID) {
-		return zchainErrors.New("can't add pool", "miner node already has pool")
+		return errors.New("can't add pool", "miner node already has pool")
 	}
 	pools[pool.ID] = pool
 	return nil
@@ -932,7 +931,7 @@ func AddPool(pools map[string]*sci.DelegatePool, pool *sci.DelegatePool) error {
 
 func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error {
 	if HasPool(pools, poolID) {
-		return zchainErrors.New("can't delete pool", "pool doesn't exist")
+		return errors.New("can't delete pool", "pool doesn't exist")
 	}
 	delete(pools, poolID)
 	return nil
@@ -1026,11 +1025,11 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 	var n = len(dkgmn.SimpleNodes)
 
 	if n < dkgmn.MinN {
-		return zchainErrors.Newf("", "to few miners: %d, want at least: %d", n, dkgmn.MinN)
+		return errors.Newf("", "to few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
 
 	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
-		return zchainErrors.Newf("", "missing miner from previous set, n: %d, list: %s",
+		return errors.Newf("", "missing miner from previous set, n: %d, list: %s",
 			n, simpleNodesKeys(dkgmn.SimpleNodes))
 	}
 
@@ -1088,7 +1087,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 
@@ -1110,7 +1109,7 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
 	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 
@@ -1192,7 +1191,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, ShardersKeepKey)
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return &MinerNodes{}, nil
@@ -1210,7 +1209,7 @@ func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) er
 func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, AllShardersKey)
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return &MinerNodes{}, nil
@@ -1245,17 +1244,17 @@ func quickFixDuplicateHosts(nn *MinerNode, allNodes []*MinerNode) error {
 	n2nhost := strings.TrimSpace(nn.N2NHost)
 	port := nn.Port
 	if n2nhost == "" || localhost.MatchString(n2nhost) {
-		return zchainErrors.Newf("", "invalid n2nhost: '%v'", n2nhost)
+		return errors.Newf("", "invalid n2nhost: '%v'", n2nhost)
 	}
 	if host == "" || localhost.MatchString(host) {
 		host = n2nhost
 	}
 	for _, n := range allNodes {
 		if n.ID != nn.ID && n2nhost == n.N2NHost && n.Port == port {
-			return zchainErrors.Newf("", "n2nhost:port already exists: '%v:%v'", n2nhost, port)
+			return errors.Newf("", "n2nhost:port already exists: '%v:%v'", n2nhost, port)
 		}
 		if n.ID != nn.ID && host == n.Host && n.Port == port {
-			return zchainErrors.Newf("", "host:port already exists: '%v:%v'", host, port)
+			return errors.Newf("", "host:port already exists: '%v:%v'", host, port)
 		}
 	}
 	nn.Host, nn.N2NHost, nn.Port = host, n2nhost, port

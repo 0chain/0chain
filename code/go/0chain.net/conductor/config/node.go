@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 // A Node used in tests.
@@ -50,17 +50,17 @@ func (n *Node) Start(logsDir string) (err error) {
 
 	logsDir = filepath.Join(logsDir, string(n.Name))
 	if err = os.MkdirAll(logsDir, 0755); err != nil {
-		return zchainErrors.Newf("", "creating logs directory %s: %v", logsDir, err)
+		return errors.Newf("", "creating logs directory %s: %v", logsDir, err)
 	}
 
 	cmd.Stdout, err = os.Create(filepath.Join(logsDir, "stdout.log"))
 	if err != nil {
-		return zchainErrors.Newf("", "creating STDOUT file: %v", err)
+		return errors.Newf("", "creating STDOUT file: %v", err)
 	}
 
 	cmd.Stderr, err = os.Create(filepath.Join(logsDir, "stderr.log"))
 	if err != nil {
-		return zchainErrors.Newf("", "creating STDERR file: %v", err)
+		return errors.Newf("", "creating STDERR file: %v", err)
 	}
 
 	n.Command = cmd
@@ -70,14 +70,14 @@ func (n *Node) Start(logsDir string) (err error) {
 // Interrupt sends SIGINT to the command if its running.
 func (n *Node) Interrupt() (err error) {
 	if n.Command == nil {
-		return zchainErrors.Newf("", "command %v not started", n.Name)
+		return errors.Newf("", "command %v not started", n.Name)
 	}
 	var proc = n.Command.Process
 	if proc == nil {
-		return zchainErrors.Newf("", "missing command %v process", n.Name)
+		return errors.Newf("", "missing command %v process", n.Name)
 	}
 	if err = proc.Signal(os.Interrupt); err != nil {
-		return zchainErrors.Newf("", "command %v: sending SIGINT: %v", n.Name, err)
+		return errors.Newf("", "command %v: sending SIGINT: %v", n.Name, err)
 	}
 	return
 }
@@ -108,10 +108,10 @@ func killAfterTimeout(cmd *exec.Cmd, tm time.Duration, done chan struct{}) {
 // files (logs).
 func (n *Node) Stop() (err error) {
 	if n.Command == nil {
-		return zchainErrors.Newf("", "command %v not started", n.Name)
+		return errors.Newf("", "command %v not started", n.Name)
 	}
 	if err = n.Kill(); err != nil {
-		return zchainErrors.Newf("", "command %v: kill: %v", n.Name, err)
+		return errors.Newf("", "command %v: kill: %v", n.Name, err)
 	}
 	if stdin, ok := n.Command.Stdin.(*os.File); ok {
 		stdin.Close() // ignore error
@@ -135,10 +135,10 @@ func (n *Node) Stop() (err error) {
 	}
 
 	if err = cmd.Start(); err != nil {
-		return zchainErrors.Newf("", "stop command %v: run: %v", n.Name, err)
+		return errors.Newf("", "stop command %v: run: %v", n.Name, err)
 	}
 	if err = cmd.Wait(); err != nil {
-		return zchainErrors.Newf("", "stop command %v: wait: %v", n.Name, err)
+		return errors.Newf("", "stop command %v: wait: %v", n.Name, err)
 	}
 	return // nil or error
 }

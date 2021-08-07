@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
@@ -24,15 +24,15 @@ type config struct {
 func (c *config) validate() (err error) {
 	switch {
 	case c.MinLock <= 0:
-		return zchainErrors.New("invalid min_lock (<= 0)")
+		return errors.New("invalid min_lock (<= 0)")
 	case toSeconds(c.MinDuration) < 1:
-		return zchainErrors.New("invalid min_duration (< 1s)")
+		return errors.New("invalid min_duration (< 1s)")
 	case toSeconds(c.MaxDuration) <= toSeconds(c.MinDuration):
-		return zchainErrors.New("invalid max_duration: less or equal to min_duration")
+		return errors.New("invalid max_duration: less or equal to min_duration")
 	case c.MaxDestinations < 1:
-		return zchainErrors.New("invalid max_destinations (< 1)")
+		return errors.New("invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
-		return zchainErrors.New("invalid max_description_length (< 1)")
+		return errors.New("invalid max_description_length (< 1)")
 	}
 	return
 }

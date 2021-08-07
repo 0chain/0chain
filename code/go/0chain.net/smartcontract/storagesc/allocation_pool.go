@@ -1,16 +1,18 @@
 package storagesc
 
 import (
+	"encoding/json"
+
+	"github.com/0chain/errors"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"encoding/json"
-	"errors"
+
 	"fmt"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"sort"
 	"time"
 )
@@ -38,7 +40,7 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 		return
 	}
 	if lr.AllocationID == "" {
-		return zchainErrors.New("missing allocation_id in request")
+		return errors.New("missing allocation_id in request")
 	}
 	return // ok
 }

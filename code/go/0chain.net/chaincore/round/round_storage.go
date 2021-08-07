@@ -3,11 +3,11 @@ package round
 import (
 	"sync"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 var (
-	ErrRoundEntityNotFound = zchainErrors.New("round entity not found")
+	ErrRoundEntityNotFound = errors.New("round entity not found")
 )
 
 type RoundStorageEntity = interface{}

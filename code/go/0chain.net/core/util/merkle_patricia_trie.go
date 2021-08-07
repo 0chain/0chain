@@ -10,8 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -99,7 +98,7 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, errors.Wrap(err, zchainErrors.Newf("", "invalid hex path: path=%q, err=", string(path)).Error())
+		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=", string(path)).Error())
 	}
 
 	mpt.mutex.RLock()
@@ -771,7 +770,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 			npath := append(path, pe)
 			if err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes); err != nil {
-				if zchainErrors.Is(err, ErrNodeNotFound) || zchainErrors.Is(err, ErrIteratingChildNodes) {
+				if errors.Is(err, ErrNodeNotFound) || errors.Is(err, ErrIteratingChildNodes) {
 					ecount++
 				} else {
 					Logger.Error("iterate - child node", zap.Error(err))
@@ -918,7 +917,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		ps.BelowVersion = count
 		ps.MissingNodes = missingNodes
 	}
-	if err == nil || zchainErrors.Is(err, ErrNodeNotFound) || zchainErrors.Is(err, ErrIteratingChildNodes) {
+	if err == nil || errors.Is(err, ErrNodeNotFound) || errors.Is(err, ErrIteratingChildNodes) {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
 				Logger.Error("update version - multi put - last batch", zap.Error(err))
@@ -983,7 +982,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return zchainErrors.Newf("", FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
+			return errors.Newf("", FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
 		}
 	}
 	return nil
@@ -1006,13 +1005,13 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	newLNDB, ok := newDB.(*LevelNodeDB)
 	if !ok {
 		Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
-		return zchainErrors.New("invalid mpt db")
+		return errors.New("invalid mpt db")
 	}
 
 	preDB := newLNDB.GetPrev()
 	if preDB != mpt.GetNodeDB() {
 		Logger.Error("MergeMPTChanges does not merge direct child mpt")
-		return zchainErrors.New("mpt does not merge changes from its child")
+		return errors.New("mpt does not merge changes from its child")
 	}
 
 	changes := mpt2.GetChangeCollector().GetChanges()

@@ -9,9 +9,8 @@ import (
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/common"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/config"
@@ -125,7 +124,7 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if !sc.hasRelatedMagicBlock(b) {
-		return zchainErrors.Newf("", "can't pull related magic block for %d", b.Round)
+		return errors.Newf("", "can't pull related magic block for %d", b.Round)
 	}
 
 	return
@@ -401,7 +400,7 @@ func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Value
 		roundSummaries, ok := entity.(*RoundSummaries)
 		if !ok {
 			Logger.Error("received invalid round summaries")
-			return nil, common.NewError("request_for_round_summaries", "invalid round summaries")
+			return nil, errors.New("request_for_round_summaries", "invalid round summaries")
 		}
 		select {
 		case rsC <- roundSummaries:
@@ -427,7 +426,7 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 		r, ok := entity.(*round.Round)
 		if !ok {
 			Logger.Error("received invalid round entity")
-			return nil, common.NewError("request_for_round", "received invalid round entity")
+			return nil, errors.New("request_for_round", "received invalid round entity")
 		}
 
 		if sc.isValidRound(r) {
@@ -438,7 +437,7 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 			cancel()
 			return r, nil
 		}
-		return nil, common.NewError("request_for_round", "invalid response round")
+		return nil, errors.New("request_for_round", "invalid response round")
 	}
 
 	sc.RequestEntityFromShardersOnMB(cctx, sc.GetCurrentMagicBlock(), RoundRequestor, params, handler)
@@ -459,7 +458,7 @@ func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Value
 		bs, ok := entity.(*BlockSummaries)
 		if !ok {
 			Logger.Error("received invalid block summaries", zap.String("round", params.Get("round")), zap.String("range", params.Get("range")))
-			return nil, common.NewError("request_for_block_summaries", "invalid block summaries")
+			return nil, errors.New("request_for_block_summaries", "invalid block summaries")
 		}
 		select {
 		case bsC <- bs:
@@ -485,7 +484,7 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 		bs, ok := entity.(*block.BlockSummary)
 		if !ok {
 			Logger.Error("received invalid block summary entity", zap.String("hash", params.Get("hash")))
-			return nil, common.NewError("request_for_block_summary", "invalid block summary entity")
+			return nil, errors.New("request_for_block_summary", "invalid block summary entity")
 		}
 
 		select {

@@ -6,11 +6,11 @@ import (
 	"context"
 	"net/http"
 
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
-"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	crpc "0chain.net/conductor/conductrpc"
 )

@@ -23,13 +23,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/metric"
+	"github.com/0chain/errors"
 	"go.uber.org/zap"
 
 	"0chain.net/core/build"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 
 	"0chain.net/core/logging"
 
@@ -833,15 +833,15 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
 		seri, err = c.GetBlockStateNode(lfb, ks.key)
-		if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
-			return nil, zchainErrors.Newf("", "can't get %s node: %v", ks.name, err)
+		if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+			return nil, errors.Newf("", "can't get %s node: %v", ks.name, err)
 		}
-		if zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if errors.Is(err, util.ErrValueNotPresent) {
 			err = nil // reset the error and leave the value blank
 			continue
 		}
 		if err = ks.inst.Decode(seri.Encode()); err != nil {
-			return nil, zchainErrors.Newf("", "can't decode %s node: %v", ks.name, err)
+			return nil, errors.Newf("", "can't decode %s node: %v", ks.name, err)
 		}
 	}
 
@@ -1206,12 +1206,12 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
-		return nil, zchainErrors.Newf("", "invalid request %T", entity)
+		return nil, errors.Newf("", "invalid request %T", entity)
 	}
 	if GetServerChain().TxnMaxPayload > 0 {
 		if len(txn.TransactionData) > GetServerChain().TxnMaxPayload {
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
-			return nil, zchainErrors.New("txn_exceed_max_payload", s)
+			return nil, errors.New("txn_exceed_max_payload", s)
 		}
 	}
 

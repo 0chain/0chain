@@ -7,8 +7,7 @@ import (
 	"net/url"
 
 	"0chain.net/smartcontract"
-	zchainErrors "github.com/0chain/gosdk/errors"
-	"github.com/pkg/errors"
+	"github.com/0chain/errors"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -77,11 +76,11 @@ func (rp *readPool) moveBlobberCharge(sscKey string, sp *stakePool,
 	)
 	transfer, _, err = ap.DrainPool(sscKey, dw, value, nil)
 	if err != nil {
-		return zchainErrors.Newf("", "transferring tokens read_pool() -> "+
+		return errors.Newf("", "transferring tokens read_pool() -> "+
 			"blobber_charge(%s): %v", dw, err)
 	}
 	if err = balances.AddTransfer(transfer); err != nil {
-		return zchainErrors.Newf("", "adding transfer: %v", err)
+		return errors.Newf("", "adding transfer: %v", err)
 	}
 
 	// blobber service charge
@@ -121,11 +120,11 @@ func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 		)
 		transfer, _, err = ap.DrainPool(sscKey, dp.DelegateID, move, nil)
 		if err != nil {
-			return zchainErrors.Newf("", "transferring tokens read_pool() -> "+
+			return errors.Newf("", "transferring tokens read_pool() -> "+
 				"stake_pool_holder(%s): %v", dp.DelegateID, err)
 		}
 		if err = balances.AddTransfer(transfer); err != nil {
-			return zchainErrors.Newf("", "adding transfer: %v", err)
+			return errors.Newf("", "adding transfer: %v", err)
 		}
 		// stat
 		dp.Rewards += move         // add to stake_pool_holder rewards
@@ -157,7 +156,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	var cut = rp.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
-		return "", zchainErrors.Newf("", "no tokens in read pool for allocation: %s,"+
+		return "", errors.Newf("", "no tokens in read pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
 
@@ -204,7 +203,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	}
 
 	if value != 0 {
-		return "", zchainErrors.Newf("", "not enough tokens in read pool for "+
+		return "", errors.Newf("", "not enough tokens in read pool for "+
 			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
@@ -223,7 +222,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
 			if ap.ExpireAt >= now {
-				return nil, zchainErrors.New("the pool is not expired yet")
+				return nil, errors.New("the pool is not expired yet")
 			}
 			took = ap
 			continue // delete
@@ -233,7 +232,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	wp.Pools = wp.Pools[:i]
 
 	if took == nil {
-		return nil, zchainErrors.New("pool not found")
+		return nil, errors.New("pool not found")
 	}
 	return
 }
@@ -280,12 +279,12 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return "", errors.Wrap(err, "new_read_pool_failed")
 	}
 
 	if err == nil {
-		return "", zchainErrors.New("new_read_pool_failed", "already exist")
+		return "", errors.New("new_read_pool_failed", "already exist")
 	}
 
 	var rp = new(readPool)
@@ -300,22 +299,22 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	err error) {
 
 	if t.Value < 0 {
-		return zchainErrors.New("negative transaction value")
+		return errors.New("negative transaction value")
 	}
 
 	var balance state.Balance
 	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && !zchainErrors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return
 	}
 
-	if zchainErrors.Is(err, util.ErrValueNotPresent) {
-		return zchainErrors.New("no tokens to lock")
+	if errors.Is(err, util.ErrValueNotPresent) {
+		return errors.New("no tokens to lock")
 	}
 
 	if state.Balance(t.Value) > balance {
-		return zchainErrors.New("lock amount is greater than balance")
+		return errors.New("lock amount is greater than balance")
 	}
 
 	return
@@ -329,7 +328,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var conf *readPoolConfig
 	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("read_pool_lock_failed",
+		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
 			"can't get configs").Error())
 	}
 
@@ -349,30 +348,30 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return "", errors.Wrap(err, "read_pool_lock_failed")
 		}
 		rp = new(readPool)
 	}
 
 	if lr.AllocationID == "" {
-		return "", zchainErrors.New("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			"missing allocation ID in request")
 	}
 
 	if t.Value < conf.MinLock {
-		return "", zchainErrors.New("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			"insufficient amount to lock")
 	}
 
 	if lr.Duration < conf.MinLockPeriod {
-		return "", zchainErrors.New("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
 				lr.Duration.String(), conf.MinLockPeriod.String()))
 	}
 
 	if lr.Duration > conf.MaxLockPeriod {
-		return "", zchainErrors.New("read_pool_lock_failed",
+		return "", errors.New("read_pool_lock_failed",
 			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
 				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
@@ -386,7 +385,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
 	if err != nil {
-		return "", errors.Wrap(err, zchainErrors.New("read_pool_lock_failed",
+		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
 			"can't get allocation").Error())
 	}
 
@@ -395,7 +394,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	// lock for allocation -> blobber (particular blobber locking)
 	if lr.BlobberID != "" {
 		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
-			return "", zchainErrors.New("read_pool_lock_failed",
+			return "", errors.New("read_pool_lock_failed",
 				fmt.Sprintf("no such blobber %s in allocation %s",
 					lr.BlobberID, lr.AllocationID))
 		}
@@ -471,7 +470,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", errors.Wrap(err, "read_pool_unlock_failed")
 	}
 	if !isFunded {
-		return "", zchainErrors.Newf("read_pool_unlock_failed",
+		return "", errors.Newf("read_pool_unlock_failed",
 			"%s did not fund pool %s", t.ClientID, req.PoolID)
 	}
 

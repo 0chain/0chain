@@ -11,7 +11,8 @@ import (
 	"sync"
 	"testing"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
+
 	"github.com/stretchr/testify/assert"
 
 	"0chain.net/chaincore/block"
@@ -115,7 +116,7 @@ func TestTransaction_ComputeHashAndSign(t *testing.T) {
 			fields: fields(*txn),
 			args: args{
 				handler: func(h string) (string, error) {
-					return "", zchainErrors.New("")
+					return "", errors.New("")
 				},
 			},
 			wantErr: true,
@@ -730,7 +731,7 @@ type mokeErrEntity struct {
 }
 
 func (ee *mokeErrEntity) Decode([]byte) error {
-	return zchainErrors.New("")
+	return errors.New("")
 }
 
 type mokeEntity struct {

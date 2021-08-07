@@ -6,8 +6,9 @@ import (
 	"io"
 	"sync"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -183,7 +184,7 @@ func (cc *ChangeCollector) Validate() error {
 	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
-			return zchainErrors.New("key present in both add and delete")
+			return errors.New("key present in both add and delete")
 		}
 	}
 	return nil

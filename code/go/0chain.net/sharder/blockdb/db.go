@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"0chain.net/core/common"
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 )
 
 var compDe common.CompDe
@@ -108,7 +108,7 @@ func (bdb *BlockDB) read(dataFile io.Reader, record Record) error {
 		return err
 	}
 	if int32(n) != dlen {
-		return zchainErrors.Newf("", "read data length doesnot match expected data length dlen=%v n=%v", dlen, n)
+		return errors.Newf("", "read data length doesnot match expected data length dlen=%v n=%v", dlen, n)
 	}
 	if bdb.compress {
 		data, err = compDe.Decompress(data)
@@ -167,7 +167,7 @@ func (bdb *BlockDB) WriteData(record Record) error {
 		return err
 	}
 	if int32(n) != dlen {
-		return zchainErrors.New("written data length doesn't match computed length")
+		return errors.New("written data length doesn't match computed length")
 	}
 	return err
 }

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
@@ -185,7 +185,7 @@ func TestDoAsyncEntityJSONHandler(t *testing.T) {
 
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		if entity.GetEntityMetadata().GetName() == "block" && len(entity.GetKey()) != 64 {
-			return nil, zchainErrors.New("hash must be 64 size")
+			return nil, errors.New("hash must be 64 size")
 		}
 
 		return nil, nil

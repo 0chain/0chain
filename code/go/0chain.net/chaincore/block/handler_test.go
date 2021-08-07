@@ -3,6 +3,8 @@ package block
 import (
 	"context"
 
+	"github.com/0chain/errors"
+
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -11,7 +13,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/mocks"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 func init() {
@@ -67,7 +68,7 @@ func TestPutBlock(t *testing.T) {
 	)
 	store.On("Write", context.TODO(), b).Return(
 		func(_ context.Context, _ datastore.Entity) error {
-			return zchainErrors.New("")
+			return errors.New("")
 		},
 	)
 

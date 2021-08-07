@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrHashMismatch = zchainErrors.New("Root hash mistatch")
+var ErrHashMismatch = errors.New("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {

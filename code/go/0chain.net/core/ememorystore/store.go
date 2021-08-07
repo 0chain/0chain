@@ -5,10 +5,11 @@ import (
 	"encoding/binary"
 	"strconv"
 
+	"github.com/0chain/errors"
+
 	"github.com/0chain/gorocksdb"
 
 	"0chain.net/core/datastore"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var storageAPI = &Store{}
@@ -80,7 +81,7 @@ func (ems *Store) InsertIfNE(ctx context.Context, entity datastore.Entity) error
 	c := GetEntityCon(ctx, emd)
 	_, err := c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(entity.GetKey())))
 	if err == nil {
-		return zchainErrors.New("entity_already_exists", "Entity already exists")
+		return errors.New("entity_already_exists", "Entity already exists")
 	}
 	ems.Write(ctx, entity)
 	return nil

@@ -1,7 +1,7 @@
 package config
 
 import (
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -19,11 +19,11 @@ type Bad struct {
 // by mapstructure package.
 func (b *Bad) Unmarshal(name string, val interface{}) (err error) {
 	if err = mapstructure.Decode(val, b); err != nil {
-		return zchainErrors.Newf("", "invalid '%s' argument type: %T, "+
+		return errors.Newf("", "invalid '%s' argument type: %T, "+
 			"decoding error: %v", name, val, err)
 	}
 	if len(b.By) == 0 {
-		return zchainErrors.Newf("", "empty 'by' field of '%s'", name)
+		return errors.Newf("", "empty 'by' field of '%s'", name)
 	}
 	return
 }

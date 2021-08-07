@@ -1,6 +1,8 @@
 package state
 
 import (
+	"github.com/0chain/errors"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -8,7 +10,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 var (
@@ -199,7 +200,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s.Balance = state.Balance(0)
 	ss, err := sc.state.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if !zchainErrors.Is(err, util.ErrValueNotPresent) {
+		if !errors.Is(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return s, err

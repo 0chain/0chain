@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	zchainErrors "github.com/0chain/gosdk/errors"
+	"github.com/0chain/errors"
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/mock"
@@ -93,7 +93,7 @@ func TestStore_Read(t *testing.T) {
 			im.On("Close").Return(
 				func() error {
 					if tt.wantIterErr {
-						return zchainErrors.New("")
+						return errors.New("")
 					}
 					return nil
 				},
@@ -323,7 +323,7 @@ func TestStore_MultiRead(t *testing.T) {
 			im.On("Close").Return(
 				func() error {
 					if tt.iterErr {
-						return zchainErrors.New("")
+						return errors.New("")
 					}
 					return nil
 				},
@@ -431,7 +431,7 @@ func TestStore_MultiWrite(t *testing.T) {
 			sm.On("ExecuteBatch", mock.AnythingOfType("*mocks.BatchI")).Return(
 				func(_ persistencestore.BatchI) error {
 					if tt.simpleBatchErr {
-						return zchainErrors.New("")
+						return errors.New("")
 					}
 					return nil
 				},

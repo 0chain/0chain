@@ -3,10 +3,11 @@ package interestpoolsc
 import (
 	"encoding/json"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	zchainErrors "github.com/0chain/gosdk/errors"
 )
 
 type UserNode struct {
@@ -93,7 +94,7 @@ func (un *UserNode) getPool(poolID datastore.Key) *interestPool {
 
 func (un *UserNode) addPool(ip *interestPool) error {
 	if un.hasPool(ip.ID) {
-		return zchainErrors.New("can't add pool", "user node already has pool")
+		return errors.New("can't add pool", "user node already has pool")
 	}
 	un.Pools[ip.ID] = ip
 	return nil
@@ -101,7 +102,7 @@ func (un *UserNode) addPool(ip *interestPool) error {
 
 func (un *UserNode) deletePool(poolID datastore.Key) error {
 	if !un.hasPool(poolID) {
-		return zchainErrors.New("can't delete pool", "pool doesn't exist")
+		return errors.New("can't delete pool", "pool doesn't exist")
 	}
 	delete(un.Pools, poolID)
 	return nil

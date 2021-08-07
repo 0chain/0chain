@@ -8,10 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0chain/errors"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	zchainErrors "github.com/0chain/gosdk/errors"
 	"go.uber.org/zap"
 )
 
@@ -66,7 +67,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		}
 		offset += count
 		if !ok {
-			return zchainErrors.New("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
+			return errors.New("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
 		for i := 0; i < count; i++ {
 			bucket[i] = entityMetadata.Instance()
