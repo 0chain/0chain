@@ -236,10 +236,11 @@ func (sp *stakePool) updateBlobberStakes(
 		return fmt.Errorf("error getting blobber stakes: %v", err)
 	}
 
-	blobberStakes.Totals[blobberId] = total
+	blobberStakes.add(blobberId, int64(total), BsStakeTotals)
 	if err := blobberStakes.save(balances); err != nil {
 		return fmt.Errorf("error saving blobber stakes: %v", err)
 	}
+
 	return nil
 }
 

@@ -9,15 +9,27 @@ import (
 	"fmt"
 )
 
+type blobberTotalsField int
+
+const (
+	BsStakeTotals blobberTotalsField = iota
+	BsCapacities
+	BsUsed
+)
+
 // blobber id x delegate id
 type blobberStakeTotals struct {
-	Totals     map[string]state.Balance `json:"totals"`
-	Capacities map[string]int64         `json:"capacities"`
-	Used       map[string]int64         `json:"used"`
+	StakeTotals map[string]state.Balance `json:"stake_totals"`
+	Capacities  map[string]int64         `json:"capacities"`
+	Used        map[string]int64         `json:"used"`
 }
 
 func newBlobberStakeTotals() *blobberStakeTotals {
-	return &blobberStakeTotals{Totals: make(map[string]state.Balance)}
+	return &blobberStakeTotals{
+		StakeTotals: make(map[string]state.Balance),
+		Capacities:  make(map[string]int64),
+		Used:        make(map[string]int64),
+	}
 }
 
 func (bs *blobberStakeTotals) Encode() []byte {
@@ -30,6 +42,29 @@ func (bs *blobberStakeTotals) Encode() []byte {
 
 func (bs *blobberStakeTotals) Decode(p []byte) error {
 	return json.Unmarshal(p, bs)
+}
+
+func (bs blobberStakeTotals) add(id string, value int64, field blobberTotalsField) {
+	if _, ok := bs.StakeTotals[id]; !ok {
+		bs.StakeTotals[id] = 0
+		bs.Used[id] = 0
+		bs.Capacities[id] = 0
+	}
+
+	switch field {
+	case BsStakeTotals:
+		bs.StakeTotals[id] = state.Balance(value)
+	case BsCapacities:
+		bs.Capacities[id] = value
+	case BsUsed:
+		bs.Used[id] = value
+	}
+}
+
+func (bs *blobberStakeTotals) remove(blobberId string) {
+	delete(bs.StakeTotals, blobberId)
+	delete(bs.Capacities, blobberId)
+	delete(bs.Used, blobberId)
 }
 
 func (bs *blobberStakeTotals) save(balances cstate.StateContextI) error {

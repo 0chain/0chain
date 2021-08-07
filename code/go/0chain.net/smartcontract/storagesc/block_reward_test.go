@@ -4,10 +4,11 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/util"
+	"fmt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"math"
 	"strconv"
 	"testing"
 )
@@ -17,6 +18,8 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 	const mockMaxMint = 1500000.0 * 5
 	type parameters struct {
 		blobberStakes        []float64
+		blobberCapacities    []int64
+		blobberUsage         []int64
 		blockReward          float64
 		qualifyingStake      float64
 		blobberCapacityRatio float64
@@ -25,22 +28,19 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		sharderRatio         float64
 	}
 
-	type blockRewards struct {
-		total                 state.Balance
-		serviceChargeUsage    state.Balance
-		serviceChargeCapacity state.Balance
-		delegateUsage         []state.Balance
-		delegateCapacity      []state.Balance
-	}
-
-	var blobberRewards = func(p parameters) (map[string]float64, float64) {
-		var totalQStake float64
+	var blobberRewards = func(t *testing.T, p parameters) (map[string]float64, float64) {
+		var totalCapacity int64
+		var totalUsage int64
 		var rewards = make(map[string]float64)
-		var blobberStakes []float64
-		for _, stake := range p.blobberStakes {
-			blobberStakes = append(blobberStakes, stake)
+		require.EqualValues(t, len(p.blobberStakes), len(p.blobberCapacities))
+		require.EqualValues(t, len(p.blobberCapacities), len(p.blobberUsage))
+		var qualifier = false
+
+		for i, stake := range p.blobberStakes {
 			if stake >= p.qualifyingStake {
-				totalQStake += stake
+				qualifier = true
+				totalCapacity += p.blobberCapacities[i]
+				totalUsage += p.blobberUsage[i]
 			}
 		}
 
@@ -49,18 +49,21 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		var usageRewardTotal = p.blockReward * p.blobberUsageRatio /
 			(p.blobberCapacityRatio + p.blobberUsageRatio + p.minerRatio + p.sharderRatio)
 
-		for i, bStake := range blobberStakes {
-			var capacityReward float64
-			var usageReward float64
-			if bStake >= p.qualifyingStake {
-				capacityReward = capacityRewardTotal * bStake / totalQStake
-				usageReward = usageRewardTotal * bStake / totalQStake
+		for i, stake := range p.blobberStakes {
+			if stake >= p.qualifyingStake {
+				var capacityReward float64
+				var usageReward float64
+				capacityReward = capacityRewardTotal * float64(p.blobberCapacities[i]) / float64(totalCapacity)
+				usageReward = usageRewardTotal * float64(p.blobberUsage[i]) / float64(totalUsage)
 				rewards[strconv.Itoa(i)] = (capacityReward + usageReward) * 1e10
 			}
 		}
 
-		require.EqualValues(t, len(p.blobberStakes), len(rewards))
-		totalReward := (capacityRewardTotal + usageRewardTotal) * 1e10
+		var totalReward = 0.0
+		if qualifier {
+			totalReward = (capacityRewardTotal + usageRewardTotal) * 1e10
+		}
+
 		return rewards, totalReward
 	}
 
@@ -88,23 +91,32 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			"GetTrieNode", BLOCK_REWARD_MINTS,
 		).Return(nil, util.ErrValueNotPresent).Once()
 
-		rewards, mintTotal := blobberRewards(p)
+		rewards, mintTotal := blobberRewards(t, p)
 		balances.On(
 			"InsertTrieNode",
 			BLOCK_REWARD_MINTS,
 			mock.MatchedBy(func(brm *blockRewardMints) bool {
 				for id, amount := range brm.UnProcessedMints {
-					if amount != rewards[id] {
+					if int64(amount) != int64(rewards[id]) {
 						return false
 					}
 				}
-				return brm.MintedRewards == mintTotal && brm.MaxMintRewards == mockMaxRewardsTotal*1e10
+				a := brm.MintedRewards == mintTotal
+				b := brm.MaxMintRewards == mockMaxRewardsTotal*1e10
+				c := len(rewards) == len(brm.UnProcessedMints)
+				fmt.Println(a, b, c)
+				return brm.MintedRewards == mintTotal &&
+					brm.MaxMintRewards == mockMaxRewardsTotal*1e10 &&
+					len(rewards) == len(brm.UnProcessedMints)
+
 			}),
 		).Return("", nil).Once()
 
 		var blobberStakes = newBlobberStakeTotals()
 		for id, stake := range p.blobberStakes {
-			blobberStakes.Totals[strconv.Itoa(id)] = zcnToBalance(stake)
+			blobberStakes.add(strconv.Itoa(id), zcnToInt64(stake), BsStakeTotals)
+			blobberStakes.add(strconv.Itoa(id), p.blobberCapacities[id], BsCapacities)
+			blobberStakes.add(strconv.Itoa(id), p.blobberUsage[id], BsUsed)
 		}
 		balances.On(
 			"GetTrieNode", ALL_BLOBBER_STAKES_KEY,
@@ -114,7 +126,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			"InsertTrieNode",
 			scConfigKey(ssc.ID),
 			mock.MatchedBy(func(c *scConfig) bool {
-				return c.Minted == conf.Minted+state.Balance(mintTotal)
+				return approxEqual(float64(c.Minted), float64(conf.Minted)+mintTotal)
 			}),
 		).Return("", nil)
 		return ssc, balances
@@ -133,6 +145,8 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			name: "1 blobbers",
 			parameters: parameters{
 				blobberStakes:        []float64{11},
+				blobberCapacities:    []int64{20},
+				blobberUsage:         []int64{5},
 				blockReward:          100,
 				qualifyingStake:      10.0,
 				blobberCapacityRatio: 5,
@@ -140,55 +154,63 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 				minerRatio:           2,
 				sharderRatio:         3,
 			},
-		}, /*
-			{
-				name: "3 blobbers",
-				parameters: parameters{
-					blobberStakes:        []float64{10, 20, 4},
-					blockReward:          100,
-					qualifyingStake:      10.0,
-					blobberCapacityRatio: 5,
-					blobberUsageRatio:    10,
-					minerRatio:           2,
-					sharderRatio:         3,
-				},
+		},
+		{
+			name: "3 blobbers",
+			parameters: parameters{
+				blobberStakes:        []float64{10, 20, 4},
+				blobberCapacities:    []int64{20, 10, 5},
+				blobberUsage:         []int64{5, 10, 0},
+				blockReward:          100,
+				qualifyingStake:      10.0,
+				blobberCapacityRatio: 5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
-			{
-				name: "no blobbers",
-				parameters: parameters{
-					blobberStakes:        []float64{},
-					blockReward:          100,
-					qualifyingStake:      10.0,
-					blobberCapacityRatio: 5,
-					blobberUsageRatio:    10,
-					minerRatio:           2,
-					sharderRatio:         3,
-				},
+		},
+		{
+			name: "no blobbers",
+			parameters: parameters{
+				blobberStakes:        []float64{},
+				blobberCapacities:    []int64{},
+				blobberUsage:         []int64{},
+				blockReward:          100,
+				qualifyingStake:      10.0,
+				blobberCapacityRatio: 5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
-			{
-				name: "3 blobbers no qualifiers",
-				parameters: parameters{
-					blobberStakes:        []float64{9, 2, 4},
-					blockReward:          100,
-					qualifyingStake:      1000.0,
-					blobberCapacityRatio: 5,
-					blobberUsageRatio:    10,
-					minerRatio:           2,
-					sharderRatio:         3,
-				},
+		},
+		{
+			name: "3 blobbers no qualifiers",
+			parameters: parameters{
+				blobberStakes:        []float64{9, 2, 4},
+				blobberCapacities:    []int64{20, 10, 5},
+				blobberUsage:         []int64{5, 10, 0},
+				blockReward:          100,
+				qualifyingStake:      1000.0,
+				blobberCapacityRatio: 5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
 			},
-			{
-				name: "zero block reward",
-				parameters: parameters{
-					blobberStakes:        []float64{10},
-					blockReward:          0,
-					qualifyingStake:      10.0,
-					blobberCapacityRatio: 5,
-					blobberUsageRatio:    10,
-					minerRatio:           2,
-					sharderRatio:         3,
-				},
-			},*/
+		},
+		{
+			name: "zero block reward",
+			parameters: parameters{
+				blobberStakes:        []float64{10},
+				blobberCapacities:    []int64{200},
+				blobberUsage:         []int64{5},
+				blockReward:          0,
+				qualifyingStake:      10.0,
+				blobberCapacityRatio: 5,
+				blobberUsageRatio:    10,
+				minerRatio:           2,
+				sharderRatio:         3,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -208,4 +230,11 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, balances))
 		})
 	}
+}
+
+// remove type casting errors
+func approxEqual(a, b float64) bool {
+	roundA := math.Round(a / 10)
+	roundB := math.Round(b / 10)
+	return roundA == roundB
 }

@@ -109,6 +109,16 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		sc.statIncr(statNumberOfBlobbers) // reborn, if it was "removed"
 	}
 
+	blobberStakes, err := getBlobberStakeTotals(balances)
+	if err != nil {
+		return fmt.Errorf("error getting blobber stakes: %v", err)
+	}
+	blobberStakes.add(blobber.ID, blobber.Capacity, BsCapacities)
+	blobberStakes.add(blobber.ID, blobber.Used, BsUsed)
+	if err := blobberStakes.save(balances); err != nil {
+		return fmt.Errorf("error saving blobber stakes: %v", err)
+	}
+
 	// update stake pool settings
 	var sp *stakePool
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
@@ -144,6 +154,15 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 	// set to zero explicitly, for "direct" calls
 	blobber.Capacity = 0
+
+	blobberStakes, err := getBlobberStakeTotals(balances)
+	if err != nil {
+		return fmt.Errorf("error getting blobber stakes: %v", err)
+	}
+	blobberStakes.remove(blobber.ID)
+	if err := blobberStakes.save(balances); err != nil {
+		return fmt.Errorf("error saving blobber stakes: %v", err)
+	}
 
 	// remove from the all list, since the blobber can't accept new allocations
 	if savedBlobber.Capacity > 0 {
@@ -260,6 +279,15 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 
 	blobber.Terms = updatedBlobber.Terms
 	blobber.Capacity = updatedBlobber.Capacity
+
+	blobberStakes, err := getBlobberStakeTotals(balances)
+	if err != nil {
+		return "", fmt.Errorf("error getting blobber stakes: %v", err)
+	}
+	blobberStakes.add(blobber.ID, blobber.Capacity, BsCapacities)
+	if err := blobberStakes.save(balances); err != nil {
+		return "", fmt.Errorf("error saving blobber stakes: %v", err)
+	}
 
 	if err = sc.updateBlobber(t, conf, blobber, blobbers, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed", err.Error())
