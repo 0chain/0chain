@@ -29,6 +29,7 @@ type freeAllocationSettings struct {
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
 	WritePriceRange            PriceRange    `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ReadPoolFraction           float64       `json:"read_pool_fraction"`
 }
 
 type stakePoolConfig struct {
@@ -249,6 +250,10 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
 			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
+	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
+		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
+			sc.FreeAllocationSettings.ReadPoolFraction)
+	}
 
 	if sc.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
@@ -417,6 +422,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
+	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(

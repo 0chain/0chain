@@ -249,18 +249,43 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marshal request: %v", err)
 	}
 
+	assigner.CurrentRedeemed += state.Balance(txn.Value)
+	readPoolTokens := int64(float64(txn.Value) * conf.FreeAllocationSettings.ReadPoolFraction)
+	txn.Value -= readPoolTokens
+
 	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
 	if err != nil {
-		return "", common.NewErrorf("free_allocation_failed", ": %v", err)
+		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}
 
-	assigner.CurrentRedeemed += state.Balance(txn.Value)
+	var sa StorageAllocation
+	if err := sa.Decode([]byte(resp)); err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "unmarshalling allocation: %v", err)
+	}
+
 	assigner.RedeemedTimestamps = append(assigner.RedeemedTimestamps, marker.Timestamp)
 	if err := assigner.save(ssc.ID, balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "assigner save failed: %v", err)
 	}
 
-	return resp, err
+	var lr = lockRequest{
+		Duration:     conf.FreeAllocationSettings.Duration,
+		AllocationID: sa.ID,
+		TargetId:     marker.Recipient,
+		MintTokens:   true,
+	}
+	input, err = json.Marshal(lr)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "marshal read lock request: %v", err)
+	}
+
+	txn.Value = readPoolTokens
+	_, err = ssc.readPoolLock(txn, input, balances)
+	if err != nil {
+		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
+	}
+
+	return string(resp), err
 }
 
 func (ssc *StorageSmartContract) updateFreeStorageRequest(
