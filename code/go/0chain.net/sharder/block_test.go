@@ -2,9 +2,7 @@ package sharder_test
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -37,63 +35,52 @@ func init() {
 }
 
 const (
-	roundDataDir    = "round"
-	blockDataDir    = "block"
-	roundSummaryDir = "roundSummary"
-	blockSummaryDir = "blockSummary"
+	roundDataDir    = "tmp/round"
+	blockDataDir    = "tmp/block"
+	roundSummaryDir = "tmp/roundSummary"
+	blockSummaryDir = "tmp/blockSummary"
 )
 
 func initDBs(t *testing.T) (closeAndClear func()) {
 	cd, err := os.Getwd()
 	require.NoError(t, err)
 
-	tmpDir := filepath.Join(cd, "tmp")
-	err = os.RemoveAll(tmpDir)
-	err = os.MkdirAll(tmpDir, 0700)
+	err = os.RemoveAll(cd + "/tmp")
+	require.NoError(t, err)
+	err = os.MkdirAll(blockDataDir, 0700)
 	require.NoError(t, err)
 
-	dbDir, err := ioutil.TempDir(tmpDir, "dbs")
+	err = os.MkdirAll(roundDataDir, 0700)
 	require.NoError(t, err)
 
-	blockDir := filepath.Join(dbDir, blockDataDir)
-	require.NoError(t, err)
-	err = os.MkdirAll(blockDir, 0700)
+	err = os.MkdirAll(roundSummaryDir, 0700)
 	require.NoError(t, err)
 
-	roundDir := filepath.Join(dbDir, roundDataDir)
-	err = os.MkdirAll(roundDir, 0700)
+	err = os.MkdirAll(blockSummaryDir, 0700)
 	require.NoError(t, err)
 
-	rsDir := filepath.Join(dbDir, roundSummaryDir)
-	err = os.MkdirAll(rsDir, 0700)
-	require.NoError(t, err)
-
-	bsDir := filepath.Join(dbDir, blockSummaryDir)
-	err = os.MkdirAll(bsDir, 0700)
-	require.NoError(t, err)
-
-	rDB, err := ememorystore.CreateDB(roundDir)
+	rDB, err := ememorystore.CreateDB(roundDataDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(round.Provider().GetEntityMetadata().GetDB(), rDB)
 
-	bDB, err := ememorystore.CreateDB(blockDir)
+	bDB, err := ememorystore.CreateDB(blockDataDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(block.Provider().GetEntityMetadata().GetDB(), bDB)
 
-	rsDB, err := ememorystore.CreateDB(rsDir)
+	rsDB, err := ememorystore.CreateDB(roundSummaryDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool("roundsummarydb", rsDB)
 
-	bsDB, err := ememorystore.CreateDB(bsDir)
+	bsDB, err := ememorystore.CreateDB(blockSummaryDir)
 	require.NoError(t, err)
 
 	ememorystore.AddPool(block.BlockSummaryProvider().GetEntityMetadata().GetDB(), bsDB)
 
 	closeAndClear = func() {
-		err = os.RemoveAll(tmpDir)
+		err = os.RemoveAll(cd + "/tmp")
 		require.NoError(t, err)
 
 		rDB.Close()

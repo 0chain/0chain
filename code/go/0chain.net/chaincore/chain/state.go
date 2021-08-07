@@ -229,8 +229,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash),
-				zap.String("to clientID", mint.ToClientID))
+				zap.Any("transaction", txn.Hash))
 			// Temporary disable returning on mint error: TODO: revert back @bbist
 			// return
 		}
@@ -376,7 +375,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return errors.Wrap(err, "mint_amount - get state")
+		return err
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
@@ -399,7 +398,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return errors.Wrap(err, "mint_amount - insert")
+		return err
 	}
 	return nil
 }

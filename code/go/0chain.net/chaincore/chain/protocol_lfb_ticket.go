@@ -21,7 +21,7 @@ import (
 )
 
 // compile-time resolution
-var _ datastore.Entity = (*LFBTicket)(nil)
+var _ datastore.Entity = ((*LFBTicket)(nil))
 
 // LFBTicketSender represents.
 var LFBTicketSender node.EntitySendHandler
@@ -143,7 +143,7 @@ func (*LFBTicket) Write(context.Context) error               { return nil }
 func (*LFBTicket) Delete(context.Context) error              { return nil }
 
 // sendLFBTicket to all appropriate nodes (by corresponding MB)
-func (c *Chain) sendLFBTicket(ctx context.Context, ticket *LFBTicket) {
+func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
 	logging.Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
 		zap.String("hash", ticket.LFBHash))
 
@@ -155,12 +155,12 @@ func (c *Chain) sendLFBTicket(ctx context.Context, ticket *LFBTicket) {
 		return
 	}
 
-	mb.Miners.SendAll(ctx, LFBTicketSender(ticket))
-	mb.Sharders.SendAll(ctx, LFBTicketSender(ticket))
+	mb.Miners.SendAll(LFBTicketSender(ticket))
+	mb.Sharders.SendAll(LFBTicketSender(ticket))
 }
 
-func (c *Chain) asyncSendLFBTicket(ctx context.Context, ticket *LFBTicket) {
-	go c.sendLFBTicket(ctx, ticket)
+func (c *Chain) asyncSendLFBTicket(ticket *LFBTicket) {
+	go c.sendLFBTicket(ticket)
 }
 
 // BroadcastLFBTicket sends LFB ticket to all other nodes from
@@ -327,7 +327,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			ticket = c.newLFBTicket(b)
 
 			// send newer tickets
-			c.asyncSendLFBTicket(ctx, ticket)
+			c.asyncSendLFBTicket(ticket)
 
 			// send for all subscribers, if any
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
@@ -337,7 +337,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
 			// send newer tickets
-			c.asyncSendLFBTicket(ctx, latest)
+			c.asyncSendLFBTicket(latest)
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:

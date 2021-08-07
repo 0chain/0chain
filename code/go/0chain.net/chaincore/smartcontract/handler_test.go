@@ -207,7 +207,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "storage",
 			address:    storagesc.ADDRESS,
-			restpoints: 16,
+			restpoints: 17,
 		},
 		{
 			name:       "zrc20",
