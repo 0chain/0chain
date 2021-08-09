@@ -4,9 +4,11 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 )
 
 type blobberTotalsField int
@@ -45,6 +47,12 @@ func (bs *blobberStakeTotals) Decode(p []byte) error {
 }
 
 func (bs blobberStakeTotals) add(id string, value int64, field blobberTotalsField) {
+	logging.Logger.Info("blobberStakeTotals add",
+		zap.Any("id", id),
+		zap.Any("value", value),
+		zap.Any("field", field),
+	)
+
 	if _, ok := bs.StakeTotals[id]; !ok {
 		bs.StakeTotals[id] = 0
 		bs.Used[id] = 0
@@ -62,6 +70,10 @@ func (bs blobberStakeTotals) add(id string, value int64, field blobberTotalsFiel
 }
 
 func (bs *blobberStakeTotals) remove(blobberId string) {
+	logging.Logger.Info("blobberStakeTotals remove",
+		zap.Any("blobberId", blobberId),
+	)
+
 	delete(bs.StakeTotals, blobberId)
 	delete(bs.Capacities, blobberId)
 	delete(bs.Used, blobberId)

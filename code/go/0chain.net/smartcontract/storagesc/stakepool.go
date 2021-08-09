@@ -307,18 +307,18 @@ func (sp *stakePool) dig(t *transaction.Transaction,
 	resp string, dp *delegatePool, err error) {
 
 	if err = checkFill(t, balances); err != nil {
-		return
+		return resp, dp, fmt.Errorf("piers checkFill %v", err)
 	}
 
 	dp = new(delegatePool)
 
 	var transfer *state.Transfer
 	if transfer, resp, err = dp.DigPool(t.Hash, t); err != nil {
-		return
+		return resp, dp, fmt.Errorf("piers DigPool %v", err)
 	}
 
 	if err = balances.AddTransfer(transfer); err != nil {
-		return
+		return resp, dp, fmt.Errorf("piers AddTransfer %v", err)
 	}
 
 	dp.DelegateID = t.ClientID
@@ -876,7 +876,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 
 	var poolb []byte
 	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
-		return
+		return nil, fmt.Errorf("getting stake pool bytes: %v", err)
 	}
 	sp = newStakePool()
 	err = sp.Decode(poolb)
@@ -887,7 +887,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	if err := sp.updateRewardMints(ssc, blobberID, balances); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update rewrad mints: %v", err)
 	}
 	sp.totalStakes = sp.stake()
 	return

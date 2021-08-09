@@ -51,6 +51,11 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		zap.Any("totalQCapacity", totalQCapacity),
 		zap.Any("totalQUsage", totalQUsage),
 	)
+	logging.Logger.Info("blobber_block_rewards weights",
+		zap.Any("BlockReward", conf.BlockReward.BlockReward),
+		zap.Any("BlobberCapacityWeight", conf.BlockReward.BlobberCapacityWeight),
+		zap.Any("BlobberUsageWeight", conf.BlockReward.BlobberUsageWeight),
+	)
 	mints, err := getBlockRewardMints(ssc, balances)
 	if err != nil {
 		return fmt.Errorf("Error getting mint info: %v", err)
@@ -72,7 +77,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * capRatio
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * useRatio
-		logging.Logger.Info("blobber_block_rewards",
+		logging.Logger.Info("blobber_block_rewards for loop qualifying blobbers",
 			zap.Any("blobber id", id),
 			zap.Any("capacityReward", capacityReward),
 			zap.Any("usageReward", usageReward),

@@ -1,15 +1,15 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"encoding/json"
+	"errors"
+	"fmt"
 )
 
 const blobberHealthTime = 60 * 60 // 1 Hour
@@ -185,6 +185,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
+	logging.Logger.Info("addBlobber start")
 	// get smart contract configuration
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
@@ -228,7 +229,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", common.NewError("add_or_update_blobber_failed",
 			"saving blobber: "+err.Error())
 	}
-
+	logging.Logger.Info("addBlobber finish")
 	return string(blobber.Encode()), nil
 }
 
