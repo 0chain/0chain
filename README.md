@@ -17,6 +17,7 @@
 - [Miscellaneous](#miscellaneous) 
   - [Cleanup](#cleanup)
   - [Minio Setup](#minio)
+- [Integration tests](#integration-tests)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
 
@@ -27,7 +28,7 @@
 In the git/0chain run the following command
 
 ```
-$ ./docker.local/bin/init.setup.sh
+./docker.local/bin/init.setup.sh
 ```
 
 ### Setup Network
@@ -37,7 +38,7 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
 ```
-$ ./docker.local/bin/setup_network.sh
+./docker.local/bin/setup_network.sh
 ```
 
 ## Building the Nodes
@@ -46,22 +47,28 @@ $ ./docker.local/bin/setup_network.sh
 
 1.1) First build the base containers, zchain_build_base and zchain_run_base
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
-$ ./docker.local/bin/build.base.sh
+./docker.local/bin/build.base.sh
 ```
 
 2. Building the miners and sharders. From the git/0chain directory use
 
 2.1) To build the miner containers
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
-$ ./docker.local/bin/build.miners.sh
+./docker.local/bin/build.miners.sh
 ```
 
 2.2) To build the sharder containers
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
-$ ./docker.local/bin/build.sharders.sh
+./docker.local/bin/build.sharders.sh
 ```
 
 for building the 1 sharder.
@@ -69,7 +76,7 @@ for building the 1 sharder.
 2.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
 ```
-$ ./docker.local/bin/sync_clock.sh
+./docker.local/bin/sync_clock.sh
 ```
 
 ## Configuring the nodes
@@ -93,7 +100,7 @@ $ ./docker.local/bin/sync_clock.sh
 Start sharder first because miners need the genesis magic block. On the sharder terminal, use
 
 ```
-$ ../bin/start.b0sharder.sh
+../bin/start.b0sharder.sh
 ```
 
 Wait till the cassandra is started and the sharder is ready to listen to requests.
@@ -101,7 +108,7 @@ Wait till the cassandra is started and the sharder is ready to listen to request
 On the respective miner terminal, use
 
 ```
-$ ../bin/start.b0miner.sh
+../bin/start.b0miner.sh
 ```
 
 ## Re-starting the nodes
@@ -142,25 +149,25 @@ The following is no longer required as the schema is automatically loaded.
 Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh
+../bin/run.sharder.sh cassandra cqlsh
 ```
 
 1. To create zerochain keyspace, do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
+../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
 ```
 
 2. To create the tables, do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
+../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
 ```
 
 3. When you want to truncate existing data (use caution), do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
+../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
 ```
 
 ## Generating Test Transactions
@@ -180,7 +187,7 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 1. Ensure the port mapping is all correct:
 
 ```
-$ docker ps
+docker ps
 ```
 
 This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
@@ -208,19 +215,19 @@ Similarly, following links can be used to see the status of the sharders
 Default redis (used for clients and state):
 
 ```
-$ ../bin/run.miner.sh redis redis-cli
+../bin/run.miner.sh redis redis-cli
 ```
 
 Redis used for transactions:
 
 ```
-$ ../bin/run.miner.sh redis_txns redis-cli
+../bin/run.miner.sh redis_txns redis-cli
 ```
 
 4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh
+../bin/run.sharder.sh cassandra cqlsh
 ```
 
 ## Dependencies for local compilation
@@ -256,13 +263,13 @@ The logs of the nodes are stored in log directory (/0chain/log on the container 
 Find arrors in all the miner nodes (from git/0chain)
 
 ```
-$ grep ERROR docker.local/miner*/log/0chain.log
+grep ERROR docker.local/miner*/log/0chain.log
 ```
 
 This gives a set of errors in the log. Say an error indicates a problem for a specific block, say abc, then
 
 ```
-$ grep abc docker.local/miner*/log/0chain.log
+grep abc docker.local/miner*/log/0chain.log
 ```
 
 gives all the logs related to block 'abc'
@@ -270,42 +277,176 @@ gives all the logs related to block 'abc'
 To get the start time of all the rounds
 
 ```
-$ grep 'starting round' docker.local/miner*/log/0chain.log
+grep 'starting round' docker.local/miner*/log/0chain.log
 ```
 
 This gives the start timestamps that can be used to correlate the events and their timings.
 
 ## Unit tests
 
-Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
+ 0chain unit tests verify the behaviour of individual parts of the program. A config for the base docker image can be provided on run to execute general unit tests.
+
+
+![unit testing uml](https://user-images.githubusercontent.com/65766301/120052862-0b4ffd00-c045-11eb-83c8-977dfdb3038e.png)
+
+### Getting started
+
+### Prerequisites
+
+Docker and Git must be installed to run the tests .
+
+Install Git using the following command:
 
 ```
-$ cd code/go/0chain.net/my-pkg
-$ go test
+sudo apt install git
 ```
 
-Otherwise, we have a Docker image which takes care of installing the build dependencies for you in an environment identical to our other Docker builds.
+Docker installation instructions can be found [here](https://docs.docker.com/engine/install/).
 
-First build the base image.
+### Cloning the repository and Building Base Image
 
-```
-$ ./docker.local/bin/build.base.sh
-```
-
-Then run the tests.
+Clone the 0chain repository:
 
 ```
-$ ./docker.local/bin/unit_test.sh [<packages>]
+git clone https://github.com/0chain/0chain.git
 ```
 
-The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.
+Navigate to 0chain folder and run the script to build base docker image for unit testing :
+
+```
+cd 0chain
+./docker.local/bin/build.base.sh
+```
+
+The base image includes all the dependencies required to test the 0chain code.
+
+### Running Tests
+
+Now run the script containing unit tests .
+
+```
+./docker.local/bin/unit_test.sh 
+```
+
+The list of packages is optional, and if provided runs only the tests from those packages. Command for running unit tests with specific packages .
+
+```
+./docker.local/bin/unit_test.sh [<packages>]
+```
+
+###  Testing Steps
+
+Unit testing happens over a series of steps one after the other.
+
+#### Step 1: FROM zchain_build_base
+
+This `FROM`step does the required preparation and specifies the underlying OS architecture to use the build image. Here we are using the base image created in the build phase.
+
+#### Step 2: ENV SRC_DIR=/0chain
+
+ The SRC_DIR  variable is a reference to a filepath which contains the code from your pull request. Here `/0chain` directory is specified as it is the one which was cloned. 
+
+#### Step 3: Setting the `GO111Module` variable to `ON` 
+
+`GO111MODULE` is an environment variable that can be set when using `go` for changing how Go imports packages. It was introduced to help ensure a smooth transition to the module system. 
+
+`GO111MODULE=on` will force using Go modules even if the project is in your GOPATH. Requires `go.mod` to work.
+
+ Note: The default behavior in Go 1.16 is now **GO111MODULE**=on 
+
+#### Step 4: COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
+This step copies the code from the source path to the destination path.
+
+#### Step 5: RUN cd $SRC_DIR/go/0chain.net &&  go mod download
+
+The RUN command is an image build step which allows installing of application and packages requited for testing while the`go mod download` downloads the specific module versions you've specified in the `go.mod`file.
+
+#### Step 6: RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd@v1.5. &&     chmod -R +w . &&  make clean libzstd.a
+
+This step runs the gozstd package and provides write permissions to the directory. gozstd which is a go wrapper for zstd (library) provides Go bindings for the libzstd C library. The `make clean` is ran in the last to clean up the code and remove all the compiled object files from the source code
+
+#### Step 7: WORKDIR $SRC_DIR/go
+
+This step defines the working directory for running unit tests which is (0chain/code/go/0chain.net/).For all the running general unit tests their code coverage will be defined in the terminal like this
+
+```
+ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
+```
+
+The above output shows 98.9% of code statements was covered with tests.
+
+Here is a sample output for all the unit test cases:
+
+```
+?       0chain.net/chaincore    [no test files]
+ok      0chain.net/chaincore/block      0.128s  coverage: 98.9% of statements
+?       0chain.net/chaincore/block/magicBlock   [no test files]
+ok      0chain.net/chaincore/chain      0.254s  coverage: 6.0% of statements
+?       0chain.net/chaincore/chain/state        [no test files]
+ok      0chain.net/chaincore/client     0.328s  coverage: 30.8% of statements
+?       0chain.net/chaincore/config     [no test files]
+?       0chain.net/chaincore/diagnostics        [no test files]
+ok      0chain.net/chaincore/httpclientutil     2.048s  coverage: 91.7% of statements
+ok      0chain.net/chaincore/node       0.011s  coverage: 8.9% of statements
+ok      0chain.net/chaincore/round      0.048s  coverage: 97.1% of statements
+ok      0chain.net/chaincore/smartcontract      0.032s  coverage: 9.1% of statements                                                                             
+ok      0chain.net/chaincore/smartcontractinterface     0.032s  coverage: 97.3%                                                                               
+?       0chain.net/chaincore/state      [no test files]
+ok      0chain.net/chaincore/threshold/bls      9.912s  coverage: 1.1% of statem                                                                             
+ok      0chain.net/chaincore/tokenpool  10.034s coverage: 100.0% of statements
+ok      0chain.net/chaincore/transaction        0.029s  coverage: 0.4% of statements [no tests to run]
+ok      0chain.net/chaincore/wallet     6.600s  coverage: 40.0% of statements
+?       0chain.net/conductor    [no test files]
+?       0chain.net/conductor/conductor  [no test files]
+?       0chain.net/conductor/conductrpc [no test files]
+?       0chain.net/conductor/config     [no test files]
+?       0chain.net/conductor/sdkproxy   [no test files]
+?       0chain.net/conductor/utils      [no test files]
+?       0chain.net/core [no test files]
+?       0chain.net/core/build   [no test files]
+ok      0chain.net/core/cache   0.004s  coverage: 100.0% of statements
+ok      0chain.net/core/common  0.238s  coverage: 87.4% of statements
+ok      0chain.net/core/datastore       0.033s  coverage: 92.0% of statements
+ok      0chain.net/core/ememorystore    1.018s  coverage: 91.7% of statements
+ok      0chain.net/core/encryption      1.290s  coverage: 95.3% of statements
+?       0chain.net/core/encryption/keys [no test files]
+ok      0chain.net/core/logging 0.069s  coverage: 96.5% of statements
+ok      0chain.net/core/memorystore     0.281s  coverage: 93.8% of statements
+?       0chain.net/core/metric  [no test files]
+ok      0chain.net/core/persistencestore        0.036s  coverage: 73.5% of statements
+ok      0chain.net/core/util    22.237s coverage: 76.5% of statements
+ok      0chain.net/miner        0.303s  coverage: 8.0% of statements
+?       0chain.net/miner/miner  [no test files]
+?       0chain.net/miner/mocks  [no test files]
+?       0chain.net/mocks        [no test files]
+?       0chain.net/mocks/core/datastore [no test files]
+?       0chain.net/mocks/core/encryption        [no test files]
+ok      0chain.net/sharder      0.168s  coverage: 20.8% of statements
+ok      0chain.net/sharder/blockdb      0.004s  coverage: 79.3% of statements
+ok      0chain.net/sharder/blockstore   0.045s  coverage: 79.7% of statements
+?       0chain.net/sharder/sharder      [no test files]
+?       0chain.net/smartcontract        [no test files]
+?       0chain.net/smartcontract/faucetsc       [no test files]
+ok      0chain.net/smartcontract/interestpoolsc 0.030s  coverage: 45.0% of statements
+ok      0chain.net/smartcontract/minersc        0.104s  coverage: 30.9% of statements
+?       0chain.net/smartcontract/multisigsc     [no test files]
+?       0chain.net/smartcontract/multisigsc/test        [no test files]
+?       0chain.net/smartcontract/setupsc        [no test files]
+ok      0chain.net/smartcontract/storagesc      1.877s  coverage: 58.8% of statements
+ok      0chain.net/smartcontract/vestingsc      0.034s  coverage: 81.8% of statements
+ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of statements
+
+```
 
 ## Creating The Magic Block
 
 First build the magic block image.
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
-$ ./docker.local/bin/build.magic_block.sh
+./docker.local/bin/build.magic_block.sh
 ```
 
 Next, set the configuration file. To do this edit the docker.local/build.magicBlock/docker-compose.yml file. On line 13 is a flag "--config_file" set it to the magic block configuration file you want to use.
@@ -313,7 +454,7 @@ Next, set the configuration file. To do this edit the docker.local/build.magicBl
 To create the magic block.
 
 ```
-$ ./docker.local/bin/create.magic_block.sh
+./docker.local/bin/create.magic_block.sh
 ```
 
 The magic block and the dkg summary json files will appear in the docker.local/config under the name given in the configuration file.
@@ -341,7 +482,7 @@ An example, that can be used with the preset ids, can be found at
 1. If you want to restart the blockchain from the beginning
 
 ```
-$ ./docker.local/bin/clean.sh
+./docker.local/bin/clean.sh
 ```
 
 This cleans up the directories within docker.local/miner* and docker.local/sharder*
@@ -353,7 +494,7 @@ separate file, deleting thousands of such files will take some time._**
 2. If you want to get rid of old unused docker resources:
 
 ```
-$ docker system prune
+docker system prune
 ```
 
 ### Minio
@@ -406,6 +547,254 @@ minio:
 ```
 - In minio the folders do not get deleted and will cause a slight increase in volume over time.
 
-# Integration tests
+## Integration tests
+
+Integration testing combines individual 0chain modules and test them as a group. Integration testing evaluates the compliance of a system for specific functional requirements and usually occurs after unit testing .
+
+For integration testing, A conductor which is a RPC(Remote Procedure Call) server is implemented to control behaviour of nodes .To know more about the conductor refer to the [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
+
+
+
+### Architecture
+A conductor requires the nodes to be built in a certain order to control them during the tests. A config file is defined in [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml) which contains important details such as details of all nodes used and custom commands used in integration testing.
+
+![integration testing](https://user-images.githubusercontent.com/65766301/120053178-6a624180-c046-11eb-8255-ac9b4e202e32.png)
+
+For running multiple test cases,conductor uses a test suite which contains multiple sets of tests .A test suites can be categorized into 3 types of tests
+
+`standard tests` - Checks whether chain continue to function properly despite bad miner and sharder participants
+
+`view-change tests` - Checks whether addition and removal of nodes is working
+
+.`blobber tests` - Checks whether storage functions continue to work properly despite bad or lost blobber, and confirms expected storage function failures
+
+Below is an example of conductor test suite.
+
+```
+# Under `enable` is the list of sets that will be run.
+enable: 
+  - "Miner down/up"
+  - "Blobber tests"
+
+# Test sets defines the test cases it covers.
+sets: 
+  - name: "Miner down/up" 
+    tests:
+      - "Miner: 50 (switch to contribute)"
+      - "Miner: 100 (switch to share)"
+  - name: "Blobber tests"
+    tests:
+      - "All blobber tests"
+
+# Test cases defines the execution flow for the tests.
+tests: 
+  - name: "Miner: 50 (switch to contribute)"
+    flow: 
+    # Flow is a series of directives.
+    # The directive can either be built-in in the conductor 
+    # or custom command defined in "conductor.config.yaml"
+      - set_monitor: "sharder-1" # Most directive refer to node by name, these are defined in `conductor.config.yaml` 
+      - cleanup_bc: {} # A sample built-in command that triggers stop on all nodes and clean up.
+      - start: ['sharder-1']
+      - start: ['miner-1', 'miner-2', 'miner-3']
+      - wait_phase: 
+          phase: 'contribute'
+      - stop: ['miner-1']
+      - start: ['miner-1']
+      - wait_view_change:
+          timeout: '5m'
+          expect_magic_block:
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1']
+  - name: "Miner: 100 (switch to share)"
+    flow:
+    ...
+  - name: "All blobber tests"
+    flow:
+      - command:
+          name: 'build_test_blobbers' # Sample custom command that executes `build_test_blobbers`
+    ...
+...
+```
+
+## Getting Started
+
+### Prerequisites
+
+Docker and Git must be installed to run the tests .
+
+Install Git using the following command:
+
+```
+sudo apt install git
+```
+
+Docker installation instructions can be found [here](https://docs.docker.com/engine/install/).
+
+### Cloning the repository and Building Base Image
+
+Clone the 0chain repository:
+
+```
+git clone https://github.com/0chain/0chain.git
+```
+
+Build miner docker image for integration test
+
+```
+(cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh)
+```
+
+Build sharder docker image for integration test
+
+```
+(cd 0chain && ./docker.local/bin/build.sharders-integration-tests.sh)
+```
+
+NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
+
+```
+(cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
+```
+
+Confirm that view change rounds are set to 50 on `0chain/docker.local/config.yaml`
+
+```
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
+```
+
+### Running standard tests
+
+Run miners test
+
+```
+(cd 0chain && ./docker.local/bin/start.conductor.sh miners)
+```
+
+Run sharders test
+
+```
+(cd 0chain && ./docker.local/bin/start.conductor.sh sharders)
+```
+
+### Running view-change tests
+
+1. Set `view_change: true` on `0chain/docker.local/config.yaml`
+2. Run view-change tests
+
+```
+(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-1)
+(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-2)
+(cd 0chain && ./docker.local/bin/start.conductor.sh view-change-3)
+```
+
+### Running blobber tests
+
+Blobber tests require cloning of below services.
+
+ [blobber](https://github.com/0chain/blobber)
+
+```
+git clone https://github.com/0chain/blobber.git
+```
 
 Refer to [conductor documentation](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md)
+
+[zboxcli](https://github.com/0chain/zboxcli)
+
+```
+git clone https://github.com/0chain/zboxcli.git
+```
+
+ [zwalletcli](https://github.com/0chain/zwalletcli)
+
+```
+git clone https://github.com/0chain/zwalletcli.git
+```
+
+ [0dns](https://github.com/0chain/0dns)
+
+```
+git clone https://github.com/0chain/0dns.git
+```
+
+Confirm whether all the cloned directories exists.
+
+```
+0chain/
+blobber/
+zboxcli/
+zwalletcli/
+0dns/
+```
+
+Install zboxcli
+
+```
+(cd zboxcli && make install)
+```
+
+Install zwalletcli
+
+```
+(cd zwalletcli && make install)
+```
+
+Patch 0dns for the latest 0chain network configuration .  
+
+```
+(cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch)
+(cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch)
+```
+
+Patch blobbers for the latest blobber tests
+
+ ```
+(cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch)
+(cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
+```
+
+Add `~/.zcn/config.yaml` as follows
+
+```
+block_worker: http://127.0.0.1:9091
+signature_scheme: bls0chain
+min_submit: 50
+min_confirmation: 50
+confirmation_chain_length: 3
+max_txn_query: 5
+query_sleep_time: 5
+```
+
+Apply if on Ubuntu 18.04
+
+https://github.com/docker/for-linux/issues/563#issuecomment-547962928
+
+The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice package required by docker-compose and used by docker. A docker process (a build, for example) can sometimes fail due to the bug. Some tests have internal docker builds and can fail due to this bug.
+
+Run blobber tests
+
+```
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)
+(cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2) 
+```
+
+### Adding new Tests
+
+New tests can be easily added  to the conductor check [Updating conductor tests](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#updating-conductor-tests) in the conductor documentation for more information. 
+
+### Enabling or Disabling Tests
+
+Check [Temporarily disabling tests](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#temporarily-disabling-tests) in the conductor documentation for more information
+
+### Supported Conductor Commands
+Check the [supported directives](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#supported-directives) in the conductor documentation for more information.
+
+### Creating Custom Conductor Commands
+
+Check [Custom Commands](https://github.com/0chain/0chain/blob/master/code/go/0chain.net/conductor/README.md#custom-commands) in the conductor documentation for more information
+

@@ -58,6 +58,23 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var ab, ok = all.Nodes.get(b.ID)
 	require.True(t, ok)
 	require.NotNil(t, ab)
+
+	// update (incl. url)
+	const NEW_BASE_URL = "https://new-base-url.com"
+	b.BaseURL = NEW_BASE_URL
+	b.Capacity = b.Capacity * 2
+	tp += 100
+	_, err = updateBlobber(t, b, 0, tp, ssc, balances)
+	require.NoError(t, err)
+
+	all, err = ssc.getBlobbersList(balances)
+	require.NoError(t, err)
+	require.Len(t, all.Nodes, 1)
+
+	ab, ok = all.Nodes.get(b.ID)
+	require.True(t, ok)
+	require.Equal(t, ab.BaseURL, NEW_BASE_URL)
+	require.Equal(t, ab.Capacity, b.Capacity)
 }
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
@@ -99,6 +116,31 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(t, false)
+		tp       int64 = 100
+		blobbers *StorageNodes
+		err      error
+	)
+
+	setConfig(t, balances)
+
+	var blob = newClient(0, balances)
+	blob.terms = avgTerms
+	blob.cap = 2 * GB
+
+	_, err = blob.callAddBlobber(t, ssc, tp, balances)
+	require.NoError(t, err)
+
+	_, err = blob.callAddBlobber(t, ssc, tp, balances)
+	require.NoError(t, err)
+
+	blobbers, err = ssc.getBlobbersList(balances)
+	require.Equal(t, 1, len(blobbers.Nodes))
+}
+
+func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
@@ -590,14 +632,9 @@ func Test_flow_reward(t *testing.T) {
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 			// last loop balances (previous balance)
-			cpl     = cpb2
-			b3l     = sp.Rewards.Blobber + sp.Rewards.Validator
-			validsl []state.Balance
+			cpl = cpb2
+			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
 		)
-		// validators balances
-		for _, val := range valids {
-			validsl = append(validsl, balances.balances[val.id])
-		}
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
 			if i < 10 {
@@ -650,12 +687,9 @@ func Test_flow_reward(t *testing.T) {
 			b3l = sp.Rewards.Blobber + sp.Rewards.Validator
 
 			// validators reward
-			for i, val := range valids {
-				var vsp *stakePool
-				vsp, err = ssc.getStakePool(val.id, balances)
+			for _, val := range valids {
+				_, err = ssc.getStakePool(val.id, balances)
 				require.NoError(t, err)
-				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
-				validsl[i] = vsp.Rewards.Validator
 			}
 
 			// next stage
@@ -798,17 +832,12 @@ func Test_flow_penalty(t *testing.T) {
 
 			until = alloc.Until()
 			// last loop balances (previous balance)
-			spl     = sp.stake()
-			wpl     = wp.allocUntil(allocID, until)
-			opl     = offer.Lock
-			cpl     = cp.Balance
-			b4l     = balances.balances[b4.id]
-			validsl []state.Balance
+			spl = sp.stake()
+			wpl = wp.allocUntil(allocID, until)
+			opl = offer.Lock
+			cpl = cp.Balance
+			b4l = balances.balances[b4.id]
 		)
-		// validators balances
-		for _, val := range valids {
-			validsl = append(validsl, balances.balances[val.id])
-		}
 		// expire the allocation challenging it (+ last challenge)
 		for i := int64(0); i < 10+1; i++ {
 			if i < 10 {
@@ -875,12 +904,9 @@ func Test_flow_penalty(t *testing.T) {
 			b4l = balances.balances[b4.id]
 
 			// validators reward
-			for i, val := range valids {
-				var vsp *stakePool
-				vsp, err = ssc.getStakePool(val.id, balances)
+			for _, val := range valids {
+				_, err = ssc.getStakePool(val.id, balances)
 				require.NoError(t, err)
-				// assert.True(t, validsl[i] < vsp.Rewards.Validator)
-				validsl[i] = vsp.Rewards.Validator
 			}
 
 			// next stage

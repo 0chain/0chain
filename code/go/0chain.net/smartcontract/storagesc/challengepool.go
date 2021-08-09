@@ -69,8 +69,13 @@ func (cp *challengePool) save(sscKey, allocationID string,
 }
 
 // moveToWritePool moves tokens back to write pool on data deleted
-func (cp *challengePool) moveToWritePool(allocID, blobID string,
-	until common.Timestamp, wp *writePool, value state.Balance) (err error) {
+func (cp *challengePool) moveToWritePool(
+	alloc *StorageAllocation,
+	blobID string,
+	until common.Timestamp,
+	wp *writePool,
+	value state.Balance,
+) (err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -81,11 +86,12 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 			cp.ID, cp.Balance, value)
 	}
 
-	var ap = wp.allocPool(allocID, until)
+	var ap = wp.allocPool(alloc.ID, until)
 	if ap == nil {
 		ap = new(allocationPool)
-		ap.AllocationID = allocID
+		ap.AllocationID = alloc.ID
 		ap.ExpireAt = 0
+		alloc.addWritePoolOwner(alloc.Owner)
 		wp.Pools.add(ap)
 	}
 
@@ -121,7 +127,7 @@ func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
 				cp.Balance, oneReward)
 		}
 		var oneMove state.Balance
-		oneMove, err = moveReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
+		oneMove, err = transferReward(sscKey, *cp.ZcnPool, sp, oneReward, balances)
 		sp.Rewards.Validator += oneMove
 		if err != nil {
 			return 0, fmt.Errorf("moving to validator %s: %v",

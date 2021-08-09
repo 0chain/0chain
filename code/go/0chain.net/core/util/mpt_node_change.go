@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*NodeChange - track a change to the node */
@@ -52,7 +55,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
-		change.New = newNode
+		change.New = newNode.Clone()
 		cc.Changes[nhash] = change
 		return
 	}
@@ -65,14 +68,14 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 				return
 			}
 		}
-		prevChange.New = newNode
+		prevChange.New = newNode.Clone()
 		cc.Changes[nhash] = prevChange
 	} else {
 		change := &NodeChange{}
-		change.New = newNode
-		change.Old = oldNode
+		change.New = newNode.Clone()
+		change.Old = oldNode.Clone()
 		cc.Changes[nhash] = change
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 
@@ -84,7 +87,7 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
 	} else {
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 
@@ -122,8 +125,21 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	nodes := make([]Node, len(cc.Changes))
 	idx := 0
 	for _, c := range cc.Changes {
-		c.New.SetOrigin(origin)
-		keys[idx] = c.New.GetHashBytes()
+		if _, ok := c.New.(*LeafNode); ok && origin != c.New.GetOrigin() {
+			oldHash := c.New.GetHashBytes()
+			oldOrigin := c.New.GetOrigin()
+			c.New.SetOrigin(origin)
+			keys[idx] = c.New.GetHashBytes()
+			logging.Logger.Warn("Updating origin of a leaf node may break references ",
+				zap.Int64("oldOrigin", int64(oldOrigin)),
+				zap.String("oldHash", ToHex(oldHash)),
+				zap.Int64("newOrigin", int64(origin)),
+				zap.String("newHash", ToHex(keys[idx])),
+			)
+		} else {
+			c.New.SetOrigin(origin)
+			keys[idx] = c.New.GetHashBytes()
+		}
 		nodes[idx] = c.New
 		idx++
 	}

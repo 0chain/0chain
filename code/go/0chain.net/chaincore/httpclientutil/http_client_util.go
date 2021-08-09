@@ -128,7 +128,9 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	}
 	resp, err := httpClient.Do(req)
 	if resp == nil || err != nil {
-		logging.N2n.Error("Failed after multiple retries", zap.Int("retried", maxRetries))
+		logging.N2n.Error("Failed after multiple retries",
+			zap.String("url", url),
+			zap.Error(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -528,6 +530,88 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 	//this should never happen
 	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 
+}
+
+// FetchMagicBlockFromSharders fetchs magic blocks from sharders
+func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, number int64,
+	verifyBlock func(mb *block.Block) bool) (*block.Block, error) {
+	if len(sharderURLs) == 0 {
+		return nil, common.NewError("fetch_magic_block_from_sharders", "empty sharder URLs")
+	}
+
+	wg := &sync.WaitGroup{}
+	recv := make(chan *block.Block, len(sharderURLs))
+	cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	for _, sharder := range sharderURLs {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			req, err := http.NewRequestWithContext(cctx, http.MethodGet, url, nil)
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - new request failed",
+					zap.String("url", url),
+					zap.Error(err))
+				return
+			}
+
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - send request failed",
+					zap.String("url", url),
+					zap.Error(err))
+				return
+			}
+
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - read data failed",
+					zap.String("url", url),
+					zap.Error(err))
+				return
+			}
+
+			b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+			if err := b.Decode(body); err != nil {
+				logging.Logger.Error("fetch_magic_block_from_sharders - decode data failed",
+					zap.String("url", url),
+					zap.Error(err))
+				return
+			}
+
+			if b.MagicBlock != nil && b.MagicBlockNumber == number {
+				if !verifyBlock(b) {
+					logging.Logger.Error("fetch_magic_block_from_sharders - failed to verify magic block",
+						zap.String("from", url),
+						zap.Int64("magic_block_number", number))
+					return
+				}
+
+				select {
+				case recv <- b:
+				default:
+				}
+			}
+		}(fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, number))
+	}
+
+	go func() {
+		wg.Wait()
+		close(recv)
+	}()
+
+	select {
+	case <-cctx.Done():
+		return nil, common.NewError("fetch_magic_block_from_sharders - could not get magic block from sharders", cctx.Err().Error())
+	case b, ok := <-recv:
+		if !ok {
+			return nil, common.NewErrorf("fetch_magic_block_from_sharders", "could not get magic block from sharders")
+		}
+		cancel()
+		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))
+		return b, nil
+	}
 }
 
 //GetMagicBlockCall for smart contract to get magic block

@@ -16,9 +16,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -129,7 +129,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 
 		if _, ok := sos.ShareOrSigns[k]; !ok {
-			sos.ShareOrSigns[k] = mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			if share != nil {
+				sos.ShareOrSigns[k] = share
+			}
 		}
 	}
 
@@ -271,13 +274,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 			"setting hex string: %v", err)
 	}
 
-	var (
-		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-		mpkString []string
-	)
-	for _, pk := range mpk {
-		mpkString = append(mpkString, pk.GetHexString())
-	}
+	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
 		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),

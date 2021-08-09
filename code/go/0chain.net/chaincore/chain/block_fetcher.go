@@ -564,8 +564,21 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	b, r = c.AddNotarizedBlockToRound(r, nb)
-	b, _ = r.AddNotarizedBlock(b)
+	var err error
+	b, r, err = c.AddNotarizedBlockToRound(r, nb)
+	if err != nil {
+		logging.Logger.Error("get notarized block failed",
+			zap.Int64("cround", cround), zap.Int64("round", rn),
+			zap.String("block", hash), zap.Error(err))
+		return nil
+	}
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("get notarized block failed",
+			zap.Int64("cround", cround), zap.Int64("round", rn),
+			zap.String("block", hash), zap.Error(err))
+		return nil
+	}
 
 	// Add the round if chain does not have it
 	if c.GetRound(nb.Round) == nil {
@@ -641,8 +654,21 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
-	b, r = c.AddNotarizedBlockToRound(r, fb)
-	b, _ = r.AddNotarizedBlock(b)
+	var err error
+	b, r, err = c.AddNotarizedBlockToRound(r, fb)
+	if err != nil {
+		logging.Logger.Error("async fetch fb from sharders failed",
+			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
+			zap.Error(err))
+		return
+	}
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("async fetch fb from sharders failed",
+			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
+			zap.Error(err))
+		return
+	}
 
 	//  Add the round to chain if does not in the chain yet
 	if c.GetRound(fb.Round) == nil {

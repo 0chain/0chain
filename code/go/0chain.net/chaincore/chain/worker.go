@@ -152,18 +152,7 @@ type MagicBlockBrief struct {
 func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-	if c.latestFinalizedMagicBlock == nil {
-		return nil
-	}
-
-	return &MagicBlockBrief{
-		MagicBlockNumber: c.latestFinalizedMagicBlock.MagicBlockNumber,
-		MagicBlockHash:   c.latestFinalizedMagicBlock.MagicBlock.Hash,
-		Round:            c.latestFinalizedMagicBlock.Round,
-		StartingRound:    c.latestFinalizedMagicBlock.MagicBlock.StartingRound,
-		MinersN2NURLs:    c.latestFinalizedMagicBlock.Miners.N2NURLs(),
-		ShardersN2NURLs:  c.latestFinalizedMagicBlock.Sharders.N2NURLs(),
-	}
+	return getMagicBlockBrief(c.latestFinalizedMagicBlock)
 }
 
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
@@ -418,18 +407,11 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				defer func() {
 					synchingStopC <- struct{}{}
 				}()
-				if lfb == nil || lfb.ClientState == nil {
+				if lfb == nil {
 					return
 				}
 
-				mpt, err := c.syncRoundState(cctx, lfb.ClientState, lfb.Round)
-				if err != nil {
-					Logger.Error("sync round state failed", zap.Error(err))
-					return
-				}
-				if err := c.UpdateLatestFinalizedBlockState(mpt); err != nil {
-					Logger.Error("update latest finalized block state failed", zap.Error(err))
-				}
+				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
 			}()
 		case <-synchingStopC:
 			isSynching = false
@@ -441,11 +423,10 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 	}
 }
 
-func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTrieI, round int64) (util.MerklePatriciaTrieI, error) {
-	Logger.Info("Sync round state from network...", zap.Int64("round", round))
-	mpt := util.NewMerklePatriciaTrie(state.GetNodeDB(), util.Sequence(round))
-	rootState := state.GetRoot()
-	mpt.SetRoot(rootState)
+func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) {
+	Logger.Info("Sync round state from network...")
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
+	mpt.SetRoot(rootStateHash)
 
 	Logger.Info("Finding missing nodes")
 	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)
@@ -455,34 +436,32 @@ func (c *Chain) syncRoundState(ctx context.Context, state util.MerklePatriciaTri
 	if err != nil {
 		switch err {
 		case context.Canceled:
-			return nil, common.NewError("sync_round_state_abort", "context is canceled, suppose the BC is moving")
+			Logger.Error("Sync round state abort, context is canceled, suppose the BC is moving")
+			return
 		case context.DeadlineExceeded:
-			return nil, common.NewError("sync round state abort", "context timed out for checking missing nodes")
+			Logger.Error("Sync round state abort, context timed out for checking missing nodes")
+			return
 		default:
-			return nil, common.NewError("sync round state abort",
-				fmt.Sprintf("failed to get missing nodes, round: %d, client state hash: %s, err: %v",
-					round, util.ToHex(rootState), err))
+			Logger.Error("Sync round state abort, failed to get missing nodes",
+				zap.Int64("round", round),
+				zap.String("client state hash", util.ToHex(rootStateHash)),
+				zap.Error(err))
+			return
 		}
 	}
 
 	if len(keys) == 0 {
 		Logger.Debug("Found no missing node",
 			zap.Int64("round", round),
-			zap.String("state hash", util.ToHex(rootState)))
-		return mpt, nil
+			zap.String("state hash", util.ToHex(rootStateHash)))
+		return
 	}
 
 	Logger.Info("Sync round state, found missing nodes",
 		zap.Int64("round", round),
 		zap.Int("missing_node_num", len(keys)))
 
-	if err := c.UpdateStateFromNetwork(ctx, mpt, keys); err != nil {
-		return nil, common.NewError("update state from network failed",
-			fmt.Sprintf("round: %d, client state hash: %s, err: %v",
-				round, util.ToHex(rootState), err))
-	}
-
-	return mpt, nil
+	c.GetStateNodes(ctx, keys)
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
@@ -525,16 +504,13 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		requestMBNum := currentLFMB.MagicBlockNumber + 1
 		Logger.Debug("verify_chain_history", zap.Int64("get_mb_number", requestMBNum))
 
-		magicBlock, err = httpclientutil.GetMagicBlockCall(sharders, requestMBNum, 1)
-
+		magicBlock, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharders, requestMBNum,
+			func(b *block.Block) bool {
+				return currentLFMB.VerifyMinersSignatures(b)
+			})
 		if err != nil {
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to get %d: %v", requestMBNum, err))
-		}
-
-		if !currentLFMB.VerifyMinersSignatures(magicBlock) {
-			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to verify magic block %d miners signatures", requestMBNum))
 		}
 
 		Logger.Info("verify chain history",
@@ -544,8 +520,6 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v", requestMBNum, err))
-		} else {
-			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		}
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)
@@ -601,8 +575,8 @@ type MagicBlockSaver interface {
 func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	mb *block.MagicBlock) (err error) {
 
-	magicBlock := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
-	if magicBlock == nil {
+	block := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+	if block == nil {
 		Logger.Warn("no new finalized magic block from sharders given",
 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
 		return nil
@@ -611,11 +585,21 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	cmb := sc.GetCurrentMagicBlock()
 
 	Logger.Info("get current magic block from sharders",
-		zap.Any("number", magicBlock.MagicBlockNumber),
-		zap.Any("sr", magicBlock.StartingRound),
-		zap.Any("hash", magicBlock.Hash))
+		zap.Any("number", block.MagicBlockNumber),
+		zap.Any("sr", block.StartingRound),
+		zap.Any("hash", block.Hash))
 
-	if magicBlock.StartingRound <= cmb.StartingRound {
+	if block.MagicBlock.StartingRound <= cmb.StartingRound {
+		if block.MagicBlock.StartingRound == cmb.StartingRound && block.MagicBlock.Hash == cmb.Hash {
+			block.MagicBlock = cmb
+			sc.SetLatestFinalizedMagicBlock(block)
+			Logger.Debug(
+				"updated lfmb to add lfmb's parent block to magicBlockStartRounds cache",
+				zap.Any("block hash", block.Hash),
+				zap.Any("block round", block.Round),
+				zap.Any("lfmb starting round", block.StartingRound),
+			)
+		}
 		return nil // earlier than the current one
 	}
 
@@ -624,17 +608,15 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
 	}
 
-	err = sc.VerifyChainHistoryAndRepair(ctx, magicBlock, saveMagicBlock)
+	err = sc.VerifyChainHistoryAndRepair(ctx, block, saveMagicBlock)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
 
-	if err = sc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+	if err = sc.UpdateMagicBlock(block.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
-
-	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-	sc.SetLatestFinalizedMagicBlock(magicBlock)
+	sc.SetLatestFinalizedMagicBlock(block)
 
 	return // ok, updated
 }

@@ -81,6 +81,7 @@ func TestLeafNode_Decode(t *testing.T) {
 	t.Parallel()
 
 	type fields struct {
+		Prefix            Path
 		Path              Path
 		Value             *ValueNode
 		OriginTrackerNode *OriginTrackerNode
@@ -96,7 +97,7 @@ func TestLeafNode_Decode(t *testing.T) {
 	}{
 		{
 			name: "Test_LeafNode_Decode_OK",
-			args: args{buf: []byte("ch:")},
+			args: args{buf: []byte("pf:ch:")},
 		},
 		{
 			name:    "Test_LeafNode_Decode_ERR",
@@ -110,6 +111,7 @@ func TestLeafNode_Decode(t *testing.T) {
 			t.Parallel()
 
 			ln := &LeafNode{
+				Prefix:            tt.fields.Prefix,
 				Path:              tt.fields.Path,
 				Value:             tt.fields.Value,
 				OriginTrackerNode: tt.fields.OriginTrackerNode,
@@ -327,7 +329,7 @@ func TestExtensionNode_Decode(t *testing.T) {
 func TestGetValueNode(t *testing.T) {
 	t.Parallel()
 
-	ln := NewLeafNode(nil, 0, NewValueNode())
+	ln := NewLeafNode(Path(""), nil, 0, NewValueNode())
 	fn := NewFullNode(NewValueNode())
 
 	type args struct {

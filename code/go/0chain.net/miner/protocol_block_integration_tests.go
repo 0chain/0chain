@@ -18,10 +18,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
-
-	"0chain.net/core/logging"
 
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
@@ -141,7 +140,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				return false
 			}
 		}
-		if err := mc.UpdateState(b, txn); err != nil {
+		if err := mc.UpdateState(ctx, b, txn); err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
@@ -265,7 +264,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		etxns = etxns[:blockSize]
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processFeeTxn(ctx, b, clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DevConfiguration.IsBlockRewards {
+		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
 		if err != nil {
 			return err
 		}
