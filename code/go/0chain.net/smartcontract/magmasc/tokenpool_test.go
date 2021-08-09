@@ -6,11 +6,8 @@ import (
 	"testing"
 
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
-	"github.com/0chain/bandwidth_marketplace/code/core/time"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 )
 
@@ -108,13 +105,13 @@ func Test_tokenPool_create(t *testing.T) {
 	acknInsufficientFundsErr := mockAcknowledgment()
 	acknInsufficientFundsErr.Consumer.ID = "insolvent_id"
 
-	tests := [5]struct {
+	tests := [4]struct {
 		name  string
 		txn   *tx.Transaction
 		ackn  *bmp.Acknowledgment
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  *tp.TokenPoolTransferResponse
+		want  *bmp.TokenPoolTransfer
 		error bool
 	}{
 		{
@@ -123,10 +120,10 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn: ackn,
 			pool: &tokenPool{},
 			sci:  sci,
-			want: &tp.TokenPoolTransferResponse{
+			want: &bmp.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
 				ToPool:     ackn.SessionID,
-				Value:      state.Balance(amount),
+				Value:      amount,
 				FromClient: ackn.Consumer.ID,
 				ToClient:   txn.ToClientID,
 			},
@@ -159,15 +156,6 @@ func Test_tokenPool_create(t *testing.T) {
 			want:  nil,
 			error: true,
 		},
-		{
-			name:  "Insert_Token_Pool_ERR",
-			txn:   &tx.Transaction{ToClientID: "cannot_insert_id"},
-			ackn:  ackn,
-			pool:  &tokenPool{},
-			sci:   sci,
-			want:  nil,
-			error: true,
-		},
 	}
 
 	for idx := range tests {
@@ -190,56 +178,48 @@ func Test_tokenPool_create(t *testing.T) {
 func Test_tokenPool_spend(t *testing.T) {
 	t.Parallel()
 
-	pool, msc, sci := mockTokenPool(), mockMagmaSmartContract(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), pool); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
-
-	pool.ID = time.NowTime().String()
-	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), pool); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
-
+	sci := mockStateContextI()
 	txn := sci.GetTransaction()
 	txnInvalid := txn.Clone()
 	txnInvalid.ToClientID = "not_present_id"
 
+	poolOK1, poolOK2 := mockTokenPool(), mockTokenPool()
 	tests := [5]struct {
 		name  string
 		txn   *tx.Transaction
 		bill  *bmp.Billing
 		sci   chain.StateContextI
 		pool  *tokenPool
-		want  *tp.TokenPoolTransferResponse
+		want  *bmp.TokenPoolTransfer
 		error bool
 	}{
 		{
 			name: "OK",
 			txn:  txn,
-			bill: &bmp.Billing{Amount: int64(pool.Balance - pool.Balance/2)},
+			bill: &bmp.Billing{Amount: int64(poolOK1.Balance - poolOK1.Balance/2)},
 			sci:  sci,
-			pool: pool,
-			want: &tp.TokenPoolTransferResponse{
+			pool: poolOK1,
+			want: &bmp.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
-				FromPool:   pool.ID,
-				Value:      pool.Balance - pool.Balance/2,
-				FromClient: pool.PayerID,
-				ToClient:   pool.PayeeID,
+				FromPool:   poolOK1.ID,
+				Value:      poolOK1.Balance - poolOK1.Balance/2,
+				FromClient: poolOK1.PayerID,
+				ToClient:   poolOK1.PayeeID,
 			},
 			error: false,
 		},
 		{
-			name: "Billing_Amount_Zero_Value_OK",
+			name: "Billing_Amount_Zero_OK",
 			txn:  txn,
 			bill: &bmp.Billing{Amount: 0},
 			sci:  sci,
-			pool: mockTokenPool(),
-			want: &tp.TokenPoolTransferResponse{
+			pool: poolOK2,
+			want: &bmp.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
-				FromPool:   mockTokenPool().ID,
+				FromPool:   poolOK2.ID,
 				Value:      0,
-				FromClient: pool.PayerID,
-				ToClient:   pool.PayeeID,
+				FromClient: poolOK2.PayerID,
+				ToClient:   poolOK2.PayeeID,
 			},
 			error: false,
 		},

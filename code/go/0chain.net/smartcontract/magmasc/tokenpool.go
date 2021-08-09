@@ -8,7 +8,6 @@ import (
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/util"
 )
@@ -16,10 +15,7 @@ import (
 type (
 	// tokenPool represents token pool wrapper implementation.
 	tokenPool struct {
-		tp.ZcnPool // embedded token pool
-
-		PayerID string `json:"payer_id"`
-		PayeeID string `json:"payee_id"`
+		bmp.TokenPool
 	}
 )
 
@@ -55,17 +51,18 @@ func (m *tokenPool) Encode() []byte {
 }
 
 // create tries to create a new token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
-	m.Balance = state.Balance(ackn.Provider.Terms.GetAmount())
+func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*bmp.TokenPoolTransfer, error) {
+	m.Balance = ackn.Provider.Terms.GetAmount()
 	if m.Balance < 0 {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
 	}
 
+	poolBalance := state.Balance(m.Balance)
 	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
 	}
-	if clientBalance < m.Balance {
+	if clientBalance < poolBalance {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
@@ -73,15 +70,12 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 	m.PayerID = ackn.Consumer.ID
 	m.PayeeID = ackn.Provider.ID
 
-	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, m.Balance)
+	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, poolBalance)
 	if err = sci.AddTransfer(transfer); err != nil {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
-	if _, err = sci.InsertTrieNode(m.uid(txn.ToClientID), m); err != nil {
-		return nil, errors.Wrap(errCodeAcceptTerms, "insert token pool failed", err)
-	}
 
-	resp := tp.TokenPoolTransferResponse{
+	resp := bmp.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,
@@ -93,38 +87,34 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 }
 
 // spend tries to spend the token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) (*tp.TokenPoolTransferResponse, error) {
+func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) (*bmp.TokenPoolTransfer, error) {
 	if bill.Amount < 0 {
 		return nil, errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
 	}
 
-	payee, amount := m.PayeeID, state.Balance(bill.Amount)
+	payee, amount, poolBalance := m.PayeeID, state.Balance(bill.Amount), state.Balance(m.Balance)
 	switch {
 	case amount == 0: // refund token pool to payer
 		payee = m.PayerID
 
-	case amount < m.Balance: // spend part of token pool to payee
+	case amount < poolBalance: // spend part of token pool to payee
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
 			return nil, errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
-		m.Balance -= amount
+		poolBalance -= amount
 		payee = m.PayerID // refund remaining token pool balance to payer
 	}
 
 	// spend token pool by balance
-	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, m.Balance)); err != nil {
+	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
 		return nil, errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 
 	m.Balance = 0
-	if _, err := sci.InsertTrieNode(m.uid(txn.ToClientID), m); err != nil {
-		return nil, errors.Wrap(errCodeTokenPoolSpend, "delete token pool failed", err)
-	}
-
-	resp := tp.TokenPoolTransferResponse{
+	resp := bmp.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		FromPool:   m.ID,
-		Value:      amount,
+		Value:      bill.Amount,
 		FromClient: m.PayerID,
 		ToClient:   m.PayeeID,
 	}

@@ -152,17 +152,17 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	list.put(item) // add or replace
 
 	blob, err := json.Marshal(list.Sorted)
-	if err != nil || blob == nil {
+	if err != nil {
 		return errors.Wrap(errCodeInternal, "encode providers list failed", err)
 	}
 	if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "insert providers list failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, providerType), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtID), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, item.Host, providerType), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider host failed", err)
 	}
@@ -175,8 +175,8 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	return nil
 }
 
-// fetchProviders extracts all providers stored in memory data store with given id.
-func fetchProviders(id string, db *store.Connection) (*Providers, error) {
+// providersFetch extracts all providers stored in memory data store with given id.
+func providersFetch(id string, db *store.Connection) (*Providers, error) {
 	list := &Providers{}
 
 	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))

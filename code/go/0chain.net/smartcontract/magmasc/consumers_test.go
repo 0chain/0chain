@@ -14,12 +14,12 @@ func Test_Consumers_add(t *testing.T) {
 	t.Parallel()
 
 	list, msc, sci := mockConsumers(), mockMagmaSmartContract(), mockStateContextI()
-	consRegistered, _ := list.getByIndex(0)
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, consRegistered.Host, consumerType), consRegistered); err != nil {
+	cons, _ := list.getByIndex(0)
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, consumerType, cons.Host), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [3]struct {
+	tests := [4]struct {
 		name  string
 		cons  *bmp.Consumer
 		msc   *MagmaSmartContract
@@ -36,8 +36,16 @@ func Test_Consumers_add(t *testing.T) {
 			error: false,
 		},
 		{
+			name:  "nil_Pointer_ERR",
+			cons:  nil,
+			msc:   msc,
+			sci:   nil,
+			list:  list,
+			error: true,
+		},
+		{
 			name:  "Consumer_Host_Already_Registered_ERR",
-			cons:  consRegistered,
+			cons:  cons,
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -61,6 +69,39 @@ func Test_Consumers_add(t *testing.T) {
 			err := test.list.add(test.msc.ID, test.cons, store.GetTransaction(test.msc.db), test.sci)
 			if (err != nil) != test.error {
 				t.Errorf("add() error: %v | want: %v", err, test.error)
+			}
+		})
+	}
+}
+
+func Test_Consumers_copy(t *testing.T) {
+	t.Parallel()
+
+	list, want := mockConsumers(), Consumers{}
+	if list.Sorted != nil {
+		want.Sorted = make([]*bmp.Consumer, len(list.Sorted))
+		copy(want.Sorted, list.Sorted)
+	}
+
+	tests := [1]struct {
+		name string
+		list *Consumers
+		want Consumers
+	}{
+		{
+			name: "OK",
+			list: list,
+			want: want,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if gotList := test.list.copy(); !reflect.DeepEqual(gotList, test.want) {
+				t.Errorf("copy() = %v, want %v", gotList, test.want)
 			}
 		})
 	}
@@ -132,7 +173,7 @@ func Test_Consumers_delByIndex(t *testing.T) {
 	cons2, _ := list.getByIndex(2)
 	cons3, _ := list.getByIndex(3)
 
-	tests := [4]struct {
+	tests := [5]struct {
 		name  string
 		idx   int
 		msc   *MagmaSmartContract
@@ -172,6 +213,14 @@ func Test_Consumers_delByIndex(t *testing.T) {
 			want:  cons1,
 			error: false,
 		},
+		{
+			name:  "nil_Pointer_ERR",
+			idx:   len(list.Sorted),
+			msc:   msc,
+			list:  list,
+			want:  nil,
+			error: true,
+		},
 	}
 
 	for idx := range tests {
@@ -194,9 +243,7 @@ func Test_Consumers_delByIndex(t *testing.T) {
 func Test_Consumers_get(t *testing.T) {
 	t.Parallel()
 
-	list := mockConsumers()
-	pros := list.Sorted[0]
-
+	idx, list := 0, mockConsumers()
 	tests := [2]struct {
 		name string
 		id   string
@@ -206,9 +253,9 @@ func Test_Consumers_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   pros.ExtID,
+			id:   list.Sorted[idx].ExtID,
 			list: list,
-			want: pros,
+			want: list.Sorted[idx],
 			ret:  true,
 		},
 		{
@@ -236,12 +283,96 @@ func Test_Consumers_get(t *testing.T) {
 	}
 }
 
+func Test_Consumers_getByHost(t *testing.T) {
+	t.Parallel()
+
+	idx, list := 0, mockConsumers()
+	tests := [2]struct {
+		name string
+		host string
+		list *Consumers
+		want *bmp.Consumer
+		ret  bool
+	}{
+		{
+			name: "TRUE",
+			host: list.Sorted[idx].Host,
+			list: list,
+			want: list.Sorted[idx],
+			ret:  true,
+		},
+		{
+			name: "FALSE",
+			host: "not_present_host",
+			list: list,
+			want: nil,
+			ret:  false,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ret := test.list.getByHost(test.host)
+			if ret != test.ret {
+				t.Errorf("get() return: %v | want: %v", got, test.ret)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("get() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func Test_Consumers_getByIndex(t *testing.T) {
+	t.Parallel()
+
+	idx, list := 0, mockConsumers()
+	tests := [2]struct {
+		name string
+		idx  int
+		list *Consumers
+		want *bmp.Consumer
+		ret  bool
+	}{
+		{
+			name: "TRUE",
+			idx:  idx,
+			list: list,
+			want: list.Sorted[idx],
+			ret:  true,
+		},
+		{
+			name: "FALSE",
+			idx:  len(list.Sorted),
+			list: list,
+			want: nil,
+			ret:  false,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ret := test.list.getByIndex(test.idx)
+			if ret != test.ret {
+				t.Errorf("get() return: %v | want: %v", got, test.ret)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("get() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
 func Test_Consumers_getIndex(t *testing.T) {
 	t.Parallel()
 
 	idx, list := 0, mockConsumers()
-	id := list.Sorted[idx].ExtID
-
 	tests := [2]struct {
 		name string
 		id   string
@@ -251,7 +382,7 @@ func Test_Consumers_getIndex(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   id,
+			id:   list.Sorted[idx].ExtID,
 			list: list,
 			want: idx,
 			ret:  true,
@@ -290,44 +421,51 @@ func Test_Consumers_put(t *testing.T) {
 	cons2 := bmp.Consumer{ExtID: "2"}
 	cons3 := bmp.Consumer{ExtID: "3"}
 
-	tests := [5]struct {
+	tests := [6]struct {
 		name string
-		pros *bmp.Consumer
+		cons *bmp.Consumer
 		list *Consumers
 		want []*bmp.Consumer
 		ret  bool
 	}{
 		{
+			name: "nil_Pointer_ERR",
+			cons: nil,
+			list: &list,
+			want: nil,
+			ret:  false,
+		},
+		{
 			name: "TRUE", // appended
-			pros: &cons2,
+			cons: &cons2,
 			list: &list,
 			want: []*bmp.Consumer{&cons2},
 			ret:  true,
 		},
 		{
 			name: "APPEND", // appended
-			pros: &cons3,
+			cons: &cons3,
 			list: &list,
 			want: []*bmp.Consumer{&cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "PREPEND", // inserted
-			pros: &cons0,
+			cons: &cons0,
 			list: &list,
 			want: []*bmp.Consumer{&cons0, &cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "INSERT", // inserted
-			pros: &cons1,
+			cons: &cons1,
 			list: &list,
 			want: []*bmp.Consumer{&cons0, &cons1, &cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "FALSE", // already have
-			pros: &cons3,
+			cons: &cons3,
 			list: &list,
 			want: []*bmp.Consumer{&cons0, &cons1, &cons2, &cons3},
 			ret:  false,
@@ -339,7 +477,7 @@ func Test_Consumers_put(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running
 			// the particular order of tests is important
-			if _, got := test.list.put(test.pros); got != test.ret {
+			if _, got := test.list.put(test.cons); got != test.ret {
 				t.Errorf("add() return: %v | want: %v", got, test.ret)
 			}
 			if !reflect.DeepEqual(test.list.Sorted, test.want) {
@@ -355,11 +493,7 @@ func Test_Consumers_write(t *testing.T) {
 	cons, msc, sci := mockConsumer(), mockMagmaSmartContract(), mockStateContextI()
 
 	list := &Consumers{}
-	if err := list.add(msc.ID, cons, store.GetTransaction(msc.db), sci); err != nil {
-		t.Fatalf("add() error: %v | want: %v", err, nil)
-	}
-
-	tests := [1]struct {
+	tests := [2]struct {
 		name  string
 		cons  *bmp.Consumer
 		msc   *MagmaSmartContract
@@ -374,6 +508,14 @@ func Test_Consumers_write(t *testing.T) {
 			sci:   sci,
 			list:  list,
 			error: false,
+		},
+		{
+			name:  "nil_Pointer_ERR",
+			cons:  nil,
+			msc:   msc,
+			sci:   nil,
+			list:  list,
+			error: true,
 		},
 	}
 
@@ -390,7 +532,7 @@ func Test_Consumers_write(t *testing.T) {
 	}
 }
 
-func Test_fetchConsumers(t *testing.T) {
+func Test_consumersFetch(t *testing.T) {
 	t.Parallel()
 
 	list, msc, sci := mockConsumers(), mockMagmaSmartContract(), mockStateContextI()
@@ -426,13 +568,13 @@ func Test_fetchConsumers(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := fetchConsumers(test.id, store.GetTransaction(test.msc.db))
+			got, err := consumersFetch(test.id, store.GetTransaction(test.msc.db))
 			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("fetchConsumers() got: %#v | want: %#v", got, test.want)
+				t.Errorf("consumersFetch() got: %#v | want: %#v", got, test.want)
 				return
 			}
 			if (err != nil) != test.error {
-				t.Errorf("fetchConsumers() error: %v | want: %v", err, test.error)
+				t.Errorf("consumersFetch() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

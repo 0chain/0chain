@@ -14,12 +14,12 @@ func Test_Providers_add(t *testing.T) {
 	t.Parallel()
 
 	list, msc, sci := mockProviders(), mockMagmaSmartContract(), mockStateContextI()
-	provRegistered, _ := list.getByIndex(0)
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, provRegistered.Host, providerType), provRegistered); err != nil {
+	prov, _ := list.getByIndex(0)
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.Host), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [3]struct {
+	tests := [4]struct {
 		name  string
 		prov  *bmp.Provider
 		msc   *MagmaSmartContract
@@ -36,8 +36,16 @@ func Test_Providers_add(t *testing.T) {
 			error: false,
 		},
 		{
+			name:  "nil_Pointer_ERR",
+			prov:  nil,
+			msc:   msc,
+			sci:   nil,
+			list:  list,
+			error: true,
+		},
+		{
 			name:  "Provider_Host_Already_Registered_ERR",
-			prov:  provRegistered,
+			prov:  prov,
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -61,6 +69,39 @@ func Test_Providers_add(t *testing.T) {
 			err := test.list.add(test.msc.ID, test.prov, store.GetTransaction(test.msc.db), test.sci)
 			if (err != nil) != test.error {
 				t.Errorf("add() error: %v | want: %v", err, test.error)
+			}
+		})
+	}
+}
+
+func Test_Providers_copy(t *testing.T) {
+	t.Parallel()
+
+	list, want := mockProviders(), Providers{}
+	if list.Sorted != nil {
+		want.Sorted = make([]*bmp.Provider, len(list.Sorted))
+		copy(want.Sorted, list.Sorted)
+	}
+
+	tests := [1]struct {
+		name string
+		list *Providers
+		want Providers
+	}{
+		{
+			name: "OK",
+			list: list,
+			want: want,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			if gotList := test.list.copy(); !reflect.DeepEqual(gotList, test.want) {
+				t.Errorf("copy() = %v, want %v", gotList, test.want)
 			}
 		})
 	}
@@ -132,7 +173,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 	prov2, _ := list.getByIndex(2)
 	prov3, _ := list.getByIndex(3)
 
-	tests := [4]struct {
+	tests := [5]struct {
 		name  string
 		idx   int
 		msc   *MagmaSmartContract
@@ -172,6 +213,14 @@ func Test_Providers_delByIndex(t *testing.T) {
 			want:  prov1,
 			error: false,
 		},
+		{
+			name:  "nil_Pointer_ERR",
+			idx:   len(list.Sorted),
+			msc:   msc,
+			list:  list,
+			want:  nil,
+			error: true,
+		},
 	}
 
 	for idx := range tests {
@@ -194,9 +243,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 func Test_Providers_get(t *testing.T) {
 	t.Parallel()
 
-	list := mockProviders()
-	pros := list.Sorted[0]
-
+	idx, list := 0, mockProviders()
 	tests := [2]struct {
 		name string
 		id   string
@@ -206,9 +253,9 @@ func Test_Providers_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   pros.ExtID,
+			id:   list.Sorted[idx].ExtID,
 			list: list,
-			want: pros,
+			want: list.Sorted[idx],
 			ret:  true,
 		},
 		{
@@ -236,12 +283,96 @@ func Test_Providers_get(t *testing.T) {
 	}
 }
 
+func Test_Providers_getByHost(t *testing.T) {
+	t.Parallel()
+
+	idx, list := 0, mockProviders()
+	tests := [2]struct {
+		name string
+		host string
+		list *Providers
+		want *bmp.Provider
+		ret  bool
+	}{
+		{
+			name: "TRUE",
+			host: list.Sorted[idx].Host,
+			list: list,
+			want: list.Sorted[idx],
+			ret:  true,
+		},
+		{
+			name: "FALSE",
+			host: "not_present_host",
+			list: list,
+			want: nil,
+			ret:  false,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ret := test.list.getByHost(test.host)
+			if ret != test.ret {
+				t.Errorf("get() return: %v | want: %v", got, test.ret)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("get() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
+func Test_Providers_getByIndex(t *testing.T) {
+	t.Parallel()
+
+	idx, list := 0, mockProviders()
+	tests := [2]struct {
+		name string
+		idx  int
+		list *Providers
+		want *bmp.Provider
+		ret  bool
+	}{
+		{
+			name: "TRUE",
+			idx:  idx,
+			list: list,
+			want: list.Sorted[idx],
+			ret:  true,
+		},
+		{
+			name: "FALSE",
+			idx:  len(list.Sorted),
+			list: list,
+			want: nil,
+			ret:  false,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ret := test.list.getByIndex(test.idx)
+			if ret != test.ret {
+				t.Errorf("get() return: %v | want: %v", got, test.ret)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("get() got: %#v | want: %#v", got, test.want)
+			}
+		})
+	}
+}
+
 func Test_Providers_getIndex(t *testing.T) {
 	t.Parallel()
 
 	idx, list := 0, mockProviders()
-	id := list.Sorted[idx].ExtID
-
 	tests := [2]struct {
 		name string
 		id   string
@@ -251,7 +382,7 @@ func Test_Providers_getIndex(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   id,
+			id:   list.Sorted[idx].ExtID,
 			list: list,
 			want: idx,
 			ret:  true,
@@ -290,44 +421,51 @@ func Test_Providers_put(t *testing.T) {
 	prov2 := bmp.Provider{ExtID: "2"}
 	prov3 := bmp.Provider{ExtID: "3"}
 
-	tests := [5]struct {
+	tests := [6]struct {
 		name string
-		pros *bmp.Provider
+		prov *bmp.Provider
 		list *Providers
 		want []*bmp.Provider
 		ret  bool
 	}{
 		{
+			name: "nil_Pointer_ERR",
+			prov: nil,
+			list: &list,
+			want: nil,
+			ret:  false,
+		},
+		{
 			name: "TRUE", // appended
-			pros: &prov2,
+			prov: &prov2,
 			list: &list,
 			want: []*bmp.Provider{&prov2},
 			ret:  true,
 		},
 		{
 			name: "APPEND", // appended
-			pros: &prov3,
+			prov: &prov3,
 			list: &list,
 			want: []*bmp.Provider{&prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "PREPEND", // inserted
-			pros: &prov0,
+			prov: &prov0,
 			list: &list,
 			want: []*bmp.Provider{&prov0, &prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "INSERT", // inserted
-			pros: &prov1,
+			prov: &prov1,
 			list: &list,
 			want: []*bmp.Provider{&prov0, &prov1, &prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "FALSE", // already have
-			pros: &prov3,
+			prov: &prov3,
 			list: &list,
 			want: []*bmp.Provider{&prov0, &prov1, &prov2, &prov3},
 			ret:  false,
@@ -339,7 +477,7 @@ func Test_Providers_put(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running
 			// the particular order of tests is important
-			if _, got := test.list.put(test.pros); got != test.ret {
+			if _, got := test.list.put(test.prov); got != test.ret {
 				t.Errorf("add() return: %v | want: %v", got, test.ret)
 			}
 			if !reflect.DeepEqual(test.list.Sorted, test.want) {
@@ -352,14 +490,8 @@ func Test_Providers_put(t *testing.T) {
 func Test_Providers_write(t *testing.T) {
 	t.Parallel()
 
-	prov, msc, sci := mockProvider(), mockMagmaSmartContract(), mockStateContextI()
-
-	list := &Providers{}
-	if err := list.add(msc.ID, prov, store.GetTransaction(msc.db), sci); err != nil {
-		t.Fatalf("add() error: %v | want: %v", err, nil)
-	}
-
-	tests := [1]struct {
+	list, msc, sci := &Providers{}, mockMagmaSmartContract(), mockStateContextI()
+	tests := [2]struct {
 		name  string
 		prov  *bmp.Provider
 		msc   *MagmaSmartContract
@@ -369,11 +501,19 @@ func Test_Providers_write(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			prov:  prov,
+			prov:  mockProvider(),
 			msc:   msc,
 			sci:   sci,
 			list:  list,
 			error: false,
+		},
+		{
+			name:  "nil_Pointer_ERR",
+			prov:  nil,
+			msc:   msc,
+			sci:   nil,
+			list:  list,
+			error: true,
 		},
 	}
 
@@ -390,7 +530,7 @@ func Test_Providers_write(t *testing.T) {
 	}
 }
 
-func Test_fetchProviders(t *testing.T) {
+func Test_providersFetch(t *testing.T) {
 	t.Parallel()
 
 	list, msc, sci := mockProviders(), mockMagmaSmartContract(), mockStateContextI()
@@ -426,13 +566,13 @@ func Test_fetchProviders(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := fetchProviders(test.id, store.GetTransaction(test.msc.db))
+			got, err := providersFetch(test.id, store.GetTransaction(test.msc.db))
 			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("fetchProviders() got: %#v | want: %#v", got, test.want)
+				t.Errorf("providersFetch() got: %#v | want: %#v", got, test.want)
 				return
 			}
 			if (err != nil) != test.error {
-				t.Errorf("fetchProviders() error: %v | want: %v", err, test.error)
+				t.Errorf("providersFetch() error: %v | want: %v", err, test.error)
 			}
 		})
 	}

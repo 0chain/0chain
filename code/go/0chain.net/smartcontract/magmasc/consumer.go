@@ -9,7 +9,7 @@ import (
 // consumerFetch extracts Consumer stored in state.StateContextI
 // or returns error if blockchain state does not contain it.
 func consumerFetch(scID, id string, sci chain.StateContextI) (*bmp.Consumer, error) {
-	data, err := sci.GetTrieNode(nodeUID(scID, id, consumerType))
+	data, err := sci.GetTrieNode(nodeUID(scID, consumerType, id))
 	if err != nil {
 		return nil, err
 	}

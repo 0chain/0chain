@@ -10,8 +10,6 @@ import (
 	"github.com/0chain/bandwidth_marketplace/code/core/time"
 
 	chain "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	tp "0chain.net/chaincore/tokenpool"
 	tx "0chain.net/chaincore/transaction"
 	store "0chain.net/core/ememorystore"
 )
@@ -20,18 +18,18 @@ func Test_MagmaSmartContract_acknowledgment(t *testing.T) {
 	t.Parallel()
 
 	msc, ackn, sci := mockMagmaSmartContract(), mockAcknowledgment(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	acknInvalidJSON := bmp.Acknowledgment{SessionID: "invalid_json_id"}
 	nodeInvalidJSON := mockInvalidJson{ID: acknInvalidJSON.SessionID}
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknInvalidJSON.SessionID, acknowledgment), &nodeInvalidJSON); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, acknInvalidJSON.SessionID), &nodeInvalidJSON); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	acknInvalid := bmp.Acknowledgment{SessionID: "invalid_acknowledgment"}
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknInvalidJSON.SessionID, acknowledgment), &acknInvalid); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, acknInvalidJSON.SessionID), &acknInvalid); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -98,7 +96,7 @@ func Test_MagmaSmartContract_acknowledgmentAccepted(t *testing.T) {
 	t.Parallel()
 
 	msc, ackn, sci := mockMagmaSmartContract(), mockAcknowledgment(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -152,7 +150,7 @@ func Test_MagmaSmartContract_acknowledgmentAcceptedVerify(t *testing.T) {
 	t.Parallel()
 
 	msc, ackn, sci := mockMagmaSmartContract(), mockAcknowledgment(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -250,7 +248,7 @@ func Test_MagmaSmartContract_acknowledgmentExist(t *testing.T) {
 	t.Parallel()
 
 	msc, ackn, sci := mockMagmaSmartContract(), mockAcknowledgment(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -402,7 +400,7 @@ func Test_MagmaSmartContract_consumerExist(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	cons := mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, cons.ExtID, consumerType), cons); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, consumerType, cons.ExtID), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -458,7 +456,7 @@ func Test_MagmaSmartContract_consumerFetch(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	cons := mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, cons.ExtID, consumerType), cons); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, consumerType, cons.ExtID), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -577,7 +575,26 @@ func Test_MagmaSmartContract_consumerRegister(t *testing.T) {
 func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	t.Parallel()
 
-	ackn, msc, sci := mockAcknowledgment(), mockMagmaSmartContract(), mockStateContextI()
+	msc, sci := mockMagmaSmartContract(), mockStateContextI()
+
+	ackn, pool := mockAcknowledgment(), newTokenPool()
+	ackn.Billing = nil                      // omitempty
+	ackn.Provider.Terms.PriceAutoUpdate = 0 // omitempty
+	ackn.Provider.Terms.ProlongDuration = 0 // omitempty
+	ackn.Provider.Terms.QoSAutoUpdate = nil // omitempty
+
+	txn := sci.GetTransaction()
+	txn.ClientID = ackn.Consumer.ID
+
+	ackn.TokenPool = &pool.TokenPool
+	ackn.TokenPoolTransfer, _ = pool.create(txn, ackn, sci)
+
+	req := &bmp.Acknowledgment{
+		SessionID:     ackn.SessionID,
+		AccessPointID: ackn.AccessPointID,
+		Consumer:      &bmp.Consumer{ExtID: ackn.Consumer.ExtID},
+		Provider:      &bmp.Provider{ExtID: ackn.Provider.ExtID},
+	}
 
 	consList := Consumers{}
 	if err := consList.add(msc.ID, ackn.Consumer, store.GetTransaction(msc.db), sci); err != nil {
@@ -587,26 +604,6 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	provList := Providers{}
 	if err := provList.add(msc.ID, ackn.Provider, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
-	}
-
-	txn := &tx.Transaction{
-		ClientID:   ackn.Consumer.ID,
-		ToClientID: msc.ID,
-	}
-
-	req := &bmp.Acknowledgment{
-		SessionID:     ackn.SessionID,
-		AccessPointID: ackn.AccessPointID,
-		Consumer:      &bmp.Consumer{ExtID: ackn.Consumer.ExtID},
-		Provider:      &bmp.Provider{ExtID: ackn.Provider.ExtID},
-	}
-
-	resp := &tp.TokenPoolTransferResponse{
-		TxnHash:    txn.Hash,
-		ToPool:     ackn.SessionID,
-		Value:      state.Balance(ackn.Provider.Terms.GetAmount()),
-		FromClient: txn.ClientID,
-		ToClient:   txn.ToClientID,
 	}
 
 	tests := [1]struct {
@@ -619,15 +616,12 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 		error bool
 	}{
 		{
-			name: "OK",
-			txn: &tx.Transaction{
-				ClientID:   ackn.Consumer.ID,
-				ToClientID: msc.ID,
-			},
+			name:  "OK",
+			txn:   txn,
 			blob:  req.Encode(),
 			sci:   sci,
 			msc:   msc,
-			want:  string(resp.Encode()),
+			want:  string(ackn.Encode()),
 			error: false,
 		},
 	}
@@ -657,7 +651,7 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 	ackn := mockAcknowledgment()
 	ackn.SessionID += time.NowTime().String()
 	ackn.Billing.CompletedAt = time.Now()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -671,19 +665,17 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
-	pool := tokenPool{PayerID: ackn.Consumer.ID, PayeeID: ackn.Provider.ID}
+	txn := sci.GetTransaction()
+	txn.ClientID = ackn.Consumer.ID
+
+	pool := newTokenPool()
+	pool.PayerID = ackn.Consumer.ID
+	pool.PayeeID = ackn.Provider.ID
 	pool.ID = ackn.SessionID
 	pool.Balance = 1000
-	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), &pool); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
 
-	txn := &tx.Transaction{
-		ClientID:   ackn.Consumer.ID,
-		ToClientID: msc.ID,
-	}
-
-	resp := &tp.TokenPoolTransferResponse{
+	ackn.TokenPool = &pool.TokenPool
+	ackn.TokenPoolTransfer = &bmp.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		FromPool:   pool.ID,
 		FromClient: pool.PayerID,
@@ -705,7 +697,7 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 			blob:  (&bmp.Acknowledgment{SessionID: ackn.SessionID}).Encode(),
 			sci:   sci,
 			msc:   msc,
-			want:  string(resp.Encode()),
+			want:  string(ackn.Encode()),
 			error: false,
 		},
 	}
@@ -731,13 +723,13 @@ func Test_MagmaSmartContract_consumerUpdate(t *testing.T) {
 	t.Parallel()
 
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
-
 	cons, list := mockConsumer(), Consumers{}
 	if err := list.add(msc.ID, cons, store.GetTransaction(msc.db), sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
-	cons = mockConsumer()
+	txn := sci.GetTransaction()
+	txn.ClientID = cons.ID
 	blob := cons.Encode()
 
 	tests := [1]struct {
@@ -751,7 +743,7 @@ func Test_MagmaSmartContract_consumerUpdate(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			txn:   &tx.Transaction{ClientID: cons.ID},
+			txn:   txn,
 			blob:  blob,
 			sci:   sci,
 			msc:   msc,
@@ -781,7 +773,7 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 	t.Parallel()
 
 	ackn, msc, sci := mockAcknowledgment(), mockMagmaSmartContract(), mockStateContextI()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, ackn.SessionID, acknowledgment), ackn); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -834,7 +826,7 @@ func Test_MagmaSmartContract_providerExist(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, prov.ExtID, providerType), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -890,7 +882,7 @@ func Test_MagmaSmartContract_providerFetch(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, prov.ExtID, providerType), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -1103,78 +1095,19 @@ func Test_MagmaSmartContract_providerUpdate(t *testing.T) {
 	}
 }
 
-func Test_MagmaSmartContract_tokenPollFetch(t *testing.T) {
-	t.Parallel()
-
-	ackn, msc, sci := mockAcknowledgment(), mockMagmaSmartContract(), mockStateContextI()
-
-	pool := tokenPool{
-		PayerID: ackn.Consumer.ID,
-		PayeeID: ackn.Provider.ID,
-	}
-	pool.ID = ackn.SessionID
-	pool.Balance = 1000
-	if _, err := sci.InsertTrieNode(pool.uid(msc.ID), &pool); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
-
-	tests := [2]struct {
-		name  string
-		ackn  *bmp.Acknowledgment
-		sci   chain.StateContextI
-		msc   *MagmaSmartContract
-		want  *tokenPool
-		error bool
-	}{
-		{
-			name:  "OK",
-			ackn:  ackn,
-			sci:   sci,
-			msc:   msc,
-			want:  &pool,
-			error: false,
-		},
-		{
-			name:  "Value_Not_Present_ERR",
-			ackn:  &bmp.Acknowledgment{SessionID: "not_present_id"},
-			sci:   sci,
-			msc:   msc,
-			want:  nil,
-			error: true,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := test.msc.tokenPollFetch(test.ackn, test.sci)
-			if (err != nil) != test.error {
-				t.Errorf("tokenPollFetch() error: %v | want: %v", err, test.error)
-				return
-			}
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("tokenPollFetch() got: %v, want: %v", got, test.want)
-			}
-		})
-	}
-}
-
 func Test_nodeUID(t *testing.T) {
 	t.Parallel()
 
 	const (
-		scID     = "sc_id"
-		nodeID   = "node_id"
-		nodeType = "node_type"
-		wantUID  = "sc:" + scID + colon + nodeType + colon + nodeID
+		nodeID   = "id:node"
+		nodeType = "type:node"
+		wantUID  = "sc:" + Address + colon + nodeType + colon + nodeID
 	)
 
 	t.Run("OK", func(t *testing.T) {
 		t.Parallel()
 
-		if got := nodeUID(scID, nodeID, nodeType); got != wantUID {
+		if got := nodeUID(Address, nodeType, nodeID); got != wantUID {
 			t.Errorf("nodeUID() got: %v | want: %v", got, wantUID)
 		}
 	})

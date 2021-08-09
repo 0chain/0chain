@@ -152,17 +152,17 @@ func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection,
 	list.put(item) // add or replace
 
 	blob, err := json.Marshal(list.Sorted)
-	if err != nil || blob == nil {
+	if err != nil {
 		return errors.Wrap(errCodeInternal, "encode consumers list failed", err)
 	}
 	if err = db.Conn.Put([]byte(AllConsumersKey), blob); err != nil {
 		return errors.Wrap(errCodeInternal, "insert consumers list failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, item.ExtID, consumerType), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, consumerType, item.ExtID), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, item.Host, consumerType), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, consumerType, item.Host), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert consumer host failed", err)
 	}
@@ -175,8 +175,8 @@ func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection,
 	return nil
 }
 
-// fetchConsumers extracts all consumers stored in memory data store with given id.
-func fetchConsumers(id string, db *store.Connection) (*Consumers, error) {
+// consumersFetch extracts all consumers stored in memory data store with given id.
+func consumersFetch(id string, db *store.Connection) (*Consumers, error) {
 	list := &Consumers{}
 
 	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))

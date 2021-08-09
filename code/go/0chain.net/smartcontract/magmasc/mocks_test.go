@@ -1,6 +1,7 @@
 package magmasc
 
 import (
+	"encoding/hex"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
+	"golang.org/x/crypto/sha3"
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
@@ -66,50 +68,43 @@ func (m *mockInvalidJson) Encode() []byte {
 }
 
 func mockAcknowledgment() *bmp.Acknowledgment {
+	now := time.Now().Format(time.RFC3339Nano)
 	return &bmp.Acknowledgment{
-		SessionID:     "session_id",
-		AccessPointID: "access_point_id",
-		Billing:       mockBilling(),
-		Consumer:      mockConsumer(),
-		Provider:      mockProvider(),
-	}
-}
-
-func mockBilling() bmp.Billing {
-	return bmp.Billing{
-		DataUsage: mockDataUsage(),
+		SessionID:     "id:session:" + now,
+		AccessPointID: "id:access_point:" + now,
+		Billing: &bmp.Billing{
+			DataUsage: bmp.DataUsage{
+				DownloadBytes: 3 * million,
+				UploadBytes:   2 * million,
+				SessionID:     "id:session:" + now,
+				SessionTime:   1 * 60, // 1 minute
+			},
+		},
+		Consumer: mockConsumer(),
+		Provider: mockProvider(),
 	}
 }
 
 func mockConsumer() *bmp.Consumer {
+	now := time.Now()
+	bin, _ := now.MarshalBinary()
+	hash := sha3.Sum256(bin)
 	return &bmp.Consumer{
-		ID:    "consumer_id",
-		ExtID: "ext_id",
-		Host:  "localhost:8010",
+		ID:    "id:consumer:" + hex.EncodeToString(hash[:]),
+		ExtID: "id:consumer:external:" + now.Format(time.RFC3339Nano),
+		Host:  "host.consumer.local:8010",
 	}
 }
 
 func mockConsumers() *Consumers {
 	list := &Consumers{}
 	for i := 0; i < 10; i++ {
-		id := strconv.Itoa(i)
-		list.put(&bmp.Consumer{
-			ID:    "consumer_id" + id,
-			ExtID: "ext_id" + id,
-			Host:  "localhost:8010" + id,
-		})
+		item := mockConsumer()
+		item.Host += strconv.Itoa(i)
+		list.put(item)
 	}
 
 	return list
-}
-
-func mockDataUsage() bmp.DataUsage {
-	return bmp.DataUsage{
-		DownloadBytes: 3 * million,
-		UploadBytes:   2 * million,
-		SessionID:     "session_id",
-		SessionTime:   1 * 60, // 1 minute
-	}
 }
 
 func mockSmartContractI() *mockSmartContract {
@@ -144,8 +139,7 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	defer mutexMockMSC.Unlock()
 
 	const prefix = "test."
-
-	msc := &MagmaSmartContract{SmartContract: sci.NewSC("sc_id")}
+	msc := &MagmaSmartContract{SmartContract: sci.NewSC(Address)}
 	path := filepath.Join("/tmp", rootPath, prefix+time.Now().Format(time.RFC3339Nano))
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
@@ -166,11 +160,13 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 }
 
 func mockProvider() *bmp.Provider {
-	now := time.Now().Format(time.RFC3339)
+	now := time.Now()
+	bin, _ := now.MarshalBinary()
+	hash := sha3.Sum256(bin)
 	return &bmp.Provider{
-		ID:    "provider_id:" + now,
-		ExtID: "ext_id:" + now,
-		Host:  "localhost:8020",
+		ID:    "id:provider:" + hex.EncodeToString(hash[:]),
+		ExtID: "id:provider:external:" + now.Format(time.RFC3339Nano),
+		Host:  "host.provider.local:8020",
 		Terms: mockProviderTerms(),
 	}
 }
@@ -178,13 +174,9 @@ func mockProvider() *bmp.Provider {
 func mockProviders() *Providers {
 	list := &Providers{}
 	for i := 0; i < 10; i++ {
-		id := strconv.Itoa(i)
-		list.put(&bmp.Provider{
-			ID:    "provider_id" + id,
-			ExtID: "ext_id" + id,
-			Host:  "localhost:8020" + id,
-			Terms: mockProviderTerms(),
-		})
+		item := mockProvider()
+		item.Host += strconv.Itoa(i)
+		list.put(item)
 	}
 
 	return list
@@ -196,8 +188,11 @@ func mockProviderTerms() bmp.ProviderTerms {
 		PriceAutoUpdate: 0.001,
 		MinCost:         0.5,
 		Volume:          0,
-		QoS:             mockQoS(),
-		QoSAutoUpdate: bmp.AutoUpdateQoS{
+		QoS: &magma.QoS{
+			DownloadMbps: 5.4321,
+			UploadMbps:   1.2345,
+		},
+		QoSAutoUpdate: &bmp.QoSAutoUpdate{
 			DownloadMbps: 0.001,
 			UploadMbps:   0.001,
 		},
@@ -242,7 +237,7 @@ func mockStateContextI() *mockStateContext {
 
 	ackn := mockAcknowledgment()
 	ackn.SessionID = "cannot_insert_id"
-	stateContext.store[nodeUID("sc_id", ackn.SessionID, acknowledgment)] = ackn
+	stateContext.store[nodeUID(Address, acknowledgment, ackn.SessionID)] = ackn
 
 	stateContext.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
@@ -273,7 +268,7 @@ func mockStateContextI() *mockStateContext {
 	)
 	stateContext.On("GetClientBalance", argStr).Return(
 		func(id string) state.Balance {
-			if id == "consumer_id" {
+			if strings.Contains(id, "id:consumer:") {
 				return 1000 * 1e9 // 1000 * 1e9 units equal to one thousand coins
 			}
 			return 0
@@ -289,7 +284,13 @@ func mockStateContextI() *mockStateContext {
 		},
 	)
 	stateContext.On("GetTransaction").Return(
-		func() *tx.Transaction { return &tx.Transaction{ToClientID: "sc_id"} },
+		func() *tx.Transaction {
+			bin, _ := time.Now().MarshalBinary()
+			hash := sha3.Sum256(bin)
+			txn := tx.Transaction{ToClientID: Address}
+			txn.Hash = hex.EncodeToString(hash[:])
+			return &txn
+		},
 	)
 	stateContext.On("GetTrieNode", argStr).Return(
 		func(id string) util.Serializable {
@@ -319,12 +320,6 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Acknowledgment")).
 		Return(funcInsertID, errFuncInsertID)
 
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ActiveSessions")).
-		Return(funcInsertList, errFuncInsertList)
-
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Billing")).
-		Return(funcInsertID, errFuncInsertID)
-
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Consumer")).
 		Return(funcInsertID, errFuncInsertID)
 
@@ -340,8 +335,8 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Providers")).
 		Return(funcInsertList, errFuncInsertList)
 
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.tokenPool")).
-		Return(funcInsertID, errFuncInsertID)
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ProviderTerms")).
+		Return(funcInsertList, errFuncInsertList)
 
 	nodeInvalid := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := stateContext.InsertTrieNode(nodeInvalid.ID, &nodeInvalid); err != nil {
@@ -352,20 +347,13 @@ func mockStateContextI() *mockStateContext {
 }
 
 func mockTokenPool() *tokenPool {
-	pool := tokenPool{
-		PayerID: "payer_id",
-		PayeeID: "payee_id",
-	}
+	now := time.Now().Format(time.RFC3339Nano)
 
-	pool.ID = "session_id"
+	pool := newTokenPool()
+	pool.PayerID = "id:payer:" + now
+	pool.PayeeID = "id:payee:" + now
+	pool.ID = "id:session:" + now
 	pool.Balance = 1000
 
-	return &pool
-}
-
-func mockQoS() magma.QoS {
-	return magma.QoS{
-		DownloadMbps: 5.4321,
-		UploadMbps:   1.2345,
-	}
+	return pool
 }

@@ -9,7 +9,7 @@ import (
 // providerFetch extracts Provider stored in state.StateContextI
 // or returns error if blockchain state does not contain it.
 func providerFetch(scID, key string, sci chain.StateContextI) (*bmp.Provider, error) {
-	data, err := sci.GetTrieNode(nodeUID(scID, key, providerType))
+	data, err := sci.GetTrieNode(nodeUID(scID, providerType, key))
 	if err != nil {
 		return nil, err
 	}

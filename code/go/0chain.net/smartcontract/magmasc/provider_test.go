@@ -12,15 +12,13 @@ import (
 func Test_providerFetch(t *testing.T) {
 	t.Parallel()
 
-	const scID = "sc_id"
-
 	sci, prov := mockStateContextI(), mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(scID, prov.ExtID, providerType), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(Address, providerType, prov.ExtID), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	node := mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, node.ID, providerType), &node); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(Address, providerType, node.ID), &node); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -59,7 +57,7 @@ func Test_providerFetch(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := providerFetch(scID, test.id, test.sci)
+			got, err := providerFetch(Address, test.id, test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
 				t.Errorf("providerFetch() got: %#v | want: %#v", err, test.want)
 				return
