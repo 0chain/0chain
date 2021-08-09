@@ -13,37 +13,36 @@ import (
 func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := GetGlobalNode(balances)
 
-	payload := &BurnPayload{}
-	err = payload.Decode(inputData)
-	if err != nil {
-		return
-	}
-
-	payload.TxnID = trans.Hash
-
 	// check burn amount
 	if trans.Value < gn.MinBurnAmount {
 		err = common.NewError("failed to burn", fmt.Sprintf("amount requested(%v) is lower than min amount for burn (%v)", trans.Value, gn.MinBurnAmount))
 		return
 	}
 
+	payload := &BurnPayload{}
+	err = payload.Decode(inputData)
+	if err != nil {
+		return
+	}
+
+	if payload.EthereumAddress == "" {
+		err = common.NewError("failed to burn", "ethereum address is required")
+		return
+	}
+
+	payload.TxnID = trans.Hash
 	payload.Amount = trans.Value
 
-	// get user node
+	// get user node and update it's node
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
-		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v)", err.Error()))
+		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1", err.Error()))
 		return
 	}
 
 	// check nonce is correct (current + 1)
 	if un.Nonce+1 != payload.Nonce {
 		err = common.NewError("failed to burn", fmt.Sprintf("the payload nonce (%v) should be 1 higher than the current nonce (%v)", payload.Nonce, un.Nonce))
-		return
-	}
-
-	if payload.EthereumAddress == "" {
-		err = common.NewError("failed to burn", "ethereum address is required")
 		return
 	}
 
