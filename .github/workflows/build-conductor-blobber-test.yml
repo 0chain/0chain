@@ -33,7 +33,6 @@ jobs:
     - name: Git Checkout
       run: |
         cd /root/0chain/
-        source /root/.profile
         git checkout .
         git pull
         git checkout $BRANCH
@@ -67,6 +66,7 @@ jobs:
         git checkout .
         git pull
         git checkout master
+        source ~/.profile
         make install
 
     - name: Installing ZWALLETCLI.
@@ -75,6 +75,7 @@ jobs:
         git checkout .
         git pull
         git checkout master
+        source ~/.profile
         make install
 
     - name: Patching 0DNS
