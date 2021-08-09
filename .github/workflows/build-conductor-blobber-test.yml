@@ -33,6 +33,7 @@ jobs:
     - name: Git Checkout
       run: |
         cd /root/0chain/
+        source /root/.profile
         git checkout .
         git pull
         git checkout $BRANCH
