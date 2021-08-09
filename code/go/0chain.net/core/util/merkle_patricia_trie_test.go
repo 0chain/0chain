@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/0chain/gorocksdb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
@@ -325,12 +326,29 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	//  4. merge transaction changes
 	//  6. prune sate (not implemented)
 
-	const n = 20
-
+	expectedValueSets := [][]string{
+		{"test-value-0-one", "test-value-0-two"},
+		{"test-value-0-one", "test-value-0-changed", "test-value-1-one", "test-value-1-two"},
+		{"test-value-0-changed", "test-value-1-one", "test-value-1-changed", "test-value-2-one", "test-value-2-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-one", "test-value-2-changed", "test-value-3-one", "test-value-3-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-one", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-changed", "test-value-5-one", "test-value-5-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-one", "test-value-5-changed", "test-value-6-one", "test-value-6-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-one", "test-value-6-changed", "test-value-7-one", "test-value-7-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-one", "test-value-7-changed", "test-value-8-one", "test-value-8-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-changed", "test-value-8-one", "test-value-8-changed",
+			"test-value-9-one", "test-value-9-two"},
+	}
 	// var back = context.Background()
 
 	//
-	for round := int64(0); round < n; round++ {
+	for round := int64(0); round < int64(len(expectedValueSets)); round++ {
 
 		//
 		// 1. create block client state
@@ -390,8 +408,14 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		priorDB = blockState.GetNodeDB()
 		priorHash = blockState.GetRoot()
 
+		sponge := valuesSponge{make([]string, 0, 16)}
+		require.NoError(t, blockState.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
+		assert.ElementsMatch(t, expectedValueSets[round], sponge.values)
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt.SetRoot(priorHash)
+		sponge = valuesSponge{make([]string, 0, 16)}
+		require.NoError(t, mpt.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
+		assert.ElementsMatch(t, expectedValueSets[round], sponge.values)
 
 		// //  5. prune state
 		// var wps = WithPruneStats(back)
