@@ -36,6 +36,7 @@ jobs:
         git checkout .
         git pull
         git checkout $BRANCH
+        git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
