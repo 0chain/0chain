@@ -221,11 +221,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.freeAllocationRequest(t, input, balances)
 	case "free_update_allocation":
 		resp, err = sc.updateFreeStorageRequest(t, input, balances)
-
-	case "add_curator":
-		resp, err = "", sc.addCurator(t, input, balances)
 	case "curator_transfer_allocation":
 		resp, err = sc.curatorTransferAllocation(t, input, balances)
+
+	//curator
+	case "add_curator":
+		resp, err = "", sc.addCurator(t, input, balances)
+	case "remove_curator":
+		resp, err = "", sc.removeCurator(t, input, balances)
 
 	// blobbers
 
