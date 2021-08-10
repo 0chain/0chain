@@ -408,14 +408,10 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		priorDB = blockState.GetNodeDB()
 		priorHash = blockState.GetRoot()
 
-		sponge := valuesSponge{make([]string, 0, 16)}
-		require.NoError(t, blockState.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
-		assert.ElementsMatch(t, expectedValueSets[round], sponge.values)
+		checkValues(t, blockState, expectedValueSets[round])
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt.SetRoot(priorHash)
-		sponge = valuesSponge{make([]string, 0, 16)}
-		require.NoError(t, mpt.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
-		assert.ElementsMatch(t, expectedValueSets[round], sponge.values)
+		checkValues(t, mpt, expectedValueSets[round])
 
 		// //  5. prune state
 		// var wps = WithPruneStats(back)
@@ -537,6 +533,25 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 		t.Fatalf("root hash mismatch: %v, %v",
 			rootHash, exp)
 	}
+}
+
+func TestMPTRepetitiveInsert(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert(t, mpt2, "223456", "22345")
+	doStrValInsert(t, mpt2, "223467", "22346")
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.Root))
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	mpt2.ChangeCollector.GetChanges()
+
+	doStrValInsert(t, mpt2, "223467", "22347")
+	checkValues(t, mpt2, []string{"22345", "22347"})
+	doStrValInsert(t, mpt2, "223467", "22346")
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.Root))
 }
 
 func TestMPTDelete(t *testing.T) {
@@ -719,6 +734,14 @@ func checkNodePaths(t *testing.T, mpt MerklePatriciaTrieI, visitNodeTypes byte, 
 	err := mpt.Iterate(context.TODO(), iterPathNodesSpongeHandler(&pathsSponge), visitNodeTypes)
 	require.NoError(t, err)
 	require.Equal(t, values, pathsSponge.paths)
+}
+
+func checkValues(t *testing.T, mpt MerklePatriciaTrieI, values []string) {
+	t.Helper()
+
+	sponge := valuesSponge{make([]string, 0, 16)}
+	require.NoError(t, mpt.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
+	assert.ElementsMatch(t, values, sponge.values)
 }
 
 func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
