@@ -187,17 +187,19 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "fetch acknowledgment failed", err)
 	}
 
-	pool := newTokenPool()
-	if err = pool.Decode(ackn.TokenPool.Encode()); err != nil {
-		return "", errors.New(errCodeSessionStop, err.Error())
-	}
-	if ackn.TokenPoolTransfer, err = pool.spend(txn, ackn.Billing, sci); err != nil {
-		return "", errors.New(errCodeSessionStop, err.Error())
-	}
+	if ackn.Billing.CompletedAt == 0 { // shouldn't be completed
+		pool := newTokenPool()
+		if err = pool.Decode(ackn.TokenPool.Encode()); err != nil {
+			return "", errors.New(errCodeSessionStop, err.Error())
+		}
+		if ackn.TokenPoolTransfer, err = pool.spend(txn, ackn.Billing, sci); err != nil {
+			return "", errors.New(errCodeSessionStop, err.Error())
+		}
 
-	ackn.Billing.CompletedAt = time.Now()
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
-		return "", errors.Wrap(errCodeSessionStop, "update acknowledgment failed", err)
+		ackn.Billing.CompletedAt = time.Now()
+		if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
+			return "", errors.Wrap(errCodeSessionStop, "update acknowledgment failed", err)
+		}
 	}
 
 	return string(ackn.Encode()), nil
