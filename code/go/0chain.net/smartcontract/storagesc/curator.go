@@ -41,10 +41,15 @@ func (sc *StorageSmartContract) removeCurator(
 	var found = false
 	for i, curator := range alloc.Curators {
 		if curator == rci.CuratorId {
-			// we don't care about order
-			alloc.Curators[i] = alloc.Curators[len(alloc.Curators)-1]
-			alloc.Curators = alloc.Curators[:len(alloc.Curators)-1]
+			// we don't care about orderif
+			if len(alloc.Curators) == 1 {
+				alloc.Curators = []string{}
+			} else {
+				alloc.Curators[i] = alloc.Curators[len(alloc.Curators)-1]
+				alloc.Curators = alloc.Curators[:len(alloc.Curators)-1]
+			}
 			found = true
+			break
 		}
 	}
 	if !found {
@@ -52,9 +57,6 @@ func (sc *StorageSmartContract) removeCurator(
 			"cannot find curator: "+rci.CuratorId)
 	}
 
-	alloc.Curators = append(alloc.Curators, rci.CuratorId)
-
-	// save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return common.NewError("remove_curator_failed",
@@ -93,7 +95,6 @@ func (sc *StorageSmartContract) addCurator(
 
 	alloc.Curators = append(alloc.Curators, aci.CuratorId)
 
-	// save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return common.NewError("add_curator_failed",
