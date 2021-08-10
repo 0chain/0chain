@@ -326,6 +326,9 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Consumers")).
 		Return(funcInsertList, errFuncInsertList)
 
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.flagBool")).
+		Return(funcInsertID, errFuncInsertID)
+
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.mockInvalidJson")).
 		Return(funcInsertID, errFuncInsertID)
 

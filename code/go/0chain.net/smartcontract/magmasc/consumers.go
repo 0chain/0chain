@@ -2,6 +2,7 @@ package magmasc
 
 import (
 	"encoding/json"
+	"reflect"
 	"sort"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
@@ -22,7 +23,7 @@ func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
-	if cons, _ := consumerFetch(scID, item.Host, sci); cons != nil {
+	if data, _ := sci.GetTrieNode(nodeUID(scID, consumerType, item.Host)); data != nil {
 		return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)
 	}
 
@@ -70,6 +71,14 @@ func (m *Consumers) delByIndex(idx int, db *store.Connection) (*bmp.Consumer, er
 	m.Sorted = list.Sorted
 
 	return &item, nil
+}
+
+func (m *Consumers) hasEqual(item *bmp.Consumer) bool {
+	if got, found := m.get(item.ExtID); !found || !reflect.DeepEqual(got, item) {
+		return false // not found or not equal
+	}
+
+	return true // found and equal
 }
 
 func (m *Consumers) get(id string) (*bmp.Consumer, bool) {
@@ -136,8 +145,7 @@ func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
 		return idx, false    // already have
 	}
 
-	// insert
-	left, right := m.Sorted[:idx], append([]*bmp.Consumer{item}, m.Sorted[idx:]...)
+	left, right := m.Sorted[:idx], append([]*bmp.Consumer{item}, m.Sorted[idx:]...) // insert
 	m.Sorted = append(left, right...)
 
 	return idx, true // inserted
@@ -146,6 +154,9 @@ func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
 func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
+	}
+	if m.hasEqual(item) { // check if it is not trying to write data equal to the existing ones
+		return nil // have no changes to write
 	}
 
 	list := m.copy()
@@ -162,7 +173,7 @@ func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection,
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, consumerType, item.Host), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, consumerType, item.Host), newFlag(true)); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert consumer host failed", err)
 	}

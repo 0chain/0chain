@@ -2,6 +2,7 @@ package magmasc
 
 import (
 	"encoding/json"
+	"reflect"
 	"sort"
 
 	"github.com/0chain/bandwidth_marketplace/code/core/errors"
@@ -22,7 +23,7 @@ func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if prov, _ := providerFetch(scID, item.Host, sci); prov != nil {
+	if data, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.Host)); data != nil {
 		return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
 	}
 
@@ -70,6 +71,14 @@ func (m *Providers) delByIndex(idx int, db *store.Connection) (*bmp.Provider, er
 	m.Sorted = list.Sorted
 
 	return &item, nil
+}
+
+func (m *Providers) hasEqual(item *bmp.Provider) bool {
+	if got, found := m.get(item.ExtID); !found || !reflect.DeepEqual(got, item) {
+		return false // not found or not equal
+	}
+
+	return true // found and equal
 }
 
 func (m *Providers) get(id string) (*bmp.Provider, bool) {
@@ -136,8 +145,7 @@ func (m *Providers) put(item *bmp.Provider) (int, bool) {
 		return idx, false    // already have
 	}
 
-	// insert
-	left, right := m.Sorted[:idx], append([]*bmp.Provider{item}, m.Sorted[idx:]...)
+	left, right := m.Sorted[:idx], append([]*bmp.Provider{item}, m.Sorted[idx:]...) // insert
 	m.Sorted = append(left, right...)
 
 	return idx, true // inserted
@@ -146,6 +154,9 @@ func (m *Providers) put(item *bmp.Provider) (int, bool) {
 func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
+	}
+	if m.hasEqual(item) { // check if it is not trying to write data equal to the existing ones
+		return nil // have no changes to write
 	}
 
 	list := m.copy()
@@ -162,7 +173,7 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), item); err != nil {
+	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), newFlag(true)); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider host failed", err)
 	}

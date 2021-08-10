@@ -68,12 +68,12 @@ func Test_tokenPool_Encode(t *testing.T) {
 
 	tests := [1]struct {
 		name string
-		ackn *tokenPool
+		pool *tokenPool
 		want []byte
 	}{
 		{
 			name: "OK",
-			ackn: pool,
+			pool: pool,
 			want: blob,
 		},
 	}
@@ -83,7 +83,7 @@ func Test_tokenPool_Encode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := test.ackn.Encode(); !reflect.DeepEqual(got, test.want) {
+			if got := test.pool.Encode(); !reflect.DeepEqual(got, test.want) {
 				t.Errorf("Encode() got: %#v | want: %#v", got, test.want)
 			}
 		})
