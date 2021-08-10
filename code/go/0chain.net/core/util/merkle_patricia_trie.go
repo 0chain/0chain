@@ -314,7 +314,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					zap.Any("version", mpt.Version),
 					//zap.Int("path len", len(path)),
 					//zap.String("path", string(path)),
-					//zap.String("key", hex.EncodeToString(ckey)),
+					zap.String("key", ToHex(ckey)),
 					//zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
 					//zap.String("node hash", node.GetHash()),
 					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
@@ -723,7 +723,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.Error(err))
+		Logger.Error("iterate - get node error", zap.String("key", ToHex(key)), zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}

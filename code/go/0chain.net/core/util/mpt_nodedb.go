@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"go.uber.org/atomic"
 
 	"reflect"
@@ -91,6 +92,7 @@ func (mndb *MemoryNodeDB) getNode(key Key) (Node, error) {
 
 // unsafe
 func (mndb *MemoryNodeDB) putNode(key Key, node Node) error {
+	logging.Logger.Debug("node put to memory", zap.String("key", ToHex(key)))
 	mndb.Nodes[StrKey(key)] = node
 	return nil
 }

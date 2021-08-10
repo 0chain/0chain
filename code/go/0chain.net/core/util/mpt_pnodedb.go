@@ -7,6 +7,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
+	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -58,7 +59,7 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	pnodedb.dataDir = dataDir
 	pnodedb.ro = gorocksdb.NewDefaultReadOptions()
 	pnodedb.wo = gorocksdb.NewDefaultWriteOptions()
-	pnodedb.wo.SetSync(false)
+	pnodedb.wo.SetSync(true)
 	pnodedb.to = gorocksdb.NewDefaultTransactionOptions()
 	pnodedb.fo = gorocksdb.NewDefaultFlushOptions()
 	return pnodedb, nil
@@ -82,6 +83,10 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
 	err := pndb.db.Put(pndb.wo, key, data)
+	logging.Logger.Debug("node put to PersistDB",
+		zap.String("key", ToHex(key)), zap.Error(err),
+		zap.Int64("Origin", int64(node.GetOrigin())),
+		zap.Int64("Version", int64(node.GetVersion())))
 	return err
 }
 
@@ -112,8 +117,14 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	defer wb.Destroy()
 	for idx, key := range keys {
 		wb.Put(key, nodes[idx].Encode())
+		logging.Logger.Debug("multi node put to PersistDB",
+			zap.String("key", ToHex(key)),
+			zap.Int64("Origin", int64(nodes[idx].GetOrigin())),
+			zap.Int64("Version", int64(nodes[idx].GetVersion())))
 	}
-	return pndb.db.Write(pndb.wo, wb)
+	err := pndb.db.Write(pndb.wo, wb)
+	logging.Logger.Debug("multi node put to PersistDB result", zap.Error(err))
+	return err
 }
 
 /*MultiDeleteNode - implement interface */
