@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"0chain.net/core/logging"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -68,7 +69,6 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		saveWallets(lmpt, wallets)
 		verifyBalance(lmpt, wallets)
 
-		lmpt.ResetChangeCollector(nil)
 		generateTransactions(lmpt, wallets, transactions)
 		verifyBalance(lmpt, wallets)
 	}

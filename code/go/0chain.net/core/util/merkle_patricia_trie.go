@@ -33,7 +33,7 @@ func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 		mutex: &sync.RWMutex{},
 		db:    db,
 	}
-	mpt.ResetChangeCollector(nil)
+	mpt.ChangeCollector = NewChangeCollector()
 	mpt.SetVersion(version)
 	return mpt
 }
@@ -236,16 +236,6 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 
 func (mpt *MerklePatriciaTrie) getChangeCollector() ChangeCollectorI {
 	return mpt.ChangeCollector
-}
-
-/*ResetChangeCollector - implement interface */
-func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
-	mpt.mutex.Lock()
-	defer mpt.mutex.Unlock()
-	mpt.ChangeCollector = NewChangeCollector()
-	if root != nil {
-		mpt.setRoot(root)
-	}
 }
 
 /*SaveChanges - implement interface */

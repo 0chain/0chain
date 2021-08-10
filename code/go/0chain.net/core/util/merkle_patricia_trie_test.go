@@ -137,7 +137,6 @@ func TestMerkeTreePruning(t *testing.T) {
 	roots := make([]Key, 0, 10)
 
 	for i := int64(0); i < 1000; i++ {
-		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
 			doStateValInsert(t, mpt2, "123456", 100+i)
@@ -624,8 +623,6 @@ func TestMPTUniverse(t *testing.T) {
 	doStrValInsert(t, mpt2, "0123455167", "europa")
 	doStrValInsert(t, mpt2, "01234523", "venus")
 	doStrValInsert(t, mpt2, "0123", "world")
-
-	mpt.ResetChangeCollector(mpt.GetRoot()) // adding a new change collector so there are changes with old nodes that are not nil
 
 	doStrValInsert(t, mpt2, "012346", "proxima centauri")
 	doStrValInsert(t, mpt2, "01", "hello")
