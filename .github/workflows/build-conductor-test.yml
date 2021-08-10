@@ -102,18 +102,36 @@ jobs:
     - conductor_standard_tests
     
     steps:
-    - name: Running View Change Fault Tolerance Tests.
+    - name: Running Fault Tolerance Tests.
       run: |
         cd /root/0chain/
         source ~/.profile
-        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        if [[ "$VIEW" == "true" ]]
+          bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        elif [[ "$VIEW" == "false" ]]
+          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
-    - name: Running View Change Byzantine Tests.
+    - name: Running Byzantine Tests.
       run: |
         cd /root/0chain/
-        bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        if [[ "$VIEW" == "true" ]]
+          bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        elif [[ "$VIEW" == "false" ]]
+          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
     - name: Running View Change-3 Tests.
       run: |
         cd /root/0chain/
-        bash ./docker.local/bin/start.conductor.sh view-change-3
+        if [[ "$VIEW" == "true" ]]
+          bash ./docker.local/bin/start.conductor.sh view-change-3
+        elif [[ "$VIEW" == "false" ]]
+          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
