@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,7 +17,7 @@ import (
 )
 
 //DebugMPTNode - for detailed debugging
-var DebugMPTNode = false
+var DebugMPTNode = true
 
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
@@ -318,7 +319,9 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					//zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
 					//zap.String("node hash", node.GetHash()),
 					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
-					zap.Error(err))
+					zap.Error(err),
+					zap.String("stack", string(debug.Stack())),
+				)
 			}
 			return nil, ErrNodeNotFound
 		}

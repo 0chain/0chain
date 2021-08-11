@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/logging"
@@ -85,8 +86,16 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
+		logging.Logger.Info("DeleteChange existing change",
+			zap.String("ohash", ohash),
+			zap.String("stack", string(debug.Stack())),
+		)
 		delete(cc.Changes, ohash)
 	} else {
+		logging.Logger.Info("DeleteChange adding to deletes",
+			zap.String("ohash", ohash),
+			zap.String("stack", string(debug.Stack())),
+		)
 		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }

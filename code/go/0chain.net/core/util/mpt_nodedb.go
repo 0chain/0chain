@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/common"
@@ -92,13 +93,18 @@ func (mndb *MemoryNodeDB) getNode(key Key) (Node, error) {
 
 // unsafe
 func (mndb *MemoryNodeDB) putNode(key Key, node Node) error {
-	logging.Logger.Debug("node put to memory", zap.String("key", ToHex(key)))
+	logging.Logger.Debug("node put to memory", zap.String("key", ToHex(key)),
+		zap.String("stack", string(debug.Stack())),
+	)
 	mndb.Nodes[StrKey(key)] = node
 	return nil
 }
 
 // unsafe
 func (mndb *MemoryNodeDB) deleteNode(key Key) error {
+	logging.Logger.Debug("node delete from memory", zap.String("key", ToHex(key)),
+		zap.String("stack", string(debug.Stack())),
+	)
 	delete(mndb.Nodes, StrKey(key))
 	return nil
 }
