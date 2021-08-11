@@ -7,12 +7,13 @@ import (
 	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
+	store "0chain.net/core/ememorystore"
 )
 
 func Test_providerFetch(t *testing.T) {
 	t.Parallel()
 
-	sci, prov := mockStateContextI(), mockProvider()
+	msc, sci, prov := mockMagmaSmartContract(), mockStateContextI(), mockProvider()
 	if _, err := sci.InsertTrieNode(nodeUID(Address, providerType, prov.ExtID), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
@@ -57,7 +58,7 @@ func Test_providerFetch(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := providerFetch(Address, test.id, test.sci)
+			got, err := providerFetch(Address, test.id, store.GetTransaction(msc.db), test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
 				t.Errorf("providerFetch() got: %#v | want: %#v", err, test.want)
 				return

@@ -154,29 +154,28 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if m.hasEqual(item) { // check if it is not trying to write data equal to the existing ones
-		return nil // have no changes to write
-	}
 
 	list := m.copy()
-	list.put(item) // add or replace
+	if !m.hasEqual(item) { // check if it is not trying to write data equal to the existing ones
+		list.put(item) // add or replace
+		blob, err := json.Marshal(list.Sorted)
+		if err != nil {
+			return errors.Wrap(errCodeInternal, "encode providers list failed", err)
+		}
+		if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
+			return errors.Wrap(errCodeInternal, "insert providers list failed", err)
+		}
+	}
 
-	blob, err := json.Marshal(list.Sorted)
-	if err != nil {
-		return errors.Wrap(errCodeInternal, "encode providers list failed", err)
-	}
-	if err = db.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
-		return errors.Wrap(errCodeInternal, "insert providers list failed", err)
-	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtID), item); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtID), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
 	}
-	if _, err = sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), newFlag(true)); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), newFlag(true)); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider host failed", err)
 	}
-	if err = db.Commit(); err != nil {
+	if err := db.Commit(); err != nil {
 		return errors.Wrap(errCodeInternal, "commit changes failed", err)
 	}
 
