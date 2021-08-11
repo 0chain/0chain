@@ -100,8 +100,8 @@ func Test_Consumers_copy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			if gotList := test.list.copy(); !reflect.DeepEqual(gotList, test.want) {
-				t.Errorf("copy() = %v, want %v", gotList, test.want)
+			if got := test.list.copy(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("copy() got: %#v | want: %#v", got, test.want)
 			}
 		})
 	}

@@ -340,32 +340,6 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 	return string(provider.Encode()), nil
 }
 
-// tokenPollFetch fetches token pool form provided state.StateContextI.
-func (m *MagmaSmartContract) tokenPollFetch(ackn *bmp.Acknowledgment, sci chain.StateContextI) (*tokenPool, error) {
-	var pool tokenPool
-
-	pool.ID = ackn.SessionID
-	data, err := sci.GetTrieNode(pool.uid(m.ID))
-	if err != nil {
-		return nil, errors.Wrap(errCodeFetchData, "fetch token pool failed", err)
-	}
-	if err = pool.Decode(data.Encode()); err != nil {
-		return nil, errors.Wrap(errCodeFetchData, "decode token pool failed", err)
-	}
-
-	if pool.ID != ackn.SessionID {
-		return nil, errors.New(errCodeFetchData, "malformed token pool: "+ackn.SessionID)
-	}
-	if pool.PayerID != ackn.Consumer.ID {
-		return nil, errors.New(errCodeFetchData, "not a payer owned token pool: "+ackn.Consumer.ID)
-	}
-	if pool.PayeeID != ackn.Provider.ID {
-		return nil, errors.New(errCodeFetchData, "not a payee owned token pool: "+ackn.Provider.ID)
-	}
-
-	return &pool, nil
-}
-
 // nodeUID returns an uniq id for Node interacting with magma smart contract.
 // Should be used while inserting, removing or getting nodes into state.StateContextI.
 func nodeUID(scID, prefix, key string) string {

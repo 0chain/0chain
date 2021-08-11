@@ -40,8 +40,7 @@ func (m *Providers) copy() (list Providers) {
 }
 
 func (m *Providers) del(id string, db *store.Connection) (*bmp.Provider, error) {
-	idx, found := m.getIndex(id)
-	if found {
+	if idx, found := m.getIndex(id); found {
 		return m.delByIndex(idx, db)
 	}
 

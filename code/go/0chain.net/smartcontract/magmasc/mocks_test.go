@@ -338,9 +338,6 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Providers")).
 		Return(funcInsertList, errFuncInsertList)
 
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.ProviderTerms")).
-		Return(funcInsertList, errFuncInsertList)
-
 	nodeInvalid := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := stateContext.InsertTrieNode(nodeInvalid.ID, &nodeInvalid); err != nil {
 		log.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
