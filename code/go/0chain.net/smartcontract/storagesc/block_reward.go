@@ -56,7 +56,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		zap.Any("BlobberCapacityWeight", conf.BlockReward.BlobberCapacityWeight),
 		zap.Any("BlobberUsageWeight", conf.BlockReward.BlobberUsageWeight),
 	)
-	mints, err := getBlockRewardMints(ssc, balances)
+	mints, err := getBlockRewardMints(ssc, conf, balances)
 	if err != nil {
 		return fmt.Errorf("Error getting mint info: %v", err)
 	}

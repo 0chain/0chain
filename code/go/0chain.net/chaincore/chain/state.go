@@ -154,7 +154,10 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 
 func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
 	err error) {
-
+	logging.Logger.Debug("piers chain updateState)",
+		zap.Int64("round", b.Round),
+		zap.String("Transaction", txn.TransactionData),
+	)
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {

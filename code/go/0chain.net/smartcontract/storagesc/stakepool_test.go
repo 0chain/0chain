@@ -55,6 +55,7 @@ func TestUpdateRewardMints(t *testing.T) {
 		ssc       *StorageSmartContract
 		blobberId string
 		balances  cstate.StateContextI
+		conf      *scConfig
 	}
 	var setExpectations = func(
 		t *testing.T, p parameters,
@@ -127,6 +128,7 @@ func TestUpdateRewardMints(t *testing.T) {
 			ssc:       ssc,
 			blobberId: mockBlobberId,
 			balances:  balances,
+			conf:      &scConfig{},
 		}
 	}
 
@@ -160,7 +162,7 @@ func TestUpdateRewardMints(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			err := args.sp.updateRewardMints(args.ssc, args.blobberId, args.balances)
+			err := args.sp.updateRewardMints(args.ssc, args.blobberId, args.conf, args.balances)
 
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
@@ -377,7 +379,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		return err
 	}
 
-	newStakePool, err := ssc.getStakePool(blobberId, ctx)
+	newStakePool, err := ssc.getStakePool(blobberId, scYaml, ctx)
 	require.NoError(t, err)
 	var newUsp *userStakePools
 	newUsp, err = ssc.getOrCreateUserStakePool(txn.ClientID, ctx)

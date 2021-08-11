@@ -65,15 +65,10 @@ func (mi *blockRewardMints) addMint(blobberId string, amount float64, config *sc
 
 func (mi *blockRewardMints) populate(
 	ssc *StorageSmartContract,
+	conf *scConfig,
 	balances cstate.StateContextI,
 ) error {
-	conf, err := ssc.getConfig(balances, true)
-	if err != nil {
-		return common.NewErrorf("allocation_creation_failed",
-			"can't get config: %v", err)
-	}
 	mi.MaxMintRewards = float64(conf.BlockReward.MaxMintRewards)
-
 	return nil
 }
 
@@ -93,6 +88,7 @@ func getBlockRewardMintsBytes(balances cstate.StateContextI) ([]byte, error) {
 
 func getBlockRewardMints(
 	ssc *StorageSmartContract,
+	conf *scConfig,
 	balances cstate.StateContextI,
 ) (*blockRewardMints, error) {
 	var bsBytes []byte
@@ -102,7 +98,7 @@ func getBlockRewardMints(
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		if err := mi.populate(ssc, balances); err != nil {
+		if err := mi.populate(ssc, conf, balances); err != nil {
 			return nil, err
 		}
 		return mi, nil

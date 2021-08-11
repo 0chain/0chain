@@ -51,10 +51,10 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		if err != nil {
 			return err
 		}
-		return common.NewError("process fee transaction", "transaction already exists")
+		return common.NewErrorf("process transaction", "piers transaction %s already exists", txn.TransactionData)
 	}
 	if err := mc.UpdateState(ctx, b, txn); err != nil {
-		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
+		logging.Logger.Error("piers processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))
 		return err

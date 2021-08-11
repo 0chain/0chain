@@ -366,10 +366,10 @@ func testBlobberPenalty(
 	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
 	require.NoError(t, err)
 
-	newVSp, err := ssc.validatorsStakePools(validators, ctx)
+	newVSp, err := ssc.validatorsStakePools(validators, &scYaml, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(blobberId, &scYaml, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberPenalty(t, f, *newCP, newVSp, *afterBlobber, ctx)
@@ -423,10 +423,10 @@ func testBlobberReward(
 	newCP, err := ssc.getChallengePool(allocation.ID, ctx)
 	require.NoError(t, err)
 
-	newVSp, err := ssc.validatorsStakePools(validators, ctx)
+	newVSp, err := ssc.validatorsStakePools(validators, &scYaml, ctx)
 	require.NoError(t, err)
 
-	afterBlobber, err := ssc.getStakePool(blobberId, ctx)
+	afterBlobber, err := ssc.getStakePool(blobberId, &scYaml, ctx)
 	require.NoError(t, err)
 
 	confirmBlobberReward(t, f, *newCP, newVSp, *afterBlobber, ctx)

@@ -386,7 +386,7 @@ func testCommitBlobberRead(
 	newRp, err := ssc.getReadPool(payerId, ctx)
 	require.NoError(t, err)
 
-	newSp, err := ssc.getStakePool(blobberId, ctx)
+	newSp, err := ssc.getStakePool(blobberId, &conf, ctx)
 	require.NoError(t, err)
 
 	stats := &StorageStats{}

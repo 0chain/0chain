@@ -247,28 +247,29 @@ func (sp *stakePool) updateBlobberStakes(
 func (sp *stakePool) updateRewardMints(
 	ssc *StorageSmartContract,
 	blobberId string,
+	conf *scConfig,
 	balances chainstate.StateContextI,
 ) error {
-	mintInfo, err := getBlockRewardMints(ssc, balances)
-	logging.Logger.Info("updateRewardMints before",
+	mintInfo, err := getBlockRewardMints(ssc, conf, balances)
+	logging.Logger.Info("piers updateRewardMints before",
 		zap.Any("getBlockRewardMints", mintInfo),
 		zap.Any("err", err),
 	)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			return fmt.Errorf("Error getting mint info: %v", err)
+			return fmt.Errorf("pers Error getting mint info: %v", err)
 		} else {
 			return nil
 		}
 	}
 
 	err = mintInfo.mintRewardsForBlobber(sp, blobberId, balances)
-	logging.Logger.Info("updateRewardMints after",
+	logging.Logger.Info("piers updateRewardMints after",
 		zap.Any("getBlockRewardMints", mintInfo),
 		zap.Any("err", err),
 	)
 	if err != nil {
-		return fmt.Errorf("error minting blobber rewards: %v", err)
+		return fmt.Errorf("piers error minting blobber rewards: %v", err)
 	}
 
 	mintInfo.save(balances)
@@ -871,8 +872,11 @@ func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
 }
 
 // getStakePool of given blobber
-func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
-	balances chainstate.StateContextI) (sp *stakePool, err error) {
+func (ssc *StorageSmartContract) getStakePool(
+	blobberID datastore.Key,
+	conf *scConfig,
+	balances chainstate.StateContextI,
+) (sp *stakePool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
@@ -886,7 +890,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	if err := sp.updateRewardMints(ssc, blobberID, balances); err != nil {
+	if err := sp.updateRewardMints(ssc, blobberID, conf, balances); err != nil {
 		return nil, fmt.Errorf("update rewrad mints: %v", err)
 	}
 	sp.totalStakes = sp.stake()
@@ -906,7 +910,7 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	}
 
 	// the stake pool can be created by related validator
-	sp, err = ssc.getStakePool(blobberID, balances)
+	sp, err = ssc.getStakePool(blobberID, conf, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
@@ -923,11 +927,14 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	return
 }
 
-func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
-	alloc *StorageAllocation, balances chainstate.StateContextI) (err error) {
-
+func (ssc *StorageSmartContract) updateSakePoolOffer(
+	ba *BlobberAllocation,
+	alloc *StorageAllocation,
+	conf *scConfig,
+	balances chainstate.StateContextI,
+) (err error) {
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(ba.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(ba.BlobberID, conf, balances); err != nil {
 		return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
 			err)
 	}
@@ -986,7 +993,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spr.BlobberID, conf, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
@@ -1064,7 +1071,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spr.BlobberID, conf, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
@@ -1150,7 +1157,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 			"can't get SC configurations: "+err.Error())
 	}
 
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(spr.BlobberID, conf, balances); err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"can't get related stake pool: "+err.Error())
 	}
@@ -1205,7 +1212,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(_ context.Context,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobberMsg)
 	}
 
-	if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
+	if sp, err = ssc.getStakePool(blobberID, conf, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 	}
 
@@ -1248,7 +1255,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(_ context.Context,
 	for blobberID, poolIDs := range usp.Pools {
 
 		var sp *stakePool
-		if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
+		if sp, err = ssc.getStakePool(blobberID, conf, balances); err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 		}
 

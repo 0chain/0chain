@@ -135,7 +135,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
+	if sp, err = sc.getStakePool(bc.BlobberID, conf, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
@@ -148,7 +148,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 	// validators' stake pools
 	var vsps []*stakePool
-	if vsps, err = sc.validatorsStakePools(validators, balances); err != nil {
+	if vsps, err = sc.validatorsStakePools(validators, conf, balances); err != nil {
 		return
 	}
 
@@ -179,13 +179,16 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 
 // obtain stake pools of given validators
 func (ssc *StorageSmartContract) validatorsStakePools(
-	validators []datastore.Key, balances c_state.StateContextI) (
+	validators []datastore.Key,
+	conf *scConfig,
+	balances c_state.StateContextI,
+) (
 	sps []*stakePool, err error) {
 
 	sps = make([]*stakePool, 0, len(validators))
 	for _, id := range validators {
 		var sp *stakePool
-		if sp, err = ssc.getStakePool(id, balances); err != nil {
+		if sp, err = ssc.getStakePool(id, conf, balances); err != nil {
 			return nil, fmt.Errorf("can't get validator %s stake pool: %v",
 				id, err)
 		}
@@ -251,7 +254,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// validators' stake pools
 	var vsps []*stakePool
-	if vsps, err = sc.validatorsStakePools(validators, balances); err != nil {
+	if vsps, err = sc.validatorsStakePools(validators, conf, balances); err != nil {
 		return
 	}
 
@@ -286,7 +289,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		// load stake pool
 		var sp *stakePool
-		if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
+		if sp, err = sc.getStakePool(bc.BlobberID, conf, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 

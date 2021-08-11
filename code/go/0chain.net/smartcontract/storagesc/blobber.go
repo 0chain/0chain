@@ -121,7 +121,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// update stake pool settings
 	var sp *stakePool
-	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(blobber.ID, conf, balances); err != nil {
 		return fmt.Errorf("can't get stake pool:  %v", err)
 	}
 
@@ -263,7 +263,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	}
 
 	var sp *stakePool
-	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
+	if sp, err = sc.getStakePool(updatedBlobber.ID, conf, balances); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get related stake pool: "+err.Error())
 	}
@@ -451,8 +451,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related read pool: %v", err)
 	}
 
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return "", common.NewError("commit_blobber_read",
+			"can't get SC configurations: "+err.Error())
+	}
+
 	var sp *stakePool
-	sp, err = sc.getStakePool(commitRead.ReadMarker.BlobberID, balances)
+	sp, err = sc.getStakePool(commitRead.ReadMarker.BlobberID, conf, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related stake pool: %v", err)

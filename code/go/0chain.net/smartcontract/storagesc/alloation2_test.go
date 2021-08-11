@@ -1035,7 +1035,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	var newStakePools = []*stakePool{}
 	for _, blobber := range allBlobbersList.Nodes {
-		var sp, err = ssc.getStakePool(blobber.ID, ctx)
+		var sp, err = ssc.getStakePool(blobber.ID, &scYaml, ctx)
 		require.NoError(t, err)
 		newStakePools = append(newStakePools, sp)
 	}
