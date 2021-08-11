@@ -59,7 +59,7 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	pnodedb.dataDir = dataDir
 	pnodedb.ro = gorocksdb.NewDefaultReadOptions()
 	pnodedb.wo = gorocksdb.NewDefaultWriteOptions()
-	pnodedb.wo.SetSync(true)
+	pnodedb.wo.SetSync(false)
 	pnodedb.to = gorocksdb.NewDefaultTransactionOptions()
 	pnodedb.fo = gorocksdb.NewDefaultFlushOptions()
 	return pnodedb, nil
