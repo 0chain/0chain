@@ -7,8 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/storagesc"
+
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -44,23 +45,22 @@ func init() {
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
-func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[string]*client.Client) error {
-	feeTxn := mc.createFeeTxn(b)
-	clients[feeTxn.ClientID] = nil
-	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, feeTxn); ok || err != nil {
+func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, clients map[string]*client.Client) error {
+	clients[txn.ClientID] = nil
+	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 		if err != nil {
 			return err
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(b, feeTxn); err != nil {
-		logging.Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash),
-			zap.String("txn_object", datastore.ToJSON(feeTxn).String()),
+	if err := mc.UpdateState(ctx, b, txn); err != nil {
+		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
+			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))
 		return err
 	}
-	b.Txns = append(b.Txns, feeTxn)
-	b.AddTransaction(feeTxn)
+	b.Txns = append(b.Txns, txn)
+	b.AddTransaction(txn)
 	return nil
 }
 
@@ -74,6 +74,18 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
 	feeTxn.Sign(node.Self.GetSignatureScheme())
 	return feeTxn
+}
+
+func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
+	brTxn := transaction.Provider().(*transaction.Transaction)
+	brTxn.ClientID = b.MinerID
+	brTxn.ToClientID = storagesc.ADDRESS
+	brTxn.CreationDate = b.CreationDate
+	brTxn.TransactionType = transaction.TxnTypeSmartContract
+	brTxn.TransactionData = `{"name":"pay_blobber_block_rewards","input":{}}`
+	brTxn.Fee = 0
+	brTxn.Sign(node.Self.GetSignatureScheme())
+	return brTxn
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
@@ -230,7 +242,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	var pb *block.Block
 	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
-		return nil, chain.ErrPreviousBlockUnavailable
+		return nil, block.ErrPreviousBlockUnavailable
 	}
 
 	if err = mc.ValidateTransactions(ctx, b); err != nil {
@@ -238,6 +250,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if err = mc.ComputeState(ctx, b); err != nil {
+		if err == context.Canceled {
+			logging.Logger.Warn("verify block canceled")
+			return
+		}
+
 		logging.Logger.Error("verify block - error computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),

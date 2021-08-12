@@ -6,7 +6,7 @@ import (
 	"0chain.net/core/common"
 )
 
-var ErrInvalidEntity = common.NewError("invalid_entity", "Invalid entity")
+var ErrInvalidEntity = common.NewError("invalid_entity", "invalid entity")
 
 var (
 	/*EntityNotFound code should be used to check whether an entity is found or not */

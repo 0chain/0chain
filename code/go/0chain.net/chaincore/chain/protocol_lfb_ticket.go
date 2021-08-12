@@ -35,10 +35,7 @@ func init() {
 		CurrentRelayLength: 0,
 		Compress:           false,
 	}
-	LFBTicketSender = node.SendEntityHandler(
-		"/v1/block/get/latest_finalized_ticket",
-		&options,
-	)
+	LFBTicketSender = node.SendEntityHandler("/v1/block/get/latest_finalized_ticket", &options)
 	// 2. Register LFBTicket EntityMetadata implementation.
 	datastore.RegisterEntityMetadata("lfb_ticket", new(LFBTicketEntityMetadata))
 }
@@ -227,7 +224,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// configurations (resend the latest by timer)
 		rebroadcastTimeout = config.GetReBroadcastLFBTicketTimeout()
 		rebroadcast        = time.NewTimer(rebroadcastTimeout)
-		isSharder          = (node.Self.Type == node.NodeTypeSharder)
+		isSharder          = node.Self.Type == node.NodeTypeSharder
 
 		// internals
 		latest = c.newLFBTicket(on)                 //

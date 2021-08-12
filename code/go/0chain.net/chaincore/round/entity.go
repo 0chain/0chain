@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/common"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -157,6 +158,20 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 	return tc.count
 }
 
+func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
+	return tc.GetTimeoutCount()
+	// tc.mutex.Lock()
+	// defer tc.mutex.Unlock()
+	// tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
+	// if tolerance <= 1 {
+	// 	return tc.count
+	// }
+	// if tc.count%tolerance == 0 {
+	// 	return tc.count
+	// }
+	// return tolerance * (1 + tc.count/tolerance)
+}
+
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
@@ -269,7 +284,11 @@ func (r *Round) GetVRFOutput() string {
 
 // AddNotarizedBlock - this will be concurrent as notarization is recognized by
 // verifying as well as notarization message from others.
-func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
+func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
+	if b.GetRoundRandomSeed() == 0 {
+		return nil, false, common.NewError("add_notarized_block", "block has no seed")
+	}
+
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -281,7 +300,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 			if blk != b {
 				blk.MergeVerificationTickets(b.GetVerificationTickets())
 			}
-			return blk, false
+			return blk, false, nil
 		}
 		if blk.RoundRank == b.RoundRank {
 			found = i
@@ -310,7 +329,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 		return rnb[i].ChainWeight > rnb[j].ChainWeight
 	})
 	r.notarizedBlocks = rnb
-	return b, true
+	return b, true, nil
 }
 
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
@@ -343,6 +362,20 @@ func (r *Round) GetProposedBlocks() []*block.Block {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	return r.proposedBlocks
+}
+
+func (r *Round) GetBestRankedProposedBlock() *block.Block {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	pbs := r.proposedBlocks
+	if len(pbs) == 0 {
+		return nil
+	}
+	if len(pbs) == 1 {
+		return pbs[0]
+	}
+	pbs = r.GetBlocksByRank(pbs)
+	return pbs[0]
 }
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */

@@ -158,7 +158,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	if nbCount < len(c.NotarizedBlocksCounts) {
 		c.NotarizedBlocksCounts[nbCount]++
 	}
-	
 	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if rn := r.GetRoundNumber(); rn < plfb.Round {
 		logging.Logger.Error("finalize round - round number < latest finalized round",
@@ -276,10 +275,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 	params.Add("round", fmt.Sprintf("%v", rn))
 
-	var (
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-		mb           = c.GetMagicBlock(rn)
-	)
+	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
@@ -288,6 +284,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 		logging.Logger.Info("get notarized block for round", zap.Int64("round", rn),
 			zap.String("block", entity.GetKey()))
 
+		// cancel further requests and return when a notarized block is acquired
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
 			cancel()
 			return b, nil
@@ -326,15 +323,31 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 		var b *block.Block
 		// This is a notarized block. So, use this method to sync round info with the notarized block.
-		b, r = c.AddNotarizedBlockToRound(r, nb)
+		b, r, err = c.AddNotarizedBlockToRound(r, nb)
+		if err != nil {
+			logging.Logger.Error("get notarized block for round failed",
+				zap.Int64("round", rn),
+				zap.String("block", nb.Hash),
+				zap.String("miner", nb.MinerID),
+				zap.Error(err))
+			return
+		}
 
 		// TODO: this may not be the best round block or the best chain weight
 		// block. Do we do that extra work?
-		b, _ = r.AddNotarizedBlock(b)
+		b, _, err = r.AddNotarizedBlock(b)
+		if err != nil {
+			logging.Logger.Error("get notarized block for round failed",
+				zap.Int64("round", rn),
+				zap.String("block", nb.Hash),
+				zap.String("miner", nb.MinerID),
+				zap.Error(err))
+			return
+		}
 		return b, nil
 	}
 
-	mb.Miners.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
+	c.RequestEntityFromMinersOnMB(lctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
 }
 
@@ -347,7 +360,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 
 	var (
 		sharders = mb.Sharders
-		snk      = node.Self.Underlying().GetKey()
 
 		listMutex sync.Mutex
 	)
@@ -376,16 +388,10 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		return mb, nil
 	}
 
-	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
-		handler)
+	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
 		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
-	}
-
-	// add own LFMB
-	if sharders.HasNode(snk) {
-		magicBlocks = append(magicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 
 	if len(magicBlocks) == 0 {
@@ -409,38 +415,44 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 // block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
 // finalized magic block of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
-	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
-		c.GetLatestFinalizedMagicBlock().MagicBlock)
+	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, c.GetLatestFinalizedMagicBlock().MagicBlock)
 }
 
-// GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
-func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
-	lfmb *block.Block) {
-
+// GetLatestFinalizedMagicBlockRound returns LFMB for given round number
+func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
-
-	lfmb = c.LatestFinalizedMagicBlock
-
-	rn = mbRoundOffset(rn) // round number with MB offset
-
+	rn = mbRoundOffset(rn) // round number with mb offset
+	lfmb := c.latestFinalizedMagicBlock
 	if len(c.magicBlockStartingRounds) > 0 {
-		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
+		lfmbr := int64(-1)
 		for r := range c.magicBlockStartingRounds {
-			startingRounds = append(startingRounds, r)
-		}
-		sort.SliceStable(startingRounds, func(i, j int) bool {
-			return startingRounds[i] >= startingRounds[j]
-		})
-		foundRound := startingRounds[0]
-		for _, r := range startingRounds {
-			foundRound = r
-			if r <= rn {
-				break
+			if r <= rn && r > lfmbr {
+				lfmbr = r
 			}
 		}
-		lfmb = c.magicBlockStartingRounds[foundRound]
+		if lfmbr >= 0 {
+			lfmb = c.magicBlockStartingRounds[lfmbr]
+		}
 	}
+	return lfmb
+}
 
-	return
+// GetLatestFinalizedMagicBlockBriefRound returns LFMB Brief for given round number
+func (c *Chain) GetLatestFinalizedMagicBlockBriefRound(rn int64) *MagicBlockBrief {
+	return getMagicBlockBrief(c.GetLatestFinalizedMagicBlockRound(rn))
+}
+
+func getMagicBlockBrief(b *block.Block) *MagicBlockBrief {
+	if b == nil || b.MagicBlock == nil {
+		return nil
+	}
+	return &MagicBlockBrief{
+		Round:            b.Round,
+		MagicBlockNumber: b.MagicBlock.MagicBlockNumber,
+		MagicBlockHash:   b.MagicBlock.Hash,
+		StartingRound:    b.MagicBlock.StartingRound,
+		MinersN2NURLs:    b.MagicBlock.Miners.N2NURLs(),
+		ShardersN2NURLs:  b.MagicBlock.Sharders.N2NURLs(),
+	}
 }

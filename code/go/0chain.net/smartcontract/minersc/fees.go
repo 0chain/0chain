@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -160,10 +159,10 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	err error) {
 
 	var miners, sharders *MinerNodes
-	if miners, err = msc.getMinersList(balances); err != nil {
+	if miners, err = getMinersList(balances); err != nil {
 		return fmt.Errorf("getting all miners list: %v", err)
 	}
-	sharders, err = msc.getShardersList(balances, AllShardersKey)
+	sharders, err = getAllShardersList(balances)
 	if err != nil {
 		return fmt.Errorf("getting all sharders list: %v", err)
 	}
@@ -183,10 +182,9 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		mbSharders[k] = struct{}{}
 	}
 
-	minerDelete, sharderDelete := false, false
-	for i := 0; i < len(miners.Nodes); i++ {
-		mn := miners.Nodes[i]
-		if mn, err = msc.getMinerNode(mn.ID, balances); err != nil {
+	// miners
+	for _, mn := range miners.Nodes {
+		if mn, err = getMinerNode(mn.ID, balances); err != nil {
 			return fmt.Errorf("missing miner node: %v", err)
 		}
 		if err = msc.payInterests(mn, gn, balances); err != nil {
@@ -194,15 +192,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
-		}
-		if mn.Delete {
-			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
-			i--
-			if err = mn.save(balances); err != nil {
-				return
-			}
-			minerDelete = true
-			continue
 		}
 		msc.activatePending(mn)
 		if _, ok := mbMiners[mn.ID]; !ok {
@@ -216,33 +205,23 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// sharders
-	for i := 0; i < len(sharders.Nodes); i++ {
-		sn := sharders.Nodes[i]
-		if sn, err = msc.getSharderNode(sn.ID, balances); err != nil {
+	for _, mn := range sharders.Nodes {
+		if mn, err = msc.getSharderNode(mn.ID, balances); err != nil {
 			return fmt.Errorf("missing sharder node: %v", err)
 		}
-		if err = msc.payInterests(sn, gn, balances); err != nil {
+		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
 		}
-		if err = msc.unlockDeleted(sn, round, balances); err != nil {
+		if err = msc.unlockDeleted(mn, round, balances); err != nil {
 			return
 		}
-		if sn.Delete {
-			sharders.Nodes = append(sharders.Nodes[:i], sharders.Nodes[i+1:]...)
-			i--
-			if err = sn.save(balances); err != nil {
-				return
-			}
-			sharderDelete = true
-			continue
-		}
-		msc.activatePending(sn)
-		if _, ok := mbSharders[sn.ID]; !ok {
-			shardersOffline = append(shardersOffline, sn)
+		msc.activatePending(mn)
+		if _, ok := mbSharders[mn.ID]; !ok {
+			shardersOffline = append(shardersOffline, mn)
 			continue
 		}
 		// save excluding offline nodes
-		if err = sn.save(balances); err != nil {
+		if err = mn.save(balances); err != nil {
 			return
 		}
 	}
@@ -260,20 +239,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 	}
 
-	if minerDelete {
-		if _, err = balances.InsertTrieNode(AllMinersKey, miners); err != nil {
-			return common.NewErrorf("view_change_pools_work",
-				"failed saving all miners list: %v", err)
-		}
-	}
-
-	if sharderDelete {
-		if _, err = balances.InsertTrieNode(AllShardersKey, sharders); err != nil {
-			return common.NewErrorf("view_change_pools_work",
-				"failed saving all sharder list: %v", err)
-		}
-	}
-
 	return
 }
 
@@ -287,7 +252,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	var dmn *DKGMinerNodes
-	if dmn, err = msc.getMinersDKGList(balances); err != nil {
+	if dmn, err = getDKGMinersList(balances); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't get DKG miners: %v", err)
 	}
@@ -301,7 +266,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
-	err = dmn.recalculateTKN(true, gn, balances)
+	err = dmn.reduceNodes(true, gn, balances)
 	if err == nil && waited < dmn.K {
 		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
 			waited, dmn.K)
@@ -325,8 +290,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
-	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
-	if err != nil {
+	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
 	}
@@ -339,7 +303,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	resp string, err error) {
 
 	var pn *PhaseNode
-	if pn, err = msc.getPhaseNode(balances); err != nil {
+	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
@@ -351,54 +315,36 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return // adjusting view change error
 	}
 
-	var block = balances.GetBlock()
-	if block.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
+	var mb = balances.GetBlock()
+	if mb.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
 		return "", common.NewErrorf("pay_fee",
-			"can't set magic block round=%d viewChange=%d",
-			block.Round, gn.ViewChange)
+			"can't set magic mb round=%d viewChange=%d",
+			mb.Round, gn.ViewChange)
 	}
 
-	if t.ClientID != block.MinerID {
-		return "", common.NewError("pay_fee", "not block generator")
+	if t.ClientID != mb.MinerID {
+		return "", common.NewError("pay_fee", "not mb generator")
 	}
 
-	if block.Round <= gn.LastRound {
+	if mb.Round <= gn.LastRound {
 		return "", common.NewError("pay_fee", "jumped back in time?")
 	}
 
-	// the block generator
+	// the mb generator
 	var mn *MinerNode
-	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
+	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
 		// TODO: remove this debug info after issue is fixed.
-		all, er := msc.getMinersList(balances)
-		if er != nil {
-			Logger.Debug("get miners list failed",
-				zap.Error(er),
-				zap.Int64("round", block.Round),
-				zap.String("block hash", block.Hash))
-		}
-
-		if all == nil {
-			Logger.Debug("miners list is empty")
-		} else {
-			ids := []string{}
-			for _, n := range all.Nodes {
-				ids = append(ids, n.ID)
-			}
-			Logger.Debug("all miners", zap.Strings("miners", ids))
-		}
-
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
-			block.MinerID, err)
+			mb.MinerID, err)
 	}
 
 	Logger.Debug("Pay fees, get miner id successfully",
-		zap.String("miner id", block.MinerID),
-		zap.Int64("round", block.Round),
-		zap.String("hash", block.Hash))
+		zap.String("miner id", mb.MinerID),
+		zap.Int64("round", mb.Round),
+		zap.String("hash", mb.Hash))
 
 	selfID := node.Self.Underlying().GetKey()
-	if _, err := msc.getMinerNode(selfID, balances); err != nil {
+	if _, err := getMinerNode(selfID, balances); err != nil {
 		Logger.Debug("Pay fees, get self miner id failed",
 			zap.String("id", selfID),
 			zap.Error(err))
@@ -407,14 +353,14 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	var (
-		// block reward -- mint for the block
+		// mb reward -- mint for the mb
 		blockReward = state.Balance(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
 		minerr, sharderr = gn.splitByShareRatio(blockReward)
 		charger, restr   = mn.splitByServiceCharge(minerr)
-		// fees         -- total fees for the block
-		fees             = msc.sumFee(block, true)
+		// fees         -- total fees for the mb
+		fees             = msc.sumFee(mb, true)
 		minerf, sharderf = gn.splitByShareRatio(fees)
 		chargef, restf   = mn.splitByServiceCharge(minerf)
 		// intermediate response
@@ -444,8 +390,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 		resp += iresp
 	}
-	// pay and mint rest for block sharders
-	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, block, gn, balances)
+	// pay and mint rest for mb sharders
+	iresp, err = msc.payShardersAndDelegates(sharderf, sharderr, mb, gn, balances)
 	if err != nil {
 		return "", err
 	}
@@ -457,10 +403,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	if (config.DevConfiguration.ViewChange && block.Round == gn.ViewChange) || (!config.DevConfiguration.ViewChange && gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0) {
-		var mb = balances.GetLastestFinalizedMagicBlock().MagicBlock
-		if mb != nil {
-			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
+	if gn.RewardRoundFrequency != 0 && mb.Round%gn.RewardRoundFrequency == 0 {
+		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
+		if lfmb != nil {
+			err = msc.viewChangePoolsWork(gn, lfmb, mb.Round, balances)
 			if err != nil {
 				return "", err
 			}
@@ -469,7 +415,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 	}
 
-	gn.setLastRound(block.Round)
+	gn.setLastRound(mb.Round)
 	if err = gn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving global node: %v", err)

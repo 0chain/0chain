@@ -16,9 +16,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -44,10 +44,11 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		nodeID = bls.ComputeIDdkg(n.ID)
 	)
 
-	var (
-		secShare           = mc.getNodeSij(nodeID)
-		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
-	)
+	shareOrSignSuccess := make(map[string]*bls.DKGKeyShare)
+	secShare, ok := mc.getNodeSij(nodeID)
+	if !ok {
+		return common.NewErrorf("send_dkg_share", "could not found sec share of node id: %s", to)
+	}
 
 	params.Add("secret_share", secShare.GetHexString())
 
@@ -71,7 +72,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		ok, err = signatureScheme.Verify(share.Sign, share.Message)
 		if !ok || err != nil {
 			logging.Logger.Error("invalid share or sign",
-				zap.Error(err), zap.Any("sign_status", ok),
+				zap.Error(err), zap.Any("minersc/dkg.gosign_status", ok),
 				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 			return
 		}
@@ -80,7 +81,9 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		return
 	}
 
-	n.RequestEntityFromNode(ctx, DKGShareSender, params, handler)
+	if !n.RequestEntityFromNode(ctx, DKGShareSender, params, handler) {
+		return common.NewError("send_dkg_share", "send message failed")
+	}
 
 	if len(shareOrSignSuccess) == 0 {
 		return common.NewError("send_dkg_share", "miner returned error")
@@ -94,7 +97,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 // P U B L I S H
 //
 
-func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
+func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
@@ -111,7 +114,7 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	)
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
+	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
 		return nil, err
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
@@ -121,14 +124,20 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
 
 	for k := range mpks.Mpks {
-		if _, ok := sos.ShareOrSigns[k]; !ok && k != selfNodeKey {
-			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
-			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
+		if k == selfNodeKey {
+			continue
+		}
+
+		if _, ok := sos.ShareOrSigns[k]; !ok {
+			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			if share != nil {
+				sos.ShareOrSigns[k] = share
+			}
 		}
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		return nil, err
 	}
 	if len(dmn.SimpleNodes) == 0 {
@@ -173,12 +182,12 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 // C O N T R I B U T E
 //
 
-func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
+func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
 		logging.Logger.Error("can't contribute", zap.Any("error", err))
 		return
 	}
@@ -208,9 +217,11 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 		zap.Int64("mb_number",
 			mc.viewChangeProcess.viewChangeDKG.MagicBlockNumber))
 
-	for _, v := range mc.viewChangeProcess.viewChangeDKG.Mpk {
+	for _, v := range mc.viewChangeProcess.viewChangeDKG.GetMPKs() {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
+
+	logging.Logger.Debug("[vc] mpks len", zap.Int("mpks_len", len(mpk.Mpk)))
 
 	var data = new(httpclientutil.SmartContractTxnData)
 	data.Name = scNameContributeMpk
@@ -263,13 +274,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 			"setting hex string: %v", err)
 	}
 
-	var (
-		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-		mpkString []string
-	)
-	for _, pk := range mpk {
-		mpkString = append(mpkString, pk.GetHexString())
-	}
+	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
 		logging.Logger.Error("failed to verify dkg share", zap.Any("share", secShare),

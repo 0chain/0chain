@@ -46,7 +46,7 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 
 /*SendOne - send message to a single node in the pool */
 func (np *Pool) SendOne(handler SendHandler) *Node {
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(false)
 	return np.sendOne(handler, nodes)
 }
 
@@ -72,7 +72,7 @@ func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) (result 
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
-	nodes := np.shuffleNodesLock()
+	nodes := np.shuffleNodesLock(false)
 	return np.sendTo(numNodes, nodes, handler)
 }
 
@@ -236,7 +236,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 			if err != nil {
-				receiver.SendErrors++
+				receiver.AddSendErrors(1)
 				receiver.AddErrorCount(1)
 				logging.N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
@@ -244,7 +244,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 			receiver.SetStatus(NodeStatusActive)
 			receiver.SetLastActiveTime(time.Now())
-			receiver.SetErrorCount(receiver.SendErrors)
+			receiver.SetErrorCount(receiver.GetSendErrors())
 
 			readAndClose(resp.Body)
 			if push {
@@ -393,7 +393,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if err != nil {
 			if err == NoDataErr {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
-				sender.Received++
+				sender.AddReceived(1)
 				return
 			}
 			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
@@ -414,6 +414,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		}
-		sender.Received++
+		sender.AddReceived(1)
 	}
 }

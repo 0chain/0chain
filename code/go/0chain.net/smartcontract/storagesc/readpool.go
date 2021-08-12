@@ -274,7 +274,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 
 // newReadPool SC function creates new read pool for a client.
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
-	input []byte, balances cstate.StateContextI) (resp string, err error) {
+	_ []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
@@ -331,21 +331,27 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"can't get configs: "+err.Error())
 	}
 
-	// user read pools
-
-	var rp *readPool
-	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
-	// lock request & user balance
-
 	var lr lockRequest
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// check
+	if len(lr.TargetId) == 0 {
+		lr.TargetId = t.ClientID
+	}
+
+	// remembers who funded the read pool, so tokens get returned to funder on unlock
+	if err := ssc.addToFundedPools(t.ClientID, lr.TargetId, balances); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
+
+	var rp *readPool
+	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+		rp = new(readPool)
+	}
 
 	if lr.AllocationID == "" {
 		return "", common.NewError("read_pool_lock_failed",
@@ -370,8 +376,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	}
 
 	// check client balance
-	if err = checkFill(t, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+	if !lr.MintTokens {
+		if err = checkFill(t, balances); err != nil {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
 	}
 
 	// get the allocation object
@@ -414,24 +422,30 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	// create and dig allocation pool
 
-	var (
-		ap       allocationPool
-		transfer *state.Transfer
-	)
-	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
-	// set fields
+	var ap allocationPool
 	ap.AllocationID = lr.AllocationID
 	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
 	ap.Blobbers = bps
 
-	// add and save
+	if !lr.MintTokens {
+		var transfer *state.Transfer
+		if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+	} else {
+		if err := balances.AddMint(&state.Mint{
+			Minter:     ADDRESS,
+			ToClientID: ADDRESS,
+			Amount:     state.Balance(t.Value),
+		}); err != nil {
+			return "", common.NewError("read_pool_lock_failed", err.Error())
+		}
+		ap.Balance = state.Balance(t.Value)
+		ap.ID = t.Hash
+	}
 
 	rp.Pools.add(&ap)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
@@ -445,21 +459,30 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
-	// user read pool
-
-	var rp *readPool
-	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
-	}
-
-	// the request
-
 	var (
 		transfer *state.Transfer
 		req      unlockRequest
 	)
 
 	if err = req.decode(input); err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
+	}
+
+	if len(req.PoolOwner) == 0 {
+		req.PoolOwner = t.ClientID
+	}
+
+	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
+	if err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
+	}
+	if !isFunded {
+		return "", common.NewErrorf("read_pool_unlock_failed",
+			"%s did not fund pool %s", t.ClientID, req.PoolID)
+	}
+
+	var rp *readPool
+	if rp, err = ssc.getReadPool(req.PoolOwner, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 

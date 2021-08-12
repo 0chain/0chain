@@ -26,5 +26,5 @@ if [[ -n "$PACKAGE" ]]; then
 else
     # Run all tests.
     echo "Running general unit tests:"
-    docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
+    docker run "$INTERACTIVE" zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 -cover ./..."
 fi

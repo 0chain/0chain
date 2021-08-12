@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"0chain.net/core/common"
@@ -22,7 +23,8 @@ const (
 )
 
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
-var FetchStrategy = FetchStrategyNearest
+// var FetchStrategy = FetchStrategyNearest
+var FetchStrategy = FetchStrategyRandom
 
 //GetFetchStrategy - indicate which fetch strategy to use
 func GetFetchStrategy() int {
@@ -33,15 +35,21 @@ func GetFetchStrategy() int {
 	}
 }
 
-//RequestEntity - request an entity
+// RequestEntity - request an entity from nodes in the pool, returns when any node has response
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
+	np.mmx.Lock()
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock()
+		nodes = np.shuffleNodes(true)
 	} else {
-		nodes = np.GetNodesByLargeMessageTime()
+		nodes = np.getNodesByLargeMessageTime()
 	}
+	np.mmx.Unlock()
+
+	wg := &sync.WaitGroup{}
+	doneC := make(chan struct{})
+	nodeC := make(chan *Node, len(nodes))
 	for _, nd := range nodes {
 		select {
 		case <-ctx.Done():
@@ -54,22 +62,41 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		if Self.IsEqual(nd) {
 			continue
 		}
-		if rhandler(nd) {
-			return nd
-		}
+
+		wg.Add(1)
+		go func(n *Node) {
+			if rhandler(n) {
+				select {
+				case nodeC <- n:
+				default:
+				}
+			}
+			wg.Done()
+		}(nd)
 	}
-	return nil
+
+	go func() {
+		wg.Wait()
+		close(doneC)
+	}()
+
+	select {
+	case <-doneC:
+		return nil
+	case n := <-nodeC:
+		return n
+	}
 }
 
-//RequestEntityFromAll - request an entity from all the nodes
+// RequestEntityFromAll - requests an entity from all the nodes
 func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	requestor EntityRequestor, params *url.Values,
 	handler datastore.JSONEntityReqResponderF) {
-
+	wg := &sync.WaitGroup{}
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock()
+		nodes = np.shuffleNodesLock(true)
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
@@ -85,8 +112,13 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 		if Self.IsEqual(nd) {
 			continue
 		}
-		rhandler(nd)
+		wg.Add(1)
+		go func(n *Node) {
+			rhandler(n)
+			wg.Done()
+		}(nd)
 	}
+	wg.Wait()
 }
 
 //RequestEntityFromNode - request an entity from a node
@@ -94,6 +126,7 @@ func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityReques
 	rhandler := requestor(params, handler)
 	select {
 	case <-ctx.Done():
+		logging.Logger.Error("RequestEntityFromNode failed", zap.Error(ctx.Err()))
 		return false
 	default:
 		return rhandler(n)
@@ -170,7 +203,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			duration := time.Since(ts)
 
 			if err != nil {
-				provider.SendErrors++
+				provider.AddSendErrors(1)
 				provider.AddErrorCount(1)
 				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
 					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
@@ -180,12 +213,18 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			// As long as the node is reachable, it is active.
 			provider.SetStatus(NodeStatusActive)
 			provider.SetLastActiveTime(time.Now())
-			provider.SetErrorCount(provider.SendErrors)
+			provider.SetErrorCount(provider.GetSendErrors())
 
 			if resp.StatusCode != http.StatusOK {
 				data := string(getDataAndClose(resp.Body))
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
-					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode),
+				logging.N2n.Error("requesting",
+					zap.Int("from", selfNode.SetIndex),
+					zap.Int("to", provider.SetIndex),
+					zap.Duration("duration", duration),
+					zap.String("handler", uri),
+					zap.String("entity", eName),
+					zap.Any("params", params),
+					zap.Any("status_code", resp.StatusCode),
 					zap.String("response", data))
 				return false
 			}
@@ -248,7 +287,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		if !validateRequest(sender, r) {
 			return
 		}
-		sender.Received++
+		sender.AddReceived(1)
 		ctx := context.TODO()
 		ts := time.Now()
 		data, err := handler(ctx, r)

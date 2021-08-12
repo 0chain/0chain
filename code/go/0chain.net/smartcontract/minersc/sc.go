@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontract"
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -24,7 +26,7 @@ import (
 const (
 	//ADDRESS address of minersc
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
-	owner   = "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
+	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	name    = "miner"
 )
 
@@ -56,6 +58,16 @@ type MinerSmartContract struct {
 	smartContractFunctions map[string]smartContractFunction
 }
 
+func NewMinerSmartContract() sci.SmartContractInterface {
+	var mscCopy = &MinerSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+		bcContext:     &smartcontract.BCContext{},
+	}
+	mscCopy.initSC()
+	mscCopy.setSC(mscCopy.SmartContract, mscCopy.bcContext)
+	return mscCopy
+}
+
 func (msc *MinerSmartContract) GetName() string {
 	return name
 }
@@ -64,12 +76,20 @@ func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
+func (ipsc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ipsc.SmartContract.HandlerStats(ctx, params)
+}
+
+func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
+	return ipsc.SmartContractExecutionStats
+}
+
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
 }
 
-//SetSC setting up smartcontract. implementing the interface
-func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+//setSC setting up smartcontract. implementing the interface
+func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
@@ -113,7 +133,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances cstate.StateContextI) (
 	string, error) {
 
-	gn, err := msc.getGlobalNode(balances)
+	gn, err := getGlobalNode(balances)
 	if err != nil {
 		return "", common.NewError("failed_to_get_global_node", err.Error())
 	}
@@ -162,21 +182,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
-func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-	if t.ClientID != owner {
-		return "", common.NewError("failed to update smart contract settings", "unauthorized access - only the owner can update the settings")
-	}
-	newGlobalNode := &GlobalNode{}
-	if err = newGlobalNode.Decode(inputData); err != nil {
-		return "", common.NewError("failed to update smart contract settings", fmt.Sprintf("error decoding input data: %v", err.Error()))
-	}
-	gn.update(newGlobalNode)
-	return string(gn.Encode()), gn.save(balances)
-}
-
-func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
+func getGlobalNode(balances cstate.StateContextI) (
 	gn *GlobalNode, err error) {
 
 	gn = new(GlobalNode)
@@ -203,6 +209,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	gn.MinN = conf.GetInt(pfx + "min_n")
 	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
 	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
+	gn.XPercent = conf.GetFloat64(pfx + "x_percent")
 	gn.MaxS = conf.GetInt(pfx + "max_s")
 	gn.MinS = conf.GetInt(pfx + "min_s")
 	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")

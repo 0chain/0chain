@@ -183,7 +183,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	const (
 		allocID, txHash = "alloc_hex", "tx_hash"
 
-		errMsg1 = "read_pool_lock_failed: value not present"
+		errMsg1 = "read_pool_lock_failed: unexpected end of JSON input"
 		errMsg2 = "read_pool_lock_failed: " +
 			"invalid character '}' looking for beginning of value"
 		errMsg3 = "read_pool_lock_failed: no tokens to lock"
@@ -221,6 +221,9 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 		MinLockPeriod: 10 * time.Second,
 		MaxLockPeriod: 100 * time.Second,
 	}, balances, ssc.ID)
+
+	var fp fundedPools = []string{client.id}
+	_, err = balances.InsertTrieNode(fundedPoolsKey(ssc.ID, client.id), &fp)
 
 	// 1. no pool
 	_, err = ssc.readPoolLock(&tx, nil, balances)

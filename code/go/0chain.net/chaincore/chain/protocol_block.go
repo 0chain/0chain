@@ -123,18 +123,18 @@ func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb  = c.GetMagicBlock(round)
-		num = mb.Miners.Size()
+		mb        = c.GetMagicBlock(round)
+		num       = mb.Miners.Size()
+		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
 	if c.ThresholdByCount > 0 {
 		var numSignatures = len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount(num) {
-			//ToDo: Remove this comment
+		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
-				zap.Int("miners", num),
-				zap.Int("threshold", c.GetNotarizationThresholdCount(num)),
+				zap.Int("active_miners", num),
+				zap.Int("threshold", threshold),
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -147,17 +147,26 @@ func (c *Chain) reachedNotarization(round int64,
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
 		if verifiersStake < c.ThresholdByStake {
+			logging.Logger.Info("not reached notarization - stake < threshold stake",
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("verify stake", verifiersStake),
+				zap.Int("threshold", c.ThresholdByStake),
+				zap.Int("active_miners", num),
+				zap.Int("num_signatures", len(bvt)),
+				zap.Int("signature threshold", threshold),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("round", round))
 			return false
 		}
 	}
 
 	logging.Logger.Info("Reached notarization!!!",
 		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("miners", num),
+		zap.Int("active_miners", num),
 		zap.Int64("round", round),
 		zap.Int64("current_cound", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", c.GetNotarizationThresholdCount(num)))
+		zap.Int("threshold", threshold))
 
 	return true
 }
@@ -276,6 +285,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.updateFeeStats(fb)
 
 	if fb.MagicBlock != nil {
+		c.UpdateMagicBlock(fb.MagicBlock)
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 	if config.Development() {
@@ -340,7 +350,6 @@ func (c *Chain) GetLocalPreviousBlock(ctx context.Context, b *block.Block) (
 }
 
 // GetPreviousBlock - get the previous block from the network and compute its state.
-// TODO: decouple the block fetching and state computation.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
 	// check if the previous block points to itself
 	if b.PrevBlock == b || b.PrevHash == b.Hash {
@@ -350,7 +359,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			zap.String("prev_hash", b.PrevHash))
 	}
 
-	if b.PrevBlock != nil {
+	if b.PrevBlock != nil && b.PrevBlock.Hash == b.PrevHash {
 		return b.PrevBlock
 	}
 
@@ -360,105 +369,80 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return pb
 	}
 
-	blocks := make([]*block.Block, 0, 10)
-	logging.Logger.Info("fetch previous block", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+	blocks := make([]*block.Block, 0, 5)
+	logging.Logger.Info("get_previous_block - fetch previous block",
+		zap.Int64("round", b.Round-1),
+		zap.String("block", b.PrevHash))
 
 	cb := b
-	for idx := 0; idx < 10; idx++ {
-		logging.Logger.Debug("fetching previous block", zap.Int("idx", idx),
-			zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash),
-			zap.String("cprev_block", cb.PrevHash))
-
+	for idx := 0; idx < 5; idx++ {
 		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
 		if nb == nil {
-			logging.Logger.Error("get previous block (unable to get prior blocks)",
+			logging.Logger.Error("get_previous_block - get previous block (unable to get prior blocks)",
 				zap.Int64("current_round", c.GetCurrentRound()),
-				zap.Int("idx", idx), zap.Int64("round", b.Round),
-				zap.String("block", b.Hash), zap.Int64("cround", cb.Round),
-				zap.String("cblock", cb.Hash),
-				zap.String("cprev_block", cb.PrevHash))
+				zap.Int("idx", idx),
+				zap.Int64("round", b.Round-1),
+				zap.String("block", b.PrevHash))
 			return nil
+		}
+
+		// link blocks beforehand
+		if cb != b {
+			cb.SetPreviousBlock(nb)
 		}
 
 		cb = nb
 		blocks = append(blocks, cb)
-		pb, err = c.GetBlock(ctx, cb.PrevHash)
-		if pb != nil {
-			cb.SetPreviousBlock(pb)
+
+		// get state changes for the nb from network, break if the state changes is valid
+		// and could be applied successfully.
+		err := c.GetBlockStateChange(cb)
+		if err == nil {
+			// get state changes successfully
 			break
 		}
+
+		logging.Logger.Error("get_previous_block - get block state change failed",
+			zap.Error(err), zap.Int64("round", cb.Round))
+		continue
 	}
 
-	// This happens after fetching as far as per the previous for loop and
-	// still not having the prior block.
-	if cb.PrevBlock == nil {
-		logging.Logger.Error("get previous block (missing continuity)",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.Int64("oldest_fetched_round", cb.Round),
-			zap.String("oldest_fetched_block", cb.Hash),
-			zap.String("missing_prior_block", cb.PrevHash))
+	if !cb.IsStateComputed() {
+		logging.Logger.Error("get_previous_block - could not get valid state changes in previous rounds",
+			zap.Int64("round", b.Round))
 		return nil
 	}
 
 	for idx := len(blocks) - 1; idx >= 0; idx-- {
 		cb := blocks[idx]
-		if cb.PrevBlock == nil {
-			pb, err := c.GetBlock(ctx, cb.PrevHash)
-			if err != nil {
-				logging.Logger.Error("get previous block (missing continuity)",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash),
-					zap.Int64("cb_round", cb.Round),
-					zap.String("cb_block", cb.Hash),
-					zap.String("missing_prior_block", cb.PrevHash))
-				return nil
-			}
-			cb.SetPreviousBlock(pb)
+		if cb.IsStateComputed() {
+			continue
 		}
+
 		// TODO (sfxdx): complex deadlock is here
 		c.ComputeState(ctx, cb)
 	}
 
-	pb, err = c.GetBlock(ctx, b.PrevHash)
-	if err == nil {
+	if len(blocks) > 0 && blocks[0].IsStateComputed() {
+		pb := blocks[0]
+		logging.Logger.Debug("get_previous_block - get state changes successfully",
+			zap.Int64("round", pb.Round))
+
+		// set previous block's previous block if it does exist in local
+		if pb.PrevBlock == nil {
+			ppb, err := c.GetBlock(ctx, pb.PrevHash)
+			if err == nil {
+				pb.SetPreviousBlock(ppb)
+			}
+		}
+
 		b.SetPreviousBlock(pb)
+		return pb
 	}
 
-	return pb
-}
-
-// fetchPreviousBlock fetches a previous block from network
-func (c *Chain) fetchPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
-	logging.Logger.Info("fetch previous block", zap.Int64("round", b.Round),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-
-	pb := c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-	if pb == nil {
-		logging.Logger.Error("get previous block (unable to get prior blocks)",
-			zap.Int64("current_round", c.GetCurrentRound()),
-			zap.Int64("round", b.Round),
-			zap.Int64("prev_round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("prev_block", b.PrevHash))
-		return nil
-	}
-
-	// get the previous block from local blocks again, the GetNotarizedBlock() function
-	// called above should have updated the chain's blocks in memory.
-	pb, err := c.GetBlock(ctx, b.PrevHash)
-	if err != nil {
-		logging.Logger.DPanic("get previous notarized block failed", zap.Error(err))
-	}
-
-	b.SetPreviousBlock(pb)
-
-	// set the pre pre block if it could be acquired from local blocks
-	ppb, err := c.GetBlock(ctx, pb.PrevHash)
-	if err == nil {
-		pb.SetPreviousBlock(ppb)
-	}
-
-	return pb
+	logging.Logger.Debug("get_previous_block - could not get previous block",
+		zap.Int64("round", b.Round-1))
+	return nil
 }
 
 //Note: this is expected to work only for small forks
