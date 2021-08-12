@@ -23,9 +23,6 @@ func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if data, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.Host)); data != nil {
-		return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
-	}
 
 	return m.write(scID, item, db, sci)
 }
@@ -156,7 +153,12 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	}
 
 	list := m.copy()
-	if !m.hasEqual(item) { // check if it is not trying to write data equal to the existing ones
+	if !m.hasEqual(item) { // check if an equal item already added
+		got, found := list.getByHost(item.Host)
+		if found && item.ID != got.ID { // check if a host already registered
+			return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
+		}
+
 		list.put(item) // add or replace
 		blob, err := json.Marshal(list.Sorted)
 		if err != nil {
@@ -170,10 +172,6 @@ func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection,
 	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtID), item); err != nil {
 		_ = db.Conn.Rollback()
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
-	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.Host), newFlag(true)); err != nil {
-		_ = db.Conn.Rollback()
-		return errors.Wrap(errCodeInternal, "insert provider host failed", err)
 	}
 	if err := db.Commit(); err != nil {
 		return errors.Wrap(errCodeInternal, "commit changes failed", err)

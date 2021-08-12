@@ -19,7 +19,7 @@ func Test_Providers_add(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [4]struct {
+	tests := [3]struct {
 		name  string
 		prov  *bmp.Provider
 		msc   *MagmaSmartContract
@@ -40,14 +40,6 @@ func Test_Providers_add(t *testing.T) {
 			prov:  nil,
 			msc:   msc,
 			sci:   nil,
-			list:  list,
-			error: true,
-		},
-		{
-			name:  "Provider_Host_Already_Registered_ERR",
-			prov:  prov,
-			msc:   msc,
-			sci:   sci,
 			list:  list,
 			error: true,
 		},

@@ -19,7 +19,7 @@ func Test_Consumers_add(t *testing.T) {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [4]struct {
+	tests := [3]struct {
 		name  string
 		cons  *bmp.Consumer
 		msc   *MagmaSmartContract
@@ -40,14 +40,6 @@ func Test_Consumers_add(t *testing.T) {
 			cons:  nil,
 			msc:   msc,
 			sci:   nil,
-			list:  list,
-			error: true,
-		},
-		{
-			name:  "Consumer_Host_Already_Registered_ERR",
-			cons:  cons,
-			msc:   msc,
-			sci:   sci,
 			list:  list,
 			error: true,
 		},
