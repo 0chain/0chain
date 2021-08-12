@@ -182,6 +182,20 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
+func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+	if t.ClientID != owner {
+		return "", common.NewError("failed to update smart contract settings", "unauthorized access - only the owner can update the settings")
+	}
+	newGlobalNode := &GlobalNode{}
+	if err = newGlobalNode.Decode(inputData); err != nil {
+		return "", common.NewError("failed to update smart contract settings", fmt.Sprintf("error decoding input data: %v", err.Error()))
+	}
+	gn.update(newGlobalNode)
+	return string(gn.Encode()), gn.save(balances)
+}
+
 func getGlobalNode(balances cstate.StateContextI) (
 	gn *GlobalNode, err error) {
 

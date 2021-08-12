@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	configpkg "0chain.net/chaincore/config"
+	"0chain.net/core/viper"
 	"encoding/json"
 	"math/rand"
 	"strconv"
@@ -38,12 +40,10 @@ func toks(val state.Balance) string {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	// chain.ServerChain = new(chain.Chain)
-	// chain.ServerChain.Config = new(chain.Config)
-	// chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
-	// node.Self.Node = node.Provider() // stub
 	logging.Logger = zap.NewNop() // /dev/null
+	configpkg.SmartContractConfig = viper.New()
+	configpkg.DevConfiguration.ViewChange = true
 
 	moveFunctions[Start] = moveTrue
 	moveFunctions[Contribute] = moveTrue
