@@ -167,7 +167,7 @@ func Test_blockHeader_Decode(t *testing.T) {
 	}{
 		{
 			name:   "Test_blockHeader_Decode_OK",
-			fields: fields{Block: &block.Block{}},
+			fields: fields{Block: block.NewBlock("", 0)},
 			args: func() args {
 				var (
 					buff = bytes.Buffer{}

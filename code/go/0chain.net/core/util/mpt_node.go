@@ -184,15 +184,17 @@ func (vn *ValueNode) Decode(buf []byte) error {
 /*LeafNode - a node that represents the leaf that contains a value and an optional path */
 type LeafNode struct {
 	Path               Path       `json:"p,omitempty"`
+	Prefix             Path       `json:"pp,omitempty"`
 	Value              *ValueNode `json:"v"`
 	*OriginTrackerNode `json:"o"`
 }
 
 /*NewLeafNode - create a new leaf node */
-func NewLeafNode(path Path, origin Sequence, value Serializable) *LeafNode {
+func NewLeafNode(prefix, path Path, origin Sequence, value Serializable) *LeafNode {
 	ln := &LeafNode{}
 	ln.OriginTrackerNode = NewOriginTrackerNode()
 	ln.Path = path
+	ln.Prefix = prefix
 	ln.SetOrigin(origin)
 	ln.SetValue(value)
 	return ln
@@ -215,7 +217,9 @@ func (ln *LeafNode) GetHashBytes() []byte {
 func (ln *LeafNode) Clone() Node {
 	clone := &LeafNode{}
 	clone.OriginTrackerNode = ln.OriginTrackerNode.Clone()
-	clone.Path = ln.Path // path will never be updated inplace and so ok
+	clone.Prefix = concat(ln.Prefix)
+	clone.Path = concat(ln.Path)
+	// path will never be updated inplace and so ok
 	clone.SetValue(ln.GetValue())
 	return clone
 }
@@ -234,6 +238,10 @@ func (ln *LeafNode) Encode() []byte {
 }
 
 func (ln *LeafNode) encode(buf *bytes.Buffer) {
+	if len(ln.Prefix) > 0 {
+		buf.Write(ln.Prefix)
+	}
+	buf.WriteByte(Separator)
 	if len(ln.Path) > 0 {
 		buf.Write(ln.Path)
 	}
@@ -249,6 +257,9 @@ func (ln *LeafNode) Decode(buf []byte) error {
 	if idx < 0 {
 		return ErrInvalidEncoding
 	}
+	ln.Prefix = buf[:idx]
+	buf = buf[idx+1:]
+	idx = bytes.IndexByte(buf, Separator)
 	ln.Path = buf[:idx]
 	buf = buf[idx+1:]
 	if len(buf) == 0 {
@@ -559,7 +570,7 @@ func CreateNode(r io.Reader) (Node, error) {
 	case NodeTypeValueNode:
 		node = NewValueNode()
 	case NodeTypeLeafNode:
-		node = NewLeafNode(nil, Sequence(0), nil)
+		node = NewLeafNode(nil, nil, Sequence(0), nil)
 	case NodeTypeFullNode:
 		node = NewFullNode(nil)
 	case NodeTypeExtensionNode:

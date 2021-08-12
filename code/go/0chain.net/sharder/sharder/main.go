@@ -172,7 +172,7 @@ func main() {
 	}
 
 	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
+		block.SetupStateLogger("/tmp/state.txt")
 	}
 
 	setupBlockStorageProvider(mConf)
@@ -256,9 +256,9 @@ func main() {
 	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
-	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
+	initWorkers(ctx)
 
 	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 		Logger.Fatal("update LFMB from sharders", zap.Error(err))
@@ -309,12 +309,16 @@ func done(ctx context.Context) {
 }
 
 func startBlocksInfoLogs(sc *sharder.Chain) {
-	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
+	var (
+		lfb  = sc.GetLatestFinalizedBlock()
+		lfmb = sc.GetLatestFinalizedMagicBlockBrief()
+	)
+
 	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
 	Logger.Info("start from LFMB",
-		zap.Int64("round", lfmb.MagicBlock.StartingRound),
-		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
+		zap.Int64("round", lfmb.StartingRound),
+		zap.String("hash", lfmb.MagicBlockHash)) // hash of block with the magic block
 }
 
 func initServer() {

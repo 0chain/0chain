@@ -57,6 +57,7 @@ func TestNewAllocation(t *testing.T) {
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
+		PreferredBlobbers:          []string{"mockBaseUrl1", "mockBaseUrl3"},
 	}
 	var goodBlobber = StorageNode{
 		Capacity: 536870912,
@@ -75,13 +76,23 @@ func TestNewAllocation(t *testing.T) {
 		var nextBlobber = goodBlobber
 		nextBlobber.ID = strconv.Itoa(i)
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
+		nextBlobber.BaseURL = "mockBaseUrl" + strconv.Itoa(i)
 		writePrice *= 0.9
 		blobbers.add(&nextBlobber)
 		stakes = append(stakes, stake)
 		stake = stake / 10
 	}
 
-	t.Run("new allocation", func(t *testing.T) {
+	t.Run("new allocation random blobbers", func(t *testing.T) {
+		request := request
+		request.DiversifyBlobbers = false
+		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
+		require.NoError(t, err)
+	})
+
+	t.Run("new allocation diverse blobbers", func(t *testing.T) {
+		request := request
+		request.DiversifyBlobbers = true
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
@@ -694,6 +705,7 @@ func setupMocksFinishAllocation(
 		Pools: allocationPools{},
 	}
 	var newPool = &allocationPool{}
+	newPool.ID = "first_mock_write_pool"
 	newPool.Balance = state.Balance(0)
 	newPool.AllocationID = sAllocation.ID
 	newPool.Blobbers = blobberPools{}
@@ -708,6 +720,7 @@ func setupMocksFinishAllocation(
 	for i := 0; i < otherWritePools; i++ {
 		var id = strconv.Itoa(i)
 		var newPool = &allocationPool{}
+		newPool.ID = "mock_write_pool_" + id
 		newPool.AllocationID = allocationId + " " + id
 		wPool.Pools.add(newPool)
 	}

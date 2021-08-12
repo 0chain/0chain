@@ -15,11 +15,12 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/minersc"
+
+	"0chain.net/core/logging"
 )
 
 const minerScSharderHealthCheck = "sharder_health_check"
@@ -52,7 +53,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	for true {
 		select {
 		case <-ctx.Done():
-			Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
+			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
 		case b := <-sc.GetBlockChannel():
 			sc.processBlock(ctx, b)
@@ -101,7 +102,6 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-
 	if !config.DevConfiguration.ViewChange {
 		return // don't send sharder_keep if view_change is false
 	}
@@ -113,11 +113,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 	var (
 		ticker = time.NewTicker(repeat)
-
-		tickerq = ticker.C
-		phaseq  = sc.PhaseEvents()
-		doneq   = ctx.Done()
-
+		phaseq = sc.PhaseEvents()
 		pe     chain.PhaseEvent //
 		latest time.Time        // last time phase updated by the node itself
 
@@ -128,13 +124,13 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 	for {
 		select {
-		case <-doneq:
+		case <-ctx.Done():
 			return
-		case tp := <-tickerq:
+		case tp := <-ticker.C:
 			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
 				continue // already have a fresh phase
 			}
-			sc.GetPhaseFromSharders() // not in a goroutine
+			go sc.GetPhaseFromSharders(ctx)
 			continue
 		case pe = <-phaseq:
 			if !pe.Sharders {
@@ -142,8 +138,8 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			}
 		}
 
-		if pe.Phase.StartRound == phaseRound {
-			continue // the phase already accepted
+		if pe.Phase.StartRound < phaseRound {
+			continue
 		}
 
 		if pe.Phase.Phase != minersc.Contribute {
@@ -151,26 +147,30 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue // we are interesting in contribute phase only on sharders
 		}
 
-		if sc.IsRegisteredSharderKeep(false) {
+		if sc.IsRegisteredSharderKeep(context.Background(), false) {
 			phaseRound = pe.Phase.StartRound // already registered
 			continue
 		}
 
+		logging.Logger.Debug("Start to register to sharder keep list")
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
-			Logger.Error("register_sharder_keep_worker", zap.Error(err))
+			logging.Logger.Error("Register sharder keep failed",
+				zap.Int64("phase start round", pe.Phase.StartRound),
+				zap.Int64("phase current round", pe.Phase.CurrentRound),
+				zap.Error(err))
 			continue // repeat next time
 		}
 
 		// so, transaction sent, let's verify it
 
-		if !sc.ConfirmTransaction(txn) {
-			Logger.Debug("register_sharder_keep_worker -- failed "+
+		if !sc.ConfirmTransaction(ctx, txn) {
+			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
 				"to confirm transaction", zap.Any("txn", txn))
 			continue
 		}
 
-		Logger.Info("register_sharder_keep_worker -- registered")
+		logging.Logger.Info("register_sharder_keep_worker -- registered")
 		phaseRound = pe.Phase.StartRound // accepted
 
 	}
@@ -210,12 +210,12 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 				for roundToProcess > 0 {
 					hash, err := sc.GetBlockHash(ctx, roundToProcess)
 					if err != nil {
-						Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+						logging.Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
 						roundToProcess--
 						continue
 					}
 					if fs.CloudObjectExists(hash) {
-						Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
+						logging.Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
 						break
 					} else {
 						swg.Add()
@@ -225,7 +225,7 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 				}
 				swg.Wait()
 				iterInprogress = false
-				Logger.Info("Moved old blocks to cloud successfully")
+				logging.Logger.Info("Moved old blocks to cloud successfully")
 			}
 		}
 	}
@@ -234,9 +234,9 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
 	err := fs.UploadToCloud(hash, round)
 	if err != nil {
-		Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
+		logging.Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
 	} else {
-		Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
+		logging.Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
 		sc.TieringStats.TotalBlocksUploaded++
 		sc.TieringStats.LastRoundUploaded = round
 		sc.TieringStats.LastUploadTime = time.Now()

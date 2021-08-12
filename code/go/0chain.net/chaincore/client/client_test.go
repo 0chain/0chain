@@ -1,16 +1,18 @@
 package client
 
 import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"context"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -67,7 +69,7 @@ func TestClientChunkSave(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		go postClient(t, sigScheme.GetPublicKey(), done)
+		go postClient(sigScheme.GetPublicKey(), done)
 	}
 	for count := 0; true; {
 		<-done
@@ -89,11 +91,11 @@ func TestClientID(t *testing.T) {
 	client.SetPublicKey(publicKey)
 }
 
-func postClient(t *testing.T, publicKey string, done chan<- bool) {
+func postClient(publicKey string, done chan<- bool) {
 	entity := Provider()
 	client, ok := entity.(*Client)
 	if !ok {
-		t.Fatal("expected Client implementation")
+		panic("expected Client implementation")
 	}
 	client.SetPublicKey(publicKey)
 
@@ -101,7 +103,7 @@ func postClient(t *testing.T, publicKey string, done chan<- bool) {
 	ctx = memorystore.WithConnection(ctx)
 	_, err := PutClient(ctx, entity)
 	if err != nil {
-		t.Errorf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
+		fmt.Printf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
 	}
 	done <- true
 }

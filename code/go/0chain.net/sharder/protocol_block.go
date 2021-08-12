@@ -95,11 +95,7 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // no MB, no VC
 	}
 
-	if err = sc.UpdateMagicBlock(mb); err != nil {
-		return
-	}
-	sc.UpdateNodesFromMagicBlock(mb)
-	return
+	return sc.UpdateMagicBlock(mb)
 }
 
 // The hasRelatedMagicBlock reports true if the Chain has MB related to the
@@ -166,6 +162,11 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
+		if b.GetRoundRandomSeed() == 0 {
+			Logger.Error("process block - block has no seed",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return
+		}
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	} else {
 		Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
@@ -195,7 +196,14 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	sc.AddNotarizedBlockToRound(er, b)
+	_, _, err = sc.AddNotarizedBlockToRound(er, b)
+	if err != nil {
+		Logger.Error("process block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -395,8 +403,7 @@ func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Value
 		rs = roundSummaries
 		return rs, nil
 	}
-	mb := sc.GetCurrentMagicBlock()
-	mb.Sharders.RequestEntity(ctx, RoundSummariesRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), RoundSummariesRequestor, params, handler)
 	return rs
 }
 
@@ -414,8 +421,7 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 		}
 		return nil, nil
 	}
-	mb := sc.GetCurrentMagicBlock()
-	mb.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), RoundRequestor, params, handler)
 	return r
 }
 
@@ -430,8 +436,7 @@ func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Value
 		bs = blockSummaries
 		return bs, nil
 	}
-	mb := sc.GetCurrentMagicBlock()
-	mb.Sharders.RequestEntity(ctx, BlockSummariesRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), BlockSummariesRequestor, params, handler)
 	return bs
 }
 
@@ -446,8 +451,7 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 		blockS = bs
 		return blockS, nil
 	}
-	mb := sc.GetCurrentMagicBlock()
-	mb.Sharders.RequestEntity(ctx, BlockSummaryRequestor, params, handler)
+	sc.RequestEntityFromShardersOnMB(ctx, sc.GetCurrentMagicBlock(), BlockSummaryRequestor, params, handler)
 	return blockS
 }
 

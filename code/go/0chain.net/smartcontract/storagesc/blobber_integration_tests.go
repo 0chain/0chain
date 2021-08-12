@@ -8,14 +8,27 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/util"
 
 	crpc "0chain.net/conductor/conductrpc"
 )
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	conf *scConfig, blobber *StorageNode, all *StorageNodes,
-	balances cstate.StateContextI) (err error) {
+	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
+	balances cstate.StateContextI
+) (err error) {
+	// check for duplicates
+	for _, b := range blobbers.Nodes {
+		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {
+			return sc.updateBlobber(t, conf, blobber, blobbers, balances)
+		}
+	}
+
+	// check blobber values
+	if err = blobber.validate(conf); err != nil {
+		return fmt.Errorf("invalid blobber params: %v", err)
+	}
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
 
@@ -31,7 +44,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("saving stake pool: %v", err)
 	}
 
-	all.Nodes.add(blobber) // add to all
+	blobbers.Nodes.add(blobber) // add to all
 
 	// statistic
 	sc.statIncr(statAddBlobber)

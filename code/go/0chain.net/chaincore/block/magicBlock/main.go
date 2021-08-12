@@ -77,7 +77,7 @@ func (cmd *cmdMagicBlock) setupMPKS() {
 	for id := range cmd.block.Miners.NodesMap {
 		cmd.dkgs[id] = bls.MakeDKG(cmd.block.T, cmd.block.N, id)
 		mpk := &block.MPK{ID: id}
-		for _, v := range cmd.dkgs[id].Mpk {
+		for _, v := range cmd.dkgs[id].GetMPKs() {
 			mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 		}
 		cmd.block.Mpks.Mpks[id] = mpk
@@ -89,21 +89,27 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
 	cmd.setupDKGSummaries()
 	for mid := range cmd.block.Miners.NodesMap {
-		ss := block.NewShareOrSigns()
+		sos := block.NewShareOrSigns()
+		sos.ID = mid
 		partyId := bls.ComputeIDdkg(mid)
-		ss.ID = mid
-		var privateKey bls.Key
-		privateKey.SetHexString(cmd.yml.MinersMap[mid].PrivateKey)
-		for id, n := range cmd.block.Miners.NodesMap {
+		for id, node := range cmd.block.Miners.NodesMap {
 			otherPartyId := bls.ComputeIDdkg(id)
-			share, _ := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
-			cmd.summaries[n.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
-			message := encryption.Hash(share.GetHexString())
-			ss.ShareOrSigns[id] = &bls.DKGKeyShare{
-				Message: message,
-				Sign:    privateKey.Sign(message).GetHexString()}
+			share, err := cmd.dkgs[mid].ComputeDKGKeyShare(otherPartyId)
+			if err != nil {
+				panic(err)
+			}
+			cmd.summaries[node.SetIndex].SecretShares[partyId.GetHexString()] = share.GetHexString()
+			if mid != id {
+				var privateKey bls.Key
+				privateKey.SetHexString(cmd.yml.MinersMap[id].PrivateKey)
+				message := encryption.Hash(share.GetHexString())
+				sos.ShareOrSigns[id] = &bls.DKGKeyShare{
+					Message: message,
+					Sign:    privateKey.Sign(message).GetHexString(),
+				}
+			}
 		}
-		cmd.block.ShareOrSigns.Shares[mid] = ss
+		cmd.block.ShareOrSigns.Shares[mid] = sos
 	}
 }
 
@@ -183,7 +189,7 @@ func main() {
 		log.Printf("Error writing json file: %v\n", err.Error())
 		return
 	}
-	log.Printf("Success: Magic block already created")
+	log.Printf("Success: Magic block created")
 	if err := cmd.saveDKGSummaries(); err != nil {
 		log.Printf("Error writing json file: %v\n", err.Error())
 		return

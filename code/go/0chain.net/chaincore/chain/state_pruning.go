@@ -1,9 +1,10 @@
 package chain
 
 import (
-	"0chain.net/chaincore/node"
 	"context"
 	"time"
+
+	"0chain.net/chaincore/node"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/logging"
@@ -121,7 +122,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
 
 	if err != nil {
-		logging.Logger.Error("prune client state (update origin)",
+		logging.Logger.Error("prune client state (update version)",
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
@@ -131,11 +132,11 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			if len(missingKeys) > 0 {
 				c.GetStateNodes(ctx, missingKeys[:])
 			}
-			ps.Stage = util.PruneStateAbandoned
-			return
 		}
+		ps.Stage = util.PruneStateAbandoned
+		return
 	} else {
-		logging.Logger.Info("prune client state (update origin)",
+		logging.Logger.Info("prune client state (update version)",
 			zap.Int64("current_round", c.GetCurrentRound()),
 			zap.Int64("round", bs.Round), zap.String("block", bs.Hash),
 			zap.String("state_hash", util.ToHex(bs.ClientStateHash)),

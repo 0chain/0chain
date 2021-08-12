@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sync"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*NodeChange - track a change to the node */
@@ -32,6 +36,7 @@ type ChangeCollectorI interface {
 type ChangeCollector struct {
 	Changes map[string]*NodeChange
 	Deletes map[string]Node
+	mutex   sync.RWMutex
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
@@ -44,13 +49,13 @@ func NewChangeCollector() ChangeCollectorI {
 
 /*AddChange - implement interface */
 func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
 	nhash := newNode.GetHash()
-	if _, ok := cc.Deletes[nhash]; ok {
-		delete(cc.Deletes, nhash)
-	}
+	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
-		change.New = newNode
+		change.New = newNode.Clone()
 		cc.Changes[nhash] = change
 		return
 	}
@@ -59,33 +64,37 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	if ok {
 		delete(cc.Changes, ohash)
 		if prevChange.Old != nil {
-			if bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
+			if bytes.Equal(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) {
 				return
 			}
 		}
-		prevChange.New = newNode
+		prevChange.New = newNode.Clone()
 		cc.Changes[nhash] = prevChange
 	} else {
 		change := &NodeChange{}
-		change.New = newNode
-		change.Old = oldNode
+		change.New = newNode.Clone()
+		change.Old = oldNode.Clone()
 		cc.Changes[nhash] = change
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 
 /*DeleteChange - implement interface */
 func (cc *ChangeCollector) DeleteChange(oldNode Node) {
+	cc.mutex.Lock()
+	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
 	} else {
-		cc.Deletes[ohash] = oldNode
+		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
 
 /*GetChanges - implement interface */
 func (cc *ChangeCollector) GetChanges() []*NodeChange {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	changes := make([]*NodeChange, len(cc.Changes))
 	idx := 0
 	for _, v := range cc.Changes {
@@ -97,6 +106,8 @@ func (cc *ChangeCollector) GetChanges() []*NodeChange {
 
 /*GetDeletes - implement interface */
 func (cc *ChangeCollector) GetDeletes() []Node {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	deletes := make([]Node, len(cc.Deletes))
 	idx := 0
 	for _, v := range cc.Deletes {
@@ -108,12 +119,27 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	keys := make([]Key, len(cc.Changes))
 	nodes := make([]Node, len(cc.Changes))
 	idx := 0
 	for _, c := range cc.Changes {
-		c.New.SetOrigin(origin)
-		keys[idx] = c.New.GetHashBytes()
+		if _, ok := c.New.(*LeafNode); ok && origin != c.New.GetOrigin() {
+			oldHash := c.New.GetHashBytes()
+			oldOrigin := c.New.GetOrigin()
+			c.New.SetOrigin(origin)
+			keys[idx] = c.New.GetHashBytes()
+			logging.Logger.Warn("Updating origin of a leaf node may break references ",
+				zap.Int64("oldOrigin", int64(oldOrigin)),
+				zap.String("oldHash", ToHex(oldHash)),
+				zap.Int64("newOrigin", int64(origin)),
+				zap.String("newHash", ToHex(keys[idx])),
+			)
+		} else {
+			c.New.SetOrigin(origin)
+			keys[idx] = c.New.GetHashBytes()
+		}
 		nodes[idx] = c.New
 		idx++
 	}
@@ -140,6 +166,8 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 
 //PrintChanges - implement interface
 func (cc *ChangeCollector) PrintChanges(w io.Writer) {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	for idx, c := range cc.Changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
@@ -151,6 +179,8 @@ func (cc *ChangeCollector) PrintChanges(w io.Writer) {
 
 //Validate - validate if this change collector is valid
 func (cc *ChangeCollector) Validate() error {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
 			return errors.New("key present in both add and delete")
@@ -161,6 +191,9 @@ func (cc *ChangeCollector) Validate() error {
 
 // Clone returns a copy of the change collector
 func (cc *ChangeCollector) Clone() ChangeCollectorI {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
+
 	c := &ChangeCollector{
 		Changes: make(map[string]*NodeChange),
 		Deletes: make(map[string]Node),

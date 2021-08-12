@@ -6,10 +6,17 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 // SendBlock - send the block proposal to the network.
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+	if b.LatestFinalizedMagicBlockRound == 0 {
+		lfmbr := mc.GetLatestFinalizedMagicBlockRound(mc.GetCurrentRound())
+		Logger.Error("Send block with magic block starting round 0",
+			zap.Int64("lfmbr", lfmbr.StartingRound))
+	}
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(VerifyBlockSender(b))

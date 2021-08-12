@@ -1,13 +1,13 @@
 package minersc
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 
-	"0chain.net/chaincore/block"
+	"0chain.net/core/common"
+	"0chain.net/smartcontract"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 
@@ -35,7 +35,7 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 	var ups = newUserPools()
 	for nodeID, poolIDs := range un.Pools {
 		var mn *MinerNode
-		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
+		if mn, err = getMinerNode(nodeID, balances); err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, fmt.Sprintf("can't get miner node %s", nodeID))
 		}
 		if ups.Pools[mn.NodeType.String()] == nil {
@@ -85,7 +85,7 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 const cantGetShardersListMsg = "can't get sharders list"
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
+	allShardersList, err := getAllShardersList(balances)
 	if err != nil {
 		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
 	}
@@ -93,7 +93,7 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 }
 
 func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances, ShardersKeepKey)
+	allShardersList, err := getShardersKeepList(balances)
 	if err != nil {
 		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
 	}
@@ -101,7 +101,7 @@ func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, pa
 }
 
 func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	dkgMinersList, err := msc.getMinersDKGList(balances)
+	dkgMinersList, err := getDKGMinersList(balances)
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners dkg list", err.Error())
 	}
@@ -111,33 +111,25 @@ func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, param
 func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
-	var mpks block.Mpks
-	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
+	mpks, err := getMinersMPKs(balances)
 	if err != nil {
-		return "", smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get miners mpks list")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
 	}
-	err = mpks.Decode(mpksBytes.Encode())
-	if err != nil {
-		return "", common.NewErrInternal("can't decode mpks bytes", err.Error())
-	}
+
 	return mpks, nil
 }
 
 func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	gsos := block.NewGroupSharesOrSigns()
-	groupBytes, err := balances.GetTrieNode(GroupShareOrSignsKey)
+	sos, err := getGroupShareOrSigns(balances)
 	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get group shares or sign")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
 	}
-	err = gsos.Decode(groupBytes.Encode())
-	if err != nil {
-		return "", common.NewErrInternal("can't decode group shares or sign", err.Error())
-	}
-	return gsos, nil
+
+	return sos, nil
 }
 
 func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	pn, err := msc.getPhaseNode(balances)
+	pn, err := GetPhaseNode(balances)
 	if err != nil {
 		return "", common.NewErrNoResource("can't get phase node", err.Error())
 	}
@@ -145,16 +137,12 @@ func (msc *MinerSmartContract) GetPhaseHandler(ctx context.Context, params url.V
 }
 
 func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	magicBlockBytes, err := balances.GetTrieNode(MagicBlockKey)
+	mb, err := getMagicBlock(balances)
 	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get magic block")
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true)
 	}
-	magicBlock := block.NewMagicBlock()
-	err = magicBlock.Decode(magicBlockBytes.Encode())
-	if err != nil {
-		return nil, common.NewErrInternal("can't decode magic block", err.Error())
-	}
-	return magicBlock, nil
+
+	return mb, nil
 }
 
 /*
@@ -172,7 +160,7 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 		sn *MinerNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = getMinerNode(id, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
 	}
 
@@ -189,7 +177,7 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 		sn     *MinerNode
 	)
 
-	if sn, err = msc.getMinerNode(id, balances); err != nil {
+	if sn, err = getMinerNode(id, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
 	}
 
@@ -209,8 +197,8 @@ func (msc *MinerSmartContract) configsHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var gn *GlobalNode
-	if gn, err = msc.getGlobalNode(balances); err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get global node")
+	if gn, err = getGlobalNode(balances); err != nil {
+		return nil, common.NewErrInternal(err.Error())
 	}
 
 	var conf = new(Config)
