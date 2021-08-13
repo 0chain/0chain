@@ -11,10 +11,11 @@ import (
 
 // AddAuthorizer sc API function
 // Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
-// inputData is a publicKey in case public key in Tx is missing. Either PK or inputData must be present
+// inputData is a publicKey in case public key in Tx is missing.
+// Either PK or inputData must be present
 // balances have `GetTriedNode` implemented to get nodes
 // ContractMap contains all the SC addresses
-// ToClient is a SC address
+// ToClient is an SC address
 func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	// check for authorizer already there
 	ans, err := GetAuthorizerNodes(balances)
@@ -34,20 +35,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData
 		return
 	}
 
-	// get public key
-	var key string
-	if t.PublicKey == "" {
-		pk := PublicKey{}
-		err = pk.Decode(inputData)
-		if err != nil {
-			err = common.NewError("failed to add authorizer", "public key was not included with transaction")
-			return
-		}
-		key = pk.Key
-	} else {
-		key = t.PublicKey
+	authParam := AuthorizerParameter{}
+	err = authParam.Decode(inputData)
+	if err != nil {
+		err = common.NewError("failed to add authorizer", "public key was not included with transaction")
+		return
 	}
-	an := GetNewAuthorizer(key, t.ClientID)
+
+	var publicKey string
+	if t.PublicKey == "" {
+		publicKey = authParam.PublicKey
+	} else {
+		publicKey = t.PublicKey
+	}
+	an := GetNewAuthorizer(publicKey, t.ClientID, authParam.URL) // t.ClientID = authorizer node id
 
 	//dig pool for authorizer
 	var transfer *state.Transfer

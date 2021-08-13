@@ -39,9 +39,18 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 	if txn.Value < 0 {
 		return nil, "", common.NewError("digging pool failed", "insufficient funds")
 	}
-	p.TokenPool.ID = id
+
+	p.TokenPool.ID = id // Transaction Hash
 	p.TokenPool.Balance = state.Balance(txn.Value)
-	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: state.Balance(txn.Value)}
+
+	tpr := &TokenPoolTransferResponse{
+		TxnHash: txn.Hash, // transaction hash
+		FromClient: txn.ClientID, // authorizer node id
+		ToPool: p.ID, // transaction hash
+		ToClient: txn.ToClientID, // smart contracts address
+		Value: state.Balance(txn.Value),
+	}
+
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
 	return transfer, string(tpr.Encode()), nil
 }

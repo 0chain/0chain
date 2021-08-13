@@ -9,7 +9,9 @@ import (
 	"0chain.net/core/common"
 )
 
-// Burn inputData - is a BurnPayload
+// Burn inputData - is a BurnPayload.
+// EthereumAddress => required
+// Nonce => required
 func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
 	gn := GetGlobalNode(balances)
 
@@ -33,7 +35,7 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 	payload.TxnID = trans.Hash
 	payload.Amount = trans.Value
 
-	// get user node and update it's node
+	// get user node and update nonce
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
 		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1", err.Error()))

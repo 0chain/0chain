@@ -135,7 +135,7 @@ func Test_EmptyAuthorizersShouldNotHaveAnyNode(t *testing.T) {
 }
 
 func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) {
-	authorizer := GetNewAuthorizer("public key", "id")
+	authorizer := GetNewAuthorizer("public key", "id", "https://localhost:9876")
 	balances := MakeMockStateContext()
 
 	nodes, err := GetAuthorizerNodes(balances)
@@ -148,7 +148,7 @@ func Test_Authorizers_Should_Add_And_Return_And_UpdateAuthorizers(t *testing.T) 
 }
 
 func Test_PublicKey(t *testing.T) {
-	pk := PublicKey{}
+	pk := AuthorizerParameter{}
 
 	err := pk.Decode(nil)
 	require.Error(t, err)
@@ -161,15 +161,15 @@ func Test_PublicKey(t *testing.T) {
 	err = pk.Decode(data)
 	require.Error(t, err)
 
-	pk.Key = "public key"
+	pk.PublicKey = "public key"
 
 	bytes, err := json.Marshal(pk)
 	require.NoError(t, err)
 
-	expected := PublicKey{}
+	expected := AuthorizerParameter{}
 	err = expected.Decode(bytes)
 	require.NoError(t, err)
-	require.Equal(t, expected.Key, pk.Key)
+	require.Equal(t, expected.PublicKey, pk.PublicKey)
 }
 
 func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
@@ -197,7 +197,7 @@ func Test_ZcnLockingPool_ShouldBeSerializable(t *testing.T) {
 func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
 	_, _, _ = node.Staking.DigPool(tr.Hash, tr)
 	node.Staking.ID = "11"
 
@@ -214,7 +214,7 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	// Create authorizer node
 	tr := CreateDefaultTransactionToZcnsc()
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
 	node.Staking.ID = "11"
 	node.Staking.Balance = 100
 

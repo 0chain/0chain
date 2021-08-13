@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"time"
 
-	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -70,7 +69,9 @@ func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 			return gn, nil
 		}
 	}
-	_ = gn.Decode(gv.Encode())
+	if err := gn.Decode(gv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
 	return gn, err
 }
 
@@ -241,16 +242,17 @@ func (bp *BurnPayload) Decode(input []byte) error {
 	return err
 }
 
-type PublicKey struct {
-	Key string `json:"public_key"`
+type AuthorizerParameter struct {
+	PublicKey string `json:"public_key"`
+	URL       string `json:"url"`
 }
 
-func (pk *PublicKey) Encode() (data []byte, err error) {
+func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
 	data, err = json.Marshal(pk)
 	return
 }
 
-func (pk *PublicKey) Decode(input []byte) error {
+func (pk *AuthorizerParameter) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
 }
@@ -259,6 +261,7 @@ type AuthorizerNode struct {
 	ID        string                    `json:"id"`
 	PublicKey string                    `json:"public_key"`
 	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
+	URL       string                    `json:"url"`
 }
 
 func (an *AuthorizerNode) Encode() []byte {
@@ -312,23 +315,26 @@ func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 }
 
 // GetNewAuthorizer To review: tokenLock init values
-func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
+// pk = authorizer node public key
+// authId = authorizer node public id = Client ID
+func GetNewAuthorizer(pk string, authId string, url string) *AuthorizerNode {
 	return &AuthorizerNode{
+		ID:        authId,
 		PublicKey: pk,
+		URL: url,
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					ID:      "", // must be filled when DigPool is invoked
-					Balance: 0,
+					ID:      "", // must be filled when DigPool is invoked. Usually this is a trx.Hash
+					Balance: 0,  // filled when we dig pool
 				},
 			},
 			TokenLockInterface: TokenLock{
 				StartTime: 0,
 				Duration:  0,
-				Owner:     id,
+				Owner:     authId,
 			},
 		},
-		ID: id,
 	}
 }
 
@@ -483,9 +489,8 @@ func GetUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
 	if err != nil {
 		return un, err
 	}
-	err = un.Decode(uv.Encode())
-	if err != nil {
-		return un, err
+	if err := un.Decode(uv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return un, err
 }
@@ -519,11 +524,11 @@ func (tl TokenLock) LockStats(entity interface{}) []byte {
 }
 
 type poolStat struct {
-	ID           datastore.Key    `json:"pool_id"`
-	StartTime    common.Timestamp `json:"start_time"`
-	Duration     time.Duration    `json:"duration"`
-	TimeLeft     time.Duration    `json:"time_left"`
-	Locked       bool             `json:"locked"`
+	ID        datastore.Key    `json:"pool_id"`
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	TimeLeft  time.Duration    `json:"time_left"`
+	Locked    bool             `json:"locked"`
 }
 
 func (ps *poolStat) encode() []byte {
