@@ -240,7 +240,7 @@ func (msc *MinerSmartContract) deleteNode(
 
 	// set node type -- miner
 	if err = deleteNode.save(balances); err != nil {
-		return nil, common.NewError("delete_miner", err.Error())
+		return nil, fmt.Errorf("saving node %v", err.Error())
 	}
 
 	return deleteNode, nil
