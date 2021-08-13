@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/state"
 	"errors"
 	"fmt"
 
@@ -193,10 +192,13 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 }
 
 // DeleteSharder Function to handle removing a sharder from the chain
-func (msc *MinerSmartContract) DeleteSharder(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
+func (msc *MinerSmartContract) DeleteSharder(
+	_ *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (string, error) {
+	var err error
 	var deleteSharder = NewMinerNode()
 	if err = deleteSharder.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delete_sharder",
@@ -208,62 +210,17 @@ func (msc *MinerSmartContract) DeleteSharder(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("delete_sharder", err.Error())
 	}
-	sn.Delete = true
 
-	// deleting pending pools
-	for key, pool := range sn.Pending {
-		var un *UserNode
-		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
-			return "", common.NewErrorf("delete_sharder",
-				"getting user node: %v", err)
-		}
-
-		var transfer *state.Transfer
-		transfer, resp, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
-		if err != nil {
-			return "", common.NewErrorf("delete_sharder",
-				"error emptying delegate pool: %v", err)
-		}
-
-		if err = balances.AddTransfer(transfer); err != nil {
-			return "", common.NewErrorf("delete_sharder",
-				"adding transfer: %v", err)
-		}
-
-		delete(un.Pools, key)
-		delete(sn.Pending, key)
-
-		if err = un.save(balances); err != nil {
-			return "", common.NewError("delete_sharder", err.Error())
-		}
-	}
-
-	// deleting active pools
-	for key, pool := range sn.Active {
-		if pool.Status == DELETING {
-			continue
-		}
-
-		pool.Status = DELETING // mark as deleting
-		pool.TokenLockInterface = &ViewChangeLock{
-			Owner:               pool.DelegateID,
-			DeleteViewChangeSet: true,
-			DeleteVC:            gn.ViewChange,
-		}
-		sn.Deleting[key] = pool // add to deleting
-	}
-
-	if err = msc.deleteSharderFromViewChange(sn, balances); err != nil {
+	updatedSn, err := msc.deleteNode(gn, sn, balances)
+	if err != nil {
 		return "", err
 	}
 
-	// set node type -- miner
-	if err = sn.save(balances); err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
+	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
+		return "", err
 	}
 
-	resp = string(sn.Encode())
-	return
+	return "", nil
 }
 
 func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) (err error) {

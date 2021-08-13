@@ -921,6 +921,22 @@ func (un *UserNode) save(balances cstate.StateContextI) (err error) {
 	return
 }
 
+func (un *UserNode) deletePool(nodeId, id datastore.Key) error {
+	for i, pool := range un.Pools[nodeId] {
+		if id == pool {
+			un.Pools[nodeId][i] = un.Pools[nodeId][len(un.Pools[nodeId])-1]
+			un.Pools[nodeId][len(un.Pools[nodeId])-1] = ""
+			un.Pools[nodeId] = un.Pools[nodeId][:len(un.Pools[nodeId])-1]
+			if len(un.Pools[nodeId]) == 0 {
+				delete(un.Pools, nodeId)
+			}
+
+			return nil
+		}
+	}
+	return fmt.Errorf("remove pool failed, cannot find pool %s in user's node %s", id, nodeId)
+}
+
 func (un *UserNode) Encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff

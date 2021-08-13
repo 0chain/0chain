@@ -6,9 +6,9 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/util"
-
 	"0chain.net/core/logging"
+	"0chain.net/core/util"
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -227,11 +227,14 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	return string(mn.Encode()), nil
 }
 
-// DeleteMiner Function to handle removing a miner from the chain
-func (msc *MinerSmartContract) DeleteMiner(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
+// deleteMiner Function to handle removing a miner from the chain
+func (msc *MinerSmartContract) deleteMiner(
+	_ *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (string, error) {
+	var err error
 	var deleteMiner = NewMinerNode()
 	if err = deleteMiner.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delete_miner",
@@ -243,38 +246,56 @@ func (msc *MinerSmartContract) DeleteMiner(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
-	mn.Delete = true
+
+	updatedMn, err := msc.deleteNode(gn, mn, balances)
+	if err != nil {
+		return "", err
+	}
+
+	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
+		return "", err
+	}
+
+	return "", nil
+}
+
+func (msc *MinerSmartContract) deleteNode(
+	gn *GlobalNode,
+	deleteNode *MinerNode,
+	balances cstate.StateContextI,
+) (*MinerNode, error) {
+	var err error
+	deleteNode.Delete = true
 
 	// deleting pending pools
-	for key, pool := range mn.Pending {
+	for key, pool := range deleteNode.Pending {
 		var un *UserNode
 		if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
-			return "", common.NewErrorf("delete_miner",
-				"getting user node: %v", err)
+			return nil, fmt.Errorf("getting user node: %v", err)
 		}
 
 		var transfer *state.Transfer
-		transfer, resp, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
+		transfer, _, err = pool.EmptyPool(msc.ID, pool.DelegateID, nil)
 		if err != nil {
-			return "", common.NewErrorf("delete_miner",
-				"error emptying delegate pool: %v", err)
+			return nil, fmt.Errorf("error emptying delegate pool: %v", err)
 		}
 
 		if err = balances.AddTransfer(transfer); err != nil {
-			return "", common.NewErrorf("delete_miner",
-				"adding transfer: %v", err)
+			return nil, fmt.Errorf("adding transfer: %v", err)
 		}
 
-		delete(un.Pools, key)
-		delete(mn.Pending, key)
+		if err := un.deletePool(deleteNode.ID, key); err != nil {
+			return nil, err
+		}
+		delete(deleteNode.Pending, key)
 
 		if err = un.save(balances); err != nil {
-			return "", common.NewError("delete_miner", err.Error())
+			return nil, err
 		}
 	}
 
 	// deleting active pools
-	for key, pool := range mn.Active {
+	for key, pool := range deleteNode.Active {
 		if pool.Status == DELETING {
 			continue
 		}
@@ -285,20 +306,15 @@ func (msc *MinerSmartContract) DeleteMiner(t *transaction.Transaction,
 			DeleteViewChangeSet: true,
 			DeleteVC:            gn.ViewChange,
 		}
-		mn.Deleting[key] = pool // add to deleting
-	}
-
-	if err = msc.deleteMinerFromViewChange(mn, balances); err != nil {
-		return "", err
+		deleteNode.Deleting[key] = pool // add to deleting
 	}
 
 	// set node type -- miner
-	if err = mn.save(balances); err != nil {
-		return "", common.NewError("delete_miner", err.Error())
+	if err = deleteNode.save(balances); err != nil {
+		return nil, common.NewError("delete_miner", err.Error())
 	}
 
-	resp = string(mn.Encode())
-	return
+	return deleteNode, nil
 }
 
 func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {

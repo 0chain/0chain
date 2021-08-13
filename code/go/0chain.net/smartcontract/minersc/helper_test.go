@@ -1,8 +1,6 @@
 package minersc
 
 import (
-	configpkg "0chain.net/chaincore/config"
-	"0chain.net/core/viper"
 	"encoding/json"
 	"math/rand"
 	"strconv"
@@ -40,10 +38,12 @@ func toks(val state.Balance) string {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+	// chain.ServerChain = new(chain.Chain)
+	// chain.ServerChain.Config = new(chain.Config)
+	// chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
+	// node.Self.Node = node.Provider() // stub
 	logging.Logger = zap.NewNop() // /dev/null
-	configpkg.SmartContractConfig = viper.New()
-	configpkg.DevConfiguration.ViewChange = true
 
 	moveFunctions[Start] = moveTrue
 	moveFunctions[Contribute] = moveTrue
@@ -266,7 +266,7 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	require.NoError(t, err, "setting magic block")
 }
 
-func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
+func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 	balances cstate.StateContextI) {
 
 	var gn, err = getGlobalNode(balances)
@@ -285,4 +285,21 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 	msc.SmartContractExecutionStats["mintedTokens"] =
 		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
+}
+
+func (msc *MinerSmartContract) DeleteMiner(
+	txn *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.deleteMiner(txn, inputData, gn, balances)
+}
+
+func GetSharderNodeKey(sid datastore.Key) datastore.Key {
+	return getSharderKey(sid)
+}
+
+func GetMinerNodeKey(mn *MinerNode) datastore.Key {
+	return mn.getKey()
 }
