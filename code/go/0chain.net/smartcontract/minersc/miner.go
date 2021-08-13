@@ -342,6 +342,72 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 	return
 }
 
+func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var update = NewMinerNode()
+	if err = update.Decode(inputData); err != nil {
+		return "", common.NewErrorf("update_settings",
+			"decoding request: %v", err)
+	}
+
+	if update.ServiceCharge < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative service charge: %v", update.ServiceCharge)
+	}
+
+	if update.ServiceCharge > gn.MaxCharge {
+		return "", common.NewErrorf("update_settings",
+			"max_charge is greater than allowed by SC: %v > %v",
+			update.ServiceCharge, gn.MaxCharge)
+	}
+
+	if update.NumberOfDelegates < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative number_of_delegates: %v", update.ServiceCharge)
+	}
+
+	if update.NumberOfDelegates > gn.MaxDelegates {
+		return "", common.NewErrorf("add_miner",
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
+			update.ServiceCharge, gn.MaxDelegates)
+	}
+
+	if update.MinStake < gn.MinStake {
+		return "", common.NewErrorf("update_settings",
+			"min_stake is less than allowed by SC: %v > %v",
+			update.MinStake, gn.MinStake)
+	}
+
+	if update.MaxStake < gn.MaxStake {
+		return "", common.NewErrorf("update_settings",
+			"max_stake is greater than allowed by SC: %v > %v",
+			update.MaxStake, gn.MaxStake)
+	}
+
+	var mn *MinerNode
+	mn, err = getMinerNode(update.ID, balances)
+	if err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	if mn.DelegateWallet != t.ClientID {
+		return "", common.NewError("update_setings", "access denied")
+	}
+
+	mn.ServiceCharge = update.ServiceCharge
+	mn.NumberOfDelegates = update.NumberOfDelegates
+	mn.MinStake = update.MinStake
+	mn.MaxStake = update.MaxStake
+
+	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("update_setings", "saving: %v", err)
+	}
+
+	return string(mn.Encode()), nil
+}
+
 //------------- local functions ---------------------
 func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 	msg string) {

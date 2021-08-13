@@ -47,7 +47,7 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["wait"] = msc.wait
 
-	//msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
+	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
