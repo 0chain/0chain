@@ -151,7 +151,8 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 }
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc("client0", 10)
@@ -171,7 +172,8 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	sc := CreateZCNSmartContract()
 	balances := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc("client0", 10)
@@ -265,7 +267,8 @@ func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 }
 
 func Test_Transaction_Or_InputData_MustBe_A_Key_Transaction(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	tr := CreateTransactionToZcnsc("client0", 10)
 	tr.PublicKey = "public Key"
 	balances := MakeMockStateContext()

@@ -75,6 +75,13 @@ func CreateTransactionToZcnsc(fromClient string, amount float64) *transaction.Tr
 	return txn
 }
 
+func CreateAuthorizerParam() *AuthorizerParameter {
+	return &AuthorizerParameter{
+		PublicKey: "public key",
+		URL:       "http://localhost:2344",
+	}
+}
+
 func CreateZCNSmartContract() *ZCNSmartContract {
 	msc := new(ZCNSmartContract)
 	msc.SmartContract = new(smartcontractinterface.SmartContract)
