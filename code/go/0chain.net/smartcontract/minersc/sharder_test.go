@@ -16,11 +16,11 @@ import (
 	"testing"
 )
 
-func TestDeleteMiner(t *testing.T) {
+func TestDeleteSharder(t *testing.T) {
 	const (
-		mockDeletedMinerId               = "mock deleted miner id"
-		mockRoundNumber                  = 5
-		x10                state.Balance = 10 * 1000 * 1000 * 1000
+		mockDeletedSharderId               = "mock deleted sharder id"
+		mockRoundNumber                    = 5
+		x10                  state.Balance = 10 * 1000 * 1000 * 1000
 	)
 	type parameters struct {
 		pendingPools []int
@@ -40,7 +40,7 @@ func TestDeleteMiner(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		mn := NewMinerNode()
-		mn.ID = mockDeletedMinerId
+		mn.ID = mockDeletedSharderId
 		for i := 0; i < p.activePools; i++ {
 			id := "active pool " + strconv.Itoa(i)
 			mn.Active[id] = sci.NewDelegatePool()
@@ -67,7 +67,7 @@ func TestDeleteMiner(t *testing.T) {
 			balances.On("DeleteTrieNode", un.GetKey()).Return("", nil).Once()
 		}
 
-		balances.On("GetTrieNode", GetMinerNodeKey(mn)).Return(mn, nil).Once()
+		balances.On("GetTrieNode", GetSharderNodeKey(mockDeletedSharderId)).Return(mn, nil).Once()
 		balances.On(
 			"InsertTrieNode",
 			GetMinerNodeKey(mn),
@@ -75,7 +75,7 @@ func TestDeleteMiner(t *testing.T) {
 				return 0 == len(mn.Pending) &&
 					len(mn.Deleting) == p.activePools &&
 					len(mn.Active) == p.activePools &&
-					mn.ID == mockDeletedMinerId
+					mn.ID == mockDeletedSharderId
 			}),
 		).Return("", nil).Once()
 
@@ -84,11 +84,12 @@ func TestDeleteMiner(t *testing.T) {
 		mockBlock := &block.Block{}
 		mockBlock.Round = mockRoundNumber
 		balances.On("GetBlock").Return(mockBlock).Twice()
-		balances.On("GetTrieNode", DKGMinersKey).Return(nil, util.ErrValueNotPresent).Once()
+		balances.On("GetTrieNode", ShardersKeepKey).Return(nil, util.ErrValueNotPresent).Once()
+		balances.On("InsertTrieNode", ShardersKeepKey, &MinerNodes{}).Return("", nil).Once()
 
 		mnInput := &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID: mockDeletedMinerId,
+				ID: mockDeletedSharderId,
 			},
 		}
 		return args{
@@ -129,7 +130,7 @@ func TestDeleteMiner(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.msc.DeleteMiner(
+			_, err := args.msc.DeleteSharder(
 				&transaction.Transaction{},
 				args.inputData,
 				args.gn,
