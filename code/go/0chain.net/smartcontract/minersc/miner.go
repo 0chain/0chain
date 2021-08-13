@@ -178,11 +178,11 @@ func (msc *MinerSmartContract) deleteMiner(
 
 	updatedMn, err := msc.deleteNode(gn, mn, balances)
 	if err != nil {
-		return "", err
+		return "", common.NewError("delete_miner", err.Error())
 	}
 
 	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
-		return "", err
+		return "", common.NewError("delete_miner", err.Error())
 	}
 
 	return "", nil
@@ -214,12 +214,12 @@ func (msc *MinerSmartContract) deleteNode(
 		}
 
 		if err := un.deletePool(deleteNode.ID, key); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("deleting pool: %v", err)
 		}
 		delete(deleteNode.Pending, key)
 
 		if err = un.save(balances); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("saving user node%s: %v", un.ID, err)
 		}
 	}
 

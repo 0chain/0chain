@@ -145,11 +145,11 @@ func (msc *MinerSmartContract) DeleteSharder(
 
 	updatedSn, err := msc.deleteNode(gn, sn, balances)
 	if err != nil {
-		return "", err
+		return "", common.NewError("delete_sharder", err.Error())
 	}
 
 	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
-		return "", err
+		return "", common.NewError("delete_sharder", err.Error())
 	}
 
 	return "", nil
