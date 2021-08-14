@@ -13,6 +13,72 @@ import (
 	"go.uber.org/zap"
 )
 
+func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var update = NewMinerNode()
+	if err = update.Decode(inputData); err != nil {
+		return "", common.NewErrorf("update_settings",
+			"decoding request: %v", err)
+	}
+
+	if update.ServiceCharge < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative service charge: %v", update.ServiceCharge)
+	}
+
+	if update.ServiceCharge > gn.MaxCharge {
+		return "", common.NewErrorf("update_settings",
+			"max_charge is greater than allowed by SC: %v > %v",
+			update.ServiceCharge, gn.MaxCharge)
+	}
+
+	if update.NumberOfDelegates < 0 {
+		return "", common.NewErrorf("update_settings",
+			"invalid negative number_of_delegates: %v", update.ServiceCharge)
+	}
+
+	if update.NumberOfDelegates > gn.MaxDelegates {
+		return "", common.NewErrorf("add_miner_failed",
+			"number_of_delegates greater than max_delegates of SC: %v > %v",
+			update.ServiceCharge, gn.MaxDelegates)
+	}
+
+	if update.MinStake < gn.MinStake {
+		return "", common.NewErrorf("update_settings",
+			"min_stake is less than allowed by SC: %v > %v",
+			update.MinStake, gn.MinStake)
+	}
+
+	if update.MaxStake < gn.MaxStake {
+		return "", common.NewErrorf("update_settings",
+			"max_stake is greater than allowed by SC: %v > %v",
+			update.MaxStake, gn.MaxStake)
+	}
+
+	var sn *MinerNode
+	sn, err = msc.getSharderNode(update.ID, balances)
+	if err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	if sn.DelegateWallet != t.ClientID {
+		return "", common.NewError("update_setings", "access denied")
+	}
+
+	sn.ServiceCharge = update.ServiceCharge
+	sn.NumberOfDelegates = update.NumberOfDelegates
+	sn.MinStake = update.MinStake
+	sn.MaxStake = update.MaxStake
+
+	if err = sn.save(balances); err != nil {
+		return "", common.NewErrorf("update_setings", "saving: %v", err)
+	}
+
+	return string(sn.Encode()), nil
+}
+
 // AddSharder function to handle miner register
 func (msc *MinerSmartContract) AddSharder(
 	t *transaction.Transaction,

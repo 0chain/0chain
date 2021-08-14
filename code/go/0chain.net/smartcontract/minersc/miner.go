@@ -155,7 +155,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	return string(newMiner.Encode()), nil
 }
 
-func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
