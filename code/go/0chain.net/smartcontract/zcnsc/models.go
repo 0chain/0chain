@@ -298,6 +298,16 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 		an.PublicKey = *pkStr
 	}
 
+	url, ok := objMap["url"]
+	if ok {
+		var urlStr *string
+		err = json.Unmarshal(*url, &urlStr)
+		if err != nil {
+			return err
+		}
+		an.URL = *urlStr
+	}
+
 	if an.Staking == nil {
 		an.Staking = &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
@@ -446,19 +456,22 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 }
 
 func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
-	an := &AuthorizerNodes{}
-	av, err := balances.GetTrieNode(AllAuthorizerKey)
+	authNodes := &AuthorizerNodes{}
+	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		} else {
-			an.NodeMap = make(map[string]*AuthorizerNode)
-			return an, nil
+			authNodes.NodeMap = make(map[string]*AuthorizerNode)
+			return authNodes, nil
 		}
 	}
 
-	err = an.Decode(av.Encode())
-	return an, err
+	err = authNodes.Decode(authNodesBytes.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return authNodes, err
 }
 
 type UserNode struct {

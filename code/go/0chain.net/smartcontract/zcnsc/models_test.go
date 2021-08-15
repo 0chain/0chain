@@ -239,8 +239,11 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 
 	targetNode := target.NodeMap[node.ID]
 	require.NotNil(t, targetNode)
-	require.Equal(t, targetNode.Staking.ID, "11")
-	require.Equal(t, int(targetNode.Staking.Balance), 100)
+	require.Equal(t, targetNode.ID, node.ID)
+	require.Equal(t, targetNode.URL, node.URL)
+	require.Equal(t, targetNode.PublicKey, node.PublicKey)
+	require.Equal(t, targetNode.Staking.ID, node.Staking.ID)
+	require.Equal(t, targetNode.Staking.Balance, node.Staking.Balance)
 }
 
 func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
