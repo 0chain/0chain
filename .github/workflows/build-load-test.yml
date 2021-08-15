@@ -30,7 +30,7 @@ on:
 jobs:
   loadTest:
     name: LOADTEST
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -73,9 +73,9 @@ jobs:
 #          tee $NEW_CONFIG
 #        env:
 #          NEW_CONFIG: ./config/loadTest.yaml
-      - name: Build
-        run: docker build -t loadtest -f docker.local/Dockerfile . --network=host
-        working-directory: loadTest
+#      - name: Build
+#        run: docker build -t loadtest -f docker.local/Dockerfile . --network=host
+#        working-directory: loadTest
       - name: Test
         run: make run config=loadTest-test.yaml
         working-directory: loadTest
