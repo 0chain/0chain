@@ -36,6 +36,7 @@ jobs:
         with:
           repository: 0chain/loadTest
           token: ${{ secrets.SVC_ACCOUNT_SECRET }}
+          path: loadTest
       - name: Print config used
         run: |
           echo "Config file used: ${{ github.event.inputs.configFile }}"
@@ -74,5 +75,7 @@ jobs:
 #          NEW_CONFIG: ./config/loadTest.yaml
       - name: Build
         run: docker build -t loadtest -f docker.local/Dockerfile . --network=host
+        working-directory: loadTest
       - name: Test
         run: make run config=loadTest-test.yaml
+        working-directory: loadTest
