@@ -62,7 +62,9 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
-
+	if sn.Delete {
+		return "", common.NewError("update_settings", "can't update settings of sharder being deleted")
+	}
 	if sn.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_sharder_settings", "access denied")
 	}
@@ -314,8 +316,8 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 	return // got it!
 }
 
-func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
-	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
+func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
+	input []byte, _ *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
 	pn, err := GetPhaseNode(balances)

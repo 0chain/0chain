@@ -321,6 +321,10 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
+	if mn.Delete {
+		return "", common.NewError("update_settings", "can't update settings of miner being deleted")
+	}
+
 	if mn.DelegateWallet != t.ClientID {
 		return "", common.NewError("update_miner_settings", "access denied")
 	}
