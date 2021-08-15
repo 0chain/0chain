@@ -6,139 +6,73 @@ on: [push]
 #  workflow_dispatch:
 #    inputs:
 #      configFile:
-#        description: 'load test yaml file located in loadTest/config directory'
+#        description: 'load test yaml file located in config directory'
 #        required: true
 #        default: loadTest-test.yaml
+#      wallets:
+#        required: true
+#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+#      transactions:
+#        required: true
+#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+#      allocations:
+#        required: true
+#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+#      storage_wallets:
+#        required: true
+#        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
+#      storage_txns:
+#        required: true
+#        default: '{"count": 50, "max_concurrency": 5, "max_qps": 20}'
+#      thirdparty_txns:
+#        required: true
+#        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
 
 #env:
 #  ZCHAIN_BUILDBASE: zchain_build_base
 #  ZCHAIN_BUILDRUN: zchain_run_base
 
 jobs:
-  loadtest_build:
-    name: LOADTEST-BUILD
+  loadTest:
+    name: LOADTEST
     runs-on: self-hosted
-    
     steps:
-    - uses: actions/checkout@v2
-
-    - uses: actions/checkout@master
-      with:
-        repository: 0chain/loadTest
-        token: ${{ secrets.SVC_ACCOUNT_SECRET }}
-
-#    - name: Get Branch
-#      id: get_info
-#      run: |
-#        BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-#        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-#        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-#        echo ::set-output name=BRANCH::${BRANCH}
-#        echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
-#        echo "Branch == ${BRANCH}"
-#
-#    - name: Git Checkout
-#      run: |
-#        cd /root/0chain/
-#        git checkout .
-#        git pull
-#        git checkout $BRANCH
-#      env:
-#        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
-#
-#    - name: Setting Up View Change
-#      run: |
-#        cd /root/0chain/docker.local/config
-#        filename='0chain.yaml'
-#        # Check the new text is empty or not
-#        if ! grep -q view_change "$filename"; then
-#          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-#        else
-#          sed -i '/view_change/d' $filename
-#          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-#        fi
-#      env:
-#        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
-#
-#    - name: Building Base Images
-#      run: |
-#        cd /root/0chain/
-#        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-#        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-#
-#    - name: Build Miner Docker Image For Integration Test.
-#      run: |
-#        cd /root/0chain/
-#        bash ./docker.local/bin/build.miners-integration-tests.sh
-#
-#    - name: Build Sharder Docker Image For Integration Test.
-#      run: |
-#        cd /root/0chain/
-#        bash ./docker.local/bin/build.sharders-integration-tests.sh
-#
-#    - name: View Change Rounds
-#      run: |
-#        cd /root/0chain/
-#        awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
-#        awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
-#
-#  conductor_standard_tests:
-#    name: CONDUCTOR-STANDARD-TESTS
-#    runs-on: self-hosted
-#
-#    needs:
-#    - conductor_build
-#
-#    steps:
-#    - name: Running Standard Tests for Miners.
-#      run: |
-#        cd /root/0chain/
-#        source ~/.profile
-#        bash ./docker.local/bin/start.conductor.sh miners
-#
-#    - name: Running Standard Tests for Sharders.
-#      run: |
-#        cd /root/0chain/
-#        bash ./docker.local/bin/start.conductor.sh sharders
-#
-#  conductor_vc_tests:
-#    name: CONDUCTOR-VIEW-CHANGE-TESTS
-#    runs-on: self-hosted
-#
-#    needs:
-#    - conductor_standard_tests
-#
-#    steps:
-#    - name: Running Fault Tolerance Tests.
-#      run: |
-#        cd /root/0chain/
-#        source ~/.profile
-#        if [[ "$VIEW" == "true" ]]
-#          bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
-#        elif [[ "$VIEW" == "false" ]]
-#          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
-#        fi
-#      env:
-#        VIEW: ${{ github.event.inputs.view_change }}
-#
-#    - name: Running Byzantine Tests.
-#      run: |
-#        cd /root/0chain/
-#        if [[ "$VIEW" == "true" ]]
-#          bash ./docker.local/bin/start.conductor.sh view-change.byzantine
-#        elif [[ "$VIEW" == "false" ]]
-#          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
-#        fi
-#      env:
-#        VIEW: ${{ github.event.inputs.view_change }}
-#
-#    - name: Running View Change-3 Tests.
-#      run: |
-#        cd /root/0chain/
-#        if [[ "$VIEW" == "true" ]]
-#          bash ./docker.local/bin/start.conductor.sh view-change-3
-#        elif [[ "$VIEW" == "false" ]]
-#          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
-#        fi
-#      env:
-#        VIEW: ${{ github.event.inputs.view_change }}
+      - uses: actions/checkout@v2
+        with:
+          repository: 0chain/loadTest
+          token: ${{ secrets.SVC_ACCOUNT_SECRET }}
+      - name: Print config used
+        run: |
+          echo "Config file used: ${{ github.event.inputs.configFile }}"
+      - name: Install yq
+        run: |
+          sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+      - name: Setup yaml config
+        run: |
+          if test -z "${{ github.event.inputs.configFile }}"; then echo "please supply a config yaml file like: config=loadTest-test.yaml"; exit 1; fi
+          rm $NEW_CONFIG || true
+          cat ./config/${{ github.event.inputs.configFile }} | \
+          yq e ".wallets.count = $(echo '${{ github.event.inputs.wallets }}' | jq '.count')" - | \
+          yq e ".wallets.max_concurrency = $(echo '${{ github.event.inputs.wallets }}' | jq '.max_concurrency')" - | \
+          yq e ".wallets.max_qps = $(echo '${{ github.event.inputs.wallets }}' | jq '.max_qps')" - | \
+          yq e ".transactions.count = $(echo '${{ github.event.inputs.transactions }}' | jq '.count')" - | \
+          yq e ".transactions.max_concurrency = $(echo '${{ github.event.inputs.transactions }}' | jq '.max_concurrency')" - | \
+          yq e ".transactions.max_qps = $(echo '${{ github.event.inputs.transactions }}' | jq '.max_qps')" - | \
+          yq e ".allocations.count = $(echo '${{ github.event.inputs.allocations }}' | jq '.count')" - | \
+          yq e ".allocations.max_concurrency = $(echo '${{ github.event.inputs.allocations }}' | jq '.max_concurrency')" - | \
+          yq e ".allocations.max_qps = $(echo '${{ github.event.inputs.allocations }}' | jq '.max_qps')" - | \
+          yq e ".storage_wallets.count = $(echo '${{ github.event.inputs.storage_wallets }}' | jq '.count')" - | \
+          yq e ".storage_wallets.max_concurrency = $(echo '${{ github.event.inputs.storage_wallets }}' | jq '.max_concurrency')" -  \
+          yq e ".storage_wallets.max_qps = $(echo '${{ github.event.inputs.storage_wallets }}' | jq '.max_qps')" - | \
+          yq e ".storage_txns.count = $(echo '${{ github.event.inputs.storage_txns }}' | jq '.count')" - | \
+          yq e ".storage_txns.max_concurrency =  $(echo '${{ github.event.inputs.storage_txns }}' | jq '.max_concurrency')" - | \
+          yq e ".storage_txns.max_qps =  $(echo '${{ github.event.inputs.storage_txns }}' | jq '.max_qps')" - | \
+          yq e ".thirdparty_txns.count = $(echo '${{ github.event.inputs.thirdparty_txns }}' | jq '.count')" - | \
+          yq e ".thirdparty_txns.max_concurrency =  $(echo '${{ github.event.inputs.thirdparty_txns }}' | jq '.max_concurrency')" - | \
+          yq e ".thirdparty_txns.max_qps =  $(echo '${{ github.event.inputs.thirdparty_txns }}' | jq '.max_qps')" - | \
+          tee $NEW_CONFIG
+        env:
+          NEW_CONFIG: ./config/loadTest.yaml
+      - name: Test
+        run: make run config=loadTest.yaml
