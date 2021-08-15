@@ -70,5 +70,5 @@ jobs:
         env:
           NEW_CONFIG: ./config/loadTest.yaml
       - name: Test
-        run: make run config=loadTest-test.yaml
+        run: make run config=loadTest.yaml
         working-directory: loadTest
