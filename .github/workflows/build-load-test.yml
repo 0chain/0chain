@@ -40,9 +40,6 @@ jobs:
       - name: Print config used
         run: |
           echo "Config file used: ${{ github.event.inputs.configFile }}"
-      - name: Install libsecret
-        run: |
-          sudo apt install libsecret-1-0 -y
       - name: Install yq
         run: |
           sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64
@@ -73,9 +70,6 @@ jobs:
 #          tee $NEW_CONFIG
 #        env:
 #          NEW_CONFIG: ./config/loadTest.yaml
-#      - name: Build
-#        run: docker build -t loadtest -f docker.local/Dockerfile . --network=host
-#        working-directory: loadTest
       - name: Test
         run: make run config=loadTest-test.yaml
         working-directory: loadTest
