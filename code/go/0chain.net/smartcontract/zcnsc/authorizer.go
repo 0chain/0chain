@@ -11,20 +11,20 @@ import (
 
 // AddAuthorizer sc API function
 // Transaction must include ClientID, ToClientID, PublicKey, Hash, Value
-// inputData is a publicKey in case public key in Tx is missing.
+// inputData is a publicKey in case public key in Tx is missing
 // Either PK or inputData must be present
 // balances have `GetTriedNode` implemented to get nodes
 // ContractMap contains all the SC addresses
 // ToClient is an SC address
-func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
+func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (string, error) {
 	// check for authorizer already there
 	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
-		return resp, err
+		return "", err
 	}
 	if ans.NodeMap[t.ClientID] != nil {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("authorizer(id: %v) already exists", t.ClientID))
-		return
+		return "", err
 	}
 
 	gn := GetGlobalNode(balances)
@@ -32,14 +32,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData
 	//compare the global min of an Authorizer to that of the transaction amount
 	if gn.MinStakeAmount > t.Value {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("amount to stake (%v) is lower than min amount (%v)", t.Value, gn.MinStakeAmount))
-		return
+		return "", err
 	}
 
 	authParam := AuthorizerParameter{}
 	err = authParam.Decode(inputData)
 	if err != nil {
 		err = common.NewError("failed to add authorizer", "public key was not included with transaction")
-		return
+		return "", err
 	}
 
 	var publicKey string
@@ -48,15 +48,29 @@ func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData
 	} else {
 		publicKey = t.PublicKey
 	}
-	an := GetNewAuthorizer(publicKey, t.ClientID, authParam.URL) // t.ClientID = authorizer node id
 
-	//dig pool for authorizer
-	var transfer *state.Transfer
-	transfer, resp, err = an.Staking.DigPool(t.Hash, t)
+	//Save authorizer
+	an := GetNewAuthorizer(publicKey, t.ClientID, authParam.URL) // t.ClientID = authorizer node id
+	err = ans.AddAuthorizer(an)
+	if err != nil {
+		return "", err
+	}
+	err = an.Save(balances) // TODO: DO I Need to save new authorizer as a Trie?
+	if err != nil {
+		return "", err
+	}
+	err = ans.Save(balances)
+	if err != nil {
+		return "", err
+	}
+
+	//Dig pool for authorizer
+	transfer, response, err := an.Staking.DigPool(t.Hash, t)
 	if err != nil {
 		err = common.NewError("failed to add authorizer", fmt.Sprintf("error digging pool(%v)", err.Error()))
-		return
+		return "", err
 	}
+
 	err = balances.AddTransfer(transfer)
 	if err != nil {
 		currTr := balances.GetTransaction()
@@ -71,15 +85,10 @@ func (zcn *ZCNSmartContract) AddAuthorizer(t *transaction.Transaction, inputData
 				transfer.ToClientID,
 			),
 		)
-		return
+		return "", err
 	}
-	err = ans.AddAuthorizer(an)
-	if err != nil {
-		return
-	}
-	//Save authorizer
-	err = ans.Save(balances)
-	return
+
+	return response, err
 }
 
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, balances cstate.StateContextI) (resp string, err error) {

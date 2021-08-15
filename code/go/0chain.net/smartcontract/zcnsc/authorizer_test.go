@@ -505,8 +505,8 @@ func Test_Authorizers_NodeMap_ShouldBeInitializedAfterSaving(t *testing.T) {
 	require.NotNil(t, tree.NodeMap)
 }
 
-func getResponse(t *testing.T, resp string) *tokenpool.TokenPoolTransferResponse {
-	response := &tokenpool.TokenPoolTransferResponse{}
+func getResponse(t *testing.T, resp string) *tokenpool.TransferResponse {
+	response := &tokenpool.TransferResponse{}
 	err := response.Decode([]byte(resp))
 	require.NoError(t, err, "failed to decode response")
 	return response

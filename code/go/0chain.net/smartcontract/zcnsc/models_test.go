@@ -204,7 +204,7 @@ func Test_AuthorizerNode_ShouldBeSerializableWithTokenLock(t *testing.T) {
 	// Deserialize it into new instance
 	target := &AuthorizerNode{}
 
-	err := target.Decode(node.Encode(), &TokenLock{})
+	err := target.Decode(node.Encode())
 	require.NoError(t, err)
 	require.Equal(t, target.Staking.ID, "11")
 	require.Equal(t, int64(target.Staking.Balance), tr.Value)

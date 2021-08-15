@@ -38,7 +38,7 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 	// get user node and update nonce
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
-		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1", err.Error()))
+		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1, ClientID=%s, hash=%s", err.Error(), trans.ClientID, trans.Hash))
 		return
 	}
 

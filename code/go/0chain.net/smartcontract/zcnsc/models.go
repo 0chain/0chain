@@ -269,7 +269,9 @@ func (an *AuthorizerNode) Encode() []byte {
 	return bytes
 }
 
-func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+func (an *AuthorizerNode) Decode(input []byte) error {
+	tokenlock := &TokenLock{}
+
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -310,6 +312,14 @@ func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (an *AuthorizerNode) Save(balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(ADDRESS + "auth_node" + an.ID, an)
+	if err != nil {
+		return common.NewError("save_auth_node_failed", "saving authorizer node: " + err.Error())
 	}
 	return nil
 }
@@ -363,7 +373,7 @@ func (an *AuthorizerNodes) Decode(input []byte) error {
 
 		for _, raw := range authorizerNodes {
 			target := &AuthorizerNode{}
-			err := target.Decode(raw, &TokenLock{})
+			err := target.Decode(raw)
 			if err != nil {
 				return err
 			}
