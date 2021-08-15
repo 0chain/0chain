@@ -1,12 +1,14 @@
 name: LOAD_TEST
 
-on:
-  workflow_dispatch:
-    inputs:
-      configFile:
-        description: 'load test yaml file located in loadTest/config directory'
-        required: true
-        default: loadTest-test.yaml
+on: [push]
+
+#on:
+#  workflow_dispatch:
+#    inputs:
+#      configFile:
+#        description: 'load test yaml file located in loadTest/config directory'
+#        required: true
+#        default: loadTest-test.yaml
 
 #env:
 #  ZCHAIN_BUILDBASE: zchain_build_base
