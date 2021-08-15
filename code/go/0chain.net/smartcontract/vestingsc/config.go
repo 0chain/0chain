@@ -1,12 +1,8 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"context"
-	"encoding/json"
 	"errors"
 	"net/url"
 	"time"
@@ -15,10 +11,6 @@ import (
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
-
-func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
-}
 
 type config struct {
 	MinLock              state.Balance `json:"min_lock"`
@@ -44,82 +36,13 @@ func (c *config) validate() (err error) {
 	return
 }
 
-func (conf *config) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(conf); err != nil {
-		panic(err) // must not happens
-	}
-	return
-}
-
-func (conf *config) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
-}
-
-func (conf *config) update(newConf *config) {
-	if newConf.MinLock > 0 {
-		conf.MinLock = newConf.MinLock
-	}
-	if newConf.MinDuration > 0 {
-		conf.MinDuration = newConf.MinDuration
-	}
-	if newConf.MaxDuration > 0 {
-		conf.MaxDuration = newConf.MaxDuration
-	}
-	if newConf.MaxDestinations > 0 {
-		conf.MaxDestinations = newConf.MaxDestinations
-	}
-	if newConf.MaxDescriptionLength > 0 {
-		conf.MaxDescriptionLength = newConf.MaxDescriptionLength
-	}
-}
-
-func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI,
-) (resp string, err error) {
-	if t.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
-	var conf *config
-	if conf, err = vsc.getConfig(balances); err != nil {
-		return "", common.NewError("update_config",
-			"can't get config: "+err.Error())
-	}
-
-	update := &config{}
-	if err = update.Decode(input); err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	conf.update(update)
-
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
-	if err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	return string(conf.Encode()), nil
-}
-
 //
 // helpers
 //
 
-func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
-) (b []byte, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
 // configurations from sc.yaml
-func getConfiguredConfig() (conf *config, err error) {
+func getConfig() (conf *config, err error) {
+
 	const prefix = "smart_contracts.vestingsc."
 
 	conf = new(config)
@@ -139,50 +62,14 @@ func getConfiguredConfig() (conf *config, err error) {
 	return
 }
 
-func (vsc *VestingSmartContract) setupConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
-	}
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
-}
-
-func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	var confb []byte
-	confb, err = vsc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	conf = new(config)
-
-	if err == util.ErrValueNotPresent {
-		return vsc.setupConfig(balances)
-	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, err
-	}
-	return
-}
-
 //
 // REST-handler
 //
 
-func (vsc *VestingSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainstate.StateContextI,
-) (interface{}, error) {
-	res, err := vsc.getConfig(balances)
+func (vsc *VestingSmartContract) getConfigHandler(context.Context,
+	url.Values, chainstate.StateContextI) (interface{}, error) {
+
+	res, err := getConfig()
 	if err != nil {
 		return nil, common.NewErrInternal("can't get config", err.Error())
 	}

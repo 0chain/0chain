@@ -14,15 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func requireErrMsg(t *testing.T, err error, msg string) {
-	t.Helper()
-	if msg == "" {
-		require.Nil(t, err)
-	} else {
-		require.Equal(t, msg, err.Error())
-	}
-}
-
 func Test_toSeconds(t *testing.T) {
 	assert.Equal(t, common.Timestamp(1),
 		toSeconds(1*time.Second+500*time.Millisecond))
@@ -53,25 +44,25 @@ func Test_addRequest_validate(t *testing.T) {
 		ar   addRequest
 	)
 	ar.Description = "very very very long description"
-	requireErrMsg(t, ar.validate(10, conf), "entry description is too long")
+	assertErrMsg(t, ar.validate(10, conf), "entry description is too long")
 	ar.Description = "short desc."
 
 	ar.StartTime = 1
-	requireErrMsg(t, ar.validate(10, conf), "vesting starts before now")
+	assertErrMsg(t, ar.validate(10, conf), "vesting starts before now")
 	ar.StartTime = 20
 
-	requireErrMsg(t, ar.validate(10, conf), "vesting duration is too short")
+	assertErrMsg(t, ar.validate(10, conf), "vesting duration is too short")
 	ar.Duration = 20 * time.Hour
-	requireErrMsg(t, ar.validate(10, conf), "vesting duration is too long")
+	assertErrMsg(t, ar.validate(10, conf), "vesting duration is too long")
 	ar.Duration = 1 * time.Minute
 
-	requireErrMsg(t, ar.validate(10, conf), "no destinations")
+	assertErrMsg(t, ar.validate(10, conf), "no destinations")
 	ar.Destinations = destinations{
 		&destination{ID: "one", Amount: 10},
 		&destination{ID: "two", Amount: 20},
 		&destination{ID: "three", Amount: 30},
 	}
-	requireErrMsg(t, ar.validate(10, conf), "too many destinations")
+	assertErrMsg(t, ar.validate(10, conf), "too many destinations")
 	ar.Destinations = destinations{
 		&destination{ID: "one", Amount: 10},
 		&destination{ID: "two", Amount: 20},
@@ -170,7 +161,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 
 	// 1. malformed request
 	_, err = vsc.add(tx, []byte(`} malformed {`), balances)
-	requireErrMsg(t, err, `create_vesting_pool_failed: malformed request:`+
+	assertErrMsg(t, err, `create_vesting_pool_failed: malformed request:`+
 		` invalid character '}' looking for beginning of value`)
 
 	// 2. invalid
@@ -183,28 +174,28 @@ func TestVestingSmartContract_add(t *testing.T) {
 		&destination{ID: "two", Amount: 20},
 	}
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	requireErrMsg(t, err, `create_vesting_pool_failed: invalid request:`+
+	assertErrMsg(t, err, `create_vesting_pool_failed: invalid request:`+
 		` vesting duration is too short`)
 
 	// 3. empty client id
 	ar.Duration = 2 * time.Second
 	tx.ClientID = ""
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	requireErrMsg(t, err, `create_vesting_pool_failed: `+
+	assertErrMsg(t, err, `create_vesting_pool_failed: `+
 		`empty client_id of transaction`)
 
 	// 4. min lock
 	tx = newTransaction(client.id, vsc.ID, 1, tp)
 	balances.txn = tx
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	requireErrMsg(t, err, `create_vesting_pool_failed: `+
+	assertErrMsg(t, err, `create_vesting_pool_failed: `+
 		`not enough tokens to create pool provided`)
 
 	// 5. no tokens
 	tx = newTransaction(client.id, vsc.ID, 800e10, tp)
 	balances.txn = tx
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	requireErrMsg(t, err, `create_vesting_pool_failed: `+
+	assertErrMsg(t, err, `create_vesting_pool_failed: `+
 		`can't fill pool: lock amount is greater than balance`)
 
 	// 6. ok
@@ -243,25 +234,25 @@ func TestVestingSmartContract_delete(t *testing.T) {
 
 	// 1. malformed (lock, unlock)
 	_, err = vsc.delete(tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, "delete_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "delete_vesting_pool_failed: invalid request:"+
 		" invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
-	requireErrMsg(t, err, "delete_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "delete_vesting_pool_failed: invalid request:"+
 		" missing pool id")
 
 	// 3. invalid transaction
 	dr.PoolID = "pool_id"
 	tx.ClientID = ""
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
-	requireErrMsg(t, err, "delete_vesting_pool_failed: "+
+	assertErrMsg(t, err, "delete_vesting_pool_failed: "+
 		"empty client id of transaction")
 
 	// 4. not found
 	tx.ClientID = client.id
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
-	requireErrMsg(t, err, "delete_vesting_pool_failed: "+
+	assertErrMsg(t, err, "delete_vesting_pool_failed: "+
 		"can't get pool: value not present")
 
 	// 5. another client
@@ -283,7 +274,7 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	tx.ClientID = "another_one"
 	balances.txn = tx
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
-	requireErrMsg(t, err, "delete_vesting_pool_failed: "+
+	assertErrMsg(t, err, "delete_vesting_pool_failed: "+
 		"only pool owner can delete the pool")
 
 	// 6. delete
@@ -312,19 +303,19 @@ func TestVestingSmartContract_stop(t *testing.T) {
 
 	// 1. malformed (stop)
 	_, err = vsc.stop(tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, "stop_vesting_failed: malformed request:"+
+	assertErrMsg(t, err, "stop_vesting_failed: malformed request:"+
 		" invalid character '}' looking for beginning of value")
 
 	// 2. destination = ""
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	requireErrMsg(t, err, "stop_vesting_failed:"+
+	assertErrMsg(t, err, "stop_vesting_failed:"+
 		" missing destination to stop vesting")
 
 	// 3. not found
 	sr.PoolID = "pool_hex"
 	sr.Destination = "dest_hex"
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	requireErrMsg(t, err, "stop_vesting_failed: "+
+	assertErrMsg(t, err, "stop_vesting_failed: "+
 		"can't get vesting pool: value not present")
 
 	// 4. another client
@@ -346,14 +337,14 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	tx.ClientID = "another_one"
 	balances.txn = tx
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	requireErrMsg(t, err, "stop_vesting_failed: "+
+	assertErrMsg(t, err, "stop_vesting_failed: "+
 		"only owner can stop a vesting")
 
 	// 6. destination not found
 	tx.Value = 1
 	tx.ClientID = client.id
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	requireErrMsg(t, err, `stop_vesting_failed: `+
+	assertErrMsg(t, err, `stop_vesting_failed: `+
 		`destination dest_hex not found in the pool`)
 
 	// 8. stop
@@ -385,18 +376,18 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 
 	// 1. malformed
 	_, err = vsc.unlock(tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
 		" invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
 		" missing pool id")
 
 	// 3. not found
 	lr.PoolID = "pool_hex"
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "unlock_vesting_pool_failed: "+
+	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
 		"can't get pool: value not present")
 
 	// 4. another client
@@ -418,7 +409,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	tx.ClientID = "another_one"
 	balances.txn = tx
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "unlock_vesting_pool_failed: "+
+	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
 		`vesting pool: destination another_one not found in the pool`)
 
 	// 6. min lock
@@ -449,18 +440,18 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 
 	// 1. malformed
 	_, err = vsc.trigger(tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, "trigger_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: invalid request:"+
 		" invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "trigger_vesting_pool_failed: invalid request:"+
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: invalid request:"+
 		" missing pool id")
 
 	// 3. not found
 	lr.PoolID = "pool_hex"
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "trigger_vesting_pool_failed: "+
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
 		"can't get pool: value not present")
 
 	// 4. vesting is not started yet
@@ -482,7 +473,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	tx.ClientID = "another_one"
 	balances.txn = tx
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, "trigger_vesting_pool_failed: "+
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
 		"only owner can trigger the pool")
 
 	// 6. vest (trigger)
