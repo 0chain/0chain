@@ -1,7 +1,9 @@
 package faucetsc
 
 import (
+	"0chain.net/core/common"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -78,6 +80,24 @@ func (gn *GlobalNode) Encode() []byte {
 func (gn *GlobalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
+}
+
+func (gn *GlobalNode) validate() error {
+	switch {
+	case gn.PourAmount < 1:
+		return common.NewError("failed to validate global node", fmt.Sprintf("pour amount(%v) is less than 1", gn.PourAmount))
+	case gn.PourAmount > gn.MaxPourAmount:
+		return common.NewError("failed to validate global node", fmt.Sprintf("max pour amount(%v) is less than pour amount(%v)", gn.MaxPourAmount, gn.PourAmount))
+	case gn.MaxPourAmount > gn.PeriodicLimit:
+		return common.NewError("failed to validate global node", fmt.Sprintf("periodic limit(%v) is less than max pour amount(%v)", gn.PeriodicLimit, gn.MaxPourAmount))
+	case gn.PeriodicLimit > gn.GlobalLimit:
+		return common.NewError("failed to validate global node", fmt.Sprintf("global periodic limit(%v) is less than periodic limit(%v)", gn.GlobalLimit, gn.PeriodicLimit))
+	case toSeconds(gn.IndividualReset) < 1:
+		return common.NewError("failed to validate global node", fmt.Sprintf("individual reset(%v) is too short", gn.IndividualReset))
+	case gn.GlobalReset < gn.IndividualReset:
+		return common.NewError("failed to validate global node", fmt.Sprintf("global reset(%v) is less than individual reset(%v)", gn.GlobalReset, gn.IndividualReset))
+	}
+	return nil
 }
 
 type UserNode struct {
