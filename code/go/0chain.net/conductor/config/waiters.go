@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 // ExpectMagicBlock represents expected magic block.
 type ExpectMagicBlock struct {
 	// Number is expected Magic Block number. Use of MB number is
@@ -19,6 +21,10 @@ type ExpectMagicBlock struct {
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	// Miners expected in MB.
 	Miners []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
+	// Sharders Count expected in MB.
+	ShardersCount int `json:"sharders_count" yaml:"sharders_count" mapstructure:"sharders_count"`
+	// Miners Count expected in MB.
+	MinersCount int `json:"miners_count" yaml:"miners_count" mapstructure:"miners_count"`
 }
 
 // IsZero returns true if the MagicBlock is empty.
@@ -58,9 +64,10 @@ func (wp *WaitPhase) IsZero() bool {
 
 // WaitRound waits a round.
 type WaitRound struct {
-	Round    Round     `json:"round" yaml:"round" mapstructure:"round"`
-	Name     RoundName `json:"name" yaml:"name" mapstructure:"name"`
-	Shift    Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
+	Round       Round     `json:"round" yaml:"round" mapstructure:"round"`
+	Name        RoundName `json:"name" yaml:"name" mapstructure:"name"`
+	Shift       Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
+	AllowBeyond bool      `json:"allow_beyond" yaml:"allow_beyond" mapstructure:"allow_beyond"`
 }
 
 func (wr *WaitRound) IsZero() bool {
@@ -90,6 +97,7 @@ type WaitAdd struct {
 	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	Blobbers []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
+	Start    bool       `json:"start" yaml:"start" mapstructure:"start"`
 }
 
 func (wa *WaitAdd) IsZero() bool {
@@ -124,6 +132,15 @@ func (wa *WaitAdd) TakeBlobber(name NodeName) (ok bool) {
 		}
 	}
 	return
+}
+
+type WaitNoProgress struct {
+	Start time.Time
+	Until time.Time
+}
+
+func (wnp *WaitNoProgress) IsZero() bool {
+	return (*wnp) == (WaitNoProgress{})
 }
 
 type WaitNoViewChainge struct {
