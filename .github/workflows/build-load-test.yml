@@ -39,6 +39,9 @@ jobs:
       - name: Print config used
         run: |
           echo "Config file used: ${{ github.event.inputs.configFile }}"
+      - name: Install libsecret
+        run: |
+          sudo apt install libsecret-1-0
       - name: Install yq
         run: |
           sudo wget -O /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.6.1/yq_linux_amd64
