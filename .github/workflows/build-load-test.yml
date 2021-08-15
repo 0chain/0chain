@@ -1,0 +1,142 @@
+name: LOAD_TEST
+
+on:
+  workflow_dispatch:
+    inputs:
+      configFile:
+        description: 'load test yaml file located in loadTest/config directory'
+        required: true
+        default: loadTest-test.yaml
+
+#env:
+#  ZCHAIN_BUILDBASE: zchain_build_base
+#  ZCHAIN_BUILDRUN: zchain_run_base
+
+jobs:
+  loadtest_build:
+    name: LOADTEST-BUILD
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - uses: actions/checkout@master
+      with:
+        repository: 0chain/loadTest
+        token: ${{ secrets.SVC_ACCOUNT_SECRET }}
+
+#    - name: Get Branch
+#      id: get_info
+#      run: |
+#        BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+#        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+#        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+#        echo ::set-output name=BRANCH::${BRANCH}
+#        echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
+#        echo "Branch == ${BRANCH}"
+#
+#    - name: Git Checkout
+#      run: |
+#        cd /root/0chain/
+#        git checkout .
+#        git pull
+#        git checkout $BRANCH
+#      env:
+#        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+#
+#    - name: Setting Up View Change
+#      run: |
+#        cd /root/0chain/docker.local/config
+#        filename='0chain.yaml'
+#        # Check the new text is empty or not
+#        if ! grep -q view_change "$filename"; then
+#          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+#        else
+#          sed -i '/view_change/d' $filename
+#          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+#        fi
+#      env:
+#        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
+#
+#    - name: Building Base Images
+#      run: |
+#        cd /root/0chain/
+#        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+#        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+#
+#    - name: Build Miner Docker Image For Integration Test.
+#      run: |
+#        cd /root/0chain/
+#        bash ./docker.local/bin/build.miners-integration-tests.sh
+#
+#    - name: Build Sharder Docker Image For Integration Test.
+#      run: |
+#        cd /root/0chain/
+#        bash ./docker.local/bin/build.sharders-integration-tests.sh
+#
+#    - name: View Change Rounds
+#      run: |
+#        cd /root/0chain/
+#        awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
+#        awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
+#
+#  conductor_standard_tests:
+#    name: CONDUCTOR-STANDARD-TESTS
+#    runs-on: self-hosted
+#
+#    needs:
+#    - conductor_build
+#
+#    steps:
+#    - name: Running Standard Tests for Miners.
+#      run: |
+#        cd /root/0chain/
+#        source ~/.profile
+#        bash ./docker.local/bin/start.conductor.sh miners
+#
+#    - name: Running Standard Tests for Sharders.
+#      run: |
+#        cd /root/0chain/
+#        bash ./docker.local/bin/start.conductor.sh sharders
+#
+#  conductor_vc_tests:
+#    name: CONDUCTOR-VIEW-CHANGE-TESTS
+#    runs-on: self-hosted
+#
+#    needs:
+#    - conductor_standard_tests
+#
+#    steps:
+#    - name: Running Fault Tolerance Tests.
+#      run: |
+#        cd /root/0chain/
+#        source ~/.profile
+#        if [[ "$VIEW" == "true" ]]
+#          bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+#        elif [[ "$VIEW" == "false" ]]
+#          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+#        fi
+#      env:
+#        VIEW: ${{ github.event.inputs.view_change }}
+#
+#    - name: Running Byzantine Tests.
+#      run: |
+#        cd /root/0chain/
+#        if [[ "$VIEW" == "true" ]]
+#          bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+#        elif [[ "$VIEW" == "false" ]]
+#          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+#        fi
+#      env:
+#        VIEW: ${{ github.event.inputs.view_change }}
+#
+#    - name: Running View Change-3 Tests.
+#      run: |
+#        cd /root/0chain/
+#        if [[ "$VIEW" == "true" ]]
+#          bash ./docker.local/bin/start.conductor.sh view-change-3
+#        elif [[ "$VIEW" == "false" ]]
+#          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
+#        fi
+#      env:
+#        VIEW: ${{ github.event.inputs.view_change }}
