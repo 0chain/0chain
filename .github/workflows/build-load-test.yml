@@ -1,36 +1,30 @@
 name: LOAD_TEST
 
-on: [push]
-
-#on:
-#  workflow_dispatch:
-#    inputs:
-#      configFile:
-#        description: 'load test yaml file located in config directory'
-#        required: true
-#        default: loadTest-test.yaml
-#      wallets:
-#        required: true
-#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
-#      transactions:
-#        required: true
-#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
-#      allocations:
-#        required: true
-#        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
-#      storage_wallets:
-#        required: true
-#        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
-#      storage_txns:
-#        required: true
-#        default: '{"count": 50, "max_concurrency": 5, "max_qps": 20}'
-#      thirdparty_txns:
-#        required: true
-#        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
-
-#env:
-#  ZCHAIN_BUILDBASE: zchain_build_base
-#  ZCHAIN_BUILDRUN: zchain_run_base
+on:
+  workflow_dispatch:
+    inputs:
+      configFile:
+        description: 'load test yaml file located in config directory'
+        required: true
+        default: loadTest-test.yaml
+      wallets:
+        required: true
+        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+      transactions:
+        required: true
+        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+      allocations:
+        required: true
+        default: '{"count": 100, "max_concurrency": 10, "max_qps": 50}'
+      storage_wallets:
+        required: true
+        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
+      storage_txns:
+        required: true
+        default: '{"count": 50, "max_concurrency": 5, "max_qps": 20}'
+      thirdparty_txns:
+        required: true
+        default: '{"count": 20, "max_concurrency": 5, "max_qps": 20}'
 
 jobs:
   loadTest:
