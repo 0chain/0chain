@@ -8,12 +8,33 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+)
+
+type Setting int
+
+const (
+	MinLock Setting = iota
+	MinDuration
+	MaxDuration
+	MaxDestinations
+	MaxDescriptionLength
+)
+
+var (
+	Settings = []string{
+		"min_lock",
+		"min_duration",
+		"max_duration",
+		"max_destinations",
+		"max_description_length",
+	}
 )
 
 func scConfigKey(scKey string) datastore.Key {
@@ -56,28 +77,60 @@ func (conf *config) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
-func (conf *config) update(newConf *config) {
-	if newConf.MinLock > 0 {
-		conf.MinLock = newConf.MinLock
+func (conf *config) set(key string, value float64) error {
+	switch key {
+	case Settings[MinLock]:
+		conf.MinLock = state.Balance(value)
+	case Settings[MinDuration]:
+		conf.MinDuration = time.Duration(value)
+	case Settings[MaxDuration]:
+		conf.MaxDuration = time.Duration(value)
+	case Settings[MaxDestinations]:
+		conf.MaxDestinations = int(value)
+	case Settings[MaxDescriptionLength]:
+		conf.MaxDescriptionLength = int(value)
+	default:
+		return fmt.Errorf("config setting %s not found", key)
 	}
-	if newConf.MinDuration > 0 {
-		conf.MinDuration = newConf.MinDuration
-	}
-	if newConf.MaxDuration > 0 {
-		conf.MaxDuration = newConf.MaxDuration
-	}
-	if newConf.MaxDestinations > 0 {
-		conf.MaxDestinations = newConf.MaxDestinations
-	}
-	if newConf.MaxDescriptionLength > 0 {
-		conf.MaxDescriptionLength = newConf.MaxDescriptionLength
-	}
+	return nil
 }
 
-func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
-	input []byte, balances chainstate.StateContextI,
+func (conf *config) update(changes *inputMap) error {
+	for key, value := range changes.Fields {
+		if fValue, ok := value.(float64); !ok {
+			return fmt.Errorf("value %v is not of numeric type, failing to set config key %s", value, key)
+		} else {
+			if err := conf.set(key, fValue); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type inputMap struct {
+	Fields map[string]interface{} `json:"fields"`
+}
+
+func (im *inputMap) Decode(input []byte) error {
+	err := json.Unmarshal(input, im)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (im *inputMap) Encode() []byte {
+	buff, _ := json.Marshal(im)
+	return buff
+}
+
+func (vsc *VestingSmartContract) updateConfig(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	if t.ClientID != owner {
+	if txn.ClientID != owner {
 		return "", common.NewError("update_config",
 			"unauthorized access - only the owner can update the variables")
 	}
@@ -88,19 +141,21 @@ func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	update := &config{}
+	update := &inputMap{}
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	conf.update(update)
+	if err := conf.update(update); err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
 
 	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
 
-	return string(conf.Encode()), nil
+	return "", nil
 }
 
 //

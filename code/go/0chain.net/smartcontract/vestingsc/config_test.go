@@ -1,9 +1,14 @@
 package vestingsc
 
 import (
+	chainstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"context"
+	"encoding/json"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 
@@ -92,120 +97,154 @@ func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 	require.EqualValues(t, configured, resp)
 }
 
-func TestVestingSmartContractUpdate(t *testing.T) {
-
-	var (
-		vsc            = newTestVestingSC()
-		balances       = newTestBalances()
-		ownerTxn       = newTransaction(owner, vsc.ID, 0, common.Now())
-		nonOwnerTxn    = newTransaction(randString(32), vsc.ID, 0, common.Now())
-		originalConfig = configureConfig()
-		err            error
-		currentConfig  *config
+func TestUpdateConfig(t *testing.T) {
+	const (
+		mockNotOwner = "mock not the owner"
+		mockBadData  = "mock bad data"
+		mockBadKey   = "mock bad key"
 	)
-
-	//test cases that produce errors
-	errorTestCases := []struct {
-		title string
-		txn   *transaction.Transaction
-		bytes []byte
-		err   string
-	}{
-		{"malformed update", ownerTxn, []byte("} malformed {"), "update_config: invalid character '}' looking for beginning of value"},
-		{"non owner account", nonOwnerTxn, []byte("} malformed {"), "update_config: unauthorized access - only the owner can update the variables"},
-	}
-	for _, tc := range errorTestCases {
-		t.Run(tc.title, func(t *testing.T) {
-			balances.txn = tc.txn
-			_, err = vsc.updateConfig(tc.txn, tc.bytes, balances)
-			require.Error(t, err)
-			require.EqualError(t, err, tc.err)
-		})
+	type args struct {
+		vsc      *VestingSmartContract
+		txn      *transaction.Transaction
+		input    []byte
+		balances chainstate.StateContextI
 	}
 
-	//test cases that will be denied
-	deniedTestCases := []struct {
-		title       string
-		request     *config
-		requireFunc func(config, request *config)
-	}{
-		{"all variables denied",
-			&config{},
-			func(config, request *config) {
-				require.Equal(t, config, request)
-			},
-		},
-	}
-	for _, tc := range deniedTestCases {
-		t.Run(tc.title, func(t *testing.T) {
-			_, err = vsc.updateConfig(ownerTxn, tc.request.Encode(), balances)
-			require.NoError(t, err)
-			currentConfig, err = vsc.getConfig(balances)
-			require.NoError(t, err)
-			tc.requireFunc(currentConfig, originalConfig)
-		})
+	type parameters struct {
+		client string
+		input  map[string]interface{}
 	}
 
-	//test cases that will be updated
-	updateTestCases := []struct {
-		title       string
-		request     *config
-		requireFunc func(config, request *config)
+	type want struct {
+		error bool
+		msg   string
+	}
+
+	setExpectations := func(t *testing.T, p parameters) args {
+		var balances = &mocks.StateContextI{}
+		var vsc = &VestingSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		var txn = &transaction.Transaction{
+			ClientID: p.client,
+		}
+		var inputObj = inputMap{
+			Fields: p.input,
+		}
+		input, err := json.Marshal(&inputObj)
+		require.NoError(t, err)
+
+		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(&config{}, nil).Once()
+		var conf config
+		if value, ok := p.input[Settings[MinLock]]; ok {
+			conf.MinLock, ok = value.(state.Balance)
+		}
+		if value, ok := p.input[Settings[MinDuration]]; ok {
+			conf.MinDuration = value.(time.Duration)
+		}
+		if value, ok := p.input[Settings[MaxDuration]]; ok {
+			conf.MaxDuration = value.(time.Duration)
+		}
+		if value, ok := p.input[Settings[MaxDestinations]]; ok {
+			conf.MaxDestinations = value.(int)
+		}
+		if value, ok := p.input[Settings[MaxDescriptionLength]]; ok {
+			conf.MaxDescriptionLength = value.(int)
+		}
+
+		balances.On(
+			"InsertTrieNode",
+			scConfigKey(vsc.ID),
+			&conf).Return("", nil).Once()
+
+		return args{
+			vsc:      vsc,
+			txn:      txn,
+			input:    input,
+			balances: balances,
+		}
+	}
+
+	testCases := []struct {
+		title      string
+		parameters parameters
+		want       want
 	}{
 		{
-			"min lock update",
-			&config{
-				MinLock: 987654321,
-			},
-			func(config, request *config) {
-				require.Equal(t, config.MinLock, request.MinLock)
-			},
-		},
-		{
-			"min duration update",
-			&config{
-				MinDuration: time.Hour * 10,
-			},
-			func(config, request *config) {
-				require.Equal(t, config.MinDuration, request.MinDuration)
+			title: "ok_all",
+			parameters: parameters{
+				client: owner,
+				input: map[string]interface{}{
+					Settings[MinLock]:              state.Balance(5),
+					Settings[MinDuration]:          time.Second,
+					Settings[MaxDuration]:          time.Hour,
+					Settings[MaxDestinations]:      int(0),
+					Settings[MaxDescriptionLength]: int(17),
+				},
 			},
 		},
 		{
-			"max duration update",
-			&config{
-				MaxDuration: time.Hour * 87600,
-			},
-			func(config, request *config) {
-				require.Equal(t, config.MaxDuration, request.MaxDuration)
-			},
-		},
-		{
-			"max destinations update",
-			&config{
-				MaxDestinations: 57,
-			},
-			func(config, request *config) {
-				require.Equal(t, config.MaxDestinations, request.MaxDestinations)
+			title: "ok_1",
+			parameters: parameters{
+				client: owner,
+				input: map[string]interface{}{
+					Settings[MaxDuration]: time.Hour,
+				},
 			},
 		},
 		{
-			"max description length update",
-			&config{
-				MaxDescriptionLength: 32,
+			title: "not_owner",
+			parameters: parameters{
+				client: mockNotOwner,
+				input: map[string]interface{}{
+					Settings[MaxDuration]: time.Hour,
+				},
 			},
-			func(config, request *config) {
-				require.Equal(t, config.MaxDescriptionLength, request.MaxDescriptionLength)
+			want: want{
+				error: true,
+				msg:   "update_config: unauthorized access - only the owner can update the variables",
+			},
+		},
+		{
+			title: "bad_data",
+			parameters: parameters{
+				client: owner,
+				input: map[string]interface{}{
+					mockBadKey: mockBadData,
+				},
+			},
+			want: want{
+				error: true,
+				msg:   "update_config: value mock bad data is not of numeric type, failing to set config key mock bad key",
+			},
+		},
+		{
+			title: "bad_key",
+			parameters: parameters{
+				client: owner,
+				input: map[string]interface{}{
+					mockBadKey: 1,
+				},
+			},
+			want: want{
+				error: true,
+				msg:   "update_config: config setting mock bad key not found",
 			},
 		},
 	}
-	for _, tc := range updateTestCases {
-		t.Run(tc.title, func(t *testing.T) {
-			balances.txn = ownerTxn
-			_, err = vsc.updateConfig(ownerTxn, tc.request.Encode(), balances)
-			require.NoError(t, err)
-			currentConfig, err = vsc.getConfig(balances)
-			require.NoError(t, err)
-			tc.requireFunc(currentConfig, tc.request)
+	for _, test := range testCases {
+		t.Run(test.title, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			args := setExpectations(t, test.parameters)
+
+			_, err := args.vsc.updateConfig(args.txn, args.input, args.balances)
+			require.EqualValues(t, test.want.error, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.msg, err.Error())
+				return
+			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
 }
