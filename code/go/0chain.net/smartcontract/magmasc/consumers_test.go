@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -21,7 +21,7 @@ func Test_Consumers_add(t *testing.T) {
 
 	tests := [3]struct {
 		name  string
-		cons  *bmp.Consumer
+		cons  *zmc.Consumer
 		msc   *MagmaSmartContract
 		sci   chain.StateContextI
 		list  *Consumers
@@ -45,7 +45,7 @@ func Test_Consumers_add(t *testing.T) {
 		},
 		{
 			name:  "Consumer_Insert_Trie_Node_ERR",
-			cons:  &bmp.Consumer{ExtID: "cannot_insert_id"},
+			cons:  &zmc.Consumer{ExtID: "cannot_insert_id"},
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -71,7 +71,7 @@ func Test_Consumers_copy(t *testing.T) {
 
 	list, want := mockConsumers(), Consumers{}
 	if list.Sorted != nil {
-		want.Sorted = make([]*bmp.Consumer, len(list.Sorted))
+		want.Sorted = make([]*zmc.Consumer, len(list.Sorted))
 		copy(want.Sorted, list.Sorted)
 	}
 
@@ -111,7 +111,7 @@ func Test_Consumers_del(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		cons  *bmp.Consumer
+		cons  *zmc.Consumer
 		msc   *MagmaSmartContract
 		list  *Consumers
 		want  *Consumers
@@ -122,15 +122,15 @@ func Test_Consumers_del(t *testing.T) {
 			cons:  cons,
 			msc:   msc,
 			list:  list,
-			want:  &Consumers{Sorted: make([]*bmp.Consumer, 0)},
+			want:  &Consumers{Sorted: make([]*zmc.Consumer, 0)},
 			error: false,
 		},
 		{
 			name:  "FALSE",
-			cons:  &bmp.Consumer{ExtID: "not_present_id"},
+			cons:  &zmc.Consumer{ExtID: "not_present_id"},
 			msc:   msc,
 			list:  list,
-			want:  &Consumers{Sorted: make([]*bmp.Consumer, 0)},
+			want:  &Consumers{Sorted: make([]*zmc.Consumer, 0)},
 			error: true,
 		},
 	}
@@ -170,7 +170,7 @@ func Test_Consumers_delByIndex(t *testing.T) {
 		idx   int
 		msc   *MagmaSmartContract
 		list  *Consumers
-		want  *bmp.Consumer
+		want  *zmc.Consumer
 		error bool
 	}{
 		{
@@ -240,7 +240,7 @@ func Test_Consumers_get(t *testing.T) {
 		name string
 		id   string
 		list *Consumers
-		want *bmp.Consumer
+		want *zmc.Consumer
 		ret  bool
 	}{
 		{
@@ -283,7 +283,7 @@ func Test_Consumers_getByHost(t *testing.T) {
 		name string
 		host string
 		list *Consumers
-		want *bmp.Consumer
+		want *zmc.Consumer
 		ret  bool
 	}{
 		{
@@ -326,7 +326,7 @@ func Test_Consumers_getByIndex(t *testing.T) {
 		name string
 		idx  int
 		list *Consumers
-		want *bmp.Consumer
+		want *zmc.Consumer
 		ret  bool
 	}{
 		{
@@ -408,16 +408,16 @@ func Test_Consumers_put(t *testing.T) {
 	t.Parallel()
 
 	list := Consumers{}
-	cons0 := bmp.Consumer{ExtID: "0"}
-	cons1 := bmp.Consumer{ExtID: "1"}
-	cons2 := bmp.Consumer{ExtID: "2"}
-	cons3 := bmp.Consumer{ExtID: "3"}
+	cons0 := zmc.Consumer{ExtID: "0"}
+	cons1 := zmc.Consumer{ExtID: "1"}
+	cons2 := zmc.Consumer{ExtID: "2"}
+	cons3 := zmc.Consumer{ExtID: "3"}
 
 	tests := [6]struct {
 		name string
-		cons *bmp.Consumer
+		cons *zmc.Consumer
 		list *Consumers
-		want []*bmp.Consumer
+		want []*zmc.Consumer
 		ret  bool
 	}{
 		{
@@ -431,35 +431,35 @@ func Test_Consumers_put(t *testing.T) {
 			name: "TRUE", // appended
 			cons: &cons2,
 			list: &list,
-			want: []*bmp.Consumer{&cons2},
+			want: []*zmc.Consumer{&cons2},
 			ret:  true,
 		},
 		{
 			name: "APPEND", // appended
 			cons: &cons3,
 			list: &list,
-			want: []*bmp.Consumer{&cons2, &cons3},
+			want: []*zmc.Consumer{&cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "PREPEND", // inserted
 			cons: &cons0,
 			list: &list,
-			want: []*bmp.Consumer{&cons0, &cons2, &cons3},
+			want: []*zmc.Consumer{&cons0, &cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "INSERT", // inserted
 			cons: &cons1,
 			list: &list,
-			want: []*bmp.Consumer{&cons0, &cons1, &cons2, &cons3},
+			want: []*zmc.Consumer{&cons0, &cons1, &cons2, &cons3},
 			ret:  true,
 		},
 		{
 			name: "FALSE", // already have
 			cons: &cons3,
 			list: &list,
-			want: []*bmp.Consumer{&cons0, &cons1, &cons2, &cons3},
+			want: []*zmc.Consumer{&cons0, &cons1, &cons2, &cons3},
 			ret:  false,
 		},
 	}
@@ -487,7 +487,7 @@ func Test_Consumers_write(t *testing.T) {
 	list := &Consumers{}
 	tests := [2]struct {
 		name  string
-		cons  *bmp.Consumer
+		cons  *zmc.Consumer
 		msc   *MagmaSmartContract
 		sci   chain.StateContextI
 		list  *Consumers

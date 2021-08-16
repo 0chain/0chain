@@ -1,7 +1,7 @@
 package magmasc
 
 import (
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -9,7 +9,7 @@ import (
 
 // providerFetch extracts Provider stored in state.StateContextI
 // or returns error if blockchain state does not contain it.
-func providerFetch(scID, id string, db *store.Connection, sci chain.StateContextI) (*bmp.Provider, error) {
+func providerFetch(scID, id string, db *store.Connection, sci chain.StateContextI) (*zmc.Provider, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, providerType, id))
 	if err != nil {
 		if list, _ := providersFetch(AllConsumersKey, db); list != nil {
@@ -19,7 +19,7 @@ func providerFetch(scID, id string, db *store.Connection, sci chain.StateContext
 		return nil, err
 	}
 
-	provider := bmp.Provider{}
+	provider := zmc.Provider{}
 	if err = provider.Decode(data.Encode()); err != nil {
 		return nil, errDecodeData.Wrap(err)
 	}

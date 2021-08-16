@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	tx "0chain.net/chaincore/transaction"
@@ -94,8 +94,11 @@ func Test_tokenPool_create(t *testing.T) {
 	t.Parallel()
 
 	ackn, sci := mockAcknowledgment(), mockStateContextI()
-	amount, txn := ackn.Provider.Terms.GetAmount(), sci.GetTransaction()
 
+	terms := ackn.Provider.Terms[ackn.AccessPointID]
+	amount := terms.GetAmount()
+
+	txn := sci.GetTransaction()
 	txn.Value = amount
 	txn.ClientID = ackn.Consumer.ID
 
@@ -108,10 +111,10 @@ func Test_tokenPool_create(t *testing.T) {
 	tests := [4]struct {
 		name  string
 		txn   *tx.Transaction
-		ackn  *bmp.Acknowledgment
+		ackn  *zmc.Acknowledgment
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  *bmp.TokenPoolTransfer
+		want  *zmc.TokenPoolTransfer
 		error bool
 	}{
 		{
@@ -120,7 +123,7 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn: ackn,
 			pool: &tokenPool{},
 			sci:  sci,
-			want: &bmp.TokenPoolTransfer{
+			want: &zmc.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
 				ToPool:     ackn.SessionID,
 				Value:      amount,
@@ -187,19 +190,19 @@ func Test_tokenPool_spend(t *testing.T) {
 	tests := [5]struct {
 		name  string
 		txn   *tx.Transaction
-		bill  *bmp.Billing
+		bill  *zmc.Billing
 		sci   chain.StateContextI
 		pool  *tokenPool
-		want  *bmp.TokenPoolTransfer
+		want  *zmc.TokenPoolTransfer
 		error bool
 	}{
 		{
 			name: "OK",
 			txn:  txn,
-			bill: &bmp.Billing{Amount: int64(poolOK1.Balance - poolOK1.Balance/2)},
+			bill: &zmc.Billing{Amount: int64(poolOK1.Balance - poolOK1.Balance/2)},
 			sci:  sci,
 			pool: poolOK1,
-			want: &bmp.TokenPoolTransfer{
+			want: &zmc.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
 				FromPool:   poolOK1.ID,
 				Value:      poolOK1.Balance - poolOK1.Balance/2,
@@ -211,10 +214,10 @@ func Test_tokenPool_spend(t *testing.T) {
 		{
 			name: "Billing_Amount_Zero_OK",
 			txn:  txn,
-			bill: &bmp.Billing{Amount: 0},
+			bill: &zmc.Billing{Amount: 0},
 			sci:  sci,
 			pool: poolOK2,
-			want: &bmp.TokenPoolTransfer{
+			want: &zmc.TokenPoolTransfer{
 				TxnHash:    txn.Hash,
 				FromPool:   poolOK2.ID,
 				Value:      0,
@@ -226,7 +229,7 @@ func Test_tokenPool_spend(t *testing.T) {
 		{
 			name:  "Billing_Amount_Negative_Value_ERR",
 			txn:   txn,
-			bill:  &bmp.Billing{Amount: -1},
+			bill:  &zmc.Billing{Amount: -1},
 			sci:   sci,
 			pool:  mockTokenPool(),
 			want:  nil,
@@ -235,7 +238,7 @@ func Test_tokenPool_spend(t *testing.T) {
 		{
 			name:  "Transfer_Token_Pool_ERR",
 			txn:   txnInvalid,
-			bill:  &bmp.Billing{Amount: 1},
+			bill:  &zmc.Billing{Amount: 1},
 			sci:   sci,
 			pool:  mockTokenPool(),
 			want:  nil,
@@ -244,7 +247,7 @@ func Test_tokenPool_spend(t *testing.T) {
 		{
 			name:  "Spend_Token_Pool_ERR",
 			txn:   txnInvalid,
-			bill:  &bmp.Billing{Amount: 1000},
+			bill:  &zmc.Billing{Amount: 1000},
 			sci:   sci,
 			pool:  mockTokenPool(),
 			error: true,

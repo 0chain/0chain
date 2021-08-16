@@ -3,8 +3,8 @@ module 0chain.net
 go 1.16
 
 require (
-	github.com/0chain/bandwidth_marketplace/code/core v0.0.0-20210809145003-760ec619ea28
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
+	github.com/0chain/gosdk v1.2.83-0.20210816131202-cc83eb118bfb
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect

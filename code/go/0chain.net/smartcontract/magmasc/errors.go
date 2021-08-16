@@ -1,11 +1,10 @@
 package magmasc
 
 import (
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
+	"github.com/0chain/gosdk/zmagmacore/errors"
 )
 
 const (
-	errCodeAcceptTerms    = "accept_terms"
 	errCodeBadRequest     = "bad_request"
 	errCodeConsumerReg    = "consumer_reg"
 	errCodeConsumerUpdate = "consumer_update"
@@ -15,6 +14,7 @@ const (
 	errCodeInternal       = "internal_error"
 	errCodeProviderReg    = "provider_reg"
 	errCodeProviderUpdate = "provider_update"
+	errCodeSessionInit    = "session_init"
 	errCodeSessionStart   = "session_start"
 	errCodeSessionStop    = "session_stop"
 

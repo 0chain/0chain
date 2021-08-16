@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
-	ts "github.com/0chain/bandwidth_marketplace/code/core/time"
+	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	ts "github.com/0chain/gosdk/zmagmacore/time"
 	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
@@ -67,13 +67,18 @@ func (m *mockInvalidJson) Encode() []byte {
 	return []byte(":")
 }
 
-func mockAcknowledgment() *bmp.Acknowledgment {
+func mockAcknowledgment() *zmc.Acknowledgment {
 	now := time.Now().Format(time.RFC3339Nano)
-	return &bmp.Acknowledgment{
+	apid := "id:access_point:" + now
+
+	prov := mockProvider()
+	prov.Terms = mockProviderTermsList(apid)
+
+	return &zmc.Acknowledgment{
 		SessionID:     "id:session:" + now,
-		AccessPointID: "id:access_point:" + now,
-		Billing: &bmp.Billing{
-			DataUsage: bmp.DataUsage{
+		AccessPointID: apid,
+		Billing: &zmc.Billing{
+			DataUsage: zmc.DataUsage{
 				DownloadBytes: 3 * million,
 				UploadBytes:   2 * million,
 				SessionID:     "id:session:" + now,
@@ -81,15 +86,15 @@ func mockAcknowledgment() *bmp.Acknowledgment {
 			},
 		},
 		Consumer: mockConsumer(),
-		Provider: mockProvider(),
+		Provider: prov,
 	}
 }
 
-func mockConsumer() *bmp.Consumer {
+func mockConsumer() *zmc.Consumer {
 	now := time.Now()
 	bin, _ := now.MarshalBinary()
 	hash := sha3.Sum256(bin)
-	return &bmp.Consumer{
+	return &zmc.Consumer{
 		ID:    "id:consumer:" + hex.EncodeToString(hash[:]),
 		ExtID: "id:consumer:external:" + now.Format(time.RFC3339Nano),
 		Host:  "host.consumer.local:8010",
@@ -159,15 +164,14 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	return msc
 }
 
-func mockProvider() *bmp.Provider {
+func mockProvider() *zmc.Provider {
 	now := time.Now()
 	bin, _ := now.MarshalBinary()
 	hash := sha3.Sum256(bin)
-	return &bmp.Provider{
+	return &zmc.Provider{
 		ID:    "id:provider:" + hex.EncodeToString(hash[:]),
 		ExtID: "id:provider:external:" + now.Format(time.RFC3339Nano),
 		Host:  "host.provider.local:8020",
-		Terms: mockProviderTerms(),
 	}
 }
 
@@ -182,8 +186,8 @@ func mockProviders() *Providers {
 	return list
 }
 
-func mockProviderTerms() bmp.ProviderTerms {
-	return bmp.ProviderTerms{
+func mockProviderTerms() zmc.ProviderTerms {
+	return zmc.ProviderTerms{
 		Price:           0.1,
 		PriceAutoUpdate: 0.001,
 		MinCost:         0.5,
@@ -192,13 +196,20 @@ func mockProviderTerms() bmp.ProviderTerms {
 			DownloadMbps: 5.4321,
 			UploadMbps:   1.2345,
 		},
-		QoSAutoUpdate: &bmp.QoSAutoUpdate{
+		QoSAutoUpdate: &zmc.QoSAutoUpdate{
 			DownloadMbps: 0.001,
 			UploadMbps:   0.001,
 		},
 		ProlongDuration: 1 * 60 * 60,              // 1 hour
 		ExpiredAt:       ts.Now() + (1 * 60 * 60), // 1 hour from now
 	}
+}
+
+func mockProviderTermsList(apid string) map[string]zmc.ProviderTerms {
+	terms := mockProviderTerms()
+	terms.AccessPointID = apid
+
+	return map[string]zmc.ProviderTerms{apid: terms}
 }
 
 func mockStateContextI() *mockStateContext {

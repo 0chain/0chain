@@ -2,12 +2,11 @@ package magmasc
 
 import (
 	"context"
-	"encoding/json"
 	"net/url"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
-	"github.com/0chain/bandwidth_marketplace/code/core/time"
+	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/time"
 	"github.com/rcrowley/go-metrics"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -16,18 +15,18 @@ import (
 )
 
 // acknowledgment tries to extract Acknowledgment with given id param.
-func (m *MagmaSmartContract) acknowledgment(id string, sci chain.StateContextI) (*bmp.Acknowledgment, error) {
+func (m *MagmaSmartContract) acknowledgment(id string, sci chain.StateContextI) (*zmc.Acknowledgment, error) {
 	data, err := sci.GetTrieNode(nodeUID(m.ID, acknowledgment, id))
 	if err != nil {
 		return nil, errors.Wrap(errCodeFetchData, "fetch acknowledgment failed", err)
 	}
 
-	ackn := bmp.Acknowledgment{}
+	ackn := zmc.Acknowledgment{}
 	if err = ackn.Decode(data.Encode()); err != nil {
 		return nil, errors.Wrap(errCodeDecode, "decode acknowledgment failed", err)
 	}
 	if ackn.Billing == nil {
-		ackn.Billing = &bmp.Billing{}
+		ackn.Billing = &zmc.Billing{}
 	}
 
 	return &ackn, nil
@@ -112,7 +111,7 @@ func (m *MagmaSmartContract) consumerFetch(_ context.Context, vals url.Values, s
 // consumerRegister allows registering consumer node in the blockchain
 // and then saves results in provided state.StateContextI.
 func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	consumer := &bmp.Consumer{}
+	consumer := &zmc.Consumer{}
 	if err := consumer.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeConsumerReg, "decode consumer data failed", err)
 	}
@@ -138,28 +137,24 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 // in provided state.StateContextI and starts a new session with lock tokens into
 // a new token pool by accepted acknowledgment data.
 func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	ackn := &bmp.Acknowledgment{}
+	var err error
 
-	err := ackn.Decode(blob)
-	if err != nil {
+	ackn := &zmc.Acknowledgment{}
+	if err = ackn.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "decode acknowledgment data failed", err)
 	}
+	if ackn, err = m.acknowledgment(ackn.SessionID, sci); err != nil {
+		return "", errors.New(errCodeSessionStart, err.Error())
 
-	ackn.Consumer, err = consumerFetch(m.ID, ackn.Consumer.ExtID, store.GetTransaction(m.db), sci)
-	if err != nil || ackn.Consumer.ID != txn.ClientID {
-		return "", errors.Wrap(errCodeSessionStart, "fetch consumer failed", err)
+	}
+	if ackn.Consumer.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeSessionStart, "check owner id failed", err)
 	}
 
-	ackn.Provider, err = providerFetch(m.ID, ackn.Provider.ExtID, store.GetTransaction(m.db), sci)
-	if err != nil {
-		return "", errors.Wrap(errCodeSessionStart, "fetch provider failed", err)
-	}
-	if err = ackn.Provider.Terms.Validate(); err != nil {
+	terms := ackn.Provider.Terms[ackn.AccessPointID]
+	if err = terms.Validate(); err != nil {
 		return "", errors.New(errCodeSessionStart, "invalid provider terms")
 	}
-	ackn.Provider.Terms.PriceAutoUpdate = 0 // omitempty
-	ackn.Provider.Terms.ProlongDuration = 0 // omitempty
-	ackn.Provider.Terms.QoSAutoUpdate = nil // omitempty
 
 	pool := newTokenPool()
 	if ackn.TokenPoolTransfer, err = pool.create(txn, ackn, sci); err != nil {
@@ -177,16 +172,18 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 // consumerSessionStop checks input for validity and complete the session with
 // stake spent tokens and refunds remaining balance by billing data.
 func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	var req bmp.Acknowledgment
-	if err := json.Unmarshal(blob, &req); err != nil {
-		return "", errors.Wrap(errCodeSessionStop, "decode request failed", err)
-	}
+	var err error
 
-	ackn, err := m.acknowledgment(req.SessionID, sci)
-	if err != nil || ackn.Consumer.ID != txn.ClientID {
-		return "", errors.Wrap(errCodeSessionStop, "fetch acknowledgment failed", err)
+	ackn := &zmc.Acknowledgment{}
+	if err = ackn.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeSessionStop, "decode acknowledgment data failed", err)
 	}
-
+	if ackn, err = m.acknowledgment(ackn.SessionID, sci); err != nil {
+		return "", errors.Wrap(errCodeSessionStop, "fetch consumer failed", err)
+	}
+	if ackn.Consumer.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeSessionStop, "check owner id failed", err)
+	}
 	if ackn.Billing.CompletedAt == 0 { // shouldn't be completed
 		pool := newTokenPool()
 		if err = pool.Decode(ackn.TokenPool.Encode()); err != nil {
@@ -207,14 +204,17 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 
 // consumerUpdate updates the consumer data.
 func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	consumer := &bmp.Consumer{}
+	consumer := &zmc.Consumer{}
 	if err := consumer.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeConsumerUpdate, "decode consumer data failed", err)
 	}
 
 	got, err := consumerFetch(m.ID, consumer.ExtID, store.GetTransaction(m.db), sci)
-	if err != nil || got.ID != txn.ClientID {
-		return "", errors.Wrap(errCodeConsumerUpdate, "fetch consumer failed", err)
+	if err != nil {
+		return "", errors.Wrap(errCodeSessionStop, "fetch consumer failed", err)
+	}
+	if got.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeSessionStop, "check owner id failed", err)
 	}
 
 	db := store.GetTransaction(m.db)
@@ -233,7 +233,7 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 
 // providerDataUsage updates the Provider billing session.
 func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	dataUsage := bmp.DataUsage{}
+	dataUsage := zmc.DataUsage{}
 	if err := dataUsage.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "decode data usage failed", err)
 	}
@@ -244,8 +244,11 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	}
 
 	provider, err := providerFetch(m.ID, ackn.Provider.ExtID, store.GetTransaction(m.db), sci)
-	if err != nil || provider.ID != txn.ClientID {
+	if err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "fetch provider failed", err)
+	}
+	if provider.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeDataUsage, "check owner id failed", err)
 	}
 
 	if err = ackn.Billing.Validate(&dataUsage); err != nil {
@@ -254,7 +257,7 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 
 	// update billing data
 	ackn.Billing.DataUsage = dataUsage
-	ackn.Billing.CalcAmount(ackn.Provider.Terms)
+	ackn.Billing.CalcAmount(ackn.Provider.Terms[ackn.AccessPointID])
 	if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "update billing data failed", err)
 	}
@@ -278,12 +281,9 @@ func (m *MagmaSmartContract) providerFetch(_ context.Context, vals url.Values, s
 // providerRegister allows registering provider node in the blockchain
 // and saves results in provided state.StateContextI.
 func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	provider := &bmp.Provider{}
+	provider := &zmc.Provider{}
 	if err := provider.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeProviderReg, "decode provider data failed", err)
-	}
-	if err := provider.Terms.Validate(); err != nil {
-		return "", errors.Wrap(errCodeProviderReg, "validate provider failed", err)
 	}
 
 	db := store.GetTransaction(m.db)
@@ -303,6 +303,41 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 	return string(provider.Encode()), nil
 }
 
+// providerSessionInit checks input for validity and inits a new session
+// with inserts resulted acknowledgment in provided state.StateContextI.
+func (m *MagmaSmartContract) providerSessionInit(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	ackn := &zmc.Acknowledgment{}
+
+	err := ackn.Decode(blob)
+	if err != nil {
+		return "", errors.Wrap(errCodeSessionInit, "decode acknowledgment data failed", err)
+	}
+
+	terms := ackn.Provider.Terms[ackn.AccessPointID] // save a copy of provider's terms to recover
+	if ackn.Provider, err = providerFetch(m.ID, ackn.Provider.ExtID, store.GetTransaction(m.db), sci); err != nil {
+		return "", errors.Wrap(errCodeSessionInit, "fetch provider failed", err)
+	}
+	if ackn.Provider.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeSessionInit, "check owner id failed", err)
+	}
+	if err = terms.Validate(); err != nil {
+		return "", errors.New(errCodeSessionInit, "invalid provider terms")
+	}
+	ackn.Provider.Terms[ackn.AccessPointID] = terms // recover provider's terms from the copy
+
+	ackn.Consumer, err = consumerFetch(m.ID, ackn.Consumer.ExtID, store.GetTransaction(m.db), sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeSessionInit, "fetch consumer failed", err)
+	}
+
+	ackn.Billing = &zmc.Billing{}
+	if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
+		return "", errors.Wrap(errCodeSessionInit, "insert acknowledgment failed", err)
+	}
+
+	return string(ackn.Encode()), nil
+}
+
 // providerTerms represents MagmaSmartContract handler.
 // providerTerms looks for Provider with id, passed in params url.Values,
 // in provided state.StateContextI and returns Provider.Terms.
@@ -317,17 +352,17 @@ func (m *MagmaSmartContract) providerTerms(_ context.Context, vals url.Values, s
 
 // providerUpdate updates the current provider terms.
 func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	provider := &bmp.Provider{}
+	provider := &zmc.Provider{}
 	if err := provider.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "decode provider data failed", err)
 	}
-	if err := provider.Terms.Validate(); err != nil {
-		return "", errors.New(errCodeProviderUpdate, "invalid provider terms")
-	}
 
 	got, err := providerFetch(m.ID, provider.ExtID, store.GetTransaction(m.db), sci)
-	if err != nil || got.ID != txn.ClientID {
+	if err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch provider failed", err)
+	}
+	if got.ID != txn.ClientID {
+		return "", errors.Wrap(errCodeProviderUpdate, "check owner id failed", err)
 	}
 
 	db := store.GetTransaction(m.db)

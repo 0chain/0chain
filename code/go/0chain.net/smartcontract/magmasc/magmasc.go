@@ -7,8 +7,8 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
 	"github.com/0chain/gorocksdb"
+	"github.com/0chain/gosdk/zmagmacore/errors"
 	"github.com/rcrowley/go-metrics"
 
 	chain "0chain.net/chaincore/chain/state"

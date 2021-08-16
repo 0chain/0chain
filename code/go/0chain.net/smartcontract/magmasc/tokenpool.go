@@ -3,8 +3,8 @@ package magmasc
 import (
 	"encoding/json"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -15,7 +15,7 @@ import (
 type (
 	// tokenPool represents token pool wrapper implementation.
 	tokenPool struct {
-		bmp.TokenPool
+		zmc.TokenPool
 	}
 )
 
@@ -51,8 +51,9 @@ func (m *tokenPool) Encode() []byte {
 }
 
 // create tries to create a new token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci chain.StateContextI) (*bmp.TokenPoolTransfer, error) {
-	m.Balance = ackn.Provider.Terms.GetAmount()
+func (m *tokenPool) create(txn *tx.Transaction, ackn *zmc.Acknowledgment, sci chain.StateContextI) (*zmc.TokenPoolTransfer, error) {
+	terms := ackn.Provider.Terms[ackn.AccessPointID]
+	m.Balance = terms.GetAmount()
 	if m.Balance < 0 {
 		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
 	}
@@ -75,7 +76,7 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 		return nil, errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
 
-	resp := bmp.TokenPoolTransfer{
+	resp := zmc.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,
@@ -87,7 +88,7 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *bmp.Acknowledgment, sci ch
 }
 
 // spend tries to spend the token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.StateContextI) (*bmp.TokenPoolTransfer, error) {
+func (m *tokenPool) spend(txn *tx.Transaction, bill *zmc.Billing, sci chain.StateContextI) (*zmc.TokenPoolTransfer, error) {
 	if bill.Amount < 0 {
 		return nil, errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
 	}
@@ -111,7 +112,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *bmp.Billing, sci chain.Stat
 	}
 
 	m.Balance = 0
-	resp := bmp.TokenPoolTransfer{
+	resp := zmc.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		FromPool:   m.ID,
 		Value:      bill.Amount,

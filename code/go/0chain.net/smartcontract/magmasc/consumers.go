@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -15,11 +15,11 @@ import (
 type (
 	// Consumers represents sorted list of consumers.
 	Consumers struct {
-		Sorted []*bmp.Consumer
+		Sorted []*zmc.Consumer
 	}
 )
 
-func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
+func (m *Consumers) add(scID string, item *zmc.Consumer, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
@@ -29,14 +29,14 @@ func (m *Consumers) add(scID string, item *bmp.Consumer, db *store.Connection, s
 
 func (m *Consumers) copy() (list Consumers) {
 	if m.Sorted != nil {
-		list.Sorted = make([]*bmp.Consumer, len(m.Sorted))
+		list.Sorted = make([]*zmc.Consumer, len(m.Sorted))
 		copy(list.Sorted, m.Sorted)
 	}
 
 	return list
 }
 
-func (m *Consumers) del(id string, db *store.Connection) (*bmp.Consumer, error) {
+func (m *Consumers) del(id string, db *store.Connection) (*zmc.Consumer, error) {
 	if idx, found := m.getIndex(id); found {
 		return m.delByIndex(idx, db)
 	}
@@ -44,7 +44,7 @@ func (m *Consumers) del(id string, db *store.Connection) (*bmp.Consumer, error) 
 	return nil, errors.New(errCodeInternal, "value not present")
 }
 
-func (m *Consumers) delByIndex(idx int, db *store.Connection) (*bmp.Consumer, error) {
+func (m *Consumers) delByIndex(idx int, db *store.Connection) (*zmc.Consumer, error) {
 	if idx >= len(m.Sorted) {
 		return nil, errors.New(errCodeInternal, "index out of range")
 	}
@@ -69,7 +69,7 @@ func (m *Consumers) delByIndex(idx int, db *store.Connection) (*bmp.Consumer, er
 	return &item, nil
 }
 
-func (m *Consumers) hasEqual(item *bmp.Consumer) bool {
+func (m *Consumers) hasEqual(item *zmc.Consumer) bool {
 	if got, found := m.get(item.ExtID); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
@@ -77,7 +77,7 @@ func (m *Consumers) hasEqual(item *bmp.Consumer) bool {
 	return true // found and equal
 }
 
-func (m *Consumers) get(id string) (*bmp.Consumer, bool) {
+func (m *Consumers) get(id string) (*zmc.Consumer, bool) {
 	idx, found := m.getIndex(id)
 	if !found {
 		return nil, false // not found
@@ -86,7 +86,7 @@ func (m *Consumers) get(id string) (*bmp.Consumer, bool) {
 	return m.Sorted[idx], true // found
 }
 
-func (m *Consumers) getByHost(host string) (*bmp.Consumer, bool) {
+func (m *Consumers) getByHost(host string) (*zmc.Consumer, bool) {
 	for _, item := range m.Sorted {
 		if item.Host == host {
 			return item, true // found
@@ -96,7 +96,7 @@ func (m *Consumers) getByHost(host string) (*bmp.Consumer, bool) {
 	return nil, false // not found
 }
 
-func (m *Consumers) getByIndex(idx int) (*bmp.Consumer, bool) {
+func (m *Consumers) getByIndex(idx int) (*zmc.Consumer, bool) {
 	if idx < len(m.Sorted) {
 		return m.Sorted[idx], true
 	}
@@ -118,7 +118,7 @@ func (m *Consumers) getIndex(id string) (int, bool) {
 	return -1, false // not found
 }
 
-func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
+func (m *Consumers) put(item *zmc.Consumer) (int, bool) {
 	if item == nil {
 		return 0, false
 	}
@@ -141,19 +141,19 @@ func (m *Consumers) put(item *bmp.Consumer) (int, bool) {
 		return idx, false    // already have
 	}
 
-	left, right := m.Sorted[:idx], append([]*bmp.Consumer{item}, m.Sorted[idx:]...) // insert
+	left, right := m.Sorted[:idx], append([]*zmc.Consumer{item}, m.Sorted[idx:]...) // insert
 	m.Sorted = append(left, right...)
 
 	return idx, true // inserted
 }
 
-func (m *Consumers) write(scID string, item *bmp.Consumer, db *store.Connection, sci chain.StateContextI) error {
+func (m *Consumers) write(scID string, item *zmc.Consumer, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
 
 	list := m.copy()
-	if !m.hasEqual(item) { // check if an equal item already added
+	if !list.hasEqual(item) { // check if an equal item already added
 		got, found := list.getByHost(item.Host)
 		if found && item.ID != got.ID { // check if a host already registered
 			return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)

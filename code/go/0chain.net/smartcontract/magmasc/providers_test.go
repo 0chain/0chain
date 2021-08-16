@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -21,7 +21,7 @@ func Test_Providers_add(t *testing.T) {
 
 	tests := [3]struct {
 		name  string
-		prov  *bmp.Provider
+		prov  *zmc.Provider
 		msc   *MagmaSmartContract
 		sci   chain.StateContextI
 		list  *Providers
@@ -45,7 +45,7 @@ func Test_Providers_add(t *testing.T) {
 		},
 		{
 			name:  "Provider_Insert_Trie_Node_ERR",
-			prov:  &bmp.Provider{ExtID: "cannot_insert_id"},
+			prov:  &zmc.Provider{ExtID: "cannot_insert_id"},
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -71,7 +71,7 @@ func Test_Providers_copy(t *testing.T) {
 
 	list, want := mockProviders(), Providers{}
 	if list.Sorted != nil {
-		want.Sorted = make([]*bmp.Provider, len(list.Sorted))
+		want.Sorted = make([]*zmc.Provider, len(list.Sorted))
 		copy(want.Sorted, list.Sorted)
 	}
 
@@ -111,7 +111,7 @@ func Test_Providers_del(t *testing.T) {
 
 	tests := [2]struct {
 		name  string
-		prov  *bmp.Provider
+		prov  *zmc.Provider
 		msc   *MagmaSmartContract
 		list  *Providers
 		want  *Providers
@@ -122,15 +122,15 @@ func Test_Providers_del(t *testing.T) {
 			prov:  prov,
 			msc:   msc,
 			list:  list,
-			want:  &Providers{Sorted: make([]*bmp.Provider, 0)},
+			want:  &Providers{Sorted: make([]*zmc.Provider, 0)},
 			error: false,
 		},
 		{
 			name:  "FALSE",
-			prov:  &bmp.Provider{ExtID: "not_present_id"},
+			prov:  &zmc.Provider{ExtID: "not_present_id"},
 			msc:   msc,
 			list:  list,
-			want:  &Providers{Sorted: make([]*bmp.Provider, 0)},
+			want:  &Providers{Sorted: make([]*zmc.Provider, 0)},
 			error: true,
 		},
 	}
@@ -170,7 +170,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 		idx   int
 		msc   *MagmaSmartContract
 		list  *Providers
-		want  *bmp.Provider
+		want  *zmc.Provider
 		error bool
 	}{
 		{
@@ -240,7 +240,7 @@ func Test_Providers_get(t *testing.T) {
 		name string
 		id   string
 		list *Providers
-		want *bmp.Provider
+		want *zmc.Provider
 		ret  bool
 	}{
 		{
@@ -283,7 +283,7 @@ func Test_Providers_getByHost(t *testing.T) {
 		name string
 		host string
 		list *Providers
-		want *bmp.Provider
+		want *zmc.Provider
 		ret  bool
 	}{
 		{
@@ -326,7 +326,7 @@ func Test_Providers_getByIndex(t *testing.T) {
 		name string
 		idx  int
 		list *Providers
-		want *bmp.Provider
+		want *zmc.Provider
 		ret  bool
 	}{
 		{
@@ -408,16 +408,16 @@ func Test_Providers_put(t *testing.T) {
 	t.Parallel()
 
 	list := Providers{}
-	prov0 := bmp.Provider{ExtID: "0"}
-	prov1 := bmp.Provider{ExtID: "1"}
-	prov2 := bmp.Provider{ExtID: "2"}
-	prov3 := bmp.Provider{ExtID: "3"}
+	prov0 := zmc.Provider{ExtID: "0"}
+	prov1 := zmc.Provider{ExtID: "1"}
+	prov2 := zmc.Provider{ExtID: "2"}
+	prov3 := zmc.Provider{ExtID: "3"}
 
 	tests := [6]struct {
 		name string
-		prov *bmp.Provider
+		prov *zmc.Provider
 		list *Providers
-		want []*bmp.Provider
+		want []*zmc.Provider
 		ret  bool
 	}{
 		{
@@ -431,35 +431,35 @@ func Test_Providers_put(t *testing.T) {
 			name: "TRUE", // appended
 			prov: &prov2,
 			list: &list,
-			want: []*bmp.Provider{&prov2},
+			want: []*zmc.Provider{&prov2},
 			ret:  true,
 		},
 		{
 			name: "APPEND", // appended
 			prov: &prov3,
 			list: &list,
-			want: []*bmp.Provider{&prov2, &prov3},
+			want: []*zmc.Provider{&prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "PREPEND", // inserted
 			prov: &prov0,
 			list: &list,
-			want: []*bmp.Provider{&prov0, &prov2, &prov3},
+			want: []*zmc.Provider{&prov0, &prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "INSERT", // inserted
 			prov: &prov1,
 			list: &list,
-			want: []*bmp.Provider{&prov0, &prov1, &prov2, &prov3},
+			want: []*zmc.Provider{&prov0, &prov1, &prov2, &prov3},
 			ret:  true,
 		},
 		{
 			name: "FALSE", // already have
 			prov: &prov3,
 			list: &list,
-			want: []*bmp.Provider{&prov0, &prov1, &prov2, &prov3},
+			want: []*zmc.Provider{&prov0, &prov1, &prov2, &prov3},
 			ret:  false,
 		},
 	}
@@ -485,7 +485,7 @@ func Test_Providers_write(t *testing.T) {
 	list, msc, sci := &Providers{}, mockMagmaSmartContract(), mockStateContextI()
 	tests := [2]struct {
 		name  string
-		prov  *bmp.Provider
+		prov  *zmc.Provider
 		msc   *MagmaSmartContract
 		sci   chain.StateContextI
 		list  *Providers

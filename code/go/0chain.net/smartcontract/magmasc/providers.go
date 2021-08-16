@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/0chain/bandwidth_marketplace/code/core/errors"
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -15,11 +15,11 @@ import (
 type (
 	// Providers represents sorted list of providers.
 	Providers struct {
-		Sorted []*bmp.Provider
+		Sorted []*zmc.Provider
 	}
 )
 
-func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
+func (m *Providers) add(scID string, item *zmc.Provider, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
@@ -29,14 +29,14 @@ func (m *Providers) add(scID string, item *bmp.Provider, db *store.Connection, s
 
 func (m *Providers) copy() (list Providers) {
 	if m.Sorted != nil {
-		list.Sorted = make([]*bmp.Provider, len(m.Sorted))
+		list.Sorted = make([]*zmc.Provider, len(m.Sorted))
 		copy(list.Sorted, m.Sorted)
 	}
 
 	return list
 }
 
-func (m *Providers) del(id string, db *store.Connection) (*bmp.Provider, error) {
+func (m *Providers) del(id string, db *store.Connection) (*zmc.Provider, error) {
 	if idx, found := m.getIndex(id); found {
 		return m.delByIndex(idx, db)
 	}
@@ -44,7 +44,7 @@ func (m *Providers) del(id string, db *store.Connection) (*bmp.Provider, error) 
 	return nil, errors.New(errCodeInternal, "value not present")
 }
 
-func (m *Providers) delByIndex(idx int, db *store.Connection) (*bmp.Provider, error) {
+func (m *Providers) delByIndex(idx int, db *store.Connection) (*zmc.Provider, error) {
 	if idx >= len(m.Sorted) {
 		return nil, errors.New(errCodeInternal, "index out of range")
 	}
@@ -69,7 +69,7 @@ func (m *Providers) delByIndex(idx int, db *store.Connection) (*bmp.Provider, er
 	return &item, nil
 }
 
-func (m *Providers) hasEqual(item *bmp.Provider) bool {
+func (m *Providers) hasEqual(item *zmc.Provider) bool {
 	if got, found := m.get(item.ExtID); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
@@ -77,7 +77,7 @@ func (m *Providers) hasEqual(item *bmp.Provider) bool {
 	return true // found and equal
 }
 
-func (m *Providers) get(id string) (*bmp.Provider, bool) {
+func (m *Providers) get(id string) (*zmc.Provider, bool) {
 	idx, found := m.getIndex(id)
 	if !found {
 		return nil, false // not found
@@ -86,7 +86,7 @@ func (m *Providers) get(id string) (*bmp.Provider, bool) {
 	return m.Sorted[idx], true // found
 }
 
-func (m *Providers) getByHost(host string) (*bmp.Provider, bool) {
+func (m *Providers) getByHost(host string) (*zmc.Provider, bool) {
 	for _, item := range m.Sorted {
 		if item.Host == host {
 			return item, true // found
@@ -96,7 +96,7 @@ func (m *Providers) getByHost(host string) (*bmp.Provider, bool) {
 	return nil, false // not found
 }
 
-func (m *Providers) getByIndex(idx int) (*bmp.Provider, bool) {
+func (m *Providers) getByIndex(idx int) (*zmc.Provider, bool) {
 	if idx < len(m.Sorted) {
 		return m.Sorted[idx], true
 	}
@@ -118,7 +118,7 @@ func (m *Providers) getIndex(id string) (int, bool) {
 	return -1, false // not found
 }
 
-func (m *Providers) put(item *bmp.Provider) (int, bool) {
+func (m *Providers) put(item *zmc.Provider) (int, bool) {
 	if item == nil {
 		return 0, false
 	}
@@ -141,19 +141,19 @@ func (m *Providers) put(item *bmp.Provider) (int, bool) {
 		return idx, false    // already have
 	}
 
-	left, right := m.Sorted[:idx], append([]*bmp.Provider{item}, m.Sorted[idx:]...) // insert
+	left, right := m.Sorted[:idx], append([]*zmc.Provider{item}, m.Sorted[idx:]...) // insert
 	m.Sorted = append(left, right...)
 
 	return idx, true // inserted
 }
 
-func (m *Providers) write(scID string, item *bmp.Provider, db *store.Connection, sci chain.StateContextI) error {
+func (m *Providers) write(scID string, item *zmc.Provider, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
 
 	list := m.copy()
-	if !m.hasEqual(item) { // check if an equal item already added
+	if !list.hasEqual(item) { // check if an equal item already added
 		got, found := list.getByHost(item.Host)
 		if found && item.ID != got.ID { // check if a host already registered
 			return errors.New(errCodeInternal, "provider host already registered: "+item.Host)

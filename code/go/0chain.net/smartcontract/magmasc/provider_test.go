@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	bmp "github.com/0chain/bandwidth_marketplace/code/core/magmasc"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -27,7 +27,7 @@ func Test_providerFetch(t *testing.T) {
 		name  string
 		id    string
 		sci   chain.StateContextI
-		want  *bmp.Provider
+		want  *zmc.Provider
 		error bool
 	}{
 		{
