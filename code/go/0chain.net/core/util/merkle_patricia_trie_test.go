@@ -1140,55 +1140,6 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 	}
 }
 
-func TestMerklePatriciaTrie_getChangeCollector(t *testing.T) {
-	t.Parallel()
-
-	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-
-	type fields struct {
-		mutex           *sync.RWMutex
-		Root            Key
-		db              NodeDB
-		ChangeCollector ChangeCollectorI
-		Version         Sequence
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   ChangeCollectorI
-	}{
-		{
-			name: "TestMerklePatriciaTrie_getChangeCollector_OK",
-			fields: fields{
-				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
-				db:              mpt.db,
-				ChangeCollector: mpt.ChangeCollector,
-				Version:         mpt.Version,
-			},
-			want: mpt.ChangeCollector,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			mpt := &MerklePatriciaTrie{
-				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
-				db:              tt.fields.db,
-				ChangeCollector: tt.fields.ChangeCollector,
-				Version:         tt.fields.Version,
-			}
-			if got := mpt.getChangeCollector(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getChangeCollector() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 	// case 1
 	pdb, cleanup := newPNodeDB(t)

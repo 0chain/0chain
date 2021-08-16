@@ -228,15 +228,18 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 	}
 }
 
-/*GetChangeCollector - implement interface */
-func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
+/*GetChanges - implement interface */
+func (mpt *MerklePatriciaTrie) GetChanges() (Key, []*NodeChange, []Node) {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
-	return mpt.ChangeCollector
+	return mpt.Root, mpt.ChangeCollector.GetChanges(), mpt.ChangeCollector.GetDeletes()
 }
 
-func (mpt *MerklePatriciaTrie) getChangeCollector() ChangeCollectorI {
-	return mpt.ChangeCollector
+/*GetChangeCount - implement interface */
+func (mpt *MerklePatriciaTrie) GetChangeCount() int {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+	return len(mpt.ChangeCollector.GetChanges())
 }
 
 /*SaveChanges - implement interface */
@@ -961,7 +964,10 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
 
-	changes := mpt.getChangeCollector().GetChanges()
+	if err := mpt.ChangeCollector.Validate(); err != nil {
+		return err
+	}
+	changes := mpt.ChangeCollector.GetChanges()
 	db := mpt.getNodeDB()
 	switch dbImpl := db.(type) {
 	case *MemoryNodeDB:
@@ -989,8 +995,8 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	}
 
 	if DebugMPTNode {
-		if err := mpt2.GetChangeCollector().Validate(); err != nil {
-			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
+		if err := mpt2.Validate(); err != nil {
+			Logger.Error("MergeMPTChanges - MPT validate", zap.Error(err))
 		}
 	}
 
@@ -1007,9 +1013,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return errors.New("mpt does not merge changes from its child")
 	}
 
-	changes := mpt2.GetChangeCollector().GetChanges()
-	deletes := mpt2.GetChangeCollector().GetDeletes()
-	newRoot := mpt2.GetRoot()
+	newRoot, changes, deletes := mpt2.GetChanges()
 
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()

@@ -27,8 +27,6 @@ type ChangeCollectorI interface {
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
 
-	PrintChanges(w io.Writer)
-
 	Validate() error
 	Clone() ChangeCollectorI
 }
@@ -177,11 +175,8 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	return nil
 }
 
-//PrintChanges - implement interface
-func (cc *ChangeCollector) PrintChanges(w io.Writer) {
-	cc.mutex.RLock()
-	defer cc.mutex.RUnlock()
-	for idx, c := range cc.Changes {
+func PrintChanges(w io.Writer, changes []*NodeChange) {
+	for idx, c := range changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
 		} else {

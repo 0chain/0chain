@@ -96,13 +96,12 @@ func TestMPTChangeCollector(t *testing.T) {
 			lmpt = cmpt
 			generateTransactions(lmpt, wallets, transactions)
 
-			rootKey := lmpt.GetRoot()
+			rootKey, changes, _ := lmpt.GetChanges()
 			root, err := mndb.GetNode(rootKey)
 			if err != nil {
 				t.Fatal(err)
 			}
 			cmndb := util.NewMemoryNodeDB()
-			changes := lmpt.GetChangeCollector().GetChanges()
 			for _, change := range changes {
 				if err := cmndb.PutNode(change.New.GetHashBytes(), change.New); err != nil {
 					t.Fatal(err)
