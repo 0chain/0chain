@@ -83,10 +83,12 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
 	err := pndb.db.Put(pndb.wo, key, data)
-	logging.Logger.Debug("node put to PersistDB",
-		zap.String("key", ToHex(key)), zap.Error(err),
-		zap.Int64("Origin", int64(node.GetOrigin())),
-		zap.Int64("Version", int64(node.GetVersion())))
+	if DebugMPTNode {
+		logging.Logger.Debug("node put to PersistDB",
+			zap.String("key", ToHex(key)), zap.Error(err),
+			zap.Int64("Origin", int64(node.GetOrigin())),
+			zap.Int64("Version", int64(node.GetVersion())))
+	}
 	return err
 }
 
@@ -117,13 +119,14 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	defer wb.Destroy()
 	for idx, key := range keys {
 		wb.Put(key, nodes[idx].Encode())
-		logging.Logger.Debug("multi node put to PersistDB",
-			zap.String("key", ToHex(key)),
-			zap.Int64("Origin", int64(nodes[idx].GetOrigin())),
-			zap.Int64("Version", int64(nodes[idx].GetVersion())))
+		if DebugMPTNode {
+			logging.Logger.Debug("multi node put to PersistDB",
+				zap.String("key", ToHex(key)),
+				zap.Int64("Origin", int64(nodes[idx].GetOrigin())),
+				zap.Int64("Version", int64(nodes[idx].GetVersion())))
+		}
 	}
 	err := pndb.db.Write(pndb.wo, wb)
-	logging.Logger.Debug("multi node put to PersistDB result", zap.Error(err))
 	return err
 }
 
