@@ -184,7 +184,7 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if ackn.Consumer.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeSessionStop, "check owner id failed", err)
 	}
-	if ackn.Billing.CompletedAt == 0 { // shouldn't be completed
+	if ackn.Billing.CompletedAt == 0 { // must be completed
 		pool := newTokenPool()
 		if err = pool.Decode(ackn.TokenPool.Encode()); err != nil {
 			return "", errors.New(errCodeSessionStop, err.Error())
@@ -242,6 +242,9 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	if err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "fetch acknowledgment failed", err)
 	}
+	if ackn.Billing.CompletedAt != 0 { // already completed
+		return "", errors.Wrap(errCodeDataUsage, "session already completed", err)
+	}
 
 	provider, err := providerFetch(m.ID, ackn.Provider.ExtID, store.GetTransaction(m.db), sci)
 	if err != nil {
@@ -258,6 +261,9 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	// update billing data
 	ackn.Billing.DataUsage = dataUsage
 	ackn.Billing.CalcAmount(ackn.Provider.Terms[ackn.AccessPointID])
+	// TODO: make checks:
+	//  the billing amount is lower than token poll balance
+	//  the session is not expired yet
 	if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "update billing data failed", err)
 	}
