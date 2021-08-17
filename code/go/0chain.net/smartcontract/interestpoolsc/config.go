@@ -37,6 +37,11 @@ func (im *inputMap) Decode(input []byte) error {
 	return nil
 }
 
+func (im *inputMap) Encode() []byte {
+	buff, _ := json.Marshal(im)
+	return buff
+}
+
 func setGnValue(gn GlobalNode, key string, value float64) {
 
 }
