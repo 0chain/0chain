@@ -2,7 +2,6 @@ package util
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -26,15 +25,12 @@ type keyNode struct {
 type testValue string
 
 func (tv testValue) Encode() (p []byte) {
-	var err error
-	if p, err = json.Marshal(tv); err != nil {
-		panic(err)
-	}
-	return
+	return []byte(tv)
 }
 
 func (tv *testValue) Decode(p []byte) error {
-	return json.Unmarshal(p, tv)
+	*tv = testValue(p)
+	return nil
 }
 
 func getTestKeyValues(n int) (kns []keyNode) {

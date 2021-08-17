@@ -4,17 +4,22 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/0chain/gorocksdb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/sha3"
 
 	"0chain.net/core/logging"
 )
@@ -38,6 +43,16 @@ func (as *AState) Decode(buf []byte) error {
 	}
 	as.balance = n
 	return nil
+}
+
+// receives a list of values
+type valuesSponge struct {
+	values []string
+}
+
+// receives a list of paths
+type pathNodesSponge struct {
+	paths []string
 }
 
 func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
@@ -83,18 +98,31 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = mpt2.Iterate(context.TODO(), iterHandler(),
+	sponge := sha3.New256()
+	err = mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp := "ae6a645401f35411371b9d498fa13c663909a7f6463b42a7f2a060db3ef0196b"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
 
 	mpt.SetRoot(mpt2.GetRoot())
 
-	err = mpt.Iterate(context.TODO(), iterHandler(),
-		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	sponge = sha3.New256()
+	err = mpt.Iterate(context.TODO(), iterSpongeHandler(sponge),
+		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Errorf("iterate error: %v", err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 }
 
@@ -109,7 +137,6 @@ func TestMerkeTreePruning(t *testing.T) {
 	roots := make([]Key, 0, 10)
 
 	for i := int64(0); i < 1000; i++ {
-		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
 			doStateValInsert(t, mpt2, "123456", 100+i)
@@ -137,10 +164,17 @@ func TestMerkeTreePruning(t *testing.T) {
 	root := roots[len(roots)-numStates]
 	mpt.SetRoot(root)
 
-	var err = mpt.Iterate(context.TODO(), iterHandler(),
+	sponge := sha3.New256()
+	var err = mpt.Iterate(context.TODO(), iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Errorf("iterate error: %v", err)
+	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp := "bb9bb9ddf3b4fb81238d6dee9b55d65dec4bf6e1ec65ef73c3975c6ba58e23be"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 
 	if err := pndb.Iterate(context.TODO(), dbIteratorHandler()); err != nil {
@@ -156,8 +190,15 @@ func TestMerkeTreePruning(t *testing.T) {
 	}
 
 	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler(),
+	sponge = sha3.New256()
+	err = mpt.Iterate(context.TODO(), iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "795692293dfb69b0e8115bcc9194730e5436d3397f26830fc1b270ce96ec9522"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
 	if err != nil {
 		t.Error("iterate error:", err)
 	}
@@ -170,11 +211,18 @@ func TestMerkeTreePruning(t *testing.T) {
 		t.Error("error pruning origin:", err)
 	}
 
+	sponge = sha3.New256()
 	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler(),
+	err = mpt.Iterate(context.TODO(), iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Error("iterate error:", err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "795692293dfb69b0e8115bcc9194730e5436d3397f26830fc1b270ce96ec9522"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 }
 
@@ -182,11 +230,10 @@ func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value i
 
 	state := &AState{}
 	state.balance = value
-	newRoot, err := mpt.Insert([]byte(key), state)
+	_, err := mpt.Insert([]byte(key), state)
 	if err != nil {
 		t.Error(err)
 	}
-	mpt.SetRoot(newRoot)
 
 	doGetStateValue(t, mpt, key, value)
 }
@@ -211,10 +258,36 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	}
 }
 
-func dbIteratorHandler() func(ctx context.Context, key Key, node Node) error {
+func dbIteratorHandler() NodeDBIteratorHandler {
 	return func(ctx context.Context, key Key, node Node) error {
 		return nil
 	}
+}
+
+// collect db keys
+func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
+	return func(ctx context.Context, key Key, node Node) error {
+		if node == nil || key == nil {
+			return fmt.Errorf("stop")
+		}
+		sponge.values = append(sponge.values, string(hex.EncodeToString(key)))
+		return nil
+	}
+}
+
+// calculates hash of all sorted keys in the NodeDB
+func calculateKeysHash(t *testing.T, ndb NodeDB) string {
+	sponge := valuesSponge{}
+	err := ndb.Iterate(context.TODO(), dbKeysSpongeHandler(&sponge))
+	require.NoError(t, err)
+	sort.Strings(sponge.values)
+	hash := sha3.New256()
+	for _, key := range sponge.values {
+		b, err := hex.DecodeString(key)
+		require.NoError(t, err)
+		hash.Write(b)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
@@ -252,12 +325,29 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	//  4. merge transaction changes
 	//  6. prune sate (not implemented)
 
-	const n = 20
-
+	expectedValueSets := [][]string{
+		{"test-value-0-one", "test-value-0-two"},
+		{"test-value-0-one", "test-value-0-changed", "test-value-1-one", "test-value-1-two"},
+		{"test-value-0-changed", "test-value-1-one", "test-value-1-changed", "test-value-2-one", "test-value-2-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-one", "test-value-2-changed", "test-value-3-one", "test-value-3-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-one", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-changed", "test-value-5-one", "test-value-5-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-one", "test-value-5-changed", "test-value-6-one", "test-value-6-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-one", "test-value-6-changed", "test-value-7-one", "test-value-7-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-one", "test-value-7-changed", "test-value-8-one", "test-value-8-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-changed", "test-value-8-one", "test-value-8-changed",
+			"test-value-9-one", "test-value-9-two"},
+	}
 	// var back = context.Background()
 
 	//
-	for round := int64(0); round < n; round++ {
+	for round := int64(0); round < int64(len(expectedValueSets)); round++ {
 
 		//
 		// 1. create block client state
@@ -317,8 +407,10 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		priorDB = blockState.GetNodeDB()
 		priorHash = blockState.GetRoot()
 
+		checkValues(t, blockState, expectedValueSets[round])
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
 		mpt.SetRoot(priorHash)
+		checkValues(t, mpt, expectedValueSets[round])
 
 		// //  5. prune state
 		// var wps = WithPruneStats(back)
@@ -393,18 +485,72 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	doStrValInsert(t, mpt2, "123456", "12345")
 	doStrValInsert(t, mpt2, "123467", "12346")
 	doStrValInsert(t, mpt2, "02", "2")
-	err := mpt2.Iterate(context.TODO(), iterStrPathHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"}) // pointing to "1234"
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp := "7ea96443c31290349e030f572c55c73153dc6822d4b1419391df530db0360ac5"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	rootHash := hex.EncodeToString(mpt2.Root)
+	exp = "1d113cf8005c4ab38a7ca31d8cc345fe3875c259eb54ed1bd9b031f2565e8015"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
 	doStrValInsert(t, mpt2, "1234", "123")
+	// node paths are same changed, value was added to full node at "1234"
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
 	doStrValInsert(t, mpt2, "223456", "22345")
 	doStrValInsert(t, mpt2, "223467", "22346")
 	doStrValInsert(t, mpt2, "223478", "22347")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "2"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347"})
 	doStrValInsert(t, mpt2, "23", "23")
 	doStrValInsert(t, mpt2, "123456", "12345.1")
 	doStrValInsert(t, mpt2, "2234", "2234")
 	doStrValInsert(t, mpt2, "22", "22")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "223"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2", "22", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347", "23"})
+	rootHash = hex.EncodeToString(mpt2.Root)
+	exp = "3624e73be093af74c884eea162070ff5eabcbad4a0fb605d8208cada970117a9"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+}
+
+func TestMPTRepetitiveInsert(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert(t, mpt2, "223456", "22345")
+	doStrValInsert(t, mpt2, "223467", "22346")
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.Root))
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	mpt2.ChangeCollector.GetChanges()
+
+	doStrValInsert(t, mpt2, "223467", "22347")
+	checkValues(t, mpt2, []string{"22345", "22347"})
+	doStrValInsert(t, mpt2, "223467", "22346")
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.Root))
 }
 
 func TestMPTDelete(t *testing.T) {
@@ -478,25 +624,55 @@ func TestMPTUniverse(t *testing.T) {
 	doStrValInsert(t, mpt2, "01234523", "venus")
 	doStrValInsert(t, mpt2, "0123", "world")
 
-	mpt.ResetChangeCollector(mpt.GetRoot()) // adding a new change collector so there are changes with old nodes that are not nil
-
 	doStrValInsert(t, mpt2, "012346", "proxima centauri")
 	doStrValInsert(t, mpt2, "01", "hello")
 
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	rootHash := hex.EncodeToString(mpt2.Root)
+	exp := "2f2ad6f1c18ee4808abde751e08dd2129109338a7866e522b9c5b7796f62f5fc"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
+	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp = "d76edb5b0e5cda8625c81593fd2bccaede906f35610a3e6de2809a862514f30b"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 
 	key, err := hex.DecodeString("14e6f2fd08c3ba3bc816d16d6af63965e5d82eb7db22761d67b8d63a4e21f1f4")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = mpt2.IterateFrom(context.TODO(), key, iterHandler(),
+	sponge = sha3.New256()
+	err = mpt2.IterateFrom(context.TODO(), key, iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "74869fa61802795b687cdfc2f4a34c71d522444022fad9250d6f19e030ce3fce"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	// collect values
+	valuesSponge := valuesSponge{make([]string, 0, 16)}
+	err = mpt2.IterateFrom(context.TODO(), key, iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := strings.Join(valuesSponge.values, ",")
+	// starting with "12345", should miss "hello" and "world"
+	expValues := "sun,mercury,green earth and ham,moon,mars,phobos,venus,jupiter,europa,saturn,uranus,neptune,dwarf planet,proxima centauri"
+	if values != expValues {
+		t.Fatalf("Actual values %v differ from expected %v", values, expValues)
 	}
 }
 
@@ -509,24 +685,71 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 	doStrValInsert(t, mpt2, "646f", "verb")
 	doStrValInsert(t, mpt2, "646f67", "puppy")
 	doStrValInsert(t, mpt2, "646f6765", "coin")
+	rootHash := hex.EncodeToString(mpt2.Root)
+	exp := "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
 	doStrValInsert(t, mpt2, "686f727365", "stallion")
 
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp = "b1d2d3eae3fb008eb00a456ad63a6e446355f6ebf279fcd261d1ab119c1aa325"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	doDelete(t, mpt2, "686f727365", nil)
+	rootHash = hex.EncodeToString(mpt2.Root)
+	exp = "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+	sponge = sha3.New256()
+	err = mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "21ccd3041d44d826c06332204d1a3e2c56114e4b831ac8521c1762695c545239"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+}
+
+func checkNodePaths(t *testing.T, mpt MerklePatriciaTrieI, visitNodeTypes byte, values []string) {
+	t.Helper()
+
+	pathsSponge := pathNodesSponge{}
+	err := mpt.Iterate(context.TODO(), iterPathNodesSpongeHandler(&pathsSponge), visitNodeTypes)
+	require.NoError(t, err)
+	require.Equal(t, values, pathsSponge.paths)
+}
+
+func checkValues(t *testing.T, mpt MerklePatriciaTrieI, values []string) {
+	t.Helper()
+
+	sponge := valuesSponge{make([]string, 0, 16)}
+	require.NoError(t, mpt.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
+	assert.ElementsMatch(t, values, sponge.values)
 }
 
 func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
 
-	newRoot, err := mpt.Insert(Path(key), &Txn{value})
+	_, err := mpt.Insert(Path(key), &Txn{value})
 	if err != nil {
 		t.Error(err)
 	}
 
-	mpt.SetRoot(newRoot)
 	doGetStrValue(t, mpt, key, value)
 }
 
@@ -545,21 +768,57 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
+	readValue := string(val.Encode())
+	if readValue != value {
+		t.Fatalf("Read value doesn't match: %v %v", readValue, value)
+	}
 }
 
-func iterHandler() func(ctx context.Context, path Path, key Key, node Node) error {
+// aggregate into hash
+func iterSpongeHandler(sponge hash.Hash) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
+		}
+		if key == nil {
+			// value node
+			vn, ok := node.(*ValueNode)
+			if !ok {
+				return fmt.Errorf("value node expected")
+			}
+			sponge.Write(vn.Value.Encode())
+		} else {
+			sponge.Write(key)
 		}
 		return nil
 	}
 }
 
-func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Node) error {
+// aggregate into a list of values
+func iterValuesSpongeHandler(sponge *valuesSponge) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
+		}
+		if key == nil {
+			// value node
+			vn, ok := node.(*ValueNode)
+			if !ok {
+				return fmt.Errorf("value node expected")
+			}
+			sponge.values = append(sponge.values, string(vn.Value.Encode()))
+		}
+		return nil
+	}
+}
+
+func iterPathNodesSpongeHandler(sponge *pathNodesSponge) MPTIteratorHandler {
+	return func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			return fmt.Errorf("stop")
+		}
+		if key != nil {
+			sponge.paths = append(sponge.paths, string(path))
 		}
 		return nil
 	}
@@ -592,20 +851,67 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	doStrValInsert(t, mpt2, "1234590131", "jupiter")
 	doStrValInsert(t, mpt2, "1234590231", "saturn")
 	doStrValInsert(t, mpt2, "1234590241", "uranus")
-
+	rootHash := hex.EncodeToString(mpt2.Root)
+	expWithVenus := "4af37dce8b6a8cd3e11b134231963b30eee6b95842f56ca2eab49a5cb0aa52bf"
+	if rootHash != expWithVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithVenus)
+	}
 	doDelete(t, mpt2, "1235", nil)
+	rootHash = hex.EncodeToString(mpt2.Root)
+	expWithoutVenus := "500096406b887e6f1c7d13dd4ee9522b44da0a7581e120a9c845211586b70b2b"
+	if rootHash != expWithoutVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithoutVenus)
+	}
 	doStrValInsert(t, mpt2, "1235", "venus")
+	rootHash = hex.EncodeToString(mpt2.Root)
+	if rootHash != expWithVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithVenus)
+	}
 	doDelete(t, mpt2, "1235", nil)
+	rootHash = hex.EncodeToString(mpt2.Root)
+	if rootHash != expWithoutVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithoutVenus)
+	}
 	doStrValInsert(t, mpt2, "1234590341", "neptune")
-
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	rootHash = hex.EncodeToString(mpt2.Root)
+	exp := "107357c93cf035864ca972b38d4992d0f7529113bfdd7e15bb3d3db1843237cd"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v", rootHash, exp)
+	}
+	sponge := sha3.New256()
+	valuesSponge := valuesSponge{make([]string, 0, 16)}
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	_, err = mpt2.GetNodeValue(Path("1234589701"))
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp = "6a15c5ff1772339a49e4bca1cff7d3b38accb6ac15af37a6907024a4e2861391"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	// collect values
+	err = mpt2.Iterate(context.TODO(), iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := strings.Join(valuesSponge.values, ",")
+	exp = "earth,mars,jupiter,saturn,uranus,neptune,mercury"
+	if values != exp {
+		t.Fatalf("values mismatch: %v, got %v", values, exp)
+	}
+	v, err := mpt2.GetNodeValue(Path("1234589701"))
 	if err != nil {
 		t.Error(err)
+	}
+	value := string(v.Encode())
+	exp = "earth"
+	if value != exp {
+		t.Fatalf("value mismatch: %v, %v", value, exp)
 	}
 }
 
@@ -624,7 +930,6 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 
 	doStrValInsert(t, mpt2, "2234567822", "a")
 	//doStrValInsert(t,"setup data", mpt2, "223556782", "b")
-
 	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
 
 	//doDelete("delete a leaf node", mpt2, "123456781", true)
@@ -830,55 +1135,6 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 			}
 			if got := mpt.getNodeDB(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getNodeDB() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestMerklePatriciaTrie_getChangeCollector(t *testing.T) {
-	t.Parallel()
-
-	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-
-	type fields struct {
-		mutex           *sync.RWMutex
-		Root            Key
-		db              NodeDB
-		ChangeCollector ChangeCollectorI
-		Version         Sequence
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   ChangeCollectorI
-	}{
-		{
-			name: "TestMerklePatriciaTrie_getChangeCollector_OK",
-			fields: fields{
-				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
-				db:              mpt.db,
-				ChangeCollector: mpt.ChangeCollector,
-				Version:         mpt.Version,
-			},
-			want: mpt.ChangeCollector,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			mpt := &MerklePatriciaTrie{
-				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
-				db:              tt.fields.db,
-				ChangeCollector: tt.fields.ChangeCollector,
-				Version:         tt.fields.Version,
-			}
-			if got := mpt.getChangeCollector(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getChangeCollector() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1193,19 +1449,20 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 	}
 	type args struct {
 		ctx            context.Context
-		handler        MPTIteratorHandler
 		visitNodeTypes byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name     string
+		fields   fields
+		args     args
+		wantErr  bool
+		wantHash string
 	}{
 		{
-			name:    "TestMerklePatriciaTrie_Iterate_OK",
-			fields:  fields{mutex: &sync.RWMutex{}},
-			wantErr: false,
+			name:     "TestMerklePatriciaTrie_Iterate_Empty_Tree_OK",
+			fields:   fields{mutex: &sync.RWMutex{}},
+			wantErr:  false,
+			wantHash: "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
 		},
 	}
 	for _, tt := range tests {
@@ -1220,8 +1477,15 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			if err := mpt.Iterate(tt.args.ctx, tt.args.handler, tt.args.visitNodeTypes); (err != nil) != tt.wantErr {
+			sponge := sha3.New256()
+			if err := mpt.Iterate(tt.args.ctx, iterSpongeHandler(sponge), tt.args.visitNodeTypes); (err != nil) != tt.wantErr {
 				t.Errorf("Iterate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantHash != "" {
+				iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+				if iteratedHash != tt.wantHash {
+					t.Errorf("Iterate() hash = %v, want = %v", iteratedHash, tt.wantHash)
+				}
 			}
 		})
 	}

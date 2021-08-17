@@ -20,8 +20,8 @@ func init() {
 
 func newBSC(state util.MerklePatriciaTrieI) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
-	bsc.Hash = state.GetRoot()
-	changes := state.GetChangeCollector().GetChanges()
+	var changes []*util.NodeChange
+	bsc.Hash, changes, _ = state.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
@@ -49,8 +49,6 @@ func TestStateChangeComputeRoot(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	clientState.ChangeCollector.GetChanges()
-	clientState.GetRoot()
 	bsc := newBSC(clientState)
 	require.Equal(t, bsc.GetRoot().GetHash(), util.ToHex(clientState.GetRoot()))
 
@@ -77,8 +75,8 @@ func TestNewBlockStateChange(t *testing.T) {
 
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
-	bsc.Hash = b.ClientState.GetRoot()
-	changes := b.ClientState.GetChangeCollector().GetChanges()
+	var changes []*util.NodeChange
+	bsc.Hash, changes, _ = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New

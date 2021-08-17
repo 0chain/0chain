@@ -177,7 +177,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 				Deletes: tt.fields.Deletes,
 			}
 			w := &bytes.Buffer{}
-			cc.PrintChanges(w)
+			PrintChanges(w, cc.GetChanges())
 			if gotW := w.String(); gotW != tt.wantW {
 				t.Errorf("PrintChanges() = %v, want %v", gotW, tt.wantW)
 			}

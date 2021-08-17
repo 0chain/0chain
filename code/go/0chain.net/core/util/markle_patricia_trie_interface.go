@@ -40,8 +40,9 @@ type MerklePatriciaTrieI interface {
 
 	IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error
 
-	GetChangeCollector() ChangeCollectorI
-	ResetChangeCollector(root Key)
+	// get root, changes and deletes
+	GetChanges() (Key, []*NodeChange, []Node)
+	GetChangeCount() int
 	SaveChanges(ctx context.Context, ndb NodeDB, includeDeletes bool) error
 
 	// useful for syncing up

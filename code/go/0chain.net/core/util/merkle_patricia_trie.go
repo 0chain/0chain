@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,9 +15,6 @@ import (
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
-
-//DebugMPTNode - for detailed debugging
-var DebugMPTNode = false
 
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
@@ -33,7 +31,7 @@ func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 		mutex: &sync.RWMutex{},
 		db:    db,
 	}
-	mpt.ResetChangeCollector(nil)
+	mpt.ChangeCollector = NewChangeCollector()
 	mpt.SetVersion(version)
 	return mpt
 }
@@ -227,25 +225,18 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 	}
 }
 
-/*GetChangeCollector - implement interface */
-func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
+/*GetChanges - implement interface */
+func (mpt *MerklePatriciaTrie) GetChanges() (Key, []*NodeChange, []Node) {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
-	return mpt.ChangeCollector
+	return mpt.Root, mpt.ChangeCollector.GetChanges(), mpt.ChangeCollector.GetDeletes()
 }
 
-func (mpt *MerklePatriciaTrie) getChangeCollector() ChangeCollectorI {
-	return mpt.ChangeCollector
-}
-
-/*ResetChangeCollector - implement interface */
-func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
-	mpt.mutex.Lock()
-	defer mpt.mutex.Unlock()
-	mpt.ChangeCollector = NewChangeCollector()
-	if root != nil {
-		mpt.setRoot(root)
-	}
+/*GetChangeCount - implement interface */
+func (mpt *MerklePatriciaTrie) GetChangeCount() int {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+	return len(mpt.ChangeCollector.GetChanges())
 }
 
 /*SaveChanges - implement interface */
@@ -324,11 +315,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					zap.Any("version", mpt.Version),
 					//zap.Int("path len", len(path)),
 					//zap.String("path", string(path)),
-					//zap.String("key", hex.EncodeToString(ckey)),
+					zap.String("key", ToHex(ckey)),
 					//zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
 					//zap.String("node hash", node.GetHash()),
 					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
-					zap.Error(err))
+					zap.Error(err),
+					zap.String("stack", string(debug.Stack())),
+				)
 			}
 			return nil, ErrNodeNotFound
 		}
@@ -733,7 +726,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.Error(err))
+		Logger.Error("iterate - get node error", zap.String("key", ToHex(key)), zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}
@@ -968,7 +961,10 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 	mpt.mutex.RLock()
 	defer mpt.mutex.RUnlock()
 
-	changes := mpt.getChangeCollector().GetChanges()
+	if err := mpt.ChangeCollector.Validate(); err != nil {
+		return err
+	}
+	changes := mpt.ChangeCollector.GetChanges()
 	db := mpt.getNodeDB()
 	switch dbImpl := db.(type) {
 	case *MemoryNodeDB:
@@ -996,8 +992,8 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	}
 
 	if DebugMPTNode {
-		if err := mpt2.GetChangeCollector().Validate(); err != nil {
-			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
+		if err := mpt2.Validate(); err != nil {
+			Logger.Error("MergeMPTChanges - MPT validate", zap.Error(err))
 		}
 	}
 
@@ -1014,9 +1010,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return errors.New("mpt does not merge changes from its child")
 	}
 
-	changes := mpt2.GetChangeCollector().GetChanges()
-	deletes := mpt2.GetChangeCollector().GetDeletes()
-	newRoot := mpt2.GetRoot()
+	newRoot, changes, deletes := mpt2.GetChanges()
 
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()

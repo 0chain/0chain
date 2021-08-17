@@ -870,7 +870,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("compute state - state hash mismatch",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
-			zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
+			zap.Int("changes", b.ClientState.GetChangeCount()),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		return ErrStateMismatch
@@ -879,7 +879,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	b.SetStateStatus(StateSuccessful)
 	logging.Logger.Info("compute state successful", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)),
-		zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())),
+		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 	return nil
@@ -946,17 +946,17 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 	duration := time.Since(ts)
 	StateSaveTimer.UpdateSince(ts)
 	p95 := StateSaveTimer.Percentile(.95)
-	changes := b.ClientState.GetChangeCollector().GetChanges()
-	if len(changes) > 0 {
-		StateChangeSizeMetric.Update(int64(len(changes)))
+	changeCount := b.ClientState.GetChangeCount()
+	if changeCount > 0 {
+		StateChangeSizeMetric.Update(int64(changeCount))
 	}
 	if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-		logging.Logger.Info("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		logging.Logger.Info("save state - slow", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", changeCount), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	} else {
-		logging.Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
+		logging.Logger.Debug("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", changeCount), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration))
 	}
 	if err != nil {
-		logging.Logger.Info("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
+		logging.Logger.Info("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", changeCount), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
 	}
 
 	return err

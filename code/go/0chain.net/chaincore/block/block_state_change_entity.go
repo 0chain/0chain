@@ -24,8 +24,8 @@ type StateChange struct {
 func NewBlockStateChange(b *Block) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
-	bsc.Hash = b.ClientState.GetRoot()
-	changes := b.ClientState.GetChangeCollector().GetChanges()
+	var changes []*util.NodeChange
+	bsc.Hash, changes, _ = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New

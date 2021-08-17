@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/logging"
@@ -25,8 +26,6 @@ type ChangeCollectorI interface {
 	GetDeletes() []Node
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
-
-	PrintChanges(w io.Writer)
 
 	Validate() error
 	Clone() ChangeCollectorI
@@ -85,8 +84,20 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
+		if DebugMPTNode {
+			logging.Logger.Debug("DeleteChange existing change",
+				zap.String("ohash", ohash),
+				zap.String("stack", string(debug.Stack())),
+			)
+		}
 		delete(cc.Changes, ohash)
 	} else {
+		if DebugMPTNode {
+			logging.Logger.Debug("DeleteChange adding to deletes",
+				zap.String("ohash", ohash),
+				zap.String("stack", string(debug.Stack())),
+			)
+		}
 		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
@@ -164,11 +175,8 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	return nil
 }
 
-//PrintChanges - implement interface
-func (cc *ChangeCollector) PrintChanges(w io.Writer) {
-	cc.mutex.RLock()
-	defer cc.mutex.RUnlock()
-	for idx, c := range cc.Changes {
+func PrintChanges(w io.Writer, changes []*NodeChange) {
+	for idx, c := range changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
 		} else {
