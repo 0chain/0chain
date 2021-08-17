@@ -11,7 +11,7 @@ type Setting int
 
 const (
 	MinLock Setting = iota
-	InterestRate
+	Apr
 	MinLockPeriod
 	MaxMint
 )
@@ -19,7 +19,7 @@ const (
 var (
 	Settings = []string{
 		"min_lock",
-		"interest_rate",
+		"apr",
 		"min_lock_period",
 		"max_mint",
 	}
@@ -40,10 +40,6 @@ func (im *inputMap) Decode(input []byte) error {
 func (im *inputMap) Encode() []byte {
 	buff, _ := json.Marshal(im)
 	return buff
-}
-
-func setGnValue(gn GlobalNode, key string, value float64) {
-
 }
 
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {

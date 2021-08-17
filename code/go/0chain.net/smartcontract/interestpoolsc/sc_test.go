@@ -449,29 +449,29 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 		want       string
 		wantErr    bool
 		shouldBeOk bool
-	}{ /*
-			{
-				name: "unauthorized access",
-				args: args{
-					t:         testTxn(clientID1, 100),
-					gn:        nil,
-					inputData: nil,
-					balances:  nil,
-				},
-				want:    "",
-				wantErr: true,
+	}{
+		{
+			name: "unauthorized access",
+			args: args{
+				t:         testTxn(clientID1, 100),
+				gn:        nil,
+				inputData: nil,
+				balances:  nil,
 			},
-			{
-				name: "request not formatted correctly",
-				args: args{
-					t:         testTxn(owner, 100),
-					gn:        nil,
-					inputData: []byte("{test}"),
-					balances:  nil,
-				},
-				want:    "",
-				wantErr: true,
-			},*/
+			want:    "",
+			wantErr: true,
+		},
+		{
+			name: "request not formatted correctly",
+			args: args{
+				t:         testTxn(owner, 100),
+				gn:        nil,
+				inputData: []byte("{test}"),
+				balances:  nil,
+			},
+			want:    "",
+			wantErr: true,
+		},
 		{
 			name: "ok",
 			args: args{
@@ -480,7 +480,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 				inputData: (&inputMap{
 					Fields: map[string]interface{}{
 						Settings[MinLock]:       bState.Balance(30),
-						Settings[InterestRate]:  float64(40.0),
+						Settings[Apr]:           float64(40.0),
 						Settings[MinLockPeriod]: time.Duration(10),
 						Settings[MaxMint]:       bState.Balance(10),
 					},
@@ -508,7 +508,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			if tt.shouldBeOk {
 				const pfx = "smart_contracts.interestpoolsc."
 				var conf = config.SmartContractConfig
-				if conf.Get(pfx+"interest_rate") != tt.args.gn.APR {
+				if conf.Get(pfx+"apr") != tt.args.gn.APR {
 					t.Errorf("wrong interest_rate")
 				}
 				if conf.Get(pfx+"min_lock_period") != tt.args.gn.MinLockPeriod {
@@ -750,7 +750,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				inputData: (&inputMap{
 					Fields: map[string]interface{}{
 						Settings[MinLock]:       bState.Balance(30),
-						Settings[InterestRate]:  float64(40.0),
+						Settings[Apr]:           float64(40.0),
 						Settings[MinLockPeriod]: time.Duration(10),
 						Settings[MaxMint]:       bState.Balance(10),
 					},
