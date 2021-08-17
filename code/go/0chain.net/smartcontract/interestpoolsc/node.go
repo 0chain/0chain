@@ -1,7 +1,10 @@
 package interestpoolsc
 
 import (
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"0chain.net/core/datastore"
@@ -62,6 +65,28 @@ func (gn *GlobalNode) Decode(input []byte) error {
 		}
 		gn.MinLockPeriod = dur
 	}
+	return nil
+}
+
+func (gn *GlobalNode) set(key string, value float64) error {
+	const pfx = "smart_contracts.interestpoolsc."
+	switch key {
+	case Settings[MinLock]:
+		gn.MinLock = state.Balance(value)
+		config.SmartContractConfig.Set(pfx+key, gn.MinLock)
+	case Settings[InterestRate]:
+		gn.APR = value
+		config.SmartContractConfig.Set(pfx+key, gn.APR)
+	case Settings[MinLockPeriod]:
+		gn.MinLockPeriod = time.Duration(value)
+		config.SmartContractConfig.Set(pfx+key, gn.MinLockPeriod)
+	case Settings[MaxMint]:
+		gn.MaxMint = state.Balance(value)
+		config.SmartContractConfig.Set(pfx+key, gn.MaxMint)
+	default:
+		return fmt.Errorf("config setting %s not found", key)
+	}
+
 	return nil
 }
 
