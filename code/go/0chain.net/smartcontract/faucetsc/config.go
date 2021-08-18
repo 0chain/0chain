@@ -1,12 +1,8 @@
 package faucetsc
 
 import (
-	"0chain.net/core/common"
-	"context"
-	"net/url"
 	"time"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
@@ -21,7 +17,7 @@ type faucetConfig struct {
 }
 
 // configurations from sc.yaml
-func getConfig() (conf *faucetConfig, err error) {
+func getConfig() (conf *faucetConfig) {
 	conf = new(faucetConfig)
 	conf.PourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_amount"))
 	conf.MaxPourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.max_pour_amount"))
@@ -30,19 +26,4 @@ func getConfig() (conf *faucetConfig, err error) {
 	conf.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
 	conf.GlobalReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	return
-}
-
-//
-// REST-handler
-//
-
-const cantGetConfig = "can't get config"
-
-func (fc *FaucetSmartContract) getConfigHandler(context.Context,
-	url.Values, chainstate.StateContextI) (interface{}, error) {
-	res, err := getConfig()
-	if err != nil {
-		return nil, common.NewErrNoResource(cantGetConfig, err.Error())
-	}
-	return res, nil
 }

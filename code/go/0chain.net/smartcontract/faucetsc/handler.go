@@ -1,10 +1,15 @@
 package faucetsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"time"
+
+	"0chain.net/core/common"
+	"0chain.net/core/util"
+
+	"0chain.net/smartcontract"
+
 	// "encoding/json"
 	"net/url"
 
@@ -61,4 +66,19 @@ func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pour amount", noGlobalNodeMsg)
 	}
 	return fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil
+}
+
+func (fc *FaucetSmartContract) getConfigHandler(
+	_ context.Context,
+	_ url.Values,
+	balances c_state.StateContextI,
+) (interface{}, error) {
+	gn, err := fc.getGlobalNode(balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, common.NewError("get config handler", err.Error())
+	}
+	if gn.faucetConfig == nil {
+		return getConfig(), nil
+	}
+	return gn.faucetConfig, nil
 }
