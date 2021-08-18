@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/sha3"
 
+	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 )
 
@@ -553,6 +554,79 @@ func TestMPTRepetitiveInsert(t *testing.T) {
 	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.Root))
 }
 
+func TestMPT_MultipleConcurrentInserts(t *testing.T) {
+	t.Parallel()
+	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	mpt := NewMerklePatriciaTrie(db, Sequence(0))
+	ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
+	numGoRoutines := 10
+	numTxns := 100
+	txns := make([]*Txn, numGoRoutines*numTxns)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
+	}
+	// insert some of the nodes to the original mpt
+	for i := 0; i < numGoRoutines; i++ {
+		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		require.NoError(t, err)
+	}
+	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0))
+	mpt2.SetRoot(mpt.GetRoot())
+	checkIterationHash(t, mpt2, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	wg := &sync.WaitGroup{}
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func(mpt2 MerklePatriciaTrieI, i int) {
+			defer wg.Done()
+			for j := 1; j < numTxns; j++ {
+				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				require.NoError(t, err)
+			}
+		}(mpt2, i)
+	}
+	wg.Wait()
+	checkIterationHash(t, mpt2, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
+	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	require.NoError(t, mpt.MergeMPTChanges(mpt2))
+	checkIterationHash(t, mpt, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
+}
+
+func TestMPT_ConcurrentMerges(t *testing.T) {
+	t.Parallel()
+	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	mpt := NewMerklePatriciaTrie(db, Sequence(0))
+	ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
+	numGoRoutines := 10
+	numTxns := 10
+	txns := make([]*Txn, numGoRoutines*numTxns)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
+	}
+	// insert some of the nodes to the original mpt
+	for i := 0; i < numGoRoutines; i++ {
+		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		require.NoError(t, err)
+	}
+	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0))
+	mpt2.SetRoot(mpt.GetRoot())
+	wg := &sync.WaitGroup{}
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func(mpt2 MerklePatriciaTrieI, i int) {
+			defer wg.Done()
+			for j := 1; j < numTxns; j++ {
+				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				require.NoError(t, err)
+				require.NoError(t, mpt.MergeMPTChanges(mpt2))
+			}
+		}(mpt2, i)
+	}
+	wg.Wait()
+	checkIterationHash(t, mpt2, "e746a622dca7212732dd74521edf4f336b5134321513343819efb74f981f1925")
+	checkIterationHash(t, mpt, "e746a622dca7212732dd74521edf4f336b5134321513343819efb74f981f1925")
+}
+
 func TestMPTDelete(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
@@ -741,6 +815,12 @@ func checkValues(t *testing.T, mpt MerklePatriciaTrieI, values []string) {
 	assert.ElementsMatch(t, values, sponge.values)
 }
 
+func checkIterationHash(t *testing.T, mpt MerklePatriciaTrieI, expectedHash string) {
+	sponge := sha3.New256()
+	require.NoError(t, mpt.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode))
+	assert.Equal(t, expectedHash, ToHex(sponge.Sum(nil)))
+}
+
 func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
@@ -882,20 +962,10 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	if rootHash != exp {
 		t.Fatalf("root hash mismatch: %v, %v", rootHash, exp)
 	}
-	sponge := sha3.New256()
-	valuesSponge := valuesSponge{make([]string, 0, 16)}
-	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
-	if err != nil {
-		t.Fatal(err)
-	}
-	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
-	exp = "6a15c5ff1772339a49e4bca1cff7d3b38accb6ac15af37a6907024a4e2861391"
-	if iteratedHash != exp {
-		t.Fatalf("calculated sequence mismatch: %v, %v",
-			iteratedHash, exp)
-	}
+	checkIterationHash(t, mpt2, "6a15c5ff1772339a49e4bca1cff7d3b38accb6ac15af37a6907024a4e2861391")
 	// collect values
-	err = mpt2.Iterate(context.TODO(), iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
+	valuesSponge := valuesSponge{make([]string, 0, 16)}
+	err := mpt2.Iterate(context.TODO(), iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
 	if err != nil {
 		t.Fatal(err)
 	}
