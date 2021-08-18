@@ -1,25 +1,25 @@
 package interestpoolsc
 
 import (
-	"0chain.net/chaincore/config"
-	"0chain.net/core/common"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
 
+	"0chain.net/core/common"
+
 	c_state "0chain.net/chaincore/chain/state"
 )
 
-func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, _ c_state.StateContextI) (interface{}, error) {
+func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
+	gn := ip.getGlobalNode(balances, "funcName")
 	const pfx = "smart_contracts.interestpoolsc."
 	return &inputMap{
 		Fields: map[string]interface{}{
-			Settings[MinLock]:       config.SmartContractConfig.GetInt64(pfx + Settings[MinLock]),
-			Settings[MaxMint]:       config.SmartContractConfig.GetInt64(pfx + Settings[MaxMint]),
-			Settings[MinLockPeriod]: config.SmartContractConfig.GetInt64(pfx + Settings[MinLockPeriod]),
-			Settings[Apr]:           config.SmartContractConfig.GetInt64(pfx + Settings[Apr]),
-			"apr":                   config.SmartContractConfig.GetInt64(pfx + "apr"),
+			Settings[MinLock]:       gn.MinLock,
+			Settings[MaxMint]:       gn.MaxMint,
+			Settings[MinLockPeriod]: gn.MinLockPeriod,
+			Settings[Apr]:           gn.APR,
 		},
 	}, nil
 }
