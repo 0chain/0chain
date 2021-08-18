@@ -71,13 +71,10 @@ func mockAcknowledgment() *zmc.Acknowledgment {
 	now := time.Now().Format(time.RFC3339Nano)
 	apid := "id:access_point:" + now
 
-	prov := mockProvider()
-	prov.Terms = mockProviderTermsList(apid)
-
 	return &zmc.Acknowledgment{
 		SessionID:     "id:session:" + now,
 		AccessPointID: apid,
-		Billing: &zmc.Billing{
+		Billing: zmc.Billing{
 			DataUsage: zmc.DataUsage{
 				DownloadBytes: 3 * million,
 				UploadBytes:   2 * million,
@@ -86,7 +83,24 @@ func mockAcknowledgment() *zmc.Acknowledgment {
 			},
 		},
 		Consumer: mockConsumer(),
-		Provider: prov,
+		Provider: mockProvider(),
+		Terms: zmc.ProviderTerms{
+			AccessPointID:   apid,
+			Price:           0.1,
+			PriceAutoUpdate: 0.001,
+			MinCost:         0.5,
+			Volume:          0,
+			QoS: &magma.QoS{
+				DownloadMbps: 5.4321,
+				UploadMbps:   1.2345,
+			},
+			QoSAutoUpdate: &zmc.QoSAutoUpdate{
+				DownloadMbps: 0.001,
+				UploadMbps:   0.001,
+			},
+			ProlongDuration: 1 * 60 * 60,              // 1 hour
+			ExpiredAt:       ts.Now() + (1 * 60 * 60), // 1 hour from now
+		},
 	}
 }
 
@@ -186,32 +200,6 @@ func mockProviders() *Providers {
 	return list
 }
 
-func mockProviderTerms() zmc.ProviderTerms {
-	return zmc.ProviderTerms{
-		Price:           0.1,
-		PriceAutoUpdate: 0.001,
-		MinCost:         0.5,
-		Volume:          0,
-		QoS: &magma.QoS{
-			DownloadMbps: 5.4321,
-			UploadMbps:   1.2345,
-		},
-		QoSAutoUpdate: &zmc.QoSAutoUpdate{
-			DownloadMbps: 0.001,
-			UploadMbps:   0.001,
-		},
-		ProlongDuration: 1 * 60 * 60,              // 1 hour
-		ExpiredAt:       ts.Now() + (1 * 60 * 60), // 1 hour from now
-	}
-}
-
-func mockProviderTermsList(apid string) map[string]zmc.ProviderTerms {
-	terms := mockProviderTerms()
-	terms.AccessPointID = apid
-
-	return map[string]zmc.ProviderTerms{apid: terms}
-}
-
 func mockStateContextI() *mockStateContext {
 	argStr := mock.AnythingOfType("string")
 	stateContext := mockStateContext{store: make(map[string]util.Serializable)}
@@ -256,25 +244,6 @@ func mockStateContextI() *mockStateContext {
 				return util.ErrValueNotPresent
 			}
 			return nil
-		},
-	)
-	stateContext.On("DeleteTrieNode", argStr).Return(
-		func(id string) string {
-			stateContext.Lock()
-			defer stateContext.Unlock()
-			if _, ok := stateContext.store[id]; ok {
-				return id
-			}
-			return ""
-		},
-		func(id string) error {
-			stateContext.Lock()
-			defer stateContext.Unlock()
-			if _, ok := stateContext.store[id]; ok {
-				delete(stateContext.store, id)
-				return nil
-			}
-			return util.ErrValueNotPresent
 		},
 	)
 	stateContext.On("GetClientBalance", argStr).Return(
@@ -336,9 +305,6 @@ func mockStateContextI() *mockStateContext {
 
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.Consumers")).
 		Return(funcInsertList, errFuncInsertList)
-
-	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.flagBool")).
-		Return(funcInsertID, errFuncInsertID)
 
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.mockInvalidJson")).
 		Return(funcInsertID, errFuncInsertID)

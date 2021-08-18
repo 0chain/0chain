@@ -25,9 +25,6 @@ func (m *MagmaSmartContract) acknowledgment(id string, sci chain.StateContextI) 
 	if err = ackn.Decode(data.Encode()); err != nil {
 		return nil, errors.Wrap(errCodeDecode, "decode acknowledgment failed", err)
 	}
-	if ackn.Billing == nil {
-		ackn.Billing = &zmc.Billing{}
-	}
 
 	return &ackn, nil
 }
@@ -150,14 +147,12 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	if ackn.Consumer.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeSessionStart, "check owner id failed", err)
 	}
-
-	terms := ackn.Provider.Terms[ackn.AccessPointID]
-	if err = terms.Validate(); err != nil {
-		return "", errors.New(errCodeSessionStart, "invalid provider terms")
+	if err = ackn.Terms.Validate(); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "invalid provider terms", err)
 	}
 
 	pool := newTokenPool()
-	if ackn.TokenPoolTransfer, err = pool.create(txn, ackn, sci); err != nil {
+	if err = pool.create(txn, ackn, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "create token pool failed", err)
 	}
 
@@ -184,12 +179,15 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 	if ackn.Consumer.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeSessionStop, "check owner id failed", err)
 	}
+	if ackn.TokenPool == nil {
+		return "", errors.Wrap(errCodeSessionStop, "session not started yet", err)
+	}
 	if ackn.Billing.CompletedAt == 0 { // must be completed
 		pool := newTokenPool()
 		if err = pool.Decode(ackn.TokenPool.Encode()); err != nil {
 			return "", errors.New(errCodeSessionStop, err.Error())
 		}
-		if ackn.TokenPoolTransfer, err = pool.spend(txn, ackn.Billing, sci); err != nil {
+		if err = pool.spend(txn, &ackn.Billing, sci); err != nil {
 			return "", errors.New(errCodeSessionStop, err.Error())
 		}
 
@@ -242,6 +240,9 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	if err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "fetch acknowledgment failed", err)
 	}
+	if ackn.TokenPool == nil {
+		return "", errors.Wrap(errCodeDataUsage, "session not started yet", err)
+	}
 	if ackn.Billing.CompletedAt != 0 { // already completed
 		return "", errors.Wrap(errCodeDataUsage, "session already completed", err)
 	}
@@ -260,7 +261,7 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 
 	// update billing data
 	ackn.Billing.DataUsage = dataUsage
-	ackn.Billing.CalcAmount(ackn.Provider.Terms[ackn.AccessPointID])
+	ackn.Billing.CalcAmount(ackn.Terms)
 	// TODO: make checks:
 	//  the billing amount is lower than token poll balance
 	//  the session is not expired yet
@@ -312,48 +313,39 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 // providerSessionInit checks input for validity and inits a new session
 // with inserts resulted acknowledgment in provided state.StateContextI.
 func (m *MagmaSmartContract) providerSessionInit(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	ackn := &zmc.Acknowledgment{}
-
-	err := ackn.Decode(blob)
+	req := &zmc.Acknowledgment{}
+	err := req.Decode(blob)
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionInit, "decode acknowledgment data failed", err)
 	}
 
-	terms := ackn.Provider.Terms[ackn.AccessPointID] // save a copy of provider's terms to recover
-	if ackn.Provider, err = providerFetch(m.ID, ackn.Provider.ExtID, store.GetTransaction(m.db), sci); err != nil {
+	if req.Provider, err = providerFetch(m.ID, req.Provider.ExtID, store.GetTransaction(m.db), sci); err != nil {
 		return "", errors.Wrap(errCodeSessionInit, "fetch provider failed", err)
 	}
-	if ackn.Provider.ID != txn.ClientID {
+	if req.Provider.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeSessionInit, "check owner id failed", err)
 	}
-	if err = terms.Validate(); err != nil {
-		return "", errors.New(errCodeSessionInit, "invalid provider terms")
+	if err = req.Terms.Validate(); err != nil {
+		return "", errors.Wrap(errCodeSessionInit, "invalid provider terms", err)
 	}
-	ackn.Provider.Terms[ackn.AccessPointID] = terms // recover provider's terms from the copy
 
-	ackn.Consumer, err = consumerFetch(m.ID, ackn.Consumer.ExtID, store.GetTransaction(m.db), sci)
+	req.Consumer, err = consumerFetch(m.ID, req.Consumer.ExtID, store.GetTransaction(m.db), sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionInit, "fetch consumer failed", err)
 	}
 
-	ackn.Billing = &zmc.Billing{}
+	ackn := &zmc.Acknowledgment{
+		SessionID:     req.SessionID,
+		AccessPointID: req.AccessPointID,
+		Consumer:      req.Consumer,
+		Provider:      req.Provider,
+		Terms:         req.Terms,
+	}
 	if _, err = sci.InsertTrieNode(nodeUID(m.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		return "", errors.Wrap(errCodeSessionInit, "insert acknowledgment failed", err)
 	}
 
 	return string(ackn.Encode()), nil
-}
-
-// providerTerms represents MagmaSmartContract handler.
-// providerTerms looks for Provider with id, passed in params url.Values,
-// in provided state.StateContextI and returns Provider.Terms.
-func (m *MagmaSmartContract) providerTerms(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
-	provider, err := providerFetch(m.ID, vals.Get("ext_id"), store.GetTransaction(m.db), sci)
-	if err != nil {
-		return nil, errors.Wrap(errCodeFetchData, "fetch provider failed", err)
-	}
-
-	return provider.Terms, nil
 }
 
 // providerUpdate updates the current provider terms.

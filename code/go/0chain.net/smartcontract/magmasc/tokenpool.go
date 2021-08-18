@@ -51,20 +51,19 @@ func (m *tokenPool) Encode() []byte {
 }
 
 // create tries to create a new token poll by given acknowledgment.
-func (m *tokenPool) create(txn *tx.Transaction, ackn *zmc.Acknowledgment, sci chain.StateContextI) (*zmc.TokenPoolTransfer, error) {
-	terms := ackn.Provider.Terms[ackn.AccessPointID]
-	m.Balance = terms.GetAmount()
+func (m *tokenPool) create(txn *tx.Transaction, ackn *zmc.Acknowledgment, sci chain.StateContextI) error {
+	m.Balance = ackn.Terms.GetAmount()
 	if m.Balance < 0 {
-		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
+		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
 	}
 
 	poolBalance := state.Balance(m.Balance)
 	clientBalance, err := sci.GetClientBalance(ackn.Consumer.ID)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
-		return nil, errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
+		return errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
 	}
 	if clientBalance < poolBalance {
-		return nil, errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
 
 	m.ID = ackn.SessionID
@@ -73,24 +72,24 @@ func (m *tokenPool) create(txn *tx.Transaction, ackn *zmc.Acknowledgment, sci ch
 
 	transfer := state.NewTransfer(m.PayerID, txn.ToClientID, poolBalance)
 	if err = sci.AddTransfer(transfer); err != nil {
-		return nil, errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
+		return errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
 
-	resp := zmc.TokenPoolTransfer{
+	m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		ToPool:     m.ID,
 		Value:      m.Balance,
 		FromClient: m.PayerID,
 		ToClient:   txn.ToClientID, // delegate transfer to smart contract address
-	}
+	})
 
-	return &resp, nil
+	return nil
 }
 
 // spend tries to spend the token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, bill *zmc.Billing, sci chain.StateContextI) (*zmc.TokenPoolTransfer, error) {
+func (m *tokenPool) spend(txn *tx.Transaction, bill *zmc.Billing, sci chain.StateContextI) error {
 	if bill.Amount < 0 {
-		return nil, errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
+		return errors.Wrap(errCodeTokenPoolSpend, "billing amount is negative", errNegativeValue)
 	}
 
 	payee, amount, poolBalance := m.PayeeID, state.Balance(bill.Amount), state.Balance(m.Balance)
@@ -100,7 +99,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *zmc.Billing, sci chain.Stat
 
 	case amount < poolBalance: // spend part of token pool to payee
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
-			return nil, errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		poolBalance -= amount
 		payee = m.PayerID // refund remaining token pool balance to payer
@@ -108,19 +107,19 @@ func (m *tokenPool) spend(txn *tx.Transaction, bill *zmc.Billing, sci chain.Stat
 
 	// spend token pool by balance
 	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
-		return nil, errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
+		return errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 
 	m.Balance = 0
-	resp := zmc.TokenPoolTransfer{
+	m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
 		TxnHash:    txn.Hash,
 		FromPool:   m.ID,
 		Value:      bill.Amount,
 		FromClient: m.PayerID,
 		ToClient:   m.PayeeID,
-	}
+	})
 
-	return &resp, nil
+	return nil
 }
 
 // uid returns uniq id used to saving token pool into chain state.

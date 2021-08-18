@@ -44,7 +44,6 @@ func Test_NewMagmaSmartContract(t *testing.T) {
 	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
 	msc.RestHandlers["/providerExist"] = msc.providerExist
 	msc.RestHandlers["/providerFetch"] = msc.providerFetch
-	msc.RestHandlers["/providerTerms"] = msc.providerTerms
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)

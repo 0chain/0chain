@@ -68,6 +68,10 @@ const (
 	// Provider's registration MagmaSmartContract function.
 	providerRegister = "provider_register"
 
+	// providerSessionInit represents name for
+	// Provider's session init MagmaSmartContract function.
+	providerSessionInit = "provider_session_init"
+
 	// providerUpdate represents name for
 	// provider data update MagmaSmartContract function.
 	providerUpdate = "provider_update"

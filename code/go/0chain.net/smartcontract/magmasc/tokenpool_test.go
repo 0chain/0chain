@@ -95,11 +95,8 @@ func Test_tokenPool_create(t *testing.T) {
 
 	ackn, sci := mockAcknowledgment(), mockStateContextI()
 
-	terms := ackn.Provider.Terms[ackn.AccessPointID]
-	amount := terms.GetAmount()
-
 	txn := sci.GetTransaction()
-	txn.Value = amount
+	txn.Value = ackn.Terms.GetAmount()
 	txn.ClientID = ackn.Consumer.ID
 
 	acknClientBalanceErr := mockAcknowledgment()
@@ -114,7 +111,7 @@ func Test_tokenPool_create(t *testing.T) {
 		ackn  *zmc.Acknowledgment
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  *zmc.TokenPoolTransfer
+		want  []zmc.TokenPoolTransfer
 		error bool
 	}{
 		{
@@ -123,13 +120,13 @@ func Test_tokenPool_create(t *testing.T) {
 			ackn: ackn,
 			pool: &tokenPool{},
 			sci:  sci,
-			want: &zmc.TokenPoolTransfer{
+			want: []zmc.TokenPoolTransfer{{
 				TxnHash:    txn.Hash,
 				ToPool:     ackn.SessionID,
-				Value:      amount,
+				Value:      ackn.Terms.GetAmount(),
 				FromClient: ackn.Consumer.ID,
 				ToClient:   txn.ToClientID,
-			},
+			}},
 			error: false,
 		},
 		{
@@ -166,13 +163,13 @@ func Test_tokenPool_create(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := test.pool.create(test.txn, test.ackn, test.sci)
-			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("create() got: %#v | want: %#v", got, test.want)
+			if err := test.pool.create(test.txn, test.ackn, test.sci); (err != nil) != test.error {
+				t.Errorf("create() error: %v | want: %v", err, test.error)
 				return
 			}
-			if (err != nil) != test.error {
-				t.Errorf("create() error: %v | want: %v", err, test.error)
+			if !reflect.DeepEqual(test.pool.Transfers, test.want) {
+				t.Errorf("create() got: %#v | want: %#v", test.pool.Transfers, test.want)
+				return
 			}
 		})
 	}
@@ -193,7 +190,7 @@ func Test_tokenPool_spend(t *testing.T) {
 		bill  *zmc.Billing
 		sci   chain.StateContextI
 		pool  *tokenPool
-		want  *zmc.TokenPoolTransfer
+		want  []zmc.TokenPoolTransfer
 		error bool
 	}{
 		{
@@ -202,13 +199,13 @@ func Test_tokenPool_spend(t *testing.T) {
 			bill: &zmc.Billing{Amount: int64(poolOK1.Balance - poolOK1.Balance/2)},
 			sci:  sci,
 			pool: poolOK1,
-			want: &zmc.TokenPoolTransfer{
+			want: []zmc.TokenPoolTransfer{{
 				TxnHash:    txn.Hash,
 				FromPool:   poolOK1.ID,
 				Value:      poolOK1.Balance - poolOK1.Balance/2,
 				FromClient: poolOK1.PayerID,
 				ToClient:   poolOK1.PayeeID,
-			},
+			}},
 			error: false,
 		},
 		{
@@ -217,13 +214,13 @@ func Test_tokenPool_spend(t *testing.T) {
 			bill: &zmc.Billing{Amount: 0},
 			sci:  sci,
 			pool: poolOK2,
-			want: &zmc.TokenPoolTransfer{
+			want: []zmc.TokenPoolTransfer{{
 				TxnHash:    txn.Hash,
 				FromPool:   poolOK2.ID,
 				Value:      0,
 				FromClient: poolOK2.PayerID,
 				ToClient:   poolOK2.PayeeID,
-			},
+			}},
 			error: false,
 		},
 		{
@@ -259,13 +256,12 @@ func Test_tokenPool_spend(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := test.pool.spend(test.txn, test.bill, test.sci)
-			if err == nil && !reflect.DeepEqual(got, test.want) {
-				t.Errorf("create() got: %#v | want: %#v", got, test.want)
-				return
-			}
-			if (err != nil) != test.error {
+			if err := test.pool.spend(test.txn, test.bill, test.sci); (err != nil) != test.error {
 				t.Errorf("spend() error: %v | want: %v", err, test.error)
+			}
+			if !reflect.DeepEqual(test.pool.Transfers, test.want) {
+				t.Errorf("create() got: %#v | want: %#v", test.pool.Transfers, test.want)
+				return
 			}
 		})
 	}

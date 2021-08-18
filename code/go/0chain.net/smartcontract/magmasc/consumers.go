@@ -23,6 +23,9 @@ func (m *Consumers) add(scID string, item *zmc.Consumer, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
 	}
+	if got, _ := sci.GetTrieNode(nodeUID(scID, consumerType, item.ExtID)); got != nil {
+		return errors.New(errCodeInternal, "consumer already registered")
+	}
 
 	return m.write(scID, item, db, sci)
 }

@@ -23,6 +23,9 @@ func (m *Providers) add(scID string, item *zmc.Provider, db *store.Connection, s
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
+	if got, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.ExtID)); got != nil {
+		return errors.New(errCodeInternal, "provider already registered")
+	}
 
 	return m.write(scID, item, db, sci)
 }

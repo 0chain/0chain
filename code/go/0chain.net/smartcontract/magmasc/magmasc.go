@@ -47,7 +47,6 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
 	msc.RestHandlers["/providerExist"] = msc.providerExist
 	msc.RestHandlers["/providerFetch"] = msc.providerFetch
-	msc.RestHandlers["/providerTerms"] = msc.providerTerms
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
@@ -74,6 +73,8 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 		return m.providerDataUsage(txn, blob, sci)
 	case providerRegister:
 		return m.providerRegister(txn, blob, sci)
+	case providerSessionInit:
+		return m.providerSessionInit(txn, blob, sci)
 	case providerUpdate:
 		return m.providerUpdate(txn, blob, sci)
 	}

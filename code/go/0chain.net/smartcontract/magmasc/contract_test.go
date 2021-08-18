@@ -577,8 +577,8 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
-	ackn, pool := mockAcknowledgment(), newTokenPool()
-	ackn.Billing = &zmc.Billing{} // initial value
+	ackn := mockAcknowledgment()
+	ackn.Billing = zmc.Billing{} // initial value
 	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, acknowledgment, ackn.SessionID), ackn); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
@@ -586,8 +586,11 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	txn := sci.GetTransaction()
 	txn.ClientID = ackn.Consumer.ID
 
+	pool := newTokenPool()
+	if err := pool.create(txn, ackn, sci); err != nil {
+		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
+	}
 	ackn.TokenPool = &pool.TokenPool
-	ackn.TokenPoolTransfer, _ = pool.create(txn, ackn, sci)
 
 	consList := Consumers{}
 	if err := consList.add(msc.ID, ackn.Consumer, store.GetTransaction(msc.db), sci); err != nil {
@@ -667,15 +670,15 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 	pool.PayeeID = ackn.Provider.ID
 	pool.ID = ackn.SessionID
 	pool.Balance = 1000
-
-	ackn.Billing.CompletedAt = time.Now()
-	ackn.TokenPool = &pool.TokenPool
-	ackn.TokenPoolTransfer = &zmc.TokenPoolTransfer{
+	pool.Transfers = []zmc.TokenPoolTransfer{{
 		TxnHash:    txn.Hash,
 		FromPool:   pool.ID,
 		FromClient: pool.PayerID,
 		ToClient:   pool.PayeeID,
-	}
+	}}
+
+	ackn.Billing.CompletedAt = time.Now()
+	ackn.TokenPool = &pool.TokenPool
 
 	tests := [1]struct {
 		name  string
@@ -782,7 +785,24 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
 	}
 
-	ackn.Billing.CalcAmount(ackn.Provider.Terms[ackn.AccessPointID])
+	txn := sci.GetTransaction()
+	txn.ClientID = ackn.Provider.ID
+
+	pool := newTokenPool()
+	pool.PayerID = ackn.Consumer.ID
+	pool.PayeeID = ackn.Provider.ID
+	pool.ID = ackn.SessionID
+	pool.Balance = 1000
+	pool.Transfers = []zmc.TokenPoolTransfer{{
+		TxnHash:    txn.Hash,
+		FromPool:   pool.ID,
+		FromClient: pool.PayerID,
+		ToClient:   pool.PayeeID,
+	}}
+
+	ackn.Billing.CalcAmount(ackn.Terms)
+	ackn.TokenPool = &pool.TokenPool
+
 	tests := [1]struct {
 		name  string
 		txn   *tx.Transaction
@@ -794,7 +814,7 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			txn:   &tx.Transaction{ClientID: ackn.Provider.ID},
+			txn:   txn,
 			blob:  ackn.Billing.DataUsage.Encode(),
 			sci:   sci,
 			msc:   msc,
@@ -994,7 +1014,7 @@ func TestMagmaSmartContract_providerSessionInit(t *testing.T) {
 
 	ackn, msc, sci := mockAcknowledgment(), mockMagmaSmartContract(), mockStateContextI()
 
-	ackn.Billing = &zmc.Billing{}
+	ackn.Billing = zmc.Billing{}
 	blob := ackn.Encode()
 
 	consList := Consumers{}
@@ -1042,62 +1062,6 @@ func TestMagmaSmartContract_providerSessionInit(t *testing.T) {
 			}
 			if got != test.want {
 				t.Errorf("providerSessionInit() got: %v | want: %v", got, test.want)
-			}
-		})
-	}
-}
-
-func Test_MagmaSmartContract_providerTerms(t *testing.T) {
-	t.Parallel()
-
-	msc, sci := mockMagmaSmartContract(), mockStateContextI()
-
-	prov, provList := mockProvider(), Providers{}
-	if err := provList.add(msc.ID, prov, store.GetTransaction(msc.db), sci); err != nil {
-		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
-	}
-
-	tests := [2]struct {
-		name  string
-		ctx   context.Context
-		vals  url.Values
-		sci   chain.StateContextI
-		msc   *MagmaSmartContract
-		want  interface{}
-		error bool
-	}{
-		{
-			name:  "OK",
-			ctx:   nil,
-			vals:  url.Values{"ext_id": {prov.ExtID}},
-			sci:   sci,
-			msc:   msc,
-			want:  prov.Terms,
-			error: false,
-		},
-		{
-			name:  "Not_Present_ERR",
-			ctx:   nil,
-			vals:  url.Values{"provider_id": {"not_present_id"}},
-			sci:   sci,
-			msc:   msc,
-			want:  nil,
-			error: true,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := test.msc.providerTerms(test.ctx, test.vals, test.sci)
-			if (err != nil) != test.error {
-				t.Errorf("providerTerms() error: %v | want: %v", err, test.error)
-				return
-			}
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("providerTerms() got: %#v | want: %#v", got, test.want)
 			}
 		})
 	}
