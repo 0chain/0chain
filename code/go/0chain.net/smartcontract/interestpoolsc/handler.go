@@ -18,7 +18,7 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 			Settings[MinLock]:       config.SmartContractConfig.GetInt64(pfx + Settings[MinLock]),
 			Settings[MaxMint]:       config.SmartContractConfig.GetInt64(pfx + Settings[MaxMint]),
 			Settings[MinLockPeriod]: config.SmartContractConfig.GetInt64(pfx + Settings[MinLockPeriod]),
-			Settings[InterestRate]:  config.SmartContractConfig.GetInt64(pfx + Settings[InterestRate]),
+			Settings[Apr]:           config.SmartContractConfig.GetInt64(pfx + Settings[Apr]),
 			"apr":                   config.SmartContractConfig.GetInt64(pfx + "apr"),
 		},
 	}, nil

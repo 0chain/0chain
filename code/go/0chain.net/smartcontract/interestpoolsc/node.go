@@ -74,7 +74,7 @@ func (gn *GlobalNode) set(key string, value float64) error {
 	case Settings[MinLock]:
 		gn.MinLock = state.Balance(value)
 		config.SmartContractConfig.Set(pfx+key, gn.MinLock)
-	case Settings[InterestRate]:
+	case Settings[Apr]:
 		gn.APR = value
 		config.SmartContractConfig.Set(pfx+key, gn.APR)
 	case Settings[MinLockPeriod]:
