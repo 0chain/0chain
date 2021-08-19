@@ -96,30 +96,34 @@ func (fc *FaucetSmartContract) updateSettings(t *transaction.Transaction, inputD
 	if t.ClientID != owner {
 		return "", common.NewError("update_settings", "only the owner can update the limits")
 	}
-	var newRequest limitRequest
-	err := newRequest.decode(inputData)
+
+	var im inputMap
+	err := im.Decode(inputData)
 	if err != nil {
 		return "", common.NewError("update_settings", "limit request not formated correctly")
 	}
-	if newRequest.PourAmount > 0 {
-		gn.PourAmount = newRequest.PourAmount
+
+	for key, value := range im.Fields {
+		fValue, ok := value.(float64)
+		if !ok {
+			return "", common.NewErrorf("update_settings", "value %v for key %s is not numeric", value, key)
+		}
+		switch key {
+		case Settings[PourAmount]:
+			gn.PourAmount = state.Balance(fValue)
+		case Settings[MaxPourAmount]:
+			gn.MaxPourAmount = state.Balance(fValue)
+		case Settings[PeriodicLimit]:
+			gn.PeriodicLimit = state.Balance(fValue)
+		case Settings[GlobalLimit]:
+			gn.GlobalLimit = state.Balance(fValue)
+		case Settings[IndividualReset]:
+			gn.IndividualReset = time.Duration(fValue)
+		case Settings[GlobalReset]:
+			gn.GlobalReset = time.Duration(fValue)
+		}
 	}
 
-	if newRequest.MaxPourAmount > gn.PourAmount {
-		gn.MaxPourAmount = newRequest.MaxPourAmount
-	}
-	if newRequest.MaxPourAmount > gn.PourAmount {
-		gn.PeriodicLimit = newRequest.PeriodicLimit
-	}
-	if newRequest.MaxPourAmount > gn.PourAmount {
-		gn.GlobalLimit = newRequest.GlobalLimit
-	}
-	if toSeconds(newRequest.IndividualReset) > 1 {
-		gn.IndividualReset = newRequest.IndividualReset
-	}
-	if newRequest.GlobalReset > gn.IndividualReset {
-		gn.GlobalReset = newRequest.GlobalReset
-	}
 	if err = gn.validate(); err != nil {
 		return "", common.NewError("update_settings", "cannot validate changes: "+err.Error())
 	}
@@ -222,8 +226,8 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, ba
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
 	}
-	if gn.faucetConfig == nil {
-		gn.faucetConfig = getConfig()
+	if gn.FaucetConfig == nil {
+		gn.FaucetConfig = getConfig()
 	}
 
 	if err == nil {
@@ -252,6 +256,6 @@ func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName stri
 	case "refill":
 		return fc.refill(t, balances, gn)
 	default:
-		return "", common.NewError("failed execution", "no function with that name")
+		return "", common.NewErrorf("failed execution", "no faucet smart contract method with name %s", funcName)
 	}
 }

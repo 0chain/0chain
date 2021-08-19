@@ -1,11 +1,12 @@
 package interestpoolsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -220,6 +221,6 @@ func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcNam
 	case "updateVariables":
 		return ip.updateVariables(t, gn, inputData, balances)
 	default:
-		return "", common.NewError("failed execution", "no function with that name")
+		return "", common.NewErrorf("failed execution", "no interest pool smart contract method with name %s", funcName)
 	}
 }

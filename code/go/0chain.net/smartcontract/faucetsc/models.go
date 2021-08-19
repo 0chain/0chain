@@ -13,25 +13,6 @@ import (
 	"0chain.net/core/util"
 )
 
-type limitRequest struct {
-	PourAmount      state.Balance `json:"pour_amount"`
-	MaxPourAmount   state.Balance `json:"max_pour_amount"`
-	PeriodicLimit   state.Balance `json:"periodic_limit"`
-	GlobalLimit     state.Balance `json:"global_limit"`
-	IndividualReset time.Duration `json:"individual_reset"` //in hours
-	GlobalReset     time.Duration `json:"global_rest"`      //in hours
-}
-
-func (lr *limitRequest) encode() []byte {
-	buff, _ := json.Marshal(lr)
-	return buff
-}
-
-func (lr *limitRequest) decode(input []byte) error {
-	err := json.Unmarshal(input, lr)
-	return err
-}
-
 type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`
@@ -50,7 +31,7 @@ func (pr *periodicResponse) decode(input []byte) error {
 }
 
 type GlobalNode struct {
-	*faucetConfig `json:"faucet_config"`
+	*FaucetConfig `json:"faucet_config"`
 	ID            string        `json:"id"`
 	Used          state.Balance `json:"used"`
 	StartTime     time.Time     `json:"start_time"`
