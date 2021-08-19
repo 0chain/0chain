@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"testing"
+	"time"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 func TestSettings(t *testing.T) {
@@ -144,7 +145,7 @@ func TestUpdateConfig(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.ssc.updateConfig(args.txn, args.input, args.balances)
+			_, err := args.ssc.updateSettings(args.txn, args.input, args.balances)
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.msg, err.Error())

@@ -1,13 +1,14 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"time"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"encoding/json"
-	"fmt"
-	"time"
 )
 
 type Setting int
@@ -222,43 +223,13 @@ func (im *inputMap) Encode() []byte {
 	return buff
 }
 
-// updateConfig is SC function used by SC owner
-// to update storage SC configurations
-func (ssc *StorageSmartContract) updateConfig(
-	t *transaction.Transaction,
-	input []byte,
-	balances chainState.StateContextI,
-) (resp string, err error) {
-	if t.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
+func (conf *scConfig) getConfigMap() inputMap {
+	var im inputMap
+	im.Fields = make(map[string]interface{})
+	for key, info := range Settings {
+		im.Fields[key] = conf.get(info.setting)
 	}
-
-	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("update_config",
-			"can't get config: "+err.Error())
-	}
-
-	var changes inputMap
-	if err = changes.Decode(input); err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	if err := conf.update(changes); err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	if err = conf.validate(); err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	return "", nil
+	return im
 }
 
 func (conf *scConfig) setInt(key string, change int) {
@@ -483,6 +454,103 @@ func (conf *scConfig) set(key string, change interface{}) error {
 	return nil
 }
 
+func (conf *scConfig) get(key Setting) interface{} {
+	switch key {
+	case MaxMint:
+		return conf.MaxMint
+	case TimeUnit:
+		return conf.TimeUnit
+	case MinAllocSize:
+		return conf.MinAllocSize
+	case MinAllocDuration:
+		return conf.MinAllocDuration
+	case MaxChallengeCompletionTime:
+		return conf.MaxChallengeCompletionTime
+	case MinOfferDuration:
+		return conf.MinOfferDuration
+	case MinBlobberCapacity:
+		return conf.MinBlobberCapacity
+	case ReadPoolMinLock:
+		return conf.ReadPool.MinLock
+	case ReadPoolMinLockPeriod:
+		return conf.ReadPool.MinLockPeriod
+	case ReadPoolMaxLockPeriod:
+		return conf.ReadPool.MaxLockPeriod
+	case WritePoolMinLock:
+		return conf.WritePool.MinLock
+	case WritePoolMinLockPeriod:
+		return conf.WritePool.MinLockPeriod
+	case WritePoolMaxLockPeriod:
+		return conf.WritePool.MaxLockPeriod
+	case StakePoolMinLock:
+		return conf.StakePool.MinLock
+	case StakePoolInterestRate:
+		return conf.StakePool.InterestRate
+	case StakePoolInterestInterval:
+		return conf.StakePool.InterestInterval
+	case MaxTotalFreeAllocation:
+		return conf.MaxTotalFreeAllocation
+	case MaxIndividualFreeAllocation:
+		return conf.MaxIndividualFreeAllocation
+	case FreeAllocationDataShards:
+		return conf.FreeAllocationSettings.DataShards
+	case FreeAllocationParityShards:
+		return conf.FreeAllocationSettings.ParityShards
+	case FreeAllocationSize:
+		return conf.FreeAllocationSettings.Size
+	case FreeAllocationDuration:
+		return conf.FreeAllocationSettings.Duration
+	case FreeAllocationReadPriceRangeMin:
+		return conf.FreeAllocationSettings.ReadPriceRange.Min
+	case FreeAllocationReadPriceRangeMax:
+		return conf.FreeAllocationSettings.ReadPriceRange.Max
+	case FreeAllocationWritePriceRangeMin:
+		return conf.FreeAllocationSettings.WritePriceRange.Min
+	case FreeAllocationWritePriceRangeMax:
+		return conf.FreeAllocationSettings.WritePriceRange.Max
+	case FreeAllocationMaxChallengeCompletionTime:
+		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
+	case FreeAllocationReadPoolFraction:
+		return conf.FreeAllocationSettings.ReadPoolFraction
+	case ValidatorReward:
+		return conf.ValidatorReward
+	case BlobberSlash:
+		return conf.BlobberSlash
+	case MaxReadPrice:
+		return conf.MaxReadPrice
+	case MaxWritePrice:
+		return conf.MaxWritePrice
+	case FailedChallengesToCancel:
+		return conf.FailedChallengesToCancel
+	case FailedChallengesToRevokeMinLock:
+		return conf.FailedChallengesToRevokeMinLock
+	case ChallengeEnabled:
+		return conf.ChallengeEnabled
+	case ChallengeGenerationRate:
+		return conf.ChallengeGenerationRate
+	case MaxChallengesPerGeneration:
+		return conf.MaxChallengesPerGeneration
+	case MaxDelegates:
+		return conf.MaxDelegates
+	case BlockRewardBlockReward:
+		return conf.BlockReward.BlockReward
+	case BlockRewardQualifyingStake:
+		return conf.BlockReward.QualifyingStake
+	case BlockRewardSharderWeight:
+		return conf.BlockReward.SharderWeight
+	case BlockRewardMinerWeight:
+		return conf.BlockReward.MinerWeight
+	case BlockRewardBlobberCapacityWeight:
+		return conf.BlockReward.BlobberCapacityWeight
+	case BlockRewardBlobberUsageWeight:
+		return conf.BlockReward.BlobberUsageWeight
+	case ExposeMpt:
+		return conf.ExposeMpt
+	default:
+		panic("Setting not implemented")
+	}
+}
+
 func (conf *scConfig) update(changes inputMap) error {
 	for key, value := range changes.Fields {
 		if err := conf.set(key, value); err != nil {
@@ -490,4 +558,43 @@ func (conf *scConfig) update(changes inputMap) error {
 		}
 	}
 	return nil
+}
+
+// updateSettings is SC function used by SC owner
+// to update storage SC configurations
+func (ssc *StorageSmartContract) updateSettings(
+	t *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (resp string, err error) {
+	if t.ClientID != owner {
+		return "", common.NewError("update_settings",
+			"unauthorized access - only the owner can update the variables")
+	}
+
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewError("update_settings",
+			"can't get config: "+err.Error())
+	}
+
+	var changes inputMap
+	if err = changes.Decode(input); err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	if err := conf.update(changes); err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	if err = conf.validate(); err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	return "", nil
 }
