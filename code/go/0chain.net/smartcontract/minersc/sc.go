@@ -104,7 +104,7 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 
 	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
 	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
-	msc.SmartContract.RestHandlers["/configs"] = msc.configsHandler
+	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
@@ -196,7 +196,7 @@ func getGlobalNode(
 		if err := gn.validate(); err != nil {
 			return nil, fmt.Errorf("validating global node: %v", err)
 		}
-		return gn, err
+		return gn, nil
 	}
 
 	if err = gn.Decode(p.Encode()); err != nil {

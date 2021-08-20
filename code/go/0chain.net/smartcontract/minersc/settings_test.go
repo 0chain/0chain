@@ -27,7 +27,7 @@ func TestSettings(t *testing.T) {
 
 func TestUpdateSettigns(t *testing.T) {
 	type args struct {
-		ssc      *MinerSmartContract
+		msc      *MinerSmartContract
 		txn      *transaction.Transaction
 		input    []byte
 		gn       *GlobalNode
@@ -41,7 +41,7 @@ func TestUpdateSettigns(t *testing.T) {
 
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
-		var ssc = &MinerSmartContract{
+		var msc = &MinerSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -62,7 +62,7 @@ func TestUpdateSettigns(t *testing.T) {
 		).Return("", nil).Once()
 
 		return args{
-			ssc:      ssc,
+			msc:      msc,
 			txn:      txn,
 			input:    (&InputMap{p.inputMap}).Encode(),
 			gn:       &GlobalNode{},
@@ -115,7 +115,7 @@ func TestUpdateSettigns(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.ssc.UpdateSettings(args.txn, args.input, args.gn, args.balances)
+			_, err := args.msc.UpdateSettings(args.txn, args.input, args.gn, args.balances)
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.msg, err.Error())

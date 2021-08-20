@@ -1,8 +1,10 @@
 package minersc
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -285,4 +287,21 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 	msc.SmartContractExecutionStats["mintedTokens"] =
 		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
+}
+
+func (msc *MinerSmartContract) ConfigHandler(
+	ctx context.Context,
+	values url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	return msc.configHandler(ctx, values, balances)
+}
+
+func (msc *MinerSmartContract) UpdateSettings(
+	t *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateSettings(t, inputData, gn, balances)
 }

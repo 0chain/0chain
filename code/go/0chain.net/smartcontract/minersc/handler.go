@@ -191,9 +191,9 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 	return nil, common.NewErrNoResource("can't find pool stats")
 }
 
-func (msc *MinerSmartContract) configsHandler(
-	ctx context.Context,
-	params url.Values,
+func (msc *MinerSmartContract) configHandler(
+	_ context.Context,
+	_ url.Values,
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	gn, err := getGlobalNode(balances)

@@ -231,7 +231,7 @@ func (gn *GlobalNode) update(changes InputMap) error {
 	return nil
 }
 
-func (msc *MinerSmartContract) UpdateSettings(
+func (msc *MinerSmartContract) updateSettings(
 	t *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
