@@ -286,3 +286,12 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
 }
+
+func (msc *MinerSmartContract) UpdateGlobals(
+	txn *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateGlobals(txn, inputData, gn, balances)
+}

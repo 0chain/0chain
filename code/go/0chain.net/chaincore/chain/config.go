@@ -3,6 +3,8 @@ package chain
 import (
 	"time"
 
+	"0chain.net/core/viper"
+
 	"0chain.net/core/datastore"
 )
 
@@ -84,5 +86,81 @@ type Config struct {
 	RoundTimeoutSofttoMin  int           `json:"softto_min"`             // minimum time for softtimeout to kick in milliseconds
 	RoundTimeoutSofttoMult int           `json:"softto_mult"`            // multiplier of mean network time for soft timeout
 	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
+}
 
+func (config *Config) update() {
+	config.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
+	config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
+	config.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
+	config.MinGenerators = viper.GetInt("server_chain.block.min_generators")
+	config.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
+	config.NumReplicators = viper.GetInt("server_chain.block.replicators")
+	config.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
+	config.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
+	config.OwnerID = viper.GetString("server_chain.owner")
+	config.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
+	config.RoundRange = viper.GetInt64("server_chain.round_range")
+	config.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
+	config.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
+	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
+	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
+		config.VerificationTicketsTo = AllMiners
+	} else {
+		config.VerificationTicketsTo = Generator
+	}
+
+	// Health Check related counters
+	// Work on deep scan
+	conf := &config.HCCycleScan[DeepScan]
+
+	conf.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
+	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
+	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
+
+	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
+	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
+
+	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
+	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
+
+	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
+	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+
+	// Work on proximity scan
+	conf = &config.HCCycleScan[ProximityScan]
+
+	conf.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
+	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
+	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
+
+	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
+	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
+
+	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
+
+	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
+	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+
+	config.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
+
+	config.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
+	if waitMode == "static" {
+		config.BlockProposalWaitMode = BlockProposalWaitStatic
+	} else if waitMode == "dynamic" {
+		config.BlockProposalWaitMode = BlockProposalWaitDynamic
+	}
+	config.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
+
+	config.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
+	config.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
+	config.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
+	if config.SmartContractTimeout == 0 {
+		config.SmartContractTimeout = DefaultSmartContractTimeout
+	}
+	config.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
+	config.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
+	config.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
 }
