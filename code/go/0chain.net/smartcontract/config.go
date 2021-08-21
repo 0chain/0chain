@@ -2,6 +2,7 @@ package smartcontract
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -40,6 +41,14 @@ func (im *StringMap) Decode(input []byte) error {
 func (im *StringMap) Encode() []byte {
 	buff, _ := json.Marshal(im)
 	return buff
+}
+
+func InterfaceMapToStringMap(in map[string]interface{}) map[string]string {
+	out := make(map[string]string)
+	for key, value := range in {
+		out[key] = fmt.Sprintf("%v", value)
+	}
+	return out
 }
 
 func StringToInterface(input string, iType ConfigType) (interface{}, error) {

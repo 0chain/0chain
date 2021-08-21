@@ -125,6 +125,14 @@ func getGlobalsFromViper() map[string]interface{} {
 	return globals
 }
 
+func getStringMapFromViper() map[string]string {
+	globals := make(map[string]string)
+	for key := range SettingTypes {
+		globals[key] = fmt.Sprintf("%v", viper.Get(key))
+	}
+	return globals
+}
+
 func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
 	val, err := balances.GetTrieNode(GLOBALS_KEY)
 	if err != nil {
