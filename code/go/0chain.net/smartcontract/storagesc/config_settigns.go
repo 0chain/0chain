@@ -1,9 +1,11 @@
 package storagesc
 
 import (
-	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -12,7 +14,8 @@ import (
 )
 
 type Setting int
-type ConfigType int
+
+const x10 = 10 * 1000 * 1000 * 1000
 
 const (
 	MaxMint Setting = iota
@@ -70,23 +73,6 @@ const (
 	ExposeMpt
 
 	NumberOfSettings
-)
-
-const (
-	Int ConfigType = iota
-	StateBalance
-	Int64
-	Float64
-	Duration
-	Boolean
-
-	NumberOfTypes
-)
-
-var (
-	ConfitTypeName = []string{
-		"int", "state.Balance", "int64", "float64", "time.duration", "bool",
-	}
 )
 
 var (
@@ -148,86 +134,69 @@ var (
 
 	Settings = map[string]struct {
 		setting    Setting
-		configType ConfigType
+		configType smartcontract.ConfigType
 	}{
-		"max_mint":                      {MaxMint, StateBalance},
-		"time_unit":                     {TimeUnit, Duration},
-		"min_alloc_size":                {MinAllocSize, Int64},
-		"min_alloc_duration":            {MinAllocDuration, Duration},
-		"max_challenge_completion_time": {MaxChallengeCompletionTime, Duration},
-		"min_offer_duration":            {MinOfferDuration, Duration},
-		"min_blobber_capacity":          {MinBlobberCapacity, Int64},
+		"max_mint":                      {MaxMint, smartcontract.StateBalance},
+		"time_unit":                     {TimeUnit, smartcontract.Duration},
+		"min_alloc_size":                {MinAllocSize, smartcontract.Int64},
+		"min_alloc_duration":            {MinAllocDuration, smartcontract.Duration},
+		"max_challenge_completion_time": {MaxChallengeCompletionTime, smartcontract.Duration},
+		"min_offer_duration":            {MinOfferDuration, smartcontract.Duration},
+		"min_blobber_capacity":          {MinBlobberCapacity, smartcontract.Int64},
 
-		"readpool.min_lock":        {ReadPoolMinLock, Int64},
-		"readpool.min_lock_period": {ReadPoolMinLockPeriod, Duration},
-		"readpool.max_lock_period": {ReadPoolMaxLockPeriod, Duration},
+		"readpool.min_lock":        {ReadPoolMinLock, smartcontract.Int64},
+		"readpool.min_lock_period": {ReadPoolMinLockPeriod, smartcontract.Duration},
+		"readpool.max_lock_period": {ReadPoolMaxLockPeriod, smartcontract.Duration},
 
-		"writepool.min_lock":        {WritePoolMinLock, Int64},
-		"writepool.min_lock_period": {WritePoolMinLockPeriod, Duration},
-		"writepool.max_lock_period": {WritePoolMaxLockPeriod, Duration},
+		"writepool.min_lock":        {WritePoolMinLock, smartcontract.Int64},
+		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
+		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock":          {StakePoolMinLock, Int64},
-		"stakepool.interest_rate":     {StakePoolInterestRate, Float64},
-		"stakepool.interest_interval": {StakePoolInterestInterval, Duration},
+		"stakepool.min_lock":          {StakePoolMinLock, smartcontract.Int64},
+		"stakepool.interest_rate":     {StakePoolInterestRate, smartcontract.Float64},
+		"stakepool.interest_interval": {StakePoolInterestInterval, smartcontract.Duration},
 
-		"max_total_free_allocation":      {MaxTotalFreeAllocation, StateBalance},
-		"max_individual_free_allocation": {MaxIndividualFreeAllocation, StateBalance},
+		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.StateBalance},
+		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.StateBalance},
 
-		"free_allocation_settings.data_shards":                   {FreeAllocationDataShards, Int},
-		"free_allocation_settings.parity_shards":                 {FreeAllocationParityShards, Int},
-		"free_allocation_settings.size":                          {FreeAllocationSize, Int64},
-		"free_allocation_settings.duration":                      {FreeAllocationDuration, Duration},
-		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, StateBalance},
-		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, StateBalance},
-		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, StateBalance},
-		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, StateBalance},
-		"free_allocation_settings.max_challenge_completion_time": {FreeAllocationMaxChallengeCompletionTime, Duration},
-		"free_allocation_settings.read_pool_fraction":            {FreeAllocationReadPoolFraction, Float64},
+		"free_allocation_settings.data_shards":                   {FreeAllocationDataShards, smartcontract.Int},
+		"free_allocation_settings.parity_shards":                 {FreeAllocationParityShards, smartcontract.Int},
+		"free_allocation_settings.size":                          {FreeAllocationSize, smartcontract.Int64},
+		"free_allocation_settings.duration":                      {FreeAllocationDuration, smartcontract.Duration},
+		"free_allocation_settings.read_price_range.min":          {FreeAllocationReadPriceRangeMin, smartcontract.StateBalance},
+		"free_allocation_settings.read_price_range.max":          {FreeAllocationReadPriceRangeMax, smartcontract.StateBalance},
+		"free_allocation_settings.write_price_range.min":         {FreeAllocationWritePriceRangeMin, smartcontract.StateBalance},
+		"free_allocation_settings.write_price_range.max":         {FreeAllocationWritePriceRangeMax, smartcontract.StateBalance},
+		"free_allocation_settings.max_challenge_completion_time": {FreeAllocationMaxChallengeCompletionTime, smartcontract.Duration},
+		"free_allocation_settings.read_pool_fraction":            {FreeAllocationReadPoolFraction, smartcontract.Float64},
 
-		"validator_reward":                     {ValidatorReward, Float64},
-		"blobber_slash":                        {BlobberSlash, Float64},
-		"max_read_price":                       {MaxReadPrice, StateBalance},
-		"max_write_price":                      {MaxWritePrice, StateBalance},
-		"failed_challenges_to_cancel":          {FailedChallengesToCancel, Int},
-		"failed_challenges_to_revoke_min_lock": {FailedChallengesToRevokeMinLock, Int},
-		"challenge_enabled":                    {ChallengeEnabled, Boolean},
-		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, Float64},
-		"max_challenges_per_generation":        {MaxChallengesPerGeneration, Int},
-		"max_delegates":                        {MaxDelegates, Int},
+		"validator_reward":                     {ValidatorReward, smartcontract.Float64},
+		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
+		"max_read_price":                       {MaxReadPrice, smartcontract.StateBalance},
+		"max_write_price":                      {MaxWritePrice, smartcontract.StateBalance},
+		"failed_challenges_to_cancel":          {FailedChallengesToCancel, smartcontract.Int},
+		"failed_challenges_to_revoke_min_lock": {FailedChallengesToRevokeMinLock, smartcontract.Int},
+		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
+		"challenge_rate_per_mb_min":            {ChallengeGenerationRate, smartcontract.Float64},
+		"max_challenges_per_generation":        {MaxChallengesPerGeneration, smartcontract.Int},
+		"max_delegates":                        {MaxDelegates, smartcontract.Int},
 
-		"block_reward.block_reward":           {BlockRewardBlockReward, StateBalance},
-		"block_reward.qualifying_stake":       {BlockRewardQualifyingStake, StateBalance},
-		"block_reward.sharder_ratio":          {BlockRewardSharderWeight, Float64},
-		"block_reward.miner_ratio":            {BlockRewardMinerWeight, Float64},
-		"block_reward.blobber_capacity_ratio": {BlockRewardBlobberCapacityWeight, Float64},
-		"block_reward.blobber_usage_ratio":    {BlockRewardBlobberUsageWeight, Float64},
+		"block_reward.block_reward":           {BlockRewardBlockReward, smartcontract.StateBalance},
+		"block_reward.qualifying_stake":       {BlockRewardQualifyingStake, smartcontract.StateBalance},
+		"block_reward.sharder_ratio":          {BlockRewardSharderWeight, smartcontract.Float64},
+		"block_reward.miner_ratio":            {BlockRewardMinerWeight, smartcontract.Float64},
+		"block_reward.blobber_capacity_ratio": {BlockRewardBlobberCapacityWeight, smartcontract.Float64},
+		"block_reward.blobber_usage_ratio":    {BlockRewardBlobberUsageWeight, smartcontract.Float64},
 
-		"expose_mpt": {ExposeMpt, Boolean},
+		"expose_mpt": {ExposeMpt, smartcontract.Boolean},
 	}
 )
 
-type inputMap struct {
-	Fields map[string]interface{} `json:"fields"`
-}
-
-func (im *inputMap) Decode(input []byte) error {
-	err := json.Unmarshal(input, im)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (im *inputMap) Encode() []byte {
-	buff, _ := json.Marshal(im)
-	return buff
-}
-
-func (conf *scConfig) getConfigMap() inputMap {
-	var im inputMap
-	im.Fields = make(map[string]interface{})
+func (conf *scConfig) getConfigMap() smartcontract.StringMap {
+	var im smartcontract.StringMap
+	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		im.Fields[key] = conf.get(info.setting)
+		im.Fields[key] = fmt.Sprintf("%v", conf.get(info.setting))
 	}
 	return im
 }
@@ -409,48 +378,47 @@ func (conf *scConfig) setBoolean(key string, change bool) {
 	}
 }
 
-func (conf *scConfig) set(key string, change interface{}) error {
+func (conf *scConfig) set(key string, change string) error {
 	switch Settings[key].configType {
-	case Int:
-		if fChange, ok := change.(float64); ok {
-			conf.setInt(key, int(fChange))
+	case smartcontract.Int:
+		if value, err := strconv.Atoi(change); err == nil {
+			conf.setInt(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-	case StateBalance:
-		if fChange, ok := change.(float64); ok {
-			conf.setBalance(key, state.Balance(fChange))
+	case smartcontract.StateBalance:
+		if value, err := strconv.ParseFloat(change, 64); err == nil {
+			conf.setBalance(key, state.Balance(value*x10))
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
-	case Int64:
-		if fChange, ok := change.(float64); ok {
-			conf.setInt64(key, int64(fChange))
+	case smartcontract.Int64:
+		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
+			conf.setInt64(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
-	case Float64:
-		if fChange, ok := change.(float64); ok {
-			conf.setFloat64(key, fChange)
+	case smartcontract.Float64:
+		if value, err := strconv.ParseFloat(change, 64); err == nil {
+			conf.setFloat64(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
-	case Duration:
-		if fChange, ok := change.(float64); ok {
-			conf.setDuration(key, time.Duration(fChange))
+	case smartcontract.Duration:
+		if value, err := time.ParseDuration(change); err == nil {
+			conf.setDuration(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
 		}
-	case Boolean:
-		if bChange, ok := change.(bool); ok {
-			conf.setBoolean(key, bChange)
+	case smartcontract.Boolean:
+		if value, err := strconv.ParseBool(change); err == nil {
+			conf.setBoolean(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not a boolean", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
 	default:
-		panic("unsupported type setting " + ConfitTypeName[Settings[key].configType])
+		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
 	}
-
 	return nil
 }
 
@@ -551,7 +519,7 @@ func (conf *scConfig) get(key Setting) interface{} {
 	}
 }
 
-func (conf *scConfig) update(changes inputMap) error {
+func (conf *scConfig) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		if err := conf.set(key, value); err != nil {
 			return err
@@ -578,7 +546,7 @@ func (ssc *StorageSmartContract) updateSettings(
 			"can't get config: "+err.Error())
 	}
 
-	var changes inputMap
+	var changes smartcontract.StringMap
 	if err = changes.Decode(input); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

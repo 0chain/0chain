@@ -1,8 +1,10 @@
 package storagesc
 
 import (
+	"fmt"
 	"testing"
-	"time"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
@@ -15,7 +17,6 @@ import (
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
-	require.Len(t, ConfitTypeName, int(NumberOfTypes))
 
 	for _, name := range SettingName {
 		require.EqualValues(t, name, SettingName[Settings[name].setting])
@@ -32,7 +33,7 @@ func TestUpdateConfig(t *testing.T) {
 
 	type parameters struct {
 		client       string
-		inputMap     map[string]interface{}
+		inputMap     map[string]string
 		TargetConfig scConfig
 	}
 
@@ -51,9 +52,8 @@ func TestUpdateConfig(t *testing.T) {
 			scConfigKey(ssc.ID),
 			mock.MatchedBy(func(conf *scConfig) bool {
 				for key, value := range p.inputMap {
-					if getConfField(*conf, key) != value {
-						return false
-					}
+					var setting interface{} = getConfField(*conf, key)
+					fmt.Println("setting", setting, "value", value)
 				}
 				return true
 			}),
@@ -62,7 +62,7 @@ func TestUpdateConfig(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&inputMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -81,60 +81,60 @@ func TestUpdateConfig(t *testing.T) {
 			title: "all_settigns",
 			parameters: parameters{
 				client: owner,
-				inputMap: map[string]interface{}{
-					"max_mint":                      zcnToBalance(1500000.0),
-					"time_unit":                     720 * time.Hour,
-					"min_alloc_size":                int64(1024),
-					"min_alloc_duration":            5 * time.Minute,
-					"max_challenge_completion_time": 30 * time.Minute,
-					"min_offer_duration":            10 * time.Hour,
-					"min_blobber_capacity":          int64(1024),
+				inputMap: map[string]string{
+					"max_mint":                      "1500000.02",
+					"time_unit":                     "720h",
+					"min_alloc_size":                "1024",
+					"min_alloc_duration":            "5m",
+					"max_challenge_completion_time": "30m",
+					"min_offer_duration":            "10h",
+					"min_blobber_capacity":          "1024",
 
-					"readpool.min_lock":        int64(10),
-					"readpool.min_lock_period": 1 * time.Hour,
-					"readpool.max_lock_period": 8760 * time.Hour,
+					"readpool.min_lock":        "10",
+					"readpool.min_lock_period": "1h",
+					"readpool.max_lock_period": "8760h",
 
-					"writepool.min_lock":        int64(10),
-					"writepool.min_lock_period": 2 * time.Minute,
-					"writepool.max_lock_period": 8760 * time.Hour,
+					"writepool.min_lock":        "10",
+					"writepool.min_lock_period": "2m",
+					"writepool.max_lock_period": "8760h",
 
-					"stakepool.min_lock":          int64(10),
-					"stakepool.interest_rate":     float64(0.0),
-					"stakepool.interest_interval": 1 * time.Minute,
+					"stakepool.min_lock":          "10",
+					"stakepool.interest_rate":     "0.0",
+					"stakepool.interest_interval": "1m",
 
-					"max_total_free_allocation":      zcnToBalance(10000),
-					"max_individual_free_allocation": zcnToBalance(100),
+					"max_total_free_allocation":      "10000",
+					"max_individual_free_allocation": "100",
 
-					"free_allocation_settings.data_shards":                   int(10),
-					"free_allocation_settings.parity_shards":                 int(5),
-					"free_allocation_settings.size":                          int64(10000000000),
-					"free_allocation_settings.duration":                      5000 * time.Hour,
-					"free_allocation_settings.read_price_range.min":          zcnToBalance(0.0),
-					"free_allocation_settings.read_price_range.max":          zcnToBalance(0.04),
-					"free_allocation_settings.write_price_range.min":         zcnToBalance(0.0),
-					"free_allocation_settings.write_price_range.max":         zcnToBalance(0.1),
-					"free_allocation_settings.max_challenge_completion_time": 1 * time.Minute,
-					"free_allocation_settings.read_pool_fraction":            float64(0.2),
+					"free_allocation_settings.data_shards":                   "10",
+					"free_allocation_settings.parity_shards":                 "5",
+					"free_allocation_settings.size":                          "10000000000",
+					"free_allocation_settings.duration":                      "5000h",
+					"free_allocation_settings.read_price_range.min":          "0.0",
+					"free_allocation_settings.read_price_range.max":          "0.04",
+					"free_allocation_settings.write_price_range.min":         "0.0",
+					"free_allocation_settings.write_price_range.max":         "0.1",
+					"free_allocation_settings.max_challenge_completion_time": "1m",
+					"free_allocation_settings.read_pool_fraction":            "0.2",
 
-					"validator_reward":                     float64(0.025),
-					"blobber_slash":                        float64(0.1),
-					"max_read_price":                       zcnToBalance(100),
-					"max_write_price":                      zcnToBalance(100),
-					"failed_challenges_to_cancel":          int(20),
-					"failed_challenges_to_revoke_min_lock": int(10),
-					"challenge_enabled":                    true,
-					"challenge_rate_per_mb_min":            float64(1.0),
-					"max_challenges_per_generation":        int(100),
-					"max_delegates":                        int(100),
+					"validator_reward":                     "0.025",
+					"blobber_slash":                        "0.1",
+					"max_read_price":                       "100",
+					"max_write_price":                      "100",
+					"failed_challenges_to_cancel":          "20",
+					"failed_challenges_to_revoke_min_lock": "0",
+					"challenge_enabled":                    "true",
+					"challenge_rate_per_mb_min":            "1.0",
+					"max_challenges_per_generation":        "100",
+					"max_delegates":                        "100",
 
-					"block_reward.block_reward":           zcnToBalance(1000),
-					"block_reward.qualifying_stake":       zcnToBalance(1),
-					"block_reward.sharder_ratio":          float64(80),
-					"block_reward.miner_ratio":            float64(20),
-					"block_reward.blobber_capacity_ratio": float64(20),
-					"block_reward.blobber_usage_ratio":    float64(80),
+					"block_reward.block_reward":           "1000",
+					"block_reward.qualifying_stake":       "1",
+					"block_reward.sharder_ratio":          "80.0",
+					"block_reward.miner_ratio":            "20.0",
+					"block_reward.blobber_capacity_ratio": "20.0",
+					"block_reward.blobber_usage_ratio":    "80.0",
 
-					"expose_mpt": false,
+					"expose_mpt": "false",
 				},
 			},
 		},
