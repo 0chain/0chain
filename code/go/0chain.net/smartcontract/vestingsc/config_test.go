@@ -3,6 +3,7 @@ package vestingsc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -76,17 +77,6 @@ func configureConfig() (configured *config) {
 	}
 }
 
-func Test_getConfig(t *testing.T) {
-	var (
-		vsc        = newTestVestingSC()
-		balances   = newTestBalances()
-		configured = configureConfig()
-		conf, err  = vsc.getConfig(balances)
-	)
-	require.NoError(t, err)
-	require.EqualValues(t, configured, conf)
-}
-
 func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 	var (
 		vsc        = newTestVestingSC()
@@ -135,8 +125,8 @@ func TestUpdateConfig(t *testing.T) {
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
-
-		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(&config{}, nil).Once()
+		prevConf := configureConfig()
+		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(prevConf, nil).Once()
 		var conf config
 		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
@@ -155,7 +145,7 @@ func TestUpdateConfig(t *testing.T) {
 		if value, ok := p.input[Settings[MaxDescriptionLength]]; ok {
 			conf.MaxDescriptionLength, err = strconv.Atoi(value)
 		}
-
+		fmt.Println("setExpectations conf", conf)
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
@@ -189,15 +179,6 @@ func TestUpdateConfig(t *testing.T) {
 			},
 		},
 		{
-			title: "ok_1",
-			parameters: parameters{
-				client: owner,
-				input: map[string]string{
-					Settings[MaxDuration]: "1h",
-				},
-			},
-		},
-		{
 			title: "not_owner",
 			parameters: parameters{
 				client: mockNotOwner,
@@ -220,7 +201,7 @@ func TestUpdateConfig(t *testing.T) {
 			},
 			want: want{
 				error: true,
-				msg:   "update_config: value mock bad data cannot be convereted to time.Duration, failing to set config key min_duration",
+				msg:   "update_config: value mock bad data cannot be converted to time.Duration, failing to set config key min_duration",
 			},
 		},
 		{

@@ -85,35 +85,35 @@ func (conf *config) update(changes *smartcontract.StringMap) error {
 		switch key {
 		case Settings[MinLock]:
 			if sbValue, err := strconv.ParseFloat(value, 64); err != nil {
-				return fmt.Errorf("value %v cannot be convereted to state.Balance, "+
+				return fmt.Errorf("value %v cannot be converted to state.Balance, "+
 					"failing to set config key %s", value, key)
 			} else {
 				conf.MinLock = state.Balance(sbValue * 1e10)
 			}
 		case Settings[MinDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
-				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
 				conf.MinDuration = dValue
 			}
 		case Settings[MaxDuration]:
 			if dValue, err := time.ParseDuration(value); err != nil {
-				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
 				conf.MaxDuration = dValue
 			}
 		case Settings[MaxDestinations]:
 			if iValue, err := strconv.Atoi(value); err != nil {
-				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
 				conf.MaxDestinations = iValue
 			}
 		case Settings[MaxDescriptionLength]:
 			if iValue, err := strconv.Atoi(value); err != nil {
-				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
 					"failing to set config key %s", value, key)
 			} else {
 				conf.MaxDescriptionLength = iValue
@@ -187,7 +187,6 @@ func (vsc *VestingSmartContract) getConfigBytes(
 
 // configurations from sc.yaml
 func getConfiguredConfig() (conf *config, err error) {
-
 	const prefix = "smart_contracts.vestingsc."
 
 	conf = new(config)
@@ -207,38 +206,26 @@ func getConfiguredConfig() (conf *config, err error) {
 	return
 }
 
-func (vsc *VestingSmartContract) setupConfig(
-	balances chainstate.StateContextI,
-) (conf *config, err error) {
-	if conf, err = getConfiguredConfig(); err != nil {
-		return
-	}
-	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
-}
-
 func (vsc *VestingSmartContract) getConfig(
 	balances chainstate.StateContextI,
 ) (conf *config, err error) {
 	var confb []byte
 	confb, err = vsc.getConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		conf, err = getConfiguredConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		conf = new(config)
+		if err = conf.Decode(confb); err != nil {
+			return nil, err
+		}
 	}
-
-	conf = new(config)
-
-	if err == util.ErrValueNotPresent {
-		return vsc.setupConfig(balances)
-	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, err
-	}
-	return
+	return conf, nil
 }
 
 //
@@ -252,7 +239,13 @@ func (vsc *VestingSmartContract) getConfigHandler(
 ) (interface{}, error) {
 	res, err := vsc.getConfig(balances)
 	if err != nil {
-		return nil, common.NewErrInternal("can't get config", err.Error())
+		if err != util.ErrValueNotPresent {
+			return nil, common.NewErrInternal("can't get config", err.Error())
+		}
+		res, err = getConfiguredConfig()
+		if err != nil {
+			return nil, common.NewErrInternal("can't read config from file", err.Error())
+		}
 	}
 	return res.getConfigMap(), nil
 }
