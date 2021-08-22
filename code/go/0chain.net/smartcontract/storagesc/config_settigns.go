@@ -196,7 +196,15 @@ func (conf *scConfig) getConfigMap() smartcontract.StringMap {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		im.Fields[key] = fmt.Sprintf("%v", conf.get(info.setting))
+		iSetting := conf.get(info.setting)
+		if info.configType == smartcontract.StateBalance {
+			sbSetting, ok := iSetting.(state.Balance)
+			if !ok {
+				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
+			}
+			iSetting = float64(sbSetting) / x10
+		}
+		im.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
 	return im
 }
