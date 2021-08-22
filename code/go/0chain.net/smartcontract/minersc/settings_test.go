@@ -1,11 +1,17 @@
 package minersc_test
 
 import (
+	"fmt"
+	"strconv"
 	"testing"
+	"time"
+
+	chainstate "0chain.net/chaincore/chain/state"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/state"
 
-	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -15,10 +21,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const x10 float64 = 10 * 1000 * 1000 * 1000
+
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
-	require.Len(t, ConfitTypeName, int(NumberOfTypes))
 
 	for _, name := range SettingName {
 		require.EqualValues(t, name, SettingName[Settings[name].Setting])
@@ -36,7 +43,7 @@ func TestUpdateSettigns(t *testing.T) {
 
 	type parameters struct {
 		client   string
-		inputMap map[string]interface{}
+		inputMap map[string]string
 	}
 
 	setExpectations := func(t *testing.T, p parameters) args {
@@ -53,8 +60,75 @@ func TestUpdateSettigns(t *testing.T) {
 			GlobalNodeKey,
 			mock.MatchedBy(func(gn *GlobalNode) bool {
 				for key, value := range p.inputMap {
-					if gn.Get(Settings[key].Setting) != value {
-						return false
+					//if gn.Get(Settings[key].Setting) != value {
+					//	return false
+					//}
+
+					//var setting interface{} = getConfField(*conf, key)
+					var setting interface{} = gn.Get(Settings[key].Setting)
+					fmt.Println("setting", setting, "value", value)
+					switch Settings[key].ConfigType {
+					case smartcontract.Int:
+						{
+							expected, err := strconv.Atoi(value)
+							require.NoError(t, err)
+							actual, ok := setting.(int)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Int64:
+						{
+							expected, err := strconv.ParseInt(value, 10, 64)
+							require.NoError(t, err)
+							actual, ok := setting.(int64)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Float64:
+						{
+							expected, err := strconv.ParseFloat(value, 64)
+							require.NoError(t, err)
+							actual, ok := setting.(float64)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Boolean:
+						{
+							expected, err := strconv.ParseBool(value)
+							require.NoError(t, err)
+							actual, ok := setting.(bool)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Duration:
+						{
+							expected, err := time.ParseDuration(value)
+							require.NoError(t, err)
+							actual, ok := setting.(time.Duration)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.StateBalance:
+						{
+							expected, err := strconv.ParseFloat(value, 64)
+							expected = x10 * expected
+							require.NoError(t, err)
+							actual, ok := setting.(state.Balance)
+							require.True(t, ok)
+							if state.Balance(expected) != actual {
+								return false
+							}
+						}
 					}
 				}
 				return true
@@ -64,7 +138,7 @@ func TestUpdateSettigns(t *testing.T) {
 		return args{
 			msc:      msc,
 			txn:      txn,
-			input:    (&InputMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
 			gn:       &GlobalNode{},
 			balances: balances,
 		}
@@ -84,27 +158,27 @@ func TestUpdateSettigns(t *testing.T) {
 			title: "all_settigns",
 			parameters: parameters{
 				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
-				inputMap: map[string]interface{}{
-					"min_stake":              zcnToBalance(0.0),
-					"max_stake":              zcnToBalance(100),
-					"max_n":                  int(7),
-					"min_n":                  int(3),
-					"t_percent":              float64(0.66),
-					"k_percent":              float64(0.75),
-					"x_percent":              float64(0.70),
-					"max_s":                  int(2),
-					"min_s":                  int(1),
-					"max_delegates":          int(200),
-					"reward_round_frequency": int64(250),
-					"interest_rate":          float64(0.0),
-					"reward_rate":            float64(1.0),
-					"share_ratio":            float64(50),
-					"block_reward":           zcnToBalance(0.21),
-					"max_charge":             float64(0.5),
-					"epoch":                  int64(15000000),
-					"reward_decline_rate":    float64(0.1),
-					"interest_decline_rate":  float64(0.1),
-					"max_mint":               zcnToBalance(1500000.0),
+				inputMap: map[string]string{
+					"min_stake":              "0.0",
+					"max_stake":              "100",
+					"max_n":                  "7",
+					"min_n":                  "3",
+					"t_percent":              "0.66",
+					"k_percent":              "0.75",
+					"x_percent":              "0.70",
+					"max_s":                  "2",
+					"min_s":                  "1",
+					"max_delegates":          "200",
+					"reward_round_frequency": "64250",
+					"interest_rate":          "0.0",
+					"reward_rate":            "1.0",
+					"share_ratio":            "50",
+					"block_reward":           "021",
+					"max_charge":             "0.5",
+					"epoch":                  "6415000000",
+					"reward_decline_rate":    "0.1",
+					"interest_decline_rate":  "0.1",
+					"max_mint":               "1500000.0",
 				},
 			},
 		},

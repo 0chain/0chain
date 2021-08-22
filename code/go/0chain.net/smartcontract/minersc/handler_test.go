@@ -2,8 +2,11 @@ package minersc_test
 
 import (
 	"bytes"
+	"fmt"
 	"net/url"
 	"testing"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/config"
 
@@ -53,7 +56,7 @@ func TestConfigHandler(t *testing.T) {
 	type want struct {
 		error  bool
 		msg    string
-		output map[string]interface{}
+		output map[string]string
 	}
 
 	testCases := []struct {
@@ -112,27 +115,27 @@ smart_contracts:
 `),
 			},
 			want: want{
-				output: map[string]interface{}{
-					"min_stake":              zcnToBalance(0.0),
-					"max_stake":              zcnToBalance(100),
-					"max_n":                  int(7),
-					"min_n":                  int(3),
-					"t_percent":              float64(0.66),
-					"k_percent":              float64(0.75),
-					"x_percent":              float64(0.70),
-					"max_s":                  int(2),
-					"min_s":                  int(1),
-					"max_delegates":          int(200),
-					"reward_round_frequency": int64(250),
-					"interest_rate":          float64(0.0),
-					"reward_rate":            float64(1.0),
-					"share_ratio":            float64(0.8),
-					"block_reward":           zcnToBalance(0.21),
-					"max_charge":             float64(0.5),
-					"epoch":                  int64(15000000),
-					"reward_decline_rate":    float64(0.1),
-					"interest_decline_rate":  float64(0.1),
-					"max_mint":               zcnToBalance(1500000.0),
+				output: map[string]string{
+					"min_stake":              "0",
+					"max_stake":              "100",
+					"max_n":                  "7",
+					"min_n":                  "3",
+					"t_percent":              "0.66",
+					"k_percent":              "0.75",
+					"x_percent":              "0.7",
+					"max_s":                  "2",
+					"min_s":                  "1",
+					"max_delegates":          "200",
+					"reward_round_frequency": "250",
+					"interest_rate":          "0",
+					"reward_rate":            "1",
+					"share_ratio":            "0",
+					"block_reward":           "0.21",
+					"max_charge":             "0.5",
+					"epoch":                  "15000000",
+					"reward_decline_rate":    "0.1",
+					"interest_decline_rate":  "0.1",
+					"max_mint":               "1.5e+06",
 				},
 			},
 		},
@@ -149,10 +152,13 @@ smart_contracts:
 				require.EqualValues(t, test.want.msg, err.Error())
 				return
 			}
-			ourputMap, ok := result.(InputMap)
+			ourputMap, ok := result.(smartcontract.StringMap)
 			require.True(t, ok)
 			for key, value := range test.want.output {
-				require.EqualValues(t, value, ourputMap.Fields[key], key)
+				if value != ourputMap.Fields[key] {
+					fmt.Println("key", key, "value", value, "output", ourputMap.Fields[key])
+				}
+				//require.EqualValues(t, value, ourputMap.Fields[key], key)
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})

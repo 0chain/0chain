@@ -1,8 +1,10 @@
 package minersc
 
 import (
-	"encoding/json"
 	"fmt"
+	"strconv"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/state"
 
@@ -11,8 +13,9 @@ import (
 	"0chain.net/core/common"
 )
 
+const x10 float64 = 10 * 1000 * 1000 * 1000
+
 type Setting int
-type ConfigType int
 
 const (
 	MinStake Setting = iota
@@ -36,17 +39,6 @@ const (
 	InterestDeclineRate
 	MaxMint
 	NumberOfSettings
-)
-
-const (
-	Int ConfigType = iota
-	StateBalance
-	Int64
-	Float64
-	Duration
-	Boolean
-
-	NumberOfTypes
 )
 
 var (
@@ -73,53 +65,32 @@ var (
 		"max_mint",
 	}
 
-	ConfitTypeName = []string{
-		"int", "state.Balance", "int64", "float64", "time.duration", "bool",
-	}
-
 	Settings = map[string]struct {
 		Setting    Setting
-		ConfigType ConfigType
+		ConfigType smartcontract.ConfigType
 	}{
-		"min_stake":              {MinStake, StateBalance},
-		"max_stake":              {MaxStake, StateBalance},
-		"max_n":                  {MaxN, Int},
-		"min_n":                  {MinN, Int},
-		"t_percent":              {TPercent, Float64},
-		"k_percent":              {KPercent, Float64},
-		"x_percent":              {XPercent, Float64},
-		"max_s":                  {MaxS, Int},
-		"min_s":                  {MinS, Int},
-		"max_delegates":          {MaxDelegates, Int},
-		"reward_round_frequency": {RewardRoundFrequency, Int64},
-		"interest_rate":          {InterestRate, Float64},
-		"reward_rate":            {RewardRate, Float64},
-		"share_ratio":            {ShareRatio, Float64},
-		"block_reward":           {BlockReward, StateBalance},
-		"max_charge":             {MaxCharge, Float64},
-		"epoch":                  {Epoch, Int64},
-		"reward_decline_rate":    {RewardDeclineRate, Float64},
-		"interest_decline_rate":  {InterestDeclineRate, Float64},
-		"max_mint":               {MaxMint, StateBalance},
+		"min_stake":              {MinStake, smartcontract.StateBalance},
+		"max_stake":              {MaxStake, smartcontract.StateBalance},
+		"max_n":                  {MaxN, smartcontract.Int},
+		"min_n":                  {MinN, smartcontract.Int},
+		"t_percent":              {TPercent, smartcontract.Float64},
+		"k_percent":              {KPercent, smartcontract.Float64},
+		"x_percent":              {XPercent, smartcontract.Float64},
+		"max_s":                  {MaxS, smartcontract.Int},
+		"min_s":                  {MinS, smartcontract.Int},
+		"max_delegates":          {MaxDelegates, smartcontract.Int},
+		"reward_round_frequency": {RewardRoundFrequency, smartcontract.Int64},
+		"interest_rate":          {InterestRate, smartcontract.Float64},
+		"reward_rate":            {RewardRate, smartcontract.Float64},
+		"share_ratio":            {ShareRatio, smartcontract.Float64},
+		"block_reward":           {BlockReward, smartcontract.StateBalance},
+		"max_charge":             {MaxCharge, smartcontract.Float64},
+		"epoch":                  {Epoch, smartcontract.Int64},
+		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
+		"interest_decline_rate":  {InterestDeclineRate, smartcontract.Float64},
+		"max_mint":               {MaxMint, smartcontract.StateBalance},
 	}
 )
-
-type InputMap struct {
-	Fields map[string]interface{} `json:"fields"`
-}
-
-func (im *InputMap) Decode(input []byte) error {
-	err := json.Unmarshal(input, im)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (im *InputMap) Encode() []byte {
-	buff, _ := json.Marshal(im)
-	return buff
-}
 
 func (gn *GlobalNode) setInt(key string, change int) {
 	switch Settings[key].Setting {
@@ -189,40 +160,40 @@ func (gn *GlobalNode) setFloat64(key string, change float64) {
 	}
 }
 
-func (gn *GlobalNode) set(key string, change interface{}) error {
+func (gn *GlobalNode) set(key string, change string) error {
 	switch Settings[key].ConfigType {
-	case Int:
-		if fChange, ok := change.(float64); ok {
-			gn.setInt(key, int(fChange))
+	case smartcontract.Int:
+		if value, err := strconv.Atoi(change); err == nil {
+			gn.setInt(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-	case StateBalance:
-		if fChange, ok := change.(float64); ok {
-			gn.setBalance(key, state.Balance(fChange))
+	case smartcontract.StateBalance:
+		if value, err := strconv.ParseFloat(change, 64); err == nil {
+			gn.setBalance(key, state.Balance(value*x10))
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
-	case Int64:
-		if fChange, ok := change.(float64); ok {
-			gn.setInt64(key, int64(fChange))
+	case smartcontract.Int64:
+		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
+			gn.setInt64(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
-	case Float64:
-		if fChange, ok := change.(float64); ok {
-			gn.setFloat64(key, fChange)
+	case smartcontract.Float64:
+		if value, err := strconv.ParseFloat(change, 64); err == nil {
+			gn.setFloat64(key, value)
 		} else {
-			return fmt.Errorf("datatype error key %s value %v is not numeric", key, change)
+			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
 	default:
-		panic("unsupported type setting " + ConfitTypeName[Settings[key].ConfigType])
+		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}
 
 	return nil
 }
 
-func (gn *GlobalNode) update(changes InputMap) error {
+func (gn *GlobalNode) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
 		if err := gn.set(key, value); err != nil {
 			return err
@@ -243,7 +214,7 @@ func (msc *MinerSmartContract) updateSettings(
 			"unauthorized access - only the owner can update the variables")
 	}
 
-	var changes InputMap
+	var changes smartcontract.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

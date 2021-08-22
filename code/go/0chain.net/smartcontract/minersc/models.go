@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/smartcontract"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -292,11 +294,19 @@ func (gn *GlobalNode) validate() error {
 	return nil
 }
 
-func (gn *GlobalNode) getConfigMap() InputMap {
-	var im InputMap
-	im.Fields = make(map[string]interface{})
+func (gn *GlobalNode) getConfigMap() smartcontract.StringMap {
+	var im smartcontract.StringMap
+	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		im.Fields[key] = gn.Get(info.Setting)
+		iSetting := gn.Get(info.Setting)
+		if info.ConfigType == smartcontract.StateBalance {
+			sbSetting, ok := iSetting.(state.Balance)
+			if !ok {
+				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
+			}
+			iSetting = float64(sbSetting) / x10
+		}
+		im.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
 	return im
 }
