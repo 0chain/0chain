@@ -1,16 +1,19 @@
 package vestingsc
 
 import (
+	"context"
+	"encoding/json"
+	"strconv"
+	"testing"
+	"time"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"context"
-	"encoding/json"
+	"0chain.net/smartcontract"
 	"github.com/stretchr/testify/mock"
-	"testing"
-	"time"
 
 	configpkg "0chain.net/chaincore/config"
 
@@ -85,7 +88,6 @@ func Test_getConfig(t *testing.T) {
 }
 
 func TestVestingSmartContract_getConfigHandler(t *testing.T) {
-
 	var (
 		vsc        = newTestVestingSC()
 		balances   = newTestBalances()
@@ -94,7 +96,7 @@ func TestVestingSmartContract_getConfigHandler(t *testing.T) {
 		resp, err  = vsc.getConfigHandler(ctx, nil, balances)
 	)
 	require.NoError(t, err)
-	require.EqualValues(t, configured, resp)
+	require.EqualValues(t, configured.getConfigMap(), resp)
 }
 
 func TestUpdateConfig(t *testing.T) {
@@ -112,7 +114,7 @@ func TestUpdateConfig(t *testing.T) {
 
 	type parameters struct {
 		client string
-		input  map[string]interface{}
+		input  map[string]string
 	}
 
 	type want struct {
@@ -128,7 +130,7 @@ func TestUpdateConfig(t *testing.T) {
 		var txn = &transaction.Transaction{
 			ClientID: p.client,
 		}
-		var inputObj = inputMap{
+		var inputObj = smartcontract.StringMap{
 			Fields: p.input,
 		}
 		input, err := json.Marshal(&inputObj)
@@ -136,26 +138,29 @@ func TestUpdateConfig(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(vsc.ID)).Return(&config{}, nil).Once()
 		var conf config
+		// not testing for error here to allow entering bad data
 		if value, ok := p.input[Settings[MinLock]]; ok {
-			conf.MinLock, ok = value.(state.Balance)
+			fValue, _ := strconv.ParseFloat(value, 64)
+			conf.MinLock = state.Balance(fValue * 1e10)
 		}
 		if value, ok := p.input[Settings[MinDuration]]; ok {
-			conf.MinDuration = value.(time.Duration)
+			conf.MinDuration, err = time.ParseDuration(value)
 		}
 		if value, ok := p.input[Settings[MaxDuration]]; ok {
-			conf.MaxDuration = value.(time.Duration)
+			conf.MaxDuration, err = time.ParseDuration(value)
 		}
 		if value, ok := p.input[Settings[MaxDestinations]]; ok {
-			conf.MaxDestinations = value.(int)
+			conf.MaxDestinations, err = strconv.Atoi(value)
 		}
 		if value, ok := p.input[Settings[MaxDescriptionLength]]; ok {
-			conf.MaxDescriptionLength = value.(int)
+			conf.MaxDescriptionLength, err = strconv.Atoi(value)
 		}
 
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(vsc.ID),
-			&conf).Return("", nil).Once()
+			&conf,
+		).Return("", nil).Once()
 
 		return args{
 			vsc:      vsc,
@@ -174,12 +179,12 @@ func TestUpdateConfig(t *testing.T) {
 			title: "ok_all",
 			parameters: parameters{
 				client: owner,
-				input: map[string]interface{}{
-					Settings[MinLock]:              state.Balance(5),
-					Settings[MinDuration]:          time.Second,
-					Settings[MaxDuration]:          time.Hour,
-					Settings[MaxDestinations]:      int(0),
-					Settings[MaxDescriptionLength]: int(17),
+				input: map[string]string{
+					Settings[MinLock]:              "5",
+					Settings[MinDuration]:          "1s",
+					Settings[MaxDuration]:          "1h",
+					Settings[MaxDestinations]:      "0",
+					Settings[MaxDescriptionLength]: "17",
 				},
 			},
 		},
@@ -187,8 +192,8 @@ func TestUpdateConfig(t *testing.T) {
 			title: "ok_1",
 			parameters: parameters{
 				client: owner,
-				input: map[string]interface{}{
-					Settings[MaxDuration]: time.Hour,
+				input: map[string]string{
+					Settings[MaxDuration]: "1h",
 				},
 			},
 		},
@@ -196,8 +201,8 @@ func TestUpdateConfig(t *testing.T) {
 			title: "not_owner",
 			parameters: parameters{
 				client: mockNotOwner,
-				input: map[string]interface{}{
-					Settings[MaxDuration]: time.Hour,
+				input: map[string]string{
+					Settings[MaxDuration]: "1h",
 				},
 			},
 			want: want{
@@ -209,21 +214,21 @@ func TestUpdateConfig(t *testing.T) {
 			title: "bad_data",
 			parameters: parameters{
 				client: owner,
-				input: map[string]interface{}{
-					mockBadKey: mockBadData,
+				input: map[string]string{
+					Settings[MinDuration]: mockBadData,
 				},
 			},
 			want: want{
 				error: true,
-				msg:   "update_config: value mock bad data is not of numeric type, failing to set config key mock bad key",
+				msg:   "update_config: value mock bad data cannot be convereted to time.Duration, failing to set config key min_duration",
 			},
 		},
 		{
 			title: "bad_key",
 			parameters: parameters{
 				client: owner,
-				input: map[string]interface{}{
-					mockBadKey: 1,
+				input: map[string]string{
+					mockBadKey: "1",
 				},
 			},
 			want: want{
@@ -241,7 +246,7 @@ func TestUpdateConfig(t *testing.T) {
 			_, err := args.vsc.updateConfig(args.txn, args.input, args.balances)
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
-				require.EqualValues(t, test.want.msg, err.Error())
+				require.EqualValues(t, test.want.msg, err.Error(), test)
 				return
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))

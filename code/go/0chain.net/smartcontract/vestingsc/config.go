@@ -1,16 +1,19 @@
 package vestingsc
 
 import (
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
+
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
@@ -77,52 +80,61 @@ func (conf *config) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
 
-func (conf *config) set(key string, value float64) error {
-	switch key {
-	case Settings[MinLock]:
-		conf.MinLock = state.Balance(value)
-	case Settings[MinDuration]:
-		conf.MinDuration = time.Duration(value)
-	case Settings[MaxDuration]:
-		conf.MaxDuration = time.Duration(value)
-	case Settings[MaxDestinations]:
-		conf.MaxDestinations = int(value)
-	case Settings[MaxDescriptionLength]:
-		conf.MaxDescriptionLength = int(value)
-	default:
-		return fmt.Errorf("config setting %s not found", key)
-	}
-	return nil
-}
-
-func (conf *config) update(changes *inputMap) error {
+func (conf *config) update(changes *smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
-		if fValue, ok := value.(float64); !ok {
-			return fmt.Errorf("value %v is not of numeric type, failing to set config key %s", value, key)
-		} else {
-			if err := conf.set(key, fValue); err != nil {
-				return err
+		switch key {
+		case Settings[MinLock]:
+			if sbValue, err := strconv.ParseFloat(value, 64); err != nil {
+				return fmt.Errorf("value %v cannot be convereted to state.Balance, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MinLock = state.Balance(sbValue * 1e10)
 			}
+		case Settings[MinDuration]:
+			if dValue, err := time.ParseDuration(value); err != nil {
+				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MinDuration = dValue
+			}
+		case Settings[MaxDuration]:
+			if dValue, err := time.ParseDuration(value); err != nil {
+				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDuration = dValue
+			}
+		case Settings[MaxDestinations]:
+			if iValue, err := strconv.Atoi(value); err != nil {
+				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDestinations = iValue
+			}
+		case Settings[MaxDescriptionLength]:
+			if iValue, err := strconv.Atoi(value); err != nil {
+				return fmt.Errorf("value %v cannot be convereted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDescriptionLength = iValue
+			}
+		default:
+			return fmt.Errorf("config setting %s not found", key)
 		}
 	}
 	return nil
 }
 
-type inputMap struct {
-	Fields map[string]interface{} `json:"fields"`
-}
-
-func (im *inputMap) Decode(input []byte) error {
-	err := json.Unmarshal(input, im)
-	if err != nil {
-		return err
+func (conf *config) getConfigMap() smartcontract.StringMap {
+	sMap := smartcontract.StringMap{
+		Fields: make(map[string]string),
 	}
-	return nil
-}
-
-func (im *inputMap) Encode() []byte {
-	buff, _ := json.Marshal(im)
-	return buff
+	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(conf.MinLock)/1e10)
+	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", conf.MinDuration)
+	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", conf.MaxDuration)
+	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", conf.MaxDestinations)
+	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", conf.MaxDescriptionLength)
+	return sMap
 }
 
 func (vsc *VestingSmartContract) updateConfig(
@@ -141,7 +153,7 @@ func (vsc *VestingSmartContract) updateConfig(
 			"can't get config: "+err.Error())
 	}
 
-	update := &inputMap{}
+	update := &smartcontract.StringMap{}
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
 	}
@@ -242,5 +254,5 @@ func (vsc *VestingSmartContract) getConfigHandler(
 	if err != nil {
 		return nil, common.NewErrInternal("can't get config", err.Error())
 	}
-	return res, nil
+	return res.getConfigMap(), nil
 }
