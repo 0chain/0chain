@@ -2,7 +2,11 @@ package storagesc
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
+	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/smartcontract"
 
@@ -54,6 +58,69 @@ func TestUpdateConfig(t *testing.T) {
 				for key, value := range p.inputMap {
 					var setting interface{} = getConfField(*conf, key)
 					fmt.Println("setting", setting, "value", value)
+					switch Settings[key].configType {
+					case smartcontract.Int:
+						{
+							expected, err := strconv.Atoi(value)
+							require.NoError(t, err)
+							actual, ok := setting.(int)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Int64:
+						{
+							expected, err := strconv.ParseInt(value, 10, 64)
+							require.NoError(t, err)
+							actual, ok := setting.(int64)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Float64:
+						{
+							expected, err := strconv.ParseFloat(value, 64)
+							require.NoError(t, err)
+							actual, ok := setting.(float64)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Boolean:
+						{
+							expected, err := strconv.ParseBool(value)
+							require.NoError(t, err)
+							actual, ok := setting.(bool)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.Duration:
+						{
+							expected, err := time.ParseDuration(value)
+							require.NoError(t, err)
+							actual, ok := setting.(time.Duration)
+							require.True(t, ok)
+							if expected != actual {
+								return false
+							}
+						}
+					case smartcontract.StateBalance:
+						{
+							expected, err := strconv.ParseFloat(value, 64)
+							expected = x10 * expected
+							require.NoError(t, err)
+							actual, ok := setting.(state.Balance)
+							require.True(t, ok)
+							if state.Balance(expected) != actual {
+								return false
+							}
+						}
+					}
 				}
 				return true
 			}),
