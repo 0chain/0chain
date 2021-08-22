@@ -74,22 +74,25 @@ func (fc *FaucetSmartContract) getConfigHandler(
 	balances c_state.StateContextI,
 ) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
-
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("get config handler", err.Error())
 	}
-	if gn.FaucetConfig == nil {
-		gn.FaucetConfig = getConfig()
+
+	var faucetConfig *FaucetConfig
+	if gn == nil || gn.FaucetConfig == nil {
+		faucetConfig = getConfig()
+	} else {
+		faucetConfig = gn.FaucetConfig
 	}
 
-	return inputMap{
-		Fields: map[string]interface{}{
-			Settings[PourAmount]:      gn.FaucetConfig.PourAmount,
-			Settings[MaxPourAmount]:   gn.FaucetConfig.MaxPourAmount,
-			Settings[PeriodicLimit]:   gn.FaucetConfig.PeriodicLimit,
-			Settings[GlobalLimit]:     gn.FaucetConfig.GlobalLimit,
-			Settings[IndividualReset]: gn.FaucetConfig.IndividualReset,
-			Settings[GlobalReset]:     gn.FaucetConfig.GlobalReset,
+	return smartcontract.StringMap{
+		Fields: map[string]string{
+			Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
+			Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
+			Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
+			Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+			Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
+			Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
 		},
 	}, nil
 }

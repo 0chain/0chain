@@ -15,6 +15,7 @@ import (
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	sc "0chain.net/smartcontract"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -92,36 +93,24 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	return true, nil
 }
 
-func (fc *FaucetSmartContract) updateSettings(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) updateSettings(
+	t *transaction.Transaction,
+	inputData []byte,
+	balances c_state.StateContextI,
+	gn *GlobalNode,
+) (string, error) {
 	if t.ClientID != owner {
 		return "", common.NewError("update_settings", "only the owner can update the limits")
 	}
 
-	var im inputMap
-	err := im.Decode(inputData)
+	var input sc.StringMap
+	err := input.Decode(inputData)
 	if err != nil {
 		return "", common.NewError("update_settings", "limit request not formated correctly")
 	}
 
-	for key, value := range im.Fields {
-		fValue, ok := value.(float64)
-		if !ok {
-			return "", common.NewErrorf("update_settings", "value %v for key %s is not numeric", value, key)
-		}
-		switch key {
-		case Settings[PourAmount]:
-			gn.PourAmount = state.Balance(fValue)
-		case Settings[MaxPourAmount]:
-			gn.MaxPourAmount = state.Balance(fValue)
-		case Settings[PeriodicLimit]:
-			gn.PeriodicLimit = state.Balance(fValue)
-		case Settings[GlobalLimit]:
-			gn.GlobalLimit = state.Balance(fValue)
-		case Settings[IndividualReset]:
-			gn.IndividualReset = time.Duration(fValue)
-		case Settings[GlobalReset]:
-			gn.GlobalReset = time.Duration(fValue)
-		}
+	if err := gn.updateConfig(input.Fields); err != nil {
+		return "", common.NewError("update_settings", err.Error())
 	}
 
 	if err = gn.validate(); err != nil {
