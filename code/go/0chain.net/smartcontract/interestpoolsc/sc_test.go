@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract"
+
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/chain/state"
@@ -477,12 +479,12 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			args: args{
 				t:  testTxn(owner, 100),
 				gn: testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5),
-				inputData: (&inputMap{
-					Fields: map[string]interface{}{
-						Settings[MinLock]:       bState.Balance(30),
-						Settings[Apr]:           float64(40.0),
-						Settings[MinLockPeriod]: time.Duration(10),
-						Settings[MaxMint]:       bState.Balance(10),
+				inputData: (&smartcontract.StringMap{
+					Fields: map[string]string{
+						Settings[MinLock]:       "30",
+						Settings[Apr]:           "40.0",
+						Settings[MinLockPeriod]: "10m",
+						Settings[MaxMint]:       "10",
 					},
 				}).Encode(),
 				balances: testBalance("", 0),
@@ -746,13 +748,12 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 			args: args{
 				t:        testTxn(owner, 10),
 				funcName: "updateVariables",
-				//	inputData: testGlobalNode(globalNode1Ok, 10, 20, 30, 40, 10).Encode(),
-				inputData: (&inputMap{
-					Fields: map[string]interface{}{
-						Settings[MinLock]:       bState.Balance(30),
-						Settings[Apr]:           float64(40.0),
-						Settings[MinLockPeriod]: time.Duration(10),
-						Settings[MaxMint]:       bState.Balance(10),
+				inputData: (&smartcontract.StringMap{
+					Fields: map[string]string{
+						Settings[MinLock]:       "30",
+						Settings[Apr]:           "40.0",
+						Settings[MinLockPeriod]: "10m",
+						Settings[MaxMint]:       "10",
 					},
 				}).Encode(),
 				balances: updateVariables(),

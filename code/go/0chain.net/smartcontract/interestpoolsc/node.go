@@ -1,11 +1,12 @@
 package interestpoolsc
 
 import (
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -68,25 +69,35 @@ func (gn *GlobalNode) Decode(input []byte) error {
 	return nil
 }
 
-func (gn *GlobalNode) set(key string, value float64) error {
+func (gn *GlobalNode) set(key string, value string) error {
 	const pfx = "smart_contracts.interestpoolsc."
+	var err error
 	switch key {
 	case Settings[MinLock]:
-		gn.MinLock = state.Balance(value)
-		config.SmartContractConfig.Set(pfx+key, gn.MinLock)
+		fValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
+		}
+		gn.MinLock = state.Balance(fValue * 1e10)
 	case Settings[Apr]:
-		gn.APR = value
-		config.SmartContractConfig.Set(pfx+key, gn.APR)
+		gn.APR, err = strconv.ParseFloat(value, 64)
+		if err != nil {
+			return fmt.Errorf("cannot conver key %s, value %s into float64e; %v", key, value, err)
+		}
 	case Settings[MinLockPeriod]:
-		gn.MinLockPeriod = time.Duration(value)
-		config.SmartContractConfig.Set(pfx+key, gn.MinLockPeriod)
+		gn.MinLockPeriod, err = time.ParseDuration(value)
+		if err != nil {
+			return fmt.Errorf("cannot conver key %s, value %s into time.duration; %v", key, value, err)
+		}
 	case Settings[MaxMint]:
-		gn.MaxMint = state.Balance(value)
-		config.SmartContractConfig.Set(pfx+key, gn.MaxMint)
+		fValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return fmt.Errorf("cannot conver key %s, value %s into state.balane; %v", key, value, err)
+		}
+		gn.MaxMint = state.Balance(fValue * 1e10)
 	default:
 		return fmt.Errorf("config setting %s not found", key)
 	}
-
 	return nil
 }
 

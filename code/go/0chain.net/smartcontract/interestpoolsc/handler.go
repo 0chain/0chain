@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"0chain.net/smartcontract"
+
 	"0chain.net/core/common"
 
 	c_state "0chain.net/chaincore/chain/state"
@@ -14,12 +16,12 @@ import (
 func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn := ip.getGlobalNode(balances, "funcName")
 	const pfx = "smart_contracts.interestpoolsc."
-	return &inputMap{
-		Fields: map[string]interface{}{
-			Settings[MinLock]:       gn.MinLock,
-			Settings[MaxMint]:       gn.MaxMint,
-			Settings[MinLockPeriod]: gn.MinLockPeriod,
-			Settings[Apr]:           gn.APR,
+	return &smartcontract.StringMap{
+		Fields: map[string]string{
+			Settings[MinLock]:       fmt.Sprintf("%0v", gn.MinLock),
+			Settings[MaxMint]:       fmt.Sprintf("%0v", gn.MaxMint),
+			Settings[MinLockPeriod]: fmt.Sprintf("%0v", gn.MinLockPeriod),
+			Settings[Apr]:           fmt.Sprintf("%0v", gn.APR),
 		},
 	}, nil
 }
