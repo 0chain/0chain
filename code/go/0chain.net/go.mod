@@ -38,6 +38,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/gozstd v1.5.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
+	go.etcd.io/bbolt v1.3.2
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
