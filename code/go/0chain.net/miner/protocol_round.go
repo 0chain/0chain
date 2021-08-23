@@ -306,6 +306,7 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	logging.Logger.Info("Starting a new round",
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("random seed", r.GetRandomSeed()))
+
 	mc.startNewRound(ctx, r)
 }
 

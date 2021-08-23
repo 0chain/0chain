@@ -8,6 +8,75 @@ import (
 	"0chain.net/core/datastore"
 )
 
+type Setting int
+
+const (
+	OwnerID Setting = iota
+	//ParentChainID
+	//GenesisBlockHash
+	Decimals
+	BlockSize
+	MinBlockSize
+	MaxByteSize
+	MinGenerators
+	GeneratorsPercent
+	NumReplicators
+	ThresholdByCount
+	ThresholdByStake
+	ValidationBatchSize
+	TxnMaxPayload
+	PruneStateBelowCount
+	RoundRange
+	//BlocksToSharder
+	VerificationTicketsTo
+	HealthShowCounters
+	BlockProposalMaxWaitTime
+	BlockProposalWaitMode
+	ReuseTransactions
+	ClientSignatureScheme
+	MinActiveSharders
+	MinActiveReplicators
+	SmartContractTimeout
+	RoundTimeoutSofttoMin
+	RoundTimeoutSofttoMult
+	RoundRestartMult
+	SignatureScheme
+)
+
+var (
+	SettingName = []string{
+		"server_chain.owner",
+		//ParentChainID
+		//"GenesisBlockHash",
+		"server_chain.decimals",
+		"server_chain.block.max_block_size",
+		"server_chain.block.min_block_size",
+		"server_chain.block.max_byte_size",
+		"server_chain.block.min_generators",
+		"server_chain.block.generators_percent",
+		"server_chain.block.replicators",
+		"server_chain.block.consensus.threshold_by_count",
+		"server_chain.block.consensus.threshold_by_stake",
+		"server_chain.block.validation.batch_size",
+		"server_chain.transaction.payload.max_size",
+		"server_chain.state.prune_below_count",
+		"server_chain.round_range",
+		//"BlocksToSharder",
+		"server_chain.messages.verification_tickets_to",
+		"server_chain.health_check.show_counters",
+		"server_chain.block.proposal.max_wait_time",
+		"server_chain.block.proposal.wait_mode",
+		"server_chain.block.reuse_txns",
+		"server_chain.block.sharding.min_active_sharders",
+		"server_chain.block.sharding.min_active_replicators",
+		"server_chain.smart_contract.timeout",
+		"server_chain.round_timeouts.softto_min",
+		"server_chain.round_timeouts.softto_mult",
+		"server_chain.round_timeouts.round_restart_mult",
+		"server_chain.client.signature_scheme",
+	}
+)
+
 const (
 	//BlockProposalWaitStatic Static wait time for block proposals
 	BlockProposalWaitStatic = 0
@@ -49,24 +118,24 @@ type HealthCheckCycleScan struct {
 
 //Config - chain Configuration
 type Config struct {
-	OwnerID               datastore.Key `json:"owner_id"`                  // Client who created this chain
-	ParentChainID         datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
-	GenesisBlockHash      string        `json:"genesis_block_hash"`
-	Decimals              int8          `json:"decimals"`                // Number of decimals allowed for the token on this chain
-	BlockSize             int32         `json:"block_size"`              // Number of transactions in a block
-	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
-	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
-	MinGenerators         int           `json:"min_generators"`          // Min number of block generators.
-	GeneratorsPercent     float64       `json:"generators_percent"`      // Percentage of all miners
-	NumReplicators        int           `json:"num_replicators"`         // Number of sharders that can store the block
-	ThresholdByCount      int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
-	ThresholdByStake      int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
-	ValidationBatchSize   int           `json:"validation_size"`         // Batch size of txns for crypto verification
-	TxnMaxPayload         int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
-	PruneStateBelowCount  int           `json:"prune_state_below_count"` // Prune state below these many rounds
-	RoundRange            int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
-	BlocksToSharder       int           `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
-	VerificationTicketsTo int           `json:"verification_tickets_to"` // send verification tickets to generator or all miners
+	OwnerID datastore.Key `json:"owner_id"` // Client who created this chain
+	//ParentChainID         datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
+	//GenesisBlockHash      string  `json:"genesis_block_hash"`
+	Decimals             int8    `json:"decimals"`                // Number of decimals allowed for the token on this chain
+	BlockSize            int32   `json:"block_size"`              // Number of transactions in a block
+	MinBlockSize         int32   `json:"min_block_size"`          // Number of transactions a block needs to have
+	MaxByteSize          int64   `json:"max_byte_size"`           // Max number of bytes a block can have
+	MinGenerators        int     `json:"min_generators"`          // Min number of block generators.
+	GeneratorsPercent    float64 `json:"generators_percent"`      // Percentage of all miners
+	NumReplicators       int     `json:"num_replicators"`         // Number of sharders that can store the block
+	ThresholdByCount     int     `json:"threshold_by_count"`      // Threshold count for a block to be notarized
+	ThresholdByStake     int     `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
+	ValidationBatchSize  int     `json:"validation_size"`         // Batch size of txns for crypto verification
+	TxnMaxPayload        int     `json:"transaction_max_payload"` // Max payload allowed in the transaction
+	PruneStateBelowCount int     `json:"prune_state_below_count"` // Prune state below these many rounds
+	RoundRange           int64   `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
+	//BlocksToSharder       int     `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
+	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners
 
 	HealthShowCounters bool `json:"health_show_counters"` // display detail counters
 	// Health Check switches

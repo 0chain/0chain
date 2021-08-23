@@ -463,7 +463,7 @@ func Provider() datastore.Entity {
 func (c *Chain) Initialize() {
 	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
-	c.BlocksToSharder = 1
+	//c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
@@ -544,7 +544,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
 func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
-	c.GenesisBlockHash = hash
+	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState(initStates)
