@@ -16,6 +16,7 @@ const (
 	Int64
 	Int32
 	Duration
+	Float64
 	Boolean
 	String
 	StateBalance
@@ -23,7 +24,7 @@ const (
 )
 
 var ConfigTypeName = []string{
-	"int", "int64", "int32", "time.duration", "bool", "string", "state.Balance",
+	"int", "int64", "int32", "time.duration", "float64", "bool", "string", "state.Balance",
 }
 
 type StringMap struct {

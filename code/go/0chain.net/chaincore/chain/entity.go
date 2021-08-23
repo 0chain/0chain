@@ -339,7 +339,7 @@ const DefaultSmartContractTimeout = time.Second
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration.ChainID)
-	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	//chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")

@@ -15,6 +15,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSettings(t *testing.T) {
+	require.Len(t, GlobalSettingName, int(NumOfGlobalSettings))
+	require.Len(t, GlobalSettingTypes, int(NumOfGlobalSettings))
+
+	for key := range GlobalSettingTypes {
+		found := false
+		for _, name := range GlobalSettingName {
+			if key == name {
+				found = true
+				break
+			}
+		}
+		require.True(t, found)
+	}
+
+	for k, name := range GlobalSettingName {
+		k = k
+		_, ok := GlobalSettingTypes[name]
+		require.True(t, ok)
+	}
+
+}
+
 func TestUpdateGlobals(t *testing.T) {
 	const (
 		mockNotASetting = "mock not a setting"
@@ -48,7 +71,7 @@ func TestUpdateGlobals(t *testing.T) {
 			GLOBALS_KEY,
 			mock.MatchedBy(func(globals *GlobalSettings) bool {
 				for key, value := range p.inputMap {
-					vType, ok := SettingTypes[key]
+					vType, ok := GlobalSettingTypes[key]
 					require.True(t, ok)
 					iValue, err := smartcontract.StringToInterface(value, vType)
 					require.NoError(t, err)
@@ -97,52 +120,50 @@ func TestUpdateGlobals(t *testing.T) {
 			parameters: parameters{
 				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
 				inputMap: map[string]string{
-					"development.state":                                                       "true",
-					"development.dkg":                                                         "true",
-					"development.view_change":                                                 "false",
-					"development.smart_contract.storage":                                      "true",
-					"development.smart_contract.faucet":                                       "true",
-					"development.smart_contract.zrc20":                                        "true",
-					"development.smart_contract.interest":                                     "true",
-					"development.smart_contract.miner":                                        "true",
-					"development.smart_contract.multisig":                                     "true",
-					"development.smart_contract.vesting":                                      "true",
-					"server_chain.block.min_block_size":                                       "1",
-					"server_chain.block.max_block_size":                                       "10",
-					"server_chain.block.max_byte_size":                                        "1638400",
-					"server_chain.block.generators":                                           "2",
-					"server_chain.block.replicators":                                          "0",
-					"server_chain.block.generation.timeout":                                   "15",
-					"server_chain.block.generation.retry_wait_time":                           "5",
-					"server_chain.block.proposal.max_wait_time":                               "100s",
-					"server_chain.block.proposal.wait_mode":                                   "static",
-					"server_chain.block.consensus.threshold_by_count":                         "66",
-					"server_chain.block.consensus.threshold_by_stake":                         "0",
-					"server_chain.block.sharding.min_active_sharders":                         "25",
-					"server_chain.block.sharding.min_active_replicators":                      "25",
-					"server_chain.block.validation.batch_size":                                "1000",
-					"server_chain.block.reuse_txns":                                           "false",
-					"server_chain.block.round_range":                                          "10000000",
-					"server_chain.block.round_timeouts.softto_min":                            "3000",
-					"server_chain.block.round_timeouts.softto_mult":                           "3",
-					"server_chain.block.round_timeouts.round_restart_mult":                    "2",
-					"server_chain.block.round_timeouts.timeout_cap":                           "0",
-					"server_chain.block.transaction.payload.max_size":                         "98304",
-					"server_chain.block.transaction.timeout":                                  "3000",
-					"server_chain.block.transaction.min_fee":                                  "3",
-					"server_chain.block.client.signature_scheme":                              "bls0chain",
-					"server_chain.block.client.discover":                                      "true",
-					"server_chain.block.messages.verification_tickets_to":                     "all_miners",
-					"server_chain.block.state.prune_below_count":                              "100",
-					"server_chain.block.state.sync.timeout":                                   "10s",
-					"server_chain.block.stuck.check_interval":                                 "10s",
-					"server_chain.block.stuck.time_threshold":                                 "60s",
-					"server_chain.block.smart_contract.timeout":                               "8000s",
-					"server_chain.block.lfb_ticket.rebroadcast_timeout":                       "15s",
-					"server_chain.block.lfb_ticket.ahead":                                     "5",
-					"server_chain.block.lfb_ticket.fb_fetching_lifetime":                      "10s",
-					"server_chain.block.async_blocks_fetching.max_simultaneous_from_miners":   "100",
-					"server_chain.block.async_blocks_fetching.max_simultaneous_from_sharders": "30",
+					"development.state":                                                 "true",
+					"development.dkg":                                                   "true",
+					"development.view_change":                                           "false",
+					"development.smart_contract.storage":                                "true",
+					"development.smart_contract.faucet":                                 "true",
+					"development.smart_contract.zrc20":                                  "true",
+					"development.smart_contract.interest":                               "true",
+					"development.smart_contract.miner":                                  "true",
+					"development.smart_contract.multisig":                               "true",
+					"development.smart_contract.vesting":                                "true",
+					"server_chain.block.min_block_size":                                 "1",
+					"server_chain.block.max_block_size":                                 "10",
+					"server_chain.block.max_byte_size":                                  "1638400",
+					"server_chain.block.replicators":                                    "0",
+					"server_chain.block.generation.timeout":                             "15",
+					"server_chain.block.generation.retry_wait_time":                     "5",
+					"server_chain.block.proposal.max_wait_time":                         "100s",
+					"server_chain.block.proposal.wait_mode":                             "static",
+					"server_chain.block.consensus.threshold_by_count":                   "66",
+					"server_chain.block.consensus.threshold_by_stake":                   "0",
+					"server_chain.block.sharding.min_active_sharders":                   "25",
+					"server_chain.block.sharding.min_active_replicators":                "25",
+					"server_chain.block.validation.batch_size":                          "1000",
+					"server_chain.block.reuse_txns":                                     "false",
+					"server_chain.round_range":                                          "10000000",
+					"server_chain.round_timeouts.softto_min":                            "3000",
+					"server_chain.round_timeouts.softto_mult":                           "3",
+					"server_chain.round_timeouts.round_restart_mult":                    "2",
+					"server_chain.round_timeouts.timeout_cap":                           "0",
+					"server_chain.transaction.payload.max_size":                         "98304",
+					"server_chain.transaction.timeout":                                  "3000",
+					"server_chain.transaction.min_fee":                                  "3",
+					"server_chain.client.signature_scheme":                              "bls0chain",
+					"server_chain.client.discover":                                      "true",
+					"server_chain.messages.verification_tickets_to":                     "all_miners",
+					"server_chain.state.prune_below_count":                              "100",
+					"server_chain.state.sync.timeout":                                   "10s",
+					"server_chain.stuck.check_interval":                                 "10s",
+					"server_chain.stuck.time_threshold":                                 "60s",
+					"server_chain.smart_contract.timeout":                               "8000s",
+					"server_chain.lfb_ticket.rebroadcast_timeout":                       "15s",
+					"server_chain.lfb_ticket.ahead":                                     "5",
+					"server_chain.async_blocks_fetching.max_simultaneous_from_miners":   "100",
+					"server_chain.async_blocks_fetching.max_simultaneous_from_sharders": "30",
 				},
 			},
 		},

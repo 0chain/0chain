@@ -3,6 +3,8 @@ package chain
 import (
 	"time"
 
+	"0chain.net/smartcontract/minersc"
+
 	"0chain.net/core/viper"
 
 	"0chain.net/core/datastore"
@@ -119,7 +121,7 @@ type Config struct {
 	OwnerID datastore.Key `json:"owner_id"` // Client who created this chain
 	//ParentChainID         datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 	//GenesisBlockHash      string  `json:"genesis_block_hash"`
-	Decimals             int8    `json:"decimals"`                // Number of decimals allowed for the token on this chain
+	//Decimals             int8    `json:"decimals"`                // Number of decimals allowed for the token on this chain
 	BlockSize            int32   `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32   `json:"min_block_size"`          // Number of transactions a block needs to have
 	MaxByteSize          int64   `json:"max_byte_size"`           // Max number of bytes a block can have
@@ -156,78 +158,8 @@ type Config struct {
 	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
 }
 
-func updateInt(target *int, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(int); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetInt(SettingName[field])
-}
-
-func updateInt8(target *int8, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(int8); ok {
-			*target = v
-			return
-		}
-	}
-	*target = int8(viper.GetInt(SettingName[field]))
-}
-
-func updateInt32(target *int32, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(int32); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetInt32(SettingName[field])
-}
-
-func updateInt64(target *int64, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(int64); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetInt64(SettingName[field])
-}
-
-func updateFloat64(target *float64, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(float64); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetFloat64(SettingName[field])
-}
-
-func updateString(target *string, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(string); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetString(SettingName[field])
-}
-
-func updateBool(target *bool, field Setting, configMap map[string]interface{}) {
-	if value, found := configMap[SettingName[field]]; found {
-		if v, ok := value.(bool); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetBool(SettingName[field])
-}
-
-func (config *Config) Update(configMap map[string]interface{}) {
-	config.Decimals = int8(viper.GetInt("server_chain.decimals"))
+func (config *Config) Update(configMap *minersc.GlobalSettings) {
+	//config.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	config.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")

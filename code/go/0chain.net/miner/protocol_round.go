@@ -302,7 +302,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc *Chain) getConfigMap(ctx context.Context, roundNumber int64) map[string]interface{} {
+func (mc *Chain) getConfigMap(ctx context.Context, roundNumber int64) *minersc.GlobalSettings {
 	pround := mc.GetRound(roundNumber - 1)
 	pb := mc.GetBlockToExtend(ctx, pround)
 	pndb := pb.ClientState.GetNodeDB()
@@ -323,7 +323,7 @@ func (mc *Chain) getConfigMap(ctx context.Context, roundNumber int64) map[string
 	err = gl.Decode(val.Encode())
 	logging.Logger.Error("piers decoding config map", zap.Error(err))
 
-	return gl.Fields
+	return gl
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
