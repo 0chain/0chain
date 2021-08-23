@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
@@ -67,7 +70,7 @@ var SettingTypes = map[string]smartcontract.ConfigType{
 	"server_chain.block.async_blocks_fetching.max_simultaneous_from_sharders": smartcontract.Int,
 }
 
-var GLOBALS_KEY = datastore.Key(ADDRESS + encryption.Hash("global_settings"))
+var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
 
 func scConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":configurations")
@@ -161,6 +164,7 @@ func (msc *MinerSmartContract) updateGlobals(
 	_ *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
+	logging.Logger.Info("piers piers updateGlobals start")
 	if txn.ClientID != owner {
 		return "", common.NewError("update_globals",
 			"unauthorized access - only the owner can update the variables")
@@ -170,8 +174,10 @@ func (msc *MinerSmartContract) updateGlobals(
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())
 	}
+	logging.Logger.Info("piers piers updateGlobals", zap.Any("changes", changes))
 
 	globals, err := getGlobalSettings(balances)
+	logging.Logger.Info("piers piers updateGlobals", zap.Any("globals", globals))
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("update_globals", err.Error())
@@ -185,6 +191,7 @@ func (msc *MinerSmartContract) updateGlobals(
 		return "", common.NewErrorf("update_settings", "validation: %v", err.Error())
 	}
 
+	logging.Logger.Info("piers piers updateGlobals", zap.Any("about to save globals", globals))
 	if err := globals.save(balances); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

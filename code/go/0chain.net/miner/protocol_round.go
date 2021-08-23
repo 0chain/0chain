@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/minersc"
+
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
@@ -299,6 +302,30 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
+func (mc *Chain) getConfigMap(ctx context.Context, roundNumber int64) map[string]interface{} {
+	pround := mc.GetRound(roundNumber - 1)
+	pb := mc.GetBlockToExtend(ctx, pround)
+	pndb := pb.ClientState.GetNodeDB()
+	root := pb.ClientStateHash
+	mndb := util.NewMemoryNodeDB()
+	ndb := util.NewLevelNodeDB(mndb, pndb, false)
+	var clientState *util.MerklePatriciaTrie = util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1))
+	clientState.SetRoot(root)
+
+	GLOBALS_KEY := datastore.Key(encryption.Hash("global_settings"))
+	key_hash := encryption.Hash(GLOBALS_KEY)
+	val, err := clientState.GetNodeValue(util.Path(key_hash))
+	logging.Logger.Error("piers getting global_setting from mpt", zap.Error(err))
+
+	gl := &minersc.GlobalSettings{
+		Fields: make(map[string]interface{}),
+	}
+	err = gl.Decode(val.Encode())
+	logging.Logger.Error("piers decoding config map", zap.Error(err))
+
+	return gl.Fields
+}
+
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
@@ -306,6 +333,13 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	logging.Logger.Info("Starting a new round",
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("random seed", r.GetRandomSeed()))
+
+	configMap := mc.getConfigMap(ctx, r.GetRoundNumber())
+	logging.Logger.Info("piers startRound",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Any("config", configMap),
+	)
+	mc.Config.Update(configMap)
 
 	mc.startNewRound(ctx, r)
 }

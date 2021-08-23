@@ -27,7 +27,6 @@ const (
 	TxnMaxPayload
 	PruneStateBelowCount
 	RoundRange
-	//BlocksToSharder
 	VerificationTicketsTo
 	HealthShowCounters
 	BlockProposalMaxWaitTime
@@ -61,7 +60,6 @@ var (
 		"server_chain.transaction.payload.max_size",
 		"server_chain.state.prune_below_count",
 		"server_chain.round_range",
-		//"BlocksToSharder",
 		"server_chain.messages.verification_tickets_to",
 		"server_chain.health_check.show_counters",
 		"server_chain.block.proposal.max_wait_time",
@@ -134,7 +132,8 @@ type Config struct {
 	TxnMaxPayload        int     `json:"transaction_max_payload"` // Max payload allowed in the transaction
 	PruneStateBelowCount int     `json:"prune_state_below_count"` // Prune state below these many rounds
 	RoundRange           int64   `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
-	//BlocksToSharder       int     `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
+	// todo move BlocksToSharder out of Config
+	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners
 
 	HealthShowCounters bool `json:"health_show_counters"` // display detail counters
@@ -157,7 +156,77 @@ type Config struct {
 	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
 }
 
-func (config *Config) update() {
+func updateInt(target *int, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(int); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetInt(SettingName[field])
+}
+
+func updateInt8(target *int8, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(int8); ok {
+			*target = v
+			return
+		}
+	}
+	*target = int8(viper.GetInt(SettingName[field]))
+}
+
+func updateInt32(target *int32, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(int32); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetInt32(SettingName[field])
+}
+
+func updateInt64(target *int64, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(int64); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetInt64(SettingName[field])
+}
+
+func updateFloat64(target *float64, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(float64); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetFloat64(SettingName[field])
+}
+
+func updateString(target *string, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(string); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetString(SettingName[field])
+}
+
+func updateBool(target *bool, field Setting, configMap map[string]interface{}) {
+	if value, found := configMap[SettingName[field]]; found {
+		if v, ok := value.(bool); ok {
+			*target = v
+			return
+		}
+	}
+	*target = viper.GetBool(SettingName[field])
+}
+
+func (config *Config) Update(configMap map[string]interface{}) {
 	config.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")

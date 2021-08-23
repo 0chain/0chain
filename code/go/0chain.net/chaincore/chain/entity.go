@@ -463,7 +463,7 @@ func Provider() datastore.Entity {
 func (c *Chain) Initialize() {
 	c.setCurrentRound(0)
 	c.SetLatestFinalizedBlock(nil)
-	//c.BlocksToSharder = 1
+	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
