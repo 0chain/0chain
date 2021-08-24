@@ -292,15 +292,8 @@ func (gl *GlobalSettings) GetDuration(field GlobalSetting) time.Duration {
 		}
 		return tValue
 	} else {
-		var err error
-		sValue := viper.GetString(GlobalSettingName[field])
-		tValue, err = time.ParseDuration(sValue)
-		if err != nil {
-			logging.Logger.Error("cannot read setting from viper",
-				zap.String("key", GlobalSettingName[field]),
-				zap.Any("cannot convert to time.Duration", value),
-			)
-		}
+		tValue = viper.GetDuration(GlobalSettingName[field])
+
 	}
 	return tValue
 }

@@ -2,11 +2,10 @@ package chain
 
 import (
 	"bytes"
-	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/require"
 
@@ -14,6 +13,7 @@ import (
 )
 
 func TestUpdate(t *testing.T) {
+	const mock_owner = "mock owner"
 	type args struct {
 		config  Config
 		updates minersc.GlobalSettings
@@ -29,7 +29,7 @@ func TestUpdate(t *testing.T) {
 	}
 	setExpectations := func(t *testing.T, p parameters, w *want) args {
 		viper.SetConfigType(p.configType)
-		err := config.SmartContractConfig.ReadConfig(bytes.NewBuffer(p.zChainYaml))
+		err := viper.ReadConfig(bytes.NewBuffer(p.zChainYaml))
 		require.NoError(t, err)
 		chain := NewChainFromConfig()
 
@@ -44,6 +44,42 @@ func TestUpdate(t *testing.T) {
 		parameters parameters
 		want       want
 	}{
+		{
+			title: "ok_no_chainge",
+			parameters: parameters{
+				updates: minersc.GlobalSettings{
+					Fields: map[string]interface{}{
+						//"server_chain.owner":                                 mock_owner,
+						"server_chain.block.max_block_size":                  int32(10),
+						"server_chain.block.min_block_size":                  int32(1),
+						"server_chain.block.max_byte_size":                   int64(1638400),
+						"server_chain.block.min_generators":                  int(2),
+						"server_chain.block.generators_percent":              float64(0.2),
+						"server_chain.block.replicators":                     int(0),
+						"server_chain.block.consensus.threshold_by_count":    int(66),
+						"server_chain.block.consensus.threshold_by_stake":    int(0),
+						"server_chain.block.validation.batch_size":           int(1000),
+						"server_chain.transaction.payload.max_size":          int(98304),
+						"server_chain.state.prune_below_count":               int(100),
+						"server_chain.round_range":                           int64(10000000),
+						"server_chain.messages.verification_tickets_to":      "all_miners",
+						"server_chain.health_check.show_counters":            true,
+						"server_chain.block.proposal.max_wait_time":          180 * time.Millisecond,
+						"server_chain.block.proposal.wait_mode":              "static",
+						"server_chain.block.reuse_txns":                      false,
+						"server_chain.block.sharding.min_active_sharders":    int(25),
+						"server_chain.block.sharding.min_active_replicators": int(25),
+						"server_chain.smart_contract.timeout":                8000 * time.Millisecond,
+						"server_chain.round_timeouts.softto_min":             int(1500),
+						"server_chain.round_timeouts.softto_mult":            int(1),
+						"server_chain.round_timeouts.round_restart_mult":     int(10),
+						"server_chain.client.signature_scheme":               "bls0chain",
+					},
+				},
+				configType: "yaml",
+				zChainYaml: []byte(exampleZChainYaml),
+			},
+		},
 		{
 			title: "ok_unknown_entry",
 			parameters: parameters{
@@ -61,10 +97,11 @@ func TestUpdate(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			test := test
 			args := setExpectations(t, test.parameters, &test.want)
-			fmt.Printf("before config: %v\n", args.config)
+			before := args.config
+
 			args.config.Update(&args.updates)
-			fmt.Printf("after config: %v\n", args.config)
-			//require.EqualValues(t, test.want.result, args.config)
+
+			require.EqualValues(t, before, args.config)
 		})
 	}
 }
@@ -125,7 +162,7 @@ server_chain:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   round_timeouts:
-    softto_min: 1500ms # in miliseconds
+    softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 10 # number of soft timeouts before round is restarted
     timeout_cap: 0 # 0 indicates no cap

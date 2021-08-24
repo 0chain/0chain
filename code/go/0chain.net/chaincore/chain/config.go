@@ -13,11 +13,8 @@ import (
 type Setting int
 
 const (
-	OwnerID Setting = iota
-	//ParentChainID
-	//GenesisBlockHash
-	Decimals
-	BlockSize
+	//OwnerID
+	BlockSize Setting = iota
 	MinBlockSize
 	MaxByteSize
 	MinGenerators
@@ -46,10 +43,7 @@ const (
 
 var (
 	SettingName = []string{
-		"server_chain.owner",
-		//ParentChainID
-		//"GenesisBlockHash",
-		"server_chain.decimals",
+		//"server_chain.owner",
 		"server_chain.block.max_block_size",
 		"server_chain.block.min_block_size",
 		"server_chain.block.max_byte_size",
