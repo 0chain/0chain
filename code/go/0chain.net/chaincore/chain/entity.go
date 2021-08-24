@@ -396,7 +396,7 @@ func NewChainFromConfig() *Chain {
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
-	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time")
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
 	if waitMode == "static" {
 		chain.BlockProposalWaitMode = BlockProposalWaitStatic
@@ -408,7 +408,7 @@ func NewChainFromConfig() *Chain {
 
 	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
 	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
-	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
+	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout")
 	if chain.SmartContractTimeout == 0 {
 		chain.SmartContractTimeout = DefaultSmartContractTimeout
 	}

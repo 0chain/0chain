@@ -118,22 +118,19 @@ type HealthCheckCycleScan struct {
 
 //Config - chain Configuration
 type Config struct {
-	OwnerID datastore.Key `json:"owner_id"` // Client who created this chain
-	//ParentChainID         datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
-	//GenesisBlockHash      string  `json:"genesis_block_hash"`
-	//Decimals             int8    `json:"decimals"`                // Number of decimals allowed for the token on this chain
-	BlockSize            int32   `json:"block_size"`              // Number of transactions in a block
-	MinBlockSize         int32   `json:"min_block_size"`          // Number of transactions a block needs to have
-	MaxByteSize          int64   `json:"max_byte_size"`           // Max number of bytes a block can have
-	MinGenerators        int     `json:"min_generators"`          // Min number of block generators.
-	GeneratorsPercent    float64 `json:"generators_percent"`      // Percentage of all miners
-	NumReplicators       int     `json:"num_replicators"`         // Number of sharders that can store the block
-	ThresholdByCount     int     `json:"threshold_by_count"`      // Threshold count for a block to be notarized
-	ThresholdByStake     int     `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
-	ValidationBatchSize  int     `json:"validation_size"`         // Batch size of txns for crypto verification
-	TxnMaxPayload        int     `json:"transaction_max_payload"` // Max payload allowed in the transaction
-	PruneStateBelowCount int     `json:"prune_state_below_count"` // Prune state below these many rounds
-	RoundRange           int64   `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
+	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
+	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
+	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
+	MaxByteSize          int64         `json:"max_byte_size"`           // Max number of bytes a block can have
+	MinGenerators        int           `json:"min_generators"`          // Min number of block generators.
+	GeneratorsPercent    float64       `json:"generators_percent"`      // Percentage of all miners
+	NumReplicators       int           `json:"num_replicators"`         // Number of sharders that can store the block
+	ThresholdByCount     int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
+	ThresholdByStake     int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
+	ValidationBatchSize  int           `json:"validation_size"`         // Batch size of txns for crypto verification
+	TxnMaxPayload        int           `json:"transaction_max_payload"` // Max payload allowed in the transaction
+	PruneStateBelowCount int           `json:"prune_state_below_count"` // Prune state below these many rounds
+	RoundRange           int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 	// todo move BlocksToSharder out of Config
 	BlocksToSharder       int `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int `json:"verification_tickets_to"` // send verification tickets to generator or all miners
@@ -192,31 +189,10 @@ func (conf *Config) Update(cf *minersc.GlobalSettings) {
 		conf.VerificationTicketsTo = Generator
 	}
 	conf.PruneStateBelowCount = cf.GetInt(minersc.StatePruneBelowCount)
-	conf.PruneStateBelowCount = cf.GetInt(minersc.SmartContractTimeout)
+	conf.SmartContractTimeout = cf.GetDuration(minersc.SmartContractTimeout)
 }
 
-func (config *Config) Update2(configMap *minersc.GlobalSettings) {
-	//config.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	//config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
-	//config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
-	//config.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
-	//config.MinGenerators = viper.GetInt("server_chain.block.min_generators")
-	//config.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
-	//config.NumReplicators = viper.GetInt("server_chain.block.replicators")
-	//config.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
-	//config.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
-	//config.OwnerID = viper.GetString("server_chain.owner")
-	//config.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
-	//config.RoundRange = viper.GetInt64("server_chain.round_range")
-	//config.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
-	//config.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
-	//verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
-	//if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
-	//	config.VerificationTicketsTo = AllMiners
-	//} else {
-	//	config.VerificationTicketsTo = Generator
-	//}
-
+func (config *Config) UpdateHealthCheck(configMap *minersc.GlobalSettings) {
 	// Health Check related counters
 	// Work on deep scan
 	conf := &config.HCCycleScan[DeepScan]
@@ -251,23 +227,8 @@ func (config *Config) Update2(configMap *minersc.GlobalSettings) {
 	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
 
 	config.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
-
-	//config.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
-	//waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
-	//if waitMode == "static" {
-	//	config.BlockProposalWaitMode = BlockProposalWaitStatic
-	//	} else if waitMode == "dynamic" {
-	//		config.BlockProposalWaitMode = BlockProposalWaitDynamic
-	//	}
-	//config.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
-
-	//	config.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
-	//	config.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
-	config.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
+	config.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout")
 	if config.SmartContractTimeout == 0 {
 		config.SmartContractTimeout = DefaultSmartContractTimeout
 	}
-	//config.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
-	//config.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
-	//config.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
 }

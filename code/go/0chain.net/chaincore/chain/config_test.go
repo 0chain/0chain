@@ -1,11 +1,75 @@
-version: 1.0
+package chain
 
-logging:
-  level: "debug"
-  console: false # printing log to console is only supported in development mode
-  goroutines: false
-  memlog: false
+import (
+	"bytes"
+	"fmt"
 
+	"github.com/spf13/viper"
+
+	"0chain.net/chaincore/config"
+	"0chain.net/smartcontract/minersc"
+	"github.com/stretchr/testify/require"
+
+	"testing"
+)
+
+func TestUpdate(t *testing.T) {
+	type args struct {
+		config  Config
+		updates minersc.GlobalSettings
+	}
+
+	type parameters struct {
+		updates    minersc.GlobalSettings
+		configType string
+		zChainYaml []byte
+	}
+	type want struct {
+		result Config
+	}
+	setExpectations := func(t *testing.T, p parameters, w *want) args {
+		viper.SetConfigType(p.configType)
+		err := config.SmartContractConfig.ReadConfig(bytes.NewBuffer(p.zChainYaml))
+		require.NoError(t, err)
+		chain := NewChainFromConfig()
+
+		return args{
+			config:  *chain.Config,
+			updates: p.updates,
+		}
+	}
+
+	testCases := []struct {
+		title      string
+		parameters parameters
+		want       want
+	}{
+		{
+			title: "ok_unknown_entry",
+			parameters: parameters{
+				updates: minersc.GlobalSettings{
+					Fields: map[string]interface{}{
+						"server_chain.block.generation.timeout": int(17),
+					},
+				},
+				configType: "yaml",
+				zChainYaml: []byte(exampleZChainYaml),
+			},
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.title, func(t *testing.T) {
+			test := test
+			args := setExpectations(t, test.parameters, &test.want)
+			fmt.Printf("before config: %v\n", args.config)
+			args.config.Update(&args.updates)
+			fmt.Printf("after config: %v\n", args.config)
+			//require.EqualValues(t, test.want.result, args.config)
+		})
+	}
+}
+
+const exampleZChainYaml string = `
 development:
   state: true
   dkg: true
@@ -28,13 +92,6 @@ development:
     min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
-
-zerochain:
-  id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
-  decimals: 10
-  genesis_block:
-    id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
-
 server_chain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
   owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
@@ -71,7 +128,7 @@ server_chain:
     softto_min: 1500ms # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 10 # number of soft timeouts before round is restarted
-    timeout_cap: 2 # 0 indicates no cap
+    timeout_cap: 0 # 0 indicates no cap
     vrfs_timeout_mismatch_tolerance: 5
   transaction:
     payload:
@@ -91,78 +148,28 @@ server_chain:
     check_interval: 10s # seconds
     time_threshold: 60s #seconds
   smart_contract:
-    timeout: 150ms # milliseconds
+    timeout: 8000ms # milliseconds
   health_check:
     show_counters: true
     deep_scan:
       enabled: false
       settle_secs: 30
       window: 0 #Full scan till round 0
-      repeat_interval_mins: 3 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 3m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
     proximity_scan:
       enabled: true
       settle_secs: 30
       window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
-      repeat_interval_mins: 1 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 1m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: "15s" #
     ahead: 5 # should be >= 5
-    fb_fetching_lifetime: "10s" #
+    fb_fetching_lifetime: 10s #
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
     max_simultaneous_from_sharders: 30
-
-network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
-  initial_states: config/initial_state.yaml
-  genesis_dkg: 0
-  dns_url: "" # http://198.18.0.98:9091
-  relay_time: 200ms # milliseconds
-  max_concurrent_requests: 40
-  timeout:
-    small_message: 1000ms # milliseconds
-    large_message: 3000ms # milliseconds
-  large_message_th_size: 5120 # anything greater than this size in bytes
-  user_handlers:
-    rate_limit: 100000000 # 100 per second
-  n2n_handlers:
-    rate_limit: 10000000000 # 10000 per second
-
-# delegate wallet is wallet that used to configure node in Miner SC; if its
-# empty, then node ID used
-delegate_wallet: ""
-# % of fees and rewards for generator
-service_charge: 0.10 # [0; 1) of all fees
-# max number of delegate pools allowed by a node in miner SC
-number_of_delegates: 10 # max number of delegate pools
-# min stake pool amount allowed by node; should not conflict with
-# SC min_stake
-min_stake: 0.0 # tokens
-# max stake pool amount allowed by node; should not conflict with
-# SC max_stake
-max_stake: 100.0 # tokens
-
-minio:
-  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800s # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  use_ssl: false # Use SSL for connection or not
-  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
-  delete_local_copy: true # Delete local copy of block once it's moved to cloud
-
-cassandra:
-  connection:
-    delay: 10s # in seconds
-    retries: 30
-
-# integration tests related configurations
-integration_tests:
-  # address of the server
-  address: host.docker.internal:15210
-  # lock_interval used by nodes to request server to connect to blockchain
-  # after start
-  lock_interval: 1s
+`

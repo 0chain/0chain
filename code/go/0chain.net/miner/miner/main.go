@@ -84,14 +84,14 @@ func main() {
 	mc := miner.GetMinerChain()
 	mc.SetDiscoverClients(viper.GetBool("server_chain.client.discover"))
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
-	mc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
-	mc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
-	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
+	mc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout"))
+	mc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval"))
+	mc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	mc.SetupConfigInfoDB()
 	chain.SetServerChain(serverChain)
 
-	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
+	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time"))
 	node.ReadConfig()
 
 	if *initialStatesFile == "" {

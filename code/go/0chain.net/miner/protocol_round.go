@@ -302,28 +302,39 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc *Chain) getConfigMap(ctx context.Context, roundNumber int64) *minersc.GlobalSettings {
+func (mc Chain) getClientState(
+	ctx context.Context,
+	roundNumber int64,
+) *util.MerklePatriciaTrie {
 	pround := mc.GetRound(roundNumber - 1)
 	pb := mc.GetBlockToExtend(ctx, pround)
 	pndb := pb.ClientState.GetNodeDB()
 	root := pb.ClientStateHash
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	var clientState *util.MerklePatriciaTrie = util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1))
+	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1))
 	clientState.SetRoot(root)
+	return clientState
+}
 
-	GLOBALS_KEY := datastore.Key(encryption.Hash("global_settings"))
-	key_hash := encryption.Hash(GLOBALS_KEY)
+func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
+	key_hash := encryption.Hash(minersc.GLOBALS_KEY)
 	val, err := clientState.GetNodeValue(util.Path(key_hash))
-	logging.Logger.Error("piers getting global_setting from mpt", zap.Error(err))
+	if err != nil {
+		logging.Logger.Info("piers getting global_setting from mpt", zap.Error(err))
+		return nil, err
+	}
 
 	gl := &minersc.GlobalSettings{
 		Fields: make(map[string]interface{}),
 	}
 	err = gl.Decode(val.Encode())
-	logging.Logger.Error("piers decoding config map", zap.Error(err))
+	if err != nil {
+		logging.Logger.Info("piers decoding config map", zap.Error(err))
+		return nil, err
+	}
 
-	return gl
+	return gl, nil
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
@@ -334,12 +345,21 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("random seed", r.GetRandomSeed()))
 
-	configMap := mc.getConfigMap(ctx, r.GetRoundNumber())
+	configMap, err := mc.getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
 	logging.Logger.Info("piers startRound",
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Any("config", configMap),
+		zap.Error(err),
 	)
-	mc.Config.Update(configMap)
+	if err == nil {
+		logging.Logger.Info("piers startRound before",
+			zap.Any("mc.Config", mc.Config),
+		)
+		mc.Config.Update(configMap)
+		logging.Logger.Info("piers startRound after",
+			zap.Any("mc.Config", mc.Config),
+		)
+	}
 
 	mc.startNewRound(ctx, r)
 }
