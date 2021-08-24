@@ -136,11 +136,11 @@ func main() {
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB()
-	sc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout"))
-	sc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval"))
-	sc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold"))
+	sc.SetSyncStateTimeout(viper.GetDuration("server_chain.state.sync.timeout") * time.Second)
+	sc.SetBCStuckCheckInterval(viper.GetDuration("server_chain.stuck.check_interval") * time.Second)
+	sc.SetBCStuckTimeThreshold(viper.GetDuration("server_chain.stuck.time_threshold") * time.Second)
 	chain.SetServerChain(serverChain)
-	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time"))
+	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
 	if *initialStatesFile == "" {

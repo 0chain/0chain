@@ -51,9 +51,9 @@ server_chain:
     replicators: 0
     generation:
       timeout: 15
-      retry_wait_time: 5ms #milliseconds
+      retry_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 180ms # milliseconds
+      max_wait_time: 180 # milliseconds
       wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage (registration)
@@ -68,15 +68,15 @@ server_chain:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   round_timeouts:
-    softto_min: 1500ms # in miliseconds
+    softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 10 # number of soft timeouts before round is restarted
-    timeout_cap: 2 # 0 indicates no cap
+    timeout_cap: 0 # 0 indicates no cap
     vrfs_timeout_mismatch_tolerance: 5
   transaction:
     payload:
       max_size: 98304 # bytes
-    timeout: 30s # seconds
+    timeout: 30 # seconds
     min_fee: 0
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
@@ -86,12 +86,12 @@ server_chain:
   state:
     prune_below_count: 100 # rounds
     sync:
-      timeout: 10s # seconds
+      timeout: 10 # seconds
   stuck:
-    check_interval: 10s # seconds
-    time_threshold: 60s #seconds
+    check_interval: 10 # seconds
+    time_threshold: 60 #seconds
   smart_contract:
-    timeout: 150ms # milliseconds
+    timeout: 8000 # milliseconds
   health_check:
     show_counters: true
     deep_scan:
@@ -117,15 +117,15 @@ server_chain:
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder_piers.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0
   dns_url: "" # http://198.18.0.98:9091
-  relay_time: 200ms # milliseconds
+  relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
-    small_message: 1000ms # milliseconds
-    large_message: 3000ms # milliseconds
+    small_message: 1000 # milliseconds
+    large_message: 3000 # milliseconds
   large_message_th_size: 5120 # anything greater than this size in bytes
   user_handlers:
     rate_limit: 100000000 # 100 per second
@@ -148,7 +148,7 @@ max_stake: 100.0 # tokens
 
 minio:
   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800s # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
   num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
   use_ssl: false # Use SSL for connection or not
   old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
@@ -156,8 +156,8 @@ minio:
 
 cassandra:
   connection:
-    delay: 10s # in seconds
-    retries: 30
+    delay: 10 # in seconds
+    retries: 10
 
 # integration tests related configurations
 integration_tests:

@@ -573,8 +573,8 @@ func (n *Node) updateRequestMessageTimings() {
 
 //ReadConfig - read configuration from the default config
 func ReadConfig() {
-	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message"))
-	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message"))
+	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
+	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
 	SetMaxConcurrentRequests(viper.GetInt("network.max_concurrent_requests"))
 	SetLargeMessageThresholdSize(viper.GetInt("network.large_message_th_size"))
 }
