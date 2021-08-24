@@ -51,7 +51,7 @@ server_chain:
     generators_percent: 0.2
     replicators: 4
     proposal:
-      max_wait_time: 200
+      max_wait_time: 200ms
       wait_mode: dynamic # static or dynamic
     generation:
       timeout: 15
@@ -98,7 +98,7 @@ server_chain:
       batch_size: 20
 
   smart_contract:
-    timeout: 150 # milliseconds, 0 = no timeout
+    timeout: 150ms # milliseconds, 0 = no timeout
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml
