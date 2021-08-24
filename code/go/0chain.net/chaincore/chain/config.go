@@ -158,27 +158,64 @@ type Config struct {
 	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
 }
 
-func (config *Config) Update(configMap *minersc.GlobalSettings) {
-	//config.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
-	config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
-	config.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
-	config.MinGenerators = viper.GetInt("server_chain.block.min_generators")
-	config.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
-	config.NumReplicators = viper.GetInt("server_chain.block.replicators")
-	config.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
-	config.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
-	config.OwnerID = viper.GetString("server_chain.owner")
-	config.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
-	config.RoundRange = viper.GetInt64("server_chain.round_range")
-	config.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
-	config.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
-	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
-	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
-		config.VerificationTicketsTo = AllMiners
-	} else {
-		config.VerificationTicketsTo = Generator
+func (conf *Config) Update(cf *minersc.GlobalSettings) {
+	conf.OwnerID = cf.GetString(minersc.Owner)
+	conf.MinBlockSize = cf.GetInt32(minersc.BlockMinSize)
+	conf.BlockSize = cf.GetInt32(minersc.BlockMaxSize)
+	conf.MaxByteSize = cf.GetInt64(minersc.BlockMaxByteSize)
+	conf.NumReplicators = cf.GetInt(minersc.BlockReplicators)
+	conf.BlockProposalMaxWaitTime = cf.GetDuration(minersc.BlockProposalMaxWaitTime)
+	waitMode := cf.GetString(minersc.BlockProposalWaitMode)
+	if waitMode == "static" {
+		conf.BlockProposalWaitMode = BlockProposalWaitStatic
+	} else if waitMode == "dynamic" {
+		conf.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
+	conf.ThresholdByCount = cf.GetInt(minersc.BlockConsensusThresholdByCount)
+	conf.ThresholdByStake = cf.GetInt(minersc.BlockConsensusThresholdByStake)
+	conf.MinActiveSharders = cf.GetInt(minersc.BlockShardingMinActiveSharders)
+	conf.MinActiveReplicators = cf.GetInt(minersc.BlockShardingMinActiveReplicators)
+	conf.ValidationBatchSize = cf.GetInt(minersc.BlockValidationBatchSize)
+	conf.ReuseTransactions = cf.GetBool(minersc.BlockReuseTransactions)
+	conf.MinGenerators = cf.GetInt(minersc.BlockMinGenerators)
+	conf.GeneratorsPercent = cf.GetFloat64(minersc.BlockGeneratorsPercent)
+	conf.RoundRange = cf.GetInt64(minersc.RoundRange)
+	conf.RoundTimeoutSofttoMin = cf.GetInt(minersc.RoundTimeoutsSofttoMin)
+	conf.RoundTimeoutSofttoMult = cf.GetInt(minersc.RoundTimeoutsSofttoMult)
+	conf.RoundRestartMult = cf.GetInt(minersc.RoundTimeoutsRoundRestartMult)
+	conf.TxnMaxPayload = cf.GetInt(minersc.TransactionPayloadMaxSize)
+	conf.ClientSignatureScheme = cf.GetString(minersc.ClientSignatureScheme)
+	verificationTicketsTo := cf.GetString(minersc.MessagesVerificationTicketsTo)
+	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
+		conf.VerificationTicketsTo = AllMiners
+	} else {
+		conf.VerificationTicketsTo = Generator
+	}
+	conf.PruneStateBelowCount = cf.GetInt(minersc.StatePruneBelowCount)
+	conf.PruneStateBelowCount = cf.GetInt(minersc.SmartContractTimeout)
+}
+
+func (config *Config) Update2(configMap *minersc.GlobalSettings) {
+	//config.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	//config.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
+	//config.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
+	//config.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
+	//config.MinGenerators = viper.GetInt("server_chain.block.min_generators")
+	//config.GeneratorsPercent = viper.GetFloat64("server_chain.block.generators_percent")
+	//config.NumReplicators = viper.GetInt("server_chain.block.replicators")
+	//config.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
+	//config.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
+	//config.OwnerID = viper.GetString("server_chain.owner")
+	//config.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
+	//config.RoundRange = viper.GetInt64("server_chain.round_range")
+	//config.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
+	//config.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
+	//verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
+	//if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
+	//	config.VerificationTicketsTo = AllMiners
+	//} else {
+	//	config.VerificationTicketsTo = Generator
+	//}
 
 	// Health Check related counters
 	// Work on deep scan
@@ -215,22 +252,22 @@ func (config *Config) Update(configMap *minersc.GlobalSettings) {
 
 	config.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
-	config.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
-	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
-	if waitMode == "static" {
-		config.BlockProposalWaitMode = BlockProposalWaitStatic
-	} else if waitMode == "dynamic" {
-		config.BlockProposalWaitMode = BlockProposalWaitDynamic
-	}
-	config.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
+	//config.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	//waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
+	//if waitMode == "static" {
+	//	config.BlockProposalWaitMode = BlockProposalWaitStatic
+	//	} else if waitMode == "dynamic" {
+	//		config.BlockProposalWaitMode = BlockProposalWaitDynamic
+	//	}
+	//config.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
 
-	config.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
-	config.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
+	//	config.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
+	//	config.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
 	config.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
 	if config.SmartContractTimeout == 0 {
 		config.SmartContractTimeout = DefaultSmartContractTimeout
 	}
-	config.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
-	config.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
-	config.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
+	//config.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
+	//config.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
+	//config.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
 }

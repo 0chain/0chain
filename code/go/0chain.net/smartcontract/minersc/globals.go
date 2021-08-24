@@ -3,6 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -128,7 +129,7 @@ var GlobalSettingName = []string{
 	"server_chain.async_blocks_fetching.max_simultaneous_from_sharders",
 }
 
-var GlobalSettingTypes = map[string]smartcontract.ConfigType{
+var GlobalSettingType = map[string]smartcontract.ConfigType{
 	GlobalSettingName[State]:                                    smartcontract.Boolean,
 	GlobalSettingName[Dkg]:                                      smartcontract.Boolean,
 	GlobalSettingName[ViewChange]:                               smartcontract.Boolean,
@@ -217,7 +218,7 @@ func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
 func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 	var err error
 	for key, value := range inputMap.Fields {
-		kType, found := GlobalSettingTypes[key]
+		kType, found := GlobalSettingType[key]
 		if !found {
 			return fmt.Errorf("'%s' is not a valid global setting", key)
 		}
@@ -229,87 +230,110 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 	return nil
 }
 
-/*
-func (gl *GlobalSettings) updateField(target *interface{}, field Setting) {
-	switch SettingTypes[field] {
-
+func (gl *GlobalSettings) GetInt(field GlobalSetting) int {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		iValue, ok := value.(int)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		}
+		return iValue
+	} else {
+		return viper.GetInt(GlobalSettingName[field])
 	}
 }
 
-func (gl *GlobalSettings) updateInt(target *int, field Setting) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(int); ok {
-			*target = v
-			return
+func (gl *GlobalSettings) GetInt32(field GlobalSetting) int32 {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		i32Value, ok := value.(int32)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type int32", GlobalSettingName[field], value))
+		}
+		return i32Value
+	} else {
+		return viper.GetInt32(GlobalSettingName[field])
+	}
+}
+
+func (gl *GlobalSettings) GetInt64(field GlobalSetting) int64 {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		i64Value, ok := value.(int64)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type int64", GlobalSettingName[field], value))
+		}
+		return i64Value
+	} else {
+		return viper.GetInt64(GlobalSettingName[field])
+	}
+}
+
+func (gl *GlobalSettings) GetFloat64(field GlobalSetting) float64 {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		fValue, ok := value.(float64)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type float64", GlobalSettingName[field], value))
+		}
+		return fValue
+	} else {
+		return viper.GetFloat64(GlobalSettingName[field])
+	}
+}
+
+func (gl *GlobalSettings) GetDuration(field GlobalSetting) time.Duration {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	var tValue time.Duration
+	if ok {
+		tValue, ok = value.(time.Duration)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type time.Duration", GlobalSettingName[field], value))
+		}
+		return tValue
+	} else {
+		var err error
+		sValue := viper.GetString(GlobalSettingName[field])
+		tValue, err = time.ParseDuration(sValue)
+		if err != nil {
+			logging.Logger.Error("cannot read setting from viper",
+				zap.String("key", GlobalSettingName[field]),
+				zap.Any("cannot convert to time.Duration", value),
+			)
 		}
 	}
-	*target = viper.GetInt(SettingName[field])
+	return tValue
 }
 
-
-func(gl *GlobalSettings)  updateInt8(target *int8, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(int8); ok {
-			*target = v
-			return
+func (gl *GlobalSettings) GetString(field GlobalSetting) string {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		sValue, ok := value.(string)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type string", GlobalSettingName[field], value))
 		}
+		return sValue
+	} else {
+		return viper.GetString(GlobalSettingName[field])
 	}
-	*target = int8(viper.GetInt(SettingName[field]))
 }
 
-func (gl *GlobalSettings) updateInt32(target *int32, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(int32); ok {
-			*target = v
-			return
+func (gl *GlobalSettings) GetBool(field GlobalSetting) bool {
+	value, ok := gl.Fields[GlobalSettingName[field]]
+	if ok {
+		bValue, ok := value.(bool)
+		if !ok {
+			panic(fmt.Sprintf("cannot convert key %s value %v to type bool", GlobalSettingName[field], value))
 		}
+		return bValue
+	} else {
+		return viper.GetBool(GlobalSettingName[field])
 	}
-	*target = viper.GetInt32(SettingName[field])
 }
 
-func (gl *GlobalSettings) updateInt64(target *int64, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(int64); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetInt64(SettingName[field])
-}
-
-func (gl *GlobalSettings) updateFloat64(target *float64, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(float64); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetFloat64(SettingName[field])
-}
-
-func(gl *GlobalSettings)  updateString(target *string, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(string); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetString(SettingName[field])
-}
-
-func(gl *GlobalSettings)  updateBool(target *bool, field Setting, gl.Fields map[string]interface{}) {
-	if value, found := gl.Fields[SettingName[field]]; found {
-		if v, ok := value.(bool); ok {
-			*target = v
-			return
-		}
-	}
-	*target = viper.GetBool(SettingName[field])
-}
-*/
 func getGlobalsFromViper() map[string]interface{} {
 	globals := make(map[string]interface{})
-	for key := range GlobalSettingTypes {
+	for key := range GlobalSettingType {
 		globals[key] = viper.Get(key)
 	}
 	return globals
@@ -317,7 +341,7 @@ func getGlobalsFromViper() map[string]interface{} {
 
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
-	for key := range GlobalSettingTypes {
+	for key := range GlobalSettingType {
 		globals[key] = fmt.Sprintf("%v", viper.Get(key))
 	}
 	return globals

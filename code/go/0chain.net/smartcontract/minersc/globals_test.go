@@ -17,9 +17,9 @@ import (
 
 func TestSettings(t *testing.T) {
 	require.Len(t, GlobalSettingName, int(NumOfGlobalSettings))
-	require.Len(t, GlobalSettingTypes, int(NumOfGlobalSettings))
+	require.Len(t, GlobalSettingType, int(NumOfGlobalSettings))
 
-	for key := range GlobalSettingTypes {
+	for key := range GlobalSettingType {
 		found := false
 		for _, name := range GlobalSettingName {
 			if key == name {
@@ -32,7 +32,7 @@ func TestSettings(t *testing.T) {
 
 	for k, name := range GlobalSettingName {
 		k = k
-		_, ok := GlobalSettingTypes[name]
+		_, ok := GlobalSettingType[name]
 		require.True(t, ok)
 	}
 
@@ -71,7 +71,7 @@ func TestUpdateGlobals(t *testing.T) {
 			GLOBALS_KEY,
 			mock.MatchedBy(func(globals *GlobalSettings) bool {
 				for key, value := range p.inputMap {
-					vType, ok := GlobalSettingTypes[key]
+					vType, ok := GlobalSettingType[key]
 					require.True(t, ok)
 					iValue, err := smartcontract.StringToInterface(value, vType)
 					require.NoError(t, err)
