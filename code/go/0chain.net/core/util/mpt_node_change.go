@@ -24,6 +24,7 @@ type ChangeCollectorI interface {
 	DeleteChange(oldNode Node)
 	GetChanges() []*NodeChange
 	GetDeletes() []Node
+	GetStartRoot() Key
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
 
@@ -33,17 +34,22 @@ type ChangeCollectorI interface {
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
-	Changes map[string]*NodeChange
-	Deletes map[string]Node
-	mutex   sync.RWMutex
+	startRoot Key
+	Changes   map[string]*NodeChange
+	Deletes   map[string]Node
+	mutex     sync.RWMutex
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
-func NewChangeCollector() ChangeCollectorI {
-	cc := &ChangeCollector{}
+func NewChangeCollector(startRoot Key) ChangeCollectorI {
+	cc := &ChangeCollector{startRoot: startRoot}
 	cc.Changes = make(map[string]*NodeChange)
 	cc.Deletes = make(map[string]Node)
 	return cc
+}
+
+func (cc *ChangeCollector) GetStartRoot() Key {
+	return cc.startRoot
 }
 
 /*AddChange - implement interface */

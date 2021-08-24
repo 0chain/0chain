@@ -21,7 +21,7 @@ func init() {
 func newBSC(state util.MerklePatriciaTrieI) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	var changes []*util.NodeChange
-	bsc.Hash, changes, _ = state.GetChanges()
+	bsc.Hash, changes, _, bsc.StartRoot = state.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
@@ -43,7 +43,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 		{"1235", "1235A"},
 	}
 
-	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	clientState := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	for _, pv := range initPathValues {
 		_, err := clientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 	require.Equal(t, bsc.GetRoot().GetHash(), util.ToHex(clientState.GetRoot()))
 
 	// apply new updates
-	newClientState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2)
+	newClientState := util.NewMerklePatriciaTrie(clientState.GetNodeDB(), 2, clientState.GetRoot())
 	for _, pv := range newPathValues {
 		_, err := newClientState.Insert(util.Path(pv[0]), &util.SecureSerializableValue{Buffer: []byte(pv[1])})
 		require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestStateChangeComputeRoot(t *testing.T) {
 func TestNewBlockStateChange(t *testing.T) {
 	b := NewBlock("", 1)
 	b.HashBlock()
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestNewBlockStateChange(t *testing.T) {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
 	var changes []*util.NodeChange
-	bsc.Hash, changes, _ = b.ClientState.GetChanges()
+	bsc.Hash, changes, _, bsc.StartRoot = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
@@ -229,7 +229,7 @@ func TestStateChange_Delete(t *testing.T) {
 
 func TestStateChange_MarshalJSON(t *testing.T) {
 	b := NewBlock("", 1)
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)
@@ -283,7 +283,7 @@ func TestStateChange_MarshalJSON(t *testing.T) {
 
 func TestStateChange_UnmarshalJSON(t *testing.T) {
 	b := NewBlock("", 1)
-	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	b.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	_, err := b.ClientState.Insert(util.Path("path"), &util.SecureSerializableValue{Buffer: []byte("value")})
 	if err != nil {
 		t.Fatal(err)

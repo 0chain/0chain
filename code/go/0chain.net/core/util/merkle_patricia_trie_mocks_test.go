@@ -21,7 +21,7 @@ func init() {
 func TestMPTSaveChanges(t *testing.T) {
 	mockNodeDB1 := &mocks.NodeDB{}
 	mockNodeDB1.On("PutNode", mock.Anything, mock.Anything).Return(nil)
-	mpt := NewMerklePatriciaTrie(mockNodeDB1, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mockNodeDB1, Sequence(0), nil)
 	_, err := mpt.Insert(Path("key"), &Txn{"value"})
 	require.NoError(t, err)
 	mockNodeDB2 := &mocks.NodeDB{}
