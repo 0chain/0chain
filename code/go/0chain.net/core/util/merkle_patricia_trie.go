@@ -360,6 +360,9 @@ func (mpt *MerklePatriciaTrie) insertExtension(oldNode Node, path Path, key Key)
 }
 
 func (mpt *MerklePatriciaTrie) delete(key Key, prefix, path Path) (Node, Key, error) {
+	if key == nil {
+		return nil, nil, ErrValueNotPresent
+	}
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		return nil, nil, err
