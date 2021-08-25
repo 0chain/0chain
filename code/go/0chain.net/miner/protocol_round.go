@@ -321,7 +321,6 @@ func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.Gl
 	key_hash := encryption.Hash(minersc.GLOBALS_KEY)
 	val, err := clientState.GetNodeValue(util.Path(key_hash))
 	if err != nil {
-		logging.Logger.Info("piers getting global_setting from mpt", zap.Error(err))
 		return nil, err
 	}
 
@@ -330,7 +329,6 @@ func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.Gl
 	}
 	err = gl.Decode(val.Encode())
 	if err != nil {
-		logging.Logger.Info("piers decoding config map", zap.Error(err))
 		return nil, err
 	}
 
@@ -341,31 +339,10 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-	logging.Logger.Info("Starting a new round",
-		zap.Int64("round", r.GetRoundNumber()),
-		zap.Int64("random seed", r.GetRandomSeed()))
 
 	configMap, err := mc.getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
-	logging.Logger.Info("piers startRound",
-		zap.Int64("round", r.GetRoundNumber()),
-		zap.Any("config", configMap),
-		zap.Error(err),
-	)
 	if err == nil {
-		logging.Logger.Info("piers startRound before",
-			zap.Any("mc.Config", mc.Config),
-		)
-		defer func() {
-			if r := recover(); r != nil {
-				logging.Logger.Info("piers startRound recover panic",
-					zap.Any("recover", r),
-				)
-			}
-		}()
 		mc.Config.Update(configMap)
-		logging.Logger.Info("piers startRound after",
-			zap.Any("mc.Config", mc.Config),
-		)
 	}
 
 	mc.startNewRound(ctx, r)

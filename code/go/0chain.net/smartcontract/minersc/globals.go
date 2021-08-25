@@ -3,11 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
-
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
@@ -296,11 +292,6 @@ func (gl *GlobalSettings) GetInt(field GlobalSetting) int {
 	}
 	value, ok := iValue.(int)
 	if !ok {
-		logging.Logger.Info("piers GetInt",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -317,11 +308,6 @@ func (gl *GlobalSettings) GetInt32(field GlobalSetting) int32 {
 	}
 	value, ok := iValue.(int32)
 	if !ok {
-		logging.Logger.Info("piers GetInt32",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -338,11 +324,6 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) int64 {
 	}
 	value, ok := iValue.(int64)
 	if !ok {
-		logging.Logger.Info("piers GetInt64",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -359,11 +340,6 @@ func (gl *GlobalSettings) GetFloat64(field GlobalSetting) float64 {
 	}
 	value, ok := iValue.(float64)
 	if !ok {
-		logging.Logger.Info("piers GetFloat64",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -380,11 +356,6 @@ func (gl *GlobalSettings) GetDuration(field GlobalSetting) time.Duration {
 	}
 	value, ok := iValue.(time.Duration)
 	if !ok {
-		logging.Logger.Info("piers GetDuration",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -405,11 +376,6 @@ func (gl *GlobalSettings) GetBool(field GlobalSetting) bool {
 	}
 	value, ok := iValue.(bool)
 	if !ok {
-		logging.Logger.Info("piers GetBool",
-			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
-			zap.Any("value", iValue),
-			zap.Any("type", reflect.TypeOf(iValue)),
-		)
 		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
 	return value
@@ -451,7 +417,6 @@ func (msc *MinerSmartContract) updateGlobals(
 	_ *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	logging.Logger.Info("piers piers updateGlobals start")
 	if txn.ClientID != owner {
 		return "", common.NewError("update_globals",
 			"unauthorized access - only the owner can update the variables")
@@ -461,10 +426,9 @@ func (msc *MinerSmartContract) updateGlobals(
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())
 	}
-	logging.Logger.Info("piers piers updateGlobals", zap.Any("changes", changes))
 
 	globals, err := getGlobalSettings(balances)
-	logging.Logger.Info("piers piers updateGlobals", zap.Any("globals", globals))
+
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return "", common.NewError("update_globals", err.Error())
@@ -478,7 +442,6 @@ func (msc *MinerSmartContract) updateGlobals(
 		return "", common.NewErrorf("update_settings", "validation: %v", err.Error())
 	}
 
-	logging.Logger.Info("piers piers updateGlobals", zap.Any("about to save globals", globals))
 	if err := globals.save(balances); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}

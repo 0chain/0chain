@@ -87,7 +87,6 @@ type Config struct {
 }
 
 func (conf *Config) Update(cf *minersc.GlobalSettings) {
-	// conf.OwnerID = cf.GetString(minersc.Owner)
 	conf.MinBlockSize = cf.GetInt32(minersc.BlockMinSize)
 	conf.BlockSize = cf.GetInt32(minersc.BlockMaxSize)
 	conf.MaxByteSize = cf.GetInt64(minersc.BlockMaxByteSize)

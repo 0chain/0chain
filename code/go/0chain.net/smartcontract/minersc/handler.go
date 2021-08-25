@@ -159,7 +159,7 @@ func (msc *MinerSmartContract) getGlobalsHandler(
 	balances cstate.StateContextI,
 ) (interface{}, error) {
 	globals, err := getGlobalSettings(balances)
-	Logger.Info("piers piers getGlobalsHandler", zap.Any("globals", globals), zap.Error(err))
+
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, common.NewErrInternal(err.Error())
