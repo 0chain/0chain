@@ -64,18 +64,14 @@ func TestUpdateGlobals(t *testing.T) {
 			ClientID: p.client,
 		}
 		balances.On("GetTrieNode", GLOBALS_KEY).Return(&GlobalSettings{
-			Fields: make(map[string]interface{}),
+			Fields: make(map[string]string),
 		}, nil).Once()
 		balances.On(
 			"InsertTrieNode",
 			GLOBALS_KEY,
 			mock.MatchedBy(func(globals *GlobalSettings) bool {
 				for key, value := range p.inputMap {
-					vType, ok := GlobalSettingType[key]
-					require.True(t, ok)
-					iValue, err := smartcontract.StringToInterface(value, vType)
-					require.NoError(t, err)
-					if globals.Fields[key] != interface{}(iValue) {
+					if globals.Fields[key] != value {
 						return false
 					}
 				}

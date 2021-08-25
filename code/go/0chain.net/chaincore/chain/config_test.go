@@ -2,7 +2,6 @@ package chain
 
 import (
 	"bytes"
-	"time"
 
 	"github.com/spf13/viper"
 
@@ -48,31 +47,31 @@ func TestUpdate(t *testing.T) {
 			title: "ok_no_chainge",
 			parameters: parameters{
 				updates: minersc.GlobalSettings{
-					Fields: map[string]interface{}{
+					Fields: map[string]string{
 						//"server_chain.owner":                                 mock_owner,
-						"server_chain.block.max_block_size":                  int32(10),
-						"server_chain.block.min_block_size":                  int32(1),
-						"server_chain.block.max_byte_size":                   int64(1638400),
-						"server_chain.block.min_generators":                  int(2),
-						"server_chain.block.generators_percent":              float64(0.2),
-						"server_chain.block.replicators":                     int(0),
-						"server_chain.block.consensus.threshold_by_count":    int(66),
-						"server_chain.block.consensus.threshold_by_stake":    int(0),
-						"server_chain.block.validation.batch_size":           int(1000),
-						"server_chain.transaction.payload.max_size":          int(98304),
-						"server_chain.state.prune_below_count":               int(100),
-						"server_chain.round_range":                           int64(10000000),
+						"server_chain.block.max_block_size":                  "10",
+						"server_chain.block.min_block_size":                  "1",
+						"server_chain.block.max_byte_size":                   "1638400",
+						"server_chain.block.min_generators":                  "2",
+						"server_chain.block.generators_percent":              "0.2",
+						"server_chain.block.replicators":                     "0",
+						"server_chain.block.consensus.threshold_by_count":    "66",
+						"server_chain.block.consensus.threshold_by_stake":    "0",
+						"server_chain.block.validation.batch_size":           "1000",
+						"server_chain.transaction.payload.max_size":          "98304",
+						"server_chain.state.prune_below_count":               "100",
+						"server_chain.round_range":                           "10000000",
 						"server_chain.messages.verification_tickets_to":      "all_miners",
-						"server_chain.health_check.show_counters":            true,
-						"server_chain.block.proposal.max_wait_time":          180 * time.Millisecond,
+						"server_chain.health_check.show_counters":            "true",
+						"server_chain.block.proposal.max_wait_time":          "180ms",
 						"server_chain.block.proposal.wait_mode":              "static",
-						"server_chain.block.reuse_txns":                      false,
-						"server_chain.block.sharding.min_active_sharders":    int(25),
-						"server_chain.block.sharding.min_active_replicators": int(25),
-						"server_chain.smart_contract.timeout":                8000 * time.Millisecond,
-						"server_chain.round_timeouts.softto_min":             int(1500),
-						"server_chain.round_timeouts.softto_mult":            int(1),
-						"server_chain.round_timeouts.round_restart_mult":     int(10),
+						"server_chain.block.reuse_txns":                      "false",
+						"server_chain.block.sharding.min_active_sharders":    "25",
+						"server_chain.block.sharding.min_active_replicators": "25",
+						"server_chain.smart_contract.timeout":                "8000ms",
+						"server_chain.round_timeouts.softto_min":             "1500",
+						"server_chain.round_timeouts.softto_mult":            "1",
+						"server_chain.round_timeouts.round_restart_mult":     "10",
 						"server_chain.client.signature_scheme":               "bls0chain",
 					},
 				},
@@ -84,8 +83,8 @@ func TestUpdate(t *testing.T) {
 			title: "ok_unknown_entry",
 			parameters: parameters{
 				updates: minersc.GlobalSettings{
-					Fields: map[string]interface{}{
-						"server_chain.block.generation.timeout": int(17),
+					Fields: map[string]string{
+						"server_chain.block.generation.timeout": "17",
 					},
 				},
 				configType: "yaml",

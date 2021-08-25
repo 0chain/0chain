@@ -10,67 +10,6 @@ import (
 	"0chain.net/core/datastore"
 )
 
-type Setting int
-
-const (
-	//OwnerID
-	BlockSize Setting = iota
-	MinBlockSize
-	MaxByteSize
-	MinGenerators
-	GeneratorsPercent
-	NumReplicators
-	ThresholdByCount
-	ThresholdByStake
-	ValidationBatchSize
-	TxnMaxPayload
-	PruneStateBelowCount
-	RoundRange
-	VerificationTicketsTo
-	HealthShowCounters
-	BlockProposalMaxWaitTime
-	BlockProposalWaitMode
-	ReuseTransactions
-	ClientSignatureScheme
-	MinActiveSharders
-	MinActiveReplicators
-	SmartContractTimeout
-	RoundTimeoutSofttoMin
-	RoundTimeoutSofttoMult
-	RoundRestartMult
-	SignatureScheme
-)
-
-var (
-	SettingName = []string{
-		//"server_chain.owner",
-		"server_chain.block.max_block_size",
-		"server_chain.block.min_block_size",
-		"server_chain.block.max_byte_size",
-		"server_chain.block.min_generators",
-		"server_chain.block.generators_percent",
-		"server_chain.block.replicators",
-		"server_chain.block.consensus.threshold_by_count",
-		"server_chain.block.consensus.threshold_by_stake",
-		"server_chain.block.validation.batch_size",
-		"server_chain.transaction.payload.max_size",
-		"server_chain.state.prune_below_count",
-		"server_chain.round_range",
-		"server_chain.messages.verification_tickets_to",
-		"server_chain.health_check.show_counters",
-		"server_chain.block.proposal.max_wait_time",
-		"server_chain.block.proposal.wait_mode",
-		"server_chain.block.reuse_txns",
-		"server_chain.block.sharding.min_active_sharders",
-		"server_chain.block.sharding.min_active_replicators",
-		"server_chain.smart_contract.timeout",
-		"server_chain.round_timeouts.softto_min",
-		"server_chain.round_timeouts.softto_mult",
-		"server_chain.round_timeouts.round_restart_mult",
-		"server_chain.client.signature_scheme",
-	}
-)
-
 const (
 	//BlockProposalWaitStatic Static wait time for block proposals
 	BlockProposalWaitStatic = 0
@@ -150,7 +89,7 @@ type Config struct {
 }
 
 func (conf *Config) Update(cf *minersc.GlobalSettings) {
-	conf.OwnerID = cf.GetString(minersc.Owner)
+	// conf.OwnerID = cf.GetString(minersc.Owner)
 	conf.MinBlockSize = cf.GetInt32(minersc.BlockMinSize)
 	conf.BlockSize = cf.GetInt32(minersc.BlockMaxSize)
 	conf.MaxByteSize = cf.GetInt64(minersc.BlockMaxByteSize)

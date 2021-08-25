@@ -302,7 +302,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc Chain) getClientState(
+func (mc *Chain) getClientState(
 	ctx context.Context,
 	roundNumber int64,
 ) *util.MerklePatriciaTrie {
@@ -326,7 +326,7 @@ func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.Gl
 	}
 
 	gl := &minersc.GlobalSettings{
-		Fields: make(map[string]interface{}),
+		Fields: make(map[string]string),
 	}
 	err = gl.Decode(val.Encode())
 	if err != nil {
@@ -353,8 +353,15 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	)
 	if err == nil {
 		logging.Logger.Info("piers startRound before",
-			zap.Any("mc.Config", mc.Config),
+			zap.Any("mc.Config", copy),
 		)
+		defer func() {
+			if r := recover(); r != nil {
+				logging.Logger.Info("piers startRound recover panic",
+					zap.Any("recover", r),
+				)
+			}
+		}()
 		mc.Config.Update(configMap)
 		logging.Logger.Info("piers startRound after",
 			zap.Any("mc.Config", mc.Config),

@@ -164,13 +164,11 @@ func (msc *MinerSmartContract) getGlobalsHandler(
 		if err != util.ErrValueNotPresent {
 			return nil, common.NewErrInternal(err.Error())
 		}
-		return smartcontract.StringMap{
+		return GlobalSettings{
 			Fields: getStringMapFromViper(),
 		}, nil
 	}
-	return smartcontract.StringMap{
-		Fields: smartcontract.InterfaceMapToStringMap(globals.Fields),
-	}, nil
+	return globals, nil
 }
 
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,

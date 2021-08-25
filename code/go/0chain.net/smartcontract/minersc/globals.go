@@ -3,6 +3,7 @@ package minersc
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"time"
 
 	"0chain.net/core/logging"
@@ -36,8 +37,9 @@ const (
 	Interest                          // todo from development
 	Miner                             // todo from development
 	Multisig                          // todo from development
-	Vesting                           // todo from development
-	Owner
+
+	Vesting // todo from development
+	Owner   // do we want to set this.
 	BlockMinSize
 	BlockMaxSize
 	BlockMaxByteSize
@@ -46,6 +48,7 @@ const (
 	BlockGenerationRetryWaitTime // todo from chain
 	BlockProposalMaxWaitTime
 	BlockProposalWaitMode
+
 	BlockConsensusThresholdByCount
 	BlockConsensusThresholdByStake
 	BlockShardingMinActiveSharders
@@ -56,6 +59,7 @@ const (
 	BlockGeneratorsPercent
 	RoundRange
 	RoundTimeoutsSofttoMin
+
 	RoundTimeoutsSofttoMult
 	RoundTimeoutsRoundRestartMult
 	RoundTimeoutsTimeoutCap // todo from chain
@@ -66,6 +70,7 @@ const (
 	ClientDiscover // todo from chain
 	MessagesVerificationTicketsTo
 	StatePruneBelowCount
+
 	StateSyncTimeout   // todo from chain
 	StuckCheckInterval // todo from chain
 	StuckTimeThreshold // todo from chain
@@ -187,12 +192,12 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type GlobalSettings struct {
-	Fields map[string]interface{} `json:"fields"`
+	Fields map[string]string `json:"fields"`
 }
 
 func newGlobalSettings() *GlobalSettings {
 	return &GlobalSettings{
-		Fields: make(map[string]interface{}),
+		Fields: make(map[string]string),
 	}
 }
 
@@ -222,120 +227,149 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		if !found {
 			return fmt.Errorf("'%s' is not a valid global setting", key)
 		}
-		gl.Fields[key], err = smartcontract.StringToInterface(value, kType)
+		_, err = smartcontract.StringToInterface(value, kType)
 		if err != nil {
 			return fmt.Errorf("%v value %v cannot be perased as a %s", key, value, smartcontract.ConfigTypeName[kType])
 		}
+		gl.Fields[key] = value
 	}
 	return nil
 }
 
 func (gl *GlobalSettings) GetInt(field GlobalSetting) int {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		iValue, ok := value.(int)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
-		}
-		return iValue
-	} else {
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
 		return viper.GetInt(GlobalSettingName[field])
 	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int)
+	if err != nil {
+		return viper.GetInt(GlobalSettingName[field])
+	}
+	value, ok := iValue.(int)
+	if !ok {
+		logging.Logger.Info("piers GetInt",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+	}
+	return value
 }
 
 func (gl *GlobalSettings) GetInt32(field GlobalSetting) int32 {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		i32Value, ok := value.(int32)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type int32", GlobalSettingName[field], value))
-		}
-		return i32Value
-	} else {
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
 		return viper.GetInt32(GlobalSettingName[field])
 	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int32)
+	if err != nil {
+		return viper.GetInt32(GlobalSettingName[field])
+	}
+	value, ok := iValue.(int32)
+	if !ok {
+		logging.Logger.Info("piers GetInt32",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+	}
+	return value
 }
 
 func (gl *GlobalSettings) GetInt64(field GlobalSetting) int64 {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		i64Value, ok := value.(int64)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type int64", GlobalSettingName[field], value))
-		}
-		return i64Value
-	} else {
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
 		return viper.GetInt64(GlobalSettingName[field])
 	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int64)
+	if err != nil {
+		return viper.GetInt64(GlobalSettingName[field])
+	}
+	value, ok := iValue.(int64)
+	if !ok {
+		logging.Logger.Info("piers GetInt64",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+	}
+	return value
 }
 
 func (gl *GlobalSettings) GetFloat64(field GlobalSetting) float64 {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		fValue, ok := value.(float64)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type float64", GlobalSettingName[field], value))
-		}
-		return fValue
-	} else {
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
 		return viper.GetFloat64(GlobalSettingName[field])
 	}
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Float64)
+	if err != nil {
+		return viper.GetFloat64(GlobalSettingName[field])
+	}
+	value, ok := iValue.(float64)
+	if !ok {
+		logging.Logger.Info("piers GetFloat64",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+	}
+	return value
 }
 
 func (gl *GlobalSettings) GetDuration(field GlobalSetting) time.Duration {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	var tValue time.Duration
-	if ok {
-		tValue, ok = value.(time.Duration)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type time.Duration", GlobalSettingName[field], value))
-		}
-		return tValue
-	} else {
-		tValue = viper.GetDuration(GlobalSettingName[field])
-
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
+		return viper.GetDuration(GlobalSettingName[field])
 	}
-	return tValue
+	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Duration)
+	if err != nil {
+		return viper.GetDuration(GlobalSettingName[field])
+	}
+	value, ok := iValue.(time.Duration)
+	if !ok {
+		logging.Logger.Info("piers GetDuration",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+	}
+	return value
 }
 
 func (gl *GlobalSettings) GetString(field GlobalSetting) string {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		sValue, ok := value.(string)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type string", GlobalSettingName[field], value))
-		}
-		return sValue
-	} else {
+	sValue, found := gl.Fields[GlobalSettingName[field]]
+	if !found {
 		return viper.GetString(GlobalSettingName[field])
 	}
+	return sValue
 }
 
 func (gl *GlobalSettings) GetBool(field GlobalSetting) bool {
-	value, ok := gl.Fields[GlobalSettingName[field]]
-	if ok {
-		bValue, ok := value.(bool)
-		if !ok {
-			panic(fmt.Sprintf("cannot convert key %s value %v to type bool", GlobalSettingName[field], value))
-		}
-		return bValue
-	} else {
+	iValue, err := smartcontract.StringToInterface(gl.Fields[GlobalSettingName[field]], smartcontract.Boolean)
+	if err != nil {
 		return viper.GetBool(GlobalSettingName[field])
 	}
-}
-
-func getGlobalsFromViper() map[string]interface{} {
-	globals := make(map[string]interface{})
-	for key := range GlobalSettingType {
-		globals[key] = viper.Get(key)
+	value, ok := iValue.(bool)
+	if !ok {
+		logging.Logger.Info("piers GetBool",
+			zap.String("key", GlobalSettingName[field]), zap.Any("field", field),
+			zap.Any("value", iValue),
+			zap.Any("type", reflect.TypeOf(iValue)),
+		)
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
 	}
-	return globals
+	return value
 }
 
 func getStringMapFromViper() map[string]string {
 	globals := make(map[string]string)
 	for key := range GlobalSettingType {
-		globals[key] = fmt.Sprintf("%v", viper.Get(key))
+		globals[key] = viper.GetString(key)
 	}
 	return globals
 }
@@ -387,7 +421,7 @@ func (msc *MinerSmartContract) updateGlobals(
 			return "", common.NewError("update_globals", err.Error())
 		}
 		globals = &GlobalSettings{
-			Fields: getGlobalsFromViper(),
+			Fields: getStringMapFromViper(),
 		}
 	}
 
