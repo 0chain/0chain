@@ -369,14 +369,9 @@ func NewChainFromConfig() *Chain {
 	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
 	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	conf.Settle = viper.GetDuration("server_chain.health_check.deep_scan.settle_secs")
+	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.deep_scan.repeat_interval_mins")
+	conf.ReportStatus = viper.GetDuration("server_chain.health_check.deep_scan.report_status_mins")
 
 	// Work on proximity scan
 	conf = &chain.HCCycleScan[ProximityScan]
@@ -385,14 +380,9 @@ func NewChainFromConfig() *Chain {
 	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
 	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	conf.Settle = viper.GetDuration("server_chain.health_check.proximity_scan.settle_secs")
+	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	conf.ReportStatus = viper.GetDuration("server_chain.health_check.proximity_scan.report_status_mins")
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 

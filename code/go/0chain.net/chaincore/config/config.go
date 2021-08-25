@@ -51,9 +51,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.deep_scan.window", 0)
 
 	// Repeat deep scan every day
-	viper.SetDefault("server_chain.health_check.deep_scan.settle_secs", 30)
-	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", 1440)
-	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 60)
+	viper.SetDefault("server_chain.health_check.deep_scan.settle_secs", "30s")
+	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", "1440m")
+	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", "60s")
 
 	//Set defaults for proximity scan.
 	viper.SetDefault("server_chain.health_check.proximity_scan.enabled", true)
@@ -61,9 +61,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.proximity_scan.window", 100000)
 
 	// Repeat proximity every hour.
-	viper.SetDefault("server_chain.health_check.proximity_scan.settle_secs", 30)
-	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", 60)
-	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 15)
+	viper.SetDefault("server_chain.health_check.proximity_scan.settle_secs", "30s")
+	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", "60m")
+	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", "15m")
 
 	// LFB tickets.
 	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)

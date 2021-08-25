@@ -80,6 +80,20 @@ const (
 	AsyncFetchingMaxSimultaneousFromMiners   // todo restart worker
 	AsyncFetchingMaxSimultaneousFromSharders // todo restart worker
 
+	HealthCheckDeepScanEnabled
+	HealthCheckDeepScanBatchSize
+	HealthCheckDeepScanWindow
+	HealthCheckDeepScanSettleSecs
+	HealthCheckDeepScanIntervalMins
+	HealthCheckDeepScanReportStatusMins
+	HealthCheckProximityScanEnabled
+	HealthCheckProximityScanBatchSize
+	HealthCheckProximityScanWindow
+	HealthCheckProximityScanSettleSecs
+	HealthCheckProximityScanRepeatIntervalMins
+	HealthCheckProximityScanRejportStatusMins
+	HealthCheckShowCounters
+
 	NumOfGlobalSettings
 )
 
@@ -132,6 +146,20 @@ var GlobalSettingName = []string{
 	"server_chain.lfb_ticket.ahead",
 	"server_chain.async_blocks_fetching.max_simultaneous_from_miners",
 	"server_chain.async_blocks_fetching.max_simultaneous_from_sharders",
+
+	"server_chain.health_check.deep_scan.enabled",
+	"server_chain.health_check.deep_scan.batch_size",
+	"server_chain.health_check.deep_scan.window",
+	"server_chain.health_check.deep_scan.settle_secs",
+	"server_chain.health_check.deep_scan.repeat_interval_mins",
+	"server_chain.health_check.deep_scan.report_status_mins",
+	"server_chain.health_check.proximity_scan.enabled",
+	"server_chain.health_check.proximity_scan.batch_size",
+	"server_chain.health_check.proximity_scan.window",
+	"server_chain.health_check.proximity_scan.settle_secs",
+	"server_chain.health_check.proximity_scan.repeat_interval_mins",
+	"server_chain.health_check.proximity_scan.report_status_mins",
+	"server_chain.health_check.show_counters",
 }
 
 var GlobalSettingType = map[string]smartcontract.ConfigType{
@@ -183,6 +211,20 @@ var GlobalSettingType = map[string]smartcontract.ConfigType{
 	GlobalSettingName[LfbTicketAhead]:                           smartcontract.Int,
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   smartcontract.Int,
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromSharders]: smartcontract.Int,
+
+	GlobalSettingName[HealthCheckDeepScanEnabled]:                 smartcontract.Boolean,
+	GlobalSettingName[HealthCheckDeepScanBatchSize]:               smartcontract.Int64,
+	GlobalSettingName[HealthCheckDeepScanWindow]:                  smartcontract.Int64,
+	GlobalSettingName[HealthCheckDeepScanSettleSecs]:              smartcontract.Duration,
+	GlobalSettingName[HealthCheckDeepScanIntervalMins]:            smartcontract.Duration,
+	GlobalSettingName[HealthCheckDeepScanReportStatusMins]:        smartcontract.Duration,
+	GlobalSettingName[HealthCheckProximityScanEnabled]:            smartcontract.Boolean,
+	GlobalSettingName[HealthCheckProximityScanBatchSize]:          smartcontract.Int64,
+	GlobalSettingName[HealthCheckProximityScanWindow]:             smartcontract.Int64,
+	GlobalSettingName[HealthCheckProximityScanSettleSecs]:         smartcontract.Duration,
+	GlobalSettingName[HealthCheckProximityScanRepeatIntervalMins]: smartcontract.Duration,
+	GlobalSettingName[HealthCheckProximityScanRejportStatusMins]:  smartcontract.Duration,
+	GlobalSettingName[HealthCheckShowCounters]:                    smartcontract.Boolean,
 }
 
 var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))

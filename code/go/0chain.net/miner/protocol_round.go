@@ -353,7 +353,7 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	)
 	if err == nil {
 		logging.Logger.Info("piers startRound before",
-			zap.Any("mc.Config", copy),
+			zap.Any("mc.Config", mc.Config),
 		)
 		defer func() {
 			if r := recover(); r != nil {

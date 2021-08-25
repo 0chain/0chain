@@ -5,8 +5,6 @@ import (
 
 	"0chain.net/smartcontract/minersc"
 
-	"0chain.net/core/viper"
-
 	"0chain.net/core/datastore"
 )
 
@@ -34,19 +32,19 @@ const (
 
 // HealthCheckCycleScan -
 type HealthCheckCycleScan struct {
-	Settle     time.Duration `json:"settle"`
-	SettleSecs int           `json:"settle_period_secs"`
+	Settle time.Duration `json:"settle"`
+	//SettleSecs int           `json:"settle_period_secs"`
 
 	Enabled   bool  `json:"scan_enable"`
 	BatchSize int64 `json:"batch_size"`
 
 	Window int64 `json:"scan_window"`
 
-	RepeatInterval     time.Duration `json:"repeat_interval"`
-	RepeatIntervalMins int           `json:"repeat_interval_mins"`
+	RepeatInterval time.Duration `json:"repeat_interval"`
+	//RepeatIntervalMins int           `json:"repeat_interval_mins"`
 
-	ReportStatusMins int           `json:"report_status_mins"`
-	ReportStatus     time.Duration `json:"report_status"`
+	//ReportStatusMins int `json:"report_status_mins"`
+	ReportStatus time.Duration `json:"report_status"`
 }
 
 //Config - chain Configuration
@@ -123,45 +121,27 @@ func (conf *Config) Update(cf *minersc.GlobalSettings) {
 	}
 	conf.PruneStateBelowCount = cf.GetInt(minersc.StatePruneBelowCount)
 	conf.SmartContractTimeout = cf.GetDuration(minersc.SmartContractTimeout)
+	if conf.SmartContractTimeout == 0 {
+		conf.SmartContractTimeout = DefaultSmartContractTimeout
+	}
 }
 
-func (config *Config) UpdateHealthCheck(configMap *minersc.GlobalSettings) {
-	// Health Check related counters
-	// Work on deep scan
-	conf := &config.HCCycleScan[DeepScan]
+// We don't need this yet, as the health check settings are used to set up a worker thread.
+func (conf *Config) UpdateHealthCheckSettings(cf *minersc.GlobalSettings) {
+	conf.HealthShowCounters = cf.GetBool(minersc.HealthCheckShowCounters)
+	ds := &conf.HCCycleScan[DeepScan]
+	ds.Enabled = cf.GetBool(minersc.HealthCheckDeepScanEnabled)
+	ds.BatchSize = cf.GetInt64(minersc.HealthCheckDeepScanBatchSize)
+	ds.Window = cf.GetInt64(minersc.HealthCheckDeepScanWindow)
+	ds.Settle = cf.GetDuration(minersc.HealthCheckDeepScanSettleSecs)
+	ds.RepeatInterval = cf.GetDuration(minersc.HealthCheckDeepScanIntervalMins)
+	ds.ReportStatus = cf.GetDuration(minersc.HealthCheckDeepScanReportStatusMins)
 
-	conf.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
-
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
-
-	// Work on proximity scan
-	conf = &config.HCCycleScan[ProximityScan]
-
-	conf.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
-	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
-	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
-
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
-
-	config.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
-	config.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout")
-	if config.SmartContractTimeout == 0 {
-		config.SmartContractTimeout = DefaultSmartContractTimeout
-	}
+	ps := &conf.HCCycleScan[ProximityScan]
+	ps.Enabled = cf.GetBool(minersc.HealthCheckProximityScanEnabled)
+	ps.BatchSize = cf.GetInt64(minersc.HealthCheckProximityScanBatchSize)
+	ps.Window = cf.GetInt64(minersc.HealthCheckProximityScanWindow)
+	ps.Settle = cf.GetDuration(minersc.HealthCheckProximityScanSettleSecs)
+	ps.RepeatInterval = cf.GetDuration(minersc.HealthCheckProximityScanRepeatIntervalMins)
+	ps.ReportStatus = cf.GetDuration(minersc.HealthCheckProximityScanRejportStatusMins)
 }
