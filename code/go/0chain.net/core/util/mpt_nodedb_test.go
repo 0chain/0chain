@@ -1305,7 +1305,7 @@ func TestMemoryNodeDB_Validate(t *testing.T) {
 			name: "TestMemoryNodeDB_Validate_ERR",
 			fields: func() fields {
 				mndb := NewMemoryNodeDB()
-				mpt := NewMerklePatriciaTrie(mndb, 1)
+				mpt := NewMerklePatriciaTrie(mndb, 1, nil)
 
 				n := NewFullNode(&AState{balance: 2})
 				_, err := mpt.Insert(n.GetHashBytes(), n)

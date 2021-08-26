@@ -144,7 +144,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 			},
 			wantW: func() string {
 				w := &bytes.Buffer{}
-				_, err := fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", "", n.GetHash(), n.GetHash())
+				_, err := fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", 0, n.GetHash(), n.GetHash())
 				require.NoError(t, err)
 
 				return w.String()
@@ -160,7 +160,7 @@ func TestChangeCollector_PrintChanges(t *testing.T) {
 			},
 			wantW: func() string {
 				w := &bytes.Buffer{}
-				_, err := fmt.Fprintf(w, "cc(%v): nn=%v\n", "", n.GetHash())
+				_, err := fmt.Fprintf(w, "cc(%v): nn=%v\n", 0, n.GetHash())
 				require.NoError(t, err)
 
 				return w.String()
