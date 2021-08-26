@@ -1,4 +1,4 @@
-name: CICD-01
+name: DEPLOY_TO_DEV-1
 
 on:
   workflow_dispatch:
@@ -23,8 +23,8 @@ jobs:
       - name: Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.CICD01KC }}" | base64 -d > ~/.kube/config
+          echo "${{ secrets.DEV1KC }}" | base64 -d > ~/.kube/config
       - name: Setup chain
         run: |
-          helm upgrade --install 0chain -n helmtest --set sharder.sharderImage.tag=${{ github.event.inputs.image }} --set miner.minerImage.tag=${{ github.event.inputs.image }} 0chain-helm/zchain
+          helm upgrade --install 0chain -n dev-1 --set sharder.sharderImage.tag=${{ github.event.inputs.image }} --set miner.minerImage.tag=${{ github.event.inputs.image }} 0chain-helm/zchain
           rm -rf ~/.kube
