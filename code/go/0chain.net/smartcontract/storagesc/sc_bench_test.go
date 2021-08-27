@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	numBlobbers            = 1000
+	numBlobbers            = 100
 	numWallets             = 100
 	numMiners              = 10
 	numSharders            = 5
@@ -85,7 +85,7 @@ func BenchmarkExecute(b *testing.B) {
 					ReadPriceRange:             PriceRange{0, config.MaxReadPrice},
 					WritePriceRange:            PriceRange{0, config.MaxWritePrice},
 					MaxChallengeCompletionTime: config.MaxChallengeCompletionTime,
-					DiversifyBlobbers:          true,
+					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes
 			}(),
@@ -151,10 +151,6 @@ func setUpMpt(
 
 	conf := setConfig(b, balances)
 	addMockBlobbers(b, sscId, *conf, balances)
-
-	//_, err := balances.GetClientBalance("31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929")
-	//require.NoError(b, err)
-	//fmt.Println("balance", balance, "id", "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929")
 
 	return pMpt, balances.GetState().GetRoot(), *conf
 }
