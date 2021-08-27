@@ -117,7 +117,7 @@ server_chain:
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_1_sharder_piers.json
+  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0
   dns_url: "" # http://198.18.0.98:9091
