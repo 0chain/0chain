@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/core/datastore"
+
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/chaincore/block"
@@ -22,7 +24,7 @@ import (
 )
 
 const (
-	numBlobbers            = 10
+	numBlobbers            = 1000
 	numWallets             = 100
 	numMiners              = 10
 	numSharders            = 5
@@ -31,6 +33,9 @@ const (
 	numZcnscAuthorizers    = 10
 	numBlobberStakeHolders = 10
 	now                    = common.Timestamp(100000)
+	mockClientId           = "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929"
+	mockClientPublicKey    = "mockPublicKey"
+	mockTransactionHash    = "1234567890"
 )
 
 func main() {
@@ -42,11 +47,6 @@ func main() {
 }
 
 func BenchmarkExecute(b *testing.B) {
-	const (
-		mockClientId        = "1234567890123456"
-		mockClientPublicKey = "mockPublicKey"
-		mockTransactionHash = "1234567890"
-	)
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -61,35 +61,35 @@ func BenchmarkExecute(b *testing.B) {
 		) (string, error)
 		txn   transaction.Transaction
 		input []byte
-	}{ /*
-			{
-				name:     "new_allocation_request",
-				endpoint: ssc.newAllocationRequest,
-				txn: transaction.Transaction{
-					HashIDField: datastore.HashIDField{
-						Hash: mockTransactionHash,
-					},
-					ClientID:     mockClientId,
-					CreationDate: now,
-					Value:        config.MinAllocSize,
+	}{
+		{
+			name:     "new_allocation_request",
+			endpoint: ssc.newAllocationRequest,
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: mockTransactionHash,
 				},
-				input: func() []byte {
-					bytes, _ := (&newAllocationRequest{
-						DataShards:                 4,
-						ParityShards:               4,
-						Size:                       config.MinAllocSize,
-						Expiration:                 common.Timestamp(config.MinAllocDuration.Seconds()) + now,
-						Owner:                      mockClientId,
-						OwnerPublicKey:             mockClientPublicKey,
-						PreferredBlobbers:          []string{},
-						ReadPriceRange:             PriceRange{0, config.MaxReadPrice},
-						WritePriceRange:            PriceRange{0, config.MaxWritePrice},
-						MaxChallengeCompletionTime: config.MaxChallengeCompletionTime,
-						DiversifyBlobbers:          true,
-					}).encode()
-					return bytes
-				}(),
-			},*/
+				ClientID:     mockClientId,
+				CreationDate: now,
+				Value:        config.MinAllocSize,
+			},
+			input: func() []byte {
+				bytes, _ := (&newAllocationRequest{
+					DataShards:                 4,
+					ParityShards:               4,
+					Size:                       config.MinAllocSize,
+					Expiration:                 common.Timestamp(config.MinAllocDuration.Seconds()) + now,
+					Owner:                      mockClientId,
+					OwnerPublicKey:             mockClientPublicKey,
+					PreferredBlobbers:          []string{},
+					ReadPriceRange:             PriceRange{0, config.MaxReadPrice},
+					WritePriceRange:            PriceRange{0, config.MaxWritePrice},
+					MaxChallengeCompletionTime: config.MaxChallengeCompletionTime,
+					DiversifyBlobbers:          true,
+				}).encode()
+				return bytes
+			}(),
+		},
 		{
 			name:     "new_read_pool",
 			endpoint: ssc.newReadPool,
@@ -113,7 +113,7 @@ func BenchmarkExecute(b *testing.B) {
 		b.Run(bm.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				b.StopTimer()
-				balances := getBalances(b, bm.name, &bm.txn, root, mpt)
+				_, balances := getBalances(b, bm.name, &bm.txn, root, mpt)
 				b.StartTimer()
 				_, err := bm.endpoint(&bm.txn, bm.input, balances)
 				require.NoError(b, err)
@@ -126,29 +126,64 @@ func setUpMpt(
 	b *testing.B,
 	client string,
 	sscId string,
-) (util.MerklePatriciaTrie, util.Key, scConfig) {
-	pMpt, balances := getNewEmptyMpt(b)
-	pNode := pMpt.GetNodeDB()
+) (*util.MerklePatriciaTrie, util.Key, scConfig) {
+	pMpt, balances, pNode := getNewEmptyMpt(b)
 
-	memNode := util.NewMemoryNodeDB()
-	levelNode := util.NewLevelNodeDB(
-		memNode,
-		pNode,
-		false,
-	)
-	levelMpt := util.NewMerklePatriciaTrie(
-		levelNode,
-		1,
-		pMpt.GetRoot(),
+	addMockkClient2(b, client, pMpt, balances, pNode)
+
+	bk := &block.Block{}
+	magicBlock := &block.MagicBlock{}
+	signatureScheme := &encryption.BLS0ChainScheme{}
+	balances = cstate.NewStateContext(
+		bk,
+		pMpt,
+		&state.Deserializer{},
+		&transaction.Transaction{
+			HashIDField: datastore.HashIDField{
+				Hash: mockTransactionHash,
+			},
+		},
+		func(*block.Block) []string { return []string{} },
+		func() *block.Block { return bk },
+		func() *block.MagicBlock { return magicBlock },
+		func() encryption.SignatureScheme { return signatureScheme },
 	)
 
 	conf := setConfig(b, balances)
-	addMockkClient(b, client, *levelMpt, balances)
 	addMockBlobbers(b, sscId, *conf, balances)
-	err := pMpt.MergeMPTChanges(levelMpt)
-	err = err
+
+	//_, err := balances.GetClientBalance("31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929")
+	//require.NoError(b, err)
+	//fmt.Println("balance", balance, "id", "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929")
 
 	return pMpt, balances.GetState().GetRoot(), *conf
+}
+
+func addMockkClient2(
+	b *testing.B,
+	client string,
+	pMpt *util.MerklePatriciaTrie,
+	balances cstate.StateContextI,
+	stateDB util.NodeDB,
+) {
+	initStates := state.NewInitStates()
+	err := initStates.Read("testdata/initial_state.yaml")
+	require.NoError(b, err)
+	for _, v := range initStates.States {
+		is := &state.State{}
+		is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+		is.Balance = state.Balance(v.Tokens)
+		pMpt.Insert(util.Path(v.ID), is)
+
+		//s, err := pMpt.GetNodeValue(util.Path(v.ID))
+		//news := &state.State{}
+		//news.Decode(s.Encode())
+		//fmt.Println("first loop s", s, "err", err)
+
+		//balance, err := balances.GetClientBalance(v.ID)
+		//fmt.Println("balance", balance, "id", v.ID)
+	}
+
 }
 
 func addMockkClient(
@@ -157,29 +192,24 @@ func addMockkClient(
 	pMpt util.MerklePatriciaTrie,
 	balances cstate.StateContextI,
 ) {
-	cState := state.State{
-		TxnHash: "12",
-		//TxnHashBytes: []uint8{49, 50},
+	cState := &state.State{
+		TxnHash: "0000000000000000000000000000000000000000000000000000000000000000",
 		Round:   7,
 		Balance: state.Balance(1e10 * 777),
 	}
-	cState = cState
-	key, err := balances.GetState().Insert(util.Path(client), &cState)
+	cStateTest := state.State{}
+	cStateTest.Decode(cState.Encode())
+	cState.TxnHashBytes = cState.Encode()
+	cStateTest.Decode(cState.Encode())
+
+	balances.SetStateContext(cState)
+	//_, err := balances.GetState().Insert(util.Path(client), cState)
+	_, err := pMpt.Insert(util.Path(client), cState)
 	require.NoError(b, err)
-	return
-	fmt.Println("key", key, err)
 
-	var blobbers StorageNodes
-	blobbers.Nodes.add(&StorageNode{ID: "fred"})
-	//_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
-	key_hash := encryption.Hash(ALL_BLOBBERS_KEY)
-	key, err = balances.GetState().Insert(util.Path(key_hash), &cState)
-
-	//err = pMpt.MergeMPTChanges(balances.GetState())
-
-	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
-	allBlobbersList := &StorageNodes{}
-	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
+	s, err := pMpt.GetNodeValue(util.Path(client))
+	news := &state.State{}
+	news.Decode(s.Encode())
 
 	bal, err := balances.GetClientBalance(client)
 	bal = bal
@@ -249,7 +279,7 @@ func addMockBlobbers(
 	require.NoError(b, err)
 }
 
-func getNewEmptyMpt(b *testing.B) (util.MerklePatriciaTrie, cstate.StateContextI) {
+func getNewEmptyMpt(b *testing.B) (*util.MerklePatriciaTrie, cstate.StateContextI, *util.PNodeDB) {
 	pNode, err := util.NewPNodeDB(
 		"testdata/name_dataDir",
 		"testdata/name_logDir",
@@ -257,22 +287,26 @@ func getNewEmptyMpt(b *testing.B) (util.MerklePatriciaTrie, cstate.StateContextI
 	require.NoError(b, err)
 	mpt := util.NewMerklePatriciaTrie(
 		pNode,
-		1,
+		0,
 		nil,
 	)
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
-	return *mpt, cstate.NewStateContext(
+	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
 		&state.Deserializer{},
-		&transaction.Transaction{},
+		&transaction.Transaction{
+			HashIDField: datastore.HashIDField{
+				Hash: mockTransactionHash,
+			},
+		},
 		func(*block.Block) []string { return []string{} },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
-	)
+	), pNode
 }
 
 func getBalances(
@@ -280,8 +314,8 @@ func getBalances(
 	name string,
 	txn *transaction.Transaction,
 	root util.Key,
-	pMpt util.MerklePatriciaTrie,
-) cstate.StateContextI {
+	pMpt *util.MerklePatriciaTrie,
+) (*util.MerklePatriciaTrie, cstate.StateContextI) {
 	pNode := pMpt.GetNodeDB()
 	memNode := util.NewMemoryNodeDB()
 	levelNode := util.NewLevelNodeDB(
@@ -297,7 +331,7 @@ func getBalances(
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
-	return cstate.NewStateContext(
+	return mpt, cstate.NewStateContext(
 		bk,
 		mpt,
 		&state.Deserializer{},
@@ -310,40 +344,6 @@ func getBalances(
 }
 
 /*
-func NewStateContext(
-	b *block.Block,
-	s util.MerklePatriciaTrieI,
-	csd state.DeserializerI, t *transaction.Transaction,
-	getSharderFunc func(*block.Block) []string,
-	getLastestFinalizedMagicBlock func() *block.Block,
-	getChainCurrentMagicBlock func() *block.MagicBlock,
-	getChainSignature func() encryption.SignatureScheme,
-) (
-	balances *StateContext,
-) {
-	return &StateContext{
-		block:                         b,
-		state:                         s,
-		clientStateDeserializer:       csd,
-		txn:                           t,
-		getSharders:                   getSharderFunc,
-		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
-		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
-		getSignature:                  getChainSignature,
-	}
-}
-
-// NewStateContext creation helper.
-func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (balances *bcstate.StateContext) {
-
-	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
-		txn,
-		c.GetBlockSharders,
-		c.GetLatestFinalizedMagicBlock,
-		c.GetCurrentMagicBlock,
-		c.GetSignatureScheme)
-}
 
 
 
@@ -392,14 +392,4 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 
 
 
-
-
-
-
-
-
-
-
-
-
-*/
+ */
