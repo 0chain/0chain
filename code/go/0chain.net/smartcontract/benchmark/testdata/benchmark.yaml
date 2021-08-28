@@ -1,0 +1,31 @@
+smart_contract:
+  miner:
+    min_delegates: 0
+    max_delegates: 100
+    min_stakke: 0.0
+    max_stake: 100.0
+  storage:
+    min_alloc_size: 1024
+    min_alloc_duration: 5m
+    max_read_price: 100.0
+    max_write_price: 100.0
+    max_challenge_completion_time: 30m
+    min_offer_duration: 10h
+    min_blobber_capacity: 1024
+    max_stake: 100
+
+simulation:
+  num_clients: 20
+  num_miners: 5
+  num_allocations: 50
+  num_blobbers: 20
+  num_allocation_payers: 2
+  num_allocation_payers_pools: 2
+  num_blobbers_per_Allocation: 4
+  num_blobber_delegates: 5
+  start_tokens: 100000000000
+  signature_scheme: bls0chain
+
+internal:
+  available_keys: 5
+  now: 100000
