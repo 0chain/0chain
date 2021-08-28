@@ -13,7 +13,10 @@ import (
 // EthereumAddress => required
 // Nonce => required
 func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := GetGlobalNode(balances)
+	gn, err := GetGlobalNode(balances)
+	if err != nil {
+		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
+	}
 
 	// check burn amount
 	if trans.Value < gn.MinBurnAmount {

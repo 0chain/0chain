@@ -16,6 +16,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var (
@@ -66,20 +69,24 @@ func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		} else {
-			return gn, nil
+			return gn, err
 		}
 	}
 	if err := gn.Decode(gv.Encode()); err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return gn, err
+	return gn, nil
 }
 
 // GetGlobalNode - returns global node
-func GetGlobalNode(balances cstate.StateContextI) *GlobalNode {
+func GetGlobalNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	gn, err := GetGlobalSavedNode(balances)
 	if err == nil {
-		return gn
+		return gn, nil
+	}
+
+	if gn == nil {
+		return nil, err
 	}
 
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
@@ -89,7 +96,7 @@ func GetGlobalNode(balances cstate.StateContextI) *GlobalNode {
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
 
-	return gn
+	return gn, nil
 }
 
 type AuthorizerSignature struct {
@@ -458,20 +465,19 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
 	authNodes := &AuthorizerNodes{}
 	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		} else {
-			authNodes.NodeMap = make(map[string]*AuthorizerNode)
-			return authNodes, nil
-		}
+	if authNodesBytes == nil {
+		authNodes.NodeMap = make(map[string]*AuthorizerNode)
+		return authNodes, nil
 	}
 
-	err = authNodes.Decode(authNodesBytes.Encode())
+	encoded := authNodesBytes.Encode()
+	logging.Logger.Info("get authorizer nodes", zap.String("hash", string(encoded)))
+
+	err = authNodes.Decode(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return authNodes, err
+	return authNodes, nil
 }
 
 type UserNode struct {

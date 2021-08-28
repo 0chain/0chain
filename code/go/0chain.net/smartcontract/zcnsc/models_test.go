@@ -102,7 +102,7 @@ func Test_ShouldGetGlobalNode(t *testing.T) {
 	balances, node, err := createStateAndNodeAndAddNodeToState()
 	require.NoError(t, err, "must Save the global node in state")
 
-	expected := GetGlobalNode(balances)
+	expected, _ := GetGlobalNode(balances)
 
 	require.Equal(t, node.ID, expected.ID)
 	require.Equal(t, node.MinBurnAmount, expected.MinBurnAmount)

@@ -327,12 +327,12 @@ func Test_Can_DigPool(t *testing.T) {
 func Test_Can_EmptyPool(t *testing.T) {
 	balances := MakeMockStateContext()
 	tr := CreateDefaultTransactionToZcnsc()
-	gn := GetGlobalNode(balances)
+	gn, err := GetGlobalNode(balances)
 
 	an := GetNewAuthorizer("key", tr.ClientID, "https://localhost:9876")
 
 	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
-	_, _, err := an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
+	_, _, err = an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 
 	require.NoError(t, err)
 }
@@ -480,7 +480,7 @@ func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
 	ans, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
 
-	gn := GetGlobalNode(ctx)
+	gn, err := GetGlobalNode(ctx)
 	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 

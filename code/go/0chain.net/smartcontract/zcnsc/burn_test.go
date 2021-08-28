@@ -207,7 +207,7 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	transfers := ctx.GetTransfers()
 	require.Equal(t, len(transfers), 1)
 
-	gn := GetGlobalNode(ctx)
+	gn, _ := GetGlobalNode(ctx)
 	require.NotNil(t, gn)
 
 	transfer := transfers[0]
