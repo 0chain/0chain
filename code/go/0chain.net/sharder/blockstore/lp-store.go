@@ -8,6 +8,9 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
+
+	. "0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -42,10 +45,6 @@ func NewFSStore(dir string) (*FSStore, error) {
 	return &FSStore{RootDir: dir}, nil
 }
 
-func (fs *FSStore) write() {
-
-}
-
 func (fs *FSStore) Write(b *block.Block) error {
 	dirRoundRange := chain.GetServerChain().RoundRange
 	subDir := strconv.Itoa(int(b.Round / dirRoundRange))
@@ -70,7 +69,7 @@ func (fs *FSStore) Write(b *block.Block) error {
 	}
 	cacheWriter.Close()
 	bmr := BlockMetaRecord{Hash: b.Hash, Tiering: int(HotTier)}
-	if err := bmr.Add(); err != nil {
+	if err := bmr.AddOrUpdate(); err != nil {
 		os.Remove(bPath)
 		return err
 	}
@@ -83,8 +82,10 @@ func (fs *FSStore) Read(hash string, round int64) (b *block.Block, err error) {
 	var bmr *BlockMetaRecord
 	bmr, err = GetBlockMetaRecord(hash)
 	if err != nil {
+		Logger.Debug(fmt.Sprintf("Block meta record not found: hash = %v, round = %v", hash, round))
 		return
 	}
+
 	switch bmr.Tiering {
 	case int(WarmTier):
 		//its only in warm tier
@@ -92,6 +93,7 @@ func (fs *FSStore) Read(hash string, round int64) (b *block.Block, err error) {
 		var f *os.File
 		f, err = os.Open(volumePath)
 		if err != nil {
+			Logger.Error(fmt.Sprintf("Block with hash = %v and round = %v not found in warm tier but its meta data found; volume path = %v", hash, round, bmr.VolumePath))
 			return
 		}
 		defer f.Close()
@@ -109,28 +111,74 @@ func (fs *FSStore) Read(hash string, round int64) (b *block.Block, err error) {
 		if err != nil {
 			return
 		}
-		go fs.addToHotTier(hash, round, data)
-		return
 
-	case int(ColdTier):
-		//
+		//Update meta record
+		bmr.LatestAccessCount++
+		bmr.LastAccessTime = time.Now()
+		bmr.AddOrUpdate()
+		// go fs.addToHotTier(hash, round, data)
+
+	case int(ColdTier): //its only in cold tier
+		filePath := path.Join(fs.RootDir, getSubdirName(round), fmt.Sprintf("%v.%v", hash, fileExt))
+		err = fs.Minio.FGetObject(fs.Minio.BucketName(), hash, filePath, minio.GetObjectOptions{})
+		if err != nil {
+			Logger.Error(fmt.Sprintf("Block with hash = %v and round = %v not found in cold tier but its meta data found", hash, round))
+			return nil, err
+		}
+
+		var f *os.File
+		f, _ = os.Open(filePath)
+		defer f.Close()
+		var r io.ReadCloser
+		r, err = zlib.NewReader(f)
+		if err != nil {
+			return
+		}
+		var data []byte
+		data, err = io.ReadAll(r)
+		if err != nil {
+			return
+		}
+		err = json.Unmarshal(data, b)
+		if err != nil {
+			return
+		}
+
+		//block is in hot tier now; either delete it or let it be
+		bmr.LatestAccessCount++
+		bmr.LastAccessTime = time.Now()
+		bmr.Tiering = int(HotAndColdTier)
+		bmr.AddOrUpdate()
 	default:
 		//its in hot tier
 		fileName := path.Join(fs.RootDir, getSubdirName(round), fmt.Sprintf("%v.%v", hash, fileExt))
 		var r *os.File
 		r, err = os.Open(fileName)
 		if err != nil {
+			Logger.Error(fmt.Sprintf("Block with hash = %v and round = %v not found in hot tier but its meta data found", hash, round))
 			return
 		}
 		err = datastore.ReadJSON(r, b)
-		return
+		if err != nil {
+			return
+		}
+		bmr.LatestAccessCount++
+		bmr.LastAccessTime = time.Now()
+		bmr.AddOrUpdate()
 	}
 	return
 }
 
+//***********************************Delete functions are kept to comply with store interface*****************************
 func (fs *FSStore) Delete(hash string) error {
 	return nil
 }
+
+func (fs *FSStore) DeleteBlock(b *block.Block) error {
+	return nil
+}
+
+//*************************************************************************************************************************
 
 // implement multiwriter; One to default path and other to among multiple disk
 // implement tiering logic. probably support for s3 compatible storage server with minio
@@ -140,6 +188,7 @@ func (fs *FSStore) Delete(hash string) error {
 func (fs *FSStore) addToHotTier(hash string, round int64, data []byte) {
 	//
 }
+
 func (fs *FSStore) furtherTiering(b *block.Block, bmr *BlockMetaRecord, blockData []byte, subDir, cachePath string) {
 	if len(fs.Volumes) > 0 {
 		v := fs.pickVolume(fs.Volumes)
@@ -147,14 +196,14 @@ func (fs *FSStore) furtherTiering(b *block.Block, bmr *BlockMetaRecord, blockDat
 		if err == nil {
 			bmr.Tiering = int(HotAndWarmTier)
 			bmr.VolumePath = bPath
-			bmr.Add()
+			bmr.AddOrUpdate()
 		}
 	} else if fs.minioEnabled {
 		// Add to minio if warm tiering is not available else minio can be used for cold tiering
 		_, err := fs.Minio.FPutObject(fs.Minio.BucketName(), b.Hash, cachePath, minio.PutObjectOptions{})
 		if err == nil {
 			bmr.Tiering = int(HotAndColdTier)
-			bmr.Add()
+			bmr.AddOrUpdate()
 		}
 	}
 }

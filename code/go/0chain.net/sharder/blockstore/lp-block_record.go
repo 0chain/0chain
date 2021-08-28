@@ -27,10 +27,11 @@ var (
 )
 
 type BlockMetaRecord struct {
-	Hash       string    `json:"-"`
-	LruTime    time.Time `json:"lrt"`
-	Tiering    int       `json:"tr"`
-	VolumePath string    `json:"vp"`
+	Hash              string    `json:"-"`
+	LastAccessTime    time.Time `json:"lrt"`
+	LatestAccessCount uint64    `json:"lac"` //This will reset to 0 when moving from hot tier.
+	Tiering           int       `json:"tr"`
+	VolumePath        string    `json:"vp"`
 }
 
 func NewBlockMetaStore(path string) error {
@@ -50,7 +51,7 @@ func NewBlockMetaStore(path string) error {
 
 // It would be better to save this meta record in hdd/s3 as per tiering config so that upon hot tiered disk fails it still can
 // be reconstructed. Writing to multiple disks but makes block writing as a whole a slow process.
-func (bmr *BlockMetaRecord) Add() (err error) {
+func (bmr *BlockMetaRecord) AddOrUpdate() (err error) {
 	err = db.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(BUCKET))
 		if bkt == nil {
@@ -85,4 +86,27 @@ func GetBlockMetaRecord(hash string) (*BlockMetaRecord, error) {
 	}
 	bmr.Hash = hash
 	return &bmr, nil
+}
+
+func GetAllRecord(ch chan<- BlockMetaRecord) {
+	err := db.View(func(t *bbolt.Tx) error {
+		bkt := t.Bucket([]byte(BUCKET))
+		if bkt == nil {
+			return errors.New("Bucket for Block meta recording not found")
+		}
+		err := bkt.ForEach(func(k, v []byte) error {
+			bmr := BlockMetaRecord{Hash: string(k)}
+			err := json.Unmarshal(v, &bmr)
+			if err != nil {
+				return err
+			}
+			ch <- bmr
+			return nil
+		})
+
+		return err
+	})
+	if err != nil {
+		close(ch)
+	}
 }
