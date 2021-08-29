@@ -73,7 +73,7 @@ var rootCmd = &cobra.Command{
 }
 
 func printSimSettings(vi *viper.Viper) {
-	println("\nsimulator settings")
+	println("\n\nsimulator settings")
 	println("num clients", vi.GetInt(benchmark.NumClients))
 	println("num miners", vi.GetInt(benchmark.NumMiners))
 	println("num sharders", vi.GetInt(benchmark.NumSharders))

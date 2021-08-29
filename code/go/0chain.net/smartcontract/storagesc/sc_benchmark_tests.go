@@ -157,7 +157,7 @@ func BenchmarkTests(
 					BaseURL:           "my_new_blobber.com",
 					Terms:             getMockBlobberTerms(vi),
 					Capacity:          vi.GetInt64(sc.StorageMinBlobberCapacity) * 1000,
-					StakePoolSettings: getStakePoolSettings(vi),
+					StakePoolSettings: getStakePoolSettings(vi, encryption.Hash("my_new_blobber")),
 				})
 				return bytes
 			}(),
@@ -177,7 +177,41 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                encryption.Hash("my_new_validator"),
 					BaseURL:           "my_new_validator.com",
-					StakePoolSettings: getStakePoolSettings(vi),
+					StakePoolSettings: getStakePoolSettings(vi, encryption.Hash("my_new_validator")),
+				})
+				return bytes
+			}(),
+		},
+		{
+			Name:     "storage_blobber_health_check",
+			Endpoint: ssc.blobberHealthCheck,
+			Txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: now + 1,
+				ClientID:     blobbers[0],
+				ToClientID:   ADDRESS,
+			},
+			Input: []byte{},
+		},
+		{
+			Name:     "update_blobber_settings",
+			Endpoint: ssc.updateBlobberSettings,
+			Txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				CreationDate: now + 1,
+				ClientID:     blobbers[0],
+				ToClientID:   ADDRESS,
+			},
+			Input: func() []byte {
+				bytes, _ := json.Marshal(&StorageNode{
+					ID:                blobbers[0],
+					Terms:             getMockBlobberTerms(vi),
+					Capacity:          vi.GetInt64(sc.StorageMinBlobberCapacity) * 1000,
+					StakePoolSettings: getStakePoolSettings(vi, blobbers[0]),
 				})
 				return bytes
 			}(),
@@ -217,7 +251,47 @@ func BenchmarkTests(
 			Endpoint: ssc.newReadPool,
 			Txn:      transaction.Transaction{},
 			Input:    []byte{},
+		}, /*
+			{
+				Name:     "storage_read_pool_unlock",
+				Endpoint: ssc.readPoolUnlock,
+				Txn: transaction.Transaction{
+					HashIDField: datastore.HashIDField{
+						Hash: encryption.Hash("mock transaction hash"),
+					},
+					Value:      vi.GetInt64(sc.StorageReadPoolMinLock),
+					ClientID:   clients[0],
+					ToClientID: ADDRESS,
+				},
+				Input: func() []byte {
+					bytes, _ := json.Marshal(&unlockRequest{
+						PoolID: allocations[0],
+					})
+					return bytes
+				}(),
+			},*/
+		{
+			Name:     "storage_read_pool_lock",
+			Endpoint: ssc.readPoolLock,
+			Txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				Value:      vi.GetInt64(sc.StorageReadPoolMinLock),
+				ClientID:   clients[0],
+				ToClientID: ADDRESS,
+			},
+			Input: func() []byte {
+				bytes, _ := json.Marshal(&lockRequest{
+					AllocationID: allocations[0],
+					TargetId:     getMockReadPoolId(0, 0, 0),
+					Duration:     vi.GetDuration(sc.StorageReadPoolMinLockPeriod),
+				})
+				return bytes
+			}(),
 		},
+		// write pool
+
 		// stake pool
 		{
 			Name:     "storage_stake_pool_pay_interests",

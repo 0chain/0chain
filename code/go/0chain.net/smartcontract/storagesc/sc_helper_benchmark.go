@@ -29,6 +29,7 @@ func AddMockAllocations(
 	var wps = make([]*writePool, 0, len(clients))
 	var rps = make([]*readPool, 0, len(clients))
 	var cas = make([]*ClientAllocation, len(clients), len(clients))
+	var fps = make([]fundedPools, len(clients), len(clients))
 	lock := state.Balance(float64(getMockBlobberTerms(vi).WritePrice) *
 		sizeInGB(vi.GetInt64(sc.StorageMinAllocSize)))
 	expire := common.Timestamp(vi.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
@@ -106,17 +107,17 @@ func AddMockAllocations(
 				rp = new(readPool)
 				rps = append(rps, rp)
 			}
-			for k := 0; k < vi.GetInt("num_aAllocation_payers_pools"); k++ {
+			for k := 0; k < vi.GetInt(sc.NumAllocationPlayerPools); k++ {
 				wap := allocationPool{
 					ExpireAt:     sa.Expiration,
 					AllocationID: sa.ID,
 				}
-				wap.ID = sa.ID + strconv.Itoa(j) + strconv.Itoa(k)
+				wap.ID = getMockWritePoolId(i, cIndex, k)
 				rap := allocationPool{
 					ExpireAt:     sa.Expiration,
 					AllocationID: sa.ID,
 				}
-				rap.ID = sa.ID + strconv.Itoa(j) + strconv.Itoa(k)
+				rap.ID = getMockReadPoolId(i, cIndex, k)
 				for l := 0; l < numAllocBlobbers; l++ {
 					wap.Blobbers.add(&blobberPool{
 						BlobberID: getMockBlobberId(startBlobbers + l),
@@ -127,6 +128,8 @@ func AddMockAllocations(
 						Balance:   amountPerBlobber,
 					})
 				}
+				fps[cIndex] = append(fps[cIndex], wap.ID)
+				fps[cIndex] = append(fps[cIndex], rap.ID)
 				wp.Pools = append(wp.Pools, &wap)
 				rp.Pools = append(rp.Pools, &rap)
 			}
@@ -141,7 +144,15 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
+
 	}
+	for i, fp := range fps {
+		_, err := balances.InsertTrieNode(fundedPoolsKey(sscId, clients[i]), &fp)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	for _, ca := range cas {
 		if ca != nil {
 			_, err := balances.InsertTrieNode(ca.GetKey(sscId), ca)
@@ -167,14 +178,15 @@ func AddMockBlobbers(
 	}.ID
 	var blobbers StorageNodes
 	var blobberIds []string
-	const maxLatitude float64 = 180
-	const maxLongitude float64 = 90
+	const maxLatitude float64 = 88
+	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(vi.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(vi.GetInt(sc.NumBlobbers))
 	for i := 0; i < vi.GetInt(sc.NumBlobbers); i++ {
+		id := getMockBlobberId(i)
 		blobber := &StorageNode{
-			ID:      getMockBlobberId(i),
-			BaseURL: getMockBlobberId(i) + ".com",
+			ID:      id,
+			BaseURL: id + ".com",
 			Geolocation: StorageNodeGeolocation{
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
 				Longitude: longitudeStep*float64(i) - maxLongitude,
@@ -184,7 +196,7 @@ func AddMockBlobbers(
 			Used:              0,
 			LastHealthCheck:   common.Timestamp(vi.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
-			StakePoolSettings: getStakePoolSettings(vi),
+			StakePoolSettings: getStakePoolSettings(vi, id),
 		}
 		if i < vi.GetInt(sc.AvailableKeys) {
 			blobberIds = append(blobberIds, blobber.ID)
@@ -216,7 +228,7 @@ func GetStakePools(
 				Blobber:   0,
 				Validator: 0,
 			},
-			Settings: getStakePoolSettings(vi),
+			Settings: getStakePoolSettings(vi, getMockBlobberId(i)),
 		}
 		bId := getMockBlobberId(i)
 		for j := 0; j < vi.GetInt(sc.NumBlobberDelegates); j++ {
@@ -256,14 +268,22 @@ func getMockBlobberTerms(vi *viper.Viper) Terms {
 	}
 }
 
-func getStakePoolSettings(vi *viper.Viper) stakePoolSettings {
+func getStakePoolSettings(vi *viper.Viper, blobber string) stakePoolSettings {
 	return stakePoolSettings{
-		DelegateWallet: "",
+		DelegateWallet: blobber,
 		MinStake:       state.Balance(vi.GetInt64(sc.StorageMinStake) * 1e10),
 		MaxStake:       state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10),
 		NumDelegates:   vi.GetInt(sc.NumBlobberDelegates),
 		ServiceCharge:  vi.GetFloat64(sc.StorageMaxCharge),
 	}
+}
+
+func getMockReadPoolId(allocation, client, index int) string {
+	return "read pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index)
+}
+
+func getMockWritePoolId(allocation, client, index int) string {
+	return "write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index)
 }
 
 func getMockBlobberId(index int) string {
@@ -303,8 +323,8 @@ func SetConfig(
 	conf.MaxMint = 100e10
 
 	conf.ReadPool = &readPoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 5 * time.Second,
+		MinLock:       vi.GetInt64(sc.StorageReadPoolMinLock),
+		MinLockPeriod: vi.GetDuration(sc.StorageReadPoolMinLockPeriod),
 		MaxLockPeriod: 20 * time.Minute,
 	}
 	conf.WritePool = &writePoolConfig{

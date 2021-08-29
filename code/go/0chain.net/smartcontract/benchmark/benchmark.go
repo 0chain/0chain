@@ -46,6 +46,8 @@ const (
 	StorageMaxDelegates               = SmartContract + Storage + "max_delegates"
 	StorageDiverseBlobbers            = SmartContract + Storage + "diverse_blobbers"
 	StorageFailedChallengesToCancel   = SmartContract + Storage + "failed_challenges_to_cancel"
+	StorageReadPoolMinLock            = SmartContract + Storage + "failed_challenges_to_cancel"
+	StorageReadPoolMinLockPeriod      = SmartContract + Storage + "min_lock_period"
 )
 
 type BenchTest struct {
