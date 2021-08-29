@@ -364,7 +364,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
 	}
 
-	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
+	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't verify read marker: %v", err)

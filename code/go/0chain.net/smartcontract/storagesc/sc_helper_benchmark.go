@@ -18,6 +18,7 @@ func AddMockAllocations(
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 	clients, publicKeys []string,
+	sps []*stakePool,
 ) []string {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
@@ -27,28 +28,42 @@ func AddMockAllocations(
 	var allocations Allocations
 	var wps = make([]*writePool, 0, len(clients))
 	var rps = make([]*readPool, 0, len(clients))
+	var cas = make([]*ClientAllocation, len(clients), len(clients))
+	lock := state.Balance(float64(getMockBlobberTerms(vi).WritePrice) *
+		sizeInGB(vi.GetInt64(sc.StorageMinAllocSize)))
+	expire := common.Timestamp(vi.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
+		common.Timestamp(vi.GetInt64(sc.Now))
 	for i := 0; i < vi.GetInt(sc.NumAllocations); i++ {
-		clientIndex := (i % (len(clients) - 1 - vi.GetInt(sc.NumAllocationPlayerPools))) + 1
+		clientIndex := (i % (len(clients) - 1 - vi.GetInt(sc.NumAllocationPlayerPools)))
 		client := clients[clientIndex]
 		id := getMockAllocationId(i, client)
 		if i < vi.GetInt(sc.AvailableKeys) {
 			allocationIds = append(allocationIds, id)
 		}
 		sa := &StorageAllocation{
-			ID:           id,
-			DataShards:   vi.GetInt(sc.NumBlobbersPerAllocation) / 2,
-			ParityShards: vi.GetInt(sc.NumBlobbersPerAllocation) / 2,
-			Size:         vi.GetInt64(sc.StorageMinAllocSize),
-			Expiration: common.Timestamp(vi.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-				common.Timestamp(vi.GetInt64("now")),
+			ID:                         id,
+			DataShards:                 vi.GetInt(sc.NumBlobbersPerAllocation) / 2,
+			ParityShards:               vi.GetInt(sc.NumBlobbersPerAllocation) / 2,
+			Size:                       vi.GetInt64(sc.StorageMinAllocSize),
+			Expiration:                 expire,
 			Owner:                      client,
-			OwnerPublicKey:             publicKeys[i%clientIndex],
+			OwnerPublicKey:             publicKeys[clientIndex],
 			ReadPriceRange:             PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
 			WritePriceRange:            PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
 			MaxChallengeCompletionTime: vi.GetDuration(sc.StorageMaxChallengeCompletionTime),
-			DiverseBlobbers:            false,
+			DiverseBlobbers:            vi.GetBool(sc.StorageDiverseBlobbers),
+			WritePoolOwners:            []string{client},
 		}
-
+		for j := 0; j < vi.GetInt(sc.NumCurators); j++ {
+			sa.Curators = append(sa.Curators, clients[j])
+		}
+		if cas[clientIndex] == nil {
+			cas[clientIndex] = &ClientAllocation{
+				ClientID:    client,
+				Allocations: &Allocations{},
+			}
+		}
+		cas[clientIndex].Allocations.List.add(sa.ID)
 		numAllocBlobbers := sa.DataShards + sa.ParityShards
 		startBlobbers := i % (vi.GetInt(sc.NumBlobbers) - numAllocBlobbers)
 		for j := 0; j < numAllocBlobbers; j++ {
@@ -60,15 +75,21 @@ func AddMockAllocations(
 				Terms:         getMockBlobberTerms(vi),
 				MinLockDemand: mockMinLockDemand,
 			})
+			sps[startBlobbers+j].Offers[sa.ID] = &offerPool{
+				Lock:   lock,
+				Expire: expire,
+			}
 		}
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
 			panic(err)
 		}
+		allocations.List.add(sa.ID)
 
 		cp := newChallengePool()
-		cp.TokenPool.ID = challengePoolKey(sscId, sscId)
-		_, err = balances.InsertTrieNode(challengePoolKey(sscId, sscId), cp)
+		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
+		cp.Balance = mockMinLockDemand * 100
+		_, err = balances.InsertTrieNode(challengePoolKey(sscId, sa.ID), cp)
 
 		startClients := (i % (len(clients) - vi.GetInt(sc.NumAllocationPlayerPools)))
 		amountPerBlobber := state.Balance(float64(sa.Size) / float64(numAllocBlobbers))
@@ -112,13 +133,21 @@ func AddMockAllocations(
 		}
 	}
 	for i := 0; i < len(wps); i++ {
-		_, err := balances.InsertTrieNode(readPoolKey(sscId, clients[i]), wps[i])
+		_, err := balances.InsertTrieNode(writePoolKey(sscId, clients[i]), wps[i])
 		if err != nil {
 			panic(err)
 		}
 		_, err = balances.InsertTrieNode(readPoolKey(sscId, clients[i]), rps[i])
 		if err != nil {
 			panic(err)
+		}
+	}
+	for _, ca := range cas {
+		if ca != nil {
+			_, err := balances.InsertTrieNode(ca.GetKey(sscId), ca)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
@@ -143,13 +172,6 @@ func AddMockBlobbers(
 	latitudeStep := 2 * maxLatitude / float64(vi.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(vi.GetInt(sc.NumBlobbers))
 	for i := 0; i < vi.GetInt(sc.NumBlobbers); i++ {
-		spSettings := stakePoolSettings{
-			DelegateWallet: "",
-			MinStake:       0,
-			MaxStake:       1e12,
-			NumDelegates:   10,
-			ServiceCharge:  0.1,
-		}
 		blobber := &StorageNode{
 			ID:      getMockBlobberId(i),
 			BaseURL: getMockBlobberId(i) + ".com",
@@ -162,33 +184,13 @@ func AddMockBlobbers(
 			Used:              0,
 			LastHealthCheck:   common.Timestamp(vi.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
-			StakePoolSettings: spSettings,
+			StakePoolSettings: getStakePoolSettings(vi),
 		}
 		if i < vi.GetInt(sc.AvailableKeys) {
 			blobberIds = append(blobberIds, blobber.ID)
 		}
 		blobbers.Nodes.add(blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
-		if err != nil {
-			panic(err)
-		}
-		sp := &stakePool{
-			Pools:  make(map[string]*delegatePool),
-			Offers: make(map[string]*offerPool),
-			Rewards: stakePoolRewards{
-				Charge:    0,
-				Blobber:   0,
-				Validator: 0,
-			},
-			Settings: spSettings,
-		}
-		for j := 0; j < vi.GetInt(sc.NumBlobberDelegates); j++ {
-			id := blobber.ID + "Pool" + strconv.Itoa(i)
-			sp.Pools[id] = &delegatePool{}
-			sp.Pools[id].ID = id
-			sp.Pools[id].Balance = state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10)
-		}
-		err = sp.save(sscId, blobber.ID, balances)
 		if err != nil {
 			panic(err)
 		}
@@ -200,6 +202,50 @@ func AddMockBlobbers(
 	return blobberIds
 }
 
+func GetStakePools(
+	vi *viper.Viper,
+	balances cstate.StateContextI,
+) []*stakePool {
+	sps := make([]*stakePool, 0, vi.GetInt(sc.NumBlobbers))
+	for i := 0; i < vi.GetInt(sc.NumBlobbers); i++ {
+		sp := &stakePool{
+			Pools:  make(map[string]*delegatePool),
+			Offers: make(map[string]*offerPool),
+			Rewards: stakePoolRewards{
+				Charge:    0,
+				Blobber:   0,
+				Validator: 0,
+			},
+			Settings: getStakePoolSettings(vi),
+		}
+		bId := getMockBlobberId(i)
+		for j := 0; j < vi.GetInt(sc.NumBlobberDelegates); j++ {
+			id := bId + "Pool" + strconv.Itoa(i)
+			sp.Pools[id] = &delegatePool{}
+			sp.Pools[id].ID = id
+			sp.Pools[id].Balance = state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10)
+		}
+		sps = append(sps, sp)
+	}
+	return sps
+}
+
+func SaveStakePools(
+	vi *viper.Viper,
+	sps []*stakePool,
+	balances cstate.StateContextI,
+) {
+	var sscId = StorageSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}.ID
+	for i, sp := range sps {
+		err := sp.save(sscId, getMockBlobberId(i), balances)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func getMockBlobberTerms(vi *viper.Viper) Terms {
 	return Terms{
 		ReadPrice:               state.Balance(0.1 * 1e10),
@@ -207,6 +253,16 @@ func getMockBlobberTerms(vi *viper.Viper) Terms {
 		MinLockDemand:           1,
 		MaxOfferDuration:        10000 * vi.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: vi.GetDuration(sc.StorageMaxChallengeCompletionTime),
+	}
+}
+
+func getStakePoolSettings(vi *viper.Viper) stakePoolSettings {
+	return stakePoolSettings{
+		DelegateWallet: "",
+		MinStake:       state.Balance(vi.GetInt64(sc.StorageMinStake) * 1e10),
+		MaxStake:       state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10),
+		NumDelegates:   vi.GetInt(sc.NumBlobberDelegates),
+		ServiceCharge:  vi.GetFloat64(sc.StorageMaxCharge),
 	}
 }
 
@@ -229,7 +285,7 @@ func SetConfig(
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.MaxChallengesPerGeneration = 100
-	conf.FailedChallengesToCancel = 100
+	conf.FailedChallengesToCancel = vi.GetInt(sc.StorageFailedChallengesToCancel)
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = vi.GetInt64(sc.StorageMinAllocSize)
 	conf.MinAllocDuration = vi.GetDuration(sc.StorageMinAllocDuration)
@@ -239,11 +295,11 @@ func SetConfig(
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
-	conf.MaxDelegates = 200
+	conf.MaxDelegates = vi.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = vi.GetDuration(sc.StorageMaxChallengeCompletionTime)
-	conf.MaxCharge = 0.50   // 50%
-	conf.MinStake = 0.0     // 0 toks
-	conf.MaxStake = 1000e10 // 100 toks
+	conf.MaxCharge = vi.GetFloat64(sc.StorageMaxCharge)                   // 50%
+	conf.MinStake = state.Balance(vi.GetInt64(sc.StorageMinStake) * 1e10) // 0 toks
+	conf.MaxStake = state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10) // 100 toks
 	conf.MaxMint = 100e10
 
 	conf.ReadPool = &readPoolConfig{

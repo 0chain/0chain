@@ -87,9 +87,11 @@ func setUpMpt(
 
 	_ = storagesc.SetConfig(vi, balances)
 	blobbers := storagesc.AddMockBlobbers(vi, balances)
-	allocations := storagesc.AddMockAllocations(vi, balances, clients[1:], keys[1:])
-	_ = minersc.AddMockMiners(minersc.NodeTypeMiner, vi, balances)
-	_ = minersc.AddMockMiners(minersc.NodeTypeSharder, vi, balances)
+	stakePools := storagesc.GetStakePools(vi, balances)
+	allocations := storagesc.AddMockAllocations(vi, balances, clients, keys, stakePools)
+	storagesc.SaveStakePools(vi, stakePools, balances)
+	_ = minersc.AddMockNodes(minersc.NodeTypeMiner, vi, balances)
+	_ = minersc.AddMockNodes(minersc.NodeTypeSharder, vi, balances)
 	return pMpt,
 		balances.GetState().GetRoot(),
 		clients[:vi.GetInt(benchmark.AvailableKeys)],

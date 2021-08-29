@@ -19,12 +19,14 @@ const (
 	StartTokens              = Simulation + "start_tokens"
 	SignatureScheme          = Simulation + "signature_scheme"
 	NumMiners                = Simulation + "num_miners"
+	NumSharders              = Simulation + "nun_sharders"
 	NumAllocations           = Simulation + "num_allocations"
 	NumBlobbersPerAllocation = Simulation + "num_blobbers_per_Allocation"
 	NumBlobbers              = Simulation + "num_blobbers"
 	NumAllocationPlayerPools = Simulation + "num_allocation_payers_pools"
 	NumAllocationPlayer      = Simulation + "num_allocation_payers"
 	NumBlobberDelegates      = Simulation + "num_blobber_delegates"
+	NumCurators              = Simulation + "num_curators"
 
 	MinerMaxDelegates = SmartContract + Miner + "max_delegates"
 	MinerMaxCharge    = SmartContract + Miner + "max_charge"
@@ -38,7 +40,12 @@ const (
 	StorageMaxChallengeCompletionTime = SmartContract + Storage + "max_challenge_completion_time"
 	StorageMinOfferDuration           = SmartContract + Storage + "min_offer_duration"
 	StorageMinBlobberCapacity         = SmartContract + Storage + "min_blobber_capacity"
-	StorageMaxStake                   = SmartContract + Miner + "max_stake"
+	StorageMaxCharge                  = SmartContract + Storage + "max_charge"
+	StorageMinStake                   = SmartContract + Storage + "min_stake"
+	StorageMaxStake                   = SmartContract + Storage + "max_stake"
+	StorageMaxDelegates               = SmartContract + Storage + "max_delegates"
+	StorageDiverseBlobbers            = SmartContract + Storage + "diverse_blobbers"
+	StorageFailedChallengesToCancel   = SmartContract + Storage + "failed_challenges_to_cancel"
 )
 
 type BenchTest struct {

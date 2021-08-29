@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/spf13/viper"
+
 	"0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/storagesc"
 	"github.com/spf13/cobra"
@@ -57,7 +59,8 @@ var rootCmd = &cobra.Command{
 			}(bm, &wg)
 		}
 		wg.Wait()
-
+		printSimSettings(vi)
+		fmt.Println("\nResults")
 		fmt.Printf("name, ms\n")
 		for _, result := range benchmarkResult {
 			fmt.Printf(
@@ -68,3 +71,27 @@ var rootCmd = &cobra.Command{
 		}
 	},
 }
+
+func printSimSettings(vi *viper.Viper) {
+	println("\nsimulator settings")
+	println("num clients", vi.GetInt(benchmark.NumClients))
+	println("num miners", vi.GetInt(benchmark.NumMiners))
+	println("num sharders", vi.GetInt(benchmark.NumSharders))
+	println("num blobbers", vi.GetInt(benchmark.NumBlobbers))
+	println("num allocations", vi.GetInt(benchmark.NumAllocations))
+}
+
+/*
+simulation:
+  num_clients: 20
+  num_miners: 5
+  num_allocations: 50
+  num_blobbers: 20
+  num_allocation_payers: 2
+  num_allocation_payers_pools: 2
+  num_blobbers_per_Allocation: 4
+  num_blobber_delegates: 5
+  num_curators: 3
+  start_tokens: 100000000000
+  signature_scheme: bls0chain
+*/

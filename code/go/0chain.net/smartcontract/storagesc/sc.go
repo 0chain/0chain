@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
+
+	"0chain.net/chaincore/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -226,9 +227,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	//curator
 	case "add_curator":
-		resp, err = "", sc.addCurator(t, input, balances)
+		resp, err = sc.addCurator(t, input, balances)
 	case "remove_curator":
-		resp, err = "", sc.removeCurator(t, input, balances)
+		resp, err = sc.removeCurator(t, input, balances)
 
 	// blobbers
 

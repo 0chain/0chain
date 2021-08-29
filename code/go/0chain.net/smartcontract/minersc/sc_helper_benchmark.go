@@ -14,15 +14,28 @@ import (
 	"github.com/spf13/viper"
 )
 
-func AddMockMiners(
+func AddMockNodes(
 	nodeType NodeType,
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 ) []string {
-	var nodes []string
-	var allNodes MinerNodes
-	var err error
-	for i := 0; i < vi.GetInt(benchmark.NumMiners); i++ {
+	var (
+		err      error
+		nodes    []string
+		allNodes MinerNodes
+		numNodes int
+		key      string
+	)
+
+	if nodeType == NodeTypeMiner {
+		numNodes = vi.GetInt(benchmark.NumMiners)
+		key = AllMinersKey
+	} else {
+		numNodes = vi.GetInt(benchmark.NumSharders)
+		key = AllShardersKey
+	}
+
+	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = getMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(vi.GetInt64(benchmark.Now))
@@ -40,14 +53,12 @@ func AddMockMiners(
 
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 	}
-	if nodeType == NodeTypeMiner {
-		_, err = balances.InsertTrieNode(AllMinersKey, &allNodes)
-	} else {
-		_, err = balances.InsertTrieNode(AllShardersKey, &allNodes)
-	}
+
+	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {
 		panic(err)
 	}
+
 	return nodes
 }
 
