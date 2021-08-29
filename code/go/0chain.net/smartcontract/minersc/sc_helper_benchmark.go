@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"strconv"
-	"testing"
 
 	"0chain.net/chaincore/state"
 
@@ -13,12 +12,10 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
 )
 
 func AddMockMiners(
 	nodeType NodeType,
-	b *testing.B,
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 ) []string {
@@ -37,7 +34,9 @@ func AddMockMiners(
 		newNode.NodeType = NodeTypeMiner
 
 		_, err := balances.InsertTrieNode(newNode.getKey(), newNode)
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
 	}
@@ -46,7 +45,9 @@ func AddMockMiners(
 	} else {
 		_, err = balances.InsertTrieNode(AllShardersKey, &allNodes)
 	}
-	require.NoError(b, err)
+	if err != nil {
+		panic(err)
+	}
 	return nodes
 }
 

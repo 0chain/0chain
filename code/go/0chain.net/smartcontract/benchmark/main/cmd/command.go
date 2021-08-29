@@ -24,9 +24,8 @@ var rootCmd = &cobra.Command{
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var b testing.B
-		var vi = GetViper(&b, "testdata/benchmark.yaml")
-		mpt, root, clients, keys, blobbers, allocations := setUpMpt(&b, vi)
+		var vi = GetViper("testdata/benchmark.yaml")
+		mpt, root, clients, keys, blobbers, allocations := setUpMpt(vi, "db")
 		benchmarks := storagesc.BenchmarkTests(vi, clients, keys, blobbers, allocations)
 		type results struct {
 			test   benchmark.BenchTest
@@ -36,11 +35,12 @@ var rootCmd = &cobra.Command{
 		var wg sync.WaitGroup
 		for _, bm := range benchmarks {
 			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
+			go func(bm benchmark.BenchTest, wg *sync.WaitGroup) {
+				defer wg.Done()
 				result := testing.Benchmark(func(b *testing.B) {
 					for i := 0; i < b.N; i++ {
 						b.StopTimer()
-						_, balances := getBalances(b, bm.Name, &bm.Txn, root, mpt)
+						_, balances := getBalances(bm.Name, &bm.Txn, root, mpt)
 						b.StartTimer()
 						_, err := bm.Endpoint(&bm.Txn, bm.Input, balances)
 						require.NoError(b, err)
@@ -54,19 +54,17 @@ var rootCmd = &cobra.Command{
 					},
 				)
 				fmt.Println("test", bm.Name, "done")
-			}(&wg)
+			}(bm, &wg)
 		}
 		wg.Wait()
 
-		fmt.Printf("name, ms, #tests")
+		fmt.Printf("name, ms\n")
 		for _, result := range benchmarkResult {
 			fmt.Printf(
-				"%s,%d,%d",
+				"%s,%f\n",
 				result.test.Name,
-				result.result.T.Milliseconds(),
-				result.result.N,
+				float64(result.result.T.Milliseconds())/float64(result.result.N),
 			)
 		}
-		fmt.Println(benchmarkResult)
 	},
 }

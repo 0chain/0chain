@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"encoding/hex"
-	"testing"
 
 	"0chain.net/smartcontract/benchmark"
 
@@ -16,11 +15,9 @@ import (
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
 )
 
 func getBalances(
-	b *testing.B,
 	name string,
 	txn *transaction.Transaction,
 	root util.Key,
@@ -54,16 +51,19 @@ func getBalances(
 }
 
 func setUpMpt(
-	b *testing.B, vi *viper.Viper,
+	vi *viper.Viper,
+	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, []string, []string, []string, []string) {
 	pNode, err := util.NewPNodeDB(
-		"testdata/name_dataDir",
-		"testdata/name_logDir",
+		dbPath+"name_dataDir",
+		dbPath+"name_logDir",
 	)
-	require.NoError(b, err)
+	if err != nil {
+		panic(err)
+	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
-	clients, keys := AddMockkClients(b, pMpt, vi)
+	clients, keys := AddMockkClients(pMpt, vi)
 
 	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
@@ -85,11 +85,11 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
 
-	_ = storagesc.SetConfig(b, vi, balances)
-	blobbers := storagesc.AddMockBlobbers(b, vi, balances)
-	allocations := storagesc.AddMockAllocations(b, vi, balances, clients[1:], keys[1:])
-	_ = minersc.AddMockMiners(minersc.NodeTypeMiner, b, vi, balances)
-	_ = minersc.AddMockMiners(minersc.NodeTypeSharder, b, vi, balances)
+	_ = storagesc.SetConfig(vi, balances)
+	blobbers := storagesc.AddMockBlobbers(vi, balances)
+	allocations := storagesc.AddMockAllocations(vi, balances, clients[1:], keys[1:])
+	_ = minersc.AddMockMiners(minersc.NodeTypeMiner, vi, balances)
+	_ = minersc.AddMockMiners(minersc.NodeTypeSharder, vi, balances)
 	return pMpt,
 		balances.GetState().GetRoot(),
 		clients[:vi.GetInt(benchmark.AvailableKeys)],
@@ -99,7 +99,6 @@ func setUpMpt(
 }
 
 func AddMockkClients(
-	b *testing.B,
 	pMpt *util.MerklePatriciaTrie,
 	vi *viper.Viper,
 ) ([]string, []string) {
@@ -107,9 +106,13 @@ func AddMockkClients(
 	var clientIds, publicKeys []string
 	for i := 0; i < vi.GetInt(benchmark.NumClients); i++ {
 		err := sigScheme.GenerateKeys()
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 		publicKeyBytes, err := hex.DecodeString(sigScheme.GetPublicKey())
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 		clientID := encryption.Hash(publicKeyBytes)
 		publicKey := sigScheme.GetPublicKey()
 		clientIds = append(clientIds, clientID)

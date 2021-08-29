@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"strconv"
-	"testing"
 	"time"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -13,11 +12,9 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-	"github.com/stretchr/testify/require"
 )
 
 func AddMockAllocations(
-	b *testing.B,
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 	clients, publicKeys []string,
@@ -65,7 +62,9 @@ func AddMockAllocations(
 			})
 		}
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(sscId, sscId)
@@ -114,18 +113,23 @@ func AddMockAllocations(
 	}
 	for i := 0; i < len(wps); i++ {
 		_, err := balances.InsertTrieNode(readPoolKey(sscId, clients[i]), wps[i])
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 		_, err = balances.InsertTrieNode(readPoolKey(sscId, clients[i]), rps[i])
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
-	require.NoError(b, err)
+	if err != nil {
+		panic(err)
+	}
 	return allocationIds
 }
 
 func AddMockBlobbers(
-	b *testing.B,
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 ) []string {
@@ -165,7 +169,9 @@ func AddMockBlobbers(
 		}
 		blobbers.Nodes.add(blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
-		require.NoError(b, err)
+		if err != nil {
+			panic(err)
+		}
 		sp := &stakePool{
 			Pools:  make(map[string]*delegatePool),
 			Offers: make(map[string]*offerPool),
@@ -182,13 +188,15 @@ func AddMockBlobbers(
 			sp.Pools[id].ID = id
 			sp.Pools[id].Balance = state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10)
 		}
-		require.NoError(b, sp.save(sscId, blobber.ID, balances))
+		err = sp.save(sscId, blobber.ID, balances)
+		if err != nil {
+			panic(err)
+		}
 	}
 	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
-
-	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
-	allBlobbersBytes = allBlobbersBytes
-	require.NoError(b, err)
+	if err != nil {
+		panic(err)
+	}
 	return blobberIds
 }
 
@@ -211,7 +219,6 @@ func getMockAllocationId(index int, client string) string {
 }
 
 func SetConfig(
-	t testing.TB,
 	vi *viper.Viper,
 	balances cstate.StateContextI,
 ) (conf *scConfig) {
@@ -257,6 +264,8 @@ func SetConfig(
 	}
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
-	require.NoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 	return
 }

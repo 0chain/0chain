@@ -1,13 +1,10 @@
 package cmd
 
 import (
-	"testing"
-
 	"github.com/spf13/viper"
-	"github.com/stretchr/testify/require"
 )
 
-func GetViper(b *testing.B, path string) *viper.Viper {
+func GetViper(path string) *viper.Viper {
 	var vi = viper.New()
 	vi.SetConfigType("yaml")
 	vi.SetConfigName("benchmark")
@@ -16,6 +13,9 @@ func GetViper(b *testing.B, path string) *viper.Viper {
 	vi.AddConfigPath("./config/")
 	vi.AddConfigPath(".")
 	vi.AddConfigPath("..")
-	require.NoError(b, vi.ReadInConfig())
+	err := vi.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
 	return vi
 }
