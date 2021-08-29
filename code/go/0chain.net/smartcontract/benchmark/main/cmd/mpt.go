@@ -1,10 +1,10 @@
-package benchmark
+package cmd
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/benchmark"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -61,11 +61,7 @@ func setUpMpt(
 		"testdata/name_logDir",
 	)
 	require.NoError(b, err)
-	pMpt := util.NewMerklePatriciaTrie(
-		pNode,
-		1,
-		nil,
-	)
+	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
 	clients, keys := AddMockkClients(b, pMpt, vi)
 
@@ -89,15 +85,15 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
 
-	_ = storagesc.SetConfig(b, balances)
+	_ = storagesc.SetConfig(b, vi, balances)
 	blobbers := storagesc.AddMockBlobbers(b, vi, balances)
 	allocations := storagesc.AddMockAllocations(b, vi, balances, clients[1:], keys[1:])
-	_ = minersc.AddMockMiners(b, vi, balances)
-
+	_ = minersc.AddMockMiners(minersc.NodeTypeMiner, b, vi, balances)
+	_ = minersc.AddMockMiners(minersc.NodeTypeSharder, b, vi, balances)
 	return pMpt,
 		balances.GetState().GetRoot(),
-		clients[:vi.GetInt(smartcontract.AvailableKeys)],
-		keys[:vi.GetInt(smartcontract.AvailableKeys)],
+		clients[:vi.GetInt(benchmark.AvailableKeys)],
+		keys[:vi.GetInt(benchmark.AvailableKeys)],
 		blobbers,
 		allocations
 }
@@ -107,9 +103,9 @@ func AddMockkClients(
 	pMpt *util.MerklePatriciaTrie,
 	vi *viper.Viper,
 ) ([]string, []string) {
-	var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(vi.GetString(smartcontract.SignatureScheme))
+	var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(vi.GetString(benchmark.SignatureScheme))
 	var clientIds, publicKeys []string
-	for i := 0; i < vi.GetInt(smartcontract.NumClients); i++ {
+	for i := 0; i < vi.GetInt(benchmark.NumClients); i++ {
 		err := sigScheme.GenerateKeys()
 		require.NoError(b, err)
 		publicKeyBytes, err := hex.DecodeString(sigScheme.GetPublicKey())
@@ -120,7 +116,7 @@ func AddMockkClients(
 		publicKeys = append(publicKeys, publicKey)
 		is := &state.State{}
 		is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(vi.GetInt64(smartcontract.StartTokens))
+		is.Balance = state.Balance(vi.GetInt64(benchmark.StartTokens))
 		pMpt.Insert(util.Path(clientID), is)
 	}
 

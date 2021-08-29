@@ -1,4 +1,4 @@
-package smartcontract
+package benchmark
 
 import (
 	cstate "0chain.net/chaincore/chain/state"

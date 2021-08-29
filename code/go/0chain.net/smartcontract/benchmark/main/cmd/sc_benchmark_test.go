@@ -1,4 +1,4 @@
-package benchmark
+package cmd
 
 import (
 	"testing"
@@ -9,11 +9,9 @@ import (
 )
 
 func BenchmarkExecute(b *testing.B) {
-	var vi = getViper(b, "testdata/benchmark.yaml")
+	var vi = GetViper(b, "testdata/benchmark.yaml")
 
 	mpt, root, clients, keys, blobbers, allocations := setUpMpt(b, vi)
-	allocations = allocations
-	blobbers = blobbers
 	benchmarks := storagesc.BenchmarkTests(vi, clients, keys, blobbers, allocations)
 	for _, bm := range benchmarks {
 		b.Run(bm.Name, func(b *testing.B) {

@@ -1,4 +1,4 @@
-package benchmark
+package cmd
 
 import (
 	"testing"
@@ -7,11 +7,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getViper(b *testing.B, path string) *viper.Viper {
+func GetViper(b *testing.B, path string) *viper.Viper {
 	var vi = viper.New()
 	vi.SetConfigType("yaml")
 	vi.SetConfigName("benchmark")
+	vi.AddConfigPath("../config/")
 	vi.AddConfigPath("./testdata/")
+	vi.AddConfigPath("./config/")
+	vi.AddConfigPath(".")
+	vi.AddConfigPath("..")
 	require.NoError(b, vi.ReadInConfig())
 	return vi
 }

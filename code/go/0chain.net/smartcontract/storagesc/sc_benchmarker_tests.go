@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	sc "0chain.net/smartcontract"
+	sc "0chain.net/smartcontract/benchmark"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
@@ -38,20 +38,20 @@ func BenchmarkTests(
 				},
 				ClientID:     clients[0],
 				CreationDate: now,
-				Value:        vi.GetInt64(sc.StorageMinAllocSize),
+				Value:        100 * vi.GetInt64(sc.StorageMinAllocSize),
 			},
 			Input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
 					DataShards:                 4,
 					ParityShards:               4,
-					Size:                       vi.GetInt64(sc.StorageMinAllocSize),
+					Size:                       100 * vi.GetInt64(sc.StorageMinAllocSize),
 					Expiration:                 common.Timestamp(vi.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now,
 					Owner:                      clients[0],
 					OwnerPublicKey:             keys[0],
 					PreferredBlobbers:          []string{},
-					ReadPriceRange:             PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxReadPrice))},
-					WritePriceRange:            PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxWritePrice))},
-					MaxChallengeCompletionTime: vi.GetDuration("max_challenge_completionTime"),
+					ReadPriceRange:             PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+					WritePriceRange:            PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+					MaxChallengeCompletionTime: vi.GetDuration(sc.StorageMaxChallengeCompletionTime),
 					DiversifyBlobbers:          false,
 				}).encode()
 				return bytes

@@ -7,7 +7,7 @@ import (
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/encryption"
-	sc "0chain.net/smartcontract"
+	sc "0chain.net/smartcontract/benchmark"
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -46,8 +46,8 @@ func AddMockAllocations(
 				common.Timestamp(vi.GetInt64("now")),
 			Owner:                      client,
 			OwnerPublicKey:             publicKeys[i%clientIndex],
-			ReadPriceRange:             PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxReadPrice))},
-			WritePriceRange:            PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxWritePrice))},
+			ReadPriceRange:             PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+			WritePriceRange:            PriceRange{0, state.Balance(vi.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
 			MaxChallengeCompletionTime: vi.GetDuration(sc.StorageMaxChallengeCompletionTime),
 			DiverseBlobbers:            false,
 		}
@@ -154,7 +154,7 @@ func AddMockBlobbers(
 				Longitude: longitudeStep*float64(i) - maxLongitude,
 			},
 			Terms:             getMockBlobberTerms(vi),
-			Capacity:          vi.GetInt64(sc.StorageMinBlobberCapacity) * 2,
+			Capacity:          vi.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Used:              0,
 			LastHealthCheck:   common.Timestamp(vi.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
@@ -180,7 +180,7 @@ func AddMockBlobbers(
 			id := blobber.ID + "Pool" + strconv.Itoa(i)
 			sp.Pools[id] = &delegatePool{}
 			sp.Pools[id].ID = id
-			sp.Pools[id].Balance = state.Balance(vi.GetInt64(sc.StorageMaxStake))
+			sp.Pools[id].Balance = state.Balance(vi.GetInt64(sc.StorageMaxStake) * 1e10)
 		}
 		require.NoError(b, sp.save(sscId, blobber.ID, balances))
 	}
@@ -194,8 +194,8 @@ func AddMockBlobbers(
 
 func getMockBlobberTerms(vi *viper.Viper) Terms {
 	return Terms{
-		ReadPrice:               state.Balance(vi.GetInt64(sc.StorageMaxReadPrice)),
-		WritePrice:              state.Balance(vi.GetInt64(sc.StorageMaxWritePrice)),
+		ReadPrice:               state.Balance(0.1 * 1e10),
+		WritePrice:              state.Balance(0.1 * 1e10),
 		MinLockDemand:           1,
 		MaxOfferDuration:        10000 * vi.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: vi.GetDuration(sc.StorageMaxChallengeCompletionTime),
@@ -226,7 +226,6 @@ func SetConfig(
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = vi.GetInt64(sc.StorageMinAllocSize)
 	conf.MinAllocDuration = vi.GetDuration(sc.StorageMinAllocDuration)
-	// conf.MaxChallengeCompletionTime = 15 * time.Second
 	conf.MinOfferDuration = 1 * time.Minute
 	conf.MinBlobberCapacity = vi.GetInt64(sc.StorageMinBlobberCapacity)
 	conf.ValidatorReward = 0.025
@@ -234,7 +233,7 @@ func SetConfig(
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
-	conf.MaxChallengeCompletionTime = 5 * time.Minute
+	conf.MaxChallengeCompletionTime = vi.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = 0.50   // 50%
 	conf.MinStake = 0.0     // 0 toks
 	conf.MaxStake = 1000e10 // 100 toks
