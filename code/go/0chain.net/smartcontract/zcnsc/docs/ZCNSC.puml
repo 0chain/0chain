@@ -1,0 +1,49 @@
+@startuml
+
+actor Client as user
+participant "0ZCN" as 0zcn
+collections miners as m
+collections authorizers as auth
+collections sharders as s
+participant "Ethereum bridge smart contract" as ethbridge
+
+== Convert from ZCN to WZCN ==
+
+user -> 0zcn : Register authorizers
+user -> 0zcn : Execute <**burn**> function on ZCNSC to burn N token
+0zcn -> m : Create <**burn**> txn
+0zcn --> user : Get registered authorizers on ZCN
+
+group for each authorizers (group, auth)
+autonumber
+auth -> s : Poll for txn confirmation
+s --> auth : Transaction Confirmation
+autonumber stop
+end
+
+auth -> user : **proof-of-ZCN-burn ticket** ticket signed by authorizers
+user -> ethbridge : Call Ethereum bridge smart contract to mint N tokens
+
+ethbridge --> ethbridge : Verify the signature from authorizers
+
+ethbridge --> ethbridge : Mint N tokens
+
+== Convert from WZCN to ZCN ==
+
+user -> ethbridge : Burn N ethers
+ethbridge --> user : Return Transaction ID
+0zcn -> user : Get registered authorizers on ZCN
+user -> auth : Send Transaction ID
+
+group for each authorizers (group, auth)
+auth -> ethbridge : Poll for txn status
+ethbridge --> auth : Transaction ID status
+end
+
+auth -> user : **proof-of-WZCN-burn ticket**
+user -> 0zcn : Mint **N** tokens
+0zcn -> 0zcn : Verify signature
+0zcn -> m : Mint transaction
+s --> user : Verify transaction
+
+@enduml
