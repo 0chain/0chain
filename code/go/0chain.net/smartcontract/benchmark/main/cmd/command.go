@@ -6,10 +6,11 @@ import (
 	"sync"
 	"testing"
 
+	"0chain.net/smartcontract/minersc"
+
 	"github.com/spf13/viper"
 
 	"0chain.net/smartcontract/benchmark"
-	"0chain.net/smartcontract/storagesc"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +39,8 @@ var rootCmd = &cobra.Command{
 		printSimSettings()
 
 		mpt, root, data := setUpMpt("db")
-		benchmarks := storagesc.BenchmarkTests(data, &BLS0ChainScheme{})
+		//benchmarksSC := storagesc.BenchmarkTests(data, &BLS0ChainScheme{})
+		benchmarksMN := minersc.BenchmarkTests(data, &BLS0ChainScheme{})
 		type results struct {
 			test   benchmark.BenchTestI
 			result testing.BenchmarkResult
@@ -46,7 +48,7 @@ var rootCmd = &cobra.Command{
 		benchmarkResult := []results{}
 
 		var wg sync.WaitGroup
-		for _, bm := range benchmarks {
+		for _, bm := range benchmarksMN {
 			wg.Add(1)
 			go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 				defer wg.Done()
