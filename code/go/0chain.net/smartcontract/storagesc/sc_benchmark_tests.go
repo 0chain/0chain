@@ -275,25 +275,25 @@ func BenchmarkTests(
 			endpoint: ssc.newReadPool,
 			txn:      transaction.Transaction{},
 			input:    []byte{},
-		}, /*
-			{
-				name:     "storage_read_pool_unlock",
-				endpoint: ssc.readPoolUnlock,
-				txn: transaction.Transaction{
-					HashIDField: datastore.HashIDField{
-						Hash: encryption.Hash("mock transaction hash"),
-					},
-					Value:      vi.GetInt64(sc.StorageReadPoolMinLock),
-					ClientID:   clients[0],
-					ToClientID: ADDRESS,
+		},
+		{
+			name:     "storage_read_pool_unlock",
+			endpoint: ssc.readPoolUnlock,
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
 				},
-				input: func() []byte {
-					bytes, _ := json.Marshal(&unlockRequest{
-						PoolID: allocations[0],
-					})
-					return bytes
-				}(),
-			},*/
+				Value:      vi.GetInt64(sc.StorageReadPoolMinLock),
+				ClientID:   clients[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&unlockRequest{
+					PoolID: allocations[0],
+				})
+				return bytes
+			}(),
+		},
 		{
 			name:     "storage_read_pool_lock",
 			endpoint: ssc.readPoolLock,
