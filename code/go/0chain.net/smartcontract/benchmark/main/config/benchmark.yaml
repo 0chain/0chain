@@ -18,6 +18,8 @@ smart_contract:
     max_delegates: 200
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
+    max_total_free_allocation: 10000
+    max_individual_free_allocation: 100
     readpool:
       min_lock: 0.1 # toekns
       min_lock_period: 1m
@@ -26,6 +28,9 @@ smart_contract:
       min_lock: 0.1 # tokens
       min_lock_period: 2m
       max_lock_period: 8760h
+    stakepool:
+      min_lock: 0.1
+    challenge_enabled: true
 
 simulation:
   num_clients: 20
@@ -33,13 +38,15 @@ simulation:
   nun_sharders: 5
   num_allocations: 1000
   num_blobbers: 100
+  num_validators: 100
   num_allocation_payers: 2
   num_allocation_payers_pools: 2
   num_blobbers_per_Allocation: 4
   num_blobber_delegates: 5
   num_curators: 3
+  num_free_storage_assigners: 100
   start_tokens: 100000000000
-  signature_scheme: bls0chain
+  signature_scheme: bls0chain // don't change only bls0chian works
 
 internal:
   available_keys: 10

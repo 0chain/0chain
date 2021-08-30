@@ -1258,7 +1258,7 @@ type StorageStats struct {
 	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
 }
 
-func (sn *StorageStats) GetKey(globalKey string) datastore.Key {
+func (sn *StorageStats) GetKey(_ string) datastore.Key {
 	return STORAGE_STATS_KEY
 }
 

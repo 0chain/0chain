@@ -522,7 +522,7 @@ func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
 }
 
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
-	b *block.Block, input []byte, balances c_state.StateContextI) (err error) {
+	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
 	var tp = time.Now()
 	defer sc.addGenerateChallengesStat(tp, &err)

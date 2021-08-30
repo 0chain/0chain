@@ -217,7 +217,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// free allocations
 
 	case "add_free_storage_assigner":
-		err = sc.addFreeStorageAssigner(t, input, balances)
+		resp, err = sc.addFreeStorageAssigner(t, input, balances)
 	case "free_allocation_request":
 		resp, err = sc.freeAllocationRequest(t, input, balances)
 	case "free_update_allocation":

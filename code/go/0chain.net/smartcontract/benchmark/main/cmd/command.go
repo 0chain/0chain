@@ -17,6 +17,7 @@ func init() {
 }
 
 func Execute() error {
+	// todo add --verbose
 	return rootCmd.Execute()
 }
 
@@ -28,8 +29,8 @@ var rootCmd = &cobra.Command{
 		var vi = GetViper("testdata/benchmark.yaml")
 		printSimSettings(vi)
 
-		mpt, root, clients, keys, blobbers, allocations := setUpMpt(vi, "db")
-		benchmarks := storagesc.BenchmarkTests(vi, clients, keys, blobbers, allocations)
+		mpt, root, data := setUpMpt(vi, "db")
+		benchmarks := storagesc.BenchmarkTests(vi, data)
 		type results struct {
 			test   benchmark.BenchTestI
 			result testing.BenchmarkResult
