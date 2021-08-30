@@ -1,7 +1,7 @@
 package benchmark
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 )
 
@@ -50,13 +50,8 @@ const (
 	StorageReadPoolMinLockPeriod      = SmartContract + Storage + "min_lock_period"
 )
 
-type BenchTest struct {
-	Name     string
-	Endpoint func(
-		*transaction.Transaction,
-		[]byte,
-		cstate.StateContextI,
-	) (string, error)
-	Txn   transaction.Transaction
-	Input []byte
+type BenchTestI interface {
+	Name() string
+	Transaction() transaction.Transaction
+	Run(state.StateContextI)
 }

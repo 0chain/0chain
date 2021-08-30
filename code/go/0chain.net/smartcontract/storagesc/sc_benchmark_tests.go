@@ -7,6 +7,7 @@ import (
 
 	sc "0chain.net/smartcontract/benchmark"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
 
@@ -18,24 +19,47 @@ import (
 	"0chain.net/core/datastore"
 )
 
+type BenchTest struct {
+	name     string
+	endpoint func(
+		*transaction.Transaction,
+		[]byte,
+		cstate.StateContextI,
+	) (string, error)
+	txn   transaction.Transaction
+	input []byte
+}
+
+func (bt BenchTest) Name() string {
+	return bt.name
+}
+
+func (bt BenchTest) Transaction() transaction.Transaction {
+	return bt.txn
+}
+
+func (bt BenchTest) Run(balances cstate.StateContextI) {
+	bt.endpoint(&bt.txn, bt.input, balances)
+}
+
 func BenchmarkTests(
 	vi *viper.Viper,
 	clients []string,
 	keys []string,
 	blobbers []string,
 	allocations []string,
-) []sc.BenchTest {
+) []BenchTest {
 	var now = common.Timestamp(vi.GetInt64(sc.Now))
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
-	return []sc.BenchTest{
+	return []BenchTest{
 		/*
 			{
-				Name:     "storage_read_redeem",
-				Endpoint: ssc.commitBlobberRead,
-				Txn:      transaction.Transaction{},
-				Input: func() []byte {
+				name:     "storage_read_redeem",
+				endpoint: ssc.commitBlobberRead,
+				txn:      transaction.Transaction{},
+				input: func() []byte {
 					bytes := (&ReadConnection{
 						ReadMarker: &ReadMarker{
 							ClientID:        clients[0],
@@ -55,9 +79,9 @@ func BenchmarkTests(
 		*/
 		// allocations
 		{
-			Name:     "storage_new_allocation_request",
-			Endpoint: ssc.newAllocationRequest,
-			Txn: transaction.Transaction{
+			name:     "storage_new_allocation_request",
+			endpoint: ssc.newAllocationRequest,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -65,7 +89,7 @@ func BenchmarkTests(
 				CreationDate: now,
 				Value:        100 * vi.GetInt64(sc.StorageMinAllocSize),
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
 					DataShards:                 4,
 					ParityShards:               4,
@@ -83,16 +107,16 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_update_allocation_request",
-			Endpoint: ssc.updateAllocationRequest,
-			Txn: transaction.Transaction{
+			name:     "storage_update_allocation_request",
+			endpoint: ssc.updateAllocationRequest,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID: clients[0],
 				Value:    100 * vi.GetInt64(sc.StorageMinAllocSize),
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&updateAllocationRequest{
 					ID:           allocations[0],
 					OwnerID:      clients[0],
@@ -104,9 +128,9 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_finalize_allocation",
-			Endpoint: ssc.finalizeAllocation,
-			Txn: transaction.Transaction{
+			name:     "storage_finalize_allocation",
+			endpoint: ssc.finalizeAllocation,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -114,7 +138,7 @@ func BenchmarkTests(
 				ClientID:     clients[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: allocations[0],
 				})
@@ -122,9 +146,9 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_cancel_allocation",
-			Endpoint: ssc.cancelAllocationRequest,
-			Txn: transaction.Transaction{
+			name:     "storage_cancel_allocation",
+			endpoint: ssc.cancelAllocationRequest,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -132,7 +156,7 @@ func BenchmarkTests(
 				ClientID:     clients[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: allocations[0],
 				})
@@ -141,9 +165,9 @@ func BenchmarkTests(
 		},
 		// blobbers
 		{
-			Name:     "storage_add_blobber",
-			Endpoint: ssc.addBlobber,
-			Txn: transaction.Transaction{
+			name:     "storage_add_blobber",
+			endpoint: ssc.addBlobber,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -151,7 +175,7 @@ func BenchmarkTests(
 				ClientID:     clients[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
 					ID:                encryption.Hash("my_new_blobber"),
 					BaseURL:           "my_new_blobber.com",
@@ -163,9 +187,9 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_add_validator",
-			Endpoint: ssc.addValidator,
-			Txn: transaction.Transaction{
+			name:     "storage_add_validator",
+			endpoint: ssc.addValidator,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -173,7 +197,7 @@ func BenchmarkTests(
 				ClientID:     clients[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&ValidationNode{
 					ID:                encryption.Hash("my_new_validator"),
 					BaseURL:           "my_new_validator.com",
@@ -183,9 +207,9 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_blobber_health_check",
-			Endpoint: ssc.blobberHealthCheck,
-			Txn: transaction.Transaction{
+			name:     "storage_blobber_health_check",
+			endpoint: ssc.blobberHealthCheck,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -193,12 +217,12 @@ func BenchmarkTests(
 				ClientID:     blobbers[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: []byte{},
+			input: []byte{},
 		},
 		{
-			Name:     "update_blobber_settings",
-			Endpoint: ssc.updateBlobberSettings,
-			Txn: transaction.Transaction{
+			name:     "update_blobber_settings",
+			endpoint: ssc.updateBlobberSettings,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -206,7 +230,7 @@ func BenchmarkTests(
 				ClientID:     blobbers[0],
 				ToClientID:   ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&StorageNode{
 					ID:                blobbers[0],
 					Terms:             getMockBlobberTerms(vi),
@@ -218,12 +242,12 @@ func BenchmarkTests(
 		},
 		// add_curator
 		{
-			Name:     "storage_add_curator",
-			Endpoint: ssc.addCurator,
-			Txn: transaction.Transaction{
+			name:     "storage_add_curator",
+			endpoint: ssc.addCurator,
+			txn: transaction.Transaction{
 				ClientID: clients[0],
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&curatorInput{
 					CuratorId:    clients[vi.GetInt(sc.NumCurators)],
 					AllocationId: allocations[0],
@@ -232,12 +256,12 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			Name:     "storage_remove_curator",
-			Endpoint: ssc.removeCurator,
-			Txn: transaction.Transaction{
+			name:     "storage_remove_curator",
+			endpoint: ssc.removeCurator,
+			txn: transaction.Transaction{
 				ClientID: clients[0],
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&curatorInput{
 					CuratorId:    clients[0],
 					AllocationId: allocations[0],
@@ -247,15 +271,15 @@ func BenchmarkTests(
 		},
 		// read_pool
 		{
-			Name:     "storage_new_read_pool",
-			Endpoint: ssc.newReadPool,
-			Txn:      transaction.Transaction{},
-			Input:    []byte{},
+			name:     "storage_new_read_pool",
+			endpoint: ssc.newReadPool,
+			txn:      transaction.Transaction{},
+			input:    []byte{},
 		}, /*
 			{
-				Name:     "storage_read_pool_unlock",
-				Endpoint: ssc.readPoolUnlock,
-				Txn: transaction.Transaction{
+				name:     "storage_read_pool_unlock",
+				endpoint: ssc.readPoolUnlock,
+				txn: transaction.Transaction{
 					HashIDField: datastore.HashIDField{
 						Hash: encryption.Hash("mock transaction hash"),
 					},
@@ -263,7 +287,7 @@ func BenchmarkTests(
 					ClientID:   clients[0],
 					ToClientID: ADDRESS,
 				},
-				Input: func() []byte {
+				input: func() []byte {
 					bytes, _ := json.Marshal(&unlockRequest{
 						PoolID: allocations[0],
 					})
@@ -271,9 +295,9 @@ func BenchmarkTests(
 				}(),
 			},*/
 		{
-			Name:     "storage_read_pool_lock",
-			Endpoint: ssc.readPoolLock,
-			Txn: transaction.Transaction{
+			name:     "storage_read_pool_lock",
+			endpoint: ssc.readPoolLock,
+			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -281,7 +305,7 @@ func BenchmarkTests(
 				ClientID:   clients[0],
 				ToClientID: ADDRESS,
 			},
-			Input: func() []byte {
+			input: func() []byte {
 				bytes, _ := json.Marshal(&lockRequest{
 					AllocationID: allocations[0],
 					TargetId:     getMockReadPoolId(0, 0, 0),
@@ -294,10 +318,10 @@ func BenchmarkTests(
 
 		// stake pool
 		{
-			Name:     "storage_stake_pool_pay_interests",
-			Endpoint: ssc.stakePoolPayInterests,
-			Txn:      transaction.Transaction{},
-			Input: func() []byte {
+			name:     "storage_stake_pool_pay_interests",
+			endpoint: ssc.stakePoolPayInterests,
+			txn:      transaction.Transaction{},
+			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: blobbers[0],
 					PoolID:    blobbers[0] + "Pool" + strconv.Itoa(0),

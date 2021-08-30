@@ -17,24 +17,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-func getBalances(
-	name string,
-	txn *transaction.Transaction,
-	root util.Key,
-	pMpt *util.MerklePatriciaTrie,
-) (*util.MerklePatriciaTrie, cstate.StateContextI) {
-	pNode := pMpt.GetNodeDB()
+func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatriciaTrie {
+	pNode := mpt.GetNodeDB()
 	memNode := util.NewMemoryNodeDB()
 	levelNode := util.NewLevelNodeDB(
 		memNode,
 		pNode,
 		false,
 	)
-	mpt := util.NewMerklePatriciaTrie(
-		levelNode,
-		1,
-		root,
-	)
+	return util.NewMerklePatriciaTrie(levelNode, 1, root)
+}
+
+func getBalances(
+	txn transaction.Transaction,
+	mpt *util.MerklePatriciaTrie,
+) (*util.MerklePatriciaTrie, cstate.StateContextI) {
 	bk := &block.Block{}
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
@@ -42,7 +39,7 @@ func getBalances(
 		bk,
 		mpt,
 		&state.Deserializer{},
-		txn,
+		&txn,
 		func(*block.Block) []string { return []string{} },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },

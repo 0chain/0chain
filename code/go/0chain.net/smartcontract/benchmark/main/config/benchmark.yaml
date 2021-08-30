@@ -29,8 +29,8 @@ smart_contract:
 
 simulation:
   num_clients: 20
-  num_miners: 5
-  nun_sharders: 3
+  num_miners: 10
+  nun_sharders: 5
   num_allocations: 1000
   num_blobbers: 100
   num_allocation_payers: 2
