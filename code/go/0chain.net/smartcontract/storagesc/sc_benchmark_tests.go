@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"0chain.net/chaincore/state"
 	sc "0chain.net/smartcontract/benchmark"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/encryption"
 
 	"github.com/spf13/viper"
@@ -79,35 +79,35 @@ func BenchmarkTests(
 					ReadMarker: &rm,
 				}).Encode()
 			}(),
-		}, /*
-			{
-				name:     "commit_connection",
-				endpoint: ssc.commitBlobberConnection,
-				txn: transaction.Transaction{
-					ClientID:   data.Clients[0],
-					ToClientID: ADDRESS,
-				},
-				input: func() []byte {
-					wm := WriteMarker{
-						AllocationRoot:         encryption.Hash("allocation root"),
-						PreviousAllocationRoot: encryption.Hash("allocation root"),
-						AllocationID:           data.Allocations[0],
-						Size:                   1024,
-						BlobberID:              data.Blobbers[0],
-						Timestamp:              1,
-						ClientID:               data.Clients[0],
-					}
-					sigScheme.SetPublicKey(data.PublicKeys[0])
-					sigScheme.SetPrivateKey(data.PrivateKeys[0])
-					wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
-					bytes, _ := json.Marshal(&BlobberCloseConnection{
-						AllocationRoot:     encryption.Hash("allocation root"),
-						PrevAllocationRoot: encryption.Hash("allocation root"),
-						WriteMarker:        &wm,
-					})
-					return bytes
-				}(),
-			},*/
+		},
+		{
+			name:     "commit_connection",
+			endpoint: ssc.commitBlobberConnection,
+			txn: transaction.Transaction{
+				ClientID:   data.Blobbers[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				wm := WriteMarker{
+					AllocationRoot:         encryption.Hash("allocation root"),
+					PreviousAllocationRoot: encryption.Hash("allocation root"),
+					AllocationID:           data.Allocations[0],
+					Size:                   1024,
+					BlobberID:              data.Blobbers[0],
+					Timestamp:              1,
+					ClientID:               data.Clients[0],
+				}
+				sigScheme.SetPublicKey(data.PublicKeys[0])
+				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
+				bytes, _ := json.Marshal(&BlobberCloseConnection{
+					AllocationRoot:     encryption.Hash("allocation root"),
+					PrevAllocationRoot: encryption.Hash("allocation root"),
+					WriteMarker:        &wm,
+				})
+				return bytes
+			}(),
+		},
 
 		// data.Allocations
 		{
