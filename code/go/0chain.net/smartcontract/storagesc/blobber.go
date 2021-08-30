@@ -586,7 +586,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	detailsBytes, err := json.Marshal(details)
 
-	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey) {
+	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid signature for write marker")
 	}

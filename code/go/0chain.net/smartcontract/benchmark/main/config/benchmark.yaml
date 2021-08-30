@@ -30,7 +30,21 @@ smart_contract:
       max_lock_period: 8760h
     stakepool:
       min_lock: 0.1
+    free_allocation_settings:
+      data_shards: 4
+      parity_shards: 4
+      size: 10000
+      duration: 50h
+      read_price_range:
+        min: 0.0
+        max: 0.1
+      write_price_range:
+        min: 0.0
+        max: 0.1
+      max_challenge_completion_time: 30m
+      read_pool_fraction: 0.2
     challenge_enabled: true
+
 
 simulation:
   num_clients: 20
@@ -44,7 +58,7 @@ simulation:
   num_blobbers_per_Allocation: 4
   num_blobber_delegates: 5
   num_curators: 3
-  num_free_storage_assigners: 100
+  num_free_storage_assigners: 10
   start_tokens: 100000000000
   signature_scheme: bls0chain // don't change only bls0chian works
 

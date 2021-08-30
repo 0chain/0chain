@@ -1024,10 +1024,13 @@ type WriteMarker struct {
 	Signature              string           `json:"signature"`
 }
 
-func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
+func (wm *WriteMarker) VerifySignature(
+	clientPublicKey string,
+	balances chainstate.StateContextI,
+) bool {
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
@@ -1169,7 +1172,6 @@ type ReadMarker struct {
 func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	//signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)

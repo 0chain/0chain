@@ -48,7 +48,6 @@ func getBalances(
 }
 
 func setUpMpt(
-	vi *viper.Viper,
 	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 	pNode, err := util.NewPNodeDB(
@@ -60,7 +59,7 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
-	clients, publicKeys, privateKeys := AddMockkClients(pMpt, vi)
+	clients, publicKeys, privateKeys := AddMockkClients(pMpt)
 
 	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
@@ -82,34 +81,33 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
 
-	_ = storagesc.SetConfig(vi, balances)
-	blobbers := storagesc.AddMockBlobbers(vi, balances)
-	validators := storagesc.AddMockValidators(vi, balances)
-	stakePools := storagesc.GetStakePools(vi, clients, balances)
-	allocations := storagesc.AddMockAllocations(vi, balances, clients, publicKeys, stakePools)
-	storagesc.SaveStakePools(vi, stakePools, balances)
-	_ = minersc.AddMockNodes(minersc.NodeTypeMiner, vi, balances)
-	_ = minersc.AddMockNodes(minersc.NodeTypeSharder, vi, balances)
-	storagesc.AddFreeStorageAssigners(vi, clients, publicKeys, balances)
+	_ = storagesc.SetConfig(balances)
+	blobbers := storagesc.AddMockBlobbers(balances)
+	validators := storagesc.AddMockValidators(balances)
+	stakePools := storagesc.GetStakePools(clients, balances)
+	allocations := storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
+	storagesc.SaveStakePools(stakePools, balances)
+	_ = minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
+	_ = minersc.AddMockNodes(minersc.NodeTypeSharder, balances)
+	storagesc.AddFreeStorageAssigners(clients, publicKeys, balances)
 	storagesc.AddStats(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
-		Clients:     clients[:vi.GetInt(benchmark.AvailableKeys)],
-		PublicKeys:  publicKeys[:vi.GetInt(benchmark.AvailableKeys)],
-		PrivateKeys: privateKeys[:vi.GetInt(benchmark.AvailableKeys)],
-		Blobbers:    blobbers[:vi.GetInt(benchmark.AvailableKeys)],
-		Validators:  validators[:vi.GetInt(benchmark.AvailableKeys)],
-		Allocations: allocations[:vi.GetInt(benchmark.AvailableKeys)],
+		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
+		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		PrivateKeys: privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		Blobbers:    blobbers[:viper.GetInt(benchmark.AvailableKeys)],
+		Validators:  validators[:viper.GetInt(benchmark.AvailableKeys)],
+		Allocations: allocations[:viper.GetInt(benchmark.AvailableKeys)],
 	}
 }
 
 func AddMockkClients(
 	pMpt *util.MerklePatriciaTrie,
-	vi *viper.Viper,
 ) ([]string, []string, []string) {
-	//var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(vi.GetString(benchmark.SignatureScheme))
+	//var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(viper.GetString(benchmark.SignatureScheme))
 	blsScheme := BLS0ChainScheme{}
 	var clientIds, publicKeys, privateKeys []string
-	for i := 0; i < vi.GetInt(benchmark.NumClients); i++ {
+	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {
 		err := blsScheme.GenerateKeys()
 		if err != nil {
 			panic(err)
@@ -125,7 +123,7 @@ func AddMockkClients(
 		privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
 		is := &state.State{}
 		is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
-		is.Balance = state.Balance(vi.GetInt64(benchmark.StartTokens))
+		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
 		pMpt.Insert(util.Path(clientID), is)
 	}
 

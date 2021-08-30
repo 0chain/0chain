@@ -16,7 +16,6 @@ import (
 
 func AddMockNodes(
 	nodeType NodeType,
-	vi *viper.Viper,
 	balances cstate.StateContextI,
 ) []string {
 	var (
@@ -28,22 +27,22 @@ func AddMockNodes(
 	)
 
 	if nodeType == NodeTypeMiner {
-		numNodes = vi.GetInt(benchmark.NumMiners)
+		numNodes = viper.GetInt(benchmark.NumMiners)
 		key = AllMinersKey
 	} else {
-		numNodes = vi.GetInt(benchmark.NumSharders)
+		numNodes = viper.GetInt(benchmark.NumSharders)
 		key = AllShardersKey
 	}
 
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
 		newNode.ID = getMockNodeId(i, nodeType)
-		newNode.LastHealthCheck = common.Timestamp(vi.GetInt64(benchmark.Now))
+		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
 		newNode.PublicKey = "mockPublicKey"
-		newNode.ServiceCharge = vi.GetFloat64(benchmark.MinerMaxCharge)
-		newNode.NumberOfDelegates = vi.GetInt(benchmark.MinerMaxDelegates)
-		newNode.MinStake = state.Balance(vi.GetInt64(benchmark.MinerMinStake))
-		newNode.MaxStake = state.Balance(vi.GetInt64(benchmark.MinerMaxStake))
+		newNode.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
+		newNode.NumberOfDelegates = viper.GetInt(benchmark.MinerMaxDelegates)
+		newNode.MinStake = state.Balance(viper.GetInt64(benchmark.MinerMinStake))
+		newNode.MaxStake = state.Balance(viper.GetInt64(benchmark.MinerMaxStake))
 		newNode.NodeType = NodeTypeMiner
 
 		_, err := balances.InsertTrieNode(newNode.getKey(), newNode)

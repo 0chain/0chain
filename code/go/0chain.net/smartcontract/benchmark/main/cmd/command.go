@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"testing"
 
@@ -13,11 +14,10 @@ import (
 )
 
 func init() {
-
+	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 }
 
 func Execute() error {
-	// todo add --verbose
 	return rootCmd.Execute()
 }
 
@@ -26,11 +26,19 @@ var rootCmd = &cobra.Command{
 	Short: "Benchmark 0chain smart-contract",
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var vi = GetViper("testdata/benchmark.yaml")
-		printSimSettings(vi)
+		GetViper("testdata/benchmark.yaml")
+		var err error
+		verbose := true
+		if cmd.Flags().Changed("verbose") {
+			verbose, err = cmd.Flags().GetBool("verbose")
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		printSimSettings()
 
-		mpt, root, data := setUpMpt(vi, "db")
-		benchmarks := storagesc.BenchmarkTests(vi, data)
+		mpt, root, data := setUpMpt("db")
+		benchmarks := storagesc.BenchmarkTests(data, &BLS0ChainScheme{})
 		type results struct {
 			test   benchmark.BenchTestI
 			result testing.BenchmarkResult
@@ -57,7 +65,9 @@ var rootCmd = &cobra.Command{
 						result: result,
 					},
 				)
-				fmt.Println("test", bm.Name(), "done")
+				if verbose {
+					fmt.Println("test", bm.Name(), "done")
+				}
 			}(bm, &wg)
 		}
 		wg.Wait()
@@ -74,11 +84,11 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func printSimSettings(vi *viper.Viper) {
+func printSimSettings() {
 	println("\n\nsimulator settings")
-	println("num clients", vi.GetInt(benchmark.NumClients))
-	println("num miners", vi.GetInt(benchmark.NumMiners))
-	println("num sharders", vi.GetInt(benchmark.NumSharders))
-	println("num blobbers", vi.GetInt(benchmark.NumBlobbers))
-	println("num allocations", vi.GetInt(benchmark.NumAllocations))
+	println("num clients", viper.GetInt(benchmark.NumClients))
+	println("num miners", viper.GetInt(benchmark.NumMiners))
+	println("num sharders", viper.GetInt(benchmark.NumSharders))
+	println("num blobbers", viper.GetInt(benchmark.NumBlobbers))
+	println("num allocations", viper.GetInt(benchmark.NumAllocations))
 }
