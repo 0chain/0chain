@@ -5,6 +5,8 @@ import (
 	"log"
 	"sort"
 
+	"0chain.net/smartcontract/vestingsc"
+
 	"0chain.net/smartcontract/interestpoolsc"
 
 	"0chain.net/smartcontract/faucetsc"
@@ -28,6 +30,7 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Miner:        minersc.BenchmarkTests,
 	bk.Faucet:       faucetsc.BenchmarkTests,
 	bk.InterestPool: interestpoolsc.BenchmarkTests,
+	bk.Vesting:      vestingsc.BenchmarkTests,
 }
 
 func init() {
@@ -59,7 +62,10 @@ var rootCmd = &cobra.Command{
 		}
 		printSimSettings()
 
-		mpt, root, data := setUpMpt("db")
+		mpt, root, data := setUpMpt("db", verbose)
+		if verbose {
+			log.Println("finished setting up blockchain")
+		}
 		suites := getTestSuites(data, cmd.Flags())
 		results := runSuites(suites, verbose, mpt, root, data)
 

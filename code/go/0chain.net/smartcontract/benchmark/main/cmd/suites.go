@@ -106,7 +106,7 @@ func runSuite(
 				},
 			)
 			if verbose {
-				fmt.Println("test", bm.Name(), "done")
+				log.Println("test", bm.Name(), "done")
 			}
 		}(bm, &wg)
 	}

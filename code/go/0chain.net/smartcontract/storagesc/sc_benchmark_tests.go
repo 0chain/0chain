@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"0chain.net/chaincore/smartcontract"
+
 	"0chain.net/chaincore/state"
 	sc "0chain.net/smartcontract/benchmark"
 
@@ -52,6 +54,7 @@ func BenchmarkTests(
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
+	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
 	var tests = []BenchTest{
 		// read/write markers
 		{
@@ -72,7 +75,7 @@ func BenchmarkTests(
 					ReadCounter:     1,
 					PayerID:         data.Clients[0],
 				}
-				sigScheme.SetPublicKey(data.PublicKeys[0])
+				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
 				rm.Signature, _ = sigScheme.Sign(encryption.Hash(rm.GetHashData()))
 				return (&ReadConnection{
@@ -97,7 +100,7 @@ func BenchmarkTests(
 					Timestamp:              1,
 					ClientID:               data.Clients[0],
 				}
-				sigScheme.SetPublicKey(data.PublicKeys[0])
+				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
 				wm.Signature, _ = sigScheme.Sign(encryption.Hash(wm.GetHashData()))
 				bytes, _ := json.Marshal(&BlobberCloseConnection{
@@ -123,8 +126,8 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				bytes, _ := (&newAllocationRequest{
-					DataShards:                 4,
-					ParityShards:               4,
+					DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+					ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 					Size:                       100 * viper.GetInt64(sc.StorageMinAllocSize),
 					Expiration:                 common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now,
 					Owner:                      data.Clients[0],
@@ -151,12 +154,12 @@ func BenchmarkTests(
 			},
 			input: func() []byte {
 				var blobberUrls []string
-				for i := 0; i < 8; i++ {
+				for i := 0; i < viper.GetInt(sc.AvailableKeys); i++ {
 					blobberUrls = append(blobberUrls, data.Blobbers[i]+".com")
 				}
 				bytes, _ := (&newAllocationRequest{
-					DataShards:                 4,
-					ParityShards:               4,
+					DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+					ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 					Size:                       100 * viper.GetInt64(sc.StorageMinAllocSize),
 					Expiration:                 common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now,
 					Owner:                      data.Clients[0],
@@ -315,7 +318,7 @@ func BenchmarkTests(
 					1,
 				}
 				responseBytes, _ := json.Marshal(&request)
-				sigScheme.SetPublicKey(data.PublicKeys[0])
+				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
 				signature, _ := sigScheme.Sign(hex.EncodeToString(responseBytes))
 				fsmBytes, _ := json.Marshal(&freeStorageMarker{

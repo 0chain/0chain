@@ -13,6 +13,7 @@ const (
 	Miner
 	Faucet
 	InterestPool
+	Vesting
 	NumberOdfBenchmarkSources
 )
 
@@ -22,6 +23,7 @@ var (
 		"miner",
 		"faucet",
 		"interest_pool",
+		"vesting",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
@@ -29,6 +31,7 @@ var (
 		"miner":         Miner,
 		"faucet":        Faucet,
 		"interest_pool": InterestPool,
+		"vesting":       Vesting,
 	}
 )
 
@@ -40,15 +43,17 @@ const (
 	StorageSc      = "storagesc."
 	FaucetSc       = "faucetsc."
 	InterestPoolSC = "interestpoolsc."
-	Fas            = "free_allocation_settings."
+	VestingSc      = "vestingsc."
+
+	Fas = "free_allocation_settings."
 
 	AvailableKeys = Internal + "available_keys"
 	Now           = Internal + "now"
 	InternalT     = Internal + "t"
 	//InternalSignatureScheme   = Internal + "signature_scheme"
+	StartTokens = Internal + "start_tokens"
 
 	NumClients               = Simulation + "num_clients"
-	StartTokens              = Simulation + "start_tokens" //
 	NumMiners                = Simulation + "num_miners"
 	NumSharders              = Simulation + "nun_sharders"
 	NumAllocations           = Simulation + "num_allocations"
@@ -100,11 +105,12 @@ const (
 	StorageFasMaxChallengeCompletionTime = SmartContract + StorageSc + Fas + "max_challenge_completion_time"
 	StorageFasReadPoolFraction           = SmartContract + StorageSc + Fas + "read_pool_fraction"
 
-	FaucetMaxPourAmount = SmartContract + FaucetSc + "max_pour_amount"
-
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
 	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
+
+	VestingMinLock         = SmartContract + VestingSc + "min_lock"
+	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
 )
 
 type BenchTestI interface {

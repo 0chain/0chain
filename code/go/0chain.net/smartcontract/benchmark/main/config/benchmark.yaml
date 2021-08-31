@@ -1,19 +1,18 @@
 simulation:
-  num_clients: 20
+  num_clients: 100
   num_miners: 10
   nun_sharders: 10
-  num_allocations: 1000
+  num_allocations: 100
   num_blobbers: 100
   num_validators: 100
   num_allocation_payers: 2
   num_allocation_payers_pools: 2
-  num_blobbers_per_Allocation: 4
+  num_blobbers_per_Allocation: 20 # ideally make this even
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
   num_curators: 3
   num_free_storage_assigners: 10
-  start_tokens: 100000000000
 
 smart_contracts:
   minersc:
@@ -84,16 +83,23 @@ smart_contracts:
       max_challenge_completion_time: 30m
       read_pool_fraction: 0.2
     challenge_enabled: true
-  faucetsc:
-    max_pour_amount: 100000000000
   interestpoolsc:
     min_lock: 10
     apr: 0.1
     min_lock_period: 1m
     max_mint: 1500000.0
+  vestingsc:
+    min_lock: 0.01
+    min_duration: 1m
+    max_duration: 1000h
+    max_destinations: 10
+    max_description_length: 100
+
+
 
 internal:
   t: 2
   available_keys: 10
   now: 100000
   signature_scheme: bls0chain // don't change only bls0chian works
+  start_tokens: 100000000000

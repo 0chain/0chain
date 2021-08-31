@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/hex"
+	"log"
 
 	"0chain.net/smartcontract/interestpoolsc"
 
@@ -63,7 +64,8 @@ func getBalances(
 }
 
 func setUpMpt(
-	dbPath string,
+	dbPath string, verbose bool,
+
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 	pNode, err := util.NewPNodeDB(
 		dbPath+"name_dataDir",
@@ -75,7 +77,13 @@ func setUpMpt(
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
 	clients, publicKeys, privateKeys := addMockkClients(pMpt)
+	if verbose {
+		log.Println("added clients")
+	}
 	faucetsc.FundFaucetSmartContract(pMpt)
+	if verbose {
+		log.Println("funded faucet")
+	}
 
 	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
@@ -96,19 +104,52 @@ func setUpMpt(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
+	if verbose {
+		log.Println("created balances")
+	}
 
 	_ = storagesc.SetConfig(balances)
+	if verbose {
+		log.Println("created storage config")
+	}
 	blobbers := storagesc.AddMockBlobbers(balances)
+	if verbose {
+		log.Println("added blobbers")
+	}
 	validators := storagesc.AddMockValidators(balances)
+	if verbose {
+		log.Println("added validators")
+	}
 	stakePools := storagesc.GetStakePools(clients, balances)
+	if verbose {
+		log.Println("added stake pools")
+	}
 	allocations := storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
+	if verbose {
+		log.Println("added allocations")
+	}
 	storagesc.SaveStakePools(stakePools, balances)
+	if verbose {
+		log.Println("added stake pools")
+	}
 	miners := minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
+	if verbose {
+		log.Println("added miners")
+	}
 	sharders := minersc.AddMockNodes(minersc.NodeTypeSharder, balances)
+	if verbose {
+		log.Println("added sharders")
+	}
 	storagesc.AddFreeStorageAssigners(clients, publicKeys, balances)
+	if verbose {
+		log.Println("added free storage assigners")
+	}
 	storagesc.AddStats(balances)
 	faucetsc.AddMockGlobalNode(balances)
 	interestPools := interestpoolsc.AddMockNodes(clients, balances)
+	if verbose {
+		log.Println("added user nodes")
+	}
 	minersc.AddPhaseNode(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:       clients[:viper.GetInt(benchmark.AvailableKeys)],
@@ -144,9 +185,12 @@ func addMockkClients(
 		publicKeys = append(publicKeys, blsScheme.GetPublicKey())
 		privateKeys = append(privateKeys, blsScheme.GetPrivateKey())
 		is := &state.State{}
-		is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+		_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 		is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
-		pMpt.Insert(util.Path(clientID), is)
+		_, err = pMpt.Insert(util.Path(clientID), is)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	return clientIds, publicKeys, privateKeys
