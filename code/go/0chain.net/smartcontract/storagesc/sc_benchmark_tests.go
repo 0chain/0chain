@@ -55,7 +55,7 @@ func BenchmarkTests(
 	var tests = []BenchTest{
 		// read/write markers
 		{
-			name:     "storage_read_redeem",
+			name:     "storage.read_redeem",
 			endpoint: ssc.commitBlobberRead,
 			txn: transaction.Transaction{
 				ClientID:   data.Clients[0],
@@ -111,7 +111,7 @@ func BenchmarkTests(
 
 		// data.Allocations
 		{
-			name:     "storage_new_allocation_request_random",
+			name:     "storage.new_allocation_request_random",
 			endpoint: ssc.newAllocationRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -139,7 +139,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_new_allocation_request_preferred",
+			name:     "storage.new_allocation_request_preferred",
 			endpoint: ssc.newAllocationRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -171,7 +171,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_update_allocation_request",
+			name:     "storage.update_allocation_request",
 			endpoint: ssc.updateAllocationRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -192,7 +192,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_finalize_allocation",
+			name:     "storage.finalize_allocation",
 			endpoint: ssc.finalizeAllocation,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -210,7 +210,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_cancel_allocation",
+			name:     "storage.cancel_allocation",
 			endpoint: ssc.cancelAllocationRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -229,7 +229,7 @@ func BenchmarkTests(
 		},
 		// free data.Allocations
 		{
-			name:     "storage_add_free_storage_assigner",
+			name:     "storage.add_free_storage_assigner",
 			endpoint: ssc.addFreeStorageAssigner,
 			txn: transaction.Transaction{
 				ClientID: owner,
@@ -246,7 +246,7 @@ func BenchmarkTests(
 		},
 		/* todo needs read_pool_lock fixed
 		{
-			name:     "storage_free_allocation_request",
+			name:     "storage.free_allocation_request",
 			endpoint: ssc.freeAllocationRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -293,7 +293,7 @@ func BenchmarkTests(
 		},
 		*/
 		{
-			name:     "storage_free_update_allocation",
+			name:     "storage.free_update_allocation",
 			endpoint: ssc.updateFreeStorageRequest,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -335,7 +335,7 @@ func BenchmarkTests(
 
 		// data.Blobbers
 		{
-			name:     "storage_add_blobber",
+			name:     "storage.add_blobber",
 			endpoint: ssc.addBlobber,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -357,7 +357,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_add_validator",
+			name:     "storage.add_validator",
 			endpoint: ssc.addValidator,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -377,7 +377,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_blobber_health_check",
+			name:     "storage.blobber_health_check",
 			endpoint: ssc.blobberHealthCheck,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -390,7 +390,7 @@ func BenchmarkTests(
 			input: []byte{},
 		},
 		{
-			name:     "storage_update_blobber_settings",
+			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -412,7 +412,7 @@ func BenchmarkTests(
 		},
 		// add_curator
 		{
-			name:     "storage_curator_transfer_allocation",
+			name:     "storage.curator_transfer_allocation",
 			endpoint: ssc.curatorTransferAllocation,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -430,7 +430,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_add_curator",
+			name:     "storage.add_curator",
 			endpoint: ssc.addCurator,
 			txn: transaction.Transaction{
 				ClientID: data.Clients[0],
@@ -444,7 +444,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_remove_curator",
+			name:     "storage.remove_curator",
 			endpoint: ssc.removeCurator,
 			txn: transaction.Transaction{
 				ClientID: data.Clients[0],
@@ -459,14 +459,14 @@ func BenchmarkTests(
 		},
 		// read_pool
 		{
-			name:     "storage_new_read_pool",
+			name:     "storage.new_read_pool",
 			endpoint: ssc.newReadPool,
 			txn:      transaction.Transaction{},
 			input:    []byte{},
 		},
 		/* todo read_unlock_lock, seems to be bugged, needs to be fixed before can benchmark
 		{
-			name:     "storage_read_pool_unlock",
+			name:     "storage.read_pool_unlock",
 			endpoint: ssc.readPoolUnlock,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
@@ -488,7 +488,7 @@ func BenchmarkTests(
 		// write pool
 		/*
 			{
-				name:     "storage_write_pool_unlock",
+				name:     "storage.write_pool_unlock",
 				endpoint: ssc.readPoolUnlock,
 				txn: transaction.Transaction{
 					HashIDField: datastore.HashIDField{
@@ -511,7 +511,7 @@ func BenchmarkTests(
 
 		// stake pool
 		{
-			name:     "storage_stake_pool_lock",
+			name:     "storage.stake_pool_lock",
 			endpoint: ssc.stakePoolLock,
 			txn: transaction.Transaction{
 				ClientID: data.Clients[0],
@@ -527,7 +527,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_stake_pool_unlock",
+			name:     "storage.stake_pool_unlock",
 			endpoint: ssc.stakePoolUnlock,
 			txn: transaction.Transaction{
 				ClientID:   data.Clients[0],
@@ -542,7 +542,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "storage_stake_pool_pay_interests",
+			name:     "storage.stake_pool_pay_interests",
 			endpoint: ssc.stakePoolPayInterests,
 			txn:      transaction.Transaction{},
 			input: func() []byte {
@@ -554,7 +554,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name: "storage_generate_challenges",
+			name: "storage.generate_challenges",
 			endpoint: func(
 				txn *transaction.Transaction,
 				_ []byte,
@@ -582,5 +582,5 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return sc.TestSuit{sc.StorageTrans, testsI}
+	return sc.TestSuit{sc.Storage, testsI}
 }

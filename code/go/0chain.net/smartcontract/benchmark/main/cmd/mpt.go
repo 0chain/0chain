@@ -3,6 +3,10 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/faucetsc"
+
+	"0chain.net/chaincore/node"
+
 	"0chain.net/smartcontract/benchmark"
 
 	"0chain.net/chaincore/block"
@@ -31,8 +35,17 @@ func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatrici
 func getBalances(
 	txn transaction.Transaction,
 	mpt *util.MerklePatriciaTrie,
+	data benchmark.BenchData,
 ) (*util.MerklePatriciaTrie, cstate.StateContextI) {
-	bk := &block.Block{}
+	bk := &block.Block{
+		MagicBlock: &block.MagicBlock{
+			StartingRound: 0,
+		},
+		PrevBlock: &block.Block{},
+	}
+	bk.Round = 2
+	bk.MinerID = data.Miners[0]
+	node.Self.Underlying().SetKey(data.Miners[0])
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
@@ -40,7 +53,7 @@ func getBalances(
 		mpt,
 		&state.Deserializer{},
 		&txn,
-		func(*block.Block) []string { return []string{} },
+		func(*block.Block) []string { return data.Sharders },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
@@ -59,7 +72,8 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 
-	clients, publicKeys, privateKeys := AddMockkClients(pMpt)
+	clients, publicKeys, privateKeys := addMockkClients(pMpt)
+	faucetsc.FundFaucetSmartContract(pMpt)
 
 	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
@@ -87,10 +101,12 @@ func setUpMpt(
 	stakePools := storagesc.GetStakePools(clients, balances)
 	allocations := storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
 	storagesc.SaveStakePools(stakePools, balances)
-	_ = minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
-	_ = minersc.AddMockNodes(minersc.NodeTypeSharder, balances)
+	miners := minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
+	sharders := minersc.AddMockNodes(minersc.NodeTypeSharder, balances)
 	storagesc.AddFreeStorageAssigners(clients, publicKeys, balances)
 	storagesc.AddStats(balances)
+	faucetsc.AddMockGlobalNode(balances)
+	minersc.AddPhaseNode(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
 		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
@@ -98,10 +114,12 @@ func setUpMpt(
 		Blobbers:    blobbers[:viper.GetInt(benchmark.AvailableKeys)],
 		Validators:  validators[:viper.GetInt(benchmark.AvailableKeys)],
 		Allocations: allocations[:viper.GetInt(benchmark.AvailableKeys)],
+		Miners:      miners[:viper.GetInt(benchmark.AvailableKeys)],
+		Sharders:    sharders[:viper.GetInt(benchmark.AvailableKeys)],
 	}
 }
 
-func AddMockkClients(
+func addMockkClients(
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
 	//var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(viper.GetString(benchmark.SignatureScheme))

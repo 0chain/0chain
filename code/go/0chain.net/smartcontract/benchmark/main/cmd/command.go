@@ -5,6 +5,12 @@ import (
 	"log"
 	"sort"
 
+	"0chain.net/smartcontract/faucetsc"
+
+	"0chain.net/chaincore/node"
+
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/smartcontract/minersc"
@@ -16,11 +22,16 @@ import (
 )
 
 var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
-	bk.StorageTrans: storagesc.BenchmarkTests,
-	bk.MinerTrans:   minersc.BenchmarkTests,
+	bk.Storage: storagesc.BenchmarkTests,
+	bk.Miner:   minersc.BenchmarkTests,
+	bk.Faucet:  faucetsc.BenchmarkTests,
 }
 
 func init() {
+	logging.InitLogging("testing")
+	node.Self = &node.SelfNode{
+		Node: &node.Node{},
+	}
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
 }
@@ -47,7 +58,7 @@ var rootCmd = &cobra.Command{
 
 		mpt, root, data := setUpMpt("db")
 		suites := getTestSuites(data, cmd.Flags())
-		results := runSuites(suites, verbose, mpt, root)
+		results := runSuites(suites, verbose, mpt, root, data)
 
 		printResults(results)
 
@@ -56,17 +67,17 @@ var rootCmd = &cobra.Command{
 
 func printResults(results []suiteResults) {
 	fmt.Println("\nResults")
-	fmt.Printf("name, ms\n")
 	sort.SliceStable(results, func(i, j int) bool {
-		return results[i].name > results[j].name
+		return results[i].name < results[j].name
 	})
 	for _, suiteResult := range results {
 		sort.SliceStable(suiteResult.results, func(i, j int) bool {
-			return suiteResult.results[i].test.Name() > suiteResult.results[j].test.Name()
+			return suiteResult.results[i].test.Name() < suiteResult.results[j].test.Name()
 		})
 	}
 	for _, suiteResult := range results {
 		fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
+		fmt.Printf("name, ms\n")
 		for _, bkResult := range suiteResult.results {
 			fmt.Printf(
 				"%s,%f\n",

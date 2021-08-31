@@ -9,8 +9,9 @@ import (
 type BenchmarkSource int
 
 const (
-	StorageTrans BenchmarkSource = iota
-	MinerTrans
+	Storage BenchmarkSource = iota
+	Miner
+	Faucet
 	NumberOdfBenchmarkSources
 )
 
@@ -18,11 +19,13 @@ var (
 	BenchmarkSourceNames = []string{
 		"storage",
 		"miner",
+		"faucet",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
-		"storage": StorageTrans,
-		"miner":   MinerTrans,
+		"storage": Storage,
+		"miner":   Miner,
+		"faucet":  Faucet,
 	}
 )
 
@@ -30,12 +33,14 @@ const (
 	Simulation    = "simulation."
 	Internal      = "internal."
 	SmartContract = "smart_contracts."
-	Miner         = "minersc."
-	Storage       = "storagesc."
+	MinerSc       = "minersc."
+	StorageSc     = "storagesc."
+	FaucetSc      = "faucetsc."
 	Fas           = "free_allocation_settings."
 
 	AvailableKeys = Internal + "available_keys"
 	Now           = Internal + "now"
+	InternalT     = Internal + "t"
 	//InternalSignatureScheme   = Internal + "signature_scheme"
 
 	NumClients               = Simulation + "num_clients"
@@ -51,43 +56,47 @@ const (
 	NumCurators              = Simulation + "num_curators"
 	NumValidators            = Simulation + "num_validators"
 	NumFreeStorageAssigners  = Simulation + "num_free_storage_assigners"
+	NumMinerDelegates        = Simulation + "num_miner_delegates"
+	NumSharderDelegates      = Simulation + "num_sharder_delegates"
 
-	MinerMaxDelegates = SmartContract + Miner + "max_delegates"
-	MinerMaxCharge    = SmartContract + Miner + "max_charge"
-	MinerMinStake     = SmartContract + Miner + "min_stake"
-	MinerMaxStake     = SmartContract + Miner + "max_stake"
+	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
+	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
+	MinerMinStake     = SmartContract + MinerSc + "min_stake"
+	MinerMaxStake     = SmartContract + MinerSc + "max_stake"
 
-	StorageMinAllocSize                  = SmartContract + Storage + "min_alloc_size"
-	StorageMinAllocDuration              = SmartContract + Storage + "min_alloc_duration"
-	StorageMaxReadPrice                  = SmartContract + Storage + "max_read_price"
-	StorageMaxWritePrice                 = SmartContract + Storage + "max_write_price"
-	StorageMaxChallengeCompletionTime    = SmartContract + Storage + "max_challenge_completion_time"
-	StorageMinOfferDuration              = SmartContract + Storage + "min_offer_duration"
-	StorageMinBlobberCapacity            = SmartContract + Storage + "min_blobber_capacity"
-	StorageMaxCharge                     = SmartContract + Storage + "max_charge"
-	StorageMinStake                      = SmartContract + Storage + "min_stake"
-	StorageMaxStake                      = SmartContract + Storage + "max_stake"
-	StorageMaxDelegates                  = SmartContract + Storage + "max_delegates"
-	StorageDiverseBlobbers               = SmartContract + Storage + "diverse_blobbers"
-	StorageFailedChallengesToCancel      = SmartContract + Storage + "failed_challenges_to_cancel"
-	StorageReadPoolMinLock               = SmartContract + Storage + "readpool.min_lock"
-	StorageReadPoolMinLockPeriod         = SmartContract + Storage + "readpool.min_lock_period"
-	StorageWritePoolMinLock              = SmartContract + Storage + "writepool.min_lock"
-	StorageWritePoolMinLockPeriod        = SmartContract + Storage + "writepool.min_lock_period"
-	StorageStakePoolMinLock              = SmartContract + Storage + "stakepool.min_lock"
-	StorageChallengeEnabled              = SmartContract + Storage + "challenge_enabled"
-	StorageMaxTotalFreeAllocation        = SmartContract + Storage + "max_total_free_allocation"
-	StorageMaxIndividualFreeAllocation   = SmartContract + Storage + "max_individual_free_allocation"
-	StorageFasDataShards                 = SmartContract + Storage + Fas + "data_shards"
-	StorageFasParityShards               = SmartContract + Storage + Fas + "parity_shards"
-	StorageFasSize                       = SmartContract + Storage + Fas + "size"
-	StorageFasDuration                   = SmartContract + Storage + Fas + "duration"
-	StorageFasReadPriceMin               = SmartContract + Storage + Fas + "read_price_range.min"
-	StorageFasReadPriceMax               = SmartContract + Storage + Fas + "read_price_range.max"
-	StorageFasWritePriceMin              = SmartContract + Storage + Fas + "write_price_range.min"
-	StorageFasWritePriceMax              = SmartContract + Storage + Fas + "write_price_range.max"
-	StorageFasMaxChallengeCompletionTime = SmartContract + Storage + Fas + "max_challenge_completion_time"
-	StorageFasReadPoolFraction           = SmartContract + Storage + Fas + "read_pool_fraction"
+	StorageMinAllocSize                  = SmartContract + StorageSc + "min_alloc_size"
+	StorageMinAllocDuration              = SmartContract + StorageSc + "min_alloc_duration"
+	StorageMaxReadPrice                  = SmartContract + StorageSc + "max_read_price"
+	StorageMaxWritePrice                 = SmartContract + StorageSc + "max_write_price"
+	StorageMaxChallengeCompletionTime    = SmartContract + StorageSc + "max_challenge_completion_time"
+	StorageMinOfferDuration              = SmartContract + StorageSc + "min_offer_duration"
+	StorageMinBlobberCapacity            = SmartContract + StorageSc + "min_blobber_capacity"
+	StorageMaxCharge                     = SmartContract + StorageSc + "max_charge"
+	StorageMinStake                      = SmartContract + StorageSc + "min_stake"
+	StorageMaxStake                      = SmartContract + StorageSc + "max_stake"
+	StorageMaxDelegates                  = SmartContract + StorageSc + "max_delegates"
+	StorageDiverseBlobbers               = SmartContract + StorageSc + "diverse_blobbers"
+	StorageFailedChallengesToCancel      = SmartContract + StorageSc + "failed_challenges_to_cancel"
+	StorageReadPoolMinLock               = SmartContract + StorageSc + "readpool.min_lock"
+	StorageReadPoolMinLockPeriod         = SmartContract + StorageSc + "readpool.min_lock_period"
+	StorageWritePoolMinLock              = SmartContract + StorageSc + "writepool.min_lock"
+	StorageWritePoolMinLockPeriod        = SmartContract + StorageSc + "writepool.min_lock_period"
+	StorageStakePoolMinLock              = SmartContract + StorageSc + "stakepool.min_lock"
+	StorageChallengeEnabled              = SmartContract + StorageSc + "challenge_enabled"
+	StorageMaxTotalFreeAllocation        = SmartContract + StorageSc + "max_total_free_allocation"
+	StorageMaxIndividualFreeAllocation   = SmartContract + StorageSc + "max_individual_free_allocation"
+	StorageFasDataShards                 = SmartContract + StorageSc + Fas + "data_shards"
+	StorageFasParityShards               = SmartContract + StorageSc + Fas + "parity_shards"
+	StorageFasSize                       = SmartContract + StorageSc + Fas + "size"
+	StorageFasDuration                   = SmartContract + StorageSc + Fas + "duration"
+	StorageFasReadPriceMin               = SmartContract + StorageSc + Fas + "read_price_range.min"
+	StorageFasReadPriceMax               = SmartContract + StorageSc + Fas + "read_price_range.max"
+	StorageFasWritePriceMin              = SmartContract + StorageSc + Fas + "write_price_range.min"
+	StorageFasWritePriceMax              = SmartContract + StorageSc + Fas + "write_price_range.max"
+	StorageFasMaxChallengeCompletionTime = SmartContract + StorageSc + Fas + "max_challenge_completion_time"
+	StorageFasReadPoolFraction           = SmartContract + StorageSc + Fas + "read_pool_fraction"
+
+	FaucetMaxPourAmount = SmartContract + FaucetSc + "max_pour_amount"
 )
 
 type BenchTestI interface {
@@ -114,4 +123,6 @@ type BenchData struct {
 	Blobbers    []string
 	Validators  []string
 	Allocations []string
+	Miners      []string
+	Sharders    []string
 }

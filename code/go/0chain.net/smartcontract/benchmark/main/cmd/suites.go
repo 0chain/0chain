@@ -55,6 +55,7 @@ func runSuites(
 	verbose bool,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
+	data benchmark.BenchData,
 ) []suiteResults {
 	var results []suiteResults
 	var wg sync.WaitGroup
@@ -64,7 +65,7 @@ func runSuites(
 			defer wg.Done()
 			results = append(results, suiteResults{
 				name:    benchmark.BenchmarkSourceNames[suite.Source],
-				results: runSuite(suite, verbose, mpt, root),
+				results: runSuite(suite, verbose, mpt, root, data),
 			})
 		}(suite, &wg)
 	}
@@ -77,6 +78,7 @@ func runSuite(
 	verbose bool,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
+	data benchmark.BenchData,
 ) []benchmarkResults {
 	benchmarkResult := []benchmarkResults{}
 	var wg sync.WaitGroup
@@ -87,7 +89,11 @@ func runSuite(
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()
-					_, balances := getBalances(bm.Transaction(), extractMpt(mpt, root))
+					_, balances := getBalances(
+						bm.Transaction(),
+						extractMpt(mpt, root),
+						data,
+					)
 					b.StartTimer()
 					bm.Run(balances)
 				}

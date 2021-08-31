@@ -38,4 +38,13 @@ func validateConfig() {
 		log.Fatal(fmt.Errorf("number of clients %d less than avalable keys %d",
 			viper.GetInt(sc.NumClients), viper.GetInt(sc.AvailableKeys)))
 	}
+	if viper.GetInt(sc.NumMiners) < viper.GetInt(sc.AvailableKeys) {
+		log.Fatal(fmt.Errorf("number of miners %d less than avalable keys %d",
+			viper.GetInt(sc.NumMiners), viper.GetInt(sc.AvailableKeys)))
+	}
+	if viper.GetInt(sc.NumSharders) < viper.GetInt(sc.AvailableKeys) {
+		log.Fatal(fmt.Errorf("number of sharders %d less than avalable keys %d",
+			viper.GetInt(sc.NumSharders), viper.GetInt(sc.AvailableKeys)))
+	}
+
 }
