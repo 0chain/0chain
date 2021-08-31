@@ -155,46 +155,46 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	return string(newMiner.Encode()), nil
 }
 
-func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
+func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var update = NewMinerNode()
 	if err = update.Decode(inputData); err != nil {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_miner_settings",
 			"decoding request: %v", err)
 	}
 
 	if update.ServiceCharge < 0 {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_sharder_settings",
 			"invalid negative service charge: %v", update.ServiceCharge)
 	}
 
 	if update.ServiceCharge > gn.MaxCharge {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_miner_settings",
 			"max_charge is greater than allowed by SC: %v > %v",
 			update.ServiceCharge, gn.MaxCharge)
 	}
 
 	if update.NumberOfDelegates < 0 {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_miner_settings",
 			"invalid negative number_of_delegates: %v", update.ServiceCharge)
 	}
 
 	if update.NumberOfDelegates > gn.MaxDelegates {
-		return "", common.NewErrorf("add_miner",
+		return "", common.NewErrorf("update_miner_settings",
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
 			update.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if update.MinStake < gn.MinStake {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_miner_settings",
 			"min_stake is less than allowed by SC: %v > %v",
 			update.MinStake, gn.MinStake)
 	}
 
 	if update.MaxStake < gn.MaxStake {
-		return "", common.NewErrorf("update_settings",
+		return "", common.NewErrorf("update_miner_settings",
 			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
 	}
@@ -202,11 +202,11 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	var mn *MinerNode
 	mn, err = getMinerNode(update.ID, balances)
 	if err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
 	if mn.DelegateWallet != t.ClientID {
-		return "", common.NewError("update_setings", "access denied")
+		return "", common.NewError("update_miner_settings", "access denied")
 	}
 
 	mn.ServiceCharge = update.ServiceCharge
@@ -215,7 +215,7 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	mn.MaxStake = update.MaxStake
 
 	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("update_setings", "saving: %v", err)
+		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
 	return string(mn.Encode()), nil

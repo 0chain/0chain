@@ -102,10 +102,13 @@ smart_contracts:
     # allocation settings for free storage
     # these values are applied to all free allocations
     free_allocation_settings:
+      # the free payment is split between read and write pool in the ratio
+      # read_pool_fraction : (1-read_pool_fraction)
+      read_pool_fraction: 0.2
       data_shards: 10
       parity_shards: 5
       size: 10000000000
-      duration: 5000h
+      duration: 50h
       read_price_range:
         min: 0.0
         max: 0.04
@@ -150,10 +153,10 @@ smart_contracts:
     block_reward:
       block_reward: 1
       qualifying_stake: 1
-      sharder_ratio: 80
-      miner_ratio: 20
-      blobber_capacity_ratio: 20
-      blobber_usage_ratio: 80
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_capacity_ratio: 10
+      blobber_usage_ratio: 40
   vestingsc:
     min_lock: 0.01
     min_duration: "2m"

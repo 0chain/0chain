@@ -158,7 +158,7 @@ minio:
 cassandra:
   connection:
     delay: 10 # in seconds
-    retries: 10
+    retries: 30
 
 # integration tests related configurations
 integration_tests:
