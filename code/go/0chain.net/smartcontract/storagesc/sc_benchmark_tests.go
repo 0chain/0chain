@@ -47,12 +47,12 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 
 func BenchmarkTests(
 	data sc.BenchData, sigScheme sc.SignatureScheme,
-) []BenchTest {
+) sc.TestSuit {
 	var now = common.Timestamp(viper.GetInt64(sc.Now))
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
-	return []BenchTest{
+	var tests = []BenchTest{
 		// read/write markers
 		{
 			name:     "storage_read_redeem",
@@ -578,4 +578,9 @@ func BenchmarkTests(
 		},
 		// todo "update_config" waiting for PR489
 	}
+	var testsI []sc.BenchTestI
+	for _, test := range tests {
+		testsI = append(testsI, test)
+	}
+	return sc.TestSuit{sc.StorageTrans, testsI}
 }

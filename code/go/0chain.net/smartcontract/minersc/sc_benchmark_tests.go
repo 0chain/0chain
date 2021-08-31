@@ -4,7 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	sc "0chain.net/smartcontract/benchmark"
+	bk "0chain.net/smartcontract/benchmark"
 )
 
 type BenchTest struct {
@@ -39,13 +39,13 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 }
 
 func BenchmarkTests(
-	data sc.BenchData, sigScheme sc.SignatureScheme,
-) []BenchTest {
+	data bk.BenchData, sigScheme bk.SignatureScheme,
+) bk.TestSuit {
 	//var now = common.Timestamp(viper.GetInt64(sc.Now))
 	var msc = MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
-	return []BenchTest{
+	var tests = []BenchTest{
 		{
 			name:     "miner.add_miner",
 			endpoint: msc.AddMiner,
@@ -55,4 +55,9 @@ func BenchmarkTests(
 			}).Encode(),
 		},
 	}
+	var testsI []bk.BenchTestI
+	for _, test := range tests {
+		testsI = append(testsI, test)
+	}
+	return bk.TestSuit{bk.MinerTrans, testsI}
 }

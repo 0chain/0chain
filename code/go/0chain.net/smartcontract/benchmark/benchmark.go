@@ -6,20 +6,40 @@ import (
 	"0chain.net/core/encryption"
 )
 
+type BenchmarkSource int
+
+const (
+	StorageTrans BenchmarkSource = iota
+	MinerTrans
+	NumberOdfBenchmarkSources
+)
+
+var (
+	BenchmarkSourceNames = []string{
+		"storage",
+		"miner",
+	}
+
+	BenchmarkSourceCode = map[string]BenchmarkSource{
+		"storage": StorageTrans,
+		"miner":   MinerTrans,
+	}
+)
+
 const (
 	Simulation    = "simulation."
 	Internal      = "internal."
-	SmartContract = "smart_contract."
-	Miner         = "miner."
-	Storage       = "storage."
+	SmartContract = "smart_contracts."
+	Miner         = "minersc."
+	Storage       = "storagesc."
 	Fas           = "free_allocation_settings."
 
 	AvailableKeys = Internal + "available_keys"
 	Now           = Internal + "now"
+	//InternalSignatureScheme   = Internal + "signature_scheme"
 
-	NumClients  = Simulation + "num_clients"
-	StartTokens = Simulation + "start_tokens"
-	//SignatureScheme          = Simulation + "signature_scheme"
+	NumClients               = Simulation + "num_clients"
+	StartTokens              = Simulation + "start_tokens" //
 	NumMiners                = Simulation + "num_miners"
 	NumSharders              = Simulation + "nun_sharders"
 	NumAllocations           = Simulation + "num_allocations"
@@ -80,6 +100,11 @@ type SignatureScheme interface {
 	encryption.SignatureScheme
 	SetPrivateKey(privateKey string)
 	GetPrivateKey() string
+}
+
+type TestSuit struct {
+	Source     BenchmarkSource
+	Benchmarks []BenchTestI
 }
 
 type BenchData struct {

@@ -3,19 +3,26 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"sync"
-	"testing"
+	"sort"
+
+	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/smartcontract/minersc"
 
 	"github.com/spf13/viper"
 
-	"0chain.net/smartcontract/benchmark"
+	bk "0chain.net/smartcontract/benchmark"
 	"github.com/spf13/cobra"
 )
 
+var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
+	bk.StorageTrans: storagesc.BenchmarkTests,
+	bk.MinerTrans:   minersc.BenchmarkTests,
+}
+
 func init() {
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
+	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
 }
 
 func Execute() error {
@@ -39,58 +46,44 @@ var rootCmd = &cobra.Command{
 		printSimSettings()
 
 		mpt, root, data := setUpMpt("db")
-		//benchmarksSC := storagesc.BenchmarkTests(data, &BLS0ChainScheme{})
-		benchmarksMN := minersc.BenchmarkTests(data, &BLS0ChainScheme{})
-		type results struct {
-			test   benchmark.BenchTestI
-			result testing.BenchmarkResult
-		}
-		benchmarkResult := []results{}
+		suites := getTestSuites(data, cmd.Flags())
+		results := runSuites(suites, verbose, mpt, root)
 
-		var wg sync.WaitGroup
-		for _, bm := range benchmarksMN {
-			wg.Add(1)
-			go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
-				defer wg.Done()
-				result := testing.Benchmark(func(b *testing.B) {
-					for i := 0; i < b.N; i++ {
-						b.StopTimer()
-						_, balances := getBalances(bm.Transaction(), extractMpt(mpt, root))
-						b.StartTimer()
-						bm.Run(balances)
-					}
-				})
-				benchmarkResult = append(
-					benchmarkResult,
-					results{
-						test:   bm,
-						result: result,
-					},
-				)
-				if verbose {
-					fmt.Println("test", bm.Name(), "done")
-				}
-			}(bm, &wg)
-		}
-		wg.Wait()
+		printResults(results)
 
-		fmt.Println("\nResults")
-		fmt.Printf("name, ms\n")
-		for _, result := range benchmarkResult {
-			fmt.Printf(
-				"%s,%f\n",
-				result.test.Name(),
-				float64(result.result.T.Milliseconds())/float64(result.result.N),
-			)
-		}
 	},
 }
 
+func printResults(results []suiteResults) {
+	fmt.Println("\nResults")
+	fmt.Printf("name, ms\n")
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].name > results[j].name
+	})
+	for _, suiteResult := range results {
+		sort.SliceStable(suiteResult.results, func(i, j int) bool {
+			return suiteResult.results[i].test.Name() > suiteResult.results[j].test.Name()
+		})
+	}
+	for _, suiteResult := range results {
+		fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
+		for _, bkResult := range suiteResult.results {
+			fmt.Printf(
+				"%s,%f\n",
+				bkResult.test.Name(),
+				float64(bkResult.result.T.Milliseconds())/float64(bkResult.result.N),
+			)
+		}
+	}
+
+}
+
 func printSimSettings() {
-	println("\n\nsimulator settings")
-	println("num clients", viper.GetInt(benchmark.NumClients))
-	println("num miners", viper.GetInt(benchmark.NumMiners))
-	println("num sharders", viper.GetInt(benchmark.NumSharders))
-	println("num blobbers", viper.GetInt(benchmark.NumBlobbers))
-	println("num allocations", viper.GetInt(benchmark.NumAllocations))
+	println("simulator settings")
+	println("num clients", viper.GetInt(bk.NumClients))
+	println("num miners", viper.GetInt(bk.NumMiners))
+	println("num sharders", viper.GetInt(bk.NumSharders))
+	println("num blobbers", viper.GetInt(bk.NumBlobbers))
+	println("num allocations", viper.GetInt(bk.NumAllocations))
+	println()
 }

@@ -1,10 +1,33 @@
-smart_contract:
-  miner:
+simulation:
+  num_clients: 20
+  num_miners: 10
+  nun_sharders: 5
+  num_allocations: 1000
+  num_blobbers: 100
+  num_validators: 100
+  num_allocation_payers: 2
+  num_allocation_payers_pools: 2
+  num_blobbers_per_Allocation: 4
+  num_blobber_delegates: 5
+  num_curators: 3
+  num_free_storage_assigners: 10
+  start_tokens: 100000000000
+
+smart_contracts:
+  minersc:
     min_delegates: 0
     max_delegates: 200
     min_stakke: 0.0
-    max_stake: 100.0
-  storage:
+    max_stake: 170.0
+    max_n: 7 # 100
+    min_n: 3 # 3
+    max_s: 2 # 30
+    min_s: 1 # 1
+    t_percent: .66
+    k_percent: .75
+    x_percent: 0.70
+    reward_round_frequency: 250
+  storagesc:
     min_alloc_size: 1024
     min_alloc_duration: 5m
     max_read_price: 100.0
@@ -46,22 +69,7 @@ smart_contract:
     challenge_enabled: true
 
 
-simulation:
-  num_clients: 20
-  num_miners: 10
-  nun_sharders: 5
-  num_allocations: 1000
-  num_blobbers: 100
-  num_validators: 100
-  num_allocation_payers: 2
-  num_allocation_payers_pools: 2
-  num_blobbers_per_Allocation: 4
-  num_blobber_delegates: 5
-  num_curators: 3
-  num_free_storage_assigners: 10
-  start_tokens: 100000000000
-  signature_scheme: bls0chain // don't change only bls0chian works
-
 internal:
   available_keys: 10
   now: 100000
+  signature_scheme: bls0chain // don't change only bls0chian works
