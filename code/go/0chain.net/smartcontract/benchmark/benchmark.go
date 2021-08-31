@@ -12,6 +12,7 @@ const (
 	Storage BenchmarkSource = iota
 	Miner
 	Faucet
+	InterestPool
 	NumberOdfBenchmarkSources
 )
 
@@ -20,23 +21,26 @@ var (
 		"storage",
 		"miner",
 		"faucet",
+		"interest_pool",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
-		"storage": Storage,
-		"miner":   Miner,
-		"faucet":  Faucet,
+		"storage":       Storage,
+		"miner":         Miner,
+		"faucet":        Faucet,
+		"interest_pool": InterestPool,
 	}
 )
 
 const (
-	Simulation    = "simulation."
-	Internal      = "internal."
-	SmartContract = "smart_contracts."
-	MinerSc       = "minersc."
-	StorageSc     = "storagesc."
-	FaucetSc      = "faucetsc."
-	Fas           = "free_allocation_settings."
+	Simulation     = "simulation."
+	Internal       = "internal."
+	SmartContract  = "smart_contracts."
+	MinerSc        = "minersc."
+	StorageSc      = "storagesc."
+	FaucetSc       = "faucetsc."
+	InterestPoolSC = "interestpoolsc."
+	Fas            = "free_allocation_settings."
 
 	AvailableKeys = Internal + "available_keys"
 	Now           = Internal + "now"
@@ -97,6 +101,10 @@ const (
 	StorageFasReadPoolFraction           = SmartContract + StorageSc + Fas + "read_pool_fraction"
 
 	FaucetMaxPourAmount = SmartContract + FaucetSc + "max_pour_amount"
+
+	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
+	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"
+	InterestPoolMaxMint       = SmartContract + InterestPoolSC + "max_mint"
 )
 
 type BenchTestI interface {
@@ -117,12 +125,13 @@ type TestSuit struct {
 }
 
 type BenchData struct {
-	Clients     []string
-	PublicKeys  []string
-	PrivateKeys []string
-	Blobbers    []string
-	Validators  []string
-	Allocations []string
-	Miners      []string
-	Sharders    []string
+	Clients       []string
+	PublicKeys    []string
+	PrivateKeys   []string
+	Blobbers      []string
+	Validators    []string
+	Allocations   []string
+	Miners        []string
+	Sharders      []string
+	InterestPools []string
 }

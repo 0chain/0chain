@@ -5,6 +5,8 @@ import (
 	"log"
 	"sort"
 
+	"0chain.net/smartcontract/interestpoolsc"
+
 	"0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/chaincore/node"
@@ -22,9 +24,10 @@ import (
 )
 
 var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
-	bk.Storage: storagesc.BenchmarkTests,
-	bk.Miner:   minersc.BenchmarkTests,
-	bk.Faucet:  faucetsc.BenchmarkTests,
+	bk.Storage:      storagesc.BenchmarkTests,
+	bk.Miner:        minersc.BenchmarkTests,
+	bk.Faucet:       faucetsc.BenchmarkTests,
+	bk.InterestPool: interestpoolsc.BenchmarkTests,
 }
 
 func init() {

@@ -15,6 +15,8 @@ type tokenLock struct {
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
 	tm, ok := entity.(time.Time)
+	aa := tm.Sub(common.ToTime(tl.StartTime))
+	aa = aa
 	if ok {
 		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}

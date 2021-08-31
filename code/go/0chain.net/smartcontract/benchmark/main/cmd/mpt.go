@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/interestpoolsc"
+
 	"0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/chaincore/node"
@@ -106,16 +108,18 @@ func setUpMpt(
 	storagesc.AddFreeStorageAssigners(clients, publicKeys, balances)
 	storagesc.AddStats(balances)
 	faucetsc.AddMockGlobalNode(balances)
+	interestPools := interestpoolsc.AddMockNodes(clients, balances)
 	minersc.AddPhaseNode(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
-		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
-		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		PrivateKeys: privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		Blobbers:    blobbers[:viper.GetInt(benchmark.AvailableKeys)],
-		Validators:  validators[:viper.GetInt(benchmark.AvailableKeys)],
-		Allocations: allocations[:viper.GetInt(benchmark.AvailableKeys)],
-		Miners:      miners[:viper.GetInt(benchmark.AvailableKeys)],
-		Sharders:    sharders[:viper.GetInt(benchmark.AvailableKeys)],
+		Clients:       clients[:viper.GetInt(benchmark.AvailableKeys)],
+		PublicKeys:    publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		PrivateKeys:   privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		Blobbers:      blobbers[:viper.GetInt(benchmark.AvailableKeys)],
+		Validators:    validators[:viper.GetInt(benchmark.AvailableKeys)],
+		Allocations:   allocations[:viper.GetInt(benchmark.AvailableKeys)],
+		Miners:        miners[:viper.GetInt(benchmark.AvailableKeys)],
+		Sharders:      sharders[:viper.GetInt(benchmark.AvailableKeys)],
+		InterestPools: interestPools[:viper.GetInt(benchmark.AvailableKeys)],
 	}
 }
 

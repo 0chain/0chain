@@ -84,9 +84,13 @@ smart_contracts:
       max_challenge_completion_time: 30m
       read_pool_fraction: 0.2
     challenge_enabled: true
-
-    faucetsc:
-      max_pour_amount: 100000000000
+  faucetsc:
+    max_pour_amount: 100000000000
+  interestpoolsc:
+    min_lock: 10
+    apr: 0.1
+    min_lock_period: 1m
+    max_mint: 1500000.0
 
 internal:
   t: 2
