@@ -66,7 +66,7 @@ func (ed *ED25519Scheme) WriteKeys(writer io.Writer) error {
 //SetPublicKey - implement interface
 func (ed *ED25519Scheme) SetPublicKey(publicKey string) error {
 	if len(ed.privateKey) > 0 {
-		return errors.New("cannot set public key when there is a private key")
+		return errors.New("", "cannot set public key when there is a private key")
 	}
 	publicKeyBytes, err := hex.DecodeString(publicKey)
 	if err != nil {

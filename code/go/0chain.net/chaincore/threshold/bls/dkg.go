@@ -296,7 +296,7 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	}
 
 	if len(idVec) == 0 || len(signVec) == 0 {
-		return Sign{}, errors.New("empty id or share")
+		return Sign{}, errors.New("", "empty id or share")
 	}
 
 	return dkg.RecoverGroupSig(idVec, signVec)

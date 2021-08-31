@@ -19,7 +19,7 @@ var (
 	ErrInternal = errors.New(ErrInternalCode, "internal server error")
 
 	// ErrDecoding represents error corresponds to common decoding error
-	ErrDecoding = errors.New("decoding error")
+	ErrDecoding = errors.New("", "decoding error")
 )
 
 const (
@@ -40,7 +40,7 @@ func NewErrInternal(err error, msgs ...string) error {
 	}
 
 	if err == nil {
-		err = errors.New("")
+		return errors.New(ErrInternalCode, strings.Join(msgs, ": "))
 	}
 	return errors.Wrap(err, errors.New(ErrInternalCode, strings.Join(msgs, ": ")).Error())
 }
@@ -51,7 +51,7 @@ func NewErrNoResource(err error, msgs ...string) error {
 		return ErrNoResource
 	}
 	if err == nil {
-		err = errors.New("")
+		return errors.New(ErrNoResourceCode, strings.Join(msgs, ": "))
 	}
 
 	return errors.Wrap(err, errors.New(ErrNoResourceCode, strings.Join(msgs, ": ")).Error())
@@ -64,7 +64,7 @@ func NewErrBadRequest(err error, msgs ...string) error {
 	}
 
 	if err == nil {
-		err = errors.New("")
+		return errors.New(ErrBadRequestCode, strings.Join(msgs, ": "))
 	}
 
 	return errors.Wrap(err, errors.New(ErrBadRequestCode, strings.Join(msgs, ": ")).Error())

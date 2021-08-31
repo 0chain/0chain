@@ -1006,13 +1006,13 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	newLNDB, ok := newDB.(*LevelNodeDB)
 	if !ok {
 		Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
-		return errors.New("invalid mpt db")
+		return errors.New("", "invalid mpt db")
 	}
 
 	preDB := newLNDB.GetPrev()
 	if preDB != mpt.GetNodeDB() {
 		Logger.Error("MergeMPTChanges does not merge direct child mpt")
-		return errors.New("mpt does not merge changes from its child")
+		return errors.New("", "mpt does not merge changes from its child")
 	}
 
 	changes := mpt2.GetChangeCollector().GetChanges()

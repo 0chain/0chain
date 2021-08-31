@@ -47,7 +47,7 @@ func (d Directive) Execute(ex Executor) (err error, mustFail bool) {
 
 	var name, val, ok = d.unwrap()
 	if !ok {
-		return errors.New("invalid empty flow"), false
+		return errors.New("", "invalid empty flow"), false
 	}
 
 	var mf bool = false

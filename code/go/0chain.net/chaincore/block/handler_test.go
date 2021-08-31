@@ -2,8 +2,7 @@ package block
 
 import (
 	"context"
-
-	"github.com/0chain/errors"
+	"fmt"
 
 	"net/http"
 	"net/http/httptest"
@@ -68,7 +67,7 @@ func TestPutBlock(t *testing.T) {
 	)
 	store.On("Write", context.TODO(), b).Return(
 		func(_ context.Context, _ datastore.Entity) error {
-			return errors.New("")
+			return fmt.Errorf("")
 		},
 	)
 

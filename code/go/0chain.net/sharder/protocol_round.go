@@ -52,7 +52,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 			// check if the block's client state is correct
 			if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 				select {
-				case errC <- errors.New("AddNotarizedBlock block client state does not match"):
+				case errC <- errors.New("", "AddNotarizedBlock block client state does not match"):
 				default:
 				}
 				return

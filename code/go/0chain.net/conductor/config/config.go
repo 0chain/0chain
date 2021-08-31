@@ -208,7 +208,7 @@ func (c *Config) IsEnabled(set *Set) bool {
 // CleanupBC used to execute the configured cleanup_command.
 func (c *Config) CleanupBC() (err error) {
 	if c.CleanupCommand == "" {
-		return errors.New("no cleanup_command given in conductor.yaml")
+		return errors.New("", "no cleanup_command given in conductor.yaml")
 	}
 
 	var (

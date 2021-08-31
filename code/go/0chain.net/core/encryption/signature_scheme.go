@@ -8,8 +8,8 @@ import (
 	"github.com/0chain/errors"
 )
 
-var ErrKeyRead = errors.New("error reading the keys")
-var ErrInvalidSignatureScheme = errors.New("invalid signature scheme")
+var ErrKeyRead = errors.New("", "error reading the keys")
+var ErrInvalidSignatureScheme = errors.New("", "invalid signature scheme")
 
 //SignatureScheme - an encryption scheme for signing and verifying messages
 type SignatureScheme interface {

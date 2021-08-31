@@ -94,7 +94,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal(err, "can't get blobbers list")
 	}
 	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewErrInternal(errors.New("can't get blobbers list"), "no blobbers found")
+		return "", common.NewErrInternal(errors.New("", "can't get blobbers list"), "no blobbers found")
 	}
 
 	var sa = request.storageAllocation()

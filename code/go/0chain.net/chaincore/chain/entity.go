@@ -1328,7 +1328,7 @@ func (c *Chain) UpdateLatestFinalizedBlockState(state util.MerklePatriciaTrieI) 
 	c.lfbMutex.Lock()
 	defer c.lfbMutex.Unlock()
 	if bytes.Compare(c.LatestFinalizedBlock.ClientStateHash, state.GetRoot()) != 0 {
-		return errors.New("latest finalized block state hash mismatch")
+		return errors.New("", "latest finalized block state hash mismatch")
 	}
 
 	c.LatestFinalizedBlock.CreateState(state.GetNodeDB(), state.GetRoot())

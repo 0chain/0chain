@@ -77,14 +77,14 @@ func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 func ValidateSignatureTime(data string) (bool, error) {
 	segs := strings.Split(data, ":")
 	if len(segs) < 2 {
-		return false, errors.New("invalid data")
+		return false, errors.New("", "invalid data")
 	}
 	ts, err := strconv.ParseInt(segs[1], 10, 64)
 	if err != nil {
 		return false, err
 	}
 	if !common.Within(ts, 3) {
-		return false, errors.New("timestamp not within tolerance")
+		return false, errors.New("", "timestamp not within tolerance")
 	}
 	return true, nil
 }

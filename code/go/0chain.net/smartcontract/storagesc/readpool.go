@@ -222,7 +222,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
 			if ap.ExpireAt >= now {
-				return nil, errors.New("the pool is not expired yet")
+				return nil, errors.New("", "the pool is not expired yet")
 			}
 			took = ap
 			continue // delete
@@ -232,7 +232,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	wp.Pools = wp.Pools[:i]
 
 	if took == nil {
-		return nil, errors.New("pool not found")
+		return nil, errors.New("", "pool not found")
 	}
 	return
 }
@@ -299,7 +299,7 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	err error) {
 
 	if t.Value < 0 {
-		return errors.New("negative transaction value")
+		return errors.New("", "negative transaction value")
 	}
 
 	var balance state.Balance
@@ -310,11 +310,11 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	}
 
 	if errors.Is(err, util.ErrValueNotPresent) {
-		return errors.New("no tokens to lock")
+		return errors.New("", "no tokens to lock")
 	}
 
 	if state.Balance(t.Value) > balance {
-		return errors.New("lock amount is greater than balance")
+		return errors.New("", "lock amount is greater than balance")
 	}
 
 	return

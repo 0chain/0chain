@@ -9,7 +9,7 @@ import (
 	"github.com/0chain/errors"
 )
 
-var ErrShutdown = errors.New("server shutdown")
+var ErrShutdown = errors.New("", "server shutdown")
 
 // type aliases
 type (

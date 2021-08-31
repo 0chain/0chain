@@ -68,10 +68,6 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{})
 
-	fmt.Println("------------------------------------------------")
-	fmt.Printf("ctx: %v, scAddress: %v, scRestPath: %v, r.URL.Query(): %v", ctx, scAddress, scRestPath, r.URL.Query())
-	fmt.Println("------------------------------------------------")
-
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 	if err != nil {
 		return nil, err

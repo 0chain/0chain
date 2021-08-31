@@ -435,7 +435,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
+		return nil, 0, errors.New("", "Not enough blobbers to honor the allocation")
 	}
 
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)
@@ -487,12 +487,12 @@ func (uar *updateAllocationRequest) validate(
 	alloc *StorageAllocation,
 ) (err error) {
 	if uar.SetImmutable && alloc.IsImmutable {
-		return errors.New("allocation is already immutable")
+		return errors.New("", "allocation is already immutable")
 	}
 
 	if uar.Size == 0 && uar.Expiration == 0 {
 		if !uar.SetImmutable {
-			return errors.New("update allocation changes nothing")
+			return errors.New("", "update allocation changes nothing")
 		}
 
 	} else {
@@ -503,7 +503,7 @@ func (uar *updateAllocationRequest) validate(
 	}
 
 	if len(alloc.BlobberDetails) == 0 {
-		return errors.New("invalid allocation for updating: no blobbers")
+		return errors.New("", "invalid allocation for updating: no blobbers")
 	}
 
 	return
@@ -1046,7 +1046,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = errors.New("invalid preferred blobber URL")
+			err = errors.New("", "invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)

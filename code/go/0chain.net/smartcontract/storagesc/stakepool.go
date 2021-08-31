@@ -140,14 +140,14 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return
 	}
 	if sps.ServiceCharge < 0.0 {
-		return errors.New("negative service charge")
+		return errors.New("", "negative service charge")
 	}
 	if sps.ServiceCharge > conf.MaxCharge {
 		return errors.Newf("", "service_charge (%f) is greater than"+
 			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.NumDelegates <= 0 {
-		return errors.New("num_delegates <= 0")
+		return errors.New("", "num_delegates <= 0")
 	}
 	return
 }
@@ -350,13 +350,13 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 	}
 
 	if dp.DelegateID != clientID {
-		return "", 0, errors.New("trying to unlock not by delegate pool owner")
+		return "", 0, errors.New("", "trying to unlock not by delegate pool owner")
 	}
 
 	if info.stake-info.offers-dp.Balance < 0 {
 		// is marked as 'unstake'
 		if dp.Unstake > 0 {
-			return "", 0, errors.New("the stake pool locked for opened " +
+			return "", 0, errors.New("", "the stake pool locked for opened "+
 				"offers and already marked as 'unstake'")
 		}
 		if unstake, err = sp.timeToUnstake(dp); err != nil {
@@ -408,7 +408,7 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 			float64(balloc.Terms.WritePrice))
 	)
 	if op == nil {
-		return errors.New("missing offer pool for " + alloc.ID)
+		return errors.New("", "missing offer pool for "+alloc.ID)
 	}
 	// unlike a write pool, here we can reduce a lock
 	op.Lock = newLock

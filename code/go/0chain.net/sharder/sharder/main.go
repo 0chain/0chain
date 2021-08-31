@@ -337,7 +337,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, "", "", errors.New("error reading Host")
+		return "", "", 0, "", "", errors.New("", "error reading Host")
 	}
 
 	h := scanner.Text()
@@ -345,7 +345,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, "", "", errors.New("error reading n2n host")
+		return "", "", 0, "", "", errors.New("", "error reading n2n host")
 	}
 
 	n2nh := scanner.Text()

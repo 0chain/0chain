@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrHashMismatch = errors.New("Root hash mistatch")
+var ErrHashMismatch = errors.New("", "Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {

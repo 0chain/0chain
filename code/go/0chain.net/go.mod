@@ -3,6 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
+	github.com/0chain/errors v1.0.3 // indirect
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/0chain/gosdk v1.2.80-0.20210805145848-576ec40feac7
 	github.com/alicebob/miniredis/v2 v2.14.3
@@ -39,7 +40,7 @@ require (
 	github.com/valyala/gozstd v1.5.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.7.0
-	go.uber.org/zap v1.17.0
+	go.uber.org/zap v1.19.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	gopkg.in/errgo.v2 v2.1.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

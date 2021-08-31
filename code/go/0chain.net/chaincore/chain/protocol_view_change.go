@@ -279,7 +279,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {
-		return nil, errors.New("only sharder")
+		return nil, errors.New("", "only sharder")
 	}
 	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
 		mc.ID, selfNode.PublicKey)

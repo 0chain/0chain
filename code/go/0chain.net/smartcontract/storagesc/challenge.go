@@ -87,7 +87,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	var tp = bc.LatestCompletedChallenge.Created
 
 	if tp > alloc.Expiration+toSeconds(details.Terms.ChallengeCompletionTime) {
-		return errors.New("late challenge response")
+		return errors.New("", "late challenge response")
 	}
 
 	if tp > alloc.Expiration {
@@ -221,7 +221,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var tp = bc.LatestCompletedChallenge.Created
 
 	if tp > alloc.Expiration+toSeconds(details.Terms.ChallengeCompletionTime) {
-		return errors.New("late challenge response")
+		return errors.New("", "late challenge response")
 	}
 
 	if tp > alloc.Expiration {
@@ -292,7 +292,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		var offer = sp.findOffer(alloc.ID)
 		if offer == nil {
-			return errors.New("invalid state, can't find stake pool offer: " +
+			return errors.New("", "invalid state, can't find stake pool offer: "+
 				alloc.ID)
 		}
 

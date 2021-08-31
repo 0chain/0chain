@@ -492,7 +492,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	cp, err := sc.getChallengePool(alloc.ID, balances)
 	if err != nil {
-		return errors.New("can't get related challenge pool")
+		return errors.New("", "can't get related challenge pool")
 	}
 
 	var (

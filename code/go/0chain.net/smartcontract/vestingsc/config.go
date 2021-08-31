@@ -24,15 +24,15 @@ type config struct {
 func (c *config) validate() (err error) {
 	switch {
 	case c.MinLock <= 0:
-		return errors.New("invalid min_lock (<= 0)")
+		return errors.New("", "invalid min_lock (<= 0)")
 	case toSeconds(c.MinDuration) < 1:
-		return errors.New("invalid min_duration (< 1s)")
+		return errors.New("", "invalid min_duration (< 1s)")
 	case toSeconds(c.MaxDuration) <= toSeconds(c.MinDuration):
-		return errors.New("invalid max_duration: less or equal to min_duration")
+		return errors.New("", "invalid max_duration: less or equal to min_duration")
 	case c.MaxDestinations < 1:
-		return errors.New("invalid max_destinations (< 1)")
+		return errors.New("", "invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
-		return errors.New("invalid max_description_length (< 1)")
+		return errors.New("", "invalid max_description_length (< 1)")
 	}
 	return
 }

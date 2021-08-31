@@ -255,7 +255,7 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 	if !ok {
 		ssv, ok := ss.(*util.SecureSerializableValue)
 		if !ok {
-			return nil, errors.New("unexpected type")
+			return nil, errors.New("", "unexpected type")
 		}
 		s := &state.State{}
 		if err := s.Decode(ssv.Encode()); err != nil {

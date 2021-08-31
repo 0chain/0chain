@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"github.com/0chain/errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
@@ -177,7 +177,7 @@ func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) 
 	var count int
 	valid := iter.Scan(&count)
 	if !valid {
-		return 0, common.NewError("txns_count_failed", fmt.Sprintf("txn count retrieval for round = %v failed", r))
+		return 0, errors.New("txns_count_failed", fmt.Sprintf("txn count retrieval for round = %v failed", r))
 	}
 	if err := iter.Close(); err != nil {
 		return 0, err

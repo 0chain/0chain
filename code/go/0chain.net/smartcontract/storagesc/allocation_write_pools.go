@@ -20,10 +20,10 @@ type allocationWritePools struct {
 
 func (awp *allocationWritePools) getOwnerWP() (*writePool, error) {
 	if len(awp.writePools) == 0 {
-		return nil, errors.New("no write pools")
+		return nil, errors.New("", "no write pools")
 	}
 	if awp.ownerId < 0 || len(awp.writePools) <= awp.ownerId {
-		return nil, errors.New("no owner write pool")
+		return nil, errors.New("", "no owner write pool")
 	}
 	return awp.writePools[awp.ownerId], nil
 }
@@ -57,10 +57,10 @@ func (aps allocationWritePools) allocUntil(
 
 func (awp *allocationWritePools) addOwnerWritePool(ap *allocationPool) error {
 	if len(awp.writePools) == 0 {
-		return errors.New("no write pools")
+		return errors.New("", "no write pools")
 	}
 	if awp.ownerId < 0 || len(awp.writePools) <= awp.ownerId {
-		return errors.New("no owner write pool")
+		return errors.New("", "no owner write pool")
 	}
 	awp.writePools[awp.ownerId].Pools.add(ap)
 	awp.allocationPools.add(ap)

@@ -28,10 +28,10 @@ const (
 // common errors
 var (
 	// ErrNodeNotFound() - error indicating that the node is not found.
-	ErrNodeNotFound = errors.New("node not found")
+	ErrNodeNotFound = errors.New("", "node not found")
 	// ErrValueNotPresent() - error indicating given path is not present in the
 	// db.
-	ErrValueNotPresent = errors.New("value not present")
+	ErrValueNotPresent = errors.New("", "value not present")
 )
 
 // global node db version

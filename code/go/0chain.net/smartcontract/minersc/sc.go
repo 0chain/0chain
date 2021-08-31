@@ -160,12 +160,12 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	}
 
 	if u.Scheme != "http" { //|| u.scheme == "https"  we don't support
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have scheme http")
+		return hostName, port, errors.New("", burl+" is not a valid url. It does not have scheme http")
 	}
 
 	sp := u.Port()
 	if sp == "" {
-		return hostName, port, errors.New(burl + " is not a valid url. It does not have port number")
+		return hostName, port, errors.New("", burl+" is not a valid url. It does not have port number")
 	}
 
 	p, err := strconv.Atoi(sp)
@@ -180,7 +180,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	}
 
 	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
-	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
+	return "", 0, errors.New("", burl+" is not a valid url. It not a valid IP or valid DNS name")
 }
 
 func getGlobalNode(balances cstate.StateContextI) (

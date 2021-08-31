@@ -247,29 +247,29 @@ func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 // validate a received terms
 func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ReadPrice < 0 {
-		return errors.New("negative read_price")
+		return errors.New("", "negative read_price")
 	}
 	if t.WritePrice < 0 {
-		return errors.New("negative write_price")
+		return errors.New("", "negative write_price")
 	}
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
-		return errors.New("invalid min_lock_demand")
+		return errors.New("", "invalid min_lock_demand")
 	}
 	if t.MaxOfferDuration < conf.MinOfferDuration {
-		return errors.New("insufficient max_offer_duration")
+		return errors.New("", "insufficient max_offer_duration")
 	}
 	if t.ChallengeCompletionTime < 0 {
-		return errors.New("negative challenge_completion_time")
+		return errors.New("", "negative challenge_completion_time")
 	}
 	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
-		return errors.New("challenge_completion_time is greater than max " +
+		return errors.New("", "challenge_completion_time is greater than max "+
 			"allowed by SC")
 	}
 	if t.ReadPrice > conf.MaxReadPrice {
-		return errors.New("read_price is greater than max_read_price allowed")
+		return errors.New("", "read_price is greater than max_read_price allowed")
 	}
 	if t.WritePrice > conf.MaxWritePrice {
-		return errors.New("write_price is greater than max_write_price allowed")
+		return errors.New("", "write_price is greater than max_write_price allowed")
 	}
 	return // nil
 }
@@ -320,12 +320,12 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return
 	}
 	if sn.Capacity <= conf.MinBlobberCapacity {
-		return errors.New("insufficient blobber capacity")
+		return errors.New("", "insufficient blobber capacity")
 	}
 
 	if strings.Contains(sn.BaseURL, "localhost") &&
 		node.Self.Host != "localhost" {
-		return errors.New("invalid blobber base url")
+		return errors.New("", "invalid blobber base url")
 	}
 
 	if err := sn.Geolocation.validate(); err != nil {
@@ -670,29 +670,29 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 	conf *scConfig) (err error) {
 
 	if !sa.ReadPriceRange.isValid() {
-		return errors.New("invalid read_price range")
+		return errors.New("", "invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write_price range")
+		return errors.New("", "invalid write_price range")
 	}
 	if sa.Size < conf.MinAllocSize {
-		return errors.New("insufficient allocation size")
+		return errors.New("", "insufficient allocation size")
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 	if dur < conf.MinAllocDuration {
-		return errors.New("insufficient allocation duration")
+		return errors.New("", "insufficient allocation duration")
 	}
 
 	if sa.DataShards <= 0 {
-		return errors.New("invalid number of data shards")
+		return errors.New("", "invalid number of data shards")
 	}
 
 	if sa.OwnerPublicKey == "" {
-		return errors.New("missing owner public key")
+		return errors.New("", "missing owner public key")
 	}
 
 	if sa.Owner == "" {
-		return errors.New("missing owner id")
+		return errors.New("", "missing owner id")
 	}
 
 	return // nil

@@ -184,7 +184,7 @@ func (cc *ChangeCollector) Validate() error {
 	defer cc.mutex.RUnlock()
 	for key := range cc.Changes {
 		if _, ok := cc.Deletes[key]; ok {
-			return errors.New("key present in both add and delete")
+			return errors.New("", "key present in both add and delete")
 		}
 	}
 	return nil

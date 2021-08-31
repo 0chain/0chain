@@ -37,7 +37,7 @@ func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
 	name := entity.GetEntityMetadata().GetName()
 
 	if (name == "block" || name == "block_summary") && len(entity.GetKey()) != 64 {
-		return errors.New("key must be 64 size")
+		return errors.New("", "key must be 64 size")
 	}
 
 	if name == "magic_block_map" || name == "round" {
@@ -46,7 +46,7 @@ func (s StoreCustom) Write(_ context.Context, entity datastore.Entity) error {
 			return err
 		}
 		if n < 0 {
-			return errors.New("key can not be negative")
+			return errors.New("", "key can not be negative")
 		}
 	}
 

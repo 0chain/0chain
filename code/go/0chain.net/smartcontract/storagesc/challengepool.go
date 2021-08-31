@@ -258,7 +258,7 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	)
 
 	if allocationID == "" {
-		err := errors.New("missing allocation_id URL query parameter")
+		err := errors.New("", "missing allocation_id URL query parameter")
 		return nil, common.NewErrBadRequest(err, "")
 	}
 

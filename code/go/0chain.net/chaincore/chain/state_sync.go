@@ -302,7 +302,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		if rsc.Block != b.Hash {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("block hash mismatch")),
+				zap.Error(errors.New("", "block hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
@@ -310,7 +310,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("state hash mismatch")),
+				zap.Error(errors.New("", "state hash mismatch")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash))
 			return nil, block.ErrBlockStateHashMismatch
@@ -319,7 +319,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		var root = rsc.GetRoot()
 		if root == nil {
 			logging.Logger.Error("get_block_state_change",
-				zap.Error(errors.New("state root error")),
+				zap.Error(errors.New("", "state root error")),
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Int("state_nodes", len(rsc.Nodes)))

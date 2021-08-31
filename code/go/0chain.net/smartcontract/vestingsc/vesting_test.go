@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0chain/errors"
-
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
@@ -507,7 +505,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Contains(t, common.NewErrNoResource(errors.New(""), "can't get pool: value not present").Error(), err.Error())
+	require.Contains(t, common.NewErrNoResource(nil, "can't get pool: value not present").Error(), err.Error())
 
 	balances.balances[client.id] = 200e10
 

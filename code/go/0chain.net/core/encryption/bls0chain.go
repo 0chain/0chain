@@ -136,7 +136,7 @@ func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
 //SetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 	if len(b0.privateKey) > 0 {
-		return errors.New("cannot set public key when there is a private key")
+		return errors.New("", "cannot set public key when there is a private key")
 	}
 
 	publicKey = MiraclToHerumiPK(publicKey)
@@ -185,7 +185,7 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 //GetSignature - given a string return the signature object
 func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
 	if signature == "" {
-		return nil, errors.New("empty signature")
+		return nil, errors.New("", "empty signature")
 	}
 	var sign bls.Sign
 	err := sign.DeserializeHexStr(MiraclToHerumiSig(signature))

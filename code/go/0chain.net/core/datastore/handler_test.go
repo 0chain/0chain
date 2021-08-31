@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
-
-	"github.com/0chain/errors"
 
 	"github.com/stretchr/testify/mock"
 
@@ -173,7 +172,7 @@ func TestGetEntityHandler(t *testing.T) {
 	)
 	e.On("Read", context.Context(nil), mock.AnythingOfType("string")).Return(
 		func(ctx context.Context, _ datastore.Key) error {
-			return errors.New("")
+			return fmt.Errorf("")
 		},
 	)
 

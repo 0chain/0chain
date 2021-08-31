@@ -40,7 +40,7 @@ func (lr *lockRequest) decode(input []byte) (err error) {
 		return
 	}
 	if lr.AllocationID == "" {
-		return errors.New("missing allocation_id in request")
+		return errors.New("", "missing allocation_id in request")
 	}
 	return // ok
 }

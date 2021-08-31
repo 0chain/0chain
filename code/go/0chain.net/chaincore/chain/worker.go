@@ -482,7 +482,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	// until we have got all MB from our from store to latest given
 	for currentLFMB.Hash != latestMagicBlock.Hash {
 		if currentLFMB.MagicBlockNumber > latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify_chain_history_failed, latest magic block ")
+			err = errors.New("", "verify_chain_history_failed, latest magic block ")
 			Logger.Debug("current lfmb number is greater than new lfmb number",
 				zap.Int64("current_lfmb_number", currentLFMB.MagicBlockNumber),
 				zap.Int64("new lfmb_number", latestMagicBlock.MagicBlockNumber),
@@ -492,7 +492,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 		}
 
 		if currentLFMB.MagicBlockNumber == latestMagicBlock.MagicBlockNumber {
-			err = errors.New("verify_chain_history_failed, latest magic block does not match")
+			err = errors.New("", "verify_chain_history_failed, latest magic block does not match")
 			Logger.Error("verify_chain_history failed",
 				zap.Error(err),
 				zap.String("current_lfmb_hash", currentLFMB.Hash),

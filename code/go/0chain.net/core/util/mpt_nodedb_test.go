@@ -194,7 +194,7 @@ func TestMemoryNodeDB_Full(t *testing.T) {
 		}
 
 		// iterate handler returns error
-		var testError = errors.New("test error")
+		var testError = errors.New("", "test error")
 		i = 0
 		err = mndb.Iterate(back,
 			func(ctx context.Context, key Key, node Node) (err error) {
@@ -400,7 +400,7 @@ func TestLevelNodeDB_Full(t *testing.T) {
 		}
 
 		// iterate handler returns error
-		var testError = errors.New("test error")
+		var testError = errors.New("", "test error")
 		i = 0
 		err = lndb.Iterate(back,
 			func(ctx context.Context, key Key, node Node) (err error) {
@@ -626,7 +626,7 @@ func TestPNodeDB_Full(t *testing.T) {
 		}
 
 		// iterate handler returns error
-		var testError = errors.New("test error")
+		var testError = errors.New("", "test error")
 		i = 0
 		err = mndb.Iterate(back,
 			func(ctx context.Context, key Key, node Node) (err error) {

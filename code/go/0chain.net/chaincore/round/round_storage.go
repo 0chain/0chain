@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrRoundEntityNotFound = errors.New("round entity not found")
+	ErrRoundEntityNotFound = errors.New("", "round entity not found")
 )
 
 type RoundStorageEntity = interface{}

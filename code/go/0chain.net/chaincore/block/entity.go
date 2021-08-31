@@ -929,7 +929,7 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 		logging.Logger.Error("save changes - client state is nil",
 			zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash))
-		return errors.New("save changes - client state is nil")
+		return errors.New("", "save changes - client state is nil")
 	}
 
 	var err error

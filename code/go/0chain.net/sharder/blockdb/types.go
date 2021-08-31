@@ -7,7 +7,7 @@ import (
 	"github.com/0chain/errors"
 )
 
-var ErrKeyNotFound = errors.New("key not found")
+var ErrKeyNotFound = errors.New("", "key not found")
 
 //Key - type for the record's identifier
 type Key string

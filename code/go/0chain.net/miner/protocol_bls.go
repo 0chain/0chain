@@ -45,9 +45,10 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
-			return errors.Wrap(err, errors.New("error while setting dkg from store: \nstorage"+
-				" may be damaged or permissions may not be available?").Error())
-
+			return errors.Wrap(
+				err,
+				errors.New("error while setting dkg from store", ": \nstorage"+" may be damaged or permissions may not be available?")
+			)
 		}
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")

@@ -221,7 +221,7 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")
-		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")
+		return "", errors.New("", "PublicKey or the ID is empty. Cannot proceed")
 	}
 
 	//check new sharder

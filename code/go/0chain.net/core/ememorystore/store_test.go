@@ -55,7 +55,7 @@ func initDBs() error {
 
 		_, ok := pools[entityName]
 		if ok {
-			return errors.New("trying to init existing db")
+			return errors.New("", "trying to init existing db")
 		}
 		pools[entityName] = db
 	}

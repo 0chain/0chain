@@ -10,7 +10,7 @@ import (
 type testWriter struct{}
 
 func (t testWriter) Write(_ []byte) (n int, err error) {
-	return 0, errors.New("error")
+	return 0, errors.New("", "error")
 }
 
 var _ io.Writer = (*testWriter)(nil)
@@ -56,7 +56,7 @@ func TestOriginTracker_Write(t *testing.T) {
 type testReader struct{}
 
 func (t testReader) Read(_ []byte) (n int, err error) {
-	return 0, errors.New("error")
+	return 0, errors.New("", "error")
 }
 
 var _ io.Reader = (*testReader)(nil)

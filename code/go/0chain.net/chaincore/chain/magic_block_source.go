@@ -35,7 +35,7 @@ func get0DNSMagicBlockEndpoint(base string) (ep string, err error) {
 func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 
 	if path == "" {
-		return nil, errors.New("empty magic block file path")
+		return nil, errors.New("", "empty magic block file path")
 	}
 
 	if ext := filepath.Ext(path); ext != ".json" {
@@ -63,7 +63,7 @@ func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 // GetMagicBlockFrom0DNS with given URL base.
 func GetMagicBlockFrom0DNS(urlBase string) (mb *block.MagicBlock, err error) {
 	if urlBase == "" {
-		return nil, errors.New("empty 0DNS URL base configured")
+		return nil, errors.New("", "empty 0DNS URL base configured")
 	}
 	var full string
 	if full, err = get0DNSMagicBlockEndpoint(urlBase); err != nil {

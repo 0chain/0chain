@@ -70,7 +70,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
 			if ap.ExpireAt >= now {
-				return nil, errors.New("the pool is not expired yet")
+				return nil, errors.New("", "the pool is not expired yet")
 			}
 			took = ap
 			continue // delete
@@ -80,7 +80,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	wp.Pools = wp.Pools[:i]
 
 	if took == nil {
-		return nil, errors.New("pool not found")
+		return nil, errors.New("", "pool not found")
 	}
 	return
 }

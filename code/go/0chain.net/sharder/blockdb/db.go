@@ -167,7 +167,7 @@ func (bdb *BlockDB) WriteData(record Record) error {
 		return err
 	}
 	if int32(n) != dlen {
-		return errors.New("written data length doesn't match computed length")
+		return errors.New("", "written data length doesn't match computed length")
 	}
 	return err
 }

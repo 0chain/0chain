@@ -21,7 +21,7 @@ import (
 
 // internal errors
 
-var errZeroVesting = errors.New("zero vesting for this destination and period")
+var errZeroVesting = errors.New("", "zero vesting for this destination and period")
 
 //
 // lock, unlock, trigger, delete a pool
@@ -164,17 +164,17 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 	}
 	switch {
 	case len(ar.Description) > conf.MaxDescriptionLength:
-		return errors.New("entry description is too long")
+		return errors.New("", "entry description is too long")
 	case ar.StartTime < now:
-		return errors.New("vesting starts before now")
+		return errors.New("", "vesting starts before now")
 	case ar.Duration < conf.MinDuration:
-		return errors.New("vesting duration is too short")
+		return errors.New("", "vesting duration is too short")
 	case ar.Duration > conf.MaxDuration:
-		return errors.New("vesting duration is too long")
+		return errors.New("", "vesting duration is too long")
 	case len(ar.Destinations) == 0:
-		return errors.New("no destinations")
+		return errors.New("", "no destinations")
 	case len(ar.Destinations) > conf.MaxDestinations:
-		return errors.New("too many destinations")
+		return errors.New("", "too many destinations")
 	}
 
 	for _, d := range ar.Destinations {
@@ -252,11 +252,11 @@ func checkFill(t *transaction.Transaction, balances chainstate.StateContextI) (
 	}
 
 	if errors.Is(err, util.ErrValueNotPresent) {
-		return errors.New("no tokens to lock")
+		return errors.New("", "no tokens to lock")
 	}
 
 	if state.Balance(t.Value) > balance {
-		return errors.New("lock amount is greater than balance")
+		return errors.New("", "lock amount is greater than balance")
 	}
 
 	return
@@ -311,7 +311,7 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	if vp.Balance == 0 {
-		return "", errors.New("empty pool")
+		return "", errors.New("", "empty pool")
 	}
 
 	var (
@@ -426,12 +426,12 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	if t.ClientID != vp.ClientID {
-		return "", errors.New("only owner can unlock the excess tokens")
+		return "", errors.New("", "only owner can unlock the excess tokens")
 	}
 
 	var over = vp.excess()
 	if over == 0 {
-		return "", errors.New("no excess tokens to unlock")
+		return "", errors.New("", "no excess tokens to unlock")
 	}
 
 	var transfer *state.Transfer

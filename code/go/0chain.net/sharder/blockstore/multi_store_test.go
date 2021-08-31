@@ -15,7 +15,7 @@ type blockStoreMock struct{}
 
 func (b2 blockStoreMock) Write(b *block.Block) error {
 	if len(b.Hash) != 64 {
-		return errors.New("hash must be 64 size")
+		return errors.New("", "hash must be 64 size")
 	}
 	return nil
 }
@@ -30,7 +30,7 @@ func (b2 blockStoreMock) ReadWithBlockSummary(_ *block.BlockSummary) (*block.Blo
 
 func (b2 blockStoreMock) Delete(hash string) error {
 	if len(hash) != 64 {
-		return errors.New("hash must be 64 size")
+		return errors.New("", "hash must be 64 size")
 	}
 
 	return nil
@@ -38,7 +38,7 @@ func (b2 blockStoreMock) Delete(hash string) error {
 
 func (b2 blockStoreMock) DeleteBlock(b *block.Block) error {
 	if len(b.Hash) != 64 {
-		return errors.New("hash must be 64 size")
+		return errors.New("", "hash must be 64 size")
 	}
 
 	return nil
