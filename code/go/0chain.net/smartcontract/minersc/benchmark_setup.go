@@ -46,7 +46,7 @@ func AddMockNodes(
 
 	for i := 0; i < numNodes; i++ {
 		newNode := NewMinerNode()
-		newNode.ID = getMockNodeId(i, nodeType)
+		newNode.ID = GetMockNodeId(i, nodeType)
 		newNode.LastHealthCheck = common.Timestamp(viper.GetInt64(benchmark.Now))
 		newNode.PublicKey = "mockPublicKey"
 		newNode.ServiceCharge = viper.GetFloat64(benchmark.MinerMaxCharge)
@@ -106,7 +106,6 @@ func AddMockNodes(
 	if err != nil {
 		panic(err)
 	}
-
 	return nodes
 }
 
@@ -123,7 +122,7 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func getMockNodeId(index int, nodeType NodeType) string {
+func GetMockNodeId(index int, nodeType NodeType) string {
 	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }
 

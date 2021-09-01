@@ -49,8 +49,8 @@ func getBalances(
 		PrevBlock: &block.Block{},
 	}
 	bk.Round = 2
-	bk.MinerID = data.Miners[0]
-	node.Self.Underlying().SetKey(data.Miners[0])
+	bk.MinerID = minersc.GetMockNodeId(0, minersc.NodeTypeMiner)
+	node.Self.Underlying().SetKey(minersc.GetMockNodeId(0, minersc.NodeTypeMiner))
 	magicBlock := &block.MagicBlock{}
 	signatureScheme := &encryption.BLS0ChainScheme{}
 	return mpt, cstate.NewStateContext(
@@ -133,7 +133,7 @@ func setUpMpt(
 	if verbose {
 		log.Println("added stake pools")
 	}
-	miners := minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
+	minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
 	if verbose {
 		log.Println("added miners")
 	}
@@ -160,7 +160,6 @@ func setUpMpt(
 		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
 		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
 		PrivateKeys: privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		Miners:      miners[:viper.GetInt(benchmark.AvailableKeys)],
 		Sharders:    sharders[:viper.GetInt(benchmark.AvailableKeys)],
 	}
 }

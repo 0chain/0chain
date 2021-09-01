@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"time"
 
 	"0chain.net/smartcontract/vestingsc"
 
@@ -60,7 +61,7 @@ var rootCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 		}
-		printSimSettings()
+		printSimSettings(verbose)
 
 		mpt, root, data := setUpMpt("db", verbose)
 		if verbose {
@@ -69,13 +70,31 @@ var rootCmd = &cobra.Command{
 		suites := getTestSuites(data, cmd.Flags())
 		results := runSuites(suites, verbose, mpt, root, data)
 
-		printResults(results)
+		printResults(results, verbose)
 
 	},
 }
 
-func printResults(results []suiteResults) {
-	fmt.Println("\nResults")
+func printResults(results []suiteResults, verbose bool) {
+	const (
+		colourReset  = "\033[0m"
+		colourRed    = "\033[31m"
+		colourGreen  = "\033[32m"
+		colourYellow = "\033[33m"
+		colourPurple = "\033[35m"
+	)
+
+	var (
+		colour string
+		bad    = viper.GetDuration(bk.Bad)
+		worry  = viper.GetDuration(bk.Worry)
+		good   = viper.GetDuration(bk.Satisfactory)
+	)
+
+	if verbose {
+		fmt.Println("\nResults")
+	}
+
 	sort.SliceStable(results, func(i, j int) bool {
 		return results[i].name < results[j].name
 	})
@@ -85,25 +104,45 @@ func printResults(results []suiteResults) {
 		})
 	}
 	for _, suiteResult := range results {
-		fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
-		fmt.Printf("name, ms\n")
+		if verbose {
+			fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
+			//fmt.Printf("name, ms\n")
+		}
 		for _, bkResult := range suiteResult.results {
+			takenMs := float64(bkResult.result.T.Milliseconds()) / float64(bkResult.result.N)
+			takenDuration := time.Duration(takenMs * float64(time.Millisecond))
+			if !verbose || !viper.GetBool(bk.Colour) {
+				colour = colourReset
+			} else if takenDuration >= bad {
+				colour = colourRed
+			} else if takenDuration > worry {
+				colour = colourPurple
+			} else if takenDuration > good {
+				colour = colourYellow
+			} else {
+				colour = colourGreen
+			}
 			fmt.Printf(
-				"%s,%f\n",
+				"%s%s,%f%s%s\n",
+				colour,
 				bkResult.test.Name(),
-				float64(bkResult.result.T.Milliseconds())/float64(bkResult.result.N),
+				takenMs,
+				"ms",
+				colourReset,
 			)
 		}
 	}
 
 }
 
-func printSimSettings() {
-	println("simulator settings")
-	println("num clients", viper.GetInt(bk.NumClients))
-	println("num miners", viper.GetInt(bk.NumMiners))
-	println("num sharders", viper.GetInt(bk.NumSharders))
-	println("num blobbers", viper.GetInt(bk.NumBlobbers))
-	println("num allocations", viper.GetInt(bk.NumAllocations))
-	println()
+func printSimSettings(verbose bool) {
+	if verbose {
+		println("simulator settings")
+		println("num clients", viper.GetInt(bk.NumClients))
+		println("num miners", viper.GetInt(bk.NumMiners))
+		println("num sharders", viper.GetInt(bk.NumSharders))
+		println("num blobbers", viper.GetInt(bk.NumBlobbers))
+		println("num allocations", viper.GetInt(bk.NumAllocations))
+		println()
+	}
 }

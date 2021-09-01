@@ -51,7 +51,12 @@ const (
 	Now           = Internal + "now"
 	InternalT     = Internal + "t"
 	//InternalSignatureScheme   = Internal + "signature_scheme"
-	StartTokens = Internal + "start_tokens"
+	StartTokens  = Internal + "start_tokens"
+	Bad          = Internal + "bad"
+	Worry        = Internal + "worry"
+	Satisfactory = Internal + "satisfactory"
+	TimeUnit     = Internal + "time_unit"
+	Colour       = Internal + "colour"
 
 	NumClients                   = Simulation + "num_clients"
 	NumMiners                    = Simulation + "num_miners"
@@ -137,6 +142,5 @@ type BenchData struct {
 	Clients     []string
 	PublicKeys  []string
 	PrivateKeys []string
-	Miners      []string
 	Sharders    []string
 }

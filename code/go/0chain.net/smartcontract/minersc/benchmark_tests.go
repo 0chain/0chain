@@ -91,7 +91,7 @@ func BenchmarkTests(
 			name:     "miner.add_sharder",
 			endpoint: msc.minerHealthCheck,
 			txn: transaction.Transaction{
-				ClientID: data.Miners[0],
+				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: nil,
 		},
@@ -99,7 +99,7 @@ func BenchmarkTests(
 			name:     "miner.sharder_health_check",
 			endpoint: msc.sharderHealthCheck,
 			txn: transaction.Transaction{
-				ClientID: data.Sharders[0],
+				ClientID: GetMockNodeId(0, NodeTypeSharder),
 			},
 			input: nil,
 		},
@@ -107,7 +107,7 @@ func BenchmarkTests(
 			name:     "miner.payFees",
 			endpoint: msc.payFees,
 			txn: transaction.Transaction{
-				ClientID:   data.Miners[0],
+				ClientID:   GetMockNodeId(0, NodeTypeMiner),
 				ToClientID: ADDRESS,
 			},
 			input: nil,
@@ -116,13 +116,13 @@ func BenchmarkTests(
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
 			txn: transaction.Transaction{
-				ClientID:   data.Miners[0],
+				ClientID:   GetMockNodeId(0, NodeTypeMiner),
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
 				var mpks []string
 				for i := 0; i < viper.GetInt(bk.InternalT); i++ {
-					mpks = append(mpks, data.Miners[i])
+					mpks = append(mpks, GetMockNodeId(i, NodeTypeMiner))
 				}
 				return (&block.MPK{
 					Mpk: mpks,
@@ -149,11 +149,11 @@ func BenchmarkTests(
 			name:     "miner.update_miner_settings",
 			endpoint: msc.UpdateMinerSettings,
 			txn: transaction.Transaction{
-				ClientID: data.Miners[0],
+				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                data.Miners[0],
+					ID:                GetMockNodeId(0, NodeTypeMiner),
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
@@ -165,11 +165,11 @@ func BenchmarkTests(
 			name:     "miner.update_sharder_settings",
 			endpoint: msc.UpdateSharderSettings,
 			txn: transaction.Transaction{
-				ClientID: data.Sharders[0],
+				ClientID: GetMockNodeId(0, NodeTypeSharder),
 			},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:                data.Sharders[0],
+					ID:                GetMockNodeId(0, NodeTypeSharder),
 					ServiceCharge:     viper.GetFloat64(bk.MinerMaxCharge),
 					NumberOfDelegates: viper.GetInt(bk.MinerMaxDelegates),
 					MinStake:          state.Balance(viper.GetFloat64(bk.MinerMinStake) * 1e10),
@@ -182,7 +182,7 @@ func BenchmarkTests(
 			endpoint: msc.addToDelegatePool,
 			txn:      transaction.Transaction{},
 			input: (&deletePool{
-				MinerID: data.Miners[0],
+				MinerID: GetMockNodeId(0, NodeTypeMiner),
 				PoolID:  getMockDelegateId(0, viper.GetInt(bk.NumMinerDelegates)),
 			}).Encode(),
 		},
@@ -190,10 +190,10 @@ func BenchmarkTests(
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
 			txn: transaction.Transaction{
-				ClientID: data.Miners[0],
+				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: (&deletePool{
-				MinerID: data.Miners[0],
+				MinerID: GetMockNodeId(0, NodeTypeMiner),
 				PoolID:  getMockDelegateId(0, 0),
 			}).Encode(),
 		},
@@ -203,7 +203,7 @@ func BenchmarkTests(
 			txn:      transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
-					ID:        data.Sharders[0],
+					ID:        GetMockNodeId(0, NodeTypeSharder),
 					PublicKey: "my public key",
 				},
 			}).Encode(),
