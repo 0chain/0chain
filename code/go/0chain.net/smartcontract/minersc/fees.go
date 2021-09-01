@@ -548,7 +548,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	for _, sid := range sids {
 		var sn *MinerNode
 		sn, err = msc.getSharderNode(sid, balances)
-		if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 			return nil, errors.Newf("", "unexpected error: %v", err)
 		}
 		sharders, err = append(sharders, sn), nil // even if it's nil, reset err

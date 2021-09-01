@@ -534,7 +534,7 @@ func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	val, err := mpt.GetNodeValue(Path(key))
 	if value == "" {
-		if !(val == nil || errors.Is(err, ErrValueNotPresent)) {
+		if !(val == nil || errors.IsTop(err, ErrValueNotPresent)) {
 			t.Fatalf("setting value to blank didn't return nil value: %v, %v",
 				val, err)
 		}

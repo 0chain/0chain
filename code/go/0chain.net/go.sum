@@ -35,6 +35,14 @@ dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20201218220906-28db891af037/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/0chain/errors v1.0.3 h1:QQZPFxTfnMcRdt32DXbzRQIfGWmBsKoEdszKQDb0rRM=
 github.com/0chain/errors v1.0.3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
+github.com/0chain/errors v1.0.4-0.20210831145704-65f8cd7ed1b3 h1:qn0N5LuOiXzuGcvq6+vTE3Iftln3KVrf8CPSvviBU2A=
+github.com/0chain/errors v1.0.4-0.20210831145704-65f8cd7ed1b3/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
+github.com/0chain/errors v1.0.4-0.20210831151211-ad2df1cc9c9a h1:dbkevEjVc/T//MRWOqMzDsIc8j9Tt4BQWTN0jPsLZaw=
+github.com/0chain/errors v1.0.4-0.20210831151211-ad2df1cc9c9a/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
+github.com/0chain/errors v1.0.4-0.20210831151657-de08996183cc h1:C6baWy9okGeq/AW+h+tCty1yLTuDtnk1Xoi0Jt8GYMQ=
+github.com/0chain/errors v1.0.4-0.20210831151657-de08996183cc/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
+github.com/0chain/errors v1.0.4-0.20210831155409-d0c49429d451 h1:28n2vDwNh0oH1hhYWYbBKokKN0B1yeWIUf1RCQdAT5w=
+github.com/0chain/errors v1.0.4-0.20210831155409-d0c49429d451/go.mod h1:xymD6nVgrbgttWwkpSCfLLEJbFO6iHGQwk/yeSuYkIc=
 github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481 h1:0lJGENbcCAQW71ZuDyvUhHKbzOuhPeFo0zI5xqiDyts=
 github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481/go.mod h1:3i9d+2Osik7apjXERxpAlKxE7SilJKkHoW9Ihdjdfxs=
 github.com/0chain/gosdk v1.2.77-0.20210712155418-b53bc7f1a68c h1:Y4KUEpfON3iq39LYc1MkbPBMUPreOYCsSW9B9zkKtB8=

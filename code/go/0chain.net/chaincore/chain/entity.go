@@ -1256,7 +1256,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 			zap.String("state", util.ToHex(b.ClientStateHash)),
 			zap.Error(err))
 
-		if errors.Is(err, util.ErrNodeNotFound) {
+		if errors.IsTop(err, util.ErrNodeNotFound) {
 			// get state from network
 			logging.Logger.Info("init block state by synching block state from network")
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -1585,7 +1585,7 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
 	// extract and send DKG phase first
 	var pn minersc.PhaseNode
 	if pn, err = c.GetPhaseOfBlock(lfb); err != nil {
-		return errors.Wrap(err, errors.New("view_change", "getting phase node").Error())
+		return errors.Wrap(err, errors.New("view_change", "getting phase node"))
 	}
 
 	// even if it executed on a shader we don't treat this phase as obtained

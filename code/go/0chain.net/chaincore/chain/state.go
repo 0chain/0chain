@@ -418,7 +418,7 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	s.Balance = state.Balance(0)
 	ss, err := clientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent) {
+		if !errors.IsTop(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return s, err
@@ -452,7 +452,7 @@ func isValid(err error) bool {
 	if err == nil {
 		return true
 	}
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return true
 	}
 	return false

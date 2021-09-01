@@ -12,7 +12,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
-			"cannot get smart contract configurations").Error())
+			"cannot get smart contract configurations"))
 	}
 
 	if conf.BlockReward.BlobberCapacityWeight+conf.BlockReward.BlobberUsageWeight == 0 ||
@@ -23,7 +23,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	allBlobbers, err := ssc.getBlobbersList(balances)
 	if err != nil {
 		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
-			"cannot get all blobbers list").Error())
+			"cannot get all blobbers list"))
 	}
 
 	// filter out blobbers with stake too low to qualify for rewards
@@ -35,7 +35,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(blobber.ID, balances); err != nil {
 			return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
-				"can't get related stake pool").Error())
+				"can't get related stake pool"))
 		}
 		var stake float64
 		for _, delegate := range sp.Pools {
@@ -59,11 +59,11 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 
 		capacityReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberCapacityWeight * ratio
 		if err := mintReward(qsp, capacityReward, balances); err != nil {
-			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting capacity reward").Error())
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting capacity reward"))
 		}
 		usageReward := float64(conf.BlockReward.BlockReward) * conf.BlockReward.BlobberUsageWeight * ratio
 		if err := mintReward(qsp, usageReward, balances); err != nil {
-			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting usage reward").Error())
+			return errors.Wrap(err, errors.New("blobber_block_rewards_failed", "minting usage reward"))
 
 		}
 		qsp.Rewards.Blobber += state.Balance(capacityReward + usageReward)
@@ -72,7 +72,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	for i, qsp := range stakePools {
 		if err = qsp.save(ssc.ID, qualifyingBlobberIds[i], balances); err != nil {
 			return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
-				"saving stake pool").Error())
+				"saving stake pool"))
 
 		}
 	}
@@ -81,7 +81,7 @@ func (ssc *StorageSmartContract) payBlobberBlockRewards(
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return errors.Wrap(err, errors.New("blobber_block_rewards_failed",
-			"saving configurations").Error())
+			"saving configurations"))
 
 	}
 

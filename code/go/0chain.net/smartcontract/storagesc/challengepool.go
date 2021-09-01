@@ -190,7 +190,7 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	cp = newChallengePool()
 	err = cp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -203,7 +203,7 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 	_, err = ssc.getChallengePoolBytes(allocationID, balances)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return nil, errors.Wrap(err, "new_challenge_pool_failed")
 	}
 

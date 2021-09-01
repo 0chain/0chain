@@ -98,7 +98,7 @@ func (mpt *MerklePatriciaTrie) GetRoot() Key {
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if _, err := hex.DecodeString(string(path)); err != nil {
-		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=", string(path)).Error())
+		return nil, errors.Wrap(err, errors.Newf("", "invalid hex path: path=%q, err=", string(path)))
 	}
 
 	mpt.mutex.RLock()
@@ -771,7 +771,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 			npath := append(path, pe)
 			if err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes); err != nil {
-				if errors.Is(err, ErrNodeNotFound) || errors.Is(err, ErrIteratingChildNodes) {
+				if errors.IsTop(err, ErrNodeNotFound) || errors.IsTop(err, ErrIteratingChildNodes) {
 					ecount++
 				} else {
 					Logger.Error("iterate - child node", zap.Error(err))
@@ -918,7 +918,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		ps.BelowVersion = count
 		ps.MissingNodes = missingNodes
 	}
-	if err == nil || errors.Is(err, ErrNodeNotFound) || errors.Is(err, ErrIteratingChildNodes) {
+	if err == nil || errors.IsTop(err, ErrNodeNotFound) || errors.IsTop(err, ErrIteratingChildNodes) {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
 				Logger.Error("update version - multi put - last batch", zap.Error(err))

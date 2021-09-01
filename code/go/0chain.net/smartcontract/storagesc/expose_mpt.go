@@ -16,8 +16,8 @@ func (ssc *StorageSmartContract) GetMptKey(
 	var err error
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, false); err != nil {
-		return nil, errors.New("get_mpt_key",
-			"can't get SC configurations: "+err.Error())
+		return nil, errors.Wrap(err, errors.New("get_mpt_key", "can't get SC configurations"))
+
 	}
 	if !conf.ExposeMpt {
 		return nil, errors.New("get_mpt_key",

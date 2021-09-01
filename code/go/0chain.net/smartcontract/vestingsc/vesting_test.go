@@ -161,8 +161,8 @@ func TestVestingSmartContract_add(t *testing.T) {
 
 	// 1. malformed request
 	_, err = vsc.add(tx, []byte(`} malformed {`), balances)
-	assertErrMsg(t, err, `create_vesting_pool_failed: malformed request:`+
-		` invalid character '}' looking for beginning of value`)
+	assertErrMsg(t, err, "create_vesting_pool_failed: malformed request\n"+
+		`invalid character '}' looking for beginning of value`)
 
 	// 2. invalid
 	configureConfig()
@@ -174,8 +174,8 @@ func TestVestingSmartContract_add(t *testing.T) {
 		&destination{ID: "two", Amount: 20},
 	}
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	assertErrMsg(t, err, `create_vesting_pool_failed: invalid request:`+
-		` vesting duration is too short`)
+	assertErrMsg(t, err, "create_vesting_pool_failed: invalid request\n"+
+		`vesting duration is too short`)
 
 	// 3. empty client id
 	ar.Duration = 2 * time.Second
@@ -195,8 +195,8 @@ func TestVestingSmartContract_add(t *testing.T) {
 	tx = newTransaction(client.id, vsc.ID, 800e10, tp)
 	balances.txn = tx
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
-	assertErrMsg(t, err, `create_vesting_pool_failed: `+
-		`can't fill pool: lock amount is greater than balance`)
+	assertErrMsg(t, err, "create_vesting_pool_failed: "+
+		"can't fill pool\n"+"lock amount is greater than balance")
 
 	// 6. ok
 	balances.balances[client.id] = 1200e10
@@ -234,8 +234,8 @@ func TestVestingSmartContract_delete(t *testing.T) {
 
 	// 1. malformed (lock, unlock)
 	_, err = vsc.delete(tx, []byte("} malformed {"), balances)
-	assertErrMsg(t, err, "delete_vesting_pool_failed: invalid request:"+
-		" invalid character '}' looking for beginning of value")
+	assertErrMsg(t, err, "delete_vesting_pool_failed: invalid request\n"+
+		"invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
@@ -253,7 +253,7 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	tx.ClientID = client.id
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
 	assertErrMsg(t, err, "delete_vesting_pool_failed: "+
-		"can't get pool: value not present")
+		"can't get pool\n"+"value not present")
 
 	// 5. another client
 	var resp string
@@ -303,8 +303,8 @@ func TestVestingSmartContract_stop(t *testing.T) {
 
 	// 1. malformed (stop)
 	_, err = vsc.stop(tx, []byte("} malformed {"), balances)
-	assertErrMsg(t, err, "stop_vesting_failed: malformed request:"+
-		" invalid character '}' looking for beginning of value")
+	assertErrMsg(t, err, "stop_vesting_failed: malformed request\n"+
+		"invalid character '}' looking for beginning of value")
 
 	// 2. destination = ""
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
@@ -316,7 +316,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	sr.Destination = "dest_hex"
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
 	assertErrMsg(t, err, "stop_vesting_failed: "+
-		"can't get vesting pool: value not present")
+		"can't get vesting pool\n"+"value not present")
 
 	// 4. another client
 	var resp string
@@ -344,8 +344,7 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	tx.Value = 1
 	tx.ClientID = client.id
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	assertErrMsg(t, err, `stop_vesting_failed: `+
-		`destination dest_hex not found in the pool`)
+	assertErrMsg(t, err, "stop_vesting_failed\n"+"destination dest_hex not found in the pool")
 
 	// 8. stop
 	sr.Destination = "one"
@@ -376,8 +375,8 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 
 	// 1. malformed
 	_, err = vsc.unlock(tx, []byte("} malformed {"), balances)
-	assertErrMsg(t, err, "unlock_vesting_pool_failed: invalid request:"+
-		" invalid character '}' looking for beginning of value")
+	assertErrMsg(t, err, "unlock_vesting_pool_failed: invalid request\n"+
+		"invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
@@ -389,7 +388,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	lr.PoolID = "pool_hex"
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
-		"can't get pool: value not present")
+		"can't get pool\n"+"value not present")
 
 	// 4. another client
 	var resp string
@@ -411,7 +410,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
-		`vesting pool: destination another_one not found in the pool`)
+		"vesting pool\n"+"destination another_one not found in the pool")
 
 	// 6. min lock
 	tx.ClientID = client.id
@@ -441,8 +440,8 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 
 	// 1. malformed
 	_, err = vsc.trigger(tx, []byte("} malformed {"), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: invalid request:"+
-		" invalid character '}' looking for beginning of value")
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: invalid request\n"+
+		"invalid character '}' looking for beginning of value")
 
 	// 2. pool_id = ""
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
@@ -452,7 +451,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	// 3. not found
 	lr.PoolID = "pool_hex"
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+"can't get pool: "+"value not present")
+	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+"can't get pool\n"+"value not present")
 
 	// 4. vesting is not started yet
 	var resp string
@@ -505,7 +504,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
-	require.Contains(t, common.NewErrNoResource(nil, "can't get pool: value not present").Error(), err.Error())
+	require.Contains(t, common.NewErrNoResource(nil, "can't get pool\n"+"value not present").Error(), err.Error())
 
 	balances.balances[client.id] = 200e10
 

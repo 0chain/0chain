@@ -28,7 +28,7 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
 	allValidatorsList, err := sc.getValidatorsList(balances)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("add_validator_failed", "Failed to get validator list").Error())
+		return "", errors.Wrap(err, errors.New("add_validator_failed", "Failed to get validator list"))
 	}
 	newValidator := &ValidationNode{}
 	err = newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
@@ -62,12 +62,12 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		&newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("add_validator_failed",
-			"get or create stake pool error").Error())
+			"get or create stake pool error"))
 
 	}
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("add_validator_failed",
-			"saving stake pool error").Error())
+			"saving stake pool error"))
 
 	}
 

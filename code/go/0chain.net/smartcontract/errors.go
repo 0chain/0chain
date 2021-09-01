@@ -25,9 +25,9 @@ import (
 // NewErrNoResource()OrErrInternal() returns provided error without wrapping.
 func NewErrNoResourceOrErrInternal(err error, defaultInternal bool, msgs ...string) error {
 	switch {
-	case errors.Is(err, common.ErrDecoding):
+	case errors.IsTop(err, common.ErrDecoding):
 		return common.NewErrInternal(err, msgs...)
-	case errors.Is(err, util.ErrValueNotPresent), errors.Is(err, util.ErrNodeNotFound):
+	case errors.IsTop(err, util.ErrValueNotPresent), errors.IsTop(err, util.ErrNodeNotFound):
 		return common.NewErrNoResource(err, msgs...)
 	default:
 		if defaultInternal {

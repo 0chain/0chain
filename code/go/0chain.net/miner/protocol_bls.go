@@ -47,7 +47,7 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 		if err != nil {
 			return errors.Wrap(
 				err,
-				errors.New("error while setting dkg from store", ": \nstorage"+" may be damaged or permissions may not be available?")
+				errors.New("error while setting dkg from store", ": \nstorage"+" may be damaged or permissions may not be available?"),
 			)
 		}
 	} else {

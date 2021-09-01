@@ -833,10 +833,10 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 		{"MB", minersc.MagicBlockKey, dkgi.MB},
 	} {
 		seri, err = c.GetBlockStateNode(lfb, ks.key)
-		if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+		if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 			return nil, errors.Newf("", "can't get %s node: %v", ks.name, err)
 		}
-		if errors.Is(err, util.ErrValueNotPresent) {
+		if errors.IsTop(err, util.ErrValueNotPresent) {
 			err = nil // reset the error and leave the value blank
 			continue
 		}

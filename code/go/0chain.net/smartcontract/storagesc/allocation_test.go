@@ -167,7 +167,7 @@ func TestSelectBlobbers(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "allocation_creation_failed: invalid preferred blobber URL",
+				errMsg: "allocation_creation_failed\ninvalid preferred blobber URL",
 			},
 		},
 		{
@@ -519,7 +519,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	if _, err = ssc.getAllocation(allocID, balances); err == nil {
 		t.Fatal("missing error")
 	}
-	if !errors.Is(err, util.ErrValueNotPresent) {
+	if !errors.IsTop(err, util.ErrValueNotPresent) {
 		t.Fatal("unexpected error:", err)
 	}
 	alloc = new(StorageAllocation)
@@ -882,7 +882,7 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 }
 
 func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
-	const errMsg = "can't get blobber's stake pool: value not present"
+	const errMsg = "can't get blobber's stake pool\n" + "value not present"
 	var (
 		alloc    StorageAllocation
 		b1, b2   StorageNode
@@ -1028,19 +1028,19 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"No Blobbers registered. Failed to create a storage allocation"
 		errMsg3 = "allocation_creation_failed: " +
 			"Invalid client in the transaction. No client id in transaction"
-		errMsg4 = "allocation_creation_failed: malformed request: " +
+		errMsg4 = "allocation_creation_failed: malformed request\n" +
 			"invalid character '}' looking for beginning of value"
-		errMsg5 = "allocation_creation_failed: " +
-			"invalid request: invalid read_price range"
-		errMsg5p9 = "allocation_creation_failed: " +
-			"invalid request: missing owner id"
-		errMsg6 = "allocation_creation_failed: " +
+		errMsg5 = "allocation_creation_failed\n" +
+			"invalid request\n" + "invalid read_price range"
+		errMsg5p9 = "allocation_creation_failed\n" +
+			"invalid request\n" + "missing owner id"
+		errMsg6 = "allocation_creation_failed\n" +
 			"Not enough blobbers to honor the allocation"
-		errMsg7 = "allocation_creation_failed: " +
+		errMsg7 = "allocation_creation_failed\n" +
 			"Not enough blobbers to honor the allocation"
-		errMsg8 = "allocation_creation_failed: " +
+		errMsg8 = "allocation_creation_failed\n" +
 			"not enough tokens to honor the min lock demand (0 < 270)"
-		errMsg9 = "allocation_creation_failed: " +
+		errMsg9 = "allocation_creation_failed\n" +
 			"no tokens to lock"
 	)
 

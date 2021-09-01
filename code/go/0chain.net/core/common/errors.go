@@ -42,7 +42,7 @@ func NewErrInternal(err error, msgs ...string) error {
 	if err == nil {
 		return errors.New(ErrInternalCode, strings.Join(msgs, ": "))
 	}
-	return errors.Wrap(err, errors.New(ErrInternalCode, strings.Join(msgs, ": ")).Error())
+	return errors.Wrap(err, errors.New(ErrInternalCode, strings.Join(msgs, ": ")))
 }
 
 // NewErrNoResource creates new Error with ErrNoResourceCode.
@@ -54,7 +54,7 @@ func NewErrNoResource(err error, msgs ...string) error {
 		return errors.New(ErrNoResourceCode, strings.Join(msgs, ": "))
 	}
 
-	return errors.Wrap(err, errors.New(ErrNoResourceCode, strings.Join(msgs, ": ")).Error())
+	return errors.Wrap(err, errors.New(ErrNoResourceCode, strings.Join(msgs, ": ")))
 }
 
 // NewErrBadRequest creates new Error with ErrBadRequestCode.
@@ -67,5 +67,5 @@ func NewErrBadRequest(err error, msgs ...string) error {
 		return errors.New(ErrBadRequestCode, strings.Join(msgs, ": "))
 	}
 
-	return errors.Wrap(err, errors.New(ErrBadRequestCode, strings.Join(msgs, ": ")).Error())
+	return errors.Wrap(err, errors.New(ErrBadRequestCode, strings.Join(msgs, ": ")))
 }

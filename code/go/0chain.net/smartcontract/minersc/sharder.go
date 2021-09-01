@@ -83,7 +83,7 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return "", errors.Newf("add_sharder", "unexpected error: %v", err)
 	}
 
@@ -100,7 +100,7 @@ func (msc *MinerSmartContract) AddSharder(
 	newSharder.NodeType = NodeTypeSharder // set node type
 
 	if err = quickFixDuplicateHosts(newSharder, allSharders.Nodes); err != nil {
-		return "", errors.Wrap(err, errors.New("add_sharder", "").Error())
+		return "", errors.Wrap(err, errors.New("add_sharder", ""))
 	}
 
 	allSharders.Nodes = append(allSharders.Nodes, newSharder)
@@ -163,14 +163,14 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 
 	var ss util.Serializable
 	ss, err = balances.GetTrieNode(getSharderKey(sid))
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return // unexpected error
 	}
 
 	sn = NewMinerNode()
 	sn.ID = sid
 
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return // with error ErrValueNotPresent (that's very stupid)
 	}
 

@@ -15,7 +15,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 	balances cstate.StateContextI) bool {
 
 	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		logging.Logger.Error("GetTrieNode from state context", zap.Error(err),
 			zap.String("key", pkey))
 		return false
@@ -119,7 +119,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	newMiner.NodeType = NodeTypeMiner // set node type
 
 	if err = quickFixDuplicateHosts(newMiner, allMiners.Nodes); err != nil {
-		return "", errors.Wrap(err, errors.New("add_miner", "").Error())
+		return "", errors.Wrap(err, errors.New("add_miner", ""))
 	}
 
 	allMap := make(map[string]struct{}, len(allMiners.Nodes))
@@ -140,7 +140,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	if !msc.doesMinerExist(newMiner.getKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
-			return "", errors.Wrap(err, errors.New("add_miner", "").Error())
+			return "", errors.Wrap(err, errors.New("add_miner", ""))
 
 		}
 

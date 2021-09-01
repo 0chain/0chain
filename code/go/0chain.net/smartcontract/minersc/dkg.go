@@ -206,7 +206,7 @@ func GetPhaseNode(statectx cstate.StateContextI) (
 
 	pn := &PhaseNode{}
 	phaseNodeBytes, err := statectx.GetTrieNode(pn.GetKey())
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return nil, err
 	}
 	if phaseNodeBytes == nil {
@@ -278,7 +278,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	}
 
 	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		Logger.DPanic("failed to set phase node -- insert failed",
 			zap.Any("error", err))
 		return err
@@ -606,7 +606,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var gsos *block.GroupSharesOrSigns
 	gsos, err = getGroupShareOrSigns(balances)
 	if err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent) {
+		if !errors.IsTop(err, util.ErrValueNotPresent) {
 			return "", errors.Wrap(err, "share_signs_or_shares_failed")
 		}
 		gsos = block.NewGroupSharesOrSigns()

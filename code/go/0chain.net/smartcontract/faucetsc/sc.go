@@ -74,11 +74,11 @@ func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _
 
 func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return false, errors.New("invalid_request", "faucet has no tokens and needs to be refilled")
 	}
 	if err != nil {
-		return false, errors.Wrap(err, errors.New("invalid_request", "getting faucet balance resulted in an error").Error())
+		return false, errors.Wrap(err, errors.New("invalid_request", "getting faucet balance resulted in an error"))
 	}
 	if gn.PourAmount > smartContractBalance {
 		return false, errors.Newf("invalid_request", "amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance)
@@ -181,7 +181,7 @@ func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances
 		return un, err
 	}
 	if err := un.Decode(us.Encode()); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return un, err
 }
@@ -206,7 +206,7 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 		return gn, err
 	}
 	if err := gn.Decode(gv.Encode()); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return gn, nil
 }

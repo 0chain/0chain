@@ -144,7 +144,7 @@ func (fbs *FSBlockStore) Read(hash string, round int64) (b *block.Block, err err
 				fi, err = os.Stat(path)
 				if err != nil {
 					if os.IsNotExist(err) {
-						// can't use errors.Is(err, os.ErrNotExist) with go1.12
+						// can't use errors.IsTop(err, os.ErrNotExist) with go1.12
 						return nil // not an error (continue)
 					}
 					return err // filesystem error

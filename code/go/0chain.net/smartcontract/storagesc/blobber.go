@@ -22,7 +22,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 	}
 	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return allBlobbersList, nil
 }
@@ -55,7 +55,7 @@ func (sc *StorageSmartContract) getBlobber(blobberID string,
 
 	blobber = new(StorageNode)
 	if err = blobber.Decode(b); err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 
 	return
@@ -170,21 +170,21 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
-			"can't get config").Error())
+			"can't get config"))
 	}
 
 	// get registered blobbers
 	blobbers, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
-			"Failed to get blobber list").Error())
+			"Failed to get blobber list"))
 	}
 
 	// set blobber
 	var blobber = new(StorageNode)
 	if err = blobber.Decode(input); err != nil {
 		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
-			"malformed request").Error())
+			"malformed request"))
 	}
 
 	// set transaction information
@@ -200,14 +200,14 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, blobbers)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
-			"saving all blobbers").Error())
+			"saving all blobbers"))
 	}
 
 	// save the blobber
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("add_or_update_blobber_failed",
-			"saving blobber").Error())
+			"saving blobber"))
 	}
 
 	return string(blobber.Encode()), nil
@@ -221,31 +221,31 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	conf, err := sc.getConfig(balances, true)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"can't get config").Error())
+			"can't get config"))
 	}
 
 	var blobbers *StorageNodes
 	if blobbers, err = sc.getBlobbersList(balances); err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"failed to get blobber list").Error())
+			"failed to get blobber list"))
 	}
 
 	var updatedBlobber = new(StorageNode)
 	if err = updatedBlobber.Decode(input); err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"malformed request").Error())
+			"malformed request"))
 	}
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(updatedBlobber.ID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"can't get the blobber").Error())
+			"can't get the blobber"))
 	}
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(updatedBlobber.ID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"can't get related stake pool").Error())
+			"can't get related stake pool"))
 	}
 
 	if sp.Settings.DelegateWallet == "" {
@@ -269,7 +269,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, blobbers)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"saving all blobbers").Error())
+			"saving all blobbers"))
 
 	}
 
@@ -277,7 +277,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID), blobber)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("update_blobber_settings_failed",
-			"saving blobber").Error())
+			"saving blobber"))
 	}
 
 	return string(blobber.Encode()), nil
@@ -295,14 +295,14 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	all, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
-			"Failed to get blobber list").Error())
+			"Failed to get blobber list"))
 
 	}
 
 	var blobber *StorageNode
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
-			"can't get the blobber "+t.ClientID).Error())
+			"can't get the blobber "+t.ClientID))
 
 	}
 
@@ -319,14 +319,14 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	found.LastHealthCheck = t.CreationDate
 	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
 		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
-			"can't save all blobbers list").Error())
+			"can't save all blobbers list"))
 	}
 
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("blobber_health_check_failed",
-			"can't save blobber").Error())
+			"can't save blobber"))
 	}
 
 	return string(blobber.Encode()), nil
@@ -355,7 +355,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	lastBlobberClientReadBytes, err = balances.GetTrieNode(
 		commitRead.GetKey(sc.ID))
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return "", errors.Newf("commit_blobber_read",
 			"can't get latest blobber client read: %v", err)
 	}
@@ -552,7 +552,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("commit_connection_failed",
-			"malformed input").Error())
+			"malformed input"))
 
 	}
 
@@ -574,7 +574,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("commit_connection_failed",
-			"can't get allocation").Error())
+			"can't get allocation"))
 
 	}
 

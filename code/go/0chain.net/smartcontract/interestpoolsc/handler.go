@@ -32,7 +32,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	statBytes := pool.LockStats(t)
 	err := stat.decode(statBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	stat.ID = pool.ID
 	stat.Locked = pool.IsLocked(t)

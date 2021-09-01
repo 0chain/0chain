@@ -41,12 +41,19 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 			data["code"] = cErr.Code
 		}
 
+		fmt.Println("Respond ---------------- 1")
+		fmt.Println(errors.Top(err))
+		fmt.Println("BadRequest: ", errors.IsTop(err, ErrBadRequest))
+		fmt.Println("ErrInternal: ", errors.IsTop(err, ErrInternal))
+		fmt.Println("ErrNoResource: ", errors.IsTop(err, ErrNoResource))
+		fmt.Println("Respond ---------------- 2")
+
 		switch {
-		case errors.Is(err, ErrBadRequest):
+		case errors.IsTop(err, ErrBadRequest):
 			w.WriteHeader(http.StatusBadRequest)
-		case errors.Is(err, ErrInternal):
+		case errors.IsTop(err, ErrInternal):
 			w.WriteHeader(http.StatusInternalServerError)
-		case errors.Is(err, ErrNoResource):
+		case errors.IsTop(err, ErrNoResource):
 			w.WriteHeader(http.StatusNotFound)
 		default:
 			w.WriteHeader(http.StatusBadRequest)

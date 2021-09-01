@@ -694,7 +694,7 @@ func TestMergeState(t *testing.T) {
 }
 
 func noNodeNotFound(err error) error {
-	if errors.Is(err, ErrNodeNotFound) {
+	if errors.IsTop(err, ErrNodeNotFound) {
 		return nil
 	}
 	return err

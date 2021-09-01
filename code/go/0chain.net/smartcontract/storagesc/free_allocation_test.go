@@ -719,7 +719,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"update_free_storage_request: marker verification failed: 30050000000000 exceeded total permitted free storage limit 30000000000000",
+				"update_free_storage_request: marker verification failed\n" + "30050000000000 exceeded total permitted free storage limit 30000000000000",
 			},
 		},
 		{
@@ -740,7 +740,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"update_free_storage_request: marker verification failed: 210000000000 exceeded permitted free storage  200000000000",
+				"update_free_storage_request: marker verification failed\n" + "210000000000 exceeded permitted free storage  200000000000",
 			},
 		},
 		{
@@ -757,7 +757,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"update_free_storage_request: error getting assigner details: value not present",
+				"update_free_storage_request: error getting assigner details\n" + "value not present",
 			},
 		},
 		{
@@ -780,7 +780,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			},
 			want: want{
 				true,
-				"update_free_storage_request: marker verification failed: marker already redeemed, timestamp: 7000",
+				"update_free_storage_request: marker verification failed\n" + "marker already redeemed, timestamp: 7000",
 			},
 		},
 	}

@@ -603,10 +603,10 @@ func FetchMagicBlockFromSharders(ctx context.Context, sharderURLs []string, numb
 
 	select {
 	case <-cctx.Done():
-		return nil, errors.Newf("", "fetch_magic_block_from_sharders - could not get magic block from sharders, error: %v, ", cctx.Err().Error())
+		return nil, errors.Wrap(cctx.Err(), "fetch_magic_block_from_sharders - could not get magic block from sharders, error: ")
 	case b, ok := <-recv:
 		if !ok {
-			return nil, errors.Newf("fetch_magic_block_from_sharders", "could not get magic block from sharders")
+			return nil, errors.New("fetch_magic_block_from_sharders", "could not get magic block from sharders")
 		}
 		cancel()
 		logging.Logger.Info("fetch_magic_block_from_sharders success", zap.Int64("magic_block_number", number))

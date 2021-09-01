@@ -183,8 +183,8 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	const (
 		allocID, txHash = "alloc_hex", "tx_hash"
 
-		errMsg1 = "read_pool_lock_failed: unexpected end of JSON input"
-		errMsg2 = "read_pool_lock_failed: " +
+		errMsg1 = "read_pool_lock_failed\n" + "unexpected end of JSON input"
+		errMsg2 = "read_pool_lock_failed\n" +
 			"invalid character '}' looking for beginning of value"
 		errMsg3 = "read_pool_lock_failed: no tokens to lock"
 		errMsg4 = "read_pool_lock_failed: insufficient amount to lock"

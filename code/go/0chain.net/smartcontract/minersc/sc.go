@@ -189,13 +189,13 @@ func getGlobalNode(balances cstate.StateContextI) (
 	gn = new(GlobalNode)
 	var p util.Serializable
 	p, err = balances.GetTrieNode(GlobalNodeKey)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return nil, err
 	}
 
 	if err == nil {
 		if err = gn.Decode(p.Encode()); err != nil {
-			return nil, errors.Wrap(err, common.ErrDecoding.Error())
+			return nil, errors.Wrap(err, common.ErrDecoding)
 
 		}
 		return gn, nil
@@ -255,7 +255,7 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	un := NewUserNode()
 	un.ID = id
 	us, err := balances.GetTrieNode(un.GetKey())
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return nil, err
 	}
 	if us == nil {
@@ -263,7 +263,7 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	}
 	err = un.Decode(us.Encode())
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return un, nil
 }

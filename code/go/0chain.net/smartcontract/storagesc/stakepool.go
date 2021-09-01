@@ -790,7 +790,7 @@ func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
 	usp = newUserStakePools()
 	err = usp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -802,11 +802,11 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 	var poolb []byte
 	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return newUserStakePools(), nil
 	}
 
@@ -841,7 +841,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	sp = newStakePool()
 	err = sp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -860,11 +860,11 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return nil, errors.Newf("", "unexpected error: %v", err)
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		sp, err = newStakePool(), nil
 		sp.Settings.DelegateWallet = settings.DelegateWallet
 	}
@@ -1094,26 +1094,26 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get SC configurations").Error())
+			"can't get SC configurations"))
 
 	}
 
 	var spr stakePoolRequest
 	if err = spr.decode(input); err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get SC configurations").Error())
+			"can't get SC configurations"))
 	}
 
 	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"can't get related stake pool").Error())
+			"can't get related stake pool"))
 	}
 
 	var info *stakePoolUpdateInfo
 	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"updating stake pool").Error())
+			"updating stake pool"))
 	}
 	conf.Minted += info.minted
 
@@ -1121,13 +1121,13 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"saving configurations").Error())
+			"saving configurations"))
 	}
 
 	// save the pool
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", errors.Wrap(err, errors.New("stake_pool_take_rewards_failed",
-			"saving stake pool").Error())
+			"saving stake pool"))
 	}
 
 	return "interests has payed", nil

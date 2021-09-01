@@ -74,13 +74,13 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 	npr := &newPoolRequest{}
 	err := npr.decode(inputData)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("failed_locking_tokens", "request not formatted correctly").Error())
+		return "", errors.Wrap(err, errors.New("failed_locking_tokens", "request not formatted correctly"))
 	}
 	if t.Value < int64(gn.MinLock) {
 		return "", errors.New("failed_locking_tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return "", errors.New("failed_locking_tokens", "you have no tokens to your name")
 	}
 	if state.Balance(t.Value) > balance {
@@ -128,18 +128,18 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 	ps := &poolStat{}
 	err := ps.decode(inputData)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "input not formatted correctly").Error())
+		return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "input not formatted correctly"))
 
 	}
 	pool, ok := un.Pools[ps.ID]
 	if ok {
 		transfer, response, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
 		if err != nil {
-			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error emptying pool").Error())
+			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error emptying pool"))
 		}
 		err = un.deletePool(pool.ID)
 		if err != nil {
-			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error deleting pool from user node").Error())
+			return "", errors.Wrap(err, errors.New("failed_to_unlock_tokens", "error deleting pool from user node"))
 		}
 		balances.AddTransfer(transfer)
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
@@ -205,7 +205,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-	if errors.Is(err, util.ErrValueNotPresent) && funcName != "updateVariables" {
+	if errors.IsTop(err, util.ErrValueNotPresent) && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}
 	return gn

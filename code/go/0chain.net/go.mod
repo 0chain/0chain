@@ -3,7 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
-	github.com/0chain/errors v1.0.3 // indirect
+	github.com/0chain/errors v1.0.4-0.20210831145704-65f8cd7ed1b3 // indirect
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/0chain/gosdk v1.2.80-0.20210805145848-576ec40feac7
 	github.com/alicebob/miniredis/v2 v2.14.3

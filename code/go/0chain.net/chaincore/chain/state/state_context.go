@@ -200,7 +200,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	s.Balance = state.Balance(0)
 	ss, err := sc.state.GetNodeValue(util.Path(clientID))
 	if err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent) {
+		if !errors.IsTop(err, util.ErrValueNotPresent) {
 			return nil, err
 		}
 		return s, err

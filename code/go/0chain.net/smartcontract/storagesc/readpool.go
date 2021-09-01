@@ -268,7 +268,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	rp = new(readPool)
 	err = rp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -279,7 +279,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return "", errors.Wrap(err, "new_read_pool_failed")
 	}
 
@@ -305,11 +305,11 @@ func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	var balance state.Balance
 	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		return errors.New("", "no tokens to lock")
 	}
 
@@ -329,7 +329,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	var conf *readPoolConfig
 	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
 		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
-			"can't get configs").Error())
+			"can't get configs"))
 	}
 
 	var lr lockRequest
@@ -348,7 +348,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent) {
+		if !errors.IsTop(err, util.ErrValueNotPresent) {
 			return "", errors.Wrap(err, "read_pool_lock_failed")
 		}
 		rp = new(readPool)
@@ -386,7 +386,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("read_pool_lock_failed",
-			"can't get allocation").Error())
+			"can't get allocation"))
 	}
 
 	var bps blobberPools

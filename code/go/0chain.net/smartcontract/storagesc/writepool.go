@@ -163,7 +163,7 @@ func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	wp = new(writePool)
 	err = wp.Decode(poolb)
 	if err != nil {
-		return nil, errors.Wrap(err, common.ErrDecoding.Error())
+		return nil, errors.Wrap(err, common.ErrDecoding)
 	}
 	return
 }
@@ -175,10 +175,10 @@ func (ssc *StorageSmartContract) createEmptyWritePool(
 ) (err error) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		wp = new(writePool)
 	}
 
@@ -207,11 +207,11 @@ func (ssc *StorageSmartContract) createWritePool(
 	var wp *writePool
 	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
-	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
+	if err != nil && !errors.IsTop(err, util.ErrValueNotPresent) {
 		return errors.Newf("", "getting client write pool: %v", err)
 	}
 
-	if errors.Is(err, util.ErrValueNotPresent) {
+	if errors.IsTop(err, util.ErrValueNotPresent) {
 		wp = new(writePool)
 	}
 
@@ -244,7 +244,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	var conf *writePoolConfig
 	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
 		return "", errors.Wrap(err, errors.New("write_pool_lock_failed",
-			"can't get configs").Error())
+			"can't get configs"))
 	}
 
 	// lock request & user balance
@@ -265,7 +265,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(lr.TargetId, balances); err != nil {
-		if !errors.Is(err, util.ErrValueNotPresent) {
+		if !errors.IsTop(err, util.ErrValueNotPresent) {
 			return "", errors.Wrap(err, "write_pool_lock_failed")
 		}
 		wp = new(writePool)
@@ -303,7 +303,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("write_pool_lock_failed",
-			"can't get allocation").Error())
+			"can't get allocation"))
 
 	}
 
@@ -366,7 +366,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	// save new linked allocation pool
 	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
-		return "", errors.Wrap(err, errors.New("write_pool_lock_failed", "saving allocation").Error())
+		return "", errors.Wrap(err, errors.New("write_pool_lock_failed", "saving allocation"))
 	}
 	return
 }
@@ -413,7 +413,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	alloc, err = ssc.getAllocation(ap.AllocationID, balances)
 	if err != nil {
 		return "", errors.Wrap(err, errors.New("write_pool_unlock_failed",
-			"can't get related allocation").Error())
+			"can't get related allocation"))
 
 	}
 
