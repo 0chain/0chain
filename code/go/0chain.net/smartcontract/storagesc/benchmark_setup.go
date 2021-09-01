@@ -194,10 +194,6 @@ func AddMockAllocations(
 	return allocationIds
 }
 
-func AddAllocation() {
-
-}
-
 func AddMockBlobbers(
 
 	balances cstate.StateContextI,
@@ -374,7 +370,7 @@ func AddFreeStorageAssigners(
 func AddStats(
 	balances cstate.StateContextI,
 ) {
-	balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
+	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1000,
 			NumWrites:                 1000,

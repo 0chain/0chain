@@ -36,7 +36,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 	case "pour":
 		_, err = fsc.pour(&bt.txn, bt.input, balances, gn)
 	case "refill":
-		fsc.refill(&bt.txn, balances, gn)
+		_, _ = fsc.refill(&bt.txn, balances, gn)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
@@ -46,7 +46,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 }
 
 func BenchmarkTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
+	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuit {
 	var tests = []BenchTest{
 		// todo updateLimits waiting for Pr 484

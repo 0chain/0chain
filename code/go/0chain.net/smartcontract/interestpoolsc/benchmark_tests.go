@@ -48,7 +48,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 }
 
 func BenchmarkTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
+	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuit {
 	var tests = []BenchTest{
 		// todo updateVariables waiting for Pr 487

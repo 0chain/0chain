@@ -22,7 +22,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) []string {
 		}
 
 		interestPools = append(interestPools, pool.ID)
-		un.addPool(pool)
+		_ = un.addPool(pool)
 
 		_, err := balances.InsertTrieNode(un.getKey(ADDRESS), un)
 		if err != nil {

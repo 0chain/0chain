@@ -10,9 +10,9 @@ import (
 
 func FundFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
 	is := &state.State{}
-	is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
+	_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
-	pMpt.Insert(util.Path(ADDRESS), is)
+	_, _ = pMpt.Insert(util.Path(ADDRESS), is)
 }
 
 func AddMockGlobalNode(balances cstate.StateContextI) {
