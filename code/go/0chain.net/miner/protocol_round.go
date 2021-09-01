@@ -1456,7 +1456,7 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		}
 		// if no not. block for the round, then we just redo VRFS sending
 		// (previous round random seed required for it)
-		if xrhnb == nil {
+		if xrhnb == nil || i == rn {
 			xr.Restart()
 			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
 			mc.RedoVrfShare(ctx, xr)
