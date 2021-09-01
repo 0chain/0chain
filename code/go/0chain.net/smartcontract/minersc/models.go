@@ -1025,7 +1025,7 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 	var n = len(dkgmn.SimpleNodes)
 
 	if n < dkgmn.MinN {
-		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
+		return fmt.Errorf("too few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
 
 	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
