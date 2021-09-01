@@ -205,6 +205,14 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
+	if b.IsStateComputed() {
+		if err := mc.SaveChanges(ctx, b); err != nil {
+			logging.Logger.Error("set lfb save changes failed",
+				zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+		}
+	}
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
