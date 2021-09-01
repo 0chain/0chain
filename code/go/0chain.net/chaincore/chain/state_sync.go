@@ -375,15 +375,23 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 
-	c.RequestEntityFromMinersOnMB(cctx, c.GetMagicBlock(b.Round), BlockStateChangeRequestor, params, handler)
+	mb := c.GetMagicBlock(b.Round)
+	c.RequestEntityFromMinersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
 	var bsc *block.StateChange
 	select {
 	case bsc = <-stateChangesC:
 	default:
 	}
 	if bsc == nil {
-		return nil, common.NewError("block_state_change_error",
-			"error getting the block state change")
+		c.RequestEntityFromShardersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
+		select {
+		case bsc = <-stateChangesC:
+		default:
+		}
+		if bsc == nil {
+			return nil, common.NewError("block_state_change_error",
+				"error getting the block state change")
+		}
 	}
 
 	logging.Logger.Debug("get_block_state_change - success with root",
