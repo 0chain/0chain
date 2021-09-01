@@ -169,8 +169,14 @@ type Chain struct {
 	unsubLFBTicket        chan chan *LFBTicket     // }
 	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
+	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
+}
+
+// SyncLFBStateNow notify workers to start the LFB state sync immediately.
+func (c *Chain) SyncLFBStateNow() {
+	c.syncLFBStateNowC <- struct{}{}
 }
 
 // SetBCStuckTimeThreshold sets the BC stuck time threshold
@@ -453,6 +459,7 @@ func Provider() datastore.Entity {
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
+	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
