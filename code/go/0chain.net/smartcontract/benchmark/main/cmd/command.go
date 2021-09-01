@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/smartcontract/multisigsc"
+
 	"0chain.net/smartcontract/vestingsc"
 
 	"0chain.net/smartcontract/interestpoolsc"
@@ -32,6 +34,7 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Faucet:       faucetsc.BenchmarkTests,
 	bk.InterestPool: interestpoolsc.BenchmarkTests,
 	bk.Vesting:      vestingsc.BenchmarkTests,
+	bk.MultiSig:     multisigsc.BenchmarkTests,
 }
 
 func init() {
@@ -127,8 +130,8 @@ func printResults(results []suiteResults, verbose bool) {
 				colour,
 				bkResult.test.Name(),
 				takenMs,
-				"ms",
 				colourReset,
+				"ms",
 			)
 		}
 	}

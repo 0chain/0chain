@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"log"
 
+	"0chain.net/smartcontract/multisigsc"
+
 	"0chain.net/smartcontract/vestingsc"
 
 	"0chain.net/smartcontract/interestpoolsc"
@@ -69,6 +71,9 @@ func setUpMpt(
 	dbPath string, verbose bool,
 
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
+	if verbose {
+		log.Println("starting building blockchain")
+	}
 	pNode, err := util.NewPNodeDB(
 		dbPath+"name_dataDir",
 		dbPath+"name_logDir",
@@ -77,7 +82,9 @@ func setUpMpt(
 		panic(err)
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
-
+	if verbose {
+		log.Println("made empty blockchain")
+	}
 	clients, publicKeys, privateKeys := addMockkClients(pMpt)
 	if verbose {
 		log.Println("added clients")
@@ -146,10 +153,17 @@ func setUpMpt(
 		log.Println("added free storage assigners")
 	}
 	storagesc.AddMockStats(balances)
+	if verbose {
+		log.Println("added storage stats")
+	}
 	faucetsc.AddMockGlobalNode(balances)
 	interestpoolsc.AddMockNodes(clients, balances)
 	if verbose {
 		log.Println("added user nodes")
+	}
+	multisigsc.AddMockWallets(clients, publicKeys, balances)
+	if verbose {
+		log.Println("added client wallets")
 	}
 	vestingsc.AddVestingPools(clients, balances)
 	if verbose {
@@ -157,10 +171,10 @@ func setUpMpt(
 	}
 	minersc.AddPhaseNode(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
-		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
-		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		PrivateKeys: privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		Sharders:    sharders[:viper.GetInt(benchmark.AvailableKeys)],
+		Clients:     clients,
+		PublicKeys:  publicKeys,
+		PrivateKeys: privateKeys,
+		Sharders:    sharders,
 	}
 }
 

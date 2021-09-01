@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"0chain.net/smartcontract/multisigsc"
+
 	"0chain.net/chaincore/config"
 	cviper "0chain.net/core/viper"
 	bk "0chain.net/smartcontract/benchmark"
@@ -50,6 +52,11 @@ func validateConfig() {
 	if viper.GetInt(bk.NumBlobbersPerAllocation) < viper.GetInt(bk.AvailableKeys) {
 		log.Fatal(fmt.Errorf("number of blobber per allocation %d must be lestt than the avalable keys %d",
 			viper.GetInt(bk.NumSharders), viper.GetInt(bk.AvailableKeys)))
+	}
+
+	if viper.GetInt(bk.NumClients) <= multisigsc.MaxSigners {
+		log.Fatal(fmt.Errorf("number of clients %d must be greater than multi sig max singers %d",
+			viper.GetInt(bk.NumClients), multisigsc.MaxSigners))
 	}
 
 }

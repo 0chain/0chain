@@ -14,6 +14,7 @@ const (
 	Faucet
 	InterestPool
 	Vesting
+	MultiSig
 	NumberOdfBenchmarkSources
 )
 
@@ -24,14 +25,16 @@ var (
 		"faucet",
 		"interest_pool",
 		"vesting",
+		"multi_sig",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
-		"storage":       Storage,
-		"miner":         Miner,
-		"faucet":        Faucet,
-		"interest_pool": InterestPool,
-		"vesting":       Vesting,
+		BenchmarkSourceNames[Storage]:      Storage,
+		BenchmarkSourceNames[Miner]:        Miner,
+		BenchmarkSourceNames[Faucet]:       Faucet,
+		BenchmarkSourceNames[InterestPool]: InterestPool,
+		BenchmarkSourceNames[Vesting]:      Vesting,
+		BenchmarkSourceNames[MultiSig]:     MultiSig,
 	}
 )
 
@@ -47,16 +50,16 @@ const (
 
 	Fas = "free_allocation_settings."
 
-	AvailableKeys = Internal + "available_keys"
-	Now           = Internal + "now"
-	InternalT     = Internal + "t"
-	//InternalSignatureScheme   = Internal + "signature_scheme"
-	StartTokens  = Internal + "start_tokens"
-	Bad          = Internal + "bad"
-	Worry        = Internal + "worry"
-	Satisfactory = Internal + "satisfactory"
-	TimeUnit     = Internal + "time_unit"
-	Colour       = Internal + "colour"
+	AvailableKeys           = Internal + "available_keys"
+	Now                     = Internal + "now"
+	InternalT               = Internal + "t"
+	InternalSignatureScheme = Internal + "signature_scheme"
+	StartTokens             = Internal + "start_tokens"
+	Bad                     = Internal + "bad"
+	Worry                   = Internal + "worry"
+	Satisfactory            = Internal + "satisfactory"
+	TimeUnit                = Internal + "time_unit"
+	Colour                  = Internal + "colour"
 
 	NumClients                   = Simulation + "num_clients"
 	NumMiners                    = Simulation + "num_miners"

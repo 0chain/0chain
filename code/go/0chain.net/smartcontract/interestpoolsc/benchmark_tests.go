@@ -80,5 +80,5 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.Faucet, testsI}
+	return bk.TestSuit{bk.InterestPool, testsI}
 }

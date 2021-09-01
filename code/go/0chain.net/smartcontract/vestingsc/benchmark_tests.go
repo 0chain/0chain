@@ -133,5 +133,5 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.Storage, testsI}
+	return bk.TestSuit{bk.Vesting, testsI}
 }
