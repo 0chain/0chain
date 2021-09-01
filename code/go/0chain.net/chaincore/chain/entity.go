@@ -1,10 +1,8 @@
 package chain
 
 import (
-	"bytes"
 	"container/ring"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -591,14 +589,6 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
 	return
 }
 
-// AddBlockNoPrevious adds block to cache and never calls
-// async fetch previous block.
-func (c *Chain) AddBlockNoPrevious(b *block.Block) *block.Block {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
-	return c.addBlockNoPrevious(b)
-}
-
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
@@ -659,29 +649,6 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	c.SetRoundRank(r, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
-	}
-	return b
-}
-
-func (c *Chain) addBlockNoPrevious(b *block.Block) *block.Block {
-	if eb, ok := c.blocks[b.Hash]; ok {
-		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
-		}
-		return eb
-	}
-	c.blocks[b.Hash] = b
-	if b.PrevBlock == nil {
-		if pb, ok := c.blocks[b.PrevHash]; ok {
-			b.SetPreviousBlock(pb)
-		}
-	}
-	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
-		pb.AddUniqueBlockExtension(b)
-		if c.IsFinalizedDeterministically(pb) {
-			c.SetLatestDeterministicBlock(pb)
-			break
-		}
 	}
 	return b
 }
@@ -1327,19 +1294,6 @@ func (c *Chain) GetLatestFinalizedBlock() *block.Block {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()
 	return c.LatestFinalizedBlock
-}
-
-// UpdateLatestFinalizedBlockState updates the latest finalized block's state
-func (c *Chain) UpdateLatestFinalizedBlockState(state util.MerklePatriciaTrieI) error {
-	c.lfbMutex.Lock()
-	defer c.lfbMutex.Unlock()
-	if bytes.Compare(c.LatestFinalizedBlock.ClientStateHash, state.GetRoot()) != 0 {
-		return errors.New("latest finalized block state hash mismatch")
-	}
-
-	c.LatestFinalizedBlock.CreateState(state.GetNodeDB(), state.GetRoot())
-	c.LatestFinalizedBlock.SetStateStatus(block.StateSuccessful)
-	return nil
 }
 
 // GetLatestFinalizedBlockSummary - get the latest finalized block summary.
