@@ -229,9 +229,9 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash))
-			// Temporary disable returning on mint error: TODO: revert back @bbist
-			// return
+				zap.Any("transaction", txn.Hash),
+				zap.String("to clientID", mint.ToClientID))
+			return
 		}
 	}
 
