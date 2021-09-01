@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -518,10 +519,16 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 		}
 	}
 
+	totalSentNum := len(sendTo)
 	failNum := len(sendFail)
-	if failNum > 0 && (len(sendTo)-failNum) < mb.K {
-		return nil, common.NewErrorf("failed to send sijs",
-			"failed to send share to miners: %v", sendFail)
+	successNum := totalSentNum - failNum
+	if failNum > 0 && totalSentNum > mb.K && successNum < mb.K {
+		logging.Logger.Error("failed to send sijs",
+			zap.Int("total sent num", totalSentNum),
+			zap.Int("fail num", failNum),
+			zap.Int("K", mb.K),
+			zap.Any("fail to miners", sendFail))
+		return nil, errors.New("failed to send sijs")
 	}
 
 	return // (nil, nil)
@@ -659,6 +666,10 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 //                               W A I T
 //
 
+// Wait create 'wait' transaction to commit the miner
+// TODO: dkg will be set to nil if this function was called in
+// current view change round. We could have flag to indicate this situation
+// instead of reporting the 'DKG is not set' error.
 func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
