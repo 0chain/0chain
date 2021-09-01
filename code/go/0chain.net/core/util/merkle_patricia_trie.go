@@ -321,13 +321,9 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if err != nil || nnode == nil {
 			if err != nil {
 				Logger.Error("full node get node failed",
-					zap.Any("version", mpt.Version),
-					//zap.Int("path len", len(path)),
-					//zap.String("path", string(path)),
-					//zap.String("key", hex.EncodeToString(ckey)),
-					//zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
-					//zap.String("node hash", node.GetHash()),
-					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
+					zap.Any("node version", nodeImpl.GetVersion()),
+					zap.Any("mpt version", mpt.Version),
+					zap.String("key", ToHex(ckey)),
 					zap.Error(err))
 			}
 			return nil, ErrNodeNotFound
@@ -801,6 +797,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
 	}
 
+	newNode.SetOrigin(mpt.Version)
 	ckey := newNode.GetHashBytes()
 	if err := mpt.db.PutNode(ckey, newNode); err != nil {
 		return nil, nil, err
