@@ -69,7 +69,8 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
 			zap.Int64("dkg_starting_round", dkg.StartingRound),
 			zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
-			zap.String("pr_seed", strconv.FormatInt(pr.GetRandomSeed(), 16)),
+			zap.Int64("pr_seed", pr.GetRandomSeed()),
+			zap.String("pr_vrf_seed", strconv.FormatInt(pr.GetRandomSeed(), 16)),
 			zap.Error(err))
 		return
 	}
@@ -78,7 +79,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 		zap.Any("round_timeout", vrfs.RoundTimeoutCount),
 		zap.Int64("dkg_starting_round", dkg.StartingRound),
 		zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
-		zap.String("pr_seed", strconv.FormatInt(pr.GetRandomSeed(), 16)))
+		zap.Int64("pr_seed", pr.GetRandomSeed()),
+		zap.String("pr_vrf_seed", strconv.FormatInt(pr.GetRandomSeed(), 16)),
+		zap.String("share", vrfs.Share))
 
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs

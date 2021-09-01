@@ -263,7 +263,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	b.SetStateStatus(block.StateSuccessful)
 	logging.Logger.Info("generate block (assemble+update+sign)",
 		zap.Int64("round", b.Round),
-		zap.Int32("block_size", blockSize),
+		zap.Int("block_size", len(b.Txns)),
 		zap.Int32("reused_txns", 0),
 		zap.Int32("reused_txns", reusedTxns),
 		zap.Duration("time", time.Since(start)),
