@@ -103,7 +103,7 @@ func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
 	}
 
 	if round+1 > tk.Round+int64(ahead) {
-		logging.Logger.Debug("[is ahead]", zap.Int64("round", round),
+		logging.Logger.Warn("[is ahead]", zap.Int64("round", round),
 			zap.Int64("ticket", tk.Round), zap.Int("ahead", ahead))
 		return true // is ahead
 	}
@@ -451,6 +451,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Int64("round", rn),
 			zap.Int64("lfmbr_sr", lfmbr.StartingRound),
 		)
+		// TODO: correct next view change round on start, sometimes the rnoff could be
+		// >= nvc when on start and the view change was not worked properly.
 		return nil, common.NewError("gen_block",
 			"required MB missing or still not finalized")
 	}
@@ -486,7 +488,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		generationTries int
 		startLogging    time.Time
 	)
-	for true {
+	for {
 		if mc.GetCurrentRound() > b.Round {
 			logging.Logger.Error("generate block - round mismatch",
 				zap.Any("round", roundNumber),
@@ -854,10 +856,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 /*VerifyRoundBlock - given a block is verified for a round*/
 func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.Block) (*block.BlockVerificationTicket, error) {
 	if !mc.CanShardBlocks(r.GetRoundNumber()) {
-		return nil, common.NewError("fewer_active_sharders", "Number of active sharders not sufficient")
+		return nil, common.NewError("fewer_active_sharders", "number of active sharders not sufficient")
 	}
 	if !mc.CanReplicateBlock(b) {
-		return nil, common.NewError("fewer_active_replicators", "Number of active replicators not sufficient")
+		return nil, common.NewError("fewer_active_replicators", "number of active replicators not sufficient")
 	}
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
 		return nil, ErrRoundMismatch
@@ -917,7 +919,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if !b.IsBlockNotarized() {
-		logging.Logger.Error("checkBlockNotarization -- block is not Notarized. Returning",
+		logging.Logger.Info("checkBlockNotarization -- block is not Notarized. Returning",
 			zap.Int64("round", b.Round),
 			zap.Any("block hash", b.Hash))
 		return false
@@ -1502,7 +1504,7 @@ func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
 	}
 
 	// ensure next view change (from sharders)
-	if ok = (b.IsStateComputed() && b.ClientState != nil); ok {
+	if ok = b.IsStateComputed() && b.ClientState != nil; ok {
 		var nvc int64
 		if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
 			logging.Logger.Error("ensure_state -- next view change",
@@ -1520,7 +1522,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	// LFB regardless a ticket
 	var (
-		rcvd *block.Block
 		have = mc.GetLatestFinalizedBlock()
 		list = mc.GetLatestFinalizedBlockFromSharder(ctx)
 	)
@@ -1529,19 +1530,67 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		return // no LFB given
 	}
 
-	rcvd = list[0].Block // the highest received LFB
+	rcvd := list[0].Block // the highest received LFB
+	if have != nil && rcvd.Round == have.Round {
+		return
+	}
 
 	if have != nil && rcvd.Round <= have.Round {
+		// local lfb could be higher than lfb from sharders when kickFinalization happens
 		mc.ensureState(ctx, have)
 		return // nothing to update
 	}
 
+	// received latest finalized block is one around ahead of local latest finalized block
+	if have != nil && rcvd.Round-1 == have.Round {
+		rcvd.SetPreviousBlock(have)
+		mc.bumpLFBTicket(ctx, rcvd)
+		if !mc.ensureState(ctx, rcvd) {
+			// but continue with the block (?)
+		}
+		logging.Logger.Info("ensure latest finalized block - set lfb",
+			zap.Int64("round", rcvd.Round))
+		mc.SetLatestFinalizedBlock(ctx, rcvd)
+		return true, nil
+	}
+
+	syncNum := rcvd.Round
+	if have != nil && have.Round < rcvd.Round {
+		syncNum -= have.Round
+	}
+
+	if syncNum > 50 {
+		syncNum = 50
+	}
+
+	var lfbRound int64
+	if have != nil {
+		lfbRound = have.Round
+	}
+	logging.Logger.Info("ensure_lfb - sync blocks",
+		zap.Int64("lfb round", lfbRound),
+		zap.Int64("lfb new round", rcvd.Round),
+		zap.Int64("sync num", syncNum))
+	blocks := mc.SyncBlocks(ctx, rcvd, syncNum, true)
+	if len(blocks) == 0 {
+		return false, nil
+	}
+	pb := blocks[len(blocks)-1]
+	if !pb.IsStateComputed() {
+		logging.Logger.Error("ensure_lfb - previous block not computed yet",
+			zap.Int64("rcvd_lfb_round", rcvd.Round),
+			zap.Int64("previous_round", pb.Round),
+			zap.String("previous_block", pb.Hash))
+	}
+
+	rcvd.SetPreviousBlock(pb)
 	mc.bumpLFBTicket(ctx, rcvd)
 	if !mc.ensureState(ctx, rcvd) {
 		// but continue with the block (?)
 	}
-	// it create corresponding round or makes sure it exists
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
+	logging.Logger.Info("ensure latest finalized block - set lfb",
+		zap.Int64("round", rcvd.Round))
 	return true, nil // updated
 }
 
@@ -1639,6 +1688,8 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	}
 
 	mc.SetLatestFinalizedBlock(ctx, lfb)
+	logging.Logger.Info("start protocoal on LFB - set lfb",
+		zap.Int64("round", lfb.Round))
 	return mc.GetMinerRound(lfb.Round)
 }
 
