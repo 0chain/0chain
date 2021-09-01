@@ -15,19 +15,26 @@ import (
 )
 
 func AddMockAllocations(
-	balances cstate.StateContextI,
 	clients, publicKeys []string,
 	sps []*stakePool,
+	blobbers []*StorageNode,
+	validators []*ValidationNode,
+	balances cstate.StateContextI,
 ) {
-	var sscId = StorageSmartContract{
-		SmartContract: sci.NewSC(ADDRESS),
-	}.ID
 	const mockMinLockDemand = 1
-	var allocations Allocations
-	var wps = make([]*writePool, 0, len(clients))
-	var rps = make([]*readPool, 0, len(clients))
-	var cas = make([]*ClientAllocation, len(clients), len(clients))
-	var fps = make([]fundedPools, len(clients), len(clients))
+	var (
+		sscId = StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}.ID
+		allocations Allocations
+		wps         = make([]*writePool, 0, len(clients))
+		rps         = make([]*readPool, 0, len(clients))
+		cas         = make([]*ClientAllocation, len(clients), len(clients))
+		fps         = make([]fundedPools, len(clients), len(clients))
+		now         = common.Timestamp(time.Now().Unix())
+		challanges  = make([]BlobberChallenge, len(blobbers), len(blobbers))
+	)
+
 	lock := state.Balance(float64(getMockBlobberTerms().WritePrice) *
 		sizeInGB(viper.GetInt64(sc.StorageMinAllocSize)))
 	expire := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
@@ -93,10 +100,16 @@ func AddMockAllocations(
 				Terms:             getMockBlobberTerms(),
 				Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 				Used:              0,
-				LastHealthCheck:   common.Timestamp(viper.GetInt64(sc.Now) - 1),
+				LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 				PublicKey:         "",
 				StakePoolSettings: getMockStakePoolSettings(bId),
 			})
+			setupMockChallenges(
+				sa.ID,
+				blobbers[startBlobbers+j],
+				&challanges[startBlobbers+j],
+				validators,
+			)
 		}
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
@@ -182,6 +195,16 @@ func AddMockAllocations(
 			}
 		}
 	}
+	for i, ch := range challanges {
+		ch.BlobberID = blobbers[i].ID
+		if len(ch.Challenges) > 0 {
+			ch.LatestCompletedChallenge = ch.Challenges[0]
+		}
+		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
 	if err != nil {
@@ -189,13 +212,31 @@ func AddMockAllocations(
 	}
 }
 
+func setupMockChallenges(
+	allocationId string,
+	blobber *StorageNode,
+	bc *BlobberChallenge,
+	validators []*ValidationNode,
+) {
+	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
+	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
+		bc.addChallenge(&StorageChallenge{
+			ID:           getMockChallengeId(blobber.ID, i),
+			Validators:   selValidators,
+			Blobber:      blobber,
+			AllocationID: allocationId,
+		})
+	}
+}
+
 func AddMockBlobbers(
 	balances cstate.StateContextI,
-) {
+) []*StorageNode {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var blobbers StorageNodes
+	var now = common.Timestamp(time.Now().Unix())
 	const maxLatitude float64 = 88
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
@@ -212,7 +253,7 @@ func AddMockBlobbers(
 			Terms:             getMockBlobberTerms(),
 			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
 			Used:              0,
-			LastHealthCheck:   common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
@@ -226,11 +267,12 @@ func AddMockBlobbers(
 	if err != nil {
 		panic(err)
 	}
+	return blobbers.Nodes
 }
 
 func AddMockValidators(
 	balances cstate.StateContextI,
-) {
+) []*ValidationNode {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
@@ -252,6 +294,7 @@ func AddMockValidators(
 	if err != nil {
 		panic(err)
 	}
+	return validators.Nodes
 }
 
 func GetMockStakePools(
@@ -444,6 +487,10 @@ func getMockClientFromAllocationIndex(allocation, numClinets int) int {
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {
 	return i % (viper.GetInt(sc.NumBlobbers) - viper.GetInt(sc.NumBlobbersPerAllocation))
+}
+
+func getMockChallengeId(blobber string, index int) string {
+	return encryption.Hash("challenge" + blobber + strconv.Itoa(index))
 }
 
 func SetMockConfig(

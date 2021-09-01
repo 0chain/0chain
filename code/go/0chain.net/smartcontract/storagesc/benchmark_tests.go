@@ -173,6 +173,37 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
+		// diversified blobbers panics if blobbers are more than around 30-50
+		/*
+			{
+				name:     "storage.new_allocation_request_diversify",
+				endpoint: ssc.newAllocationRequest,
+				txn: transaction.Transaction{
+					HashIDField: datastore.HashIDField{
+						Hash: encryption.Hash("mock transaction hash"),
+					},
+					ClientID:     data.Clients[0],
+					CreationDate: now,
+					Value:        100 * viper.GetInt64(sc.StorageMinAllocSize),
+				},
+				input: func() []byte {
+					bytes, _ := (&newAllocationRequest{
+						DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+						ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+						Size:                       100 * viper.GetInt64(sc.StorageMinAllocSize),
+						Expiration:                 common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + now,
+						Owner:                      data.Clients[0],
+						OwnerPublicKey:             data.PublicKeys[0],
+						PreferredBlobbers:          []string{},
+						ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+						WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+						MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
+						DiversifyBlobbers:          true,
+					}).encode()
+					return bytes
+				}(),
+			},
+		*/
 		{
 			name:     "storage.update_allocation_request",
 			endpoint: ssc.updateAllocationRequest,

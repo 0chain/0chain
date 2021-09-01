@@ -110,7 +110,6 @@ func printResults(results []suiteResults, verbose bool) {
 	for _, suiteResult := range results {
 		if verbose {
 			fmt.Printf("\nbenchmark suite " + suiteResult.name + "\n")
-			//fmt.Printf("name, ms\n")
 		}
 		for _, bkResult := range suiteResult.results {
 			takenMs := float64(bkResult.result.T.Milliseconds()) / float64(bkResult.result.N)

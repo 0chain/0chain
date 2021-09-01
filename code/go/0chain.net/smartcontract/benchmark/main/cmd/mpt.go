@@ -120,19 +120,21 @@ func setUpMpt(
 	if verbose {
 		log.Println("created storage config")
 	}
-	storagesc.AddMockBlobbers(balances)
-	if verbose {
-		log.Println("added blobbers")
-	}
-	storagesc.AddMockValidators(balances)
+	validators := storagesc.AddMockValidators(balances)
 	if verbose {
 		log.Println("added validators")
+	}
+	blobbers := storagesc.AddMockBlobbers(balances)
+	if verbose {
+		log.Println("added blobbers")
 	}
 	stakePools := storagesc.GetMockStakePools(clients, balances)
 	if verbose {
 		log.Println("added stake pools")
 	}
-	storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
+	storagesc.AddMockAllocations(
+		clients, publicKeys, stakePools, blobbers, validators, balances,
+	)
 	if verbose {
 		log.Println("added allocations")
 	}

@@ -80,6 +80,7 @@ const (
 	NumSharderDelegates          = Simulation + "num_sharder_delegates"
 	NumVestingDestinationsClient = Simulation + "num_vesting_destinations_client"
 	NumWriteRedeemAllocation     = Simulation + "num_write_redeem_allocation"
+	NumChallengesBlobber         = Simulation + "num_challenges_blobber"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
