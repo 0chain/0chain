@@ -30,6 +30,7 @@ import (
 
 var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
 	bk.Storage:      storagesc.BenchmarkTests,
+	bk.StorageRest:  storagesc.BenchmarkRestTests,
 	bk.Miner:        minersc.BenchmarkTests,
 	bk.Faucet:       faucetsc.BenchmarkTests,
 	bk.InterestPool: interestpoolsc.BenchmarkTests,

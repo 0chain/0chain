@@ -10,6 +10,7 @@ type BenchmarkSource int
 
 const (
 	Storage BenchmarkSource = iota
+	StorageRest
 	Miner
 	Faucet
 	InterestPool
@@ -21,6 +22,7 @@ const (
 var (
 	BenchmarkSourceNames = []string{
 		"storage",
+		"storage_rest",
 		"miner",
 		"faucet",
 		"interest_pool",
@@ -30,6 +32,7 @@ var (
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
 		BenchmarkSourceNames[Storage]:      Storage,
+		BenchmarkSourceNames[StorageRest]:  StorageRest,
 		BenchmarkSourceNames[Miner]:        Miner,
 		BenchmarkSourceNames[Faucet]:       Faucet,
 		BenchmarkSourceNames[InterestPool]: InterestPool,
@@ -76,6 +79,7 @@ const (
 	NumMinerDelegates            = Simulation + "num_miner_delegates"
 	NumSharderDelegates          = Simulation + "num_sharder_delegates"
 	NumVestingDestinationsClient = Simulation + "num_vesting_destinations_client"
+	NumWriteRedeemAllocation     = Simulation + "num_write_redeem_allocation"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"

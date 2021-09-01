@@ -148,13 +148,17 @@ func setUpMpt(
 	if verbose {
 		log.Println("added sharders")
 	}
-	storagesc.AddmockFreeStorageAssigners(clients, publicKeys, balances)
+	storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 	if verbose {
 		log.Println("added free storage assigners")
 	}
 	storagesc.AddMockStats(balances)
 	if verbose {
 		log.Println("added storage stats")
+	}
+	storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
+	if verbose {
+		log.Println("added read redeems")
 	}
 	faucetsc.AddMockGlobalNode(balances)
 	interestpoolsc.AddMockNodes(clients, balances)
