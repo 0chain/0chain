@@ -50,7 +50,8 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 func BenchmarkTests(
 	data sc.BenchData, sigScheme sc.SignatureScheme,
 ) sc.TestSuit {
-	var now = common.Timestamp(viper.GetInt64(sc.Now))
+	//var now = common.Timestamp(viper.GetInt64(sc.Now))
+	var now = common.Now()
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}

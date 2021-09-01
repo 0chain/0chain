@@ -37,8 +37,8 @@ func AddMockAllocations(
 
 	lock := state.Balance(float64(getMockBlobberTerms().WritePrice) *
 		sizeInGB(viper.GetInt64(sc.StorageMinAllocSize)))
-	expire := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) +
-		common.Timestamp(viper.GetInt64(sc.Now))
+	expire := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+	//common.Timestamp(viper.GetInt64(sc.Now))
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		clientIndex := getMockClientFromAllocationIndex(i, len(clients))
 		client := clients[clientIndex]

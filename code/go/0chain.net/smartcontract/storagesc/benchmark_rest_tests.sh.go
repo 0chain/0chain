@@ -137,6 +137,73 @@ func BenchmarkRestTests(
 				return values
 			}(),
 		},
+		{
+			name:     "getReadPoolStat",
+			endpoint: ssc.getReadPoolStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("client_id", data.Clients[0])
+				return values
+			}(),
+		},
+		{
+			name:     "getReadPoolAllocBlobberStat",
+			endpoint: ssc.getReadPoolAllocBlobberStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("client_id", data.Clients[0])
+				values.Set("allocation_id", getMockAllocationId(0))
+				values.Set("blobber_id", getMockBlobberId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "getWritePoolStat",
+			endpoint: ssc.getWritePoolStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("client_id", data.Clients[0])
+				return values
+			}(),
+		},
+		{
+			name:     "getWritePoolAllocBlobberStat",
+			endpoint: ssc.getWritePoolAllocBlobberStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("client_id", data.Clients[0])
+				values.Set("allocation_id", getMockAllocationId(0))
+				values.Set("blobber_id", getMockBlobberId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "getStakePoolStat",
+			endpoint: ssc.getStakePoolStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("blobber_id", getMockBlobberId(0))
+				return values
+			}(),
+		},
+		{
+			name:     "getUserStakePoolStat",
+			endpoint: ssc.getUserStakePoolStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("client_id", data.Clients[0])
+				return values
+			}(),
+		},
+		{
+			name:     "getChallengePoolStat",
+			endpoint: ssc.getChallengePoolStatHandler,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("allocation_id", getMockAllocationId(0))
+				return values
+			}(),
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
