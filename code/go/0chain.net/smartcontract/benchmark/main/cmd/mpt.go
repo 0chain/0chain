@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"log"
 
+	"0chain.net/smartcontract/vestingsc"
+
 	"0chain.net/smartcontract/interestpoolsc"
 
 	"0chain.net/smartcontract/faucetsc"
@@ -107,28 +109,27 @@ func setUpMpt(
 	if verbose {
 		log.Println("created balances")
 	}
-
-	_ = storagesc.SetConfig(balances)
+	_ = storagesc.SetMockConfig(balances)
 	if verbose {
 		log.Println("created storage config")
 	}
-	blobbers := storagesc.AddMockBlobbers(balances)
+	storagesc.AddMockBlobbers(balances)
 	if verbose {
 		log.Println("added blobbers")
 	}
-	validators := storagesc.AddMockValidators(balances)
+	storagesc.AddMockValidators(balances)
 	if verbose {
 		log.Println("added validators")
 	}
-	stakePools := storagesc.GetStakePools(clients, balances)
+	stakePools := storagesc.GetMockStakePools(clients, balances)
 	if verbose {
 		log.Println("added stake pools")
 	}
-	allocations := storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
+	storagesc.AddMockAllocations(balances, clients, publicKeys, stakePools)
 	if verbose {
 		log.Println("added allocations")
 	}
-	storagesc.SaveStakePools(stakePools, balances)
+	storagesc.SaveMockStakePools(stakePools, balances)
 	if verbose {
 		log.Println("added stake pools")
 	}
@@ -140,27 +141,27 @@ func setUpMpt(
 	if verbose {
 		log.Println("added sharders")
 	}
-	storagesc.AddFreeStorageAssigners(clients, publicKeys, balances)
+	storagesc.AddmockFreeStorageAssigners(clients, publicKeys, balances)
 	if verbose {
 		log.Println("added free storage assigners")
 	}
-	storagesc.AddStats(balances)
+	storagesc.AddMockStats(balances)
 	faucetsc.AddMockGlobalNode(balances)
-	interestPools := interestpoolsc.AddMockNodes(clients, balances)
+	interestpoolsc.AddMockNodes(clients, balances)
 	if verbose {
 		log.Println("added user nodes")
 	}
+	vestingsc.AddVestingPools(clients, balances)
+	if verbose {
+		log.Println("added vesting pools")
+	}
 	minersc.AddPhaseNode(balances)
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
-		Clients:       clients[:viper.GetInt(benchmark.AvailableKeys)],
-		PublicKeys:    publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		PrivateKeys:   privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
-		Blobbers:      blobbers[:viper.GetInt(benchmark.AvailableKeys)],
-		Validators:    validators[:viper.GetInt(benchmark.AvailableKeys)],
-		Allocations:   allocations[:viper.GetInt(benchmark.AvailableKeys)],
-		Miners:        miners[:viper.GetInt(benchmark.AvailableKeys)],
-		Sharders:      sharders[:viper.GetInt(benchmark.AvailableKeys)],
-		InterestPools: interestPools[:viper.GetInt(benchmark.AvailableKeys)],
+		Clients:     clients[:viper.GetInt(benchmark.AvailableKeys)],
+		PublicKeys:  publicKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		PrivateKeys: privateKeys[:viper.GetInt(benchmark.AvailableKeys)],
+		Miners:      miners[:viper.GetInt(benchmark.AvailableKeys)],
+		Sharders:    sharders[:viper.GetInt(benchmark.AvailableKeys)],
 	}
 }
 

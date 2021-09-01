@@ -53,20 +53,21 @@ const (
 	//InternalSignatureScheme   = Internal + "signature_scheme"
 	StartTokens = Internal + "start_tokens"
 
-	NumClients               = Simulation + "num_clients"
-	NumMiners                = Simulation + "num_miners"
-	NumSharders              = Simulation + "nun_sharders"
-	NumAllocations           = Simulation + "num_allocations"
-	NumBlobbersPerAllocation = Simulation + "num_blobbers_per_Allocation"
-	NumBlobbers              = Simulation + "num_blobbers"
-	NumAllocationPlayerPools = Simulation + "num_allocation_payers_pools"
-	NumAllocationPlayer      = Simulation + "num_allocation_payers"
-	NumBlobberDelegates      = Simulation + "num_blobber_delegates"
-	NumCurators              = Simulation + "num_curators"
-	NumValidators            = Simulation + "num_validators"
-	NumFreeStorageAssigners  = Simulation + "num_free_storage_assigners"
-	NumMinerDelegates        = Simulation + "num_miner_delegates"
-	NumSharderDelegates      = Simulation + "num_sharder_delegates"
+	NumClients                   = Simulation + "num_clients"
+	NumMiners                    = Simulation + "num_miners"
+	NumSharders                  = Simulation + "nun_sharders"
+	NumAllocations               = Simulation + "num_allocations"
+	NumBlobbersPerAllocation     = Simulation + "num_blobbers_per_Allocation"
+	NumBlobbers                  = Simulation + "num_blobbers"
+	NumAllocationPlayerPools     = Simulation + "num_allocation_payers_pools"
+	NumAllocationPlayer          = Simulation + "num_allocation_payers"
+	NumBlobberDelegates          = Simulation + "num_blobber_delegates"
+	NumCurators                  = Simulation + "num_curators"
+	NumValidators                = Simulation + "num_validators"
+	NumFreeStorageAssigners      = Simulation + "num_free_storage_assigners"
+	NumMinerDelegates            = Simulation + "num_miner_delegates"
+	NumSharderDelegates          = Simulation + "num_sharder_delegates"
+	NumVestingDestinationsClient = Simulation + "num_vesting_destinations_client"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
@@ -111,6 +112,8 @@ const (
 
 	VestingMinLock         = SmartContract + VestingSc + "min_lock"
 	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
+	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
+	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
 )
 
 type BenchTestI interface {
@@ -131,13 +134,9 @@ type TestSuit struct {
 }
 
 type BenchData struct {
-	Clients       []string
-	PublicKeys    []string
-	PrivateKeys   []string
-	Blobbers      []string
-	Validators    []string
-	Allocations   []string
-	Miners        []string
-	Sharders      []string
-	InterestPools []string
+	Clients     []string
+	PublicKeys  []string
+	PrivateKeys []string
+	Miners      []string
+	Sharders    []string
 }

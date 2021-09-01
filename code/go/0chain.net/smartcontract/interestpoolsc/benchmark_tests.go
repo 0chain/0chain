@@ -72,7 +72,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[0],
 			},
 			input: (&poolStat{
-				ID: data.InterestPools[0],
+				ID: getInterestPoolId(0),
 			}).encode(),
 		},
 	}

@@ -44,11 +44,40 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuit {
+	var now = common.Timestamp(viper.GetInt64(bk.Now))
 	var vsc = VestingSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	vsc.setSC(vsc.SmartContract, &smartcontract.BCContext{})
 	var tests = []BenchTest{
+		{
+			name:     "vesting.trigger",
+			endpoint: vsc.trigger,
+			txn: transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: now,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&poolRequest{
+					PoolID: geMockVestingPoolId(0),
+				})
+				return bytes
+			}(),
+		},
+		{
+			name:     "vesting.unlock",
+			endpoint: vsc.unlock,
+			txn: transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: now,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&poolRequest{
+					PoolID: geMockVestingPoolId(0),
+				})
+				return bytes
+			}(),
+		},
 		{
 			name:     "vesting.add",
 			endpoint: vsc.add,
@@ -69,18 +98,36 @@ func BenchmarkTests(
 				})
 				return bytes
 			}(),
-		}, /*
-			{
-				name:     "vesting.trigger",
-				endpoint: vsc.trigger,
-				txn:      transaction.Transaction{},
-				input: func() []byte {
-					bytes, _ := json.Marshal(&poolRequest{
-						PoolID: "my pool",
-					})
-					return bytes
-				}(),
-			},*/
+		},
+		{
+			name:     "vesting.stop",
+			endpoint: vsc.stop,
+			txn: transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: now,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&stopRequest{
+					PoolID:      geMockVestingPoolId(0),
+					Destination: getMockDestinationId(0, 0),
+				})
+				return bytes
+			}(),
+		},
+		{
+			name:     "vesting.delete",
+			endpoint: vsc.delete,
+			txn: transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: now,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&poolRequest{
+					PoolID: geMockVestingPoolId(0),
+				})
+				return bytes
+			}(),
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {

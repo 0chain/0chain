@@ -18,12 +18,11 @@ func AddMockAllocations(
 	balances cstate.StateContextI,
 	clients, publicKeys []string,
 	sps []*stakePool,
-) []string {
+) {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	const mockMinLockDemand = 1
-	var allocationIds []string
 	var allocations Allocations
 	var wps = make([]*writePool, 0, len(clients))
 	var rps = make([]*readPool, 0, len(clients))
@@ -36,10 +35,7 @@ func AddMockAllocations(
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		clientIndex := (i % (len(clients) - 1 - viper.GetInt(sc.NumAllocationPlayerPools)))
 		client := clients[clientIndex]
-		id := getMockAllocationId(i, client)
-		if i < viper.GetInt(sc.AvailableKeys) {
-			allocationIds = append(allocationIds, id)
-		}
+		id := getMockAllocationId(clientIndex, i)
 		sa := &StorageAllocation{
 			ID:                         id,
 			DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
@@ -99,7 +95,7 @@ func AddMockAllocations(
 				Used:              0,
 				LastHealthCheck:   common.Timestamp(viper.GetInt64(sc.Now) - 1),
 				PublicKey:         "",
-				StakePoolSettings: getStakePoolSettings(bId),
+				StakePoolSettings: getMockStakePoolSettings(bId),
 			})
 		}
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
@@ -191,18 +187,15 @@ func AddMockAllocations(
 	if err != nil {
 		panic(err)
 	}
-	return allocationIds
 }
 
 func AddMockBlobbers(
-
 	balances cstate.StateContextI,
-) []string {
+) {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var blobbers StorageNodes
-	var blobberIds []string
 	const maxLatitude float64 = 88
 	const maxLongitude float64 = 175
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
@@ -221,10 +214,7 @@ func AddMockBlobbers(
 			Used:              0,
 			LastHealthCheck:   common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
-			StakePoolSettings: getStakePoolSettings(id),
-		}
-		if i < viper.GetInt(sc.AvailableKeys) {
-			blobberIds = append(blobberIds, blobber.ID)
+			StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		blobbers.Nodes.add(blobber)
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
@@ -236,27 +226,21 @@ func AddMockBlobbers(
 	if err != nil {
 		panic(err)
 	}
-	return blobberIds
 }
 
 func AddMockValidators(
-
 	balances cstate.StateContextI,
-) []string {
+) {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var validators ValidatorNodes
-	var validatorIds []string
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
 			ID:                id,
 			BaseURL:           id + ".com",
-			StakePoolSettings: getStakePoolSettings(id),
-		}
-		if i < viper.GetInt(sc.AvailableKeys) {
-			validatorIds = append(validatorIds, validator.ID)
+			StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		validators.Nodes = append(validators.Nodes, validator)
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
@@ -268,11 +252,9 @@ func AddMockValidators(
 	if err != nil {
 		panic(err)
 	}
-	return validatorIds
 }
 
-func GetStakePools(
-
+func GetMockStakePools(
 	clients []string,
 	balances cstate.StateContextI,
 ) []*stakePool {
@@ -288,7 +270,7 @@ func GetStakePools(
 				Blobber:   0,
 				Validator: 0,
 			},
-			Settings: getStakePoolSettings(bId),
+			Settings: getMockStakePoolSettings(bId),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
 			id := getMockStakePoolId(i, j)
@@ -323,7 +305,7 @@ func GetStakePools(
 	return sps
 }
 
-func SaveStakePools(
+func SaveMockStakePools(
 
 	sps []*stakePool,
 	balances cstate.StateContextI,
@@ -340,7 +322,7 @@ func SaveStakePools(
 	}
 }
 
-func AddFreeStorageAssigners(
+func AddmockFreeStorageAssigners(
 
 	clients []string,
 	keys []string,
@@ -367,7 +349,7 @@ func AddFreeStorageAssigners(
 	}
 }
 
-func AddStats(
+func AddMockStats(
 	balances cstate.StateContextI,
 ) {
 	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
@@ -396,7 +378,7 @@ func getMockBlobberTerms() Terms {
 	}
 }
 
-func getStakePoolSettings(blobber string) stakePoolSettings {
+func getMockStakePoolSettings(blobber string) stakePoolSettings {
 	return stakePoolSettings{
 		DelegateWallet: blobber,
 		MinStake:       state.Balance(viper.GetInt64(sc.StorageMinStake) * 1e10),
@@ -407,34 +389,33 @@ func getStakePoolSettings(blobber string) stakePoolSettings {
 }
 
 func getMockReadPoolId(allocation, client, index int) string {
-	return "read pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index)
+	return encryption.Hash("read pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
 }
 
 func getMockWritePoolId(allocation, client, index int) string {
-	return "write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index)
+	return encryption.Hash("write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
 }
 
 func getMockStakePoolId(blobber, stake int) string {
-	return getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake)
+	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
 func getMockBlobberId(index int) string {
-	return "mockBlobber_" + strconv.Itoa(index)
+	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
 }
 
 func getMockValidatorId(index int) string {
-	return "mockValidator_" + strconv.Itoa(index)
+	return encryption.Hash("mockValidator_" + strconv.Itoa(index))
 }
 
-func getMockAllocationId(index int, client string) string {
-	return encryption.Hash(client + strconv.Itoa(index))
+func getMockAllocationId(client, allocation int) string {
+	return "mock allocatino id clinet " + strconv.Itoa(client) + " index " + strconv.Itoa(allocation)
+	//return encryption.Hash(strconv.Itoa(client) + strconv.Itoa(allocation))
 }
 
-func SetConfig(
-
+func SetMockConfig(
 	balances cstate.StateContextI,
 ) (conf *scConfig) {
-
 	conf = new(scConfig)
 
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests

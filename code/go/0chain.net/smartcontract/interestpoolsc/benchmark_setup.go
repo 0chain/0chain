@@ -9,8 +9,7 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 )
 
-func AddMockNodes(clients []string, balances cstate.StateContextI) []string {
-	var interestPools []string
+func AddMockNodes(clients []string, balances cstate.StateContextI) {
 	for i, client := range clients {
 		un := newUserNode(client)
 		pool := newInterestPool()
@@ -21,7 +20,6 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) []string {
 			Owner:    client,
 		}
 
-		interestPools = append(interestPools, pool.ID)
 		_ = un.addPool(pool)
 
 		_, err := balances.InsertTrieNode(un.getKey(ADDRESS), un)
@@ -38,7 +36,6 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) []string {
 	if err != nil {
 		panic(err)
 	}
-	return interestPools
 }
 
 func getInterestPoolId(i int) string {
