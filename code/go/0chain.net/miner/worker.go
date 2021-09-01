@@ -92,7 +92,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 
 				if r != nil {
 					logging.Logger.Info("Round timeout",
-						zap.Any("Number", r.Number),
+						zap.Any("round", r.Number),
+						zap.Any("current round", cround),
 						zap.Int("VRF_shares", len(r.GetVRFShares())),
 						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))

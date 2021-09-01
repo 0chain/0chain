@@ -231,6 +231,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.String("lfb block", lfb.Hash))
 		for idx := range frchain {
 			fb := frchain[len(frchain)-1-idx]
+			_, _, err := c.createRoundIfNotExist(ctx, fb)
+			if err != nil {
+				logging.Logger.Error("create round for finalize block failed",
+					zap.Int64("round", fb.Round),
+					zap.String("hash", fb.Hash))
+			}
+
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
@@ -296,6 +303,39 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		return
 	}
 	logging.Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", plfb.Round), zap.String("cf_block", plfb.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
+}
+
+func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
+	if r := c.GetRound(b.Round); r != nil {
+		return r, b, nil
+	}
+
+	currentRound := c.GetCurrentRound()
+	// create the round if it does not exist
+	r := c.RoundF.CreateRoundF(b.Round)
+	var err error
+	b, r, err = c.AddNotarizedBlockToRound(r, b)
+	if err != nil {
+		logging.Logger.Error("createRoundIfNotExist - add notarized block to round failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("current_round", currentRound),
+			zap.Error(err))
+		return nil, nil, err
+	}
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		logging.Logger.Error("createRoundIfNotExist - add notarized block failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("current_round", currentRound),
+			zap.Error(err))
+		return nil, nil, err
+	}
+
+	// Add the round if chain does not have it
+	r = c.AddRound(r)
+	return r, b, nil
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
