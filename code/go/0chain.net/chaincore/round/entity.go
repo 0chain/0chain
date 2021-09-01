@@ -332,6 +332,25 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	return b, true, nil
 }
 
+// UpdateNotarizedBlock updates the notarized block in the round
+func (r *Round) UpdateNotarizedBlock(b *block.Block) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	// update proposed blocks
+	for i, pb := range r.proposedBlocks {
+		if pb.Hash == b.Hash {
+			r.proposedBlocks[i] = b
+		}
+	}
+
+	// update notarized block
+	for i, nb := range r.notarizedBlocks {
+		if nb.Hash == b.Hash {
+			r.notarizedBlocks[i] = nb
+		}
+	}
+}
+
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
 func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
