@@ -56,7 +56,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, bvt) {
+	if !c.reachedNotarization(round, b.Hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
@@ -112,14 +112,14 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 		return false // false
 	}
 
-	var notarized = c.reachedNotarization(b.Round, b.GetVerificationTickets())
+	var notarized = c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
 	return notarized
 }
 
-func (c *Chain) reachedNotarization(round int64,
+func (c *Chain) reachedNotarization(round int64, hash string,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
@@ -160,11 +160,12 @@ func (c *Chain) reachedNotarization(round int64,
 		}
 	}
 
-	logging.Logger.Error("Reached notarization!!!",
-		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("active_miners", num),
+	logging.Logger.Info("reached notarization!!!",
 		zap.Int64("round", round),
 		zap.Int64("current_round", c.GetCurrentRound()),
+		zap.String("block", hash),
+		zap.Int64("mb_sr", mb.StartingRound),
+		zap.Int("active_miners", num),
 		zap.Int("num_signatures", len(bvt)),
 		zap.Int("threshold", threshold))
 
@@ -229,7 +230,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	numGenerators := c.GetGeneratorsNum()
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
-		logging.Logger.Warn("FB round rank is invalid or greater than num_generators",
+		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", numGenerators))
 	} else {
@@ -252,7 +253,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 	}
 	fr := c.GetRound(fb.Round)
+
 	logging.Logger.Info("finalize block -- round", zap.Any("round", fr))
+
 	if fr != nil {
 		generators := c.GetGenerators(fr)
 		for idx, g := range generators {
@@ -275,7 +278,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
 	if err := c.SaveChanges(ctx, fb); err != nil {
-		logging.Logger.Error("Finaliz block save changes failed",
+		logging.Logger.Error("finalize block save changes failed",
 			zap.Error(err),
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
