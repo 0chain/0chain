@@ -413,6 +413,27 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
 			}()
+		case <-c.syncLFBStateNowC:
+			if isSynching {
+				continue
+			}
+
+			lfb := c.GetLatestFinalizedBlock()
+			Logger.Info("Sync LFB immediately", zap.Int64("lfb round", lfb.Round),
+				zap.Int64("current round", c.GetCurrentRound()))
+
+			cctx, cancel = context.WithCancel(ctx)
+			isSynching = true
+			go func() {
+				defer func() {
+					synchingStopC <- struct{}{}
+				}()
+				if lfb == nil {
+					return
+				}
+
+				c.syncRoundStateToStateDB(cctx, lfb.Round, lfb.ClientStateHash)
+			}()
 		case <-synchingStopC:
 			isSynching = false
 		case <-ctx.Done():
