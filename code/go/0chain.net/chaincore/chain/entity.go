@@ -1143,13 +1143,20 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
-	logging.Logger.Debug("CanShareBlocks",
-		zap.Int("active sharders", mb.Sharders.GetActiveCount()),
-		zap.Int("sharders size", mb.Sharders.Size()),
-		zap.Int("min active sharders", c.MinActiveSharders),
-		zap.Int("left", mb.Sharders.GetActiveCount()*100),
-		zap.Int("right", mb.Sharders.Size()*c.MinActiveSharders))
-	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
+	activeShardersNum := mb.Sharders.GetActiveCount()
+	mbShardersNum := mb.Sharders.Size()
+
+	if activeShardersNum*100 < mbShardersNum*c.MinActiveSharders {
+		logging.Logger.Error("CanShardBlocks - can not shard blocks",
+			zap.Int("active sharders", activeShardersNum),
+			zap.Int("sharders size", mbShardersNum),
+			zap.Int("min active sharders", c.MinActiveSharders),
+			zap.Int("left", activeShardersNum*100),
+			zap.Int("right", mbShardersNum*c.MinActiveSharders))
+		return false
+	}
+
+	return true
 }
 
 // CanShardBlocksSharders - is the network able to effectively shard the blocks?
@@ -1267,6 +1274,10 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
 	c.LatestFinalizedBlock = b
 	if b != nil {
+		logging.Logger.Debug("set lfb",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Bool("state_computed", b.IsStateComputed()))
 		bs := b.GetSummary()
 		c.lfbSummary = bs
 		c.BroadcastLFBTicket(common.GetRootContext(), b)

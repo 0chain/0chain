@@ -186,7 +186,11 @@ func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) er
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				Logger.Error("prune below origin - error deleting node",
+					zap.String("key", ToHex(key)),
+					zap.Any("old_version", node.GetVersion()),
+					zap.Any("new_version", version),
+					zap.Error(err))
 				return err
 			}
 		}

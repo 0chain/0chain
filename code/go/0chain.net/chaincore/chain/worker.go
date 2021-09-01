@@ -224,12 +224,22 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
 	lfb := c.GetLatestFinalizedBlock()
 	if fb.Round < lfb.Round-5 {
-		Logger.Error("slow finalized block processing",
+		Logger.Warn("finalize block - slow finalized block processing",
 			zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 	}
-	Logger.Debug("Get finalized block from channel", zap.Int64("round", fb.Round))
-	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 
+	if lfb.Round == fb.Round && lfb.Hash == fb.Hash {
+		Logger.Info("finalize block - already finalized",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash))
+		return
+	}
+
+	Logger.Debug("start to finalize block",
+		zap.Int64("round", fb.Round),
+		zap.String("block", fb.Hash))
+
+	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 	// make sure we have valid verified MB chain if the block contains
 	// a magic block; we already have verified and valid MB chain at this
 	// moment, let's keep it updated and verified too
@@ -237,7 +247,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
 		var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
 		if err != nil {
-			Logger.Error("repairing MB chain", zap.Error(err))
+			Logger.Error("finalize block - repairing MB chain", zap.Error(err))
 			return
 		}
 	}
@@ -248,13 +258,13 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 			zap.Int64("round", fb.Round))
 		err := c.ComputeOrSyncState(ctx, fb)
 		if err != nil {
-			Logger.Error("save changes - save state not successful",
+			Logger.Error("finalize block - save changes - save state not successful",
 				zap.Int64("round", fb.Round),
 				zap.String("hash", fb.Hash),
 				zap.Int8("state", fb.GetBlockState()),
 				zap.Error(err))
 			if state.Debug() {
-				Logger.DPanic("save changes - state not successful")
+				Logger.DPanic("finalize block - save changes - state not successful")
 			}
 		}
 	} else {
@@ -266,14 +276,14 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	switch fb.GetStateStatus() {
 	case block.StateSynched, block.StateSuccessful:
 	default:
-		Logger.Error("state_save_without_success, state can't be saved without successful computation",
+		Logger.Error("finalize block - state_save_without_success, state can't be saved without successful computation",
 			zap.Int64("round", fb.Round))
 		return
 	}
 
 	// Fetch block state changes and apply them would reduce the blocks finalize speed
 	if fb.ClientState == nil {
-		Logger.Error("Finalize block - client state is null, get state changes from network",
+		Logger.Error("finalize block - client state is null, get state changes from network",
 			zap.Int64("round", fb.Round),
 			zap.String("hash", fb.Hash))
 		if err := c.GetBlockStateChange(fb); err != nil {
