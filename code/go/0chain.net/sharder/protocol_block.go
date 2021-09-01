@@ -148,7 +148,9 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 
 	var lfb = sc.GetLatestFinalizedBlock()
 	if lfb.Round < b.Round {
-		sc.SetLatestFinalizedBlock(b) // bump by the newer one
+		Logger.Warn("after_fetch - newer finalize round",
+			zap.Int64("round", b.Round),
+			zap.Int64("lfb round", lfb.Round))
 	}
 
 	return // everything is done
@@ -169,8 +171,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			return
 		}
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
-	} else {
-		Logger.Debug("process block -- get round failed", zap.Int64("round", b.Round))
 	}
 
 	// pull related magic block if missing
