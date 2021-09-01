@@ -121,9 +121,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 		total = fm + fs
 
 		// main channels
-		quit  = ctx.Done()
-		fetch = bf.fetchBlock
-		statq = bf.statq
+		quit = ctx.Done()
 
 		// internal mapping and replies
 		fetching = make(map[string]*blockFetchRequest, cap(bf.fetchBlock))
@@ -158,14 +156,14 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			return
 
 		// send statistics
-		case statq <- stat:
+		case bf.statq <- stat:
 
 		// update latest round known by sharders
 		case tk = <-tickets:
 			latest = tk.Round // update latest sharders round
 
 		// handle block fetch requests
-		case bfr := <-fetch:
+		case bfr := <-bf.fetchBlock:
 
 			var have, ok = fetching[bfr.hash]
 			if ok {
