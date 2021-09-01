@@ -231,8 +231,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 			logging.Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash),
 				zap.String("to clientID", mint.ToClientID))
-			// Temporary disable returning on mint error: TODO: revert back @bbist
-			// return
+			return
 		}
 	}
 
