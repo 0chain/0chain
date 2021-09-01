@@ -6,7 +6,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -183,9 +182,11 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	}
 
 	// miners
-	for _, mn := range miners.Nodes {
-		if mn, err = getMinerNode(mn.ID, balances); err != nil {
-			return fmt.Errorf("missing miner node: %v", err)
+	for _, m := range miners.Nodes {
+		var mn *MinerNode
+		mn, err = getMinerNode(m.ID, balances)
+		if err != nil {
+			return fmt.Errorf("missing miner node: %v, err: %v", m.ID, err)
 		}
 		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
@@ -338,19 +339,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			mb.MinerID, err)
 	}
 
+	originState := balances.GetState().GetRoot()
+
 	Logger.Debug("Pay fees, get miner id successfully",
 		zap.String("miner id", mb.MinerID),
 		zap.Int64("round", mb.Round),
-		zap.String("hash", mb.Hash))
-
-	selfID := node.Self.Underlying().GetKey()
-	if _, err := getMinerNode(selfID, balances); err != nil {
-		Logger.Debug("Pay fees, get self miner id failed",
-			zap.String("id", selfID),
-			zap.Error(err))
-	} else {
-		Logger.Debug("Pay fees, get self miner id successfully")
-	}
+		zap.String("block", mb.Hash))
 
 	var (
 		// mb reward -- mint for the mb
@@ -399,6 +393,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// save node first, for the VC pools work
 	if err = mn.save(balances); err != nil {
+		Logger.Error("save miner failed",
+			zap.String("miner id", mn.ID),
+			zap.String("origin state root", util.ToHex(originState)),
+			zap.String("current state root", util.ToHex(balances.GetState().GetRoot())))
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
 	}
