@@ -274,7 +274,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", count))
 	block.StateSanityCheck(ctx, b)
-	go b.ComputeTxnMap()
+	b.StartComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
