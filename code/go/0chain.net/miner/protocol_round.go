@@ -203,13 +203,13 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		er = mc.AddRound(mr).(*Round)
 	)
 
-	if er != mr && mc.isStarted() {
-		logging.Logger.Info("StartNextRound found next round ready. No VRFs Sent",
-			zap.Int64("er_round", er.GetRoundNumber()),
-			zap.Int64("rrs", r.GetRandomSeed()),
-			zap.Bool("is_started", mc.isStarted()))
-		return er
-	}
+	//if er != mr && mc.isStarted() {
+	//	logging.Logger.Info("StartNextRound found next round ready. No VRFs Sent",
+	//		zap.Int64("er_round", er.GetRoundNumber()),
+	//		zap.Int64("rrs", r.GetRandomSeed()),
+	//		zap.Bool("is_started", mc.isStarted()))
+	//	return er
+	//}
 
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, er)
