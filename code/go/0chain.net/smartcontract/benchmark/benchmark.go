@@ -53,6 +53,29 @@ var (
 	}
 )
 
+type SimulatorParameter int
+
+const (
+	SimulationNumClients SimulatorParameter = iota
+	SimulationNumMiners
+	SimulationNumSharders
+	SimulationNumAllocations
+	SimulationNumBlobbersPerAllocation
+	SimulationNumBlobbers
+	SimulationNumAllocationPlayerPools
+	SimulationNumAllocationPlayer
+	SimulationNumBlobberDelegates
+	SimulationNumCurators
+	SimulationNumValidators
+	SimulationNumFreeStorageAssigners
+	SimulationNumMinerDelegates
+	SimulationNumSharderDelegates
+	SimulationNumVestingDestinationsClient
+	SimulationNumWriteRedeemAllocation
+	SimulationNumChallengesBlobber
+	NumberSimulationParameters
+)
+
 const (
 	Simulation     = "simulation."
 	Internal       = "internal."
@@ -75,24 +98,6 @@ const (
 	Satisfactory            = Internal + "satisfactory"
 	TimeUnit                = Internal + "time_unit"
 	Colour                  = Internal + "colour"
-
-	NumClients                   = Simulation + "num_clients"
-	NumMiners                    = Simulation + "num_miners"
-	NumSharders                  = Simulation + "nun_sharders"
-	NumAllocations               = Simulation + "num_allocations"
-	NumBlobbersPerAllocation     = Simulation + "num_blobbers_per_Allocation"
-	NumBlobbers                  = Simulation + "num_blobbers"
-	NumAllocationPlayerPools     = Simulation + "num_allocation_payers_pools"
-	NumAllocationPlayer          = Simulation + "num_allocation_payers"
-	NumBlobberDelegates          = Simulation + "num_blobber_delegates"
-	NumCurators                  = Simulation + "num_curators"
-	NumValidators                = Simulation + "num_validators"
-	NumFreeStorageAssigners      = Simulation + "num_free_storage_assigners"
-	NumMinerDelegates            = Simulation + "num_miner_delegates"
-	NumSharderDelegates          = Simulation + "num_sharder_delegates"
-	NumVestingDestinationsClient = Simulation + "num_vesting_destinations_client"
-	NumWriteRedeemAllocation     = Simulation + "num_write_redeem_allocation"
-	NumChallengesBlobber         = Simulation + "num_challenges_blobber"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
@@ -140,6 +145,48 @@ const (
 	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
 	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
+)
+
+func (w SimulatorParameter) String() string {
+	return [...]string{
+		"num_clients",
+		"num_miners",
+		"nun_sharders",
+		"num_allocations",
+		"num_blobbers_per_Allocation",
+		"num_blobbers",
+		"num_allocation_payers_pools",
+		"num_allocation_payers",
+		"num_blobber_delegates",
+		"num_curators",
+		"num_validators",
+		"num_free_storage_assigners",
+		"num_miner_delegates",
+		"num_sharder_delegates",
+		"num_vesting_destinations_client",
+		"num_write_redeem_allocation",
+		"num_challenges_blobber",
+	}[w]
+}
+
+var (
+	NumClients                   = Simulation + SimulationNumClients.String()
+	NumMiners                    = Simulation + SimulationNumMiners.String()
+	NumSharders                  = Simulation + SimulationNumSharders.String()
+	NumAllocations               = Simulation + SimulationNumAllocationPlayer.String()
+	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
+	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
+	NumAllocationPlayerPools     = Simulation + SimulationNumAllocationPlayerPools.String()
+	NumAllocationPlayer          = Simulation + SimulationNumAllocationPlayer.String()
+	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
+	NumCurators                  = Simulation + SimulationNumCurators.String()
+	NumValidators                = Simulation + SimulationNumValidators.String()
+	NumFreeStorageAssigners      = Simulation + SimulationNumFreeStorageAssigners.String()
+	NumMinerDelegates            = Simulation + SimulationNumMinerDelegates.String()
+	NumSharderDelegates          = Simulation + SimulationNumSharderDelegates.String()
+	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
+	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
+	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
 )
 
 type BenchTestI interface {
