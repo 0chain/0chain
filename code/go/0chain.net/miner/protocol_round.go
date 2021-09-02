@@ -86,9 +86,8 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(context.Background(), vrfs.Clone())
-	}
+	mc.AddVRFShare(ctx, r, vrfs)
+	go mc.SendVRFShare(context.Background(), vrfs.Clone())
 }
 
 func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
@@ -1458,7 +1457,7 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		}
 		// if no not. block for the round, then we just redo VRFS sending
 		// (previous round random seed required for it)
-		if xrhnb == nil || i == rn {
+		if xrhnb == nil {
 			xr.Restart()
 			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
 			mc.RedoVrfShare(ctx, xr)
