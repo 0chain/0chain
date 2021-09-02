@@ -1,4 +1,4 @@
-package faucetsc
+package interestpoolsc
 
 import (
 	"context"
@@ -39,14 +39,14 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI) {
 func BenchmarkRestTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
 ) bk.TestSuit {
-	var fsc = FaucetSmartContract{
+	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
-	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
+	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "personalPeriodicLimit",
-			endpoint: fsc.personalPeriodicLimit,
+			name:     "getPoolsStats",
+			endpoint: isc.getPoolsStats,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
 				values.Set("client_id", data.Clients[0])
@@ -54,21 +54,13 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "globalPerodicLimit",
-			endpoint: fsc.globalPerodicLimit,
-		},
-		{
-			name:     "pourAmount",
-			endpoint: fsc.pourAmount,
-		},
-		{
-			name:     "getConfig",
-			endpoint: fsc.getConfigHandler,
+			name:     "getLockConfig",
+			endpoint: isc.getLockConfig,
 		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.FaucetRest, testsI}
+	return bk.TestSuit{bk.InterestPoolRest, testsI}
 }

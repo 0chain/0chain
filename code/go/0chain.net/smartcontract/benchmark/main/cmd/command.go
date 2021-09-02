@@ -29,15 +29,16 @@ import (
 )
 
 var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
-	bk.Storage:      storagesc.BenchmarkTests,
-	bk.StorageRest:  storagesc.BenchmarkRestTests,
-	bk.Miner:        minersc.BenchmarkTests,
-	bk.MinerRest:    minersc.BenchmarkRestTests,
-	bk.Faucet:       faucetsc.BenchmarkTests,
-	bk.FaucetRest:   faucetsc.BenchmarkRestTests,
-	bk.InterestPool: interestpoolsc.BenchmarkTests,
-	bk.Vesting:      vestingsc.BenchmarkTests,
-	bk.MultiSig:     multisigsc.BenchmarkTests,
+	bk.Storage:          storagesc.BenchmarkTests,
+	bk.StorageRest:      storagesc.BenchmarkRestTests,
+	bk.Miner:            minersc.BenchmarkTests,
+	bk.MinerRest:        minersc.BenchmarkRestTests,
+	bk.Faucet:           faucetsc.BenchmarkTests,
+	bk.FaucetRest:       faucetsc.BenchmarkRestTests,
+	bk.InterestPool:     interestpoolsc.BenchmarkTests,
+	bk.InterestPoolRest: interestpoolsc.BenchmarkRestTests,
+	bk.Vesting:          vestingsc.BenchmarkTests,
+	bk.MultiSig:         multisigsc.BenchmarkTests,
 }
 
 func init() {

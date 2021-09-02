@@ -16,8 +16,11 @@ const (
 	Faucet
 	FaucetRest
 	InterestPool
+	InterestPoolRest
 	Vesting
+	VestingRest
 	MultiSig
+	MultiSigRest
 	NumberOdfBenchmarkSources
 )
 
@@ -30,20 +33,26 @@ var (
 		"faucet",
 		"faucet_rest",
 		"interest_pool",
+		"interest_pool_rest",
 		"vesting",
+		"vesting_rest",
 		"multi_sig",
+		"multi_sig_rest",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
-		BenchmarkSourceNames[Storage]:      Storage,
-		BenchmarkSourceNames[StorageRest]:  StorageRest,
-		BenchmarkSourceNames[Miner]:        Miner,
-		BenchmarkSourceNames[MinerRest]:    MinerRest,
-		BenchmarkSourceNames[Faucet]:       Faucet,
-		BenchmarkSourceNames[FaucetRest]:   FaucetRest,
-		BenchmarkSourceNames[InterestPool]: InterestPool,
-		BenchmarkSourceNames[Vesting]:      Vesting,
-		BenchmarkSourceNames[MultiSig]:     MultiSig,
+		BenchmarkSourceNames[Storage]:          Storage,
+		BenchmarkSourceNames[StorageRest]:      StorageRest,
+		BenchmarkSourceNames[Miner]:            Miner,
+		BenchmarkSourceNames[MinerRest]:        MinerRest,
+		BenchmarkSourceNames[Faucet]:           Faucet,
+		BenchmarkSourceNames[FaucetRest]:       FaucetRest,
+		BenchmarkSourceNames[InterestPool]:     InterestPool,
+		BenchmarkSourceNames[InterestPoolRest]: InterestPoolRest,
+		BenchmarkSourceNames[Vesting]:          Vesting,
+		BenchmarkSourceNames[VestingRest]:      VestingRest,
+		BenchmarkSourceNames[MultiSig]:         MultiSig,
+		BenchmarkSourceNames[MultiSigRest]:     MultiSigRest,
 	}
 )
 
