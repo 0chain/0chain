@@ -14,7 +14,7 @@ go build -tags bn256
 ./main benchmark benchmark --tests "miner, storage" | column -t -s,
 ```
 
-To only print out the comma delimited data without any updates, use the `-verbose false` flag
+To only print out the comma delimited data without any updates, use the `--verbose=false` flag
 ```bash
 go build -tags bn256
 ./main benchmark  --verbose=false | column -t -s,

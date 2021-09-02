@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func FundFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
+func FundMockFaucetSmartContract(pMpt *util.MerklePatriciaTrie) {
 	is := &state.State{}
 	_ = is.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	is.Balance = state.Balance(viper.GetInt64(benchmark.StartTokens))
@@ -19,8 +19,19 @@ func AddMockGlobalNode(balances cstate.StateContextI) {
 	gn := &GlobalNode{
 		ID: ADDRESS,
 	}
-	_, err := balances.InsertTrieNode(gn.GetKey(), gn)
-	if err != nil {
-		panic(err)
+	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
+}
+
+func AddMockUserNodes(
+	clients []string,
+	balances cstate.StateContextI,
+) {
+	const mockUsed = 3e10
+	for _, client := range clients {
+		un := &UserNode{
+			ID:   client,
+			Used: mockUsed,
+		}
+		_, _ = balances.InsertTrieNode(un.GetKey(ADDRESS), un)
 	}
 }

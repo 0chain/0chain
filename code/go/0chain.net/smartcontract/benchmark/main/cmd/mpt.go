@@ -89,7 +89,7 @@ func setUpMpt(
 	if verbose {
 		log.Println("added clients")
 	}
-	faucetsc.FundFaucetSmartContract(pMpt)
+	faucetsc.FundMockFaucetSmartContract(pMpt)
 	if verbose {
 		log.Println("funded faucet")
 	}
@@ -177,6 +177,10 @@ func setUpMpt(
 	faucetsc.AddMockGlobalNode(balances)
 	if verbose {
 		log.Println("added faucet global node")
+	}
+	faucetsc.AddMockUserNodes(clients, balances)
+	if verbose {
+		log.Println("added faucet user nodes")
 	}
 	interestpoolsc.AddMockNodes(clients, balances)
 	if verbose {

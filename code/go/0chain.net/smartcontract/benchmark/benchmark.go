@@ -14,6 +14,7 @@ const (
 	Miner
 	MinerRest
 	Faucet
+	FaucetRest
 	InterestPool
 	Vesting
 	MultiSig
@@ -27,6 +28,7 @@ var (
 		"miner",
 		"miner_rest",
 		"faucet",
+		"faucet_rest",
 		"interest_pool",
 		"vesting",
 		"multi_sig",
@@ -38,6 +40,7 @@ var (
 		BenchmarkSourceNames[Miner]:        Miner,
 		BenchmarkSourceNames[MinerRest]:    MinerRest,
 		BenchmarkSourceNames[Faucet]:       Faucet,
+		BenchmarkSourceNames[FaucetRest]:   FaucetRest,
 		BenchmarkSourceNames[InterestPool]: InterestPool,
 		BenchmarkSourceNames[Vesting]:      Vesting,
 		BenchmarkSourceNames[MultiSig]:     MultiSig,

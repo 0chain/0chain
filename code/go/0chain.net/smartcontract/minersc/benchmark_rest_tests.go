@@ -32,7 +32,7 @@ func (bt RestBenchTest) Transaction() transaction.Transaction {
 func (rbt RestBenchTest) Run(balances cstate.StateContextI) {
 	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
 	if err != nil {
-		//	panic(err)
+		panic(err)
 	}
 }
 
