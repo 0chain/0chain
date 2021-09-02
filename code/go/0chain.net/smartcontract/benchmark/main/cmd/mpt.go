@@ -142,13 +142,25 @@ func setUpMpt(
 	if verbose {
 		log.Println("added stake pools")
 	}
-	minersc.AddMockNodes(minersc.NodeTypeMiner, balances)
+	miners := minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
 	if verbose {
 		log.Println("added miners")
 	}
-	sharders := minersc.AddMockNodes(minersc.NodeTypeSharder, balances)
+	sharders := minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
 	if verbose {
 		log.Println("added sharders")
+	}
+	minersc.AddNodeDelegates(clients, miners, sharders, balances)
+	if verbose {
+		log.Println("adding miners and sharders delegates")
+	}
+	minersc.AddMagicBlock(miners, sharders, balances)
+	if verbose {
+		log.Println("add magic block")
+	}
+	minersc.SetUpNodes(miners, sharders)
+	if verbose {
+		log.Println("registering miners and sharders")
 	}
 	storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
 	if verbose {
@@ -163,6 +175,9 @@ func setUpMpt(
 		log.Println("added read redeems")
 	}
 	faucetsc.AddMockGlobalNode(balances)
+	if verbose {
+		log.Println("added faucet global node")
+	}
 	interestpoolsc.AddMockNodes(clients, balances)
 	if verbose {
 		log.Println("added user nodes")

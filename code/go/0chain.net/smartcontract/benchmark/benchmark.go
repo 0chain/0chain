@@ -12,6 +12,7 @@ const (
 	Storage BenchmarkSource = iota
 	StorageRest
 	Miner
+	MinerRest
 	Faucet
 	InterestPool
 	Vesting
@@ -24,6 +25,7 @@ var (
 		"storage",
 		"storage_rest",
 		"miner",
+		"miner_rest",
 		"faucet",
 		"interest_pool",
 		"vesting",
@@ -34,6 +36,7 @@ var (
 		BenchmarkSourceNames[Storage]:      Storage,
 		BenchmarkSourceNames[StorageRest]:  StorageRest,
 		BenchmarkSourceNames[Miner]:        Miner,
+		BenchmarkSourceNames[MinerRest]:    MinerRest,
 		BenchmarkSourceNames[Faucet]:       Faucet,
 		BenchmarkSourceNames[InterestPool]: InterestPool,
 		BenchmarkSourceNames[Vesting]:      Vesting,
@@ -118,6 +121,7 @@ const (
 	StorageFasWritePriceMax              = SmartContract + StorageSc + Fas + "write_price_range.max"
 	StorageFasMaxChallengeCompletionTime = SmartContract + StorageSc + Fas + "max_challenge_completion_time"
 	StorageFasReadPoolFraction           = SmartContract + StorageSc + Fas + "read_pool_fraction"
+	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
 
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"

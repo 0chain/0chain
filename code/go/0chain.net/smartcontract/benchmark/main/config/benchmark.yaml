@@ -85,6 +85,7 @@ smart_contracts:
         max: 0.1
       max_challenge_completion_time: 30m
       read_pool_fraction: 0.2
+    max_mint: 1500000.0 # tokens
     challenge_enabled: true
   interestpoolsc:
     min_lock: 10

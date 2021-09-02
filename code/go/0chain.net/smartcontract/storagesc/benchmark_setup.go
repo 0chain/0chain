@@ -517,7 +517,7 @@ func SetMockConfig(
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)
 	conf.MinStake = state.Balance(viper.GetInt64(sc.StorageMinStake) * 1e10)
 	conf.MaxStake = state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10)
-	conf.MaxMint = 100e10
+	conf.MaxMint = state.Balance((viper.GetFloat64(sc.StorageMaxMint)) * 1e10)
 	conf.MaxTotalFreeAllocation = state.Balance(viper.GetInt64(sc.StorageMaxTotalFreeAllocation) * 1e10)
 	conf.MaxIndividualFreeAllocation = state.Balance(viper.GetInt64(sc.StorageMaxIndividualFreeAllocation) * 1e10)
 	conf.ReadPool = &readPoolConfig{

@@ -7,6 +7,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
 	bk "0chain.net/smartcontract/benchmark"
@@ -180,21 +181,27 @@ func BenchmarkTests(
 		{
 			name:     "miner.addToDelegatePool",
 			endpoint: msc.addToDelegatePool,
-			txn:      transaction.Transaction{},
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("transaction hash"),
+				},
+				ClientID: data.Clients[0],
+				Value:    1e10,
+			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, NodeTypeMiner),
-				PoolID:  getMockDelegateId(0, viper.GetInt(bk.NumMinerDelegates)),
+				PoolID:  getMinerDelegatePoolId(0, 0, NodeTypeMiner),
 			}).Encode(),
 		},
 		{
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
 			txn: transaction.Transaction{
-				ClientID: GetMockNodeId(0, NodeTypeMiner),
+				ClientID: data.Clients[0],
 			},
 			input: (&deletePool{
 				MinerID: GetMockNodeId(0, NodeTypeMiner),
-				PoolID:  getMockDelegateId(0, 0),
+				PoolID:  getMinerDelegatePoolId(0, 0, NodeTypeMiner),
 			}).Encode(),
 		},
 		{

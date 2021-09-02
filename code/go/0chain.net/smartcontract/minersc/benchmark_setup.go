@@ -3,6 +3,13 @@ package minersc
 import (
 	"strconv"
 
+	"0chain.net/core/encryption"
+
+	"0chain.net/core/datastore"
+
+	"0chain.net/chaincore/node"
+	"github.com/rcrowley/go-metrics"
+
 	"0chain.net/chaincore/block"
 
 	"0chain.net/chaincore/tokenpool"
@@ -10,8 +17,6 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/chaincore/state"
-
-	"0chain.net/core/encryption"
 
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
@@ -21,6 +26,7 @@ import (
 )
 
 func AddMockNodes(
+	clients []string,
 	nodeType NodeType,
 	balances cstate.StateContextI,
 ) []string {
@@ -57,21 +63,22 @@ func AddMockNodes(
 		newNode.DelegateWallet = newNode.ID
 
 		for j := 0; j < numDelegates; j++ {
+			dId := (i + j) % numNodes
 			pool := sci.DelegatePool{
 				ZcnLockingPool: &tokenpool.ZcnLockingPool{
 					ZcnPool: tokenpool.ZcnPool{
 						TokenPool: tokenpool.TokenPool{
-							ID:      getMockDelegateId(i, j),
+							ID:      getMinerDelegatePoolId(i, dId, nodeType),
 							Balance: 100 * 1e10,
 						},
 					},
 				},
 				PoolStats: &sci.PoolStats{},
 			}
-			pool.DelegateID = newNode.ID
-			newNode.Active[pool.ID] = &pool
-		}
 
+			pool.DelegateID = clients[dId]
+			newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+		}
 		_, err := balances.InsertTrieNode(newNode.getKey(), newNode)
 		if err != nil {
 			panic(err)
@@ -79,7 +86,6 @@ func AddMockNodes(
 		nodes = append(nodes, newNode.ID)
 		nodeMap[newNode.ID] = newNode.SimpleNode
 		allNodes.Nodes = append(allNodes.Nodes, newNode)
-
 	}
 	if nodeType == NodeTypeMiner {
 		dkgMiners := NewDKGMinerNodes()
@@ -101,12 +107,86 @@ func AddMockNodes(
 			Nodes: allNodes.Nodes[1:],
 		})
 	}
-
 	_, err = balances.InsertTrieNode(key, &allNodes)
 	if err != nil {
 		panic(err)
 	}
 	return nodes
+}
+
+func AddNodeDelegates(
+	clients, miners, sharders []string,
+	balances cstate.StateContextI,
+) {
+	var cns = make(map[string]UserNode)
+	for i := range miners {
+		AddUserNodesForNode(i, NodeTypeMiner, miners, clients, cns)
+	}
+	for i := range sharders {
+		AddUserNodesForNode(i, NodeTypeSharder, sharders, clients, cns)
+	}
+	for _, un := range cns {
+		_, _ = balances.InsertTrieNode(un.GetKey(), &un)
+	}
+}
+
+func AddUserNodesForNode(
+	nodeIndex int,
+	nodeType NodeType,
+	nodes []string,
+	clients []string, cns map[string]UserNode,
+) {
+	var numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
+	for j := 0; j < numDelegates; j++ {
+		delegate := (nodeIndex + j) % len(nodes)
+		var un UserNode
+		un, ok := cns[clients[delegate]]
+		if !ok {
+			un = UserNode{
+				ID:    clients[delegate],
+				Pools: make(map[datastore.Key][]datastore.Key),
+			}
+		}
+		un.Pools[nodes[nodeIndex]] = append(un.Pools[nodes[nodeIndex]],
+			getMinerDelegatePoolId(nodeIndex, delegate, nodeType))
+		cns[clients[delegate]] = un
+	}
+}
+
+func SetUpNodes(
+	miners, sharders []string,
+) {
+	for _, miner := range miners {
+		nextMiner := &node.Node{}
+		nextMiner.TimersByURI = make(map[string]metrics.Timer, 10)
+		nextMiner.SizeByURI = make(map[string]metrics.Histogram, 10)
+		nextMiner.ID = miner
+		nextMiner.PublicKey = "mockPublicKey"
+		nextMiner.Type = node.NodeTypeMiner
+		nextMiner.Status = node.NodeStatusActive
+		node.RegisterNode(nextMiner)
+	}
+	for _, sharder := range sharders {
+		nextSharder := &node.Node{}
+		nextSharder.TimersByURI = make(map[string]metrics.Timer, 10)
+		nextSharder.SizeByURI = make(map[string]metrics.Histogram, 10)
+		nextSharder.ID = sharder
+		nextSharder.PublicKey = "mockPublicKey"
+		nextSharder.Type = node.NodeTypeMiner
+		nextSharder.Status = node.NodeStatusActive
+		node.RegisterNode(nextSharder)
+	}
+}
+
+func AddMagicBlock(
+	miners, sharders []string,
+	balances cstate.StateContextI,
+) {
+	var magicBlock block.MagicBlock
+	_, _ = balances.InsertTrieNode(MagicBlockKey, &magicBlock)
+
+	var gsos block.GroupSharesOrSigns
+	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, &gsos)
 }
 
 func AddPhaseNode(balances cstate.StateContextI) {
@@ -122,10 +202,14 @@ func AddPhaseNode(balances cstate.StateContextI) {
 	}
 }
 
-func GetMockNodeId(index int, nodeType NodeType) string {
-	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
+func getMinerDelegatePoolId(miner, delegate int, nodeType NodeType) string {
+	//return "delegate pool" +
+	//	strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType))
+	return encryption.Hash("delegate pool" +
+		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
 }
 
-func getMockDelegateId(miner, delegate int) string {
-	return "node_id_" + strconv.Itoa(miner) + "_" + strconv.Itoa(delegate)
+func GetMockNodeId(index int, nodeType NodeType) string {
+	//return "mock" + nodeType.String() + strconv.Itoa(index)
+	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }

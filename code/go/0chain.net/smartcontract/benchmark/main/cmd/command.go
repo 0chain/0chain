@@ -32,6 +32,7 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Storage:      storagesc.BenchmarkTests,
 	bk.StorageRest:  storagesc.BenchmarkRestTests,
 	bk.Miner:        minersc.BenchmarkTests,
+	bk.MinerRest:    minersc.BenchmarkRestTests,
 	bk.Faucet:       faucetsc.BenchmarkTests,
 	bk.InterestPool: interestpoolsc.BenchmarkTests,
 	bk.Vesting:      vestingsc.BenchmarkTests,
