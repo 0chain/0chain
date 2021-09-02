@@ -38,6 +38,7 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.InterestPool:     interestpoolsc.BenchmarkTests,
 	bk.InterestPoolRest: interestpoolsc.BenchmarkRestTests,
 	bk.Vesting:          vestingsc.BenchmarkTests,
+	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
 }
 
