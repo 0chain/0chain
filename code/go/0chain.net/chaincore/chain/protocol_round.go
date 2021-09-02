@@ -100,7 +100,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
 that extend from a single block in that round. */
-func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+func (c *Chain) FinalizeRound(r round.RoundI) {
 	if r.IsFinalized() {
 		return // round already finalized
 	}
@@ -115,7 +115,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if r.GetHeaviestNotarizedBlock() == nil {
 		logging.Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
-		go c.GetHeaviestNotarizedBlock(ctx, r)
+		go c.GetHeaviestNotarizedBlock(context.Background(), r)
 	}
 	time.Sleep(FINALIZATION_TIME)
 	logging.Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
@@ -373,7 +373,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 				"Block not from the requested round")
 		}
 
-		err = c.VerifyNotarization(cctx, nb, nb.GetVerificationTickets(), rn)
+		err = c.VerifyNotarization(nb, nb.GetVerificationTickets(), rn)
 		if err != nil {
 			logging.Logger.Error("get notarized block for round - validate notarization",
 				zap.Int64("round", rn), zap.String("block", nb.Hash),

@@ -15,7 +15,7 @@ import (
 )
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, blockHash string,
+func (c *Chain) VerifyTicket(blockHash string,
 	bvt *block.VerificationTicket, round int64) error {
 
 	var sender = c.GetMiners(round).GetNode(bvt.VerifierID)
@@ -30,7 +30,7 @@ func (c *Chain) VerifyTicket(ctx context.Context, blockHash string,
 }
 
 // VerifyNotarization - verify that the notarization is correct.
-func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
+func (c *Chain) VerifyNotarization(b *block.Block,
 	bvt []*block.VerificationTicket, round int64) (err error) {
 
 	if bvt == nil {
@@ -62,7 +62,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 	}
 
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, b.Hash, vt, round); err != nil {
+		if err := c.VerifyTicket(b.Hash, vt, round); err != nil {
 			return err
 		}
 	}
@@ -102,7 +102,7 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 }
 
 // IsBlockNotarized - check if the block is notarized.
-func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
+func (c *Chain) IsBlockNotarized(b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
@@ -207,20 +207,20 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 }
 
 /*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
-func (c *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
+func (c *Chain) AddVerificationTicket(b *block.Block, bvt *block.VerificationTicket) bool {
 	added := b.AddVerificationTicket(bvt)
 	if added {
-		c.IsBlockNotarized(ctx, b)
+		c.IsBlockNotarized(b)
 	}
 	return added
 }
 
 /*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
-func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vts []*block.VerificationTicket) {
+func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.VerificationTicket) {
 	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
 	if b.VerificationTicketsSize() != vtlen {
-		c.IsBlockNotarized(ctx, b)
+		c.IsBlockNotarized(b)
 	}
 }
 

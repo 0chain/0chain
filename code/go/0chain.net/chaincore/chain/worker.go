@@ -588,7 +588,7 @@ func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			c.PruneRoundStorage(ctx, getCountRoundStorage, storage...)
+			c.PruneRoundStorage(getCountRoundStorage, storage...)
 		}
 	}
 }

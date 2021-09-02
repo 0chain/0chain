@@ -656,7 +656,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
+			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
 		}
 		return eb
 	}
@@ -981,7 +981,7 @@ func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
 }
 
 /*DeleteRoundsBelow - delete rounds below */
-func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
+func (c *Chain) DeleteRoundsBelow(roundNumber int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
@@ -1280,7 +1280,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 			zap.Bool("state_computed", b.IsStateComputed()))
 		bs := b.GetSummary()
 		c.lfbSummary = bs
-		c.BroadcastLFBTicket(common.GetRootContext(), b)
+		c.BroadcastLFBTicket(context.Background(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
 	}
 	c.lfbMutex.Unlock()
@@ -1508,7 +1508,7 @@ func (c *Chain) Stop() {
 }
 
 // PruneRoundStorage pruning storage
-func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage round.RoundStorage) int,
+func (c *Chain) PruneRoundStorage(getTargetCount func(storage round.RoundStorage) int,
 	storages ...round.RoundStorage) {
 
 	for _, storage := range storages {

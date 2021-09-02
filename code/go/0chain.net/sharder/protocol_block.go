@@ -55,15 +55,15 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr.Finalize(b)
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
-	sc.StoreTransactions(ctx, b)
-	err := sc.StoreBlockSummaryFromBlock(ctx, b)
+	sc.StoreTransactions(b)
+	err := sc.StoreBlockSummaryFromBlock(b)
 	if err != nil {
 		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
 	if b.MagicBlock != nil {
 		bs := b.GetSummary()
-		err = sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
+		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		if err != nil {
 			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
 		}
@@ -80,12 +80,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	if frImpl, ok := fr.(*round.Round); ok {
-		err := sc.StoreRound(ctx, frImpl)
+		err := sc.StoreRound(frImpl)
 		if err != nil {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
 	}
-	sc.DeleteRoundsBelow(ctx, b.Round)
+	sc.DeleteRoundsBelow(b.Round)
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
@@ -181,7 +181,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	err = sc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
+	err = sc.VerifyNotarization(b, b.GetVerificationTickets(),
 		er.GetRoundNumber())
 	if err != nil {
 		Logger.Error("notarization verification failed",
@@ -245,7 +245,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 	params.Del("range")
 	r = sc.requestForRound(ctx, params)
 	if sc.isValidRound(r) {
-		err := sc.StoreRound(ctx, r)
+		err := sc.StoreRound(r)
 		if err != nil {
 			Logger.Error("HC-DSWriteFailure",
 				zap.String("object", "RoundSummary"),
@@ -368,7 +368,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 
 	if canShard || b.MagicBlock != nil {
 		// Save the block
-		err := sc.storeBlock(ctx, b)
+		err := sc.storeBlock(b)
 		if err != nil {
 			Logger.Error("HC-DSWriteFailure",
 				zap.String("object", "block"),
@@ -559,7 +559,7 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 					zap.String("object", "RoundSummary"),
 					zap.Int64("round", roundS.Number),
 					zap.String("hash", roundS.BlockHash))
-				sc.StoreRound(ctx, roundS)
+				sc.StoreRound(roundS)
 			}
 		} else {
 			Logger.Debug("HC-StoreRoundSummaries",
@@ -627,7 +627,7 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) {
 	var err error
 	for true {
-		err = sc.StoreRound(ctx, r)
+		err = sc.StoreRound(r)
 		if err != nil {
 			Logger.Error("db error (save round summary)", zap.Int64("round", r.Number), zap.Error(err))
 			time.Sleep(time.Second)
@@ -649,7 +649,7 @@ func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 	}
 }
 
-func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
+func (sc *Chain) storeBlock(b *block.Block) error {
 	var err error
 	err = blockstore.GetStore().Write(b)
 	if err == nil {
@@ -659,7 +659,7 @@ func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
 	}
 	if b.MagicBlock != nil {
 		bs := b.GetSummary()
-		err = sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
+		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		if err != nil {
 			return err
 		}
@@ -668,7 +668,7 @@ func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
 }
 
 func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) error {
-	err := sc.StoreTransactions(ctx, b)
+	err := sc.StoreTransactions(b)
 	//	Logger.Error(caller,
 	//		zap.Int64("round", b.Round),
 	//		zap.String("block", b.Hash),

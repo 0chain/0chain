@@ -225,7 +225,7 @@ func (b *Block) Decode(input []byte) error {
 }
 
 /*Validate - implementing the interface */
-func (b *Block) Validate(ctx context.Context) error {
+func (b *Block) Validate(_ context.Context) error {
 	err := config.ValidChain(datastore.ToString(b.ChainID))
 	if err != nil {
 		return err

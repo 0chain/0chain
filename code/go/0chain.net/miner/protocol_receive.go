@@ -74,7 +74,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		var vts = mr.GetVerificationTickets(b.Hash)
 
 		if len(vts) > 0 {
-			mc.MergeVerificationTickets(ctx, b, vts)
+			mc.MergeVerificationTickets(b, vts)
 			if b.IsBlockNotarized() {
 				if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 					/* Since this is a notarized block, we are accepting it. */
@@ -169,7 +169,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	var b, err = mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
-		err = mc.VerifyTicket(ctx, bvt.BlockID, &bvt.VerificationTicket, rn)
+		err = mc.VerifyTicket(bvt.BlockID, &bvt.VerificationTicket, rn)
 		if err != nil {
 			logging.Logger.Debug("verification ticket", zap.Error(err))
 			return
@@ -191,7 +191,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		return
 	}
 
-	err = mc.VerifyTicket(ctx, b.Hash, &bvt.VerificationTicket, rn)
+	err = mc.VerifyTicket(b.Hash, &bvt.VerificationTicket, rn)
 	if err != nil {
 		logging.Logger.Debug("verification ticket", zap.Error(err))
 		return

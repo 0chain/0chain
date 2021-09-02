@@ -307,7 +307,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
 
-	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 
 	// set DKG if this node is miner of new MB (it have to have the DKG)

@@ -349,7 +349,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 				"wrong block hash")
 		}
 
-		err = c.VerifyNotarization(ctx, gfb, gfb.GetVerificationTickets(),
+		err = c.VerifyNotarization(gfb, gfb.GetVerificationTickets(),
 			gfb.Round)
 		if err != nil {
 			logging.Logger.Error("fetch_fb_from_sharders - not notarized",
@@ -429,7 +429,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 				"wrong block hash")
 		}
 
-		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(),
+		err = c.VerifyNotarization(nb, nb.GetVerificationTickets(),
 			nb.Round)
 		if err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - not notarized",

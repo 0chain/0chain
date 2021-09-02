@@ -87,7 +87,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
 	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs.Clone())
+		go mc.SendVRFShare(context.Background(), vrfs.Clone())
 	}
 }
 
@@ -171,7 +171,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 	logging.Logger.Debug("finalizedRound - cancel round verification")
 	mc.CancelRoundVerification(ctx, r)
-	go mc.FinalizeRound(ctx, r.Round, mc)
+	go mc.FinalizeRound(r.Round)
 }
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
@@ -350,7 +350,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 
 	// NOTE: If there are not enough txns, this will not advance further even
 	// though rest of the network is. That's why this is a goroutine.
-	go mc.GenerateRoundBlock(ctx, mr)
+	go mc.GenerateRoundBlock(context.Background(), mr)
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
@@ -432,7 +432,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
+	ctx = memorystore.WithEntityConnection(common.GetRootContext(), txnEntityMetadata)
 	defer memorystore.Close(ctx)
 
 	var (
@@ -631,7 +631,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 
-		err = mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
+		err = mc.VerifyNotarization(pb, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
 		if err != nil {
 			logging.Logger.Error("add to verification (prior block verify notarization)",
 				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
@@ -881,7 +881,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 
 func (mc *Chain) updatePriorBlock(ctx context.Context, r round.RoundI, b *block.Block) {
 	pb := b.PrevBlock
-	mc.MergeVerificationTickets(ctx, pb, b.GetPrevBlockVerificationTickets())
+	mc.MergeVerificationTickets(pb, b.GetPrevBlockVerificationTickets())
 	pr := mc.GetMinerRound(pb.Round)
 	if pr != nil {
 		mc.AddNotarizedBlock(ctx, pr, pb)
@@ -904,7 +904,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	// NOTE: We keep collecting verification tickets even if a block is
 	// notarized. Knowing who all know about a block can be used to optimize
 	// other parts of the protocol.
-	if !mc.AddVerificationTicket(ctx, b, vt) {
+	if !mc.AddVerificationTicket(b, vt) {
 		return
 	}
 
@@ -935,7 +935,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	}
 
 	mc.SetRandomSeed(r, seed)
-	go mc.SendNotarization(ctx, b)
+	go mc.SendNotarization(context.Background(), b)
 
 	logging.Logger.Debug("check block notarization - block notarized",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
@@ -958,13 +958,13 @@ func (mc *Chain) startNextRoundNotAhead(ctx context.Context, r *Round) {
 // MergeNotarization - merge a notarization.
 func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
 	for _, t := range vts {
-		if err := mc.VerifyTicket(ctx, b.Hash, t, r.GetRoundNumber()); err != nil {
+		if err := mc.VerifyTicket(b.Hash, t, r.GetRoundNumber()); err != nil {
 			logging.Logger.Error("merge notarization", zap.Int64("round", b.Round),
 				zap.String("block", b.Hash), zap.Error(err))
 		}
 	}
 	notarized := b.IsBlockNotarized()
-	mc.MergeVerificationTickets(ctx, b, vts)
+	mc.MergeVerificationTickets(b, vts)
 	if notarized {
 		return
 	}
@@ -1037,7 +1037,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 			return
 		}
 
-		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
+		err = mc.VerifyNotarization(fb, fb.GetVerificationTickets(),
 			fb.Round)
 		if err != nil {
 			logging.Logger.Error("lfb from sharder - notarization failed",
@@ -1122,7 +1122,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
+		err = mc.VerifyNotarization(fb, fb.GetVerificationTickets(),
 			fb.Round)
 		if err != nil {
 			logging.Logger.Error("FB from sharder - notarization failed",
@@ -1238,7 +1238,9 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 	}
 
 	if r.vrfShare != nil {
-		go mc.SendVRFShare(ctx, r.vrfShare)
+		// send VRF share in goroutine, use new context, the old one will be canceled soon
+		// after the function is returned
+		go mc.SendVRFShare(context.Background(), r.vrfShare)
 		logging.Logger.Info("Sent vrf shares in handle NoProgress")
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
@@ -1284,7 +1286,7 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 		}
 		logging.Logger.Info("restartRound->kickFinalization:",
 			zap.Int64("round", mr.GetRoundNumber()))
-		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
+		go mc.FinalizeRound(mr.Round) // kick finalization again
 		i++
 		count++
 	}

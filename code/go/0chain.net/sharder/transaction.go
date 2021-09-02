@@ -96,7 +96,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 }
 
 /*StoreTransactions - persists given list of transactions*/
-func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
+func (sc *Chain) StoreTransactions(b *block.Block) error {
 	var sTxns = make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
 		txnSummary := txn.GetSummary()
@@ -108,7 +108,7 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	delay := time.Millisecond
 	ts := time.Now()
 	for tries := 1; tries <= 9; tries++ {
-		err := sc.storeTransactions(ctx, sTxns)
+		err := sc.storeTransactions(sTxns)
 		if err != nil {
 			delay = 2 * delay
 			logging.Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
@@ -128,9 +128,9 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity) error {
+func (sc *Chain) storeTransactions(sTxns []datastore.Entity) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
+	tctx := persistencestore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
 	defer persistencestore.Close(tctx)
 	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 }

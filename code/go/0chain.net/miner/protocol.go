@@ -43,7 +43,7 @@ type ProtocolRound interface {
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelRoundVerification(ctx context.Context, r *Round)
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
-	FinalizeRound(ctx context.Context, r round.RoundI, bsh chain.BlockStateHandler)
+	FinalizeRound(round.RoundI)
 
 	HandleRoundTimeout(ctx context.Context, round int64)
 }
@@ -54,11 +54,11 @@ type ProtocolBlock interface {
 	ValidateMagicBlock(context.Context, *round.Round, *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 
-	VerifyTicket(ctx context.Context, blockHash string, vt *block.VerificationTicket, round int64) error
-	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket, round int64) error
+	VerifyTicket(blockHash string, vt *block.VerificationTicket, round int64) error
+	VerifyNotarization(b *block.Block, bvt []*block.VerificationTicket, round int64) error
 
-	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
-	IsBlockNotarized(ctx context.Context, b *block.Block) bool
+	AddVerificationTicket(b *block.Block, bvt *block.VerificationTicket) bool
+	IsBlockNotarized(b *block.Block) bool
 	FinalizeBlock(ctx context.Context, b *block.Block) error
 }
 

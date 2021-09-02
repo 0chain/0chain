@@ -84,7 +84,7 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 	//sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
 	// Save the block
-	err := sc.storeBlock(common.GetRootContext(), gb)
+	err := sc.storeBlock(gb)
 	if err != nil {
 		Logger.Error("Failed to save genesis block",
 			zap.Error(err))
@@ -92,12 +92,12 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock, in
 	if gb.MagicBlock != nil {
 		var tries int64
 		bs := gb.GetSummary()
-		err = sc.StoreMagicBlockMapFromBlock(common.GetRootContext(), bs.GetMagicBlockMap())
+		err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		for err != nil {
 			tries++
 			Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
 			time.Sleep(time.Millisecond * 100)
-			err = sc.StoreMagicBlockMapFromBlock(common.GetRootContext(), bs.GetMagicBlockMap())
+			err = sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 		}
 	}
 	return gb
@@ -195,7 +195,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
 
 	// check is it notarized
-	err = sc.VerifyNotarization(ctx, bl.lfb, bl.lfb.GetVerificationTickets(),
+	err = sc.VerifyNotarization(bl.lfb, bl.lfb.GetVerificationTickets(),
 		bl.r.GetRoundNumber())
 	if err != nil {
 		Logger.Error("load_lfb - verify notarization failed",
@@ -442,11 +442,11 @@ func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
 		zap.Int64("starting_round", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
 
-	if err = sc.storeBlock(ctx, b); err != nil {
+	if err = sc.storeBlock(b); err != nil {
 		return
 	}
 	var bs = b.GetSummary()
-	return sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
+	return sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap())
 }
 
 // SaveMagicBlock function.

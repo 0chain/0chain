@@ -495,7 +495,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 		if canShard || (b != nil && b.MagicBlock != nil) {
 			// The sharder has acquired the block and should save it.
-			err := sc.storeBlock(ctx, b)
+			err := sc.storeBlock(b)
 			if err != nil {
 				Logger.Error("HC-DSWriteFailure",
 					zap.String("mode", cc.ScanMode.String()),
