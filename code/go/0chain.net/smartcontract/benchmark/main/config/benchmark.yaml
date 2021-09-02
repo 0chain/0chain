@@ -61,13 +61,13 @@ smart_contracts:
     diverse_blobbers: false
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
-    max_individual_free_allocation: 100
+    max_individual_free_allocation: 170
     readpool:
-      min_lock: 0.1 # toekns
+      min_lock: 0.3
       min_lock_period: 1m
       max_lock_period: 8760h
     writepool:
-      min_lock: 0.1 # tokens
+      min_lock: 0.1
       min_lock_period: 2m
       max_lock_period: 8760h
     stakepool:
@@ -85,7 +85,7 @@ smart_contracts:
         max: 0.1
       max_challenge_completion_time: 30m
       read_pool_fraction: 0.2
-    max_mint: 1500000.0 # tokens
+    max_mint: 1500000.0
     challenge_enabled: true
   interestpoolsc:
     min_lock: 10

@@ -43,7 +43,7 @@ func (bt BenchTest) Transaction() transaction.Transaction {
 func (bt BenchTest) Run(balances cstate.StateContextI) {
 	_, err := bt.endpoint(&bt.txn, bt.input, balances)
 	if err != nil {
-		panic(err) // todo temporary, remove later
+		panic(err)
 	}
 }
 
@@ -278,7 +278,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		/* todo needs read_pool_lock fixed
 		{
 			name:     "storage.free_allocation_request",
 			endpoint: ssc.freeAllocationRequest,
@@ -289,7 +288,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[1],
 				ToClientID:   ADDRESS,
 				CreationDate: common.Timestamp(viper.GetInt64(sc.Now)),
-				Value:        100 * viper.GetInt64(sc.StorageMinAllocSize),
+				Value:        int64(viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation) * 1e10),
 			},
 			input: func() []byte {
 				var request = struct {
@@ -325,7 +324,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-		*/
 		{
 			name:     "storage.free_update_allocation",
 			endpoint: ssc.updateFreeStorageRequest,
