@@ -40,23 +40,13 @@ func validateConfig() {
 		log.Fatal(fmt.Errorf("number of clients %d less than avalable keys %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.AvailableKeys)))
 	}
-	if viper.GetInt(bk.NumMiners) < viper.GetInt(bk.AvailableKeys) {
-		log.Fatal(fmt.Errorf("number of miners %d less than avalable keys %d",
-			viper.GetInt(bk.NumMiners), viper.GetInt(bk.AvailableKeys)))
-	}
-	if viper.GetInt(bk.NumSharders) < viper.GetInt(bk.AvailableKeys) {
-		log.Fatal(fmt.Errorf("number of sharders %d less than avalable keys %d",
-			viper.GetInt(bk.NumSharders), viper.GetInt(bk.AvailableKeys)))
-	}
-
-	if viper.GetInt(bk.NumBlobbersPerAllocation) < viper.GetInt(bk.AvailableKeys) {
-		log.Fatal(fmt.Errorf("number of blobber per allocation %d must be lestt than the avalable keys %d",
-			viper.GetInt(bk.NumSharders), viper.GetInt(bk.AvailableKeys)))
-	}
 
 	if viper.GetInt(bk.NumClients) <= multisigsc.MaxSigners {
 		log.Fatal(fmt.Errorf("number of clients %d must be greater than multi sig max singers %d",
 			viper.GetInt(bk.NumClients), multisigsc.MaxSigners))
 	}
-
+	if viper.GetInt(bk.NumClients) >= viper.GetInt(bk.NumAllocations) {
+		log.Fatal(fmt.Errorf("number of clients %d must be alt esst than the number of allocations %d",
+			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAllocations)))
+	}
 }

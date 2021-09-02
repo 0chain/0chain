@@ -27,92 +27,18 @@ func AddMockAllocations(
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
 		allocations Allocations
-		wps         = make([]*writePool, 0, len(clients))
-		rps         = make([]*readPool, 0, len(clients))
+		wps         = make([]*writePool, len(clients), len(clients))
+		rps         = make([]*readPool, len(clients), len(clients))
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
 		fps         = make([]fundedPools, len(clients), len(clients))
-		now         = common.Timestamp(time.Now().Unix())
-		challanges  = make([]BlobberChallenge, len(blobbers), len(blobbers))
-	)
 
-	lock := state.Balance(float64(getMockBlobberTerms().WritePrice) *
-		sizeInGB(viper.GetInt64(sc.StorageMinAllocSize)))
-	expire := common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
-	//common.Timestamp(viper.GetInt64(sc.Now))
+		challanges = make([]BlobberChallenge, len(blobbers), len(blobbers))
+	)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
-		clientIndex := getMockClientFromAllocationIndex(i, len(clients))
-		client := clients[clientIndex]
-		id := getMockAllocationId(i)
-		sa := &StorageAllocation{
-			ID:                         id,
-			DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-			ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
-			Size:                       viper.GetInt64(sc.StorageMinAllocSize),
-			Expiration:                 expire,
-			Owner:                      client,
-			OwnerPublicKey:             publicKeys[clientIndex],
-			ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
-			WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
-			MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
-			DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
-			WritePoolOwners:            []string{client},
-			Stats: &StorageAllocationStats{
-				UsedSize:                  1,
-				NumWrites:                 1,
-				NumReads:                  1,
-				TotalChallenges:           1,
-				OpenChallenges:            1,
-				SuccessChallenges:         1,
-				FailedChallenges:          1,
-				LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
-			},
-		}
-		for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
-			sa.Curators = append(sa.Curators, clients[j])
-		}
-		if cas[clientIndex] == nil {
-			cas[clientIndex] = &ClientAllocation{
-				ClientID:    client,
-				Allocations: &Allocations{},
-			}
-		}
-		cas[clientIndex].Allocations.List.add(sa.ID)
-		numAllocBlobbers := sa.DataShards + sa.ParityShards
-		startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
-		for j := 0; j < numAllocBlobbers; j++ {
-			bIndex := startBlobbers + j
-			bId := getMockBlobberId(bIndex)
-			sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
-				BlobberID:      bId,
-				AllocationID:   sa.ID,
-				Size:           viper.GetInt64(sc.StorageMinAllocSize),
-				Stats:          &StorageAllocationStats{},
-				Terms:          getMockBlobberTerms(),
-				MinLockDemand:  mockMinLockDemand,
-				AllocationRoot: encryption.Hash("allocation root"),
-			})
-			sps[startBlobbers+j].Offers[sa.ID] = &offerPool{
-				Lock:   lock,
-				Expire: expire,
-			}
-			sa.Blobbers = append(sa.Blobbers, &StorageNode{
-				ID:                bId,
-				BaseURL:           bId + ".com",
-				Terms:             getMockBlobberTerms(),
-				Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-				Used:              0,
-				LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
-				PublicKey:         "",
-				StakePoolSettings: getMockStakePoolSettings(bId),
-			})
-			setupMockChallenges(
-				sa.ID,
-				bIndex,
-				blobbers[bIndex],
-				&challanges[bIndex],
-				validators,
-			)
-		}
+		cIndex := getMockClientFromAllocationIndex(i, len(clients))
+		sa := addMockAllocation(
+			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators,
+		)
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
 			panic(err)
@@ -124,20 +50,15 @@ func AddMockAllocations(
 		cp.Balance = mockMinLockDemand * 100
 		_, err = balances.InsertTrieNode(challengePoolKey(sscId, sa.ID), cp)
 
-		startClients := (i % (len(clients) - viper.GetInt(sc.NumAllocationPlayerPools)))
+		startClients := i % len(clients)
 		amountPerBlobber := state.Balance(100 * 1e10)
 		for j := 0; j < viper.GetInt(sc.NumAllocationPlayer); j++ {
-			cIndex := startClients + j
-			var wp *writePool
-			var rp *readPool
-			if len(wps) > cIndex {
-				wp = wps[cIndex]
-				rp = rps[cIndex]
-			} else {
-				wp = new(writePool)
-				wps = append(wps, wp)
-				rp = new(readPool)
-				rps = append(rps, rp)
+			cIndex := (startClients + j) % len(clients)
+			if wps[cIndex] == nil {
+				wps[cIndex] = new(writePool)
+			}
+			if rps[cIndex] == nil {
+				rps[cIndex] = new(readPool)
 			}
 			for k := 0; k < viper.GetInt(sc.NumAllocationPlayerPools); k++ {
 				wap := allocationPool{
@@ -154,6 +75,8 @@ func AddMockAllocations(
 				rap.Balance = 100 * 1e10
 				rap.ID = getMockReadPoolId(i, cIndex, k)
 				rap.Balance = 100 * 1e10
+				startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
+				numAllocBlobbers := sa.DataShards + sa.ParityShards
 				for l := 0; l < numAllocBlobbers; l++ {
 					wap.Blobbers.add(&blobberPool{
 						BlobberID: getMockBlobberId(startBlobbers + l),
@@ -166,24 +89,31 @@ func AddMockAllocations(
 				}
 				fps[cIndex] = append(fps[cIndex], wap.ID)
 				fps[cIndex] = append(fps[cIndex], rap.ID)
-				wp.Pools = append(wp.Pools, &wap)
-				rp.Pools = append(rp.Pools, &rap)
+				wps[cIndex].Pools = append(wps[cIndex].Pools, &wap)
+				rps[cIndex].Pools = append(rps[cIndex].Pools, &rap)
 			}
 		}
 	}
 	for i := 0; i < len(wps); i++ {
-		_, err := balances.InsertTrieNode(writePoolKey(sscId, clients[i]), wps[i])
+		_, err := balances.InsertTrieNode(writePoolKey(ADDRESS, clients[i]), wps[i])
 		if err != nil {
 			panic(err)
 		}
-		_, err = balances.InsertTrieNode(readPoolKey(sscId, clients[i]), rps[i])
+		_, err = balances.InsertTrieNode(readPoolKey(ADDRESS, clients[i]), rps[i])
 		if err != nil {
 			panic(err)
 		}
-
+		var fp fundedPools
+		for _, pool := range wps[i].Pools {
+			fp = append(fp, pool.ID)
+		}
+		for _, pool := range rps[i].Pools {
+			fp = append(fp, pool.ID)
+		}
+		_, _ = balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
 	}
 	for i, fp := range fps {
-		_, err := balances.InsertTrieNode(fundedPoolsKey(sscId, clients[i]), &fp)
+		_, err := balances.InsertTrieNode(fundedPoolsKey(ADDRESS, clients[i]), &fp)
 		if err != nil {
 			panic(err)
 		}
@@ -191,19 +121,16 @@ func AddMockAllocations(
 
 	for _, ca := range cas {
 		if ca != nil {
-			_, err := balances.InsertTrieNode(ca.GetKey(sscId), ca)
+			_, err := balances.InsertTrieNode(ca.GetKey(ADDRESS), ca)
 			if err != nil {
 				panic(err)
 			}
 		}
 	}
 	for _, ch := range challanges {
-		//ch.BlobberID = blobbers[i].ID  d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
-		// challenge d2e600fcbefd8f52e02fa726149fd54ae2b5f2c1621fe26161a7a52892ca4591
 		if len(ch.Challenges) > 0 {
 			ch.LatestCompletedChallenge = ch.Challenges[0]
 		}
-		// key 6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7:blobberchallenge:d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
 		_, err := balances.InsertTrieNode(ch.GetKey(ADDRESS), &ch)
 		if err != nil {
 			panic(err)
@@ -214,6 +141,98 @@ func AddMockAllocations(
 	if err != nil {
 		panic(err)
 	}
+}
+
+func addMockAllocation(
+	i, cIndex int,
+	cas []*ClientAllocation,
+	publicKey string,
+	clients []string,
+	sps []*stakePool,
+	blobbers []*StorageNode,
+	challanges []BlobberChallenge,
+	validators []*ValidationNode,
+) *StorageAllocation {
+	const mockMinLockDemand = 1
+	var (
+		now    = common.Timestamp(time.Now().Unix())
+		expire = common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
+		lock   = state.Balance(float64(getMockBlobberTerms().WritePrice) *
+			sizeInGB(viper.GetInt64(sc.StorageMinAllocSize)))
+		id = getMockAllocationId(i)
+	)
+
+	sa := &StorageAllocation{
+		ID:                         id,
+		DataShards:                 viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		ParityShards:               viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
+		Size:                       viper.GetInt64(sc.StorageMinAllocSize),
+		Expiration:                 expire,
+		Owner:                      clients[cIndex],
+		OwnerPublicKey:             publicKey,
+		ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxReadPrice) * 1e10)},
+		WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(sc.StorageMaxWritePrice) * 1e10)},
+		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
+		DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
+		WritePoolOwners:            []string{clients[cIndex]},
+		Stats: &StorageAllocationStats{
+			UsedSize:                  1,
+			NumWrites:                 1,
+			NumReads:                  1,
+			TotalChallenges:           1,
+			OpenChallenges:            1,
+			SuccessChallenges:         1,
+			FailedChallenges:          1,
+			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
+		},
+	}
+	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
+		sa.Curators = append(sa.Curators, clients[j])
+	}
+	if cas[cIndex] == nil {
+		cas[cIndex] = &ClientAllocation{
+			ClientID:    clients[cIndex],
+			Allocations: &Allocations{},
+		}
+	}
+	cas[cIndex].Allocations.List.add(sa.ID)
+	numAllocBlobbers := sa.DataShards + sa.ParityShards
+	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
+	for j := 0; j < numAllocBlobbers; j++ {
+		bIndex := startBlobbers + j
+		bId := getMockBlobberId(bIndex)
+		sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
+			BlobberID:      bId,
+			AllocationID:   sa.ID,
+			Size:           viper.GetInt64(sc.StorageMinAllocSize),
+			Stats:          &StorageAllocationStats{},
+			Terms:          getMockBlobberTerms(),
+			MinLockDemand:  mockMinLockDemand,
+			AllocationRoot: encryption.Hash("allocation root"),
+		})
+		sps[startBlobbers+j].Offers[sa.ID] = &offerPool{
+			Lock:   lock,
+			Expire: expire,
+		}
+		sa.Blobbers = append(sa.Blobbers, &StorageNode{
+			ID:                bId,
+			BaseURL:           bId + ".com",
+			Terms:             getMockBlobberTerms(),
+			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
+			Used:              0,
+			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			PublicKey:         "",
+			StakePoolSettings: getMockStakePoolSettings(bId),
+		})
+		setupMockChallenges(
+			getMockAllocationId(i),
+			bIndex,
+			blobbers[bIndex],
+			&challanges[bIndex],
+			validators,
+		)
+	}
+	return sa
 }
 
 func setupMockChallenges(

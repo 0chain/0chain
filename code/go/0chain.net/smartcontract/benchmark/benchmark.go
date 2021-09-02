@@ -173,7 +173,7 @@ var (
 	NumClients                   = Simulation + SimulationNumClients.String()
 	NumMiners                    = Simulation + SimulationNumMiners.String()
 	NumSharders                  = Simulation + SimulationNumSharders.String()
-	NumAllocations               = Simulation + SimulationNumAllocationPlayer.String()
+	NumAllocations               = Simulation + SimulationNumAllocations.String()
 	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
 	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
 	NumAllocationPlayerPools     = Simulation + SimulationNumAllocationPlayerPools.String()

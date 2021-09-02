@@ -50,7 +50,6 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 func BenchmarkTests(
 	data sc.BenchData, sigScheme sc.SignatureScheme,
 ) sc.TestSuit {
-	//var now = common.Timestamp(viper.GetInt64(sc.Now))
 	var now = common.Now()
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
@@ -499,10 +498,9 @@ func BenchmarkTests(
 			txn:      transaction.Transaction{},
 			input:    []byte{},
 		},
-		/* todo read_unlock_lock, seems to be bugged, needs to be fixed before can benchmark
 		{
-			name:     "storage.read_pool_unlock",
-			endpoint: ssc.readPoolUnlock,
+			name:     "storage.read_pool_lock",
+			endpoint: ssc.readPoolLock,
 			txn: transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
@@ -512,37 +510,71 @@ func BenchmarkTests(
 				ToClientID: ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&unlockRequest{
-					PoolID: data.Allocations[0],
+				bytes, _ := json.Marshal(&lockRequest{
+					Duration:     viper.GetDuration(sc.StorageReadPoolMinLockPeriod),
+					AllocationID: getMockAllocationId(0),
 				})
 				return bytes
 			}(),
 		},
-		*/
-		// todo read_pool_lock, seems to be bugged, needs to be fixed before we can benchmark
-		// write pool
-		/*
-			{
-				name:     "storage.write_pool_unlock",
-				endpoint: ssc.readPoolUnlock,
-				txn: transaction.Transaction{
-					HashIDField: datastore.HashIDField{
-						Hash: encryption.Hash("mock transaction hash"),
-					},
-					Value:      int64(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
-					ClientID:   data.Clients[0],
-					ToClientID: ADDRESS,
+		{
+			name:     "storage.read_pool_unlock",
+			endpoint: ssc.readPoolUnlock,
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
 				},
-				input: func() []byte {
-					bytes, _ := json.Marshal(&unlockRequest{
-						PoolID: data.Allocations[0],
-					})
-					return bytes
-				}(),
+				Value:        int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
+				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
+				CreationDate: now + common.Timestamp(viper.GetDuration(sc.StorageWritePoolMinLockPeriod))*10,
 			},
-		*/
-		// todo write_pool_unlock, seems to be bugged, needs to be fixed before we can benchmark
-		// todo write_pool_lock, seems to be bugged, needs to be fixed before we can benchmark
+			input: func() []byte {
+				bytes, _ := json.Marshal(&unlockRequest{
+					PoolID: getMockReadPoolId(0, 0, 0),
+				})
+				return bytes
+			}(),
+		},
+		// write pool
+		{
+			name:     "storage.write_pool_lock",
+			endpoint: ssc.writePoolLock,
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				Value:      int64(viper.GetFloat64(sc.StorageWritePoolMinLock) * 1e10),
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&lockRequest{
+					Duration:     viper.GetDuration(sc.StorageWritePoolMinLockPeriod),
+					AllocationID: getMockAllocationId(0),
+				})
+				return bytes
+			}(),
+		},
+		{
+			name:     "storage.write_pool_unlock",
+			endpoint: ssc.writePoolUnlock,
+			txn: transaction.Transaction{
+				HashIDField: datastore.HashIDField{
+					Hash: encryption.Hash("mock transaction hash"),
+				},
+				Value:        int64(viper.GetFloat64(sc.StorageReadPoolMinLock) * 1e10),
+				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
+				CreationDate: now + common.Timestamp(viper.GetDuration(sc.StorageWritePoolMinLockPeriod))*10,
+			},
+			input: func() []byte {
+				bytes, _ := json.Marshal(&unlockRequest{
+					PoolID: getMockWritePoolId(0, 0, 0),
+				})
+				return bytes
+			}(),
+		},
 
 		// stake pool
 		{
