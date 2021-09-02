@@ -126,14 +126,23 @@ func printResults(results []suiteResults, verbose bool) {
 			} else {
 				colour = colourGreen
 			}
-			fmt.Printf(
-				"%s%s,%f%s%s\n",
-				colour,
-				bkResult.test.Name(),
-				takenMs,
-				colourReset,
-				"ms",
-			)
+			if verbose {
+				fmt.Printf(
+					"%s%s,%f%s%s\n",
+					colour,
+					bkResult.test.Name(),
+					takenMs,
+					colourReset,
+					"ms",
+				)
+			} else {
+				fmt.Printf(
+					"%s,%f\n",
+					bkResult.test.Name(),
+					takenMs,
+				)
+			}
+
 		}
 	}
 

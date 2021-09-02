@@ -14,10 +14,10 @@ go build -tags bn256
 ./main benchmark benchmark --tests "miner, storage" | column -t -s,
 ```
 
-To only print out the comma delimited data use teh `-verbose false` flat
+To only print out the comma delimited data without any updates, use the `-verbose false` flag
 ```bash
 go build -tags bn256
-./main benchmark  --verbose false | column -t -s,
+./main benchmark  --verbose=false | column -t -s,
 ```
 
 Setup parameters in [benchmark.yaml](https://github.com/0chain/0chain/blob/bench-sc/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
