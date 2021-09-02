@@ -45,7 +45,7 @@ func BenchmarkRestTests(
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "getNodepool",
+			name:     "miner_rest.getNodepool",
 			endpoint: msc.GetNodepoolHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -55,7 +55,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getUserPools",
+			name:     "miner_rest.getUserPools",
 			endpoint: msc.GetUserPoolsHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -64,35 +64,35 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getMinerList",
+			name:     "miner_rest.getMinerList",
 			endpoint: msc.GetMinerListHandler,
 		},
 		{
-			name:     "getSharderList",
+			name:     "miner_rest.getSharderList",
 			endpoint: msc.GetSharderListHandler,
 		},
 		{
-			name:     "getPhase",
+			name:     "miner_rest.getPhase",
 			endpoint: msc.GetPhaseHandler,
 		},
 		{
-			name:     "getDkgList",
+			name:     "miner_rest.getDkgList",
 			endpoint: msc.GetDKGMinerListHandler,
 		},
 		{
-			name:     "getMpksList",
+			name:     "miner_rest.getMpksList",
 			endpoint: msc.GetMinersMpksListHandler,
 		},
 		{
-			name:     "getGroupShareOrSigns",
+			name:     "miner_rest.getGroupShareOrSigns",
 			endpoint: msc.GetGroupShareOrSignsHandler,
 		},
 		{
-			name:     "getMagicBlock",
+			name:     "miner_rest.getMagicBlock",
 			endpoint: msc.GetMagicBlockHandler,
 		},
 		{
-			name:     "nodeStat",
+			name:     "miner_rest.nodeStat",
 			endpoint: msc.nodeStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -101,7 +101,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "nodePoolStat",
+			name:     "miner_rest.nodePoolStat",
 			endpoint: msc.nodePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -111,7 +111,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "configs",
+			name:     "miner_rest.configs",
 			endpoint: msc.configsHandler,
 		},
 	}

@@ -345,7 +345,7 @@ func BenchmarkTests(
 					FreeTokens float64          `json:"free_tokens"`
 					Timestamp  common.Timestamp `json:"timestamp"`
 				}{
-					data.Clients[1],
+					data.Clients[0],
 					viper.GetFloat64(sc.StorageMaxIndividualFreeAllocation),
 					1,
 				}
@@ -361,7 +361,7 @@ func BenchmarkTests(
 					Signature:  signature,
 				})
 				bytes, _ := json.Marshal(&freeStorageUpgradeInput{
-					AllocationId: getMockAllocationId(1),
+					AllocationId: getMockAllocationId(0),
 					Marker:       string(fsmBytes),
 				})
 				return bytes

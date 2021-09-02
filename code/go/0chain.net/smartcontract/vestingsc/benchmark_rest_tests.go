@@ -49,7 +49,7 @@ func BenchmarkRestTests(
 			endpoint: vsc.getConfigHandler,
 		},
 		{
-			name:     "getPoolInfo",
+			name:     "vesting_rest.getPoolInfo",
 			endpoint: vsc.getPoolInfoHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -58,7 +58,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getClientPools",
+			name:     "vesting_rest.getClientPools",
 			endpoint: vsc.getClientPoolsHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)

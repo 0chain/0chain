@@ -51,11 +51,11 @@ func BenchmarkRestTests(
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "getConfig",
+			name:     "storage_rest.getConfig",
 			endpoint: ssc.getConfigHandler,
 		},
 		{
-			name:     "latestreadmarker",
+			name:     "storage_rest.latestreadmarker",
 			endpoint: ssc.LatestReadMarkerHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -65,7 +65,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "allocation",
+			name:     "storage_rest.allocation",
 			endpoint: ssc.AllocationStatsHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -74,7 +74,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "allocations",
+			name:     "storage_rest.allocations",
 			endpoint: ssc.GetAllocationsHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -83,7 +83,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "allocation_min_lock",
+			name:     "storage_rest.allocation_min_lock",
 			endpoint: ssc.GetAllocationMinLockHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -106,7 +106,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "openchallenges",
+			name:     "storage_rest.openchallenges",
 			endpoint: ssc.OpenChallengeHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -115,7 +115,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getchallenge",
+			name:     "storage_rest.getchallenge",
 			endpoint: ssc.GetChallengeHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -125,11 +125,11 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getblobbers",
+			name:     "storage_rest.getblobbers",
 			endpoint: ssc.GetBlobbersHandler,
 		},
 		{
-			name:     "getBlobber",
+			name:     "storage_rest.getBlobber",
 			endpoint: ssc.GetBlobberHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -138,7 +138,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getReadPoolStat",
+			name:     "storage_rest.getReadPoolStat",
 			endpoint: ssc.getReadPoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -147,7 +147,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getReadPoolAllocBlobberStat",
+			name:     "storage_rest.getReadPoolAllocBlobberStat",
 			endpoint: ssc.getReadPoolAllocBlobberStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -158,7 +158,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getWritePoolStat",
+			name:     "storage_rest.getWritePoolStat",
 			endpoint: ssc.getWritePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -167,7 +167,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getWritePoolAllocBlobberStat",
+			name:     "storage_rest.getWritePoolAllocBlobberStat",
 			endpoint: ssc.getWritePoolAllocBlobberStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -178,7 +178,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getStakePoolStat",
+			name:     "storage_rest.getStakePoolStat",
 			endpoint: ssc.getStakePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -187,7 +187,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getUserStakePoolStat",
+			name:     "storage_rest.getUserStakePoolStat",
 			endpoint: ssc.getUserStakePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -196,7 +196,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getChallengePoolStat",
+			name:     "storage_rest.getChallengePoolStat",
 			endpoint: ssc.getChallengePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)

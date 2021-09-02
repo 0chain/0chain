@@ -156,13 +156,6 @@ func printSimSettings(verbose bool) {
 		for i := bk.SimulatorParameter(0); i < bk.NumberSimulationParameters; i++ {
 			println(i.String(), viper.GetInt(bk.Simulation+i.String()))
 		}
-
-		//println("simulator settings")
-		//println("num clients", viper.GetInt(bk.NumClients))
-		//println("num miners", viper.GetInt(bk.NumMiners))
-		//println("num sharders", viper.GetInt(bk.NumSharders))
-		//println("num blobbers", viper.GetInt(bk.NumBlobbers))
-		//println("num allocations", viper.GetInt(bk.NumAllocations))
 		println()
 	}
 }

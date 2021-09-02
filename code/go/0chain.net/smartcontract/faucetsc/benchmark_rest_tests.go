@@ -45,7 +45,7 @@ func BenchmarkRestTests(
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "personalPeriodicLimit",
+			name:     "faucet_rest.personalPeriodicLimit",
 			endpoint: fsc.personalPeriodicLimit,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -54,15 +54,15 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "globalPerodicLimit",
+			name:     "faucet_rest.globalPerodicLimit",
 			endpoint: fsc.globalPerodicLimit,
 		},
 		{
-			name:     "pourAmount",
+			name:     "faucet_rest.pourAmount",
 			endpoint: fsc.pourAmount,
 		},
 		{
-			name:     "getConfig",
+			name:     "faucet_rest.getConfig",
 			endpoint: fsc.getConfigHandler,
 		},
 	}

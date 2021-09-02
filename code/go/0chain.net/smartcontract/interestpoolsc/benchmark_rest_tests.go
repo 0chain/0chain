@@ -45,7 +45,7 @@ func BenchmarkRestTests(
 	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "getPoolsStats",
+			name:     "interest_pool_rest.getPoolsStats",
 			endpoint: isc.getPoolsStats,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
@@ -54,7 +54,7 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "getLockConfig",
+			name:     "interest_pool_rest.getLockConfig",
 			endpoint: isc.getLockConfig,
 		},
 	}
