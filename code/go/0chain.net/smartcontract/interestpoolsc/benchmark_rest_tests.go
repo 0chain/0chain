@@ -25,8 +25,8 @@ func (rbt RestBenchTest) Name() string {
 	return rbt.name
 }
 
-func (bt RestBenchTest) Transaction() transaction.Transaction {
-	return transaction.Transaction{}
+func (bt RestBenchTest) Transaction() *transaction.Transaction {
+	return &transaction.Transaction{}
 }
 
 func (rbt RestBenchTest) Run(balances cstate.StateContextI) {

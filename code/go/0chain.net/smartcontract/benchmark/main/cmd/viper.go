@@ -25,9 +25,6 @@ func GetViper(path string) {
 	if err != nil {
 		panic(err)
 	}
-	aa := config.SmartContractConfig
-	aa = aa
-
 	config.SmartContractConfig = cviper.GetViper()
 	validateConfig()
 }

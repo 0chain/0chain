@@ -194,7 +194,7 @@ var (
 
 type BenchTestI interface {
 	Name() string
-	Transaction() transaction.Transaction
+	Transaction() *transaction.Transaction
 	Run(state.StateContextI)
 }
 

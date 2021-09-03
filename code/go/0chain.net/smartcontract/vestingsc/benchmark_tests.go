@@ -22,7 +22,7 @@ type BenchTest struct {
 		[]byte,
 		cstate.StateContextI,
 	) (string, error)
-	txn   transaction.Transaction
+	txn   *transaction.Transaction
 	input []byte
 }
 
@@ -30,12 +30,12 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI) {
-	_, err := bt.endpoint(&bt.txn, bt.input, balances)
+	_, err := bt.endpoint(bt.txn, bt.input, balances)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +53,7 @@ func BenchmarkTests(
 		{
 			name:     "vesting.trigger",
 			endpoint: vsc.trigger,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
 				CreationDate: now,
 			},
@@ -67,7 +67,7 @@ func BenchmarkTests(
 		{
 			name:     "vesting.unlock",
 			endpoint: vsc.unlock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
 				CreationDate: now,
 			},
@@ -81,7 +81,7 @@ func BenchmarkTests(
 		{
 			name:     "vesting.add",
 			endpoint: vsc.add,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 				Value:    int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
 			},
@@ -102,7 +102,7 @@ func BenchmarkTests(
 		{
 			name:     "vesting.stop",
 			endpoint: vsc.stop,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
 				CreationDate: now,
 			},
@@ -117,7 +117,7 @@ func BenchmarkTests(
 		{
 			name:     "vesting.delete",
 			endpoint: vsc.delete,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:     data.Clients[0],
 				CreationDate: now,
 			},

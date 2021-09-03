@@ -41,7 +41,7 @@ func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatrici
 }
 
 func getBalances(
-	txn transaction.Transaction,
+	txn *transaction.Transaction,
 	mpt *util.MerklePatriciaTrie,
 	data benchmark.BenchData,
 ) (*util.MerklePatriciaTrie, cstate.StateContextI) {
@@ -60,7 +60,7 @@ func getBalances(
 		bk,
 		mpt,
 		&state.Deserializer{},
-		&txn,
+		txn,
 		func(*block.Block) []string { return data.Sharders },
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },

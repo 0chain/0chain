@@ -11,7 +11,7 @@ import (
 type BenchTest struct {
 	name     string
 	endpoint string
-	txn      transaction.Transaction
+	txn      *transaction.Transaction
 	input    []byte
 }
 
@@ -19,7 +19,7 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
@@ -28,15 +28,15 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
-	gn := fsc.getGlobalVariables(&bt.txn, balances)
+	gn := fsc.getGlobalVariables(bt.txn, balances)
 	var err error
 	switch bt.endpoint {
 	case "updateLimits":
-		_, err = fsc.updateLimits(&bt.txn, bt.input, balances, gn)
+		_, err = fsc.updateLimits(bt.txn, bt.input, balances, gn)
 	case "pour":
-		_, err = fsc.pour(&bt.txn, bt.input, balances, gn)
+		_, err = fsc.pour(bt.txn, bt.input, balances, gn)
 	case "refill":
-		_, _ = fsc.refill(&bt.txn, balances, gn)
+		_, _ = fsc.refill(bt.txn, balances, gn)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
@@ -53,7 +53,7 @@ func BenchmarkTests(
 		{
 			name:     "faucet.pour",
 			endpoint: "pour",
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				Value:    3,
 				ClientID: data.Clients[0],
 			},
@@ -62,7 +62,7 @@ func BenchmarkTests(
 		{
 			name:     "faucet.refill",
 			endpoint: "refill",
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				Value:      23,
 				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,

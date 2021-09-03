@@ -28,7 +28,7 @@ type BenchTest struct {
 		[]byte,
 		cstate.StateContextI,
 	) (string, error)
-	txn   transaction.Transaction
+	txn   *transaction.Transaction
 	input []byte
 }
 
@@ -36,12 +36,12 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI) {
-	_, err := bt.endpoint(&bt.txn, bt.input, balances)
+	_, err := bt.endpoint(bt.txn, bt.input, balances)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +60,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.read_redeem",
 			endpoint: ssc.commitBlobberRead,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,
 			},
@@ -86,7 +86,7 @@ func BenchmarkTests(
 		{
 			name:     "commit_connection",
 			endpoint: ssc.commitBlobberConnection,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:   getMockBlobberId(0),
 				ToClientID: ADDRESS,
 			},
@@ -116,7 +116,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.new_allocation_request_random",
 			endpoint: ssc.newAllocationRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -144,7 +144,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.new_allocation_request_preferred",
 			endpoint: ssc.newAllocationRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -178,7 +178,7 @@ func BenchmarkTests(
 			{
 				name:     "storage.new_allocation_request_diversify",
 				endpoint: ssc.newAllocationRequest,
-				txn: transaction.Transaction{
+				txn: &transaction.Transaction{
 					HashIDField: datastore.HashIDField{
 						Hash: encryption.Hash("mock transaction hash"),
 					},
@@ -207,7 +207,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.update_allocation_request",
 			endpoint: ssc.updateAllocationRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -228,7 +228,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.finalize_allocation",
 			endpoint: ssc.finalizeAllocation,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -246,7 +246,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.cancel_allocation",
 			endpoint: ssc.cancelAllocationRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -265,7 +265,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.add_free_storage_assigner",
 			endpoint: ssc.addFreeStorageAssigner,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: owner,
 			},
 			input: func() []byte {
@@ -281,7 +281,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.free_allocation_request",
 			endpoint: ssc.freeAllocationRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -327,7 +327,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.free_update_allocation",
 			endpoint: ssc.updateFreeStorageRequest,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -369,7 +369,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.add_blobber",
 			endpoint: ssc.addBlobber,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -391,7 +391,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.add_validator",
 			endpoint: ssc.addValidator,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -411,7 +411,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.blobber_health_check",
 			endpoint: ssc.blobberHealthCheck,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -424,7 +424,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.update_blobber_settings",
 			endpoint: ssc.updateBlobberSettings,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -446,7 +446,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.curator_transfer_allocation",
 			endpoint: ssc.curatorTransferAllocation,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -464,7 +464,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.add_curator",
 			endpoint: ssc.addCurator,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 			},
 			input: func() []byte {
@@ -478,7 +478,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.remove_curator",
 			endpoint: ssc.removeCurator,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 			},
 			input: func() []byte {
@@ -493,13 +493,13 @@ func BenchmarkTests(
 		{
 			name:     "storage.new_read_pool",
 			endpoint: ssc.newReadPool,
-			txn:      transaction.Transaction{},
+			txn:      &transaction.Transaction{},
 			input:    []byte{},
 		},
 		{
 			name:     "storage.read_pool_lock",
 			endpoint: ssc.readPoolLock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -518,7 +518,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.read_pool_unlock",
 			endpoint: ssc.readPoolUnlock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -538,7 +538,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.write_pool_lock",
 			endpoint: ssc.writePoolLock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -557,7 +557,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.write_pool_unlock",
 			endpoint: ssc.writePoolUnlock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
@@ -578,7 +578,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.stake_pool_lock",
 			endpoint: ssc.stakePoolLock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 				Value:    int64(viper.GetFloat64(sc.StorageStakePoolMinLock) * 1e10),
 			},
@@ -594,7 +594,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.stake_pool_unlock",
 			endpoint: ssc.stakePoolUnlock,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,
 			},
@@ -609,7 +609,7 @@ func BenchmarkTests(
 		{
 			name:     "storage.stake_pool_pay_interests",
 			endpoint: ssc.stakePoolPayInterests,
-			txn:      transaction.Transaction{},
+			txn:      &transaction.Transaction{},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: getMockBlobberId(0),
@@ -636,7 +636,7 @@ func BenchmarkTests(
 				}
 				return "Challenges generated", nil
 			},
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				CreationDate: common.Timestamp(viper.GetInt64(sc.Now)),
 			},
 			input: nil,

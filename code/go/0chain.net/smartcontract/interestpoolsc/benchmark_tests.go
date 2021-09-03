@@ -14,7 +14,7 @@ import (
 type BenchTest struct {
 	name     string
 	endpoint string
-	txn      transaction.Transaction
+	txn      *transaction.Transaction
 	input    []byte
 }
 
@@ -22,7 +22,7 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
@@ -36,9 +36,9 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 	var err error
 	switch bt.endpoint {
 	case "lock":
-		_, err = isc.lock(&bt.txn, un, gn, bt.input, balances)
+		_, err = isc.lock(bt.txn, un, gn, bt.input, balances)
 	case "unlock":
-		_, err = isc.unlock(&bt.txn, un, gn, bt.input, balances)
+		_, err = isc.unlock(bt.txn, un, gn, bt.input, balances)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
@@ -55,7 +55,7 @@ func BenchmarkTests(
 		{
 			name:     "interest_pool.lock",
 			endpoint: "lock",
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				Value:      int64(viper.GetFloat64(bk.InterestPoolMinLock) * 1e10),
 				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,
@@ -67,7 +67,7 @@ func BenchmarkTests(
 		{
 			name:     "interest_pool.unlock",
 			endpoint: "unlock",
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				CreationDate: 2 * common.Timestamp(viper.GetDuration(bk.InterestPoolMinLockPeriod)),
 				ClientID:     data.Clients[0],
 			},

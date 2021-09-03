@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
@@ -386,6 +388,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(&allocation, nil).Once()
 
 		balances.On(
+			"GetSignatureScheme",
+		).Return(encryption.NewBLS0ChainScheme()).Once()
+
+		balances.On(
 			"AddMint", &state.Mint{
 				Minter:     ADDRESS,
 				ToClientID: ADDRESS,
@@ -701,6 +707,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		balances.On(
 			"GetTrieNode", challengePoolKey(ssc.ID, p.allocationId),
 		).Return(&challengePool{}, nil).Once()
+
+		balances.On(
+			"GetSignatureScheme",
+		).Return(encryption.NewBLS0ChainScheme()).Once()
 
 		balances.On(
 			"InsertTrieNode",

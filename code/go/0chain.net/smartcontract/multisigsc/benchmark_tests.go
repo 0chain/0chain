@@ -17,7 +17,7 @@ import (
 type BenchTest struct {
 	name     string
 	endpoint string
-	txn      transaction.Transaction
+	txn      *transaction.Transaction
 	input    []byte
 }
 
@@ -25,7 +25,7 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
@@ -65,7 +65,7 @@ func BenchmarkTests(
 		{
 			name:     "multi_sig." + RegisterFuncName,
 			endpoint: RegisterFuncName,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[len(data.Clients)-1],
 			},
 			input: func() []byte {
@@ -83,7 +83,7 @@ func BenchmarkTests(
 		{
 			name:     "multi_sig." + VoteFuncName,
 			endpoint: VoteFuncName,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 				HashIDField: datastore.HashIDField{
 					Hash: "my hash",

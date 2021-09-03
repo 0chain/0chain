@@ -22,7 +22,7 @@ type BenchTest struct {
 		*GlobalNode,
 		cstate.StateContextI,
 	) (string, error)
-	txn   transaction.Transaction
+	txn   *transaction.Transaction
 	input []byte
 }
 
@@ -30,7 +30,7 @@ func (bt BenchTest) Name() string {
 	return bt.name
 }
 
-func (bt BenchTest) Transaction() transaction.Transaction {
+func (bt BenchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
@@ -39,7 +39,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = bt.endpoint(&bt.txn, bt.input, gn, balances)
+	_, err = bt.endpoint(bt.txn, bt.input, gn, balances)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.add_miner",
 			endpoint: msc.AddMiner,
-			txn:      transaction.Transaction{},
+			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:                encryption.Hash("my new miner"),
@@ -74,7 +74,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.add_sharder",
 			endpoint: msc.AddSharder,
-			txn:      transaction.Transaction{},
+			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:                encryption.Hash("my new sharder"),
@@ -92,7 +92,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.miner_heath_check",
 			endpoint: msc.minerHealthCheck,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: nil,
@@ -100,7 +100,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.sharder_health_check",
 			endpoint: msc.sharderHealthCheck,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeSharder),
 			},
 			input: nil,
@@ -108,7 +108,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.payFees",
 			endpoint: msc.payFees,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:   GetMockNodeId(0, NodeTypeMiner),
 				ToClientID: ADDRESS,
 			},
@@ -117,7 +117,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.contributeMpk",
 			endpoint: msc.contributeMpk,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID:   GetMockNodeId(0, NodeTypeMiner),
 				ToClientID: ADDRESS,
 			},
@@ -153,7 +153,7 @@ func BenchmarkTests(
 				}
 				return msc.shareSignsOrShares(txn, input, gn, balances)
 			},
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: func() []byte {
@@ -170,7 +170,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.update_miner_settings",
 			endpoint: msc.UpdateMinerSettings,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: (&MinerNode{
@@ -186,7 +186,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.update_sharder_settings",
 			endpoint: msc.UpdateSharderSettings,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeSharder),
 			},
 			input: (&MinerNode{
@@ -202,7 +202,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.addToDelegatePool",
 			endpoint: msc.addToDelegatePool,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("transaction hash"),
 				},
@@ -217,7 +217,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.deleteFromDelegatePool",
 			endpoint: msc.deleteFromDelegatePool,
-			txn: transaction.Transaction{
+			txn: &transaction.Transaction{
 				ClientID: data.Clients[0],
 			},
 			input: (&deletePool{
@@ -228,7 +228,7 @@ func BenchmarkTests(
 		{
 			name:     "miner.sharder_keep",
 			endpoint: msc.sharderKeep,
-			txn:      transaction.Transaction{},
+			txn:      &transaction.Transaction{},
 			input: (&MinerNode{
 				SimpleNode: &SimpleNode{
 					ID:        GetMockNodeId(0, NodeTypeSharder),
