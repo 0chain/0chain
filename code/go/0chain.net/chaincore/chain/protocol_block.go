@@ -481,7 +481,6 @@ func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveT
 				zap.String("block", cb.Hash))
 		}
 
-		fmt.Println("cb round", cb.Round, ", index:", i, ", len:", len(blocks))
 		logging.Logger.Info("sync_blocks success", zap.Int64("round", cb.Round),
 			zap.String("block", cb.Hash))
 	}
