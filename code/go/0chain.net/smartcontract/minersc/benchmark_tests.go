@@ -6,6 +6,7 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -129,23 +130,43 @@ func BenchmarkTests(
 					Mpk: mpks,
 				}).Encode()
 			}(),
-		}, /* todo need to set PhaseNode.Phase differently for different tests
+		},
 		{
-			name:     "miner.shareSignsOrShares",
-			endpoint: msc.shareSignsOrShares,
+			name: "miner.shareSignsOrShares",
+			endpoint: func(
+				txn *transaction.Transaction,
+				input []byte,
+				gn *GlobalNode,
+				balances cstate.StateContextI,
+			) (string, error) {
+				// This is not best practise as adding the node will count as part
+				// of the test duration.
+				var pn = PhaseNode{
+					Phase:        Publish,
+					StartRound:   1,
+					CurrentRound: 2,
+					Restarts:     0,
+				}
+				_, err := balances.InsertTrieNode(pn.GetKey(), &pn)
+				if err != nil {
+					panic(err)
+				}
+				return msc.shareSignsOrShares(txn, input, gn, balances)
+			},
 			txn: transaction.Transaction{
-				ClientID:   data.Miners[0],
+				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
 			input: func() []byte {
 				var sos = make(map[string]*bls.DKGKeyShare)
 				for i := 0; i < viper.GetInt(bk.InternalT); i++ {
-					sos[data.Miners[i]] = &bls.DKGKeyShare{}
+					//sos[GetMockNodeId(i, NodeTypeMiner)] = &bls.DKGKeyShare{}
+					sos[GetMockNodeId(i, NodeTypeMiner)] = nil
 				}
 				return (&block.ShareOrSigns{
 					ShareOrSigns: sos,
 				}).Encode()
 			}(),
-		},*/
+		},
 		{
 			name:     "miner.update_miner_settings",
 			endpoint: msc.UpdateMinerSettings,

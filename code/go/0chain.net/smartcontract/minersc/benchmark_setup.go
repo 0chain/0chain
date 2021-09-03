@@ -160,6 +160,9 @@ func SetUpNodes(
 		nextMiner := &node.Node{}
 		nextMiner.TimersByURI = make(map[string]metrics.Timer, 10)
 		nextMiner.SizeByURI = make(map[string]metrics.Histogram, 10)
+		// if necessary we coule create a real (id, public key, private key)
+		// triplet here, but we would need to provide it to the tests as
+		// they would change each run. No test seems to need this so leaving it out.
 		nextMiner.ID = miner
 		nextMiner.PublicKey = "mockPublicKey"
 		nextMiner.Type = node.NodeTypeMiner
@@ -185,8 +188,8 @@ func AddMagicBlock(
 	var magicBlock block.MagicBlock
 	_, _ = balances.InsertTrieNode(MagicBlockKey, &magicBlock)
 
-	var gsos block.GroupSharesOrSigns
-	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, &gsos)
+	var gsos = block.NewGroupSharesOrSigns()
+	_, _ = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 }
 
 func AddPhaseNode(balances cstate.StateContextI) {
@@ -203,13 +206,10 @@ func AddPhaseNode(balances cstate.StateContextI) {
 }
 
 func getMinerDelegatePoolId(miner, delegate int, nodeType NodeType) string {
-	//return "delegate pool" +
-	//	strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType))
 	return encryption.Hash("delegate pool" +
 		strconv.Itoa(miner) + strconv.Itoa(delegate) + strconv.Itoa(int(nodeType)))
 }
 
 func GetMockNodeId(index int, nodeType NodeType) string {
-	//return "mock" + nodeType.String() + strconv.Itoa(index)
 	return encryption.Hash("mock" + nodeType.String() + strconv.Itoa(index))
 }

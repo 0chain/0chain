@@ -37,7 +37,7 @@ func (bt BenchTest) Transaction() transaction.Transaction {
 func (bt BenchTest) Run(balances cstate.StateContextI) {
 	_, err := bt.endpoint(&bt.txn, bt.input, balances)
 	if err != nil {
-		panic(err) // todo temporary, remove later
+		panic(err)
 	}
 }
 
