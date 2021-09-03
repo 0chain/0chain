@@ -45,7 +45,7 @@ func BenchmarkRestTests(
 	vsc.setSC(vsc.SmartContract, &smartcontract.BCContext{})
 	var tests = []RestBenchTest{
 		{
-			name:     "getConfig",
+			name:     "vesting_rest.getConfig",
 			endpoint: vsc.getConfigHandler,
 		},
 		{
