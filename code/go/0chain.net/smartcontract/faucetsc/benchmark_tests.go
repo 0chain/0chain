@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
 	bk "0chain.net/smartcontract/benchmark"
 )
 
@@ -20,7 +21,15 @@ func (bt BenchTest) Name() string {
 }
 
 func (bt BenchTest) Transaction() *transaction.Transaction {
-	return bt.txn
+	return &transaction.Transaction{
+		HashIDField: datastore.HashIDField{
+			Hash: bt.txn.Hash,
+		},
+		ClientID:     bt.txn.ClientID,
+		ToClientID:   bt.txn.ToClientID,
+		Value:        bt.txn.Value,
+		CreationDate: bt.txn.CreationDate,
+	}
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI) {
@@ -32,11 +41,11 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 	var err error
 	switch bt.endpoint {
 	case "updateLimits":
-		_, err = fsc.updateLimits(bt.txn, bt.input, balances, gn)
+		_, err = fsc.updateLimits(bt.Transaction(), bt.input, balances, gn)
 	case "pour":
-		_, err = fsc.pour(bt.txn, bt.input, balances, gn)
+		_, err = fsc.pour(bt.Transaction(), bt.input, balances, gn)
 	case "refill":
-		_, _ = fsc.refill(bt.txn, balances, gn)
+		_, _ = fsc.refill(bt.Transaction(), balances, gn)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}

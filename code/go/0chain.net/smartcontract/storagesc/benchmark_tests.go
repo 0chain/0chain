@@ -37,11 +37,19 @@ func (bt BenchTest) Name() string {
 }
 
 func (bt BenchTest) Transaction() *transaction.Transaction {
-	return bt.txn
+	return &transaction.Transaction{
+		HashIDField: datastore.HashIDField{
+			Hash: bt.txn.Hash,
+		},
+		ClientID:     bt.txn.ClientID,
+		ToClientID:   bt.txn.ToClientID,
+		Value:        bt.txn.Value,
+		CreationDate: bt.txn.CreationDate,
+	}
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI) {
-	_, err := bt.endpoint(bt.txn, bt.input, balances)
+	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	if err != nil {
 		panic(err)
 	}

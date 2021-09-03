@@ -2,6 +2,7 @@ package interestpoolsc
 
 import (
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"github.com/spf13/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -23,7 +24,15 @@ func (bt BenchTest) Name() string {
 }
 
 func (bt BenchTest) Transaction() *transaction.Transaction {
-	return bt.txn
+	return &transaction.Transaction{
+		HashIDField: datastore.HashIDField{
+			Hash: bt.txn.Hash,
+		},
+		ClientID:     bt.txn.ClientID,
+		ToClientID:   bt.txn.ToClientID,
+		Value:        bt.txn.Value,
+		CreationDate: bt.txn.CreationDate,
+	}
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI) {
@@ -36,9 +45,9 @@ func (bt BenchTest) Run(balances cstate.StateContextI) {
 	var err error
 	switch bt.endpoint {
 	case "lock":
-		_, err = isc.lock(bt.txn, un, gn, bt.input, balances)
+		_, err = isc.lock(bt.Transaction(), un, gn, bt.input, balances)
 	case "unlock":
-		_, err = isc.unlock(bt.txn, un, gn, bt.input, balances)
+		_, err = isc.unlock(bt.Transaction(), un, gn, bt.input, balances)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
