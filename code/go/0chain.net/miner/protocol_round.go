@@ -446,6 +446,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		logging.Logger.Error("gen_block",
 			zap.String("err", "required MB missing or still not finalized"),
+			zap.Int64("round offset", rnoff),
 			zap.Int64("next_vc", nvc),
 			zap.Int64("round", rn),
 			zap.Int64("lfmbr_sr", lfmbr.StartingRound),
@@ -1546,9 +1547,10 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	if have != nil && rcvd.Round-1 == have.Round {
 		rcvd.SetPreviousBlock(have)
 		mc.bumpLFBTicket(ctx, rcvd)
-		if !mc.ensureState(ctx, rcvd) {
-			// but continue with the block (?)
+		if err := mc.SyncStateOrComputeLocal(ctx, rcvd); err != nil {
+			logging.Logger.Error("ensure lfb", zap.Error(err))
 		}
+
 		logging.Logger.Info("ensure latest finalized block - set lfb",
 			zap.Int64("round", rcvd.Round))
 		mc.SetLatestFinalizedBlock(ctx, rcvd)
@@ -1558,6 +1560,16 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	syncNum := rcvd.Round
 	if have != nil && have.Round < rcvd.Round {
 		syncNum -= have.Round
+		// sync one more back if the local LFB is not computed
+		if !have.IsStateComputed() {
+			syncNum++
+
+			// sync one more back if the local LFB's previous block is not
+			// computed yet
+			if _, err := mc.GetBlock(ctx, have.PrevHash); err != nil {
+				syncNum++
+			}
+		}
 	}
 
 	if syncNum > 50 {
@@ -1586,9 +1598,11 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	rcvd.SetPreviousBlock(pb)
 	mc.bumpLFBTicket(ctx, rcvd)
-	if !mc.ensureState(ctx, rcvd) {
-		// but continue with the block (?)
+
+	if err := mc.SyncStateOrComputeLocal(ctx, rcvd); err != nil {
+		logging.Logger.Error("ensure lfb", zap.Error(err))
 	}
+
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
 	logging.Logger.Info("ensure latest finalized block - set lfb",
 		zap.Int64("round", rcvd.Round))

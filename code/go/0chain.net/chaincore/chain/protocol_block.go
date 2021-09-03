@@ -447,6 +447,11 @@ func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveT
 		return nil
 	}
 
+	logging.Logger.Debug("sync_blocks - start",
+		zap.Int64("num", num),
+		zap.Int64("start round", b.Round),
+		zap.Bool("sav to DB", saveToDB))
+
 	failedIndex := -1
 	for i := range blocks {
 		cb := blocks[i]
@@ -457,18 +462,9 @@ func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveT
 		}
 
 		cb.SetStateDB(cb.PrevBlock, c.GetStateDB())
-
-		if err := c.GetBlockStateChange(cb); err != nil {
-			logging.Logger.Error("sync_blocks - sync state change failed",
-				zap.Error(err), zap.Int64("round", cb.Round))
-
-			if err := cb.ComputeStateLocal(ctx, c); err != nil {
-				logging.Logger.Error("sync_blocks - compute state force failed",
-					zap.Error(err), zap.Int64("round", cb.Round))
-				// continue as later blocks may be able to get state changes from remote or compute state successfully
-				failedIndex = i
-				continue
-			}
+		if err := c.SyncStateOrComputeLocal(ctx, cb); err != nil {
+			failedIndex = i
+			continue
 		}
 
 		if saveToDB {
@@ -491,6 +487,25 @@ func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveT
 	}
 
 	return blocks
+}
+
+// SyncStateOrComputeLocal syncs state changes from remote first, if failed, then
+// try to execute the blocks locally without fetching from remote.
+func (c *Chain) SyncStateOrComputeLocal(ctx context.Context, b *block.Block) error {
+	if err := c.GetBlockStateChange(b); err != nil {
+		logging.Logger.Error("sync_blocks - sync state change failed",
+			zap.Error(err), zap.Int64("round", b.Round))
+
+		if err := b.ComputeStateLocal(ctx, c); err != nil {
+			logging.Logger.Error("sync_blocks - compute state local failed",
+				zap.Error(err), zap.Int64("round", b.Round))
+			// continue as later blocks may be able to get state changes from remote or compute state successfully
+			return common.NewErrorf("sync_blocks", "sync or compute state failed, round: %v, block: %v",
+				b.Round, b.Hash)
+		}
+	}
+
+	return nil
 }
 
 //Note: this is expected to work only for small forks
