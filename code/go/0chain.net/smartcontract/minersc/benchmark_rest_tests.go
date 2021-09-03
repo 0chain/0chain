@@ -119,5 +119,8 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.MinerRest, testsI}
+	return bk.TestSuit{
+		Source:     bk.MinerRest,
+		Benchmarks: testsI,
+	}
 }

@@ -114,5 +114,8 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.MultiSig, testsI}
+	return bk.TestSuit{
+		Source:     bk.MultiSig,
+		Benchmarks: testsI,
+	}
 }

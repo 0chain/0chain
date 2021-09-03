@@ -647,5 +647,8 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return sc.TestSuit{sc.Storage, testsI}
+	return sc.TestSuit{
+		Source:     sc.Storage,
+		Benchmarks: testsI,
+	}
 }

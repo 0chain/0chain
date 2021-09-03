@@ -62,5 +62,8 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.InterestPoolRest, testsI}
+	return bk.TestSuit{
+		Source:     bk.InterestPoolRest,
+		Benchmarks: testsI,
+	}
 }

@@ -71,5 +71,8 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{bk.VestingRest, testsI}
+	return bk.TestSuit{
+		Source:     bk.VestingRest,
+		Benchmarks: testsI,
+	}
 }
