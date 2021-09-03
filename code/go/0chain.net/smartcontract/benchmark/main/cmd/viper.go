@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/multisigsc"
 
@@ -33,7 +34,7 @@ func GetViper(path string) {
 
 func validateConfig() {
 	if 0 >= viper.GetInt(bk.AvailableKeys) {
-		log.Fatalln(fmt.Errorf("avalable keys %d must be grater than zero",
+		log.Fatal(fmt.Errorf("avalable keys %d must be grater than zero",
 			viper.GetInt(bk.AvailableKeys)))
 	}
 	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.AvailableKeys) {

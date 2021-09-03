@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"encoding/hex"
-	"log"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/multisigsc"
 
@@ -71,9 +72,9 @@ func setUpMpt(
 	dbPath string, verbose bool,
 
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
-	if verbose {
-		log.Println("starting building blockchain")
-	}
+
+	log.Println("starting building blockchain")
+
 	pNode, err := util.NewPNodeDB(
 		dbPath+"name_dataDir",
 		dbPath+"name_logDir",
@@ -82,18 +83,11 @@ func setUpMpt(
 		panic(err)
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
-	if verbose {
-		log.Println("made empty blockchain")
-	}
+	log.Println("made empty blockchain")
 	clients, publicKeys, privateKeys := addMockkClients(pMpt)
-	if verbose {
-		log.Println("added clients")
-	}
+	log.Println("added clients")
 	faucetsc.FundMockFaucetSmartContract(pMpt)
-	if verbose {
-		log.Println("funded faucet")
-	}
-
+	log.Println("funded faucet")
 	pMpt.GetNodeDB().(*util.PNodeDB).TrackDBVersion(1)
 
 	bk := &block.Block{}
@@ -113,88 +107,50 @@ func setUpMpt(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
-	if verbose {
-		log.Println("created balances")
-	}
+
+	log.Println("created balances")
 	_ = storagesc.SetMockConfig(balances)
-	if verbose {
-		log.Println("created storage config")
-	}
+	log.Println("created storage config")
 	validators := storagesc.AddMockValidators(balances)
-	if verbose {
-		log.Println("added validators")
-	}
+	log.Println("added validators")
 	blobbers := storagesc.AddMockBlobbers(balances)
-	if verbose {
-		log.Println("added blobbers")
-	}
+	log.Println("added blobbers")
 	stakePools := storagesc.GetMockStakePools(clients, balances)
-	if verbose {
-		log.Println("added stake pools")
-	}
+	log.Println("added stake pools")
 	storagesc.AddMockAllocations(
 		clients, publicKeys, stakePools, blobbers, validators, balances,
 	)
-	if verbose {
-		log.Println("added allocations")
-	}
+	log.Println("added allocations")
 	storagesc.SaveMockStakePools(stakePools, balances)
-	if verbose {
-		log.Println("added stake pools")
-	}
+	log.Println("added stake pools")
 	miners := minersc.AddMockNodes(clients, minersc.NodeTypeMiner, balances)
-	if verbose {
-		log.Println("added miners")
-	}
+	log.Println("added miners")
 	sharders := minersc.AddMockNodes(clients, minersc.NodeTypeSharder, balances)
-	if verbose {
-		log.Println("added sharders")
-	}
+	log.Println("added sharders")
 	minersc.AddNodeDelegates(clients, miners, sharders, balances)
-	if verbose {
-		log.Println("adding miners and sharders delegates")
-	}
+	log.Println("adding miners and sharders delegates")
 	minersc.AddMagicBlock(miners, sharders, balances)
-	if verbose {
-		log.Println("add magic block")
-	}
+	log.Println("add magic block")
 	minersc.SetUpNodes(miners, sharders)
-	if verbose {
-		log.Println("registering miners and sharders")
-	}
+	log.Println("registering miners and sharders")
 	storagesc.AddMockFreeStorageAssigners(clients, publicKeys, balances)
-	if verbose {
-		log.Println("added free storage assigners")
-	}
+	log.Println("added free storage assigners")
 	storagesc.AddMockStats(balances)
-	if verbose {
-		log.Println("added storage stats")
-	}
+	log.Println("added storage stats")
 	storagesc.AddMockWriteRedeems(clients, publicKeys, balances)
-	if verbose {
-		log.Println("added read redeems")
-	}
+	log.Println("added read redeems")
 	faucetsc.AddMockGlobalNode(balances)
-	if verbose {
-		log.Println("added faucet global node")
-	}
+	log.Println("added faucet global node")
 	faucetsc.AddMockUserNodes(clients, balances)
-	if verbose {
-		log.Println("added faucet user nodes")
-	}
+	log.Println("added faucet user nodes")
 	interestpoolsc.AddMockNodes(clients, balances)
-	if verbose {
-		log.Println("added user nodes")
-	}
+	log.Println("added user nodes")
 	multisigsc.AddMockWallets(clients, publicKeys, balances)
-	if verbose {
-		log.Println("added client wallets")
-	}
+	log.Println("added client wallets")
 	vestingsc.AddVestingPools(clients, balances)
-	if verbose {
-		log.Println("added vesting pools")
-	}
+	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,
 		PublicKeys:  publicKeys,
@@ -206,7 +162,6 @@ func setUpMpt(
 func addMockkClients(
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
-	//var sigScheme encryption.SignatureScheme = encryption.GetSignatureScheme(viper.GetString(benchmark.SignatureScheme))
 	blsScheme := BLS0ChainScheme{}
 	var clientIds, publicKeys, privateKeys []string
 	for i := 0; i < viper.GetInt(benchmark.NumClients); i++ {

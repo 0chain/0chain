@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"time"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/multisigsc"
 
@@ -69,12 +70,12 @@ var rootCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 		}
+		log.SetVerbose(verbose)
 		printSimSettings(verbose)
 
 		mpt, root, data := setUpMpt("db", verbose)
-		if verbose {
-			log.Println("finished setting up blockchain")
-		}
+		log.Println("finished setting up blockchain")
+
 		suites := getTestSuites(data, cmd.Flags())
 		results := runSuites(suites, verbose, mpt, root, data)
 

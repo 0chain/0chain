@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"sync"
 	"testing"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"github.com/spf13/pflag"
 
@@ -105,9 +106,9 @@ func runSuite(
 					result: result,
 				},
 			)
-			if verbose {
-				log.Println("test", bm.Name(), "done")
-			}
+
+			log.Println("test", bm.Name(), "done")
+
 		}(bm, &wg)
 	}
 	wg.Wait()
