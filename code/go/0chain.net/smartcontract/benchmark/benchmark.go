@@ -138,6 +138,7 @@ const (
 	StorageFasMaxChallengeCompletionTime = SmartContract + StorageSc + Fas + "max_challenge_completion_time"
 	StorageFasReadPoolFraction           = SmartContract + StorageSc + Fas + "read_pool_fraction"
 	StorageMaxMint                       = SmartContract + StorageSc + "max_mint"
+	StorageMaxChallengesPerGeneration    = SmartContract + StorageSc + "max_challenges_per_generation"
 
 	InterestPoolMinLock       = SmartContract + InterestPoolSC + "min_lock"
 	InterestPoolMinLockPeriod = SmartContract + InterestPoolSC + "min_lock_period"

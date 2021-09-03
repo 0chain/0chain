@@ -46,8 +46,19 @@ func validateConfig() {
 		log.Fatal(fmt.Errorf("number of clients %d must be greater than multi sig max singers %d",
 			viper.GetInt(bk.NumClients), multisigsc.MaxSigners))
 	}
-	if viper.GetInt(bk.NumClients) >= viper.GetInt(bk.NumAllocations) {
-		log.Fatal(fmt.Errorf("number of clients %d must be alt esst than the number of allocations %d",
+
+	if viper.GetInt(bk.NumClients) > viper.GetInt(bk.NumAllocations) {
+		log.Fatal(fmt.Errorf("number of clients %d must be alt lest than the number of allocations %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAllocations)))
+	}
+
+	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumSharders) {
+		log.Fatal(fmt.Errorf("number of clients %d must be alt lest the number of miners %d",
+			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumMiners)))
+	}
+
+	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumSharders) {
+		log.Fatal(fmt.Errorf("number of clients %d must be alt lest the number of sharders %d",
+			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumMiners)))
 	}
 }

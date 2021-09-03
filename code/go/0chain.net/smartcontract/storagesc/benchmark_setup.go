@@ -528,7 +528,7 @@ func SetMockConfig(
 	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
-	conf.MaxChallengesPerGeneration = 100
+	conf.MaxChallengesPerGeneration = viper.GetInt(sc.StorageMaxChallengesPerGeneration)
 	conf.FailedChallengesToCancel = viper.GetInt(sc.StorageFailedChallengesToCancel)
 	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = viper.GetInt64(sc.StorageMinAllocSize)

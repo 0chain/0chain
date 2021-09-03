@@ -90,7 +90,7 @@ func BenchmarkTests(
 			}).Encode(),
 		},
 		{
-			name:     "miner.add_sharder",
+			name:     "miner.miner_heath_check",
 			endpoint: msc.minerHealthCheck,
 			txn: transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeMiner),
