@@ -206,7 +206,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	fmt.Println("freeAllocationRequest txn value", txn.Value)
 	var err error
 	var inputObj freeStorageAllocationInput
 	if err := json.Unmarshal(input, &inputObj); err != nil {
@@ -286,7 +285,6 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	txn.Value = readPoolTokens
-	fmt.Println("freeAllocationRequest locking", txn.Value)
 	_, err = ssc.readPoolLock(txn, input, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
