@@ -949,11 +949,16 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	// 	lfmb.MagicBlockNumber-1, 1)
 	pfmb, err = httpclientutil.FetchMagicBlockFromSharders(
 		ctx, lfmb.Sharders.N2NURLs(), lfmb.MagicBlockNumber-1, func(*block.Block) bool { return true })
-	if err != nil || pfmb.MagicBlock == nil {
+	if err != nil {
 		logging.Logger.Error("getting previous FMB from sharder", zap.Error(err),
-			zap.Int64("num", lfmb.MagicBlockNumber-1),
-			zap.Bool("has_mb", pfmb.MagicBlock != nil))
+			zap.Int64("num", lfmb.MagicBlockNumber-1))
 		return // error
+	}
+
+	if pfmb != nil && pfmb.MagicBlock == nil {
+		logging.Logger.Error("getting previous FMB from sharder, has no magic block",
+			zap.Int64("num", lfmb.MagicBlockNumber-1))
+		return
 	}
 
 	if pfmb.MagicBlock.GetHash() != lfmb.MagicBlock.PreviousMagicBlockHash {
