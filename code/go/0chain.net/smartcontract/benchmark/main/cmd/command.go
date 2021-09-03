@@ -80,7 +80,6 @@ var rootCmd = &cobra.Command{
 		results := runSuites(suites, verbose, mpt, root, data)
 
 		printResults(results, verbose)
-
 	},
 }
 
