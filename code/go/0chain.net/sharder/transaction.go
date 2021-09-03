@@ -39,6 +39,8 @@ func (sc *Chain) GetTransactionSummary(ctx context.Context, hash string) (*trans
 func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.Confirmation, error) {
 	var ts *transaction.TransactionSummary
 	t, err := sc.BlockTxnCache.Get(hash)
+	fmt.Println("BlockTxnCache", t, err)
+
 	if err != nil {
 		ts, err = sc.GetTransactionSummary(ctx, hash)
 		if err != nil {
@@ -49,6 +51,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	}
 	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
 	confirmation.Hash = hash
+	fmt.Println("GetEntityMetadata", confirmation)
 	bhash, err := sc.GetBlockHash(ctx, ts.Round)
 	if err != nil {
 		return nil, err

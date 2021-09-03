@@ -1,6 +1,9 @@
 package sharder_test
 
 import (
+	"bytes"
+	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -9,6 +12,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+	"0chain.net/core/viper"
 	"0chain.net/sharder"
 )
 
@@ -96,6 +100,7 @@ func TestBlockHandler(t *testing.T) {
 }
 
 func TestChainStatsWriter(t *testing.T) {
+	viper.Set("cassandra.connection.retries", 2)
 	const baseUrl = "/_chain_stats"
 
 	type test struct {
@@ -125,6 +130,65 @@ func TestChainStatsWriter(t *testing.T) {
 			handler := http.HandlerFunc(common.UserRateLimit(sharder.ChainStatsWriter))
 
 			handler.ServeHTTP(rr, tt.request)
+
+			if status := rr.Code; status != tt.wantStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestTransactionConfirmationHandler(t *testing.T) {
+	baseUrl := "/v1/transaction/get/confirmation?hash="
+
+	type argsType struct {
+		ctx context.Context
+		hash string
+	}
+
+	type test struct {
+		name       string
+		request    *http.Request
+		wantStatus int
+		args 			argsType
+	}
+
+	b := block.NewBlock("", 1)
+	b.HashBlock()
+
+	sharderChain := makeTestChain(t)
+	sharderChain.AddBlock(b)
+
+	tests := []test{
+		{
+			name: "Test_TransactionConfirmationHandler_OK",
+			request: func() *http.Request {
+				req, err := http.NewRequest(http.MethodGet, baseUrl + b.Hash, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				return req
+			}(),
+			wantStatus: http.StatusOK,
+			args: argsType{ hash: b.Hash },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.TransactionConfirmationHandler)))
+			fmt.Println(tt.request.URL)
+			handler.ServeHTTP(rr, tt.request)
+
+			fmt.Println("code", rr.Code)
+			bodio := rr.Result().Body
+			fmt.Println("result body", bodio)
+
+			buf := new(bytes.Buffer)
+			buf.ReadFrom(bodio)
+			fmt.Println("body string", buf.String())
 
 			if status := rr.Code; status != tt.wantStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)

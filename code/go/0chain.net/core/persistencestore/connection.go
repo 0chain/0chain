@@ -2,6 +2,7 @@ package persistencestore
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -35,9 +36,11 @@ var Session SessionI
 
 /*InitSession - initialize a storage session */
 func InitSession() {
+	viper.Set("cassandra.connection.retries", 500)
 	cassandraDelay := viper.GetInt("cassandra.connection.delay")
 	cassandraRetries := viper.GetInt("cassandra.connection.retries")
 	delay := time.Duration(cassandraDelay) * time.Second
+	fmt.Println("Retries", cassandraRetries)
 	err := initSession(delay, cassandraRetries)
 	if Session == nil {
 		panic(err)
@@ -66,15 +69,17 @@ func initSession(delay time.Duration, maxTries int) error {
 	cluster.WriteCoalesceWaitTime = 0
 
 	// This reduces the time to create the session from 9+ seconds to 5 seconds when running the tests.
-	//cluster.DisableInitialHostLookup = true
+	cluster.DisableInitialHostLookup = true
 
 	cluster.ProtoVersion = 4
 	cluster.Keyspace = KeySpace
 	start0 := time.Now()
+	fmt.Println("This point is reached")
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
 	for tries := 0; tries < maxTries; tries++ {
 		start := time.Now()
 		s, err := cluster.CreateSession()
+		// fmt.Println("If retries is set, reaches this")
 		if err != nil {
 			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
@@ -95,6 +100,7 @@ func GetConnection() SessionI {
 	if Session == nil {
 		InitSession()
 	}
+	fmt.Println("sessione", Session)
 	return Session
 }
 
@@ -103,6 +109,7 @@ const CONNECTION common.ContextKey = "pconnection"
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
+	fmt.Println("then this")
 	return context.WithValue(ctx, CONNECTION, GetConnection())
 }
 
@@ -116,6 +123,7 @@ func GetCon(ctx context.Context) SessionI {
 
 /*WithEntityConnection takes a context and adds a connection value to it */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
+	fmt.Println("called this")
 	return WithConnection(ctx)
 }
 
