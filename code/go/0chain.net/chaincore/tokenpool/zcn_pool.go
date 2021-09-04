@@ -70,7 +70,7 @@ func (p *ZcnPool) TransferTo(op TokenPoolI, value state.Balance, entity interfac
 
 func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error) {
 	if value > p.Balance {
-		return nil, "", errors.New("draining pool failed", "value exceeds balance")
+		return nil, "", errors.New("draining_pool_failed", "value exceeds balance")
 	}
 	tpr := &TokenPoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: value, FromPool: p.ID}
 	transfer := state.NewTransfer(fromClientID, toClientID, value)

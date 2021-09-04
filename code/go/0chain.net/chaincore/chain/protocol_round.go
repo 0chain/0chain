@@ -2,14 +2,13 @@ package chain
 
 import (
 	"context"
-
-	"github.com/0chain/errors"
-
 	"fmt"
 	"net/url"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/0chain/errors"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -393,7 +392,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
-		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("github.com/0chain/errors", errs))
+		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
 	}
 
 	if len(magicBlocks) == 0 {

@@ -111,15 +111,15 @@ func (zrc *zrc20Pool) interPoolTransfer(op *zrc20Pool, value state.Balance, txn 
 
 func (zrc *zrc20Pool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance) (*state.Transfer, string, error) {
 	if zrc == nil {
-		return nil, "", errors.New("draining pool failed", "pool doesn't exist")
+		return nil, "", errors.New("draining_pool_failed", "pool doesn't exist")
 	}
 	if value > zrc.GetBalance() {
-		return nil, "", errors.New("draining pool failed", "value exceeds balance")
+		return nil, "", errors.New("draining_pool_failed", "value exceeds balance")
 	}
 	otherUsed := (value / zrc.ExchangeRate.Other) * zrc.ExchangeRate.Other
 	zcnUsed := (value / zrc.ExchangeRate.Other) * zrc.ExchangeRate.ZCN
 	if zcnUsed == 0 {
-		return nil, "", errors.New("draining pool failed", "insufficient funds to swap tokens")
+		return nil, "", errors.New("draining_pool_failed", "insufficient funds to swap tokens")
 	}
 	transfer := state.NewTransfer(fromClientID, toClientID, zcnUsed)
 	zrc.Balance -= otherUsed
