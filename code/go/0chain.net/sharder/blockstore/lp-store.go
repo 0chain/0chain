@@ -27,22 +27,29 @@ type FSStore struct {
 	Volumes      []Volume
 	minioEnabled bool
 	Minio        MinioClient
-	pickVolume   func(volumes []Volume) *Volume
+	nextVolume   chan *Volume
+	prevVolInd   int
+	pickVolume   func(volumes *[]Volume, prevVolInd int) (*Volume, int)
 }
 
-const (
-	Random        = "random"
-	RoundRobin    = "round_robin"
-	MinSizeFirst  = "min_size_first"
-	MinCountFirst = "min_count_first"
-)
-
-func NewFSStore(dir string) (*FSStore, error) {
+func NewFSStore(dir, strategy string) (*FSStore, error) {
 	err := os.MkdirAll(dir, 0644)
 	if err != nil {
 		return nil, err
 	}
-	return &FSStore{RootDir: dir}, nil
+	volumes := checkVolumes([]string{})
+	volumePicker := volumeStrategy(strategy)
+	nextVolume, prevVolInd := volumePicker(&volumes, -1)
+
+	fsStore := FSStore{
+		RootDir:    dir,
+		Volumes:    volumes,
+		pickVolume: volumePicker,
+	}
+
+	fsStore.prevVolInd = prevVolInd
+	fsStore.nextVolume <- nextVolume
+	return &fsStore, nil
 }
 
 func (fs *FSStore) Write(b *block.Block) error {
@@ -191,8 +198,9 @@ func (fs *FSStore) addToHotTier(hash string, round int64, data []byte) {
 
 func (fs *FSStore) furtherTiering(b *block.Block, bmr *BlockMetaRecord, blockData []byte, subDir, cachePath string) {
 	if len(fs.Volumes) > 0 {
-		v := fs.pickVolume(fs.Volumes)
-		bPath, err := v.Write(b, blockData, subDir)
+		v, prevInd := fs.pickVolume(&fs.Volumes, fs.prevVolInd)
+		fs.prevVolInd = prevInd
+		bPath, err := v.Write(b, blockData)
 		if err == nil {
 			bmr.Tiering = int(HotAndWarmTier)
 			bmr.VolumePath = bPath

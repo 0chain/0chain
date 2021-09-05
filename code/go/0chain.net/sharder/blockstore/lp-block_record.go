@@ -110,3 +110,11 @@ func GetAllRecord(ch chan<- BlockMetaRecord) {
 		close(ch)
 	}
 }
+
+func GetUnmovedBlock() {
+
+}
+
+func GetRecord() {
+
+}
