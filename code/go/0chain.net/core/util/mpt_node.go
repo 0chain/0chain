@@ -117,7 +117,7 @@ func (vn *ValueNode) Clone() Node {
 	clone := NewValueNode()
 	clone.OriginTrackerNode = vn.OriginTrackerNode.Clone()
 	if vn.Value != nil {
-		clone.SetValue(&SecureSerializableValue{vn.Value.Encode()})
+		clone.SetValue(vn.GetValue())
 	}
 	return clone
 }
@@ -222,9 +222,7 @@ func (ln *LeafNode) Clone() Node {
 	clone.Prefix = concat(ln.Prefix)
 	clone.Path = concat(ln.Path)
 	// path will never be updated inplace and so ok
-	if ln.Value != nil {
-		clone.Value = ln.Value.Clone().(*ValueNode)
-	}
+	clone.SetValue(ln.GetValue())
 	return clone
 }
 
@@ -380,7 +378,7 @@ func (fn *FullNode) Clone() Node {
 		clone.Children[idx] = ckey // ckey will never be updated inplace and so ok
 	}
 	if fn.HasValue() {
-		clone.Value = fn.Value.Clone().(*ValueNode)
+		clone.SetValue(fn.GetValue())
 	}
 	return clone
 }

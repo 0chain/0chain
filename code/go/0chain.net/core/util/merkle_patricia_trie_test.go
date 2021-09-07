@@ -207,10 +207,8 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
-	var astate, ok = val.(*AState)
-	if !ok {
-		t.Fatalf("wrong state type: %T", val)
-	}
+	astate := AState{}
+	assert.NoError(t, astate.Decode(val.Encode()))
 	if astate.balance != value {
 		t.Fatalf("%s: wrong state value: %d, expected: %d", key, astate.balance,
 			value)

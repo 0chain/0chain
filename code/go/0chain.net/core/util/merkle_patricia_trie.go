@@ -129,14 +129,15 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 		return mpt.Delete(path)
 	}
 
+	valueCopy := &SecureSerializableValue{eval}
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 	var err error
 	var newRootHash Key
 	if mpt.root == nil {
-		_, newRootHash, err = mpt.insertLeaf(nil, value, Path(""), path)
+		_, newRootHash, err = mpt.insertLeaf(nil, valueCopy, Path(""), path)
 	} else {
-		_, newRootHash, err = mpt.insert(value, mpt.root, Path(""), path)
+		_, newRootHash, err = mpt.insert(valueCopy, mpt.root, Path(""), path)
 	}
 	if err != nil {
 		return nil, err
