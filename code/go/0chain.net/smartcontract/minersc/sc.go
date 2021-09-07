@@ -144,7 +144,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 	}
 	scFunc, found := msc.smartContractFunctions[funcName]
 	if !found {
-		return common.NewErrorf("failed execution", "no miner smart contract method with name", funcName).Error(), nil
+		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
 	}
 	return scFunc(t, input, gn, balances)
 }
