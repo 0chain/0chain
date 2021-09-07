@@ -2,6 +2,7 @@ package multisigsc
 
 import (
 	"encoding/json"
+	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -37,7 +38,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	var msc = MultiSigSmartContract{
 		SmartContract: sci.NewSC(Address),
 	}

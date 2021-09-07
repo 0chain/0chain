@@ -96,7 +96,7 @@ func runSuite(
 						data,
 					)
 					b.StartTimer()
-					bm.Run(balances)
+					bm.Run(balances, b)
 				}
 			})
 			benchmarkResult = append(

@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/hex"
 	"encoding/json"
+	"testing"
 	"time"
 
 	"0chain.net/chaincore/smartcontract"
@@ -48,7 +49,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	if err != nil {
 		panic(err)

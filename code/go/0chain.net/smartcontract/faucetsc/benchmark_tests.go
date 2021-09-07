@@ -1,6 +1,8 @@
 package faucetsc
 
 import (
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -32,7 +34,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}

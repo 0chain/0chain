@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -42,7 +44,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	gn, err := getGlobalNode(balances)
 	if err != nil {
 		panic(err)

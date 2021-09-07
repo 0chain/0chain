@@ -1,6 +1,8 @@
 package benchmark
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
@@ -195,7 +197,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI)
+	Run(state.StateContextI, *testing.B)
 }
 
 type SignatureScheme interface {

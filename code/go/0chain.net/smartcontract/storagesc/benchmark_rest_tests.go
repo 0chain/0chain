@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"net/url"
+	"testing"
 	"time"
 
 	"0chain.net/chaincore/state"
@@ -35,7 +36,7 @@ func (bt RestBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (rbt RestBenchTest) Run(balances cstate.StateContextI) {
+func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
 	if err != nil {
 		panic(err)

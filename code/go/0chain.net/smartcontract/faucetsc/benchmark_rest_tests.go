@@ -3,6 +3,7 @@ package faucetsc
 import (
 	"context"
 	"net/url"
+	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -29,7 +30,7 @@ func (bt RestBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (rbt RestBenchTest) Run(balances cstate.StateContextI) {
+func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
 	if err != nil {
 		panic(err)
