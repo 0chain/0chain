@@ -69,6 +69,10 @@ func (c *Chain) VerifyNotarization(b *block.Block,
 
 	b.SetBlockNotarized()
 
+	if b.Round > c.GetCurrentRound() {
+		c.SetCurrentRound(b.Round)
+	}
+
 	return nil
 }
 
