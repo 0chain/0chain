@@ -6,9 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/chaincore/state"
 )
 
@@ -76,10 +73,6 @@ func StringToInterface(input string, iType ConfigType) (interface{}, error) {
 		value, err := strconv.ParseInt(input, 10, 64)
 		return state.Balance(value), err
 	default:
-		logging.Logger.Info("piers unsupported type",
-			zap.String("input", input),
-			zap.Any("iType", iType),
-		)
 		panic(fmt.Sprintf("StringToInterface input %s unsupported type %v", input, iType))
 	}
 }
