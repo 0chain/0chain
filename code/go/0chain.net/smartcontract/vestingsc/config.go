@@ -1,16 +1,48 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
+	"strconv"
 	"time"
+
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 )
+
+type Setting int
+
+const (
+	MinLock Setting = iota
+	MinDuration
+	MaxDuration
+	MaxDestinations
+	MaxDescriptionLength
+)
+
+var (
+	Settings = []string{
+		"min_lock",
+		"min_duration",
+		"max_duration",
+		"max_destinations",
+		"max_description_length",
+	}
+)
+
+func scConfigKey(scKey string) datastore.Key {
+	return datastore.Key(scKey + ":configurations")
+}
 
 type config struct {
 	MinLock              state.Balance `json:"min_lock"`
@@ -36,13 +68,125 @@ func (c *config) validate() (err error) {
 	return
 }
 
+func (conf *config) Encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(conf); err != nil {
+		panic(err) // must not happens
+	}
+	return
+}
+
+func (conf *config) Decode(b []byte) error {
+	return json.Unmarshal(b, conf)
+}
+
+func (conf *config) update(changes *smartcontract.StringMap) error {
+	for key, value := range changes.Fields {
+		switch key {
+		case Settings[MinLock]:
+			if sbValue, err := strconv.ParseFloat(value, 64); err != nil {
+				return fmt.Errorf("value %v cannot be converted to state.Balance, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MinLock = state.Balance(sbValue * 1e10)
+			}
+		case Settings[MinDuration]:
+			if dValue, err := time.ParseDuration(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MinDuration = dValue
+			}
+		case Settings[MaxDuration]:
+			if dValue, err := time.ParseDuration(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDuration = dValue
+			}
+		case Settings[MaxDestinations]:
+			if iValue, err := strconv.Atoi(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDestinations = iValue
+			}
+		case Settings[MaxDescriptionLength]:
+			if iValue, err := strconv.Atoi(value); err != nil {
+				return fmt.Errorf("value %v cannot be converted to time.Duration, "+
+					"failing to set config key %s", value, key)
+			} else {
+				conf.MaxDescriptionLength = iValue
+			}
+		default:
+			return fmt.Errorf("config setting %s not found", key)
+		}
+	}
+	return nil
+}
+
+func (conf *config) getConfigMap() smartcontract.StringMap {
+	sMap := smartcontract.StringMap{
+		Fields: make(map[string]string),
+	}
+	sMap.Fields[Settings[MinLock]] = fmt.Sprintf("%v", float64(conf.MinLock)/1e10)
+	sMap.Fields[Settings[MinDuration]] = fmt.Sprintf("%v", conf.MinDuration)
+	sMap.Fields[Settings[MaxDuration]] = fmt.Sprintf("%v", conf.MaxDuration)
+	sMap.Fields[Settings[MaxDestinations]] = fmt.Sprintf("%v", conf.MaxDestinations)
+	sMap.Fields[Settings[MaxDescriptionLength]] = fmt.Sprintf("%v", conf.MaxDescriptionLength)
+	return sMap
+}
+
+func (vsc *VestingSmartContract) updateConfig(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainstate.StateContextI,
+) (resp string, err error) {
+	if txn.ClientID != owner {
+		return "", common.NewError("update_config",
+			"unauthorized access - only the owner can update the variables")
+	}
+
+	var conf *config
+	if conf, err = vsc.getConfig(balances); err != nil {
+		return "", common.NewError("update_config",
+			"can't get config: "+err.Error())
+	}
+
+	update := &smartcontract.StringMap{}
+	if err = update.Decode(input); err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	if err := conf.update(update); err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(scConfigKey(vsc.ID), conf)
+	if err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	return "", nil
+}
+
 //
 // helpers
 //
 
-// configurations from sc.yaml
-func getConfig() (conf *config, err error) {
+func (vsc *VestingSmartContract) getConfigBytes(
+	balances chainstate.StateContextI,
+) (b []byte, err error) {
+	var val util.Serializable
+	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
+	if err != nil {
+		return
+	}
+	return val.Encode(), nil
+}
 
+// configurations from sc.yaml
+func getConfiguredConfig() (conf *config, err error) {
 	const prefix = "smart_contracts.vestingsc."
 
 	conf = new(config)
@@ -62,16 +206,46 @@ func getConfig() (conf *config, err error) {
 	return
 }
 
+func (vsc *VestingSmartContract) getConfig(
+	balances chainstate.StateContextI,
+) (conf *config, err error) {
+	var confb []byte
+	confb, err = vsc.getConfigBytes(balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		conf, err = getConfiguredConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		conf = new(config)
+		if err = conf.Decode(confb); err != nil {
+			return nil, err
+		}
+	}
+	return conf, nil
+}
+
 //
 // REST-handler
 //
 
-func (vsc *VestingSmartContract) getConfigHandler(context.Context,
-	url.Values, chainstate.StateContextI) (interface{}, error) {
-
-	res, err := getConfig()
+func (vsc *VestingSmartContract) getConfigHandler(
+	ctx context.Context,
+	params url.Values,
+	balances chainstate.StateContextI,
+) (interface{}, error) {
+	res, err := vsc.getConfig(balances)
 	if err != nil {
-		return nil, common.NewErrInternal("can't get config", err.Error())
+		if err != util.ErrValueNotPresent {
+			return nil, common.NewErrInternal("can't get config", err.Error())
+		}
+		res, err = getConfiguredConfig()
+		if err != nil {
+			return nil, common.NewErrInternal("can't read config from file", err.Error())
+		}
 	}
-	return res, nil
+	return res.getConfigMap(), nil
 }

@@ -359,8 +359,7 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
-	b.ClientState.SetRoot(root)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root)
 }
 
 /*AddTransaction - add a transaction to the block */
@@ -910,7 +909,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	//c.stateMutex.Lock()
 	//defer c.stateMutex.Unlock()
 
-	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	err := b.ClientState.MergeChanges(bsc.GetRoot().GetHashBytes(), bsc.GetChanges(), nil, bsc.StartRoot)
 	if err != nil {
 		logging.Logger.Error("apply block state change - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))

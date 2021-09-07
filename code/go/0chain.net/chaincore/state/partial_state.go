@@ -19,11 +19,12 @@ var ErrHashMismatch = errors.New("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
-	Hash    util.Key    `json:"root"`
-	Version string      `json:"version"`
-	Nodes   []util.Node `json:"_"`
-	mndb    *util.MemoryNodeDB
-	root    util.Node
+	Hash      util.Key    `json:"root"`
+	Version   string      `json:"version"`
+	StartRoot util.Key    `json:"start"`
+	Nodes     []util.Node `json:"_"`
+	mndb      *util.MemoryNodeDB
+	root      util.Node
 }
 
 //NewPartialState - create a new partial state object with initialization
@@ -127,11 +128,6 @@ func (ps *PartialState) Validate(ctx context.Context) error {
 /*GetRoot - get the root of this set of changes */
 func (ps *PartialState) GetRoot() util.Node {
 	return ps.root
-}
-
-/*GetNodeDB - get the node db containing all the changes */
-func (ps *PartialState) GetNodeDB() util.NodeDB {
-	return ps.mndb
 }
 
 //UnmarshalJSON - implement Unmarshaler interface
