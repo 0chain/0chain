@@ -3,9 +3,8 @@ package chain
 import (
 	"bytes"
 
-	"github.com/spf13/viper"
-
 	"0chain.net/smartcontract/minersc"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 
 	"testing"
