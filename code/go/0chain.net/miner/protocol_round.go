@@ -312,8 +312,7 @@ func (mc *Chain) getClientState(
 	root := pb.ClientStateHash
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1))
-	clientState.SetRoot(root)
+	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
 	return clientState
 }
 
