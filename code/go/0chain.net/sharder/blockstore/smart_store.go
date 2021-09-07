@@ -198,13 +198,31 @@ func (fs *FSStore) addToHotTier(hash string, round int64, data []byte) {
 
 func (fs *FSStore) furtherTiering(b *block.Block, bmr *BlockMetaRecord, blockData []byte, subDir, cachePath string) {
 	if len(fs.Volumes) > 0 {
-		v, prevInd := fs.pickVolume(&fs.Volumes, fs.prevVolInd)
-		fs.prevVolInd = prevInd
-		bPath, err := v.Write(b, blockData)
-		if err == nil {
-			bmr.Tiering = int(HotAndWarmTier)
-			bmr.VolumePath = bPath
-			bmr.AddOrUpdate()
+		ableVolumes := make([]Volume, len(fs.Volumes))
+		copy(ableVolumes, fs.Volumes)
+		for {
+			if len(ableVolumes) == 0 {
+				//log error
+				//stop sharder, panic
+			}
+			v, prevInd := fs.pickVolume(&ableVolumes, fs.prevVolInd)
+			if v == nil {
+				//Log error
+				//stop sharder, panic
+			}
+			fs.prevVolInd = prevInd
+			bPath, err := v.Write(b, blockData)
+			if err == nil {
+				bmr.Tiering = int(HotAndWarmTier)
+				bmr.VolumePath = bPath
+				bmr.AddOrUpdate()
+				break
+			} else {
+				ableVolumes[prevInd] = ableVolumes[len(ableVolumes)-1]
+				ableVolumes = ableVolumes[:len(ableVolumes)-1]
+				fs.prevVolInd--
+			}
+
 		}
 	} else if fs.minioEnabled {
 		// Add to minio if warm tiering is not available else minio can be used for cold tiering

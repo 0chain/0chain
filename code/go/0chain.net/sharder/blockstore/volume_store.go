@@ -50,7 +50,7 @@ const (
 	// space consumed by all K directories i.e. K0...999 is 10^3* 10^6*1MB is 1PB
 )
 
-type Volume struct {
+type Volume struct { //Write is dependent on Volume struct but Read is independent
 	rootPath                string
 	blocksSize, blocksCount uint64
 	//Available size is crude to be reliable because there can be other process that stores data in the disk making this
@@ -201,6 +201,7 @@ func (v *Volume) isAbleToStoreBlock() (ableToStore bool) {
 }
 
 func volumeStrategy(strategy string) func(volumes *[]Volume, prevInd int) (*Volume, int) {
+	//It seems better to remove volume from volumes list when it is unable to store blocks further
 	switch strategy {
 	case Random:
 		return func(rVolumes *[]Volume, prevInd int) (*Volume, int) { //return volume path
@@ -242,6 +243,9 @@ func volumeStrategy(strategy string) func(volumes *[]Volume, prevInd int) (*Volu
 						break
 					}
 					i = totalVolumes - i
+					if i < 0 {
+						i = 0 //i can be negative when a selected volume fail to store block.
+					}
 				}
 				v := volumes[i]
 				if v.isAbleToStoreBlock() {

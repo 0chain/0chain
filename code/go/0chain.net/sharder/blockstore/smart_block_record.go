@@ -14,7 +14,8 @@ import (
 type Tier uint8
 
 const (
-	BUCKET              = "bmr"
+	BMRBucket           = "bmr"
+	UnmovedBlocks       = "ubs"
 	HotTier        Tier = iota //Hot tier only
 	WarmTier                   //Warm tier only
 	ColdTier                   //Cold tier only
@@ -41,7 +42,7 @@ func NewBlockMetaStore(path string) error {
 	}
 	db, err = bbolt.Open(path, 0644, nil)
 	if err := db.Update(func(t *bbolt.Tx) error {
-		_, err := t.CreateBucketIfNotExists([]byte(BUCKET)) //block meta record
+		_, err := t.CreateBucketIfNotExists([]byte(BMRBucket)) //block meta record
 		return err
 	}); err != nil {
 		return err
@@ -49,19 +50,18 @@ func NewBlockMetaStore(path string) error {
 	return err
 }
 
-// It would be better to save this meta record in hdd/s3 as per tiering config so that upon hot tiered disk fails it still can
-// be reconstructed. Writing to multiple disks but makes block writing as a whole a slow process.
 func (bmr *BlockMetaRecord) AddOrUpdate() (err error) {
+	value, err := json.Marshal(bmr)
+	if err != nil {
+		return err
+	}
+	key := []byte(bmr.Hash)
 	err = db.Update(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BUCKET))
+		bkt := t.Bucket([]byte(BMRBucket))
 		if bkt == nil {
 			return errors.New("Bucket for Block meta recording not found")
 		}
-		data, err := json.Marshal(bmr)
-		if err != nil {
-			return err
-		}
-		return bkt.Put([]byte(bmr.Hash), data)
+		return bkt.Put(key, value)
 	})
 
 	return
@@ -70,17 +70,25 @@ func (bmr *BlockMetaRecord) AddOrUpdate() (err error) {
 func GetBlockMetaRecord(hash string) (*BlockMetaRecord, error) {
 	var data []byte
 	var bmr BlockMetaRecord
+	key := []byte(hash)
 	err := db.View(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BUCKET))
+		bkt := t.Bucket([]byte(BMRBucket))
 		if bkt == nil {
 			return errors.New("Bucket for Block meta recording not found")
 		}
-		data = bkt.Get([]byte(hash))
-		if data == nil {
+		bmrData := bkt.Get(key)
+		if bmrData == nil {
 			return fmt.Errorf("Block meta record for %v not found.", hash)
 		}
-		return json.Unmarshal(data, &bmr)
+		data = make([]byte, len(bmrData))
+		copy(data, bmrData)
+		return nil
 	})
+
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &bmr)
 	if err != nil {
 		return nil, err
 	}
@@ -88,33 +96,70 @@ func GetBlockMetaRecord(hash string) (*BlockMetaRecord, error) {
 	return &bmr, nil
 }
 
-func GetAllRecord(ch chan<- BlockMetaRecord) {
-	err := db.View(func(t *bbolt.Tx) error {
-		bkt := t.Bucket([]byte(BUCKET))
-		if bkt == nil {
-			return errors.New("Bucket for Block meta recording not found")
+type ColdBlock struct {
+	HashKey   string
+	CreatedAt time.Time
+}
+
+//Add block hash to db with current time so upon some duration passed it can be moved to cold tier if cold tiering
+//is enabled
+func AddToMoveBlocks(hashKey string) error {
+	nowByte, _ := time.Now().MarshalText()
+	hashKeyByte := []byte(hashKey)
+	return db.Update(func(t *bbolt.Tx) error {
+		bkt, err := t.CreateBucketIfNotExists([]byte(UnmovedBlocks))
+		if err != nil {
+			return err
 		}
-		err := bkt.ForEach(func(k, v []byte) error {
-			bmr := BlockMetaRecord{Hash: string(k)}
-			err := json.Unmarshal(v, &bmr)
-			if err != nil {
-				return err
-			}
-			ch <- bmr
-			return nil
-		})
-
-		return err
+		return bkt.Put(hashKeyByte, nowByte)
 	})
+}
+
+//Remove block hash from db as it is moved to cold tier
+func RemoveMovedBlocks(hashKey string) error {
+	hashKeyByte := []byte(hashKey)
+	return db.Update(func(t *bbolt.Tx) error {
+		bkt := t.Bucket([]byte(UnmovedBlocks))
+		if bkt == nil {
+			return nil
+		}
+		return bkt.Delete(hashKeyByte)
+	})
+}
+
+//Get all unmoved block hashes. Since sharder can choose to transfer blocks to cold tier in any duration i.e. one day, one week;
+//monthly, etc. so it is iterated based on the prefix key. There is chance of block being missed to be transferred to cold
+//tier because of the iteration method choosed below but it will be moved within few tiering.
+//Reading all possibly million keys in single transaction takes some time which will affect block storage in SSD as well.
+func GetUnmovedBlocks(ch chan<- *ColdBlock, prefix string) error {
+	var hashKey []byte
+	var timeByte []byte
+	err := db.View(func(t *bbolt.Tx) error {
+		bkt := t.Bucket([]byte(UnmovedBlocks))
+		if bkt == nil {
+			return fmt.Errorf("No bucket")
+		}
+		cursor := bkt.Cursor()
+		k, _ := cursor.Seek([]byte(prefix))
+		if k == nil {
+			return fmt.Errorf("End of keys")
+		}
+		k, v := cursor.Next()
+		hashKey = make([]byte, len(k))
+		timeByte = make([]byte, len(v))
+		copy(hashKey, k)
+		copy(timeByte, v)
+		return nil
+	})
+
 	if err != nil {
-		close(ch)
+		return err
 	}
-}
+	coldBlock := ColdBlock{
+		HashKey: string(hashKey),
+	}
+	coldBlock.CreatedAt.UnmarshalText(timeByte)
 
-func GetUnmovedBlock() {
-
-}
-
-func GetRecord() {
-
+	ch <- &coldBlock
+	return nil
 }
