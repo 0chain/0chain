@@ -1,6 +1,5 @@
 # TestNet Setup with Docker Containers
 
-
 ## Table of Contents
 
 - [Initial Setup](#initial-setup) 
