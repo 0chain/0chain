@@ -1,6 +1,9 @@
 package minersc_test
 
 import (
+	"strconv"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
@@ -12,8 +15,6 @@ import (
 	. "0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"testing"
 )
 
 func TestDeleteSharder(t *testing.T) {
@@ -67,10 +68,10 @@ func TestDeleteSharder(t *testing.T) {
 			balances.On("DeleteTrieNode", un.GetKey()).Return("", nil).Once()
 		}
 
-		balances.On("GetTrieNode", GetSharderNodeKey(mockDeletedSharderId)).Return(mn, nil).Once()
+		balances.On("GetTrieNode", GetSharderKey(mockDeletedSharderId)).Return(mn, nil).Once()
 		balances.On(
 			"InsertTrieNode",
-			GetMinerNodeKey(mn),
+			mn.GetKey(),
 			mock.MatchedBy(func(mn *MinerNode) bool {
 				return 0 == len(mn.Pending) &&
 					len(mn.Deleting) == p.activePools &&

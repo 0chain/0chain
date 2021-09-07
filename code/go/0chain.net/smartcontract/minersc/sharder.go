@@ -176,7 +176,7 @@ func (msc *MinerSmartContract) AddSharder(
 	allSharders.Nodes = append(allSharders.Nodes, newSharder)
 
 	// save the added sharder
-	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
+	_, err = balances.InsertTrieNode(newSharder.GetKey(), newSharder)
 	if err != nil {
 		return "", common.NewErrorf("add_sharder", "saving sharder: %v", err)
 	}
@@ -297,7 +297,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 	balances cstate.StateContextI) (sn *MinerNode, err error) {
 
 	var ss util.Serializable
-	ss, err = balances.GetTrieNode(getSharderKey(sid))
+	ss, err = balances.GetTrieNode(GetSharderKey(sid))
 	if err != nil && err != util.ErrValueNotPresent {
 		return // unexpected error
 	}

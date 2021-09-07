@@ -197,7 +197,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 		}
 		if mn.Delete {
 			miners.Nodes = append(miners.Nodes[:i], miners.Nodes[i+1:]...)
-			if _, err := balances.DeleteTrieNode(mn.getKey()); err != nil {
+			if _, err := balances.DeleteTrieNode(mn.GetKey()); err != nil {
 				return fmt.Errorf("deleting miner node: %v", err)
 			}
 			minerDelete = true

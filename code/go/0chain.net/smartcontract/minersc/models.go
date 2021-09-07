@@ -603,11 +603,11 @@ func getMinerKey(mid string) datastore.Key {
 	return datastore.Key(ADDRESS + mid)
 }
 
-func getSharderKey(sid string) datastore.Key {
+func GetSharderKey(sid string) datastore.Key {
 	return datastore.Key(ADDRESS + sid)
 }
 
-func (mn *MinerNode) getKey() datastore.Key {
+func (mn *MinerNode) GetKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
 }
 
@@ -631,7 +631,7 @@ func (mn *MinerNode) numActiveDelegates() int {
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
-	if _, err := balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 

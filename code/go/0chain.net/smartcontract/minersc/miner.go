@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -8,7 +10,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -125,11 +126,11 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	allMap := make(map[string]struct{}, len(allMiners.Nodes))
 	for _, n := range allMiners.Nodes {
-		allMap[n.getKey()] = struct{}{}
+		allMap[n.GetKey()] = struct{}{}
 	}
 
 	var update bool
-	if _, ok := allMap[newMiner.getKey()]; !ok {
+	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
 		if err = updateMinersList(balances, allMiners); err != nil {
@@ -139,7 +140,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	if !msc.doesMinerExist(newMiner.getKey(), balances) {
+	if !msc.doesMinerExist(newMiner.GetKey(), balances) {
 		if err = newMiner.save(balances); err != nil {
 			return "", common.NewError("add_miner", err.Error())
 		}
@@ -157,7 +158,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 }
 
 // deleteMiner Function to handle removing a miner from the chain
-func (msc *MinerSmartContract) deleteMiner(
+func (msc *MinerSmartContract) DeleteMiner(
 	_ *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
@@ -379,7 +380,7 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 		mn := NewMinerNode()
 		mn.ID = id
 
-		ms, err := state.GetTrieNode(mn.getKey())
+		ms, err := state.GetTrieNode(mn.GetKey())
 		if err != nil {
 			return nil, err
 		}
