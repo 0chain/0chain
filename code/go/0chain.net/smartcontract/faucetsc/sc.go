@@ -207,6 +207,9 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	if err := gn.Decode(gv.Encode()); err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
+	if gn.FaucetConfig == nil {
+		gn.FaucetConfig = getConfig()
+	}
 	return gn, nil
 }
 

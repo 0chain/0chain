@@ -1,23 +1,23 @@
 package smartcontract_test
 
 import (
-	"0chain.net/smartcontract/interestpoolsc"
-	"0chain.net/smartcontract/multisigsc"
-	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
 
+	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/multisigsc"
+	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zrc20sc"
+	"github.com/stretchr/testify/require"
+
 	"0chain.net/core/viper"
 	"github.com/rcrowley/go-metrics"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
@@ -124,7 +124,6 @@ func TestExecuteRestAPI(t *testing.T) {
 
 func TestExecuteStats(t *testing.T) {
 	t.Parallel()
-
 	i := `<!DOCTYPE html><html><body><style>
 .number { text-align: right; }
 .menu li { list-style-type: none; }
@@ -134,7 +133,7 @@ tr.header { background-color: #E0E0E0;  }
 .warning { background-color: #FFEB3B; }
 .optimal { color: #1B5E20; }
 .slow { font-style: italic; }
-.bold {font-weight:bold;}</style><table width='100%'><tr><td><h2>pour</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td><td><h2>refill</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td></tr><tr><td><h2>token refills</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td><td><h2>tokens Poured</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td></tr><tr><td><h2>updateLimits</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></body></html>`
+.bold {font-weight:bold;}</style><table width='100%'><tr><td><h2>pour</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td><td><h2>refill</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></td></tr><tr><td><h2>token refills</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td><td><h2>tokens Poured</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Metric Value</td></tr><tr><td>Min</td><td>0.00</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00</td></tr><tr><td>Max</td><td>0.00</td></tr><tr><td>50.00%</td><td>0.00</td></tr><tr><td>90.00%</td><td>0.00</td></tr><tr><td>95.00%</td><td>0.00</td></tr><tr><td>99.00%</td><td>0.00</td></tr><tr><td>99.90%</td><td>0.00</td></tr></table></td></tr><tr><td><h2>update-settings</h2><table width='100%'><tr><td class='sheader' colspan=2'>Metrics</td></tr><tr><td>Count</td><td>0</td></tr><tr><td class='sheader' colspan='2'>Time taken</td></tr><tr><td>Min</td><td>0.00 ms</td></tr><tr><td>Mean</td><td>0.00 &plusmn;0.00 ms</td></tr><tr><td>Max</td><td>0.00 ms</td></tr><tr><td>50.00%</td><td>0.00 ms</td></tr><tr><td>90.00%</td><td>0.00 ms</td></tr><tr><td>95.00%</td><td>0.00 ms</td></tr><tr><td>99.00%</td><td>0.00 ms</td></tr><tr><td>99.90%</td><td>0.00 ms</td></tr><tr><td class='sheader' colspan='2'>Rate per second</td></tr><tr><td>Last 1-min rate</td><td>0.00</td></tr><tr><td>Last 5-min rate</td><td>0.00</td></tr><tr><td>Last 15-min rate</td><td>0.00</td></tr><tr><td>Overall mean rate</td><td>0.00</td></tr></table></body></html>`
 	type args struct {
 		ctx      context.Context
 		scAdress string
@@ -184,7 +183,7 @@ tr.header { background-color: #E0E0E0;  }
 			t.Parallel()
 
 			ExecuteStats(tt.args.ctx, tt.args.scAdress, tt.args.params, tt.args.w)
-			assert.Equal(t, tt.wantW, tt.args.w)
+			require.Equal(t, tt.wantW, tt.args.w)
 		})
 	}
 }
@@ -216,7 +215,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:       "interest",
 			address:    interestpoolsc.ADDRESS,
-			restpoints: 2,
+			restpoints: 3,
 		},
 		{
 			name:       "multisig",
