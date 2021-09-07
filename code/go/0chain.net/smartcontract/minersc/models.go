@@ -603,11 +603,11 @@ func getMinerKey(mid string) datastore.Key {
 	return datastore.Key(ADDRESS + mid)
 }
 
-func getSharderKey(sid string) datastore.Key {
+func GetSharderKey(sid string) datastore.Key {
 	return datastore.Key(ADDRESS + sid)
 }
 
-func (mn *MinerNode) getKey() datastore.Key {
+func (mn *MinerNode) GetKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
 }
 
@@ -631,7 +631,7 @@ func (mn *MinerNode) numActiveDelegates() int {
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	//var key datastore.Key
 	//if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
-	if _, err := balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
 
@@ -783,6 +783,7 @@ type SimpleNode struct {
 	ShortName   string `json:"short_name"`
 	BuildTag    string `json:"build_tag"`
 	TotalStaked int64  `json:"total_stake"`
+	Delete      bool   `json:"delete"`
 
 	// settings and statistic
 
@@ -960,6 +961,22 @@ func (un *UserNode) save(balances cstate.StateContextI) (err error) {
 	}
 
 	return
+}
+
+func (un *UserNode) deletePool(nodeId, id datastore.Key) error {
+	for i, pool := range un.Pools[nodeId] {
+		if id == pool {
+			un.Pools[nodeId][i] = un.Pools[nodeId][len(un.Pools[nodeId])-1]
+			un.Pools[nodeId][len(un.Pools[nodeId])-1] = ""
+			un.Pools[nodeId] = un.Pools[nodeId][:len(un.Pools[nodeId])-1]
+			if len(un.Pools[nodeId]) == 0 {
+				delete(un.Pools, nodeId)
+			}
+
+			return nil
+		}
+	}
+	return fmt.Errorf("remove pool failed, cannot find pool %s in user's node %s", id, nodeId)
 }
 
 func (un *UserNode) Encode() []byte {

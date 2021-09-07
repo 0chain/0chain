@@ -67,7 +67,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
 		return nil, common.NewErrBadRequest("can't decode miner from passed params", err.Error())
 	}
-	if !msc.doesMinerExist(regMiner.getKey(), statectx) {
+	if !msc.doesMinerExist(regMiner.GetKey(), statectx) {
 		return "", common.NewErrNoResource("unknown miner")
 	}
 	npi := msc.bcContext.GetNodepoolInfo()
