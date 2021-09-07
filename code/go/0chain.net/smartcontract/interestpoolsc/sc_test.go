@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract"
+
 	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/chain/state"
@@ -475,10 +477,17 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 		{
 			name: "ok",
 			args: args{
-				t:         testTxn(owner, 100),
-				gn:        testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5),
-				inputData: testGlobalNode(globalNode1Ok, 10, 20, 30, 40, 10).Encode(),
-				balances:  testBalance("", 0),
+				t:  testTxn(owner, 100),
+				gn: testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5),
+				inputData: (&smartcontract.StringMap{
+					Fields: map[string]string{
+						Settings[MinLock]:       "30",
+						Settings[Apr]:           "40.0",
+						Settings[MinLockPeriod]: "10m",
+						Settings[MaxMint]:       "10",
+					},
+				}).Encode(),
+				balances: testBalance("", 0),
 			},
 			want:       string(testGlobalNode(globalNode1Ok, 10, 10, 30, 40, 10).Encode()),
 			wantErr:    false,
@@ -501,7 +510,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			if tt.shouldBeOk {
 				const pfx = "smart_contracts.interestpoolsc."
 				var conf = config.SmartContractConfig
-				if conf.Get(pfx+"interest_rate") != tt.args.gn.APR {
+				if conf.Get(pfx+"apr") != tt.args.gn.APR {
 					t.Errorf("wrong interest_rate")
 				}
 				if conf.Get(pfx+"min_lock_period") != tt.args.gn.MinLockPeriod {
@@ -737,10 +746,17 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
-				t:         testTxn(owner, 10),
-				funcName:  "updateVariables",
-				inputData: testGlobalNode(globalNode1Ok, 10, 20, 30, 40, 10).Encode(),
-				balances:  updateVariables(),
+				t:        testTxn(owner, 10),
+				funcName: "updateVariables",
+				inputData: (&smartcontract.StringMap{
+					Fields: map[string]string{
+						Settings[MinLock]:       "30",
+						Settings[Apr]:           "40.0",
+						Settings[MinLockPeriod]: "10m",
+						Settings[MaxMint]:       "10",
+					},
+				}).Encode(),
+				balances: updateVariables(),
 			},
 			want:    string(testGlobalNode(globalNode1Ok, 10, 10, 30, 40, 10).Encode()),
 			wantErr: false,
