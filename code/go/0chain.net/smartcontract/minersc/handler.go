@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/core/util"
+
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
 
@@ -149,6 +151,24 @@ func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params 
 new zwallet commands
 
 */
+
+func (msc *MinerSmartContract) getGlobalsHandler(
+	_ context.Context,
+	_ url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	globals, err := getGlobalSettings(balances)
+
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, common.NewErrInternal(err.Error())
+		}
+		return GlobalSettings{
+			Fields: getStringMapFromViper(),
+		}, nil
+	}
+	return globals, nil
+}
 
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (

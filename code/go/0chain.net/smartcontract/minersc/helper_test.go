@@ -303,3 +303,12 @@ func (msc *MinerSmartContract) UpdateSettings(
 ) (resp string, err error) {
 	return msc.updateSettings(t, inputData, gn, balances)
 }
+
+func (msc *MinerSmartContract) UpdateGlobals(
+	txn *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateGlobals(txn, inputData, gn, balances)
+}

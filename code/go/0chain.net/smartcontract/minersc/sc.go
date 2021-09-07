@@ -91,6 +91,7 @@ func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestH
 //setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
+	msc.SmartContract.RestHandlers["/globals"] = msc.getGlobalsHandler
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
@@ -111,7 +112,9 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
 	msc.SmartContractExecutionStats["miner_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "miner_health_check"), nil)
 	msc.SmartContractExecutionStats["sharder_health_check"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "sharder_health_check"), nil)
-	msc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_settings"), nil)
+	msc.SmartContractExecutionStats["update_globals"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_globals"), nil)
+	msc.SmartContractExecutionStats["update_miner_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_miner_settings"), nil)
+	msc.SmartContractExecutionStats["update_sharder_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "update_sharder_settings"), nil)
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterCounter("feesPaid", nil)
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
