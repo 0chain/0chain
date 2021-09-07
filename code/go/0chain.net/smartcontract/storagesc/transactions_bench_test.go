@@ -76,8 +76,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 
 	mpts.mndb = util.NewMemoryNodeDB()                           //
 	mpts.lndb = util.NewLevelNodeDB(mpts.mndb, mpts.pndb, false) // transaction
-	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1)          //
-	mpts.mpt.SetRoot(root)
+	mpts.mpt = util.NewMerklePatriciaTrie(mpts.lndb, 1, root)    //
 }
 
 //

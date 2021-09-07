@@ -4,18 +4,24 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/0chain/gorocksdb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/sha3"
 
+	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 )
 
@@ -38,6 +44,16 @@ func (as *AState) Decode(buf []byte) error {
 	}
 	as.balance = n
 	return nil
+}
+
+// receives a list of values
+type valuesSponge struct {
+	values []string
+}
+
+// receives a list of paths
+type pathNodesSponge struct {
+	paths []string
 }
 
 func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
@@ -69,9 +85,9 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
 
-	mpt := NewMerklePatriciaTrie(pndb, Sequence(2016))
+	mpt := NewMerklePatriciaTrie(pndb, Sequence(2016), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(2016))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(2016), mpt.GetRoot())
 
 	doStateValInsert(t, mpt2, "123456", 100)
 	doStateValInsert(t, mpt2, "123457", 1000)
@@ -83,18 +99,31 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 		t.Error(err)
 	}
 
-	err = mpt2.Iterate(context.TODO(), iterHandler(),
+	sponge := sha3.New256()
+	err = mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp := "ae6a645401f35411371b9d498fa13c663909a7f6463b42a7f2a060db3ef0196b"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
 
-	mpt.SetRoot(mpt2.GetRoot())
+	mpt3 := NewMerklePatriciaTrie(pndb, Sequence(2016), mpt2.GetRoot())
 
-	err = mpt.Iterate(context.TODO(), iterHandler(),
-		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	sponge = sha3.New256()
+	err = mpt3.Iterate(context.TODO(), iterSpongeHandler(sponge),
+		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Errorf("iterate error: %v", err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 }
 
@@ -102,14 +131,13 @@ func TestMerkeTreePruning(t *testing.T) {
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
 
-	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt := NewMerklePatriciaTrie(NewLevelNodeDB(NewMemoryNodeDB(), pndb, false), Sequence(0), nil)
 	origin := 2016
 	roots := make([]Key, 0, 10)
 
 	for i := int64(0); i < 1000; i++ {
-		mpt2.ResetChangeCollector(mpt2.GetRoot())
+		db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+		mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
 			doStateValInsert(t, mpt2, "123456", 100+i)
@@ -124,69 +152,47 @@ func TestMerkeTreePruning(t *testing.T) {
 			doStateValInsert(t, mpt2, "133458", 1000000000+i)
 		}
 		roots = append(roots, mpt2.GetRoot())
-		var err = mpt2.SaveChanges(context.TODO(), pndb, false)
-		if err != nil {
-			t.Error(err)
-		}
-		mpt.SetRoot(mpt2.GetRoot())
+		require.NoError(t, mpt2.SaveChanges(context.TODO(), mpt.GetNodeDB(), false))
 		origin++
 	}
 
 	numStates := 200
 	newOrigin := Sequence(origin - numStates)
 	root := roots[len(roots)-numStates]
-	mpt.SetRoot(root)
+	mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), root)
 
-	var err = mpt.Iterate(context.TODO(), iterHandler(),
-		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
-	if err != nil {
-		t.Errorf("iterate error: %v", err)
-	}
+	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
 
-	if err := pndb.Iterate(context.TODO(), dbIteratorHandler()); err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
 
 	missingNodeHandler := func(ctx context.Context, path Path, key Key) error {
 		return nil
 	}
-	err = mpt.UpdateVersion(context.TODO(), newOrigin, missingNodeHandler)
+	err := mpt.UpdateVersion(context.TODO(), newOrigin, missingNodeHandler)
 	if err != nil {
 		t.Error("error updating origin:", err)
 	}
 
-	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler(),
-		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
-	if err != nil {
-		t.Error("iterate error:", err)
-	}
+	// mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), mpt.GetRoot())
+	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
 	err = pndb.PruneBelowVersion(context.TODO(), newOrigin)
-	if err := pndb.Iterate(context.TODO(), dbIteratorHandler()); err != nil {
-		t.Fatal(err)
-	}
-
 	if err != nil {
 		t.Error("error pruning origin:", err)
 	}
 
-	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler(),
-		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
-	if err != nil {
-		t.Error("iterate error:", err)
-	}
+	assert.NoError(t, pndb.Iterate(context.TODO(), dbIteratorHandler()))
+
+	checkIterationHash(t, mpt, "84b88172c473aa0350b2841269ff8e58c81fb72f5c8ce877e8c130b7092fddc5")
 }
 
 func doStateValInsert(t *testing.T, mpt MerklePatriciaTrieI, key string, value int64) {
 
 	state := &AState{}
 	state.balance = value
-	newRoot, err := mpt.Insert([]byte(key), state)
+	_, err := mpt.Insert([]byte(key), state)
 	if err != nil {
 		t.Error(err)
 	}
-	mpt.SetRoot(newRoot)
 
 	doGetStateValue(t, mpt, key, value)
 }
@@ -211,10 +217,36 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	}
 }
 
-func dbIteratorHandler() func(ctx context.Context, key Key, node Node) error {
+func dbIteratorHandler() NodeDBIteratorHandler {
 	return func(ctx context.Context, key Key, node Node) error {
 		return nil
 	}
+}
+
+// collect db keys
+func dbKeysSpongeHandler(sponge *valuesSponge) NodeDBIteratorHandler {
+	return func(ctx context.Context, key Key, node Node) error {
+		if node == nil || key == nil {
+			return fmt.Errorf("stop")
+		}
+		sponge.values = append(sponge.values, string(hex.EncodeToString(key)))
+		return nil
+	}
+}
+
+// calculates hash of all sorted keys in the NodeDB
+func calculateKeysHash(t *testing.T, ndb NodeDB) string {
+	sponge := valuesSponge{}
+	err := ndb.Iterate(context.TODO(), dbKeysSpongeHandler(&sponge))
+	require.NoError(t, err)
+	sort.Strings(sponge.values)
+	hash := sha3.New256()
+	for _, key := range sponge.values {
+		b, err := hex.DecodeString(key)
+		require.NoError(t, err)
+		hash.Write(b)
+	}
+	return hex.EncodeToString(hash.Sum(nil))
 }
 
 func computeMPTRoot(t *testing.T, mpt MerklePatriciaTrieI) (rk Key) {
@@ -237,7 +269,7 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	var stateDB, cleanup = newPNodeDB(t)
 	defer cleanup()
 
-	var mpt = NewMerklePatriciaTrie(stateDB, 0)
+	var mpt = NewMerklePatriciaTrie(stateDB, 0, nil)
 
 	// prior block DB and hash
 	var (
@@ -252,32 +284,46 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 	//  4. merge transaction changes
 	//  6. prune sate (not implemented)
 
-	const n = 20
-
+	expectedValueSets := [][]string{
+		{"test-value-0-one", "test-value-0-two"},
+		{"test-value-0-one", "test-value-0-changed", "test-value-1-one", "test-value-1-two"},
+		{"test-value-0-changed", "test-value-1-one", "test-value-1-changed", "test-value-2-one", "test-value-2-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-one", "test-value-2-changed", "test-value-3-one", "test-value-3-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-one", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed",
+			"test-value-4-one", "test-value-4-changed", "test-value-5-one", "test-value-5-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-one", "test-value-5-changed", "test-value-6-one", "test-value-6-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-one", "test-value-6-changed", "test-value-7-one", "test-value-7-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-one", "test-value-7-changed", "test-value-8-one", "test-value-8-two"},
+		{"test-value-0-changed", "test-value-1-changed", "test-value-2-changed", "test-value-3-changed", "test-value-4-changed",
+			"test-value-5-changed", "test-value-6-changed", "test-value-7-changed", "test-value-8-one", "test-value-8-changed",
+			"test-value-9-one", "test-value-9-two"},
+	}
 	// var back = context.Background()
 
 	//
-	for round := int64(0); round < n; round++ {
+	for round := int64(0); round < int64(len(expectedValueSets)); round++ {
 
 		//
 		// 1. create block client state
 		//
 		var (
 			ndb        = NewLevelNodeDB(NewMemoryNodeDB(), priorDB, false)
-			blockState = NewMerklePatriciaTrie(ndb, Sequence(round))
+			blockState = NewMerklePatriciaTrie(ndb, Sequence(round), priorHash)
 			err        error
 		)
-
-		blockState.SetRoot(priorHash)
 
 		//
 		// 2. create transaction
 		//
 		var (
 			tdb  = NewLevelNodeDB(NewMemoryNodeDB(), blockState.GetNodeDB(), false)
-			tmpt = NewMerklePatriciaTrie(tdb, blockState.GetVersion())
+			tmpt = NewMerklePatriciaTrie(tdb, blockState.GetVersion(), blockState.GetRoot())
 		)
-		tmpt.SetRoot(blockState.GetRoot())
 
 		//
 		//  3. add/remove/change values
@@ -317,8 +363,10 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		priorDB = blockState.GetNodeDB()
 		priorHash = blockState.GetRoot()
 
+		checkValues(t, blockState, expectedValueSets[round])
 		require.NoError(t, blockState.SaveChanges(context.TODO(), stateDB, false))
-		mpt.SetRoot(priorHash)
+		mpt = NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion(), priorHash)
+		checkValues(t, mpt, expectedValueSets[round])
 
 		// //  5. prune state
 		// var wps = WithPruneStats(back)
@@ -329,9 +377,9 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 
 func TestMPTHexachars(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(2018))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(2018), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db, Sequence(2018))
+	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db, Sequence(2018), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "01", "1")
 	doStrValInsert(t, mpt2, "02", "2")
@@ -340,9 +388,9 @@ func TestMPTHexachars(t *testing.T) {
 
 func TestMPTInsertLeafNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "1234", "1")
 	doStrValInsert(t, mpt2, "123567", "2")
@@ -369,9 +417,9 @@ func TestMPTInsertLeafNode(t *testing.T) {
 
 func TestMPTInsertFullNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "01", "1")
 	doStrValInsert(t, mpt2, "02", "2")
@@ -386,32 +434,158 @@ func TestMPTInsertFullNode(t *testing.T) {
 
 func TestMPTInsertExtensionNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "123456", "12345")
 	doStrValInsert(t, mpt2, "123467", "12346")
 	doStrValInsert(t, mpt2, "02", "2")
-	err := mpt2.Iterate(context.TODO(), iterStrPathHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"}) // pointing to "1234"
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp := "7ea96443c31290349e030f572c55c73153dc6822d4b1419391df530db0360ac5"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	rootHash := ToHex(mpt2.root)
+	exp = "1d113cf8005c4ab38a7ca31d8cc345fe3875c259eb54ed1bd9b031f2565e8015"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
 	doStrValInsert(t, mpt2, "1234", "123")
+	// node paths are same changed, value was added to full node at "1234"
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346"})
+
 	doStrValInsert(t, mpt2, "223456", "22345")
 	doStrValInsert(t, mpt2, "223467", "22346")
 	doStrValInsert(t, mpt2, "223478", "22347")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "2"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347"})
 	doStrValInsert(t, mpt2, "23", "23")
 	doStrValInsert(t, mpt2, "123456", "12345.1")
 	doStrValInsert(t, mpt2, "2234", "2234")
 	doStrValInsert(t, mpt2, "22", "22")
+	checkNodePaths(t, mpt2, NodeTypeExtensionNode, []string{"1", "223"})
+	checkNodePaths(t, mpt2, NodeTypeFullNode, []string{"", "1234", "2", "22", "2234"})
+	checkNodePaths(t, mpt2, NodeTypeLeafNode, []string{"0", "12345", "12346", "22345", "22346", "22347", "23"})
+	rootHash = ToHex(mpt2.root)
+	exp = "3624e73be093af74c884eea162070ff5eabcbad4a0fb605d8208cada970117a9"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+}
+
+func TestMPTRepetitiveInsert(t *testing.T) {
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
+
+	doStrValInsert(t, mpt2, "223456", "22345")
+	doStrValInsert(t, mpt2, "223467", "22346")
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.root))
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	mpt2.ChangeCollector.GetChanges()
+
+	doStrValInsert(t, mpt2, "223467", "22347")
+	checkValues(t, mpt2, []string{"22345", "22347"})
+	doStrValInsert(t, mpt2, "223467", "22346")
+	checkValues(t, mpt2, []string{"22345", "22346"})
+	assert.Equal(t, "b4297fd80bb162a0f766f71197a07690bcb6c2ec198fa02678cb057af0c04276", ToHex(mpt2.root))
+}
+
+func TestMPT_MultipleConcurrentInserts(t *testing.T) {
+	t.Parallel()
+	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
+	ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
+	numGoRoutines := 10
+	numTxns := 100
+	txns := make([]*Txn, numGoRoutines*numTxns)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
+	}
+	// insert some of the nodes to the original mpt
+	for i := 0; i < numGoRoutines; i++ {
+		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		require.NoError(t, err)
+	}
+	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
+	checkIterationHash(t, mpt2, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	wg := &sync.WaitGroup{}
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func(mpt2 MerklePatriciaTrieI, i int) {
+			defer wg.Done()
+			for j := 1; j < numTxns; j++ {
+				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				require.NoError(t, err)
+			}
+		}(mpt2, i)
+	}
+	wg.Wait()
+	checkIterationHash(t, mpt2, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
+	checkIterationHash(t, mpt, "49989099964c9dff77435c4bee926c76c64006724af5f1efc0deb95488dbff9e")
+	require.NoError(t, mpt.MergeMPTChanges(mpt2))
+	checkIterationHash(t, mpt, "3f056cecd45427bc466681a2fe01594a70a50161c66708aec400970f799ef935")
+}
+
+func TestMPT_ConcurrentMerges(t *testing.T) {
+	t.Parallel()
+	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
+	ldb := NewLevelNodeDB(NewMemoryNodeDB(), db, false)
+	numGoRoutines := 10
+	numTxns := 10
+	txns := make([]*Txn, numGoRoutines*numTxns)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{fmt.Sprintf("%v", len(txns)-i)}
+	}
+	// insert some of the nodes to the original mpt
+	for i := 0; i < numGoRoutines; i++ {
+		_, err := mpt.Insert(Path(encryption.Hash(txns[i*numTxns].Data)), txns[i*numTxns])
+		require.NoError(t, err)
+	}
+	mpt2 := NewMerklePatriciaTrie(ldb, Sequence(0), mpt.GetRoot())
+	wg := &sync.WaitGroup{}
+	for i := 0; i < numGoRoutines; i++ {
+		wg.Add(1)
+		go func(mpt2 MerklePatriciaTrieI, i int) {
+			defer wg.Done()
+			for j := 1; j < numTxns; j++ {
+				_, err := mpt2.Insert(Path(encryption.Hash(txns[i*numTxns+j].Data)), txns[i*numTxns+j])
+				require.NoError(t, err)
+				mpt.MergeMPTChanges(mpt2) // may produce error because of optimistic lock failure
+				// the transient mpt state contains no missing nodes
+				require.NoError(t, mpt.Iterate(context.TODO(), iterNopHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode))
+			}
+		}(mpt2, i)
+	}
+	wg.Wait()
+	checkIterationHash(t, mpt2, "e746a622dca7212732dd74521edf4f336b5134321513343819efb74f981f1925")
 }
 
 func TestMPTDelete(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "123456", "12345")
 	doStrValInsert(t, mpt2, "223456", "22345")
@@ -447,16 +621,16 @@ func TestMPTDelete(t *testing.T) {
 	doStrValInsert(t, mpt2, "612345", "")
 
 	// delete not existent node
-	doDelete(t, mpt2, "abcdef12", ErrNodeNotFound)
-	doDelete(t, mpt2, "61251234", ErrNodeNotFound)
-	doDelete(t, mpt2, "613512", ErrNodeNotFound)
+	doDelete(t, mpt2, "abcdef12", ErrValueNotPresent)
+	doDelete(t, mpt2, "61251234", ErrValueNotPresent)
+	doDelete(t, mpt2, "613512", ErrValueNotPresent)
 }
 
 func TestMPTUniverse(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "01234513", "earth")
 	doStrValInsert(t, mpt2, "0123451478", "mars")
@@ -478,55 +652,140 @@ func TestMPTUniverse(t *testing.T) {
 	doStrValInsert(t, mpt2, "01234523", "venus")
 	doStrValInsert(t, mpt2, "0123", "world")
 
-	mpt.ResetChangeCollector(mpt.GetRoot()) // adding a new change collector so there are changes with old nodes that are not nil
-
 	doStrValInsert(t, mpt2, "012346", "proxima centauri")
 	doStrValInsert(t, mpt2, "01", "hello")
 
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	rootHash := hex.EncodeToString(mpt2.root)
+	exp := "2f2ad6f1c18ee4808abde751e08dd2129109338a7866e522b9c5b7796f62f5fc"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
+	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp = "d76edb5b0e5cda8625c81593fd2bccaede906f35610a3e6de2809a862514f30b"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
 	}
 
 	key, err := hex.DecodeString("14e6f2fd08c3ba3bc816d16d6af63965e5d82eb7db22761d67b8d63a4e21f1f4")
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	err = mpt2.IterateFrom(context.TODO(), key, iterHandler(),
+	sponge = sha3.New256()
+	err = mpt2.IterateFrom(context.TODO(), key, iterSpongeHandler(sponge),
 		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "74869fa61802795b687cdfc2f4a34c71d522444022fad9250d6f19e030ce3fce"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	// collect values
+	valuesSponge := valuesSponge{make([]string, 0, 16)}
+	err = mpt2.IterateFrom(context.TODO(), key, iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := strings.Join(valuesSponge.values, ",")
+	// starting with "12345", should miss "hello" and "world"
+	expValues := "sun,mercury,green earth and ham,moon,mars,phobos,venus,jupiter,europa,saturn,uranus,neptune,dwarf planet,proxima centauri"
+	if values != expValues {
+		t.Fatalf("Actual values %v differ from expected %v", values, expValues)
 	}
 }
 
 func TestMPTInsertEthereumExample(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), mpt.GetRoot())
 
 	doStrValInsert(t, mpt2, "646f", "verb")
 	doStrValInsert(t, mpt2, "646f67", "puppy")
 	doStrValInsert(t, mpt2, "646f6765", "coin")
+	rootHash := ToHex(mpt2.root)
+	exp := "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
 	doStrValInsert(t, mpt2, "686f727365", "stallion")
 
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	sponge := sha3.New256()
+	err := mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Fatal(err)
 	}
+	iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+	exp = "b1d2d3eae3fb008eb00a456ad63a6e446355f6ebf279fcd261d1ab119c1aa325"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+	doDelete(t, mpt2, "686f727365", nil)
+	rootHash = ToHex(mpt2.root)
+	exp = "720a6fff8f2b30647b94a2d801cd1baedcb7e8648a293697550720dcb42405be"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, exp)
+	}
+	sponge = sha3.New256()
+	err = mpt2.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	iteratedHash = hex.EncodeToString(sponge.Sum(nil))
+	exp = "21ccd3041d44d826c06332204d1a3e2c56114e4b831ac8521c1762695c545239"
+	if iteratedHash != exp {
+		t.Fatalf("calculated sequence mismatch: %v, %v",
+			iteratedHash, exp)
+	}
+}
+
+func checkNodePaths(t *testing.T, mpt MerklePatriciaTrieI, visitNodeTypes byte, values []string) {
+	t.Helper()
+
+	pathsSponge := pathNodesSponge{}
+	err := mpt.Iterate(context.TODO(), iterPathNodesSpongeHandler(&pathsSponge), visitNodeTypes)
+	require.NoError(t, err)
+	require.Equal(t, values, pathsSponge.paths)
+}
+
+func checkValues(t *testing.T, mpt MerklePatriciaTrieI, values []string) {
+	t.Helper()
+
+	sponge := valuesSponge{make([]string, 0, 16)}
+	require.NoError(t, mpt.Iterate(context.TODO(), iterValuesSpongeHandler(&sponge), NodeTypeValueNode))
+	assert.ElementsMatch(t, values, sponge.values)
+}
+
+func checkIterationHash(t *testing.T, mpt MerklePatriciaTrieI, expectedHash string) {
+	t.Helper()
+
+	sponge := sha3.New256()
+	require.NoError(t, mpt.Iterate(context.TODO(), iterSpongeHandler(sponge), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode))
+	assert.Equal(t, expectedHash, ToHex(sponge.Sum(nil)))
 }
 
 func doStrValInsert(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 
 	t.Helper()
 
-	newRoot, err := mpt.Insert(Path(key), &Txn{value})
+	_, err := mpt.Insert(Path(key), &Txn{value})
 	if err != nil {
 		t.Error(err)
 	}
 
-	mpt.SetRoot(newRoot)
 	doGetStrValue(t, mpt, key, value)
 }
 
@@ -545,34 +804,76 @@ func doGetStrValue(t *testing.T, mpt MerklePatriciaTrieI, key, value string) {
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
+	readValue := string(val.Encode())
+	if readValue != value {
+		t.Fatalf("Read value doesn't match: %v %v", readValue, value)
+	}
 }
 
-func iterHandler() func(ctx context.Context, path Path, key Key, node Node) error {
+// aggregate into hash
+func iterSpongeHandler(sponge hash.Hash) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
+		}
+		if key == nil {
+			// value node
+			vn, ok := node.(*ValueNode)
+			if !ok {
+				return fmt.Errorf("value node expected")
+			}
+			sponge.Write(vn.Value.Encode())
+		} else {
+			sponge.Write(key)
 		}
 		return nil
 	}
 }
 
-func iterStrPathHandler() func(ctx context.Context, path Path, key Key, node Node) error {
+// aggregate into a list of values
+func iterValuesSpongeHandler(sponge *valuesSponge) MPTIteratorHandler {
 	return func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
 			return fmt.Errorf("stop")
 		}
+		if key == nil {
+			// value node
+			vn, ok := node.(*ValueNode)
+			if !ok {
+				return fmt.Errorf("value node expected")
+			}
+			sponge.values = append(sponge.values, string(vn.Value.Encode()))
+		}
+		return nil
+	}
+}
+
+func iterPathNodesSpongeHandler(sponge *pathNodesSponge) MPTIteratorHandler {
+	return func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			return fmt.Errorf("stop")
+		}
+		if key != nil {
+			sponge.paths = append(sponge.paths, string(path))
+		}
+		return nil
+	}
+}
+
+func iterNopHandler() MPTIteratorHandler {
+	return func(ctx context.Context, path Path, key Key, node Node) error {
 		return nil
 	}
 }
 
 func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
+	t.Helper()
 
-	newRoot, err := mpt.Delete([]byte(key))
+	_, err := mpt.Delete([]byte(key))
 	if err != expErr {
 		t.Fatalf("expect err: %v, got err: %v", expErr, err)
 		return
 	}
-	mpt.SetRoot(newRoot)
 	doGetStrValue(t, mpt, key, "")
 }
 
@@ -581,9 +882,9 @@ func doDelete(t *testing.T, mpt MerklePatriciaTrieI, key string, expErr error) {
 */
 func TestCasePEFLEdeleteL(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), nil)
 
 	doStrValInsert(t, mpt2, "22345678", "mercury")
 	doStrValInsert(t, mpt2, "1235", "venus")
@@ -592,28 +893,65 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	doStrValInsert(t, mpt2, "1234590131", "jupiter")
 	doStrValInsert(t, mpt2, "1234590231", "saturn")
 	doStrValInsert(t, mpt2, "1234590241", "uranus")
-
+	rootHash := hex.EncodeToString(mpt2.root)
+	expWithVenus := "4af37dce8b6a8cd3e11b134231963b30eee6b95842f56ca2eab49a5cb0aa52bf"
+	if rootHash != expWithVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithVenus)
+	}
 	doDelete(t, mpt2, "1235", nil)
+	rootHash = hex.EncodeToString(mpt2.root)
+	expWithoutVenus := "500096406b887e6f1c7d13dd4ee9522b44da0a7581e120a9c845211586b70b2b"
+	if rootHash != expWithoutVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithoutVenus)
+	}
 	doStrValInsert(t, mpt2, "1235", "venus")
+	rootHash = hex.EncodeToString(mpt2.root)
+	if rootHash != expWithVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithVenus)
+	}
 	doDelete(t, mpt2, "1235", nil)
+	rootHash = hex.EncodeToString(mpt2.root)
+	if rootHash != expWithoutVenus {
+		t.Fatalf("root hash mismatch: %v, %v",
+			rootHash, expWithoutVenus)
+	}
 	doStrValInsert(t, mpt2, "1234590341", "neptune")
-
-	err := mpt2.Iterate(context.TODO(), iterHandler(), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	rootHash = hex.EncodeToString(mpt2.root)
+	exp := "107357c93cf035864ca972b38d4992d0f7529113bfdd7e15bb3d3db1843237cd"
+	if rootHash != exp {
+		t.Fatalf("root hash mismatch: %v, %v", rootHash, exp)
+	}
+	checkIterationHash(t, mpt2, "6a15c5ff1772339a49e4bca1cff7d3b38accb6ac15af37a6907024a4e2861391")
+	// collect values
+	valuesSponge := valuesSponge{make([]string, 0, 16)}
+	err := mpt2.Iterate(context.TODO(), iterValuesSpongeHandler(&valuesSponge), NodeTypeValueNode)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	_, err = mpt2.GetNodeValue(Path("1234589701"))
+	values := strings.Join(valuesSponge.values, ",")
+	exp = "earth,mars,jupiter,saturn,uranus,neptune,mercury"
+	if values != exp {
+		t.Fatalf("values mismatch: %v, got %v", values, exp)
+	}
+	v, err := mpt2.GetNodeValue(Path("1234589701"))
 	if err != nil {
 		t.Error(err)
+	}
+	value := string(v.Encode())
+	exp = "earth"
+	if value != exp {
+		t.Fatalf("value mismatch: %v, %v", value, exp)
 	}
 }
 
 func TestAddTwiceDeleteOnce(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), nil)
 
 	doStrValInsert(t, mpt2, "1234567812", "x")
 	doStrValInsert(t, mpt2, "1234567822", "y")
@@ -624,7 +962,6 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 
 	doStrValInsert(t, mpt2, "2234567822", "a")
 	//doStrValInsert(t,"setup data", mpt2, "223556782", "b")
-
 	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
 
 	//doDelete("delete a leaf node", mpt2, "123456781", true)
@@ -703,7 +1040,7 @@ func TestGetPruneStats(t *testing.T) {
 
 func TestCloneMPT(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 
 	type args struct {
 		mpt MerklePatriciaTrieI
@@ -735,7 +1072,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -756,7 +1093,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_SetNodeDB_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.root,
 				db:              nil,
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -771,7 +1108,7 @@ func TestMerklePatriciaTrie_SetNodeDB(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -790,7 +1127,7 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 	t.Parallel()
 
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -808,7 +1145,7 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_getNodeDB_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.root,
 				db:              mpt.db,
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -823,7 +1160,7 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -835,62 +1172,12 @@ func TestMerklePatriciaTrie_getNodeDB(t *testing.T) {
 	}
 }
 
-func TestMerklePatriciaTrie_getChangeCollector(t *testing.T) {
-	t.Parallel()
-
-	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-
-	type fields struct {
-		mutex           *sync.RWMutex
-		Root            Key
-		db              NodeDB
-		ChangeCollector ChangeCollectorI
-		Version         Sequence
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   ChangeCollectorI
-	}{
-		{
-			name: "TestMerklePatriciaTrie_getChangeCollector_OK",
-			fields: fields{
-				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
-				db:              mpt.db,
-				ChangeCollector: mpt.ChangeCollector,
-				Version:         mpt.Version,
-			},
-			want: mpt.ChangeCollector,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			mpt := &MerklePatriciaTrie{
-				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
-				db:              tt.fields.db,
-				ChangeCollector: tt.fields.ChangeCollector,
-				Version:         tt.fields.Version,
-			}
-			if got := mpt.getChangeCollector(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getChangeCollector() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 	// case 1
 	pdb, cleanup := newPNodeDB(t)
 	defer cleanup()
 
-	pmpt := NewMerklePatriciaTrie(pdb, 0)
-	pmpt.Root = Key("qwe")
+	pmpt := NewMerklePatriciaTrie(pdb, 0, Key("qwe"))
 
 	// case 2
 
@@ -898,8 +1185,7 @@ func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 	key := "key"
 	mdb.Nodes[StrKey(key)] = nil
 
-	mmpt := NewMerklePatriciaTrie(mdb, 0)
-	mmpt.Root = Key("key")
+	mmpt := NewMerklePatriciaTrie(mdb, 0, Key("key"))
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -922,7 +1208,7 @@ func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_GetNodeValue_Not_Found_ERR",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            pmpt.Root,
+				Root:            pmpt.GetRoot(),
 				db:              pmpt.db,
 				ChangeCollector: pmpt.ChangeCollector,
 				Version:         pmpt.Version,
@@ -934,7 +1220,7 @@ func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_GetNodeValue_Nil_Node_ERR",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mmpt.Root,
+				Root:            mmpt.GetRoot(),
 				db:              mmpt.db,
 				ChangeCollector: mmpt.ChangeCollector,
 				Version:         mmpt.Version,
@@ -947,7 +1233,7 @@ func TestMerklePatriciaTrie_GetNodeValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1006,7 +1292,7 @@ func TestMerklePatriciaTrie_Insert(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1061,7 +1347,7 @@ func TestMerklePatriciaTrie_GetPathNodes(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1164,7 +1450,7 @@ func TestMerklePatriciaTrie_getPathNodes(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1193,19 +1479,20 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 	}
 	type args struct {
 		ctx            context.Context
-		handler        MPTIteratorHandler
 		visitNodeTypes byte
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name     string
+		fields   fields
+		args     args
+		wantErr  bool
+		wantHash string
 	}{
 		{
-			name:    "TestMerklePatriciaTrie_Iterate_OK",
-			fields:  fields{mutex: &sync.RWMutex{}},
-			wantErr: false,
+			name:     "TestMerklePatriciaTrie_Iterate_Empty_Tree_OK",
+			fields:   fields{mutex: &sync.RWMutex{}},
+			wantErr:  false,
+			wantHash: "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
 		},
 	}
 	for _, tt := range tests {
@@ -1215,13 +1502,20 @@ func TestMerklePatriciaTrie_Iterate(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			if err := mpt.Iterate(tt.args.ctx, tt.args.handler, tt.args.visitNodeTypes); (err != nil) != tt.wantErr {
+			sponge := sha3.New256()
+			if err := mpt.Iterate(tt.args.ctx, iterSpongeHandler(sponge), tt.args.visitNodeTypes); (err != nil) != tt.wantErr {
 				t.Errorf("Iterate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantHash != "" {
+				iteratedHash := hex.EncodeToString(sponge.Sum(nil))
+				if iteratedHash != tt.wantHash {
+					t.Errorf("Iterate() hash = %v, want = %v", iteratedHash, tt.wantHash)
+				}
 			}
 		})
 	}
@@ -1289,7 +1583,7 @@ func TestMerklePatriciaTrie_getNodeValue(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1343,7 +1637,7 @@ func TestMerklePatriciaTrie_insert(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1488,7 +1782,7 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1508,14 +1802,14 @@ func TestMerklePatriciaTrie_insertAtNode(t *testing.T) {
 	}
 }
 
-func TestMerklePatriciaTrie_MergeDB(t *testing.T) {
+func TestMerklePatriciaTrie_MergeChanges(t *testing.T) {
 	t.Parallel()
 
-	mpt := NewMerklePatriciaTrie(NewMemoryNodeDB(), 0)
+	mpt := NewMerklePatriciaTrie(NewMemoryNodeDB(), 0, nil)
 
 	mndb := NewMemoryNodeDB()
-	err := mndb.PutNode(Key("key"), NewValueNode())
-	require.NoError(t, err)
+	mpt2 := NewMerklePatriciaTrie(mndb, 0, nil)
+	doStrValInsert(t, mpt2, "1234", "test")
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -1535,10 +1829,10 @@ func TestMerklePatriciaTrie_MergeDB(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Test_MerklePatriciaTrie_MergeDB_OK",
+			name: "Test_MerklePatriciaTrie_MergeChanges_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              NewMemoryNodeDB(),
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -1554,12 +1848,12 @@ func TestMerklePatriciaTrie_MergeDB(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
 			}
-			if err := mpt.MergeDB(tt.args.ndb, tt.args.root); (err != nil) != tt.wantErr {
+			if err := mpt.MergeChanges(mpt2.GetChanges()); (err != nil) != tt.wantErr {
 				t.Errorf("MergeDB() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -1572,7 +1866,7 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 	DebugMPTNode = true
 
 	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), true)
-	mpt := NewMerklePatriciaTrie(db, 0)
+	mpt := NewMerklePatriciaTrie(db, 0, nil)
 
 	type fields struct {
 		mutex           *sync.RWMutex
@@ -1594,26 +1888,25 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_MergeMPTChanges_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              NewMemoryNodeDB(),
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
 			},
-			args:    args{mpt2: NewMerklePatriciaTrie(NewMemoryNodeDB(), 0)},
+			args:    args{mpt2: NewMerklePatriciaTrie(NewMemoryNodeDB(), 0, nil)},
 			wantErr: false,
 		},
 		{
 			name: "Test_MerklePatriciaTrie_MergeMPTChanges_Invalid_MPT_DB_ERR",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              NewMemoryNodeDB(),
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
 			},
 			args: func() args {
-				mpt := NewMerklePatriciaTrie(NewMemoryNodeDB(), 0)
-				mpt.Root = Key("key")
+				mpt := NewMerklePatriciaTrie(NewMemoryNodeDB(), 0, Key("key"))
 
 				cc := &ChangeCollector{
 					Changes: make(map[string]*NodeChange),
@@ -1631,7 +1924,7 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_MergeMPTChanges_LevelNDB_ERR",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              NewMemoryNodeDB(),
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -1640,9 +1933,8 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 				mpt2: func() *MerklePatriciaTrie {
 					mpt := NewMerklePatriciaTrie(
 						NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false),
-						0,
+						0, Key("key"),
 					)
-					mpt.Root = Key("key")
 
 					return mpt
 				}(),
@@ -1657,7 +1949,7 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1675,7 +1967,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 	pndb, cleanup := newPNodeDB(t)
 	defer cleanup()
 
-	mpt := NewMerklePatriciaTrie(nil, 0)
+	mpt := NewMerklePatriciaTrie(nil, 0, nil)
 
 	lndb := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), true)
 	n := NewFullNode(&SecureSerializableValue{Buffer: []byte("value")})
@@ -1698,7 +1990,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_Validate_PNDB_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              pndb,
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -1709,7 +2001,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_Validate_MNDB_OK",
 			fields: fields{
 				mutex:           &sync.RWMutex{},
-				Root:            mpt.Root,
+				Root:            mpt.GetRoot(),
 				db:              NewMemoryNodeDB(),
 				ChangeCollector: mpt.ChangeCollector,
 				Version:         mpt.Version,
@@ -1720,7 +2012,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_Validate_LNDB_OK",
 			fields: fields{
 				mutex: &sync.RWMutex{},
-				Root:  mpt.Root,
+				Root:  mpt.GetRoot(),
 				db:    NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), true),
 				ChangeCollector: func() ChangeCollectorI {
 					cc := ChangeCollector{
@@ -1739,7 +2031,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 			name: "Test_MerklePatriciaTrie_Validate_LNDB_OK2",
 			fields: fields{
 				mutex: &sync.RWMutex{},
-				Root:  mpt.Root,
+				Root:  mpt.GetRoot(),
 				db:    lndb,
 				ChangeCollector: func() ChangeCollectorI {
 					cc := ChangeCollector{
@@ -1762,7 +2054,7 @@ func TestMerklePatriciaTrie_Validate(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1791,7 +2083,7 @@ func TestIsMPTValid(t *testing.T) {
 	}{
 		{
 			name:    "Test_IsMPTValid_OK",
-			args:    args{mpt: NewMerklePatriciaTrie(NewMemoryNodeDB(), 0)},
+			args:    args{mpt: NewMerklePatriciaTrie(NewMemoryNodeDB(), 0, nil)},
 			wantErr: false,
 		},
 	}
@@ -1810,7 +2102,7 @@ func TestIsMPTValid(t *testing.T) {
 func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
 	t.Parallel()
 
-	mpt := NewMerklePatriciaTrie(nil, 0)
+	mpt := NewMerklePatriciaTrie(nil, 0, nil)
 	mnh := func(ctx context.Context, path Path, key Key) error {
 		return nil
 	}
@@ -1897,7 +2189,7 @@ func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
 
 			mpt := &MerklePatriciaTrie{
 				mutex:           tt.fields.mutex,
-				Root:            tt.fields.Root,
+				root:            tt.fields.Root,
 				db:              tt.fields.db,
 				ChangeCollector: tt.fields.ChangeCollector,
 				Version:         tt.fields.Version,
@@ -1911,9 +2203,9 @@ func TestMerklePatriciaTrie_UpdateVersion(t *testing.T) {
 
 func TestMPTInsertABC(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), nil)
 
 	doStrValInsert(t, mpt2, "12345897", "earth")
 	doStrValInsert(t, mpt2, "1234", "mars")
@@ -1922,9 +2214,9 @@ func TestMPTInsertABC(t *testing.T) {
 
 func TestMPTDeleteSameEndingPathNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), nil)
 
 	doStrValInsert(t, mpt2, "1245", "1234")
 	doStrValInsert(t, mpt2, "12", "12")
@@ -1936,9 +2228,9 @@ func TestMPTDeleteSameEndingPathNode(t *testing.T) {
 }
 func TestMPTFullToLeafNodeDelete(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0), nil)
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
-	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0), nil)
 
 	doStrValInsert(t, mpt2, "1245", "1234")
 	doStrValInsert(t, mpt2, "12", "12")

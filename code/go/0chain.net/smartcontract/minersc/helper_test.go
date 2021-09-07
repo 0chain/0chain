@@ -1,8 +1,10 @@
 package minersc
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,8 +31,6 @@ import (
 )
 
 // test helpers
-
-const x10 = 10 * 1000 * 1000 * 1000
 
 func toks(val state.Balance) string {
 	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
@@ -287,19 +287,28 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 	return
 }
 
-func (msc *MinerSmartContract) DeleteMiner(
+func (msc *MinerSmartContract) ConfigHandler(
+	ctx context.Context,
+	values url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	return msc.configHandler(ctx, values, balances)
+}
+
+func (msc *MinerSmartContract) UpdateSettings(
+	t *transaction.Transaction,
+	inputData []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI,
+) (resp string, err error) {
+	return msc.updateSettings(t, inputData, gn, balances)
+}
+
+func (msc *MinerSmartContract) UpdateGlobals(
 	txn *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	return msc.deleteMiner(txn, inputData, gn, balances)
-}
-
-func GetSharderNodeKey(sid datastore.Key) datastore.Key {
-	return getSharderKey(sid)
-}
-
-func GetMinerNodeKey(mn *MinerNode) datastore.Key {
-	return mn.getKey()
+	return msc.updateGlobals(txn, inputData, gn, balances)
 }
