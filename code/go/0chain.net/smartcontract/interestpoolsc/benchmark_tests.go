@@ -1,6 +1,8 @@
 package interestpoolsc
 
 import (
+	"testing"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/spf13/viper"
@@ -35,7 +37,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}

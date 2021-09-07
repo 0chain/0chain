@@ -44,7 +44,22 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
+	b.StopTimer()
+	if bt.name == "miner.shareSignsOrShares" {
+		var pn = PhaseNode{
+			Phase:        Publish,
+			StartRound:   1,
+			CurrentRound: 2,
+			Restarts:     0,
+		}
+		_, err := balances.InsertTrieNode(pn.GetKey(), &pn)
+		if err != nil {
+			panic(err)
+		}
+	}
+	b.StartTimer()
+
 	gn, err := getGlobalNode(balances)
 	if err != nil {
 		panic(err)
@@ -142,27 +157,8 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name: "miner.shareSignsOrShares",
-			endpoint: func(
-				txn *transaction.Transaction,
-				input []byte,
-				gn *GlobalNode,
-				balances cstate.StateContextI,
-			) (string, error) {
-				// This is not best practise as adding the node will count as part
-				// of the test duration.
-				var pn = PhaseNode{
-					Phase:        Publish,
-					StartRound:   1,
-					CurrentRound: 2,
-					Restarts:     0,
-				}
-				_, err := balances.InsertTrieNode(pn.GetKey(), &pn)
-				if err != nil {
-					panic(err)
-				}
-				return msc.shareSignsOrShares(txn, input, gn, balances)
-			},
+			name:     "miner.shareSignsOrShares",
+			endpoint: msc.shareSignsOrShares,
 			txn: &transaction.Transaction{
 				ClientID: GetMockNodeId(0, NodeTypeMiner),
 			},
