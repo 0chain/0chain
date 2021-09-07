@@ -478,18 +478,18 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			name: "ok",
 			args: args{
 				t:  testTxn(owner, 100),
-				gn: testGlobalNode(globalNode1Ok, 10, 10, 0, 10, 5),
+				gn: testGlobalNodeStringTime(globalNode1Ok, 10, 10, 0, 0.10, "5m"),
 				inputData: (&smartcontract.StringMap{
 					Fields: map[string]string{
 						Settings[MinLock]:       "30",
-						Settings[Apr]:           "40.0",
+						Settings[Apr]:           "0.40",
 						Settings[MinLockPeriod]: "10m",
 						Settings[MaxMint]:       "10",
 					},
 				}).Encode(),
 				balances: testBalance("", 0),
 			},
-			want:       string(testGlobalNode(globalNode1Ok, 10, 10, 30, 40, 10).Encode()),
+			want:       string(testGlobalNodeStringTime(globalNode1Ok, 10, 10, 30, 0.40, "10m").Encode()),
 			wantErr:    false,
 			shouldBeOk: true,
 		},
@@ -507,23 +507,6 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("updateVariables() got = %v, want %v", got, tt.want)
 			}
-			if tt.shouldBeOk {
-				const pfx = "smart_contracts.interestpoolsc."
-				var conf = config.SmartContractConfig
-				if conf.Get(pfx+"apr") != tt.args.gn.APR {
-					t.Errorf("wrong interest_rate")
-				}
-				if conf.Get(pfx+"min_lock_period") != tt.args.gn.MinLockPeriod {
-					t.Errorf("wrong min_lock_period")
-				}
-				if conf.Get(pfx+"min_lock") != tt.args.gn.MinLock {
-					t.Errorf("wrong min_lock")
-				}
-				if conf.Get(pfx+"max_mint") != tt.args.gn.MaxMint {
-					t.Errorf("wrong max_mint")
-				}
-			}
-
 		})
 	}
 }
@@ -751,14 +734,14 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 				inputData: (&smartcontract.StringMap{
 					Fields: map[string]string{
 						Settings[MinLock]:       "30",
-						Settings[Apr]:           "40.0",
+						Settings[Apr]:           "0.40",
 						Settings[MinLockPeriod]: "10m",
 						Settings[MaxMint]:       "10",
 					},
 				}).Encode(),
 				balances: updateVariables(),
 			},
-			want:    string(testGlobalNode(globalNode1Ok, 10, 10, 30, 40, 10).Encode()),
+			want:    string(testGlobalNodeStringTime(globalNode1Ok, 10, 10/1e10, 30, 0.40, "10m").Encode()),
 			wantErr: false,
 		},
 		{
