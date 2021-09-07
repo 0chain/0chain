@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSettings(t *testing.T) {
+func TestGlobalSettings(t *testing.T) {
 	require.Len(t, GlobalSettingName, int(NumOfGlobalSettings))
 	require.Len(t, GlobalSettingInfo, int(NumOfGlobalSettings))
 
