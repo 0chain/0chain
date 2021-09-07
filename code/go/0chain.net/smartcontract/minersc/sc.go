@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -105,7 +104,7 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 
 	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
 	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
-	msc.SmartContract.RestHandlers["/configs"] = msc.configsHandler
+	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
@@ -183,70 +182,26 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
-func getGlobalNode(balances cstate.StateContextI) (
-	gn *GlobalNode, err error) {
-
+func getGlobalNode(
+	balances cstate.StateContextI,
+) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
 	var p util.Serializable
 	p, err = balances.GetTrieNode(GlobalNodeKey)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-
-	if err == nil {
-		if err = gn.Decode(p.Encode()); err != nil {
-			return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		gn.readConfig()
+		if err := gn.validate(); err != nil {
+			return nil, fmt.Errorf("validating global node: %v", err)
 		}
 		return gn, nil
 	}
 
-	err = nil // reset the value not present error
-
-	const pfx = "smart_contracts.minersc."
-	var conf = config.SmartContractConfig
-	gn.MinStake = state.Balance(conf.GetFloat64(pfx+"min_stake") * 1e10)
-	gn.MaxStake = state.Balance(conf.GetFloat64(pfx+"max_stake") * 1e10)
-	gn.MaxN = conf.GetInt(pfx + "max_n")
-	gn.MinN = conf.GetInt(pfx + "min_n")
-	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
-	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
-	gn.XPercent = conf.GetFloat64(pfx + "x_percent")
-	gn.MaxS = conf.GetInt(pfx + "max_s")
-	gn.MinS = conf.GetInt(pfx + "min_s")
-	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")
-	gn.RewardRoundFrequency = conf.GetInt64(pfx + "reward_round_frequency")
-
-	// check bounds
-	if gn.MinN < 1 {
-		return nil, fmt.Errorf("min_n is too small: %d", gn.MinN)
+	if err = gn.Decode(p.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	if gn.MaxN < gn.MinN {
-		return nil, fmt.Errorf("max_n is less than min_n: %d < %d",
-			gn.MaxN, gn.MinN)
-	}
-
-	if gn.MinS < 1 {
-		return nil, fmt.Errorf("min_s is too small: %d", gn.MinS)
-	}
-	if gn.MaxS < gn.MinS {
-		return nil, fmt.Errorf("max_s is less than min_s: %d < %d",
-			gn.MaxS, gn.MinS)
-	}
-
-	if gn.MaxDelegates <= 0 {
-		return nil, fmt.Errorf("max_delegates is too small: %d", gn.MaxDelegates)
-	}
-
-	gn.InterestRate = conf.GetFloat64(pfx + "interest_rate")
-	gn.RewardRate = conf.GetFloat64(pfx + "reward_rate")
-	gn.ShareRatio = conf.GetFloat64(pfx + "share_ratio")
-	gn.BlockReward = state.Balance(conf.GetFloat64(pfx+"block_reward") * 1e10)
-	gn.MaxCharge = conf.GetFloat64(pfx + "max_charge")
-	gn.Epoch = conf.GetInt64(pfx + "epoch")
-	gn.RewardDeclineRate = conf.GetFloat64(pfx + "reward_decline_rate")
-	gn.InterestDeclineRate = conf.GetFloat64(pfx + "interest_decline_rate")
-	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
-
 	return gn, nil
 }
 
