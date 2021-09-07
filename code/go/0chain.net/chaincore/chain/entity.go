@@ -1360,7 +1360,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 		if mb.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.Any("LFMB previous MB hash", mb.Hash),
+				zap.Any("LFMB previous MB hash", mb.PreviousMagicBlockHash),
 				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 			c.PreviousMagicBlock = mb
 		}
@@ -1598,7 +1598,7 @@ func (c *Chain) pullNotarizedBlocks(ctx context.Context, b *block.Block, num int
 		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
 		if nb == nil {
 			logging.Logger.Error("pull_notarized_block - could not get notarized block",
-				zap.Int64("b_round", b.Round),
+				zap.Int64("end_round", b.Round),
 				zap.Int64("round", b.Round-1-i),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("index", i))
@@ -1646,8 +1646,8 @@ func (c *Chain) pullNotarizedBlocks(ctx context.Context, b *block.Block, num int
 		}
 
 		if blocks[0].Round > 0 && blocks[0].PrevBlock == nil {
-			logging.Logger.Panic("pull_notarized_block - last block has no previous block",
-				zap.Int64("b_round", b.Round),
+			logging.Logger.Warn("pull_notarized_block - last block has no previous block",
+				zap.Int64("end_round", b.Round),
 				zap.Int64("round", blocks[0].Round))
 		}
 	}

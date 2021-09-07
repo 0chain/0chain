@@ -441,23 +441,50 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 
 // SyncBlocks sync N blocks and state changes from network
 func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveToDB bool) []*block.Block {
+	logging.Logger.Debug("sync_blocks - start",
+		zap.Int64("num", num),
+		zap.Int64("start round", b.Round),
+		zap.Bool("sav to DB", saveToDB))
+
 	blocks := c.pullNotarizedBlocks(ctx, b, num)
 	if len(blocks) == 0 {
 		logging.Logger.Debug("sync_blocks - pull blocks with no response")
 		return nil
 	}
 
-	logging.Logger.Debug("sync_blocks - start",
-		zap.Int64("num", num),
-		zap.Int64("start round", b.Round),
-		zap.Bool("sav to DB", saveToDB))
-
 	failedIndex := -1
+	first := blocks[0]
+	if first.PrevBlock == nil {
+		if err := c.SyncStateOrComputeLocal(ctx, first); err != nil {
+			logging.Logger.Error("sync_blocks - sync state for oldest block failed",
+				zap.Error(err),
+				zap.Int64("round", first.Round),
+				zap.String("block", first.Hash))
+		} else {
+			if saveToDB {
+				if err := first.SaveChanges(ctx, c); err != nil {
+					logging.Logger.Error("sync_blocks - save changes failed",
+						zap.Error(err), zap.Int64("round", first.Round))
+				}
+				logging.Logger.Info("sync_blocks - save state changes success",
+					zap.Int64("round", first.Round),
+					zap.String("block", first.Hash))
+			}
+		}
+	}
+
 	for i := range blocks {
 		cb := blocks[i]
 		if cb.PrevBlock == nil {
-			// continue so that next block has previous block
-			failedIndex = i
+			// only the first block could have no previous block
+			if i > 0 {
+				logging.Logger.Panic("sync_blocks - block has no prev block",
+					zap.Int64("round", cb.Round),
+					zap.String("block", cb.Hash),
+					zap.Int("index", i),
+					zap.Int64("end_round", b.Round),
+					zap.Int64("num", num))
+			}
 			continue
 		}
 
