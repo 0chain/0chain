@@ -3,6 +3,9 @@ package faucetsc
 import (
 	"testing"
 
+	sc "0chain.net/smartcontract"
+	"github.com/stretchr/testify/require"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -34,39 +37,52 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
-	gn := fsc.getGlobalVariables(bt.txn, balances)
-	var err error
+	gn, err := fsc.getGlobalVariables(bt.txn, balances)
+	require.NoError(b, err)
 	switch bt.endpoint {
-	case "updateLimits":
-		_, err = fsc.updateLimits(bt.Transaction(), bt.input, balances, gn)
+	case "updateSettings":
+		_, err = fsc.updateSettings(bt.Transaction(), bt.input, balances, gn)
 	case "pour":
 		_, err = fsc.pour(bt.Transaction(), bt.input, balances, gn)
 	case "refill":
 		_, _ = fsc.refill(bt.Transaction(), balances, gn)
 	default:
-		panic("unknown endpoint: " + bt.endpoint)
+		require.Fail(b, "unknown endpoint"+bt.endpoint)
 	}
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(b, err)
 }
 
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuit {
 	var tests = []BenchTest{
-		// todo updateLimits waiting for Pr 484
+		{
+			name:     "faucet.update-settings",
+			endpoint: "updateSettings",
+			txn: &transaction.Transaction{
+				Value: 3,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					Settings[PourAmount]:      "1",
+					Settings[MaxPourAmount]:   "2",
+					Settings[PeriodicLimit]:   "3",
+					Settings[GlobalLimit]:     "5",
+					Settings[IndividualReset]: "7s",
+					Settings[GlobalReset]:     "11m",
+				},
+			}).Encode(),
+		},
 		{
 			name:     "faucet.pour",
 			endpoint: "pour",
 			txn: &transaction.Transaction{
-				Value:    3,
-				ClientID: data.Clients[0],
+				Value: 3,
 			},
 			input: nil,
 		},
@@ -75,7 +91,6 @@ func BenchmarkTests(
 			endpoint: "refill",
 			txn: &transaction.Transaction{
 				Value:      23,
-				ClientID:   data.Clients[0],
 				ToClientID: ADDRESS,
 			},
 			input: nil,
@@ -83,6 +98,7 @@ func BenchmarkTests(
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
+		test.txn.ClientID = data.Clients[0]
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuit{

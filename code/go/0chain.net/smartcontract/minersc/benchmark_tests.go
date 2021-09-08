@@ -115,6 +115,14 @@ func BenchmarkTests(
 			}).Encode(),
 		},
 		{
+			name:     "miner.update_globals",
+			endpoint: msc.minerHealthCheck,
+			txn: &transaction.Transaction{
+				ClientID: GetMockNodeId(0, NodeTypeMiner),
+			},
+			input: nil,
+		},
+		{
 			name:     "miner.miner_heath_check",
 			endpoint: msc.minerHealthCheck,
 			txn: &transaction.Transaction{

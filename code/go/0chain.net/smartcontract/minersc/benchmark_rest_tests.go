@@ -113,7 +113,7 @@ func BenchmarkRestTests(
 		},
 		{
 			name:     "miner_rest.configs",
-			endpoint: msc.configsHandler,
+			endpoint: msc.configHandler,
 		},
 	}
 	var testsI []bk.BenchTestI
