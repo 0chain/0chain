@@ -53,14 +53,14 @@ server_chain:
       timeout: 15
       retry_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 180 # milliseconds
+      max_wait_time: 180ms
       wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage (registration)
       threshold_by_stake: 0 # percent
     sharding:
       min_active_sharders: 25 # percentage
-      min_active_replicators: 25 # percentage
+      min_active_replicators: 25 # percentageRF
     validation:
       batch_size: 1000
     reuse_txns: false
@@ -91,22 +91,22 @@ server_chain:
     check_interval: 10 # seconds
     time_threshold: 60 #seconds
   smart_contract:
-    timeout: 8000 # milliseconds
+    timeout: 8000ms
   health_check:
     show_counters: true
     deep_scan:
       enabled: false
-      settle_secs: 30
+      settle_secs: 30s
       window: 0 #Full scan till round 0
-      repeat_interval_mins: 3 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 3m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
     proximity_scan:
       enabled: true
-      settle_secs: 30
+      settle_secs: 30s
       window: 100000 #number of blocks, Do not make 0 with minio ON, Should be less than minio old block round range
-      repeat_interval_mins: 1 #minutes
-      report_status_mins: 1 #minutes
+      repeat_interval_mins: 1m #minutes
+      report_status_mins: 1m #minutes
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: "15s" #
@@ -117,7 +117,7 @@ server_chain:
     max_simultaneous_from_sharders: 30
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder_piers.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0
   dns_url: "" # http://198.18.0.98:9091
@@ -157,7 +157,7 @@ minio:
 cassandra:
   connection:
     delay: 10 # in seconds
-    retries: 30
+    retries: 10
 
 # integration tests related configurations
 integration_tests:

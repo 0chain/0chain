@@ -50,7 +50,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/get_mpt_key"] = ssc.GetMptKey
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
-	ssc.SmartContractExecutionStats["update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_config"), nil)
+	ssc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_settings"), nil)
 	// reading / writing
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
@@ -287,12 +287,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	// configurations
 
-	case "update_config":
-		resp, err = sc.updateConfig(t, input, balances)
+	case "update_settings":
+		resp, err = sc.updateSettings(t, input, balances)
 
 	default:
-		err = common.NewError("invalid_storage_function_name",
-			"Invalid storage function called")
+		err = common.NewErrorf("invalid_storage_function_name",
+			"Invalid storage function '%s' called", funcName)
 	}
 
 	return
