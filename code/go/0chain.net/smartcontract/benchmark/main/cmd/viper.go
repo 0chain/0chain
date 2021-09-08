@@ -49,13 +49,28 @@ func validateConfig() {
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumAllocations)))
 	}
 
-	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumSharders) {
+	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumMiners) {
 		log.Fatal(fmt.Errorf("number of clients %d must be alt lest the number of miners %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumMiners)))
 	}
 
 	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.NumSharders) {
 		log.Fatal(fmt.Errorf("number of clients %d must be alt lest the number of sharders %d",
-			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumMiners)))
+			viper.GetInt(bk.NumClients), viper.GetInt(bk.NumSharders)))
+	}
+
+	if viper.GetInt(bk.NumActiveMiners) > viper.GetInt(bk.NumMiners) {
+		log.Fatal(fmt.Errorf("number of active miners %d cannot exceeed the number of miners %d",
+			viper.GetInt(bk.NumActiveMiners), viper.GetInt(bk.NumMiners)))
+	}
+
+	if viper.GetInt(bk.NumActiveMiners) > viper.GetInt(bk.NumMiners) {
+		log.Fatal(fmt.Errorf("number of active miners %d cannot exceeed the number of miners %d",
+			viper.GetInt(bk.NumActiveMiners), viper.GetInt(bk.NumMiners)))
+	}
+
+	if viper.GetInt(bk.NumActiveSharders) > viper.GetInt(bk.NumSharders) {
+		log.Fatal(fmt.Errorf("number of active sharders %d cannot exceeed the number of sharders %d",
+			viper.GetInt(bk.NumActiveSharders), viper.GetInt(bk.NumSharders)))
 	}
 }

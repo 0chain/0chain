@@ -3,25 +3,17 @@ package minersc
 import (
 	"strconv"
 
-	"0chain.net/core/encryption"
-
-	"0chain.net/core/datastore"
-
-	"0chain.net/chaincore/node"
-	"github.com/rcrowley/go-metrics"
-
 	"0chain.net/chaincore/block"
-
-	"0chain.net/chaincore/tokenpool"
-
-	sci "0chain.net/chaincore/smartcontractinterface"
-
-	"0chain.net/chaincore/state"
-
-	"0chain.net/core/common"
-	"0chain.net/smartcontract/benchmark"
-
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/benchmark"
+	"github.com/rcrowley/go-metrics"
 	"github.com/spf13/viper"
 )
 
@@ -34,6 +26,7 @@ func AddMockNodes(
 		err          error
 		nodes        []string
 		allNodes     MinerNodes
+		numActive    int
 		nodeMap      = make(map[string]*SimpleNode)
 		numNodes     int
 		numDelegates int
@@ -41,10 +34,12 @@ func AddMockNodes(
 	)
 
 	if nodeType == NodeTypeMiner {
+		numActive = viper.GetInt(benchmark.NumActiveMiners)
 		numNodes = viper.GetInt(benchmark.NumMiners)
 		numDelegates = viper.GetInt(benchmark.NumMinerDelegates)
 		key = AllMinersKey
 	} else {
+		numActive = viper.GetInt(benchmark.NumActiveSharders)
 		numNodes = viper.GetInt(benchmark.NumSharders)
 		numDelegates = viper.GetInt(benchmark.NumSharderDelegates)
 		key = AllShardersKey
@@ -77,7 +72,11 @@ func AddMockNodes(
 			}
 
 			pool.DelegateID = clients[dId]
-			newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+			if i < numActive {
+				newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+			} else {
+				newNode.Pending[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
+			}
 		}
 		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
 		if err != nil {
@@ -156,7 +155,8 @@ func AddUserNodesForNode(
 func SetUpNodes(
 	miners, sharders []string,
 ) {
-	for _, miner := range miners {
+	activeMiners := viper.GetInt(benchmark.NumActiveMiners)
+	for i, miner := range miners {
 		nextMiner := &node.Node{}
 		nextMiner.TimersByURI = make(map[string]metrics.Timer, 10)
 		nextMiner.SizeByURI = make(map[string]metrics.Histogram, 10)
@@ -166,17 +166,26 @@ func SetUpNodes(
 		nextMiner.ID = miner
 		nextMiner.PublicKey = "mockPublicKey"
 		nextMiner.Type = node.NodeTypeMiner
-		nextMiner.Status = node.NodeStatusActive
+		if i < activeMiners {
+			nextMiner.Status = node.NodeStatusActive
+		} else {
+			nextMiner.Status = node.NodeStatusInactive
+		}
 		node.RegisterNode(nextMiner)
 	}
-	for _, sharder := range sharders {
+	activeSharders := viper.GetInt(benchmark.NumActiveSharders)
+	for i, sharder := range sharders {
 		nextSharder := &node.Node{}
 		nextSharder.TimersByURI = make(map[string]metrics.Timer, 10)
 		nextSharder.SizeByURI = make(map[string]metrics.Histogram, 10)
 		nextSharder.ID = sharder
 		nextSharder.PublicKey = "mockPublicKey"
 		nextSharder.Type = node.NodeTypeMiner
-		nextSharder.Status = node.NodeStatusActive
+		if i < activeSharders {
+			nextSharder.Status = node.NodeStatusActive
+		} else {
+			nextSharder.Status = node.NodeStatusInactive
+		}
 		node.RegisterNode(nextSharder)
 	}
 }

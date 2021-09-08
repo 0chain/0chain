@@ -137,10 +137,6 @@ func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
 
 //SetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
-	if len(b0.privateKey) > 0 {
-		return errors.New("cannot set public key when there is a private key")
-	}
-
 	publicKey = MiraclToHerumiPK(publicKey)
 	publicKeyBytes, err := hex.DecodeString(publicKey)
 	if err != nil {

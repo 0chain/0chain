@@ -61,7 +61,9 @@ type SimulatorParameter int
 const (
 	SimulationNumClients SimulatorParameter = iota
 	SimulationNumMiners
+	SimulationNumActiveMiners
 	SimulationNumSharders
+	SimulationNumActiveSharders
 	SimulationNumAllocations
 	SimulationNumBlobbersPerAllocation
 	SimulationNumBlobbers
@@ -162,7 +164,9 @@ func (w SimulatorParameter) String() string {
 	return [...]string{
 		"num_clients",
 		"num_miners",
+		"num_active_miners",
 		"nun_sharders",
+		"nun__active_sharders",
 		"num_allocations",
 		"num_blobbers_per_Allocation",
 		"num_blobbers",
@@ -183,7 +187,9 @@ func (w SimulatorParameter) String() string {
 var (
 	NumClients                   = Simulation + SimulationNumClients.String()
 	NumMiners                    = Simulation + SimulationNumMiners.String()
+	NumActiveMiners              = Simulation + SimulationNumActiveMiners.String()
 	NumSharders                  = Simulation + SimulationNumSharders.String()
+	NumActiveSharders            = Simulation + SimulationNumActiveSharders.String()
 	NumAllocations               = Simulation + SimulationNumAllocations.String()
 	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
 	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
