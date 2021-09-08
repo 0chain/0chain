@@ -38,8 +38,8 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 }
 
 func BenchmarkRestTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+	data bk.BenchData, _ bk.SignatureScheme,
+) bk.TestSuite {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -55,8 +55,8 @@ func BenchmarkRestTests(
 			}(),
 		},
 		{
-			name:     "faucet_rest.globalPerodicLimit",
-			endpoint: fsc.globalPerodicLimit,
+			name:     "faucet_rest.globalPeriodicLimit",
+			endpoint: fsc.globalPeriodicLimit,
 		},
 		{
 			name:     "faucet_rest.pourAmount",
@@ -71,7 +71,7 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.FaucetRest,
 		Benchmarks: testsI,
 	}

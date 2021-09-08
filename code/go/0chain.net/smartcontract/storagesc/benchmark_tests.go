@@ -58,7 +58,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var now = common.Now()
 	var ssc = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
@@ -313,7 +313,10 @@ func BenchmarkTests(
 				if err != nil {
 					panic(err)
 				}
-				sigScheme.SetPublicKey(data.PublicKeys[0])
+				err = sigScheme.SetPublicKey(data.PublicKeys[0])
+				if err != nil {
+					panic(err)
+				}
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
 				signature, err := sigScheme.Sign(hex.EncodeToString(responseBytes))
 				if err != nil {
@@ -720,7 +723,7 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.Storage,
 		Benchmarks: testsI,
 	}

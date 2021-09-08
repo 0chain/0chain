@@ -17,6 +17,34 @@ simulation:
   num_write_redeem_allocation: 10
   num_challenges_blobber: 10
 
+options:
+  verbose: true
+  test_suites:
+    - "storage"
+    - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+  omitted_tests:
+    - "miner.payFees"
+    - "storage.cancel_allocation"
+    - "storage.finalize_allocation"
+    - "storage.free_allocation_request"
+    - "storage.free_update_allocation"
+    - "storage.new_allocation_request_preferred"
+    - "storage.new_allocation_request_random"
+    - "storage.update_allocation_request"
+    - "storage_rest.allocation_min_lock"
+    - "storage_rest.getStakePoolStat"
+    - "storage_rest.getUserStakePoolStat"
+    - "storage.generate_challenges"
+
 smart_contracts:
   minersc:
     min_delegates: 0

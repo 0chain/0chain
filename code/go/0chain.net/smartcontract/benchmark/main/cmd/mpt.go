@@ -69,8 +69,7 @@ func getBalances(
 }
 
 func setUpMpt(
-	dbPath string, verbose bool,
-
+	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, benchmark.BenchData) {
 
 	log.Println("starting building blockchain")

@@ -38,8 +38,8 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 }
 
 func BenchmarkRestTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+	data bk.BenchData, _ bk.SignatureScheme,
+) bk.TestSuite {
 	var vsc = VestingSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -72,7 +72,7 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.VestingRest,
 		Benchmarks: testsI,
 	}

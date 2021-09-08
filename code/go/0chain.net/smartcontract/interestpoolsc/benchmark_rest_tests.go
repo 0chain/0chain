@@ -38,8 +38,8 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 }
 
 func BenchmarkRestTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+	data bk.BenchData, _ bk.SignatureScheme,
+) bk.TestSuite {
 	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -58,12 +58,16 @@ func BenchmarkRestTests(
 			name:     "interest_pool_rest.getLockConfig",
 			endpoint: isc.getLockConfig,
 		},
+		{
+			name:     "interest_pool_rest.getConfig",
+			endpoint: isc.getConfig,
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.InterestPoolRest,
 		Benchmarks: testsI,
 	}

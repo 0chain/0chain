@@ -31,6 +31,7 @@ require (
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.2.1
+	github.com/spf13/flag v0.0.0-20140426202619-916eaf9e2dc5
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/objx v0.1.1 // indirect

@@ -59,13 +59,14 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var tests = []BenchTest{
 		{
 			name:     "faucet.update-settings",
 			endpoint: "updateSettings",
 			txn: &transaction.Transaction{
-				Value: 3,
+				ClientID: owner,
+				Value:    3,
 			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
@@ -82,7 +83,8 @@ func BenchmarkTests(
 			name:     "faucet.pour",
 			endpoint: "pour",
 			txn: &transaction.Transaction{
-				Value: 3,
+				ClientID: data.Clients[0],
+				Value:    3,
 			},
 			input: nil,
 		},
@@ -90,6 +92,7 @@ func BenchmarkTests(
 			name:     "faucet.refill",
 			endpoint: "refill",
 			txn: &transaction.Transaction{
+				ClientID:   data.Clients[0],
 				Value:      23,
 				ToClientID: ADDRESS,
 			},
@@ -98,10 +101,9 @@ func BenchmarkTests(
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
-		test.txn.ClientID = data.Clients[0]
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.Faucet,
 		Benchmarks: testsI,
 	}

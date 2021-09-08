@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
+var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
 	bk.Storage:          storagesc.BenchmarkTests,
 	bk.StorageRest:      storagesc.BenchmarkRestTests,
 	bk.Miner:            minersc.BenchmarkTests,
@@ -40,6 +40,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
+	rootCmd.PersistentFlags().StringSlice("omit", nil, "list endpoints to omit")
 }
 
 func Execute() error {
@@ -52,28 +53,22 @@ var rootCmd = &cobra.Command{
 	Long:  `Benchmark 0chain smart-contract`,
 	Run: func(cmd *cobra.Command, args []string) {
 		GetViper("testdata/benchmark.yaml")
-		var err error
-		verbose := true
-		if cmd.Flags().Changed("verbose") {
-			verbose, err = cmd.Flags().GetBool("verbose")
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-		log.SetVerbose(verbose)
-		printSimSettings(verbose)
+		log.PrintSimSettings()
 
-		mpt, root, data := setUpMpt("db", verbose)
+		tests, omittedTests := setupOptions(cmd.Flags())
+		log.Println("read in command line options")
+
+		mpt, root, data := setUpMpt("db")
 		log.Println("finished setting up blockchain")
 
-		suites := getTestSuites(data, cmd.Flags())
-		results := runSuites(suites, verbose, mpt, root, data)
+		suites := getTestSuites(data, tests, omittedTests)
+		results := runSuites(suites, mpt, root, data)
 
-		printResults(results, verbose)
+		printResults(results)
 	},
 }
 
-func printResults(results []suiteResults, verbose bool) {
+func printResults(results []suiteResults) {
 	const (
 		colourReset  = "\033[0m"
 		colourRed    = "\033[31m"
@@ -83,10 +78,11 @@ func printResults(results []suiteResults, verbose bool) {
 	)
 
 	var (
-		colour string
-		bad    = viper.GetDuration(bk.Bad)
-		worry  = viper.GetDuration(bk.Worry)
-		good   = viper.GetDuration(bk.Satisfactory)
+		verbose = log.GetVerbose()
+		colour  string
+		bad     = viper.GetDuration(bk.Bad)
+		worry   = viper.GetDuration(bk.Worry)
+		good    = viper.GetDuration(bk.Satisfactory)
 	)
 
 	if verbose {
@@ -137,15 +133,5 @@ func printResults(results []suiteResults, verbose bool) {
 			}
 
 		}
-	}
-
-}
-
-func printSimSettings(verbose bool) {
-	if verbose {
-		for i := bk.SimulatorParameter(0); i < bk.NumberSimulationParameters; i++ {
-			println(i.String(), viper.GetInt(bk.Simulation+i.String()))
-		}
-		println()
 	}
 }

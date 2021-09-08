@@ -49,7 +49,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var vsc = VestingSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -155,7 +155,7 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.Vesting,
 		Benchmarks: testsI,
 	}

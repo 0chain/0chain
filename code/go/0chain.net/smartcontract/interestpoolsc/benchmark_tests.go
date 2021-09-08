@@ -3,6 +3,8 @@ package interestpoolsc
 import (
 	"testing"
 
+	sc "0chain.net/smartcontract"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/spf13/viper"
@@ -50,6 +52,8 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 		_, err = isc.lock(bt.Transaction(), un, gn, bt.input, balances)
 	case "unlock":
 		_, err = isc.unlock(bt.Transaction(), un, gn, bt.input, balances)
+	case "updateVariables":
+		_, err = isc.updateVariables(bt.Transaction(), gn, bt.input, balances)
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
@@ -60,9 +64,8 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var tests = []BenchTest{
-		// todo updateVariables waiting for Pr 487
 		{
 			name:     "interest_pool.lock",
 			endpoint: "lock",
@@ -86,12 +89,27 @@ func BenchmarkTests(
 				ID: getInterestPoolId(0),
 			}).encode(),
 		},
+		{
+			name:     "interest_pool.updateVariables",
+			endpoint: "updateVariables",
+			txn: &transaction.Transaction{
+				ClientID: owner,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					Settings[MinLock]:       "1",
+					Settings[Apr]:           "0.2",
+					Settings[MinLockPeriod]: "3m",
+					Settings[MaxMint]:       "5",
+				},
+			}).Encode(),
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.InterestPool,
 		Benchmarks: testsI,
 	}

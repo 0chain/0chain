@@ -69,7 +69,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var tests = []BenchTest{
 		{
 			name:     "multi_sig." + RegisterFuncName,
@@ -123,7 +123,7 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.MultiSig,
 		Benchmarks: testsI,
 	}

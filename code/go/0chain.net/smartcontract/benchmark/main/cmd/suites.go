@@ -1,14 +1,10 @@
 package cmd
 
 import (
-	"flag"
-	"fmt"
 	"sync"
 	"testing"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
-	"github.com/spf13/pflag"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/benchmark"
@@ -24,37 +20,8 @@ type suiteResults struct {
 	results []benchmarkResults
 }
 
-func getTestSuites(data benchmark.BenchData, flags *pflag.FlagSet) []benchmark.TestSuit {
-	var (
-		err     error
-		suits   []benchmark.TestSuit
-		bkNames []string
-	)
-	if flags.Changed("tests") {
-		bkNames, err = flags.GetStringSlice("tests")
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	if bkNames == nil {
-		for _, bks := range benchmarkSources {
-			suits = append(suits, bks(data, &BLS0ChainScheme{}))
-		}
-		return suits
-	}
-	for _, name := range bkNames {
-		if code, ok := benchmark.BenchmarkSourceCode[name]; ok {
-			suits = append(suits, benchmarkSources[code](data, &BLS0ChainScheme{}))
-		} else {
-			log.Fatal(fmt.Errorf("Invalid test source %s", name))
-		}
-	}
-	return suits
-}
-
 func runSuites(
-	suites []benchmark.TestSuit,
-	verbose bool,
+	suites []benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
 	data benchmark.BenchData,
@@ -63,11 +30,11 @@ func runSuites(
 	var wg sync.WaitGroup
 	for _, suite := range suites {
 		wg.Add(1)
-		go func(suite benchmark.TestSuit, wg *sync.WaitGroup) {
+		go func(suite benchmark.TestSuite, wg *sync.WaitGroup) {
 			defer wg.Done()
 			results = append(results, suiteResults{
 				name:    benchmark.BenchmarkSourceNames[suite.Source],
-				results: runSuite(suite, verbose, mpt, root, data),
+				results: runSuite(suite, mpt, root, data),
 			})
 		}(suite, &wg)
 	}
@@ -76,8 +43,7 @@ func runSuites(
 }
 
 func runSuite(
-	suite benchmark.TestSuit,
-	verbose bool,
+	suite benchmark.TestSuite,
 	mpt *util.MerklePatriciaTrie,
 	root util.Key,
 	data benchmark.BenchData,
@@ -88,7 +54,6 @@ func runSuite(
 		wg.Add(1)
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
-			flag.Set("test.benchtime", "2s")
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()

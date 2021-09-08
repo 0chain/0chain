@@ -38,8 +38,8 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 }
 
 func BenchmarkRestTests(
-	data bk.BenchData, sigScheme bk.SignatureScheme,
-) bk.TestSuit {
+	data bk.BenchData, _ bk.SignatureScheme,
+) bk.TestSuite {
 	var msc = MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -63,6 +63,14 @@ func BenchmarkRestTests(
 				values.Set("client_id", data.Clients[0])
 				return values
 			}(),
+		},
+		{
+			name:     "miner_rest.globals",
+			endpoint: msc.getGlobalsHandler,
+		},
+		{
+			name:     "miner_rest.getSharderKeepList",
+			endpoint: msc.GetSharderKeepListHandler,
 		},
 		{
 			name:     "miner_rest.getMinerList",
@@ -120,7 +128,7 @@ func BenchmarkRestTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.MinerRest,
 		Benchmarks: testsI,
 	}

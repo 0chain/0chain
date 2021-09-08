@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"strings"
 	"testing"
 
 	"0chain.net/chaincore/chain/state"
@@ -80,6 +81,7 @@ const (
 
 const (
 	Simulation     = "simulation."
+	Options        = "options."
 	Internal       = "internal."
 	SmartContract  = "smart_contracts."
 	MinerSc        = "minersc."
@@ -100,6 +102,10 @@ const (
 	Satisfactory            = Internal + "satisfactory"
 	TimeUnit                = Internal + "time_unit"
 	Colour                  = Internal + "colour"
+
+	OptionVerbose      = Options + "verbose"
+	OptionTestSuites   = Options + "test_suites"
+	OptionOmittedTests = Options + "omitted_tests"
 
 	MinerMaxDelegates = SmartContract + MinerSc + "max_delegates"
 	MinerMaxCharge    = SmartContract + MinerSc + "max_charge"
@@ -206,9 +212,36 @@ type SignatureScheme interface {
 	GetPrivateKey() string
 }
 
-type TestSuit struct {
+type TestSuite struct {
 	Source     BenchmarkSource
 	Benchmarks []BenchTestI
+}
+
+func (ts *TestSuite) RemoveBenchmarks(listToRemove []string) {
+	if len(ts.Benchmarks) == 0 {
+		return
+	}
+	var name = ts.Benchmarks[0].Name()
+	var prefix = name[:strings.IndexByte(name, '.')]
+	for _, testName := range listToRemove {
+		if len(testName) > len(prefix) && prefix == testName[:len(prefix)] {
+			ts.removeBenchmark(testName)
+		}
+		if len(ts.Benchmarks) == 0 {
+			return
+		}
+	}
+}
+
+func (ts *TestSuite) removeBenchmark(benchToRemove string) bool {
+	for i, bks := range ts.Benchmarks {
+		if bks.Name() == benchToRemove {
+			ts.Benchmarks[i] = ts.Benchmarks[len(ts.Benchmarks)-1]
+			ts.Benchmarks = ts.Benchmarks[:len(ts.Benchmarks)-1]
+			return true
+		}
+	}
+	return false
 }
 
 type BenchData struct {

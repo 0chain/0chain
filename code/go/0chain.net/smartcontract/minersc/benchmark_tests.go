@@ -3,6 +3,8 @@ package minersc
 import (
 	"testing"
 
+	sc "0chain.net/smartcontract"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -72,7 +74,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 
 func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
-) bk.TestSuit {
+) bk.TestSuite {
 	var msc = MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -173,13 +175,74 @@ func BenchmarkTests(
 			input: func() []byte {
 				var sos = make(map[string]*bls.DKGKeyShare)
 				for i := 0; i < viper.GetInt(bk.InternalT); i++ {
-					//sos[GetMockNodeId(i, NodeTypeMiner)] = &bls.DKGKeyShare{}
 					sos[GetMockNodeId(i, NodeTypeMiner)] = nil
 				}
 				return (&block.ShareOrSigns{
 					ShareOrSigns: sos,
 				}).Encode()
 			}(),
+		},
+		{
+			name:     "miner.update_globals",
+			endpoint: msc.updateGlobals,
+			txn: &transaction.Transaction{
+				ClientID: owner,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					"server_chain.block.min_block_size":                  "1",
+					"server_chain.block.max_block_size":                  "10",
+					"server_chain.block.max_byte_size":                   "1638400",
+					"server_chain.block.replicators":                     "0",
+					"server_chain.block.proposal.max_wait_time":          "100ms",
+					"server_chain.block.proposal.wait_mode":              "static",
+					"server_chain.block.consensus.threshold_by_count":    "66",
+					"server_chain.block.consensus.threshold_by_stake":    "0",
+					"server_chain.block.sharding.min_active_sharders":    "25",
+					"server_chain.block.sharding.min_active_replicators": "25",
+					"server_chain.block.validation.batch_size":           "1000",
+					"server_chain.block.reuse_txns":                      "false",
+					"server_chain.round_range":                           "10000000",
+					"server_chain.round_timeouts.softto_min":             "3000",
+					"server_chain.round_timeouts.softto_mult":            "3",
+					"server_chain.round_timeouts.round_restart_mult":     "2",
+					"server_chain.transaction.payload.max_size":          "98304",
+					"server_chain.client.signature_scheme":               "bls0chain",
+					"server_chain.messages.verification_tickets_to":      "all_miners",
+					"server_chain.state.prune_below_count":               "100",
+				},
+			}).Encode(),
+		},
+		{
+			name:     "miner.update_settings",
+			endpoint: msc.updateSettings,
+			txn: &transaction.Transaction{
+				ClientID: owner,
+			},
+			input: (&sc.StringMap{
+				Fields: map[string]string{
+					"min_stake":              "0.0",
+					"max_stake":              "100",
+					"max_n":                  "7",
+					"min_n":                  "3",
+					"t_percent":              "0.66",
+					"k_percent":              "0.75",
+					"x_percent":              "0.70",
+					"max_s":                  "2",
+					"min_s":                  "1",
+					"max_delegates":          "200",
+					"reward_round_frequency": "64250",
+					"interest_rate":          "0.0",
+					"reward_rate":            "1.0",
+					"share_ratio":            "50",
+					"block_reward":           "021",
+					"max_charge":             "0.5",
+					"epoch":                  "6415000000",
+					"reward_decline_rate":    "0.1",
+					"interest_decline_rate":  "0.1",
+					"max_mint":               "1500000.0",
+				},
+			}).Encode(),
 		},
 		{
 			name:     "miner.update_miner_settings",
@@ -255,7 +318,7 @@ func BenchmarkTests(
 	for _, test := range tests {
 		testsI = append(testsI, test)
 	}
-	return bk.TestSuit{
+	return bk.TestSuite{
 		Source:     bk.Miner,
 		Benchmarks: testsI,
 	}
