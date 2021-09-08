@@ -42,7 +42,7 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["sharder_health_check"] = msc.sharderHealthCheck
 
 	msc.smartContractFunctions["payFees"] = msc.payFees
-	update_globals
+
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["wait"] = msc.wait

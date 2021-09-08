@@ -579,6 +579,8 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
+	conf.BlockReward = &blockReward{}
+	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)
 	if err != nil {

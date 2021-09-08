@@ -56,6 +56,15 @@ func BenchmarkRestTests(
 			endpoint: ssc.getConfigHandler,
 		},
 		{
+			name:     "storage_rest.get_mpt_key.sc_config",
+			endpoint: ssc.GetMptKey,
+			params: func() url.Values {
+				var values url.Values = make(map[string][]string)
+				values.Set("key", scConfigKey(ADDRESS))
+				return values
+			}(),
+		},
+		{
 			name:     "storage_rest.latestreadmarker",
 			endpoint: ssc.LatestReadMarkerHandler,
 			params: func() url.Values {

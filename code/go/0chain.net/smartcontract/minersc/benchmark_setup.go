@@ -79,7 +79,7 @@ func AddMockNodes(
 			pool.DelegateID = clients[dId]
 			newNode.Active[getMinerDelegatePoolId(i, dId, nodeType)] = &pool
 		}
-		_, err := balances.InsertTrieNode(newNode.getKey(), newNode)
+		_, err := balances.InsertTrieNode(newNode.GetKey(), newNode)
 		if err != nil {
 			panic(err)
 		}

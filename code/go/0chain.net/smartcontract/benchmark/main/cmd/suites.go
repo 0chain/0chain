@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"flag"
 	"fmt"
 	"sync"
 	"testing"
@@ -87,6 +88,7 @@ func runSuite(
 		wg.Add(1)
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
+			flag.Set("test.benchtime", "2s")
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()

@@ -36,7 +36,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 		ClientID:     bt.txn.ClientID,
 		ToClientID:   bt.txn.ToClientID,
 		Value:        bt.txn.Value,
-		CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+		CreationDate: bt.txn.CreationDate,
 	}
 }
 
@@ -58,7 +58,10 @@ func BenchmarkTests(
 		{
 			name:     "vesting.trigger",
 			endpoint: vsc.trigger,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{
 					PoolID: geMockVestingPoolId(0),
@@ -69,7 +72,10 @@ func BenchmarkTests(
 		{
 			name:     "vesting.updateConfig",
 			endpoint: vsc.updateConfig,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     owner,
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
 			input: (&sc.StringMap{
 				Fields: map[string]string{
 					Settings[MinLock]:              "1",
@@ -83,7 +89,10 @@ func BenchmarkTests(
 		{
 			name:     "vesting.unlock",
 			endpoint: vsc.unlock,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{
 					PoolID: geMockVestingPoolId(0),
@@ -95,7 +104,8 @@ func BenchmarkTests(
 			name:     "vesting.add",
 			endpoint: vsc.add,
 			txn: &transaction.Transaction{
-				Value: int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
+				ClientID: data.Clients[0],
+				Value:    int64(viper.GetFloat64(bk.VestingMinLock) * 1e10),
 			},
 			input: func() []byte {
 				var dests destinations
@@ -114,7 +124,10 @@ func BenchmarkTests(
 		{
 			name:     "vesting.stop",
 			endpoint: vsc.stop,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stopRequest{
 					PoolID:      geMockVestingPoolId(0),
@@ -126,7 +139,10 @@ func BenchmarkTests(
 		{
 			name:     "vesting.delete",
 			endpoint: vsc.delete,
-			txn:      &transaction.Transaction{},
+			txn: &transaction.Transaction{
+				ClientID:     data.Clients[0],
+				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
+			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&poolRequest{
 					PoolID: geMockVestingPoolId(0),
@@ -137,7 +153,6 @@ func BenchmarkTests(
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
-		test.txn.ClientID = data.Clients[0]
 		testsI = append(testsI, test)
 	}
 	return bk.TestSuit{
