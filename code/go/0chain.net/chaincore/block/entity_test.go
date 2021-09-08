@@ -2252,9 +2252,7 @@ func TestBlock_ComputeTxnMap(t *testing.T) {
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 
-			b.StartComputeTxnMap()
-			b.mutexTxns.RLock()
-			defer b.mutexTxns.RUnlock()
+			b.ComputeTxnMap()
 			if !reflect.DeepEqual(b.TxnsMap, tt.want) {
 				t.Errorf("ComputeTxnMap() = %v, want %v", b.TxnsMap, tt.want)
 			}

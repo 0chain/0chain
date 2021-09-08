@@ -458,15 +458,13 @@ func (b *Block) HashBlock() {
 }
 
 /*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/
-func (b *Block) StartComputeTxnMap() {
+func (b *Block) ComputeTxnMap() {
 	b.mutexTxns.Lock()
-	go func() {
-		defer b.mutexTxns.Unlock()
-		b.TxnsMap = make(map[string]bool, len(b.Txns))
-		for _, txn := range b.Txns {
-			b.TxnsMap[txn.Hash] = true
-		}
-	}()
+	defer b.mutexTxns.Unlock()
+	b.TxnsMap = make(map[string]bool, len(b.Txns))
+	for _, txn := range b.Txns {
+		b.TxnsMap[txn.Hash] = true
+	}
 }
 
 /*HasTransaction - check if the transaction exists in this block */
