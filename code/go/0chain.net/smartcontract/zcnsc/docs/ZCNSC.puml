@@ -63,7 +63,7 @@ end note
 
 == Convert from WZCN to ZCN ==
 
-user -> ethbridge : Call **'Burn'** N ethers
+user -> ethbridge : Call **'Burn'** N ethers (amount, clientId)
 note left
 **Parameters**
 * The amount of WZCN burned
@@ -78,14 +78,22 @@ emit **Burned**(_from, _amount, _clientId, burnNonce)
 end note
 
 ethbridge --> user : Return Transaction ID
-user -> auth : Send Transaction ID
 
+user -> auth : Verify Transaction Status (transactionID)
 group for each authorizers (group, auth)
 auth -> ethbridge : Poll for txn status
-ethbridge --> auth : Transaction ID status
+ethbridge --> auth : Transaction status
 end
+auth --> user : Transaction successful
 
-auth -> user : **proof-of-WZCN-burn ticket**
+user -> user : Provide **clientId** and **ethereum address** to filter function
+user -> auth : Get proof-of-WZCN-burn, arguments: (clientId, ethereum address, transactionId)
+auth -> ethbridge : Read all events
+ethbridge -> ethbridge : Filter events by **sender address** and **clientId**
+ethbridge -> auth : Return transaction event
+auth -> auth : Create signature
+auth -> auth : Create burn ticket
+auth --> user : **proof-of-WZCN-burn ticket**
 note left
 **proof-of-WZCN-burn ticket**
 * The Ethereum transaction ID
