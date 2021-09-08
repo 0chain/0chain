@@ -3,30 +3,25 @@ package cmd
 import (
 	"encoding/hex"
 
-	"0chain.net/smartcontract/benchmark/main/cmd/log"
-
-	"0chain.net/smartcontract/multisigsc"
-
-	"0chain.net/smartcontract/vestingsc"
-
-	"0chain.net/smartcontract/interestpoolsc"
-
-	"0chain.net/smartcontract/faucetsc"
-
-	"0chain.net/chaincore/node"
-
-	"0chain.net/smartcontract/benchmark"
+	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark/main/cmd/log"
+	"0chain.net/smartcontract/faucetsc"
+	"0chain.net/smartcontract/interestpoolsc"
+	magmasc "0chain.net/smartcontract/magmasc/benchmark"
 	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
-	"github.com/spf13/viper"
+	"0chain.net/smartcontract/vestingsc"
 )
 
 func extractMpt(mpt *util.MerklePatriciaTrie, root util.Key) *util.MerklePatriciaTrie {
@@ -150,6 +145,8 @@ func setUpMpt(
 	vestingsc.AddVestingPools(clients, balances)
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+	magmasc.Setup(balances)
+	log.Println("magma is set")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,
@@ -188,4 +185,8 @@ func addMockkClients(
 	}
 
 	return clientIds, publicKeys, privateKeys
+}
+
+func clean() {
+	magmasc.Clean()
 }

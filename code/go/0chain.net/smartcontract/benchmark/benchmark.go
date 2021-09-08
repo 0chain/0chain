@@ -22,6 +22,7 @@ const (
 	Vesting
 	VestingRest
 	MultiSig
+	Magma
 	NumberOdfBenchmarkSources
 )
 
@@ -38,6 +39,7 @@ var (
 		"vesting",
 		"vesting_rest",
 		"multi_sig",
+		"magma",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
@@ -52,6 +54,7 @@ var (
 		BenchmarkSourceNames[Vesting]:          Vesting,
 		BenchmarkSourceNames[VestingRest]:      VestingRest,
 		BenchmarkSourceNames[MultiSig]:         MultiSig,
+		BenchmarkSourceNames[Magma]:            Magma,
 	}
 )
 

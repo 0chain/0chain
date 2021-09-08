@@ -5,18 +5,20 @@ import (
 	"sort"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"0chain.net/chaincore/node"
 	"0chain.net/core/logging"
 	bk "0chain.net/smartcontract/benchmark"
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
+	magmasc "0chain.net/smartcontract/magmasc/benchmark"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuit{
@@ -31,6 +33,7 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Vesting:          vestingsc.BenchmarkTests,
 	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
+	bk.Magma:            magmasc.Tests,
 }
 
 func init() {
@@ -70,6 +73,8 @@ var rootCmd = &cobra.Command{
 		results := runSuites(suites, verbose, mpt, root, data)
 
 		printResults(results, verbose)
+
+		clean()
 	},
 }
 
