@@ -6,8 +6,8 @@ const (
 	numActiveSessionsFlag   = "active-sessions"
 	numInactiveSessionsFlag = "inactive-sessions"
 
-	numGoroutinesFlag = "goroutines"
+	goroutinesFlag = "goroutines"
 
-	cleanFlag    = "clean"
-	separateFlag = "separate"
+	cleanFlag = "clean"
+	sepFlag   = "separate"
 )

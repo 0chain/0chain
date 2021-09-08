@@ -22,6 +22,7 @@ func New() *cli.App {
 
 	// register commands into cli application
 	registerGenerateCommand(app)
+	registerStatusCommand(app)
 
 	return app
 }

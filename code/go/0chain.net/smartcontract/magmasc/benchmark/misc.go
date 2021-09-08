@@ -62,7 +62,10 @@ func copyDir(source, destination string) {
 }
 
 func getSourcePostfix(sc *magmasc.MagmaSmartContract, sci chain.StateContextI) string {
-	actSess, inactSess, err := sessions.Count(sc, sci)
+	actSess, err := sessions.CountActive(sc, sci)
+	panicIfErr(err)
+
+	inactSess, err := sessions.CountActive(sc, sci)
 	panicIfErr(err)
 
 	consumers, providers, err := countNodes(sc, sci)

@@ -20,27 +20,31 @@ func registerGenerateCommand(app *cli.App) {
 				Name:    numConsumersFlag,
 				Usage:   "Number of needed registered consumers",
 				Aliases: []string{"nc"},
+				Value:   0,
 			},
 			&cli.IntFlag{
 				Name:    numProvidersFlag,
 				Usage:   "Number of needed registered providers",
 				Aliases: []string{"np"},
+				Value:   0,
 			},
 			&cli.IntFlag{
 				Name:    numActiveSessionsFlag,
 				Usage:   "Number of needed active sessions",
 				Aliases: []string{"as"},
+				Value:   0,
 			},
 			&cli.IntFlag{
 				Name:    numInactiveSessionsFlag,
 				Usage:   "Number of needed inactive providers",
 				Aliases: []string{"is"},
+				Value:   0,
 			},
 			&cli.IntFlag{
-				Name:    numGoroutinesFlag,
+				Name:    goroutinesFlag,
 				Usage:   "Number of goroutines",
-				Value:   5000,
 				Aliases: []string{"g"},
+				Value:   1000,
 			},
 			&cli.BoolFlag{
 				Name:    cleanFlag,
@@ -48,15 +52,12 @@ func registerGenerateCommand(app *cli.App) {
 				Aliases: []string{"c", "cl"},
 			},
 			&cli.BoolFlag{
-				Name:    separateFlag,
+				Name:    sepFlag,
 				Usage:   "Separate progress bar each 1%",
 				Aliases: []string{"sep", "s"},
 			},
 		},
 		Action: func(cc *cli.Context) error {
-			if err := setDefaultGenFlags(cc); err != nil {
-				return err
-			}
 			if err := setupGenDirs(cc); err != nil {
 				return err
 			}
@@ -65,24 +66,16 @@ func registerGenerateCommand(app *cli.App) {
 			if err != nil {
 				return err
 			}
-
-			var (
-				sc      = magmasc.NewMagmaSmartContract()
-				sFiller = filler.New(
-					sci,
-					sc,
-					cc.Int(numGoroutinesFlag),
-					cc.Bool(separateFlag),
-				)
-			)
-			sc.SetDB(db)
 			defer func() {
-				if err := state.CloseSciAndDB(sci, db); err != nil {
+				if err = state.CloseSciAndDB(sci, db); err != nil {
 					log.Println("Got error while closing databases ", err.Error())
 				}
 			}()
 
-			return sFiller.Fill(
+			sc := magmasc.NewMagmaSmartContract()
+			sc.SetDB(db)
+
+			return filler.New(sci, sc, cc.Int(goroutinesFlag), cc.Bool(sepFlag)).Fill(
 				cc.Int(numConsumersFlag),
 				cc.Int(numProvidersFlag),
 				cc.Int(numActiveSessionsFlag),
@@ -90,20 +83,6 @@ func registerGenerateCommand(app *cli.App) {
 			)
 		},
 	})
-}
-
-func setDefaultGenFlags(cc *cli.Context) error {
-	if cc.Int(numConsumersFlag) == 0 && (cc.IsSet(numActiveSessionsFlag) || cc.IsSet(numInactiveSessionsFlag)) {
-		if err := cc.Set(numConsumersFlag, "1"); err != nil {
-			return err
-		}
-	}
-	if cc.Int(numProvidersFlag) == 0 && (cc.IsSet(numActiveSessionsFlag) || cc.IsSet(numInactiveSessionsFlag)) {
-		if err := cc.Set(numProvidersFlag, "1"); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func setupGenDirs(cc *cli.Context) error {

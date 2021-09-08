@@ -3,8 +3,7 @@ package filler
 import (
 	"encoding/json"
 	"fmt"
-
-	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"sync"
 
 	store "0chain.net/core/ememorystore"
 	"0chain.net/smartcontract/magmasc"
@@ -12,61 +11,62 @@ import (
 	"0chain.net/smartcontract/magmasc/benchmark/state-generator/bar"
 )
 
-func (sf *Filler) registerAll(numConsumers, numProviders int) ([]*zmc.Consumer, []*zmc.Provider, error) {
-	fmt.Println("Start registering nodes ...")
-	sf.pBar = bar.StartNew(numConsumers+numProviders, sf.sepPBar)
-
-	var (
-		consumers []*zmc.Consumer
-		providers []*zmc.Provider
-
-		errCh    = make(chan error, 2)
-		errCount int
-	)
-	go func() {
-		var err error
-		consumers, err = sf.registerConsumers(numConsumers)
-		errCh <- err
-	}()
-	errCount++
-	go func() {
-		var err error
-		providers, err = sf.registerProviders(numProviders)
-		errCh <- err
-	}()
-	errCount++
-
-	for err := range errCh {
-		if err != nil {
-			sf.pBar.Finish()
-			return nil, nil, err
-		}
-		errCount--
-		if errCount == 0 {
-			close(errCh)
-		}
+func (sf *Filler) registerAll(nc, np int) error {
+	if nc <= 0 && np <= 0 {
+		return nil
 	}
+
+	wg := sync.WaitGroup{}
+	fmt.Println("Start registering nodes...")
+	sf.pBar = bar.StartNew(nc+np, sf.pBarSep)
+
+	var crErr, prErr error
+	if nc > 0 {
+		wg.Add(1)
+		go func() {
+			crErr = sf.registerConsumers(nc)
+			wg.Done()
+		}()
+	}
+
+	if nc > 0 {
+		wg.Add(1)
+		go func() {
+			prErr = sf.registerProviders(np)
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 	sf.pBar.Finish()
 
-	return consumers, providers, nil
+	switch {
+	case crErr != nil:
+		return crErr
+	case prErr != nil:
+		return prErr
+	}
+
+	return nil
 }
 
-func (sf *Filler) registerConsumers(num int) ([]*zmc.Consumer, error) {
-	var (
-		consumers = rand.Consumers(num)
-	)
-
-	// store all consumers list
-	consumersByt, err := json.Marshal(consumers)
-	if err != nil {
-		return nil, err
+func (sf *Filler) registerConsumers(num int) error {
+	if num <= 0 {
+		return nil
 	}
-	tx := store.GetTransaction(sf.sc.GetDB())
-	if err = tx.Conn.Put([]byte(magmasc.AllConsumersKey), consumersByt); err != nil {
-		return nil, err
+
+	consumers := rand.Consumers(num)
+	blob, err := json.Marshal(consumers)
+	if err != nil {
+		return err
+	}
+
+	tx := store.GetTransaction(sf.msc.GetDB())
+	if err = tx.Conn.Put([]byte(magmasc.AllConsumersKey), blob); err != nil {
+		return err
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// insert each in state
@@ -74,42 +74,43 @@ func (sf *Filler) registerConsumers(num int) ([]*zmc.Consumer, error) {
 		var (
 			consumerType = "consumer"
 		)
-		if _, err := sf.sci.InsertTrieNode(nodeUID(magmasc.Address, consumerType, cons.ExtID), cons); err != nil {
-			return nil, err
+		if _, err = sf.sci.InsertTrieNode(nodeUID(magmasc.Address, consumerType, cons.ExtID), cons); err != nil {
+			return err
 		}
 
 		sf.pBar.Increment()
 	}
 
-	return consumers, nil
+	return nil
 }
 
-func (sf *Filler) registerProviders(num int) ([]*zmc.Provider, error) {
-	var (
-		providers = rand.Providers(num)
-	)
-
-	// store all providers list
-	providersByt, err := json.Marshal(providers)
-	if err != nil {
-		return nil, err
+func (sf *Filler) registerProviders(num int) error {
+	if num <= 0 {
+		return nil
 	}
-	tx := store.GetTransaction(sf.sc.GetDB())
-	if err = tx.Conn.Put([]byte(magmasc.AllProvidersKey), providersByt); err != nil {
-		return nil, err
+
+	providers := rand.Providers(num)
+	blob, err := json.Marshal(providers)
+	if err != nil {
+		return err
+	}
+
+	tx := store.GetTransaction(sf.msc.GetDB())
+	if err = tx.Conn.Put([]byte(magmasc.AllProvidersKey), blob); err != nil {
+		return err
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// insert each in state
 	for _, prov := range providers {
 		key := "sc:" + magmasc.Address + ":" + "provider" + ":" + prov.ExtID
-		if _, err := sf.sci.InsertTrieNode(key, prov); err != nil {
-			return nil, err
+		if _, err = sf.sci.InsertTrieNode(key, prov); err != nil {
+			return err
 		}
 		sf.pBar.Increment()
 	}
 
-	return providers, nil
+	return nil
 }

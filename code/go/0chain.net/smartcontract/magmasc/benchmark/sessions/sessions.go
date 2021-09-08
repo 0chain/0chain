@@ -12,49 +12,42 @@ import (
 	"0chain.net/smartcontract/magmasc"
 )
 
-func Count(sc *magmasc.MagmaSmartContract, sci chain.StateContextI) (act, inact int, err error) {
-	var (
-		handl = sc.RestHandlers["/acknowledgmentAccepted"]
-	)
-
+func CountActive(sc *magmasc.MagmaSmartContract, sci chain.StateContextI) (int, error) {
+	nas, handler := 0, sc.RestHandlers["/acknowledgmentAccepted"]
 	for i := 0; ; i++ {
 		val := url.Values{}
 		val.Set("id", GetSessionName(i, true))
-		output, err := handl(nil, val, sci)
-		if errors.Is(err, util.ErrValueNotPresent) {
+		output, err := handler(nil, val, sci)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			break
 		} else if err != nil {
-			return 0, 0, err
+			return nas, err
 		}
-
-		outputAckn := output.(*zmc.Acknowledgment)
-		if outputAckn.Billing.CompletedAt == 0 {
-			act++
-		} else {
-			inact++
+		if output.(*zmc.Acknowledgment).Billing.CompletedAt == 0 {
+			nas++
 		}
 	}
 
+	return nas, nil
+}
+
+func CountInactive(sc *magmasc.MagmaSmartContract, sci chain.StateContextI) (int, error) {
+	nis, handler := 0, sc.RestHandlers["/acknowledgmentAccepted"]
 	for i := 0; ; i++ {
 		val := url.Values{}
 		val.Set("id", GetSessionName(i, false))
-		output, err := handl(nil, val, sci)
-		if errors.Is(err, util.ErrValueNotPresent) {
+		output, err := handler(nil, val, sci)
+		if err != nil && errors.Is(err, util.ErrValueNotPresent) {
 			break
+		} else if err != nil {
+			return nis, err
 		}
-		if err != nil {
-			return 0, 0, err
-		}
-
-		outputAckn := output.(*zmc.Acknowledgment)
-		if outputAckn.Billing.CompletedAt == 0 {
-			act++
-		} else {
-			inact++
+		if output.(*zmc.Acknowledgment).Billing.CompletedAt != 0 {
+			nis++
 		}
 	}
 
-	return act, inact, nil
+	return nis, nil
 }
 
 const (

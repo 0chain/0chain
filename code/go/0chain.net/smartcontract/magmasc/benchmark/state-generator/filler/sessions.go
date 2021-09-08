@@ -1,7 +1,6 @@
 package filler
 
 import (
-	"fmt"
 	"math/rand"
 	"sync"
 
@@ -11,40 +10,63 @@ import (
 	"0chain.net/chaincore/block"
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
+	tx "0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/magmasc"
 	"0chain.net/smartcontract/magmasc/benchmark/sessions"
 	"0chain.net/smartcontract/magmasc/benchmark/state-generator/bar"
 )
 
-func (sf *Filler) fillSessions(numActiveSessionsInState, activateNum, numInactiveSessionsInState, inactivateNum int,
-	consumers []*zmc.Consumer, providers []*zmc.Provider) (err error) {
-
-	fmt.Println("\nStart filling sessions ...")
-	sf.pBar = bar.StartNew(activateNum+inactivateNum, sf.sepPBar)
+func (sf *Filler) fillSessions(
+	nasInState,
+	nas,
+	nisInState,
+	nis int,
+	consumers []*zmc.Consumer,
+	providers []*zmc.Provider,
+) error {
+	if nas <= 0 && nis <= 0 {
+		return nil
+	}
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
-	go func() {
-		err = sf.activateSessions(numActiveSessionsInState, activateNum, consumers, providers)
-		wg.Done()
-	}()
-	go func() {
-		err = sf.inactivateSessions(numInactiveSessionsInState, inactivateNum, consumers, providers)
-		wg.Done()
-	}()
+	println("\nStart filling sessions...")
+	sf.pBar = bar.StartNew(nas+nis, sf.pBarSep)
+
+	var nasErr, nisErr error
+	if nas > 0 {
+		wg.Add(1)
+		go func() {
+			nasErr = sf.activateSessions(nasInState, nas, consumers, providers)
+			wg.Done()
+		}()
+	}
+	if nis > 0 {
+		wg.Add(1)
+		go func() {
+			nisErr = sf.inactivateSessions(nisInState, nis, consumers, providers)
+			wg.Done()
+		}()
+	}
+
 	wg.Wait()
 	sf.pBar.Finish()
+
+	switch {
+	case nasErr != nil:
+		return nasErr
+	case nisErr != nil:
+		return nisErr
+	}
 
 	return nil
 }
 
-func (sf *Filler) activateSessions(numActiveSessionsInState, activateNum int, consumers []*zmc.Consumer, providers []*zmc.Provider) error {
+func (sf *Filler) activateSessions(nasInState, nas int, consumers []*zmc.Consumer, providers []*zmc.Provider) error {
 	wg := sync.WaitGroup{}
-	wg.Add(activateNum)
-	for i := numActiveSessionsInState; i < numActiveSessionsInState+activateNum; i++ {
-		sf.activeGoroutines <- struct{}{}
+	wg.Add(nas)
+	for i := nasInState; i < nasInState+nas; i++ {
+		sf.goroutines <- struct{}{}
 		go func(i int) {
 			_, err := sf.activateSession(
 				consumers[rand.Intn(len(consumers))],
@@ -57,7 +79,7 @@ func (sf *Filler) activateSessions(numActiveSessionsInState, activateNum int, co
 
 			wg.Done()
 			sf.pBar.Increment()
-			<-sf.activeGoroutines
+			<-sf.goroutines
 		}(i)
 	}
 	wg.Wait()
@@ -66,26 +88,22 @@ func (sf *Filler) activateSessions(numActiveSessionsInState, activateNum int, co
 }
 
 func (sf *Filler) activateSession(consumer *zmc.Consumer, provider *zmc.Provider, sessionID string) (*zmc.Acknowledgment, error) {
-	var (
-		sci = chain.NewStateContext(
-			&block.Block{},
-			sf.sci.GetState(),
-			&state.Deserializer{},
-			&transaction.Transaction{
-				ClientID:   consumer.ID,
-				ToClientID: consumer.ID,
-			},
-			func(*block.Block) []string { return []string{} },
-			func() *block.Block { return &block.Block{} },
-			func() *block.MagicBlock { return &block.MagicBlock{} },
-			func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
-		)
-
-		ackn = createAcknowledgment(sessionID, consumer, provider)
-
-		transfer = state.NewTransfer(ackn.Consumer.ID, magmasc.Address, state.Balance(ackn.Terms.GetAmount()))
+	ackn := createAcknowledgment(sessionID, consumer, provider)
+	sci := chain.NewStateContext(
+		&block.Block{},
+		sf.sci.GetState(),
+		&state.Deserializer{},
+		&tx.Transaction{
+			ClientID:   ackn.Consumer.ID,
+			ToClientID: sf.msc.ID,
+		},
+		func(*block.Block) []string { return []string{} },
+		func() *block.Block { return &block.Block{} },
+		func() *block.MagicBlock { return &block.MagicBlock{} },
+		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 	)
 
+	transfer := state.NewTransfer(ackn.Consumer.ID, magmasc.Address, state.Balance(ackn.Terms.GetAmount()))
 	if err := sci.AddTransfer(transfer); err != nil {
 		return nil, err
 	}
@@ -97,11 +115,11 @@ func (sf *Filler) activateSession(consumer *zmc.Consumer, provider *zmc.Provider
 	return ackn, nil
 }
 
-func (sf *Filler) inactivateSessions(numInactiveSessionsInState, inactivateNum int, consumers []*zmc.Consumer, providers []*zmc.Provider) error {
+func (sf *Filler) inactivateSessions(nisInState, nis int, consumers []*zmc.Consumer, providers []*zmc.Provider) error {
 	wg := sync.WaitGroup{}
-	wg.Add(inactivateNum)
-	for i := numInactiveSessionsInState; i < numInactiveSessionsInState+inactivateNum; i++ {
-		sf.activeGoroutines <- struct{}{}
+	wg.Add(nis)
+	for i := nisInState; i < nisInState+nis; i++ {
+		sf.goroutines <- struct{}{}
 		go func(i int) {
 			ackn, err := sf.activateSession(
 				consumers[rand.Intn(len(consumers))],
@@ -117,7 +135,7 @@ func (sf *Filler) inactivateSessions(numInactiveSessionsInState, inactivateNum i
 
 			wg.Done()
 			sf.pBar.Increment()
-			<-sf.activeGoroutines
+			<-sf.goroutines
 		}(i)
 	}
 	wg.Wait()
@@ -126,28 +144,20 @@ func (sf *Filler) inactivateSessions(numInactiveSessionsInState, inactivateNum i
 }
 
 func (sf *Filler) inactivateSession(ackn *zmc.Acknowledgment) error {
-	pool := &zmc.TokenPool{}
-	if err := pool.Decode(ackn.TokenPool.Encode()); err != nil {
-		return err
-	}
-
-	var (
-		txn = transaction.Transaction{
-			ClientID:   ackn.Consumer.ID,
+	sci := chain.NewStateContext(
+		&block.Block{},
+		sf.sci.GetState(),
+		&state.Deserializer{},
+		&tx.Transaction{
+			ClientID:   sf.msc.ID,
 			ToClientID: ackn.Consumer.ID,
-		}
-		sci = chain.NewStateContext(
-			&block.Block{},
-			sf.sci.GetState(),
-			&state.Deserializer{},
-			&txn,
-			func(*block.Block) []string { return []string{} },
-			func() *block.Block { return &block.Block{} },
-			func() *block.MagicBlock { return &block.MagicBlock{} },
-			func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
-		)
+		},
+		func(*block.Block) []string { return []string{} },
+		func() *block.Block { return &block.Block{} },
+		func() *block.MagicBlock { return &block.MagicBlock{} },
+		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 	)
-	if err := spend(&txn, &ackn.Billing, sci, *ackn.TokenPool); err != nil {
+	if err := spend(sci.GetTransaction(), &ackn.Billing, sci, *ackn.TokenPool); err != nil {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package filler
 
 import (
+	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -12,43 +13,62 @@ import (
 type (
 	// Filler fills state by executing magma's smart contract functions.
 	Filler struct {
-		sci chain.StateContextI
-		sc  *magmasc.MagmaSmartContract
-
-		acknCh chan *zmc.Acknowledgment
-
-		pBar    *bar.ProgressBar
-		sepPBar bool
-
-		activeGoroutines chan struct{}
+		sci        chain.StateContextI
+		msc        *magmasc.MagmaSmartContract
+		chAckn     chan *zmc.Acknowledgment
+		pBar       *bar.ProgressBar
+		pBarSep    bool
+		goroutines chan struct{}
 	}
 )
 
-func New(sci chain.StateContextI, sc *magmasc.MagmaSmartContract, numGoroutines int, separatePBar bool) *Filler {
+func New(sci chain.StateContextI, msc *magmasc.MagmaSmartContract, goroutines int, sep bool) *Filler {
 	return &Filler{
-		sci:              sci,
-		sc:               sc,
-		acknCh:           make(chan *zmc.Acknowledgment),
-		sepPBar:          separatePBar,
-		activeGoroutines: make(chan struct{}, numGoroutines),
+		sci:        sci,
+		msc:        msc,
+		chAckn:     make(chan *zmc.Acknowledgment),
+		pBarSep:    sep,
+		goroutines: make(chan struct{}, goroutines),
 	}
 }
 
 // Fill registers nodes, starts and stops sessions by executing magma sc functions.
-func (sf *Filler) Fill(numConsumers, numProviders, numActiveSessions, numInactiveSessions int) error {
-	consumers, providers, err := sf.registerAll(numConsumers, numProviders)
+func (sf *Filler) Fill(nc, np, nas, nis int) error {
+	if err := sf.registerAll(nc, np); err != nil {
+		return err
+	}
+
+	nasInState, err := sessions.CountActive(sf.msc, sf.sci)
+	if err != nil {
+		return err
+	}
+	nisInState, err := sessions.CountInactive(sf.msc, sf.sci)
 	if err != nil {
 		return err
 	}
 
-	actInState, inactInState, err := sessions.Count(sf.sc, sf.sci)
+	var data interface{}
+	data, err = sf.msc.RestHandlers["/allConsumers"](nil, nil, sf.sci)
 	if err != nil {
 		return err
 	}
+	consumers, ok := data.([]*zmc.Consumer)
+	if !ok || len(consumers) == 0 {
+		return errors.New("internal", "empty registered consumers' list")
+	}
 
-	if err := sf.fillSessions(actInState, numActiveSessions, inactInState, numInactiveSessions, consumers, providers); err != nil {
+	data, err = sf.msc.RestHandlers["/allProviders"](nil, nil, sf.sci)
+	if err != nil {
+		return err
+	}
+	providers, ok := data.([]*zmc.Provider)
+	if !ok || len(providers) == 0 {
+		return errors.New("internal", "empty registered providers' list")
+	}
+
+	if err = sf.fillSessions(nasInState, nas, nisInState, nis, consumers, providers); err != nil {
 		return err
 	}
 
-	return sf.validate(consumers, providers, actInState+numActiveSessions, inactInState+numInactiveSessions)
+	return sf.validate(consumers, providers, nasInState+nas, nisInState+nis)
 }
