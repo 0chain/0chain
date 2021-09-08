@@ -46,9 +46,8 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["wait"] = msc.wait
-
+	msc.smartContractFunctions["update_globals"] = msc.updateGlobals
 	msc.smartContractFunctions["update_settings"] = msc.updateSettings
-
 	msc.smartContractFunctions["update_miner_settings"] = msc.UpdateMinerSettings
 	msc.smartContractFunctions["update_sharder_settings"] = msc.UpdateSharderSettings
 
