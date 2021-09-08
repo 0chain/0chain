@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	chainstate "0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/bits"
 	"strings"
 	"time"
+
+	chainstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -1023,10 +1024,13 @@ type WriteMarker struct {
 	Signature              string           `json:"signature"`
 }
 
-func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
+func (wm *WriteMarker) VerifySignature(
+	clientPublicKey string,
+	balances chainstate.StateContextI,
+) bool {
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
@@ -1165,10 +1169,10 @@ type ReadMarker struct {
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 }
 
-func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
+func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstate.StateContextI) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
@@ -1201,7 +1205,7 @@ func (rm *ReadMarker) GetHashData() string {
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
+func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
 
 	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
 		rm.Timestamp == 0 {
@@ -1220,7 +1224,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 		}
 	}
 
-	if ok := rm.VerifySignature(rm.ClientPublicKey); ok {
+	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); ok {
 		return nil
 	}
 
@@ -1256,7 +1260,7 @@ type StorageStats struct {
 	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
 }
 
-func (sn *StorageStats) GetKey(globalKey string) datastore.Key {
+func (sn *StorageStats) GetKey(_ string) datastore.Key {
 	return STORAGE_STATS_KEY
 }
 

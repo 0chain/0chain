@@ -1,10 +1,11 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
+
+	"0chain.net/chaincore/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 	name    = "storage"
 
@@ -49,7 +50,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/get_mpt_key"] = ssc.GetMptKey
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
-	ssc.SmartContractExecutionStats["update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_config"), nil)
+	ssc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_settings"), nil)
 	// reading / writing
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
@@ -216,16 +217,19 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// free allocations
 
 	case "add_free_storage_assigner":
-		err = sc.addFreeStorageAssigner(t, input, balances)
+		resp, err = sc.addFreeStorageAssigner(t, input, balances)
 	case "free_allocation_request":
 		resp, err = sc.freeAllocationRequest(t, input, balances)
 	case "free_update_allocation":
 		resp, err = sc.updateFreeStorageRequest(t, input, balances)
-
-	case "add_curator":
-		resp, err = "", sc.addCurator(t, input, balances)
 	case "curator_transfer_allocation":
 		resp, err = sc.curatorTransferAllocation(t, input, balances)
+
+	//curator
+	case "add_curator":
+		resp, err = sc.addCurator(t, input, balances)
+	case "remove_curator":
+		resp, err = sc.removeCurator(t, input, balances)
 
 	// blobbers
 
@@ -283,12 +287,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	// configurations
 
-	case "update_config":
-		resp, err = sc.updateConfig(t, input, balances)
+	case "update_settings":
+		resp, err = sc.updateSettings(t, input, balances)
 
 	default:
-		err = common.NewError("invalid_storage_function_name",
-			"Invalid storage function called")
+		err = common.NewErrorf("invalid_storage_function_name",
+			"Invalid storage function '%s' called", funcName)
 	}
 
 	return

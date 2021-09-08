@@ -9,6 +9,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
+	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
@@ -26,15 +27,14 @@ require (
 	github.com/magma/augmented-networks/accounting/protos v0.1.1
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/mapstructure v1.4.1
-	github.com/pelletier/go-toml v1.4.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
-	github.com/spf13/afero v1.2.2 // indirect
-	github.com/spf13/cast v1.3.0
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/cast v1.3.1
+	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/valyala/gozstd v1.11.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.8.0

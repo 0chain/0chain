@@ -7,6 +7,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 
+	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -82,6 +83,12 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
 	err := pndb.db.Put(pndb.wo, key, data)
+	if DebugMPTNode {
+		logging.Logger.Debug("node put to PersistDB",
+			zap.String("key", ToHex(key)), zap.Error(err),
+			zap.Int64("Origin", int64(node.GetOrigin())),
+			zap.Int64("Version", int64(node.GetVersion())))
+	}
 	return err
 }
 
@@ -112,8 +119,15 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	defer wb.Destroy()
 	for idx, key := range keys {
 		wb.Put(key, nodes[idx].Encode())
+		if DebugMPTNode {
+			logging.Logger.Debug("multi node put to PersistDB",
+				zap.String("key", ToHex(key)),
+				zap.Int64("Origin", int64(nodes[idx].GetOrigin())),
+				zap.Int64("Version", int64(nodes[idx].GetVersion())))
+		}
 	}
-	return pndb.db.Write(pndb.wo, wb)
+	err := pndb.db.Write(pndb.wo, wb)
+	return err
 }
 
 /*MultiDeleteNode - implement interface */

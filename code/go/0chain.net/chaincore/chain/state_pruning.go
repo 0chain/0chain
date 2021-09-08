@@ -75,8 +75,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return // already done with pruning this
 	}
 
-	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion)
-	mpt.SetRoot(bs.ClientStateHash)
+	var mpt = util.NewMerklePatriciaTrie(c.stateDB, newVersion, bs.ClientStateHash)
 
 	var (
 		pctx = util.WithPruneStats(ctx)

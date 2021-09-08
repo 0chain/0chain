@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"0chain.net/core/logging"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -64,11 +65,10 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		wallets = createWallets(clients)
 
 		prng = rand.New(rs)
-		lmpt := GetMPT(LEVEL, util.Sequence(2010))
+		lmpt := GetMPT(LEVEL, util.Sequence(2010), nil)
 		saveWallets(lmpt, wallets)
 		verifyBalance(lmpt, wallets)
 
-		lmpt.ResetChangeCollector(nil)
 		generateTransactions(lmpt, wallets, transactions)
 		verifyBalance(lmpt, wallets)
 	}
@@ -82,27 +82,25 @@ func TestMPTChangeCollector(t *testing.T) {
 	for i := 0; i < 1; i++ {
 		prng = rand.New(rs)
 		wallets = createWallets(clients)
-		mpt := GetMPT(MEMORY, util.Sequence(2010))
+		mpt := GetMPT(MEMORY, util.Sequence(2010), nil)
 		saveWallets(mpt, wallets)
 		verifyBalance(mpt, wallets)
 		lmpt := mpt
 		for j := 1; j < 10; j++ {
-			cmpt := GetMPT(LEVEL, util.Sequence(2010+j))
+			cmpt := GetMPT(LEVEL, util.Sequence(2010+j), lmpt.GetRoot())
 			lndb := cmpt.GetNodeDB().(*util.LevelNodeDB)
 			lndb.SetPrev(lmpt.GetNodeDB())
-			cmpt.SetRoot(lmpt.GetRoot())
 			mndb := lndb.GetCurrent().(*util.MemoryNodeDB)
 			mpt = lmpt
 			lmpt = cmpt
 			generateTransactions(lmpt, wallets, transactions)
 
-			rootKey := lmpt.GetRoot()
+			rootKey, changes, _, _ := lmpt.GetChanges()
 			root, err := mndb.GetNode(rootKey)
 			if err != nil {
 				t.Fatal(err)
 			}
 			cmndb := util.NewMemoryNodeDB()
-			changes := lmpt.GetChangeCollector().GetChanges()
 			for _, change := range changes {
 				if err := cmndb.PutNode(change.New.GetHashBytes(), change.New); err != nil {
 					t.Fatal(err)
@@ -120,24 +118,24 @@ func TestMPTChangeCollector(t *testing.T) {
 	}
 }
 
-func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
+func GetMPT(dbType int, version util.Sequence, root util.Key) util.MerklePatriciaTrieI {
 	var mpt util.MerklePatriciaTrieI
 
 	switch dbType {
 	case MEMORY:
 		mndb := util.NewMemoryNodeDB()
-		mpt = util.NewMerklePatriciaTrie(mndb, version)
+		mpt = util.NewMerklePatriciaTrie(mndb, version, root)
 	case PERSIST:
 		pndb, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 		if err != nil {
 			panic(err)
 		}
-		mpt = util.NewMerklePatriciaTrie(pndb, version)
+		mpt = util.NewMerklePatriciaTrie(pndb, version, root)
 	case LEVEL:
 		mndb := util.NewMemoryNodeDB()
 		pndb := util.NewMemoryNodeDB()
 		lndb := util.NewLevelNodeDB(mndb, pndb, false)
-		mpt = util.NewMerklePatriciaTrie(lndb, version)
+		mpt = util.NewMerklePatriciaTrie(lndb, version, root)
 	}
 	return mpt
 }

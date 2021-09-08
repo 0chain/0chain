@@ -128,3 +128,11 @@ func (m *MagmaSmartContract) Setup() error {
 
 	return nil
 }
+
+func (m *MagmaSmartContract) GetDB() *gorocksdb.TransactionDB {
+	return m.db
+}
+
+func (m *MagmaSmartContract) SetDB(db *gorocksdb.TransactionDB) {
+	m.db = db
+}
