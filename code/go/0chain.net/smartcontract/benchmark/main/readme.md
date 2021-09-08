@@ -24,6 +24,17 @@ go build -tags bn256
 ./main benchmark  --verbose=false | column -t -s,
 ```
 
+To filter out test from the benchmark use the `-ommit` option,
+and enter them in a comma delimited list.
+```bash
+go build -tags bn256
+./main benchmark --omit "storage_rest.allocation, storage_rest.allocations" | column -t -s,
+```
+
+You can also set all these options in the
+[benchmark.yaml](https://github.com/0chain/0chain/blob/bench-sc/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+file. The command line options will take precedence over those in the `.yaml` file.
+
 The benchmark results are unlikely to be false positives but could  be false negatives, 
 if benchmark parameters are such that a particularly long running block of code 
 is accidentally skipped.
