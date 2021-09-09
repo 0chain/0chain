@@ -266,7 +266,7 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	require.NoError(t, err, "setting magic block")
 }
 
-func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
+func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 	balances cstate.StateContextI) {
 
 	var gn, err = getGlobalNode(balances)

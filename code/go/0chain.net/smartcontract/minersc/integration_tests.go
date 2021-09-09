@@ -46,9 +46,10 @@ func (msc *MinerSmartContract) initSC() {
 	msc.smartContractFunctions["update_globals"] = msc.updateGlobals
 	msc.smartContractFunctions["update_miner_settings"] = msc.UpdateMinerSettings
 	msc.smartContractFunctions["update_sharder_settings"] = msc.UpdateSharderSettings
-
+	msc.smartContractFunctions["update_settings"] = msc.updateSettings
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
+	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 }
 
 func (msc *MinerSmartContract) AddMinerIntegrationTests(
