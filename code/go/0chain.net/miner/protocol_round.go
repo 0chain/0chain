@@ -1472,6 +1472,10 @@ func (mc *Chain) syncUpFromLFB(ctx context.Context, lfb *block.Block) {
 			continue // skip rounds finalizing or finalized <=== [continue loop]
 		}
 
+		if xrhb := xr.GetHeaviestNotarizedBlock(); xrhb != nil && xrhb.IsStateComputed() {
+			continue
+		}
+
 		if err := mc.syncUpBlocksFrom(ctx, xr, lfb.Round); err != nil {
 			logging.Logger.Error("restartRound - sync up blocks failed",
 				zap.Int64("round", i),
@@ -1521,7 +1525,8 @@ func (mc *Chain) syncUpFromLFB(ctx context.Context, lfb *block.Block) {
 
 func (mc *Chain) syncUpBlocksFrom(ctx context.Context, r *Round, lfbr int64) error {
 	blocks := make([]*block.Block, 0, 10)
-	for i := r.GetRoundNumber(); ; i++ {
+	rn := r.GetRoundNumber()
+	for i := rn; ; i++ {
 		b := mc.GetHeaviestNotarizedBlockLight(ctx, i)
 		if b == nil {
 			break
@@ -1542,7 +1547,7 @@ func (mc *Chain) syncUpBlocksFrom(ctx context.Context, r *Round, lfbr int64) err
 		}
 
 		if err := mc.VerifyNotarization(b, b.GetVerificationTickets(), b.Round); err != nil {
-			logging.Logger.Error("get notarized block for round - validate notarization",
+			logging.Logger.Error("restartRound - get notarized block for round - validate notarization",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Error(err))
@@ -1593,7 +1598,24 @@ func (mc *Chain) syncUpBlocksFrom(ctx context.Context, r *Round, lfbr int64) err
 			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(last.Round), mc.GetMiners(last.Round+1))
 			mc.RedoVrfShare(ctx, xr)
 		}
+		return nil
 	}
+
+	logging.Logger.Info("restartRound - got no heaviest notarized block from remote",
+		zap.Int64("round", rn),
+		zap.Int64("lfb_round", lfbr))
+
+	// Got no heaviest block from remote
+	xr := mc.GetMinerRound(rn)
+	if xr != nil && xr.GetHeaviestNotarizedBlock() == nil {
+		logging.Logger.Debug("restartRound - reached round with no heaviest notarized block, restart",
+			zap.Int64("round", rn),
+			zap.Int64("lfb_round", lfbr))
+		xr.Restart()
+		xr.IncrementTimeoutCount(mc.getRoundRandomSeed(rn-1), mc.GetMiners(rn))
+		mc.RedoVrfShare(ctx, xr)
+	}
+
 	return nil
 }
 
