@@ -219,7 +219,10 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID))
+		zap.Any("mscID", msc.ID),
+		zap.Int64("pn_start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")

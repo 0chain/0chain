@@ -107,6 +107,11 @@ func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
 		relatedmbr = b.LatestFinalizedMagicBlockRound
 		mb         = sc.GetMagicBlock(b.Round)
 	)
+	if mb.StartingRound != relatedmbr {
+		Logger.Warn("do not have related MB",
+			zap.Int64("mb", mb.StartingRound),
+			zap.Int64("relatedMb", relatedmbr))
+	}
 	return mb.StartingRound == relatedmbr
 }
 
@@ -120,7 +125,7 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 
 	// TODO (sfxdx): get magic block by number/hash/round to be sure its
 	//               really related, not just latest
-	if err = sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+	if err = sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
 		return // got error
 	}
 
@@ -177,7 +182,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	var err error
 	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
 		Logger.Error("pulling related magic block", zap.Error(err),
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
 		return
 	}
 
