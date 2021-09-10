@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,7 +147,9 @@ func saveWallets(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
 	if mpt != nil {
 		for _, w := range wallets {
 			balance := state.Balance(w.Balance)
-			if _, err := mpt.Insert(util.Path(w.ClientID), &state.State{Balance: balance}); err != nil {
+			s := state.State{Balance: balance}
+			s.SetTxnHash(strings.Repeat("00", 32))
+			if _, err := mpt.Insert(util.Path(w.ClientID), &s); err != nil {
 				panic(err)
 			}
 			_, err := getState(mpt, w.ClientID)
