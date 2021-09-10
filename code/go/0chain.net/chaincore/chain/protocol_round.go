@@ -439,6 +439,56 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 	return r.GetHeaviestNotarizedBlock()
 }
 
+// GetHeaviestNotarizedBlockLight - get a notarized block for a round.
+func (c *Chain) GetHeaviestNotarizedBlockLight(ctx context.Context, r int64) *block.Block {
+	params := &url.Values{}
+
+	params.Add("round", fmt.Sprintf("%v", r))
+
+	cctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
+	defer cancel()
+
+	notarizedBlockC := make(chan *block.Block, 1)
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+		logging.Logger.Info("get notarized block for round", zap.Int64("round", r),
+			zap.String("block", entity.GetKey()))
+
+		var nb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if nb.Round != r {
+			return nil, common.NewError("invalid_block",
+				"Block not from the requested round")
+		}
+
+		if err = nb.Validate(ctx); err != nil {
+			logging.Logger.Error("get notarized block for round - validate",
+				zap.Int64("round", r), zap.String("block", nb.Hash),
+				zap.Error(err))
+			return
+		}
+
+		select {
+		case notarizedBlockC <- nb:
+		default:
+		}
+		cancel()
+		return nb, nil
+	}
+
+	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), MinerNotarizedBlockRequestor, params, handler)
+	var nb *block.Block
+	select {
+	case nb = <-notarizedBlockC:
+	default:
+	}
+
+	return nb
+}
+
 // GetLatestFinalizedMagicBlockFromShardersOn - request for latest finalized
 // magic blocks from all the sharders. It uses provided MagicBlock to get list
 // of sharders to request data from, and returns the block with highest magic
@@ -496,6 +546,9 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		})
 	}
 
+	logging.Logger.Debug("get latest finalized magic block from sharders",
+		zap.Int64("mb_num", magicBlocks[0].MagicBlockNumber),
+		zap.Int64("mb_sr", magicBlocks[0].StartingRound))
 	return magicBlocks[0]
 }
 
