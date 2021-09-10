@@ -391,16 +391,49 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	}
 
 	// TODO: make this configurable
-	const maxSyncDepth int64 = 50
+	maxSyncDepth := int64(config.GetLFBTicketAhead() * 2)
 	syncNum := maxSyncDepth
 	if lfb != nil {
 		syncNum = b.Round - lfb.Round
+		// sync lfb if its state is not computed
+		if syncNum > 0 && syncNum < maxSyncDepth && !lfb.IsStateComputed() {
+			syncNum++
+		}
 	}
 
-	if syncNum <= 0 || syncNum > maxSyncDepth {
+	// The round is equal or less than lfb, get state changes
+	// from remote directly, as it must exist.
+	if syncNum <= 0 {
+		blocks := c.SyncBlocks(ctx, b, 1, false)
+		if len(blocks) == 0 {
+			logging.Logger.Error("get_previous_block - current round is <= lfb, could not sync block from remote",
+				zap.Int64("round", b.Round-1),
+				zap.Int64("lfb_round", lfb.Round))
+			return nil
+		}
+
+		pb = blocks[0]
+		b.SetPreviousBlock(pb)
+		logging.Logger.Info("get_previous_block - sync successfully",
+			zap.Int("sync num", 1),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("previous round", b.PrevBlock.Round),
+			zap.String("previous block", b.PrevHash))
+		return pb
+	}
+
+	// Sync at most maxSyncDepth rounds back, and
+	// send request to do sync the remaining blocks in block sync worker.
+	var remainSyncNum int64
+	if syncNum > maxSyncDepth {
+		remainSyncNum = syncNum - maxSyncDepth
 		syncNum = maxSyncDepth
 	}
 
+	// Sync at most 10 blocks back, because we should
+	// be able to get the state changes of latest finalized block from remote,
+	// we can sync up from it.
 	blocks := c.SyncBlocks(ctx, b, syncNum, false)
 	if len(blocks) == 0 || !blocks[0].IsStateComputed() {
 		logging.Logger.Debug("get_previous_block - could not sync previous blocks",
@@ -409,22 +442,8 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	}
 
 	first := blocks[0]
-	last := blocks[len(blocks)-1]
-	if lfb != nil {
-		if first.Round <= lfb.Round && last.Round >= lfb.Round {
-			syncedLfb := blocks[lfb.Round-first.Round]
-			if syncedLfb.Hash != lfb.Hash {
-				logging.Logger.Error("get_previous_block - sync blocks got different lfb blocks",
-					zap.Int64("round", b.Round),
-					zap.Int64("lfb", lfb.Round),
-					zap.Int64("synced_lfb_round", syncedLfb.Round),
-					zap.String("lfb_block", lfb.Hash),
-					zap.String("synced_lfb_block", syncedLfb.Hash))
-			}
-		}
-	}
+	pb = blocks[len(blocks)-1]
 
-	pb = last
 	if !pb.IsStateComputed() {
 		logging.Logger.Error("get_previous_block - could not get state computed previous block",
 			zap.Int64("round", b.Round),
@@ -436,10 +455,35 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	b.SetPreviousBlock(pb)
 
 	logging.Logger.Info("get_previous_block - sync successfully",
+		zap.Int("sync num", len(blocks)),
 		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
 		zap.Int64("previous round", b.PrevBlock.Round),
-		zap.String("previous block", b.PrevHash),
-		zap.Int("synced_num", len(blocks)))
+		zap.String("previous block", b.PrevHash))
+
+	go func() {
+		// do not sync blocks more than `pruned below count` of blocks
+		if remainSyncNum > int64(c.PruneStateBelowCount) {
+			remainSyncNum = int64(c.PruneStateBelowCount)
+		}
+
+		if remainSyncNum > 0 {
+			logging.Logger.Debug("get_previous_block - send async blocks request",
+				zap.Int64("start_round", first.Round-1),
+				zap.Int64("num", remainSyncNum))
+			if err := c.AsyncSyncBlocks(ctx, SyncBlockReq{
+				Hash:     first.Hash,
+				Round:    first.Round,
+				Num:      remainSyncNum,
+				SaveToDB: false,
+			}); err != nil {
+				logging.Logger.Warn("get_previous_block - send async blocks request failed",
+					zap.Int64("round", first.Round),
+					zap.Int64("num", remainSyncNum),
+					zap.Error(err))
+			}
+		}
+	}()
 	return pb
 }
 
