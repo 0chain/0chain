@@ -546,8 +546,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	if pn.Phase != Contribute {
-		return "", common.NewError("contribute_mpk_failed",
-			"this is not the correct phase to contribute mpk")
+		return "", common.NewErrorf("contribute_mpk_failed",
+			"this is not the correct phase to contribute mpk: %v", pn.Phase.String())
 	}
 
 	dmn, err := getDKGMinersList(balances)
@@ -590,7 +590,11 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	Logger.Debug("contribute_mpk success",
-		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+		zap.Int64("DB version", int64(balances.GetState().GetVersion())),
+		zap.String("mpk id", mpk.ID),
+		zap.Int("len", len(mpks.Mpks)),
+		zap.Int64("pn_start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
 
 	return string(mpk.Encode()), nil
 }
