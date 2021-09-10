@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -170,6 +171,37 @@ type Chain struct {
 	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
+	syncBlocksC chan *SyncBlockReq
+}
+
+// SyncBlockReq represents a request to sync blocks, it will be
+// send to sync block worker.
+type SyncBlockReq struct {
+	Hash     string
+	Round    int64
+	Num      int64
+	SaveToDB bool
+}
+
+// GetSyncBlocksChan returns the channel for receving block
+// sync request
+func (c *Chain) GetSyncBlocksChan() chan *SyncBlockReq {
+	return c.syncBlocksC
+}
+
+// AsyncSyncBlocks send a request to sync blocks back that startinng
+// from the given block or round,
+// return error if failed to push to channel or timeout
+func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case c.syncBlocksC <- &req:
+	case <-time.After(500 * time.Millisecond):
+		return errors.New("push block sync request to channel timeout")
+	}
+
+	return nil
 }
 
 // SyncLFBStateNow notify workers to start the LFB state sync immediately.
@@ -460,6 +492,7 @@ func Provider() datastore.Entity {
 	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
+	c.syncBlocksC = make(chan *SyncBlockReq, 100)
 
 	return c
 }
@@ -596,7 +629,7 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
+/*AddNotarizedBlockToRound - adds notarized block to cache and sync info from notarized block to round  */
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
 	if b.GetRoundRandomSeed() == 0 {
 		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
@@ -1451,10 +1484,13 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		logging.Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
 			"hashes don't match up: chain's finalized block hash %v, block's"+
 			" magic block previous hash %v",
-			c.latestFinalizedMagicBlock.Hash,
+			latest.MagicBlock.Hash,
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
+	logging.Logger.Debug("update lfmb",
+		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
+		zap.String("mb_hash", b.MagicBlock.Hash))
 	c.latestFinalizedMagicBlock = b
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
 }

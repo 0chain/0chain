@@ -24,6 +24,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
+	go mc.BlockSyncWorker(ctx)
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 	go mc.UpdateMagicBlockWorker(ctx)
@@ -209,5 +210,40 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 		}
 		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
+	}
+}
+
+// BlockSyncWorker pull and sync blocks from remote
+func (mc *Chain) BlockSyncWorker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case req := <-mc.GetSyncBlocksChan():
+			func() {
+				tm := time.Now()
+				b, _ := mc.GetBlock(ctx, req.Hash)
+				if b == nil {
+					logging.Logger.Warn("[block sync worker] - start block does not exist locally",
+						zap.String("block", req.Hash),
+						zap.Int64("round", req.Round))
+					return
+				}
+				syncNum := req.Num
+				// use half of the PruneStateBelowCount, usually it would be 50,
+				maxSyncNum := int64(mc.PruneStateBelowCount / 2)
+				if syncNum > maxSyncNum {
+					syncNum = maxSyncNum
+				}
+
+				blocks := mc.SyncBlocks(ctx, b, syncNum, req.SaveToDB)
+				logging.Logger.Debug("[block sync worker] - blocks synced",
+					zap.Int64("start round", b.Round-1),
+					zap.Int64("req sync num", syncNum),
+					zap.Int("synced num", len(blocks)),
+					zap.Bool("save to db", req.SaveToDB),
+					zap.Any("duration", time.Since(tm)))
+			}()
+		}
 	}
 }
