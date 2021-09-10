@@ -63,49 +63,75 @@ end note
 
 == Convert from WZCN to ZCN ==
 
+alt Step 1: User calls Ethereum SC from device
 user -> ethbridge : Call **'Burn'** N ethers (amount, clientId)
+activate ethbridge
+
 note left
 **Parameters**
 * The amount of WZCN burned
 * The client’s ID on the 0chain blockchain
 * A sequential nonce
 end note
+
 ethbridge -> ethbridge : Transfer from sender to bridge smart contract
 ethbridge -> ethbridge : Increment nonce
 ethbridge -> ethbridge
+
 note right
 emit **Burned**(_from, _amount, _clientId, burnNonce)
 end note
 
-ethbridge --> user : Return Transaction ID
-
-user -> auth : Verify Transaction Status (transactionID)
-group for each authorizers (group, auth)
-auth -> ethbridge : Poll for txn status
-ethbridge --> auth : Transaction status
+ethbridge --> user : **TransactionID**
+deactivate ethbridge
 end
-auth --> user : Transaction successful
 
+alt Step 2: User calls authorizer
+
+user -> auth : Verify Transaction Status : **IsTransactionSuccessful** ( TransactionID )
+activate auth
+group for each authorizer (auth)
+auth -> ethbridge : Poll for txn status
+activate ethbridge
+ethbridge --> auth : Transaction status
+deactivate ethbridge
+end
+auth --> user : **Transaction successful**
+deactivate auth
+end
+
+alt Step 3: User calls authorizer
 user -> user : Provide **clientId** and **ethereum address** to filter function
-user -> auth : Get proof-of-WZCN-burn, arguments: (clientId, ethereum address, transactionId)
+user -> auth : Get proof-of-WZCN-burn : **GetBurnEventFromEthereum** (clientId, ethereum address, transactionId)
+activate auth
 auth -> ethbridge : Read all events
+activate ethbridge
 ethbridge -> ethbridge : Filter events by **sender address** and **clientId**
 ethbridge -> auth : Return transaction event
+deactivate ethbridge
 auth -> auth : Create signature
 auth -> auth : Create burn ticket
-auth --> user : **proof-of-WZCN-burn ticket**
-note left
+note over auth
 **proof-of-WZCN-burn ticket**
+
 * The Ethereum transaction ID
 * The amount of ZCN to be minted
 * The client ID to receive the ZCN
 * The nonce provided the client in step 1 above
 * The authorizers' signature
 end note
+auth --> user : **Proof-of-WZCN-burn ticket**
+deactivate auth
+end
+
+alt Step 4: Client calls bridge in 0ZCN
+
 user -> zcnscbridge : Call **Mint** function (amount, signature)
 zcnscbridge -> zcnscbridge : Verify signature
 zcnscbridge -> m : **Transfer** transaction
 m -> s: Save transaction
+end
+
 user -> s : Verify transaction
 
 @enduml
