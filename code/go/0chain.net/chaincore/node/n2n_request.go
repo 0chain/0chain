@@ -47,6 +47,9 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	}
 	np.mmx.Unlock()
 
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
 	wg := &sync.WaitGroup{}
 	doneC := make(chan struct{})
 	nodeC := make(chan *Node, len(nodes))
@@ -68,6 +71,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 			if rhandler(ctx, n) {
 				select {
 				case nodeC <- n:
+					cancel()
 				default:
 				}
 			}
