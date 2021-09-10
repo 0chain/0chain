@@ -220,11 +220,14 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	if r == nil {
 		if msg.ShouldRetry() {
 			logging.Logger.Error("handle notarization message (round not started yet) retrying",
+				zap.Int64("round", not.Round),
 				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
+
 			msg.Retry(mc.blockMessageChannel)
 		} else {
 			logging.Logger.Error("handle notarization message (round not started yet)",
+				zap.Int64("round", not.Round),
 				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
 		}
