@@ -1286,7 +1286,7 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 		if mr == nil || mr.IsFinalized() {
 			logging.Logger.Info("restartRound->kickFinalization continued",
 				zap.Any("miner round", mr),
-				zap.Bool("miner is finalized", mr.IsFinalized()))
+				zap.Bool("miner is finalized", mr != nil && mr.IsFinalized()))
 			i++
 			count++
 			continue // skip finalized blocks, skip nil miner rounds
