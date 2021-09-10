@@ -260,7 +260,7 @@ func main() {
 
 	startBlocksInfoLogs(sc)
 
-	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+	if err := sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
 		Logger.Fatal("update LFMB from sharders", zap.Error(err))
 	}
 
