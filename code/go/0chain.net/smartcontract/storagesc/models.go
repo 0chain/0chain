@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	chainstate "0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"math/bits"
 	"strings"
 	"time"
+
+	chainstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -1104,7 +1105,7 @@ func (at *AuthTicket) getHashData() (data string) {
 }
 
 func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
-	clientID string) (err error) {
+	clientID, clientPublicKey string) (err error) {
 
 	if at.AllocationID != alloc.ID {
 		return common.NewError("invalid_read_marker",
@@ -1135,9 +1136,9 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 		ssn = chain.GetServerChain().ClientSignatureScheme
 		ss  = encryption.GetSignatureScheme(ssn)
 	)
-	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
+	if err = ss.SetPublicKey(clientPublicKey); err != nil {
 		return common.NewErrorf("invalid_read_marker",
-			"setting owner public key: %v", err)
+			"setting client public key: %v", err)
 	}
 
 	var (
@@ -1191,7 +1192,7 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
 	if rm.AuthTicket == nil {
 		return common.NewError("invalid_read_marker", "missing auth. ticket")
 	}
-	return rm.AuthTicket.verify(alloc, now, rm.PayerID)
+	return rm.AuthTicket.verify(alloc, now, rm.PayerID, rm.ClientPublicKey)
 }
 
 func (rm *ReadMarker) GetHashData() string {
