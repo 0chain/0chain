@@ -26,8 +26,6 @@ import (
 
 // test helpers
 
-const x10 = 10 * 1000 * 1000 * 1000
-
 func toks(val state.Balance) string {
 	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
 }
