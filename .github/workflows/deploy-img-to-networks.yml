@@ -1,0 +1,41 @@
+name: DEPLOY_TO_SELECTED_N/W
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Input the network name for updating images. '
+        required: true
+      chainimage:
+        description: '0chain image tag'
+        required: true
+        default: latest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: azure/setup-helm@v1
+        with:
+          version: 'v3.2.2'
+
+      - name: Setup helm repo
+        run: |
+          helm repo add 0chain-helm http://0chain-helm-chart.s3-website.us-east-2.amazonaws.com/0helm/
+          helm repo update
+
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          if [[ "${{ github.event.inputs.network }}" == "test" ]]; then
+            echo "${{ secrets.TESTKC }}" | base64 -d > ~/.kube/config
+          elif [[ "${{ github.event.inputs.network }}" == "helm" ]]; then
+            echo "${{ secrets.HELMKC }}" | base64 -d > ~/.kube/config
+          fi
+
+      - name: Setup chain
+        run: |
+          helm upgrade --install --wait --timeout 120s 0chain -n ${{ github.event.inputs.network }} --set sharder.image.tag=${{ github.event.inputs.chainimage }} --set miner.image.tag=${{ github.event.inputs.chainimage }} 0chain-helm/zchain
+          rm -rf ~/.kube
