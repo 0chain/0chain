@@ -97,8 +97,8 @@ func TestUpdate(t *testing.T) {
 			args := setExpectations(t, test.parameters, &test.want)
 			before := args.config
 
-			args.config.Update(&args.updates)
-
+			err := args.config.Update(&args.updates)
+			require.NoError(t, err)
 			require.EqualValues(t, before, args.config)
 		})
 	}

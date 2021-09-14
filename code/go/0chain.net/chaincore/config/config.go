@@ -32,13 +32,13 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.stuck.time_threshold", 60)
 	viper.SetDefault("server_chain.transaction.timeout", 30)
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
-	viper.SetDefault("server_chain.block.proposal.max_wait_time", time.Millisecond*200)
+	viper.SetDefault("server_chain.block.proposal.max_wait_time", "200ms")
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 	viper.SetDefault("server_chain.block.reuse_txns", true)
 	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
 	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
 	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
-	viper.SetDefault("server_chain.smart_contract.timeout", 550*time.Millisecond)
+	viper.SetDefault("server_chain.smart_contract.timeout", "500ms")
 	viper.SetDefault("server_chain.round_timeouts.softto_min", 300)
 	viper.SetDefault("server_chain.round_timeouts.softto_mult", 3)
 	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
@@ -66,9 +66,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", "15m")
 
 	// LFB tickets.
-	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)
+	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", "16s")
 	viper.SetDefault("server_chain.lfb_ticket.ahead", 2)
-	viper.SetDefault("server_chain.lfb_ticket.fb_fetching_lifetime", time.Second*10)
+	viper.SetDefault("server_chain.lfb_ticket.fb_fetching_lifetime", "10s")
 
 	// Asynchronous blocks fetching.
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_miners", 100)

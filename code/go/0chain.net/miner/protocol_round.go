@@ -316,9 +316,8 @@ func (mc *Chain) getClientState(
 	return clientState
 }
 
-func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
-	key_hash := encryption.Hash(minersc.GLOBALS_KEY)
-	val, err := clientState.GetNodeValue(util.Path(key_hash))
+func getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
+	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
 	if err != nil {
 		return nil, err
 	}
@@ -339,9 +338,18 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 		return
 	}
 
-	configMap, err := mc.getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
-	if err == nil {
-		mc.Config.Update(configMap)
+	configMap, err := getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
+	if err != nil {
+		logging.Logger.Info("cannot get global settings",
+			zap.Int64("start of round", r.RandomSeed),
+			zap.Error(err),
+		)
+	} else {
+		err := mc.Config.Update(configMap)
+		logging.Logger.Error("cannot update global settings",
+			zap.Int64("start of round", r.RandomSeed),
+			zap.Error(err),
+		)
 	}
 
 	mc.startNewRound(ctx, r)
