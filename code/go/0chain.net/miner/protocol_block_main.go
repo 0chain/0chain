@@ -96,7 +96,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 					zap.Error(err))
 			}
 			failedStateCount++
-			return false
+			// return false
 		}
 
 		// Setting the score lower so the next time blocks are generated

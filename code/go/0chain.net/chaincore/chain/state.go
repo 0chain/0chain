@@ -177,7 +177,9 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		if output, err = c.ExecuteSmartContract(ctx, txn, sctx); err != nil {
 			logging.Logger.Error("Error executing the SC", zap.Any("txn", txn),
 				zap.Error(err))
-			return
+			txn.TransactionOutput = err.Error()
+			txn.Status = transaction.TxnFail
+			return nil
 		}
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
