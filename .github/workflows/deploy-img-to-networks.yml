@@ -84,10 +84,10 @@ jobs:
       run: |
         BRANCH=$(echo ${GITHUB_REF#refs/heads/})
         echo ::set-output name=BRANCH::${BRANCH}
-        echo "Branch ${BRANCH}."
         BRANCH1=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=IMAGE_TAG::${BRANCH1}-${SHORT_SHA}
+        IMAGE_TAG=${BRANCH1}-${SHORT_SHA}
+        echo "Branch ${IMAGE_TAG}."
         JSON=$(echo {\"minerImage\":\"${IMAGE_TAG}\"\,\"sharderImage\":\"${IMAGE_TAG}\"})
         echo ::set-output name=JSON::${JSON}
 
@@ -98,7 +98,7 @@ jobs:
         repo: loadTest
         github_token: ${{ secrets.CHAIN_PAT }}
         workflow_file_name: load-test-v1.yml
-        ref: ${{ steps.get_tag.outputs.BRANCH }}
+        ref: staging
         inputs: ${{ steps.get_tag.outputs.JSON }}
         propagate_failure: true
         trigger_workflow: true
