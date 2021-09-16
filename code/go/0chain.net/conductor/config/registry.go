@@ -48,6 +48,12 @@ func init() {
 		return stop(ex, val, tm)
 	})
 
+	// checks
+	register("expect_active_set", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return expectActiveSet(ex, val)
+	})
+
 	// wait for an event of the monitor
 
 	register("wait_view_change", func(name string,
