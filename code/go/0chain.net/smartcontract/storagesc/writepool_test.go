@@ -108,7 +108,7 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 	require.EqualValues(t, nrps, wps)
 }
 
-func testSetWritePoolConfig(t *testing.T, wpc *WritePoolConfig,
+func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
@@ -158,7 +158,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	// setup config
 
-	testSetWritePoolConfig(t, &WritePoolConfig{
+	testSetWritePoolConfig(t, &writePoolConfig{
 		MinLock:       10,
 		MinLockPeriod: 20 * time.Second,
 		MaxLockPeriod: 2 * time.Hour,

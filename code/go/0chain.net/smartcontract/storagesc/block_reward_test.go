@@ -1,18 +1,15 @@
-// +build depreciated
-
 package storagesc
 
 import (
-	"strconv"
-	"strings"
-	"testing"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"strconv"
+	"strings"
+	"testing"
 )
 
 func TestPayBlobberBlockRewards(t *testing.T) {
@@ -92,7 +89,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 		}
 
 		var conf = &scConfig{
-			BlockReward: &BlockReward{
+			BlockReward: &blockReward{
 				BlockReward:     zcnToBalance(p.blockReward),
 				QualifyingStake: zcnToBalance(p.qualifyingStake),
 			},

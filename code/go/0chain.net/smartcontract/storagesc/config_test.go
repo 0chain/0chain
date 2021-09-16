@@ -1,14 +1,13 @@
 package storagesc
 
 import (
-	"testing"
-
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestGetBlockPayments(t *testing.T) {
 	type want struct {
-		reward BlockReward
+		reward blockReward
 	}
 
 	tests := []struct {
@@ -30,7 +29,7 @@ func TestGetBlockPayments(t *testing.T) {
 			BlobberUsageRatio:    20.0,
 
 			want: want{
-				BlockReward{
+				blockReward{
 					SharderWeight:         0.1,
 					MinerWeight:           0.2,
 					BlobberCapacityWeight: 0.3,
@@ -45,7 +44,7 @@ func TestGetBlockPayments(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var br = BlockReward{}
+			var br = blockReward{}
 			br.setWeightsFromRatio(tt.SharderRatio, tt.MinerRatio, tt.BlobberCapacityRatio, tt.BlobberUsageRatio)
 			require.EqualValues(t, br, tt.want.reward)
 		})

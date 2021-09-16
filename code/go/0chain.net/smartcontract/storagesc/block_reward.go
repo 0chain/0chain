@@ -1,5 +1,3 @@
-// +build depreciated
-
 package storagesc
 
 import (

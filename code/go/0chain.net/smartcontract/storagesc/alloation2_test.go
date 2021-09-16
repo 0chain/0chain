@@ -1,13 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
-
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -16,7 +9,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	"encoding/json"
 	"github.com/stretchr/testify/require"
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
 )
 
 type blobberStakes []int64
@@ -112,7 +111,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 	var challenges = [][]common.Timestamp{}
 	var scYaml = scConfig{
 		MaxMint: zcnToBalance(4000000.0),
-		StakePool: &StakePoolConfig{
+		StakePool: &stakePoolConfig{
 			InterestRate:     0.0000334,
 			InterestInterval: time.Minute,
 		},
@@ -266,7 +265,7 @@ func TestFinalizeAllocation(t *testing.T) {
 	var blobberStakePools = [][]mockStakePool{}
 	var scYaml = scConfig{
 		MaxMint: zcnToBalance(4000000.0),
-		StakePool: &StakePoolConfig{
+		StakePool: &stakePoolConfig{
 			InterestRate:     0.0000334,
 			InterestInterval: time.Minute,
 		},

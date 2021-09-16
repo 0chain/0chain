@@ -1,4 +1,4 @@
-package storagesc_test
+package storagesc
 
 import (
 	"fmt"
@@ -8,24 +8,22 @@ import (
 
 	"0chain.net/chaincore/state"
 
+	"0chain.net/smartcontract"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract"
-	. "0chain.net/smartcontract/storagesc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
 
 	for _, name := range SettingName {
-		require.EqualValues(t, name, SettingName[Settings[name].Setting])
+		require.EqualValues(t, name, SettingName[Settings[name].setting])
 	}
 }
 
@@ -40,7 +38,7 @@ func TestUpdateConfig(t *testing.T) {
 	type parameters struct {
 		client       string
 		inputMap     map[string]string
-		TargetConfig ScConfig
+		TargetConfig scConfig
 	}
 
 	setExpectations := func(t *testing.T, p parameters) args {
@@ -52,19 +50,15 @@ func TestUpdateConfig(t *testing.T) {
 			ClientID: p.client,
 		}
 
-		balances.On("GetTrieNode", ScConfigKey(ssc.ID)).Return(&ScConfig{}, nil).Once()
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{}, nil).Once()
 		balances.On(
 			"InsertTrieNode",
-			ScConfigKey(ssc.ID),
-			mock.MatchedBy(func(in interface{}) bool {
-				conf, ok := IToScConfig(in)
-				if !ok {
-					return false
-				}
+			scConfigKey(ssc.ID),
+			mock.MatchedBy(func(conf *scConfig) bool {
 				for key, value := range p.inputMap {
 					var setting interface{} = getConfField(*conf, key)
 					fmt.Println("setting", setting, "value", value)
-					switch Settings[key].ConfigType {
+					switch Settings[key].configType {
 					case smartcontract.Int:
 						{
 							expected, err := strconv.Atoi(value)
@@ -118,7 +112,7 @@ func TestUpdateConfig(t *testing.T) {
 					case smartcontract.StateBalance:
 						{
 							expected, err := strconv.ParseFloat(value, 64)
-							expected = 1e10 * expected
+							expected = x10 * expected
 							require.NoError(t, err)
 							actual, ok := setting.(state.Balance)
 							require.True(t, ok)
@@ -218,7 +212,7 @@ func TestUpdateConfig(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.ssc.UpdateSettings(args.txn, args.input, args.balances)
+			_, err := args.ssc.updateSettings(args.txn, args.input, args.balances)
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.msg, err.Error())
@@ -229,8 +223,8 @@ func TestUpdateConfig(t *testing.T) {
 	}
 }
 
-func getConfField(conf ScConfig, field string) interface{} {
-	switch Settings[field].Setting {
+func getConfField(conf scConfig, field string) interface{} {
+	switch Settings[field].setting {
 	case MaxMint:
 		return conf.MaxMint
 	case TimeUnit:

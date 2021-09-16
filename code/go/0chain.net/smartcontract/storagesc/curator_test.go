@@ -1,16 +1,14 @@
-package storagesc_test
+package storagesc
 
 import (
-	"encoding/json"
-	"testing"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	. "0chain.net/smartcontract/storagesc"
+	"encoding/json"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestAddCurator(t *testing.T) {
@@ -28,7 +26,7 @@ func TestAddCurator(t *testing.T) {
 	}
 	type parameters struct {
 		clientId         string
-		info             CuratorInput
+		info             curatorInput
 		existingCurators []string
 	}
 	type want struct {
@@ -85,7 +83,7 @@ func TestAddCurator(t *testing.T) {
 			name: "ok",
 			parameters: parameters{
 				clientId: mockClientId,
-				info: CuratorInput{
+				info: curatorInput{
 					CuratorId:    mockCuratorId,
 					AllocationId: mockAllocationId,
 				},
@@ -98,7 +96,7 @@ func TestAddCurator(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.AddCurator(args.txn, args.input, args.balances)
+			err := args.ssc.addCurator(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
@@ -127,7 +125,7 @@ func TestRemoveCurator(t *testing.T) {
 	}
 	type parameters struct {
 		clientId         string
-		info             CuratorInput
+		info             curatorInput
 		existingCurators []string
 	}
 	type want struct {
@@ -181,7 +179,7 @@ func TestRemoveCurator(t *testing.T) {
 			name: "ok_1_curators",
 			parameters: parameters{
 				clientId: mockClientId,
-				info: CuratorInput{
+				info: curatorInput{
 					CuratorId:    mockCuratorId,
 					AllocationId: mockAllocationId,
 				},
@@ -192,7 +190,7 @@ func TestRemoveCurator(t *testing.T) {
 			name: "ok_3_curators",
 			parameters: parameters{
 				clientId: mockClientId,
-				info: CuratorInput{
+				info: curatorInput{
 					CuratorId:    mockCuratorId,
 					AllocationId: mockAllocationId,
 				},
@@ -203,7 +201,7 @@ func TestRemoveCurator(t *testing.T) {
 			name: "error_not_curator",
 			parameters: parameters{
 				clientId: mockClientId,
-				info: CuratorInput{
+				info: curatorInput{
 					CuratorId:    mockCuratorId,
 					AllocationId: mockAllocationId,
 				},
@@ -221,7 +219,7 @@ func TestRemoveCurator(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.RemoveCurator(args.txn, args.input, args.balances)
+			err := args.ssc.removeCurator(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {

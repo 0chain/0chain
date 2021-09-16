@@ -1,15 +1,13 @@
-package storagesc_test
+package storagesc
 
 import (
-	"testing"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/util"
-	. "0chain.net/smartcontract/storagesc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestAddToFundedPools(t *testing.T) {
@@ -31,26 +29,22 @@ func TestAddToFundedPools(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		if len(p.existing) != 0 {
-			var existingPools FundedPools = p.existing
+			var existingPools fundedPools = p.existing
 			balances.On(
 				"GetTrieNode",
-				FundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client),
 			).Return(&existingPools, nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
-				FundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client),
 			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
 		balances.On(
 			"InsertTrieNode",
-			FundedPoolsKey(ssc.ID, p.client),
-			mock.MatchedBy(func(ifp interface{}) bool {
-				fp, ok := IToFundedPool(ifp)
-				if !ok {
-					return false
-				}
+			fundedPoolsKey(ssc.ID, p.client),
+			mock.MatchedBy(func(fp *fundedPools) bool {
 				if len(p.existing) != len(*fp)-1 {
 					return false
 				}
@@ -99,7 +93,7 @@ func TestAddToFundedPools(t *testing.T) {
 
 			ssc, balances := setExpectations(t, tt.parameters)
 
-			err := ssc.AddToFundedPools(tt.parameters.client, tt.parameters.newPool, balances)
+			err := ssc.addToFundedPools(tt.parameters.client, tt.parameters.newPool, balances)
 
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
@@ -131,15 +125,15 @@ func TestIsFundedPool(t *testing.T) {
 		}
 
 		if len(p.existing) != 0 {
-			var existingPools FundedPools = p.existing
+			var existingPools fundedPools = p.existing
 			balances.On(
 				"GetTrieNode",
-				FundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client),
 			).Return(&existingPools, nil).Once()
 		} else {
 			balances.On(
 				"GetTrieNode",
-				FundedPoolsKey(ssc.ID, p.client),
+				fundedPoolsKey(ssc.ID, p.client),
 			).Return(nil, util.ErrValueNotPresent).Once()
 		}
 
@@ -193,7 +187,7 @@ func TestIsFundedPool(t *testing.T) {
 
 			ssc, balances := setExpectations(t, tt.parameters)
 
-			ok, err := ssc.IsFundedPool(tt.parameters.client, tt.parameters.poolId, balances)
+			ok, err := ssc.isFundedPool(tt.parameters.client, tt.parameters.poolId, balances)
 
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {

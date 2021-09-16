@@ -1,17 +1,15 @@
-package storagesc_test
+package storagesc
 
 import (
-	"strconv"
-	"testing"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/datastore"
-	. "0chain.net/smartcontract/storagesc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"strconv"
+	"testing"
 )
 
 func TestTransferReward(t *testing.T) {
@@ -26,7 +24,7 @@ func TestTransferReward(t *testing.T) {
 	type args struct {
 		sscKey   string
 		zcnPool  tokenpool.ZcnPool
-		sp       *StakePool
+		sp       *stakePool
 		value    state.Balance
 		balances cstate.StateContextI
 	}
@@ -58,18 +56,18 @@ func TestTransferReward(t *testing.T) {
 	var setup = func(t *testing.T, p parameters) args {
 		var zcnPool tokenpool.ZcnPool
 		zcnPool.Balance = zcnToBalance(2 * p.value)
-		sPool := NewStakePool()
+		sPool := newStakePool()
 
-		sPool.SetSettings(StakePoolSettings{
+		sPool.Settings = stakePoolSettings{
 			ServiceCharge:  p.serviceCharge,
 			DelegateWallet: p.to,
-		})
+		}
 		for i, d := range p.delegates {
 			id := strconv.Itoa(i)
-			dPool := DelegatePool{}
+			dPool := delegatePool{}
 			dPool.Balance = zcnToBalance(d)
 			dPool.DelegateID = id
-			sPool.SetPool(id, &dPool)
+			sPool.Pools[id] = &dPool
 		}
 
 		balances := setExpectations(t, p)
@@ -77,7 +75,7 @@ func TestTransferReward(t *testing.T) {
 		return args{
 			sscKey:   p.from,
 			zcnPool:  zcnPool,
-			sp:       (*StakePool)(sPool),
+			sp:       sPool,
 			value:    zcnToBalance(p.value),
 			balances: balances,
 		}
@@ -114,7 +112,7 @@ func TestTransferReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			args := setup(t, tt.parameters)
-			moved, err := TransferReward(args.sscKey, args.zcnPool, args.sp, args.value, args.balances)
+			moved, err := transferReward(args.sscKey, args.zcnPool, args.sp, args.value, args.balances)
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errorMsg, err.Error())
@@ -135,7 +133,7 @@ func TestMintReward(t *testing.T) {
 	}
 
 	type args struct {
-		sp       *StakePool
+		sp       *stakePool
 		value    float64
 		balances cstate.StateContextI
 	}
@@ -165,23 +163,23 @@ func TestMintReward(t *testing.T) {
 	}
 
 	var setup = func(t *testing.T, p parameters) args {
-		sPool := NewStakePool()
-		sPool.SetSettings(StakePoolSettings{
+		sPool := newStakePool()
+		sPool.Settings = stakePoolSettings{
 			ServiceCharge:  p.serviceCharge,
 			DelegateWallet: p.to,
-		})
+		}
 		for i, d := range p.delegates {
 			id := strconv.Itoa(i)
-			dPool := DelegatePool{}
+			dPool := delegatePool{}
 			dPool.Balance = zcnToBalance(d)
 			dPool.DelegateID = id
-			sPool.SetPool(id, &dPool)
+			sPool.Pools[id] = &dPool
 		}
 
 		balances := setExpectations(t, p)
 
 		return args{
-			sp:       (*StakePool)(sPool),
+			sp:       sPool,
 			value:    float64(zcnToBalance(p.value)),
 			balances: balances,
 		}
@@ -225,7 +223,7 @@ func TestMintReward(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			args := setup(t, tt.parameters)
-			err := MintReward(args.sp, args.value, args.balances)
+			err := mintReward(args.sp, args.value, args.balances)
 			require.EqualValues(t, tt.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, tt.want.errorMsg, err.Error())
