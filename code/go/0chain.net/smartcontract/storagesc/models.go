@@ -11,7 +11,6 @@ import (
 
 	chainstate "0chain.net/chaincore/chain/state"
 
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -1024,10 +1023,13 @@ type WriteMarker struct {
 	Signature              string           `json:"signature"`
 }
 
-func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
+func (wm *WriteMarker) VerifySignature(
+	clientPublicKey string,
+	balances chainstate.StateContextI,
+) bool {
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
@@ -1107,8 +1109,12 @@ func (at *AuthTicket) getHashData() string {
 	return hashData
 }
 
-func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
-	clientID string) (err error) {
+func (at *AuthTicket) verify(
+	alloc *StorageAllocation,
+	now common.Timestamp,
+	clientID string,
+	balances chainstate.StateContextI,
+) (err error) {
 
 	if at.AllocationID != alloc.ID {
 		return common.NewError("invalid_read_marker",
@@ -1135,10 +1141,7 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 			"Invalid auth ticket. Timestamp in future")
 	}
 
-	var (
-		ssn = chain.GetServerChain().ClientSignatureScheme
-		ss  = encryption.GetSignatureScheme(ssn)
-	)
+	var ss = balances.GetSignatureScheme()
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
 		return common.NewErrorf("invalid_read_marker",
 			"setting owner public key: %v", err)
@@ -1169,10 +1172,13 @@ type ReadMarker struct {
 	AuthTicket      *AuthTicket      `json:"auth_ticket"`
 }
 
-func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
+func (rm *ReadMarker) VerifySignature(
+	clientPublicKey string,
+	balances chainstate.StateContextI,
+) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(clientPublicKey)
 	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
@@ -1184,8 +1190,11 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
-	now common.Timestamp) (err error) {
+func (rm *ReadMarker) verifyAuthTicket(
+	alloc *StorageAllocation,
+	now common.Timestamp,
+	balances chainstate.StateContextI,
+) (err error) {
 
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
@@ -1195,7 +1204,7 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
 	if rm.AuthTicket == nil {
 		return common.NewError("invalid_read_marker", "missing auth. ticket")
 	}
-	return rm.AuthTicket.verify(alloc, now, rm.PayerID)
+	return rm.AuthTicket.verify(alloc, now, rm.PayerID, balances)
 }
 
 func (rm *ReadMarker) GetHashData() string {
@@ -1205,8 +1214,10 @@ func (rm *ReadMarker) GetHashData() string {
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
-
+func (rm *ReadMarker) Verify(
+	prevRM *ReadMarker,
+	balances chainstate.StateContextI,
+) error {
 	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
 		rm.Timestamp == 0 {
 
@@ -1224,7 +1235,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 		}
 	}
 
-	if ok := rm.VerifySignature(rm.ClientPublicKey); ok {
+	if ok := rm.VerifySignature(rm.ClientPublicKey, balances); ok {
 		return nil
 	}
 
@@ -1244,11 +1255,11 @@ type ValidationTicket struct {
 	Signature    string           `json:"signature"`
 }
 
-func (vt *ValidationTicket) VerifySign() (bool, error) {
+func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool, error) {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(vt.ValidatorKey)
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
@@ -1260,7 +1271,7 @@ type StorageStats struct {
 	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
 }
 
-func (sn *StorageStats) GetKey(globalKey string) datastore.Key {
+func (sn *StorageStats) GetKey(_ string) datastore.Key {
 	return STORAGE_STATS_KEY
 }
 
