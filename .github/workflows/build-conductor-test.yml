@@ -107,9 +107,9 @@ jobs:
       run: |
         cd /root/0chain/
         source ~/.profile
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
         fi
       env:
@@ -118,9 +118,9 @@ jobs:
     - name: Running Byzantine Tests.
       run: |
         cd /root/0chain/
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.byzantine
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
         fi
       env:
@@ -129,9 +129,9 @@ jobs:
     - name: Running View Change-3 Tests.
       run: |
         cd /root/0chain/
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change-3
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
         fi
       env:
