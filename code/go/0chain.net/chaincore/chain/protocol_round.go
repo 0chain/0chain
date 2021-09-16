@@ -464,13 +464,6 @@ func (c *Chain) GetHeaviestNotarizedBlockLight(ctx context.Context, r int64) *bl
 				"Block not from the requested round")
 		}
 
-		if err = nb.Validate(ctx); err != nil {
-			logging.Logger.Error("get notarized block for round - validate",
-				zap.Int64("round", r), zap.String("block", nb.Hash),
-				zap.Error(err))
-			return
-		}
-
 		select {
 		case notarizedBlockC <- nb:
 		default:
