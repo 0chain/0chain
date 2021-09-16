@@ -35,7 +35,7 @@ jobs:
         cd /root/0chain/
         git checkout .
         git pull
-        git checkout staging
+        git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
