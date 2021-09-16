@@ -139,11 +139,6 @@ func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error
 	return data, nil
 }
 
-/*LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetServerChain().GetLatestFinalizedMagicBlockSummary(), nil
-}
-
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */
 func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	fbs := make([]*block.BlockSummary, 0, 10)
