@@ -135,43 +135,43 @@ jobs:
         trigger_workflow: true
         wait_workflow: true
 
-  # Update_Images:
-  #   name: Update images over test.0chain.net.
-  #   runs-on: ubuntu-20.04
+  Update_Images:
+    name: Update images over test.0chain.net.
+    runs-on: ubuntu-20.04
 
-  #   needs:
-  #   - Conductor_Test
+    needs:
+    - Conductor_Test
 
-  #   steps:
-  #     - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - uses: azure/setup-helm@v1
-  #       with:
-  #         version: 'v3.2.2'
+      - uses: azure/setup-helm@v1
+        with:
+          version: 'v3.2.2'
 
-  #     - name: Get Image Tags.
-  #       id: get_info
-  #       run: |
-  #         BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-  #         SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-  #         echo ::set-output name=BRANCH::${BRANCH}
-  #         echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+      - name: Get Image Tags.
+        id: get_info
+        run: |
+          BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+          echo ::set-output name=BRANCH::${BRANCH}
+          echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
 
-  #     - name: Setup helm repo
-  #       run: |
-  #         helm repo add 0chain-helm http://0chain-helm-chart.s3-website.us-east-2.amazonaws.com/0helm/
-  #         helm repo update
+      - name: Setup helm repo
+        run: |
+          helm repo add 0chain-helm http://0chain-helm-chart.s3-website.us-east-2.amazonaws.com/0helm/
+          helm repo update
 
-  #     - name: Setup kubeconfig
-  #       run: |
-  #         mkdir -p ~/.kube
-  #         if [[ "${{ github.event.inputs.network }}" == "test" ]]; then
-  #           echo "${{ secrets.TESTKC }}" | base64 -d > ~/.kube/config
-  #         elif [[ "${{ github.event.inputs.network }}" == "helm" ]]; then
-  #           echo "${{ secrets.HELMKC }}" | base64 -d > ~/.kube/config
-  #         fi
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          if [[ "${{ github.event.inputs.network }}" == "test" ]]; then
+            echo "${{ secrets.TESTKC }}" | base64 -d > ~/.kube/config
+          elif [[ "${{ github.event.inputs.network }}" == "helm" ]]; then
+            echo "${{ secrets.HELMKC }}" | base64 -d > ~/.kube/config
+          fi
 
-  #     - name: Setup chain
-  #       run: |
-  #         helm upgrade --install --wait --timeout 120s 0chain -n ${{ github.event.inputs.network }} --set sharder.image.tag=${{ steps.get_info.outputs.IMAGE_TAG }} --set miner.image.tag=${{ steps.get_info.outputs.IMAGE_TAG }} 0chain-helm/zchain
-  #         rm -rf ~/.kube
+      - name: Setup chain
+        run: |
+          helm upgrade --install --wait --timeout 120s 0chain -n ${{ github.event.inputs.network }} --set sharder.image.tag=${{ steps.get_info.outputs.IMAGE_TAG }} --set miner.image.tag=${{ steps.get_info.outputs.IMAGE_TAG }} 0chain-helm/zchain
+          rm -rf ~/.kube

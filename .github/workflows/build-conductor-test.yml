@@ -53,27 +53,27 @@ jobs:
       env:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
-    - name: Building Base Images
-      run: |
-        cd /root/0chain/
-        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+    # - name: Building Base Images
+    #   run: |
+    #     cd /root/0chain/
+    #     docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+    #     docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
-    - name: Build Miner Docker Image For Integration Test.
-      run: |
-        cd /root/0chain/
-        bash ./docker.local/bin/build.miners-integration-tests.sh
+    # - name: Build Miner Docker Image For Integration Test.
+    #   run: |
+    #     cd /root/0chain/
+    #     bash ./docker.local/bin/build.miners-integration-tests.sh
 
-    - name: Build Sharder Docker Image For Integration Test.
-      run: |
-        cd /root/0chain/
-        bash ./docker.local/bin/build.sharders-integration-tests.sh
+    # - name: Build Sharder Docker Image For Integration Test.
+    #   run: |
+    #     cd /root/0chain/
+    #     bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    - name: View Change Rounds
-      run: |
-        cd /root/0chain/
-        awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
-        awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
+    # - name: View Change Rounds
+    #   run: |
+    #     cd /root/0chain/
+    #     awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
+    #     awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
@@ -87,13 +87,13 @@ jobs:
       run: |
         cd /root/0chain/
         source ~/.profile
-        bash ./docker.local/bin/start.conductor.sh miners
+        # bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
         cd /root/0chain/
         source ~/.profile
-        bash ./docker.local/bin/start.conductor.sh sharders
+        # bash ./docker.local/bin/start.conductor.sh sharders
   
   conductor_vc_tests:
     name: CONDUCTOR-VIEW-CHANGE-TESTS
@@ -107,9 +107,9 @@ jobs:
       run: |
         cd /root/0chain/
         source ~/.profile
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
         fi
       env:
@@ -118,9 +118,9 @@ jobs:
     - name: Running Byzantine Tests.
       run: |
         cd /root/0chain/
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change.byzantine
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
         fi
       env:
@@ -129,9 +129,9 @@ jobs:
     - name: Running View Change-3 Tests.
       run: |
         cd /root/0chain/
-        if [[ "$VIEW" == "true" ]]
+        if [[ "$VIEW" == "true" ]]; then
           bash ./docker.local/bin/start.conductor.sh view-change-3
-        elif [[ "$VIEW" == "false" ]]
+        elif [[ "$VIEW" == "false" ]]; then
           bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
         fi
       env:
