@@ -84,11 +84,8 @@ func (n *Node) Interrupt() (err error) {
 // Kill the command if started.
 func (n *Node) Kill() (err error) {
 	if n.Command != nil && n.Command.Process != nil {
-		if err := n.Command.Process.Kill(); err != nil {
-			return err
-		}
+		return n.Command.Process.Kill()
 	}
-	n.Command = nil
 	return
 }
 
@@ -109,17 +106,16 @@ func killAfterTimeout(cmd *exec.Cmd, tm time.Duration, done chan struct{}) {
 // Stop interrupts command and waits it. Then it closes STDIN and STDOUT
 // files (logs).
 func (n *Node) Stop() (err error) {
-	startCmd := n.Command
-	if startCmd == nil {
+	if n.Command == nil {
 		return fmt.Errorf("command %v not started", n.Name)
 	}
 	if err = n.Kill(); err != nil {
 		return fmt.Errorf("command %v: kill: %v", n.Name, err)
 	}
-	if stdin, ok := startCmd.Stdin.(*os.File); ok {
+	if stdin, ok := n.Command.Stdin.(*os.File); ok {
 		stdin.Close() // ignore error
 	}
-	if stderr, ok := startCmd.Stderr.(*os.File); ok {
+	if stderr, ok := n.Command.Stderr.(*os.File); ok {
 		stderr.Close() // ignore error
 	}
 

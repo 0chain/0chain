@@ -1,17 +1,17 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
 
-	"0chain.net/smartcontract"
-
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -501,11 +501,10 @@ func (ssc *StorageSmartContract) getConfig(
 
 const cantGetConfigErrMsg = "can't get config"
 
-func (ssc *StorageSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
-	balances chainState.StateContextI,
-) (resp interface{}, err error) {
+func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
+	params url.Values, balances chainState.StateContextI) (
+	resp interface{}, err error) {
+
 	var conf *scConfig
 	conf, err = ssc.getConfig(balances, false)
 
@@ -515,13 +514,49 @@ func (ssc *StorageSmartContract) getConfigHandler(
 
 	// return configurations from sc.yaml not saving them
 	if err == util.ErrValueNotPresent {
-		conf, err = getConfiguredConfig()
+		res, err := getConfiguredConfig()
 		if err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 		}
+		return res, nil
 	}
 
-	return conf.getConfigMap(), nil // actual value
+	return conf, nil // actual value
+}
+
+// updateConfig is SC function used by SC owner
+// to update storage SC configurations
+func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
+	input []byte, balances chainState.StateContextI) (resp string, err error) {
+
+	if t.ClientID != owner {
+		return "", common.NewError("update_config",
+			"unauthorized access - only the owner can update the variables")
+	}
+
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewError("update_config",
+			"can't get config: "+err.Error())
+	}
+
+	var update scConfig
+	if err = update.Decode(input); err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	if err = update.validate(); err != nil {
+		return
+	}
+
+	update.Minted = conf.Minted
+
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
+	if err != nil {
+		return "", common.NewError("update_config", err.Error())
+	}
+
+	return string(update.Encode()), nil
 }
 
 // getWritePoolConfig

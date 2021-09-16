@@ -63,10 +63,8 @@ tests:
           by: ["miner-3"]
           good: []
           bad: ["miner-1", "miner-2"]
-      - wait_round:
-          shift: 10
-          timeout: "3m"
-          must_fail: true
+      - wait_no_progress:
+          timeout: "2m"
   - name: "Send VRFS only to group"
     flow:
       - set_monitor: "sharder-1"
@@ -107,10 +105,8 @@ tests:
           by: ["miner-3"]
           good: []
           bad: []
-      - wait_round:
-          shift: 10
-          timeout: "3m"
-          must_fail: true
+      - wait_no_progress:
+          timeout: "2m"
 
   # Round timeout
   - name: "Don't send a round timeout"
@@ -197,7 +193,7 @@ tests:
           good: [] # no tickets
           bad: [] # no bad tickets
       - wait_no_progress:
-          timeout: "30s" # setting greater waiting time will cause eventual notarization via a different route
+          timeout: "1m"
   - name: "Send bad verification ticket with wrong key"
     flow:
       - set_monitor: "sharder-1"
@@ -212,7 +208,6 @@ tests:
           bad: ["miner-1", "miner-2"]
       - wait_round:
           round: 20 # it keeps going
-          timeout: "15s" # fast
   - name: "Send bad verification ticket with wrong hash"
     flow:
       - set_monitor: "sharder-1"
@@ -227,7 +222,6 @@ tests:
           bad: ["miner-1", "miner-2"]
       - wait_round:
           round: 20 # it keeps going
-          timeout: "15s" # fast
 
   # Bad block
   - name: "Create competing block when not a generator"
@@ -252,10 +246,8 @@ tests:
           by: ["miner-3"]
       - sign_only_competing_blocks:
           by: ["miner-3", "miner-4"]
-      - wait_round:
-          shift: 10
-          must_fail: true
-          timeout: "3m"
+      - wait_no_progress:
+          timeout: "2m"
 
   - name: "Sign a different hash than the block hash"
     flow:

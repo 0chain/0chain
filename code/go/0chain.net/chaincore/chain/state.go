@@ -405,7 +405,8 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
-	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion(), mpt.GetRoot())
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion())
+	tmpt.SetRoot(mpt.GetRoot())
 	return tmpt
 }
 

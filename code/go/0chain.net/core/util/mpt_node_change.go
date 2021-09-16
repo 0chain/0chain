@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime/debug"
 	"sync"
 
 	"0chain.net/core/logging"
@@ -24,9 +23,10 @@ type ChangeCollectorI interface {
 	DeleteChange(oldNode Node)
 	GetChanges() []*NodeChange
 	GetDeletes() []Node
-	GetStartRoot() Key
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
+
+	PrintChanges(w io.Writer)
 
 	Validate() error
 	Clone() ChangeCollectorI
@@ -34,22 +34,17 @@ type ChangeCollectorI interface {
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
-	startRoot Key
-	Changes   map[string]*NodeChange
-	Deletes   map[string]Node
-	mutex     sync.RWMutex
+	Changes map[string]*NodeChange
+	Deletes map[string]Node
+	mutex   sync.RWMutex
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
-func NewChangeCollector(startRoot Key) ChangeCollectorI {
-	cc := &ChangeCollector{startRoot: startRoot}
+func NewChangeCollector() ChangeCollectorI {
+	cc := &ChangeCollector{}
 	cc.Changes = make(map[string]*NodeChange)
 	cc.Deletes = make(map[string]Node)
 	return cc
-}
-
-func (cc *ChangeCollector) GetStartRoot() Key {
-	return cc.startRoot
 }
 
 /*AddChange - implement interface */
@@ -90,20 +85,8 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	defer cc.mutex.Unlock()
 	ohash := oldNode.GetHash()
 	if _, ok := cc.Changes[ohash]; ok {
-		if DebugMPTNode {
-			logging.Logger.Debug("DeleteChange existing change",
-				zap.String("ohash", ohash),
-				zap.String("stack", string(debug.Stack())),
-			)
-		}
 		delete(cc.Changes, ohash)
 	} else {
-		if DebugMPTNode {
-			logging.Logger.Debug("DeleteChange adding to deletes",
-				zap.String("ohash", ohash),
-				zap.String("stack", string(debug.Stack())),
-			)
-		}
 		cc.Deletes[ohash] = oldNode.Clone()
 	}
 }
@@ -181,8 +164,11 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	return nil
 }
 
-func PrintChanges(w io.Writer, changes []*NodeChange) {
-	for idx, c := range changes {
+//PrintChanges - implement interface
+func (cc *ChangeCollector) PrintChanges(w io.Writer) {
+	cc.mutex.RLock()
+	defer cc.mutex.RUnlock()
+	for idx, c := range cc.Changes {
 		if c.Old != nil {
 			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
 		} else {

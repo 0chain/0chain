@@ -51,11 +51,11 @@ server_chain:
     generators_percent: 0.2
     replicators: 4
     proposal:
-      max_wait_time: 200ms
+      max_wait_time: 200
       wait_mode: dynamic # static or dynamic
     generation:
       timeout: 15
-      retry_wait_time: 5ms #milliseconds
+      retry_wait_time: 5 #milliseconds
     sharding:
       min_active_sharders: 33 # percentage
       min_active_replicators: 33 # percentage
@@ -77,36 +77,36 @@ server_chain:
   state:
     prune_below_count: 100 # rounds
     sync:
-      timeout: 10s # seconds
+      timeout: 10 # seconds
   stuck:
-    check_interval: 10s # seconds
-    time_threshold: 60s #seconds
+    check_interval: 10 # seconds
+    time_threshold: 60 #seconds
 
   health_check:
     show_counters: true
     deep_scan:
       enabled: true
       window: 0 #Full scan till round 0
-      repeat_interval_mins: 1440m #minutes
-      report_status_mins: 60m #minutes
+      repeat_interval_mins: 1440 #minutes
+      report_status_mins: 60 #minutes
       batch_size: 500
     proximity_scan:
       enabled: true
       window: 100 #number of blocks
-      repeat_interval_mins: 60m #minutes
-      report_status_mins: 15m #minutes
+      repeat_interval_mins: 60 #minutes
+      report_status_mins: 15 #minutes
       batch_size: 20
 
   smart_contract:
-    timeout: 150ms # milliseconds, 0 = no timeout
+    timeout: 0 # milliseconds, 0 = no timeout
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml
-  relay_time: 200ms # milliseconds
+  relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
-    small_message: 1000ms # milliseconds
-    large_message: 3000ms # milliseconds
+    small_message: 1000 # milliseconds
+    large_message: 3000 # milliseconds
   large_message_th_size: 10240 # anything greater than this size in bytes
   user_handlers:
     rate_limit: 1 # 1 per second

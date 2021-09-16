@@ -1,11 +1,10 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
-
-	"0chain.net/chaincore/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -50,7 +49,7 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContract.RestHandlers["/get_mpt_key"] = ssc.GetMptKey
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
-	ssc.SmartContractExecutionStats["update_settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_settings"), nil)
+	ssc.SmartContractExecutionStats["update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_config"), nil)
 	// reading / writing
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
@@ -222,14 +221,11 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.freeAllocationRequest(t, input, balances)
 	case "free_update_allocation":
 		resp, err = sc.updateFreeStorageRequest(t, input, balances)
-	case "curator_transfer_allocation":
-		resp, err = sc.curatorTransferAllocation(t, input, balances)
 
-	//curator
 	case "add_curator":
 		resp, err = "", sc.addCurator(t, input, balances)
-	case "remove_curator":
-		resp, err = "", sc.removeCurator(t, input, balances)
+	case "curator_transfer_allocation":
+		resp, err = sc.curatorTransferAllocation(t, input, balances)
 
 	// blobbers
 
@@ -287,12 +283,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	// configurations
 
-	case "update_settings":
-		resp, err = sc.updateSettings(t, input, balances)
+	case "update_config":
+		resp, err = sc.updateConfig(t, input, balances)
 
 	default:
-		err = common.NewErrorf("invalid_storage_function_name",
-			"Invalid storage function '%s' called", funcName)
+		err = common.NewError("invalid_storage_function_name",
+			"Invalid storage function called")
 	}
 
 	return

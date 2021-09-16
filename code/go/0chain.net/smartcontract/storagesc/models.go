@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	chainstate "0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	chainstate "0chain.net/chaincore/chain/state"
 
+	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -1091,22 +1092,19 @@ type AuthTicket struct {
 	OwnerID         string           `json:"owner_id"`
 	AllocationID    string           `json:"allocation_id"`
 	FilePathHash    string           `json:"file_path_hash"`
-	ActualFileHash  string           `json:"actual_file_hash"`
 	FileName        string           `json:"file_name"`
 	RefType         string           `json:"reference_type"`
 	Expiration      common.Timestamp `json:"expiration"`
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReEncryptionKey string           `json:"re_encryption_key"`
 	Signature       string           `json:"signature"`
-	Encrypted       bool             `json:"encrypted"`
 }
 
-func (at *AuthTicket) getHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v",
-		at.AllocationID, at.ClientID, at.OwnerID, at.FilePathHash,
-		at.FileName, at.RefType, at.ReEncryptionKey, at.Expiration, at.Timestamp,
-		at.ActualFileHash, at.Encrypted)
-	return hashData
+func (at *AuthTicket) getHashData() (data string) {
+	data = fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v", at.AllocationID,
+		at.ClientID, at.OwnerID, at.FilePathHash, at.FileName, at.RefType,
+		at.ReEncryptionKey, at.Expiration, at.Timestamp)
+	return
 }
 
 func (at *AuthTicket) verify(

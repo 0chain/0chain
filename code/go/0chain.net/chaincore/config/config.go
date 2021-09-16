@@ -32,13 +32,13 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.stuck.time_threshold", 60)
 	viper.SetDefault("server_chain.transaction.timeout", 30)
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
-	viper.SetDefault("server_chain.block.proposal.max_wait_time", time.Millisecond*200)
+	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 	viper.SetDefault("server_chain.block.reuse_txns", true)
 	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
 	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
 	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
-	viper.SetDefault("server_chain.smart_contract.timeout", 550*time.Millisecond)
+	viper.SetDefault("server_chain.smart_contract.timeout", 550)
 	viper.SetDefault("server_chain.round_timeouts.softto_min", 300)
 	viper.SetDefault("server_chain.round_timeouts.softto_mult", 3)
 	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
@@ -51,9 +51,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.deep_scan.window", 0)
 
 	// Repeat deep scan every day
-	viper.SetDefault("server_chain.health_check.deep_scan.settle_secs", "30s")
-	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", "1440m")
-	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", "60s")
+	viper.SetDefault("server_chain.health_check.deep_scan.settle_secs", 30)
+	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", 1440)
+	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 60)
 
 	//Set defaults for proximity scan.
 	viper.SetDefault("server_chain.health_check.proximity_scan.enabled", true)
@@ -61,9 +61,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.proximity_scan.window", 100000)
 
 	// Repeat proximity every hour.
-	viper.SetDefault("server_chain.health_check.proximity_scan.settle_secs", "30s")
-	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", "60m")
-	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", "15m")
+	viper.SetDefault("server_chain.health_check.proximity_scan.settle_secs", 30)
+	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", 60)
+	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 15)
 
 	// LFB tickets.
 	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)

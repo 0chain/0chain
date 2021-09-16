@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net/url"
 
-	"0chain.net/core/util"
-
 	"0chain.net/core/common"
 	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -67,7 +66,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
 		return nil, common.NewErrBadRequest("can't decode miner from passed params", err.Error())
 	}
-	if !msc.doesMinerExist(regMiner.GetKey(), statectx) {
+	if !msc.doesMinerExist(regMiner.getKey(), statectx) {
 		return "", common.NewErrNoResource("unknown miner")
 	}
 	npi := msc.bcContext.GetNodepoolInfo()
@@ -152,24 +151,6 @@ new zwallet commands
 
 */
 
-func (msc *MinerSmartContract) getGlobalsHandler(
-	_ context.Context,
-	_ url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	globals, err := getGlobalSettings(balances)
-
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, common.NewErrInternal(err.Error())
-		}
-		return GlobalSettings{
-			Fields: getStringMapFromViper(),
-		}, nil
-	}
-	return globals, nil
-}
-
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
@@ -211,14 +192,27 @@ func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
 	return nil, common.NewErrNoResource("can't find pool stats")
 }
 
-func (msc *MinerSmartContract) configHandler(
-	_ context.Context,
-	_ url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	gn, err := getGlobalNode(balances)
-	if err != nil {
+func (msc *MinerSmartContract) configsHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var gn *GlobalNode
+	if gn, err = getGlobalNode(balances); err != nil {
 		return nil, common.NewErrInternal(err.Error())
 	}
-	return gn.getConfigMap(), nil
+
+	var conf = new(Config)
+	conf.GlobalNode = (*gn)
+
+	// setup phases rounds values
+	const pfx = "smart_contracts.minersc."
+	var scc = config.SmartContractConfig
+
+	conf.StartRounds = scc.GetInt64(pfx + "start_rounds")
+	conf.ContributeRounds = scc.GetInt64(pfx + "contribute_rounds")
+	conf.ShareRounds = scc.GetInt64(pfx + "share_rounds")
+	conf.PublishRounds = scc.GetInt64(pfx + "publish_rounds")
+	conf.WaitRounds = scc.GetInt64(pfx + "wait_rounds")
+
+	return &conf, nil
 }
