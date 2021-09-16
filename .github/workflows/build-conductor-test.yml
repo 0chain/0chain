@@ -86,11 +86,13 @@ jobs:
     - name: Running Standard Tests for Miners.
       run: |
         cd /root/0chain/
+        source ~/.profile
         bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
         cd /root/0chain/
+        source ~/.profile
         bash ./docker.local/bin/start.conductor.sh sharders
   
   conductor_vc_tests:
