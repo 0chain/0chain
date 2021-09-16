@@ -35,8 +35,7 @@ jobs:
         cd /root/0chain/
         git checkout .
         git pull
-        git checkout $BRANCH
-        git checkout rrrooommmaaa/conductor-peter
+        git checkout staging
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
@@ -78,7 +77,7 @@ jobs:
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
-    runs-on: self-hosted
+    runs-on: conductor-test
     
     needs:
     - conductor_build
@@ -87,7 +86,6 @@ jobs:
     - name: Running Standard Tests for Miners.
       run: |
         cd /root/0chain/
-        source ~/.profile
         bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
@@ -97,7 +95,7 @@ jobs:
   
   conductor_vc_tests:
     name: CONDUCTOR-VIEW-CHANGE-TESTS
-    runs-on: self-hosted
+    runs-on: conductor-test
     
     needs:
     - conductor_standard_tests
