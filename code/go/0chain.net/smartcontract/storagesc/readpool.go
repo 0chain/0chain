@@ -326,7 +326,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	// configs
 
-	var conf *readPoolConfig
+	var conf *ReadPoolConfig
 	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
 		return "", common.NewError("read_pool_lock_failed",
 			"can't get configs: "+err.Error())

@@ -167,7 +167,7 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 	requireErrMsg(t, err, errMsg)
 }
 
-func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
+func testSetReadPoolConfig(t *testing.T, rpc *ReadPoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
 	var (
@@ -216,7 +216,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	// setup config
 
-	testSetReadPoolConfig(t, &readPoolConfig{
+	testSetReadPoolConfig(t, &ReadPoolConfig{
 		MinLock:       10,
 		MinLockPeriod: 10 * time.Second,
 		MaxLockPeriod: 100 * time.Second,

@@ -1,16 +1,17 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	cstate "0chain.net/chaincore/chain/state"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -114,7 +115,7 @@ func TestStakePoolLock(t *testing.T) {
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
 
-		StakePool: &stakePoolConfig{
+		StakePool: &StakePoolConfig{
 			InterestRate:     0.0000334,
 			InterestInterval: 1 * time.Minute,
 			MinLock:          int64(zcnToBalance(0.1)),

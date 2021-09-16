@@ -133,8 +133,8 @@ var (
 	}
 
 	Settings = map[string]struct {
-		setting    Setting
-		configType smartcontract.ConfigType
+		Setting    Setting
+		ConfigType smartcontract.ConfigType
 	}{
 		"max_mint":                      {MaxMint, smartcontract.StateBalance},
 		"time_unit":                     {TimeUnit, smartcontract.Duration},
@@ -196,8 +196,8 @@ func (conf *scConfig) getConfigMap() smartcontract.StringMap {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		iSetting := conf.get(info.setting)
-		if info.configType == smartcontract.StateBalance {
+		iSetting := conf.get(info.Setting)
+		if info.ConfigType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
 				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
@@ -210,7 +210,7 @@ func (conf *scConfig) getConfigMap() smartcontract.StringMap {
 }
 
 func (conf *scConfig) setInt(key string, change int) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case FreeAllocationDataShards:
 		conf.FreeAllocationSettings.DataShards = change
 	case FreeAllocationParityShards:
@@ -229,7 +229,7 @@ func (conf *scConfig) setInt(key string, change int) {
 }
 
 func (conf *scConfig) setBalance(key string, change state.Balance) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case MaxMint:
 		conf.MaxMint = change
 	case MaxTotalFreeAllocation:
@@ -250,12 +250,12 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 		conf.MaxWritePrice = change
 	case BlockRewardBlockReward:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.BlockReward = change
 	case BlockRewardQualifyingStake:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.QualifyingStake = change
 	default:
@@ -264,24 +264,24 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 }
 
 func (conf *scConfig) setInt64(key string, change int64) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case MinAllocSize:
 		conf.MinAllocSize = change
 	case MinBlobberCapacity:
 		conf.MinBlobberCapacity = change
 	case ReadPoolMinLock:
 		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+			conf.ReadPool = &ReadPoolConfig{}
 		}
 		conf.ReadPool.MinLock = change
 	case WritePoolMinLock:
 		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+			conf.WritePool = &WritePoolConfig{}
 		}
 		conf.WritePool.MinLock = change
 	case StakePoolMinLock:
 		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+			conf.StakePool = &StakePoolConfig{}
 		}
 		conf.StakePool.MinLock = change
 	case FreeAllocationSize:
@@ -292,10 +292,10 @@ func (conf *scConfig) setInt64(key string, change int64) {
 }
 
 func (conf *scConfig) setFloat64(key string, change float64) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case StakePoolInterestRate:
 		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+			conf.StakePool = &StakePoolConfig{}
 		}
 		conf.StakePool.InterestRate = change
 	case FreeAllocationReadPoolFraction:
@@ -308,22 +308,22 @@ func (conf *scConfig) setFloat64(key string, change float64) {
 		conf.ChallengeGenerationRate = change
 	case BlockRewardSharderWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.SharderWeight = change
 	case BlockRewardMinerWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.MinerWeight = change
 	case BlockRewardBlobberCapacityWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.BlobberCapacityWeight = change
 	case BlockRewardBlobberUsageWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &BlockReward{}
 		}
 		conf.BlockReward.BlobberUsageWeight = change
 	default:
@@ -332,7 +332,7 @@ func (conf *scConfig) setFloat64(key string, change float64) {
 }
 
 func (conf *scConfig) setDuration(key string, change time.Duration) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case TimeUnit:
 		conf.TimeUnit = change
 	case MinAllocDuration:
@@ -343,27 +343,27 @@ func (conf *scConfig) setDuration(key string, change time.Duration) {
 		conf.MinOfferDuration = change
 	case ReadPoolMinLockPeriod:
 		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+			conf.ReadPool = &ReadPoolConfig{}
 		}
 		conf.ReadPool.MinLockPeriod = change
 	case ReadPoolMaxLockPeriod:
 		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+			conf.ReadPool = &ReadPoolConfig{}
 		}
 		conf.ReadPool.MaxLockPeriod = change
 	case WritePoolMinLockPeriod:
 		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+			conf.WritePool = &WritePoolConfig{}
 		}
 		conf.WritePool.MinLockPeriod = change
 	case WritePoolMaxLockPeriod:
 		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+			conf.WritePool = &WritePoolConfig{}
 		}
 		conf.WritePool.MaxLockPeriod = change
 	case StakePoolInterestInterval:
 		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+			conf.StakePool = &StakePoolConfig{}
 		}
 		conf.StakePool.InterestInterval = change
 	case FreeAllocationDuration:
@@ -376,7 +376,7 @@ func (conf *scConfig) setDuration(key string, change time.Duration) {
 }
 
 func (conf *scConfig) setBoolean(key string, change bool) {
-	switch Settings[key].setting {
+	switch Settings[key].Setting {
 	case ChallengeEnabled:
 		conf.ChallengeEnabled = change
 	case ExposeMpt:
@@ -387,7 +387,7 @@ func (conf *scConfig) setBoolean(key string, change bool) {
 }
 
 func (conf *scConfig) set(key string, change string) error {
-	switch Settings[key].configType {
+	switch Settings[key].ConfigType {
 	case smartcontract.Int:
 		if value, err := strconv.Atoi(change); err == nil {
 			conf.setInt(key, value)
@@ -425,7 +425,7 @@ func (conf *scConfig) set(key string, change string) error {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
 	default:
-		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].configType])
+		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}
 	return nil
 }

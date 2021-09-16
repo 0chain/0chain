@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/tokenpool"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -23,7 +25,221 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// test helpers
+// export to storage_test package
+type (
+	ScConfig                   scConfig
+	CuratorInput               curatorInput
+	NewFreeStorageAssignerInfo newFreeStorageAssignerInfo
+	FreeStorageAssigner        freeStorageAssigner
+	FreeStorageMarker          freeStorageMarker
+	FreeStorageAllocationInput freeStorageAllocationInput
+	WritePool                  writePool
+	ReadPool                   readPool
+	StakePool                  stakePool
+	FreeStorageUpgradeInput    freeStorageUpgradeInput
+	OfferPool                  offerPool
+	ChallengePool              challengePool
+	StakePoolSettings          stakePoolSettings
+	DelegatePool               delegatePool
+	FundedPools                fundedPools
+)
+
+func ScConfigKey(scKey string) datastore.Key {
+	return scConfigKey(scKey)
+}
+
+func FreeStorageAssignerKey(sscKey, clientId string) datastore.Key {
+	return freeStorageAssignerKey(sscKey, clientId)
+}
+
+func NewStakePool() *stakePool {
+	return newStakePool()
+}
+
+// stake pool key for the storage SC and  blobber
+func StakePoolKey(scKey, blobberID string) datastore.Key {
+	return stakePoolKey(scKey, blobberID)
+}
+
+func WritePoolKey(scKey, clientID string) datastore.Key {
+	return writePoolKey(scKey, clientID)
+}
+
+func ChallengePoolKey(scKey, allocationID string) datastore.Key {
+	return challengePoolKey(scKey, allocationID)
+}
+
+func FundedPoolsKey(scKey, clientID string) datastore.Key {
+	return fundedPoolsKey(scKey, clientID)
+}
+
+func ReadPoolKey(scKey, clientID string) datastore.Key {
+	return readPoolKey(scKey, clientID)
+}
+
+func (sc *ScConfig) Encode() []byte {
+	return ((*scConfig)(sc)).Encode()
+}
+
+func (sc *ScConfig) Decode(p []byte) error {
+	return ((*scConfig)(sc)).Decode(p)
+}
+
+func (fp *FundedPools) Encode() []byte {
+	return ((*fundedPools)(fp)).Encode()
+}
+
+func (fp *FundedPools) Decode(p []byte) error {
+	return ((*fundedPools)(fp)).Decode(p)
+}
+
+func (ssc *StorageSmartContract) UpdateSettings(
+	t *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (resp string, err error) {
+	return ssc.updateSettings(t, input, balances)
+}
+
+func (ssc *StorageSmartContract) AddCurator(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (err error) {
+	return ssc.addCurator(txn, input, balances)
+}
+
+func (ssc *StorageSmartContract) RemoveCurator(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (err error) {
+	return ssc.removeCurator(txn, input, balances)
+}
+
+func TransferReward(
+	sscKey string,
+	zcnPool tokenpool.ZcnPool,
+	sp *StakePool,
+	value state.Balance,
+	balances chainState.StateContextI,
+) (state.Balance, error) {
+	var spl stakePool = stakePool(*sp)
+	return transferReward(sscKey, zcnPool, &spl, value, balances)
+}
+
+func (ssc *StorageSmartContract) AddToFundedPools(
+	clientId, poolId string,
+	balances chainState.StateContextI,
+) error {
+	return ssc.addToFundedPools(clientId, poolId, balances)
+}
+
+func (ssc *StorageSmartContract) IsFundedPool(
+	clientId, poolId string,
+	balances chainState.StateContextI,
+) (bool, error) {
+	return ssc.isFundedPool(clientId, poolId, balances)
+}
+
+func (ssc *StorageSmartContract) AddFreeStorageAssigner(
+	t *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) error {
+	return ssc.addFreeStorageAssigner(t, input, balances)
+}
+
+func (ssc *StorageSmartContract) FreeAllocationRequest(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (string, error) {
+	return ssc.freeAllocationRequest(txn, input, balances)
+}
+
+func (ssc *StorageSmartContract) UpdateFreeStorageRequest(
+	txn *transaction.Transaction,
+	input []byte,
+	balances chainState.StateContextI,
+) (string, error) {
+	return ssc.updateFreeStorageRequest(txn, input, balances)
+}
+
+func MintReward(
+	sp *StakePool,
+	value float64,
+	balances chainState.StateContextI,
+) error {
+	return mintReward((*stakePool)(sp), value, balances)
+}
+
+func (sb *sortedBlobbers) Add(b *StorageNode) (ok bool) {
+	return sb.add(b)
+}
+
+func (aps *allocationPools) Get(allocID string) (ap *allocationPool, ok bool) {
+	return aps.get(allocID)
+}
+
+func (sl *sortedList) Add(id string) (ok bool) {
+	return sl.add(id)
+}
+
+func (sp *stakePool) SetOffer(allocationId string, offer *OfferPool) {
+	var op offerPool = offerPool(*offer)
+	sp.Offers[allocationId] = &op
+}
+
+func (sp *stakePool) SetPool(id string, pool *DelegatePool) {
+	var dp delegatePool = delegatePool(*pool)
+	sp.Pools[id] = &dp
+}
+
+func (sp *stakePool) SetSettings(settings StakePoolSettings) {
+	sp.Settings = stakePoolSettings(settings)
+}
+
+func IToScConfig(iConf interface{}) (*ScConfig, bool) {
+	conf, ok := iConf.(*scConfig)
+	if !ok {
+		return nil, false
+	}
+	return (*ScConfig)(conf), true
+}
+
+func IToReadPool(irp interface{}) (*ReadPool, bool) {
+	rp, ok := irp.(*readPool)
+	if !ok {
+		return nil, false
+	}
+	return (*ReadPool)(rp), true
+}
+
+func IToWritePool(iwp interface{}) (*WritePool, bool) {
+	wp, ok := iwp.(*writePool)
+	if !ok {
+		return nil, false
+	}
+	return (*WritePool)(wp), true
+}
+func IToFundedPool(ifp interface{}) (*FundedPools, bool) {
+	fp, ok := ifp.(*fundedPools)
+	if !ok {
+		return nil, false
+	}
+	return (*FundedPools)(fp), true
+}
+
+func FsaToFsa(assigner *FreeStorageAssigner) *freeStorageAssigner {
+	return (*freeStorageAssigner)(assigner)
+}
+
+func WpToWp(wp *WritePool) *writePool {
+	return (*writePool)(wp)
+}
+
+// ---------------
 
 func toks(val state.Balance) string {
 	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
@@ -348,18 +564,18 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.MaxStake = 1000e10 // 100 toks
 	conf.MaxMint = 100e10
 
-	conf.ReadPool = &readPoolConfig{
+	conf.ReadPool = &ReadPoolConfig{
 		MinLock:       10,
 		MinLockPeriod: 5 * time.Second,
 		MaxLockPeriod: 20 * time.Minute,
 	}
-	conf.WritePool = &writePoolConfig{
+	conf.WritePool = &WritePoolConfig{
 		MinLock:       10,
 		MinLockPeriod: 5 * time.Second,
 		MaxLockPeriod: 20 * time.Minute,
 	}
 
-	conf.StakePool = &stakePoolConfig{
+	conf.StakePool = &StakePoolConfig{
 		MinLock:          10,
 		InterestRate:     0.01,
 		InterestInterval: 5 * time.Second,

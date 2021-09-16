@@ -241,7 +241,7 @@ func (ssc *StorageSmartContract) createWritePool(
 func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
-	var conf *writePoolConfig
+	var conf *WritePoolConfig
 	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			"can't get configs: "+err.Error())
