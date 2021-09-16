@@ -15,7 +15,7 @@ env:
 jobs:
   conductor_build: 
     name: CONDUCTOR-BUILD
-    runs-on: self-hosted
+    runs-on: conductor-test
     
     steps:
     - uses: actions/checkout@v2

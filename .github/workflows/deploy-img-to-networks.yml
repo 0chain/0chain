@@ -17,7 +17,7 @@ env:
 jobs:
   Dockerize_Miner_Sharder:
     name: Docker images for miner/sharder.
-    runs-on: self-hosted
+    runs-on: load-test
     steps:
     - uses: actions/checkout@v2
 
@@ -71,7 +71,7 @@ jobs:
 
   Conductor_Test:
     name: Conductor Tests for Miners & Sharders.
-    runs-on: self-hosted
+    runs-on: conductor-test
 
     needs:
     - Dockerize_Miner_Sharder
@@ -140,7 +140,7 @@ jobs:
     runs-on: ubuntu-20.04
 
     needs:
-    - Loadtestv1
+    - Conductor_Test
 
     steps:
       - uses: actions/checkout@v2
