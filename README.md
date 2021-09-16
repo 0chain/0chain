@@ -1,5 +1,6 @@
 # TestNet Setup with Docker Containers
 
+
 ## Table of Contents
 
 - [Initial Setup](#initial-setup) 
@@ -56,11 +57,15 @@ Use **-m1** flag to build for Apple m1 chip
 
 2.1) To build the miner containers
 
+Use **-m1** flag to build for Apple m1 chip
+
 ```
 ./docker.local/bin/build.miners.sh
 ```
 
 2.2) To build the sharder containers
+
+Use **-m1** flag to build for Apple m1 chip
 
 ```
 ./docker.local/bin/build.sharders.sh
@@ -437,6 +442,8 @@ ok      0chain.net/smartcontract/zrc20sc        0.030s  coverage: 23.3% of state
 ## Creating The Magic Block
 
 First build the magic block image.
+
+Use **-m1** flag to build for Apple m1 chip
 
 ```
 ./docker.local/bin/build.magic_block.sh

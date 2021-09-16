@@ -425,7 +425,8 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 
 func (c *Chain) syncRoundStateToStateDB(ctx context.Context, round int64, rootStateHash util.Key) {
 	Logger.Info("Sync round state from network...")
-	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round), rootStateHash)
+	mpt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(round))
+	mpt.SetRoot(rootStateHash)
 
 	Logger.Info("Finding missing nodes")
 	cctx, cancel := context.WithTimeout(ctx, c.syncStateTimeout)

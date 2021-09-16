@@ -1,13 +1,12 @@
 package state
 
 import (
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
-
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 )
 
 //Balance - any quantity that is represented as an integer in the lowest denomination
@@ -39,10 +38,6 @@ func (s *State) GetHashBytes() []byte {
 /*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	// if s.TxnHashBytes are not set, the State can't be deserialized later
-	if s.TxnHashBytes == nil {
-		panic(errors.New("State isn't properly initialized"))
-	}
 	buf.Write(s.TxnHashBytes)
 	binary.Write(buf, binary.LittleEndian, s.Round)
 	binary.Write(buf, binary.LittleEndian, s.Balance)
@@ -56,7 +51,7 @@ func (s *State) Decode(data []byte) error {
 	var balance Balance
 	s.TxnHashBytes = make([]byte, 32)
 	if n, err := buf.Read(s.TxnHashBytes); err != nil || n != 32 {
-		return errors.New("invalid state")
+		logging.Logger.Error("invalid state")
 	}
 	binary.Read(buf, binary.LittleEndian, &origin)
 	binary.Read(buf, binary.LittleEndian, &balance)

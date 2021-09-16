@@ -1,11 +1,10 @@
 package zrc20sc
 
 import (
+	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
-
-	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -267,6 +266,6 @@ func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName stri
 	case "emptyPool":
 		return zrc.emptyPool(t, inputData, balances)
 	default:
-		return common.NewErrorf("failed execution", "no zrc20 smart contract method with name %s", funcName).Error(), nil
+		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}
 }

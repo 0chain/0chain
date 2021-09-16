@@ -116,9 +116,7 @@ func NewValueNode() *ValueNode {
 func (vn *ValueNode) Clone() Node {
 	clone := NewValueNode()
 	clone.OriginTrackerNode = vn.OriginTrackerNode.Clone()
-	if vn.Value != nil {
-		clone.SetValue(vn.GetValue())
-	}
+	clone.SetValue(vn.GetValue())
 	return clone
 }
 

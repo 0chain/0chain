@@ -54,22 +54,6 @@ func testGlobalNode(id string, maxMint, totalMint, minLock state.Balance, apr fl
 	return gn
 }
 
-func testGlobalNodeStringTime(id string, maxMint, totalMint, minLock, apr float64, minLockP string) *GlobalNode {
-	var gn = &GlobalNode{ID: id}
-	gn.SimpleGlobalNode = &SimpleGlobalNode{
-		MaxMint:     state.Balance(maxMint * 1e10),
-		TotalMinted: state.Balance(totalMint * 1e10),
-		MinLock:     state.Balance(minLock * 1e10),
-		APR:         apr,
-	}
-	var err error
-	gn.MinLockPeriod, err = time.ParseDuration(minLockP)
-	if err != nil {
-		panic(err)
-	}
-	return gn
-}
-
 // TEST FUNCTION
 // testTxn function creates transaction instance using incoming parameters
 func testTxn(owner string, value int64) *transaction.Transaction {

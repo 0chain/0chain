@@ -1,13 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-
-	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -341,6 +340,11 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		lr.TargetId = t.ClientID
 	}
 
+	// remembers who funded the read pool, so tokens get returned to funder on unlock
+	if err := ssc.addToFundedPools(t.ClientID, lr.TargetId, balances); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
+
 	var rp *readPool
 	if rp, err = ssc.getReadPool(lr.TargetId, balances); err != nil {
 		if err != util.ErrValueNotPresent {
@@ -443,11 +447,6 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		ap.ID = t.Hash
 	}
 
-	// remembers who funded the read pool, so tokens get returned to funder on unlock
-	if err := ssc.addToFundedPools(t.ClientID, ap.ID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
 	rp.Pools.add(&ap)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
@@ -473,7 +472,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		req.PoolOwner = t.ClientID
 	}
 
-	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolID, balances)
+	isFunded, err := ssc.isFundedPool(t.ClientID, req.PoolOwner, balances)
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}

@@ -241,7 +241,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
 		zap.Int64("batch-size", config.BatchSize),
-		zap.Duration("interval", config.RepeatInterval))
+		zap.Int("interval", config.RepeatIntervalMins))
 
 	// Initial setup
 	Logger.Info("HC-Init",

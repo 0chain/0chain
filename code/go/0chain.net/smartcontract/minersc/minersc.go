@@ -35,8 +35,6 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	}
 	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
-	msc.smartContractFunctions["delete_miner"] = msc.DeleteMiner
-	msc.smartContractFunctions["delete_sharder"] = msc.DeleteSharder
 
 	msc.smartContractFunctions["miner_health_check"] = msc.minerHealthCheck
 	msc.smartContractFunctions["sharder_health_check"] = msc.sharderHealthCheck
@@ -46,10 +44,8 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["wait"] = msc.wait
-	msc.smartContractFunctions["update_globals"] = msc.updateGlobals
-	msc.smartContractFunctions["update_settings"] = msc.updateSettings
-	msc.smartContractFunctions["update_miner_settings"] = msc.UpdateMinerSettings
-	msc.smartContractFunctions["update_sharder_settings"] = msc.UpdateSharderSettings
+
+	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool

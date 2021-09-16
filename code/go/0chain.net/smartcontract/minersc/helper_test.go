@@ -1,10 +1,8 @@
 package minersc
 
 import (
-	"context"
 	"encoding/json"
 	"math/rand"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -31,6 +29,8 @@ import (
 )
 
 // test helpers
+
+const x10 = 10 * 1000 * 1000 * 1000
 
 func toks(val state.Balance) string {
 	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
@@ -266,7 +266,7 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	require.NoError(t, err, "setting magic block")
 }
 
-func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
+func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
 	balances cstate.StateContextI) {
 
 	var gn, err = getGlobalNode(balances)
@@ -285,30 +285,4 @@ func newTestMinerSC() (msc *MinerSmartContract) {
 	msc.SmartContractExecutionStats["mintedTokens"] =
 		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
-}
-
-func (msc *MinerSmartContract) ConfigHandler(
-	ctx context.Context,
-	values url.Values,
-	balances cstate.StateContextI,
-) (interface{}, error) {
-	return msc.configHandler(ctx, values, balances)
-}
-
-func (msc *MinerSmartContract) UpdateSettings(
-	t *transaction.Transaction,
-	inputData []byte,
-	gn *GlobalNode,
-	balances cstate.StateContextI,
-) (resp string, err error) {
-	return msc.updateSettings(t, inputData, gn, balances)
-}
-
-func (msc *MinerSmartContract) UpdateGlobals(
-	txn *transaction.Transaction,
-	inputData []byte,
-	gn *GlobalNode,
-	balances cstate.StateContextI,
-) (resp string, err error) {
-	return msc.updateGlobals(txn, inputData, gn, balances)
 }

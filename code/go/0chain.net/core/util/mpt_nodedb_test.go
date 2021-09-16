@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -25,12 +26,15 @@ type keyNode struct {
 type testValue string
 
 func (tv testValue) Encode() (p []byte) {
-	return []byte(tv)
+	var err error
+	if p, err = json.Marshal(tv); err != nil {
+		panic(err)
+	}
+	return
 }
 
 func (tv *testValue) Decode(p []byte) error {
-	*tv = testValue(p)
-	return nil
+	return json.Unmarshal(p, tv)
 }
 
 func getTestKeyValues(n int) (kns []keyNode) {
@@ -1305,7 +1309,7 @@ func TestMemoryNodeDB_Validate(t *testing.T) {
 			name: "TestMemoryNodeDB_Validate_ERR",
 			fields: func() fields {
 				mndb := NewMemoryNodeDB()
-				mpt := NewMerklePatriciaTrie(mndb, 1, nil)
+				mpt := NewMerklePatriciaTrie(mndb, 1)
 
 				n := NewFullNode(&AState{balance: 2})
 				_, err := mpt.Insert(n.GetHashBytes(), n)

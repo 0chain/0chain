@@ -15,7 +15,6 @@ import (
 
 const (
 	ADDRESS = "2bba5b05949ea59c80aed3ac3474d7379d3be737e8eb5a968c52295e48333ead"
-	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 )
 
 type RestPoints = map[string]smartcontractinterface.SmartContractRestHandler
@@ -98,8 +97,7 @@ func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,
 		resp, err = vsc.stop(t, input, balances)
 	case "delete":
 		resp, err = vsc.delete(t, input, balances)
-	case "vestingsc-update-settings":
-		resp, err = vsc.updateConfig(t, input, balances)
+
 	default:
 		err = common.NewError("vesting_sc_failed",
 			fmt.Sprintf("no function with %q name", function))

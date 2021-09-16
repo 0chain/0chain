@@ -383,12 +383,3 @@ func (v *Viper) WriteConfigFile(filename string) error {
 
 	return v.viper.WriteConfigAs(filename)
 }
-
-// SetConfigType sets the type of the configuration returned by the
-// remote source, e.g. "json".
-func (v *Viper) SetConfigType(in string) {
-	v.mutex.Lock()
-	defer v.mutex.Unlock()
-
-	v.viper.SetConfigType(in)
-}

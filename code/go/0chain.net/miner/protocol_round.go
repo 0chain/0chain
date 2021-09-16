@@ -9,9 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/minersc"
-
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
@@ -302,48 +299,13 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc *Chain) getClientState(
-	ctx context.Context,
-	roundNumber int64,
-) *util.MerklePatriciaTrie {
-	pround := mc.GetRound(roundNumber - 1)
-	pb := mc.GetBlockToExtend(ctx, pround)
-	pndb := pb.ClientState.GetNodeDB()
-	root := pb.ClientStateHash
-	mndb := util.NewMemoryNodeDB()
-	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
-	return clientState
-}
-
-func (mc *Chain) getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
-	key_hash := encryption.Hash(minersc.GLOBALS_KEY)
-	val, err := clientState.GetNodeValue(util.Path(key_hash))
-	if err != nil {
-		return nil, err
-	}
-
-	gl := &minersc.GlobalSettings{
-		Fields: make(map[string]string),
-	}
-	err = gl.Decode(val.Encode())
-	if err != nil {
-		return nil, err
-	}
-
-	return gl, nil
-}
-
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-
-	configMap, err := mc.getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
-	if err == nil {
-		mc.Config.Update(configMap)
-	}
-
+	logging.Logger.Info("Starting a new round",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Int64("random seed", r.GetRandomSeed()))
 	mc.startNewRound(ctx, r)
 }
 
