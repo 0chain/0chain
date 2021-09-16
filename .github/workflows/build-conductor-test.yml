@@ -35,7 +35,7 @@ jobs:
         cd /root/0chain/
         git checkout .
         git pull
-        git checkout staging
+        git checkout rrrooommmaaa/conductor-peter
       env:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
@@ -104,7 +104,6 @@ jobs:
     - name: Running Fault Tolerance Tests.
       run: |
         cd /root/0chain/
-        source ~/.profile
         if [[ "$VIEW" == "true" ]]
           bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
         elif [[ "$VIEW" == "false" ]]
