@@ -71,7 +71,7 @@ jobs:
 
   Conductor_Test:
     name: Conductor Tests for Miners & Sharders.
-    runs-on: conductor-test
+    runs-on: load-test
 
     needs:
     - Dockerize_Miner_Sharder
@@ -102,7 +102,7 @@ jobs:
 
   Loadtestv1:
     name: Trigger loadtest v1.
-    runs-on: load-test
+    runs-on: conductor-test
 
     needs:
     - Conductor_Test
