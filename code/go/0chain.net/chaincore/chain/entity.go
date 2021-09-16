@@ -1488,7 +1488,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
-	logging.Logger.Debug("update lfmb",
+	logging.Logger.Warn("update lfmb",
 		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
 	c.latestFinalizedMagicBlock = b
