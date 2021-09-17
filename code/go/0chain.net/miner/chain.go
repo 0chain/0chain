@@ -319,6 +319,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	// this must be ok, if not -- return error
 	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+		logging.Logger.Error("view_change - set DKG failed",
+			zap.Int64("mb_starting_round", mb.StartingRound),
+			zap.Error(err))
 		return
 	}
 

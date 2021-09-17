@@ -35,9 +35,12 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 
 // StatusMonitor monitors and updates the node connection status on current magic block
 func (c *Chain) StatusMonitor(ctx context.Context) {
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetLatestFinalizedMagicBlock().MagicBlock
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
-	cancel := startStatusMonitor(mb, ctx)
+	var cancel func()
+	if mb != nil {
+		cancel = startStatusMonitor(mb, ctx)
+	}
 
 	for {
 		select {
@@ -46,39 +49,40 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			return
 		case newRound := <-UpdateNodes:
 			newMB := c.GetMagicBlockNoOffset(newRound)
+			if newMB == nil {
+				continue
+			}
+
 			if newMB == mb {
 				continue
 			}
 
-			N2n.Debug("Got nodes update",
-				zap.Int64("monitoring round", mb.StartingRound),
-				zap.Int64("new round", newRound),
-				zap.Int64("mb starting round", newMB.StartingRound))
+			if mb == nil {
+				mb = newMB
+				cancel = startStatusMonitor(newMB, ctx)
+				continue
+			}
 
 			if newMB.StartingRound < mb.StartingRound {
 				continue
 			}
 
-			N2n.Info("Restart status monitor - update nodes",
-				zap.Int64("update round", newRound),
-				zap.Int64("mb starting round", newMB.StartingRound))
+			Logger.Debug("[monitor] got new magic block, update nodes",
+				zap.Int64("monitoring round", mb.StartingRound),
+				zap.Int64("new mb starting round", newMB.StartingRound))
+
 			cancel()
 			mb = newMB
 			cancel = startStatusMonitor(newMB, ctx)
 		case <-newMagicBlockCheckTk.C:
-			cmb := c.GetCurrentMagicBlock()
-			// current magic block may be kicked back, restart if changed.
-			N2n.Debug("new mb status monitor ticker",
-				zap.Int64("current mb starting round", cmb.StartingRound),
-				zap.Int64("monitoring round", mb.StartingRound))
-
+			cmb := c.GetLatestFinalizedMagicBlock().MagicBlock
 			if cmb == mb {
 				continue
 			}
 
-			N2n.Info("Restart status monitor - new mb detected",
-				zap.Int64("starting round", cmb.StartingRound),
-				zap.Int64("previous starting round", mb.StartingRound))
+			Logger.Info("[monitor] restart status monitor - new mb detected",
+				zap.Int64("monitoring starting round", mb.StartingRound),
+				zap.Int64("new mb starting round", cmb.StartingRound))
 			cancel()
 			mb = cmb
 			cancel = startStatusMonitor(cmb, ctx)
@@ -87,6 +91,8 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 }
 
 func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
+	Logger.Info("[monitor] start status monitor - update nodes",
+		zap.Int64("mb starting round", mb.StartingRound))
 	var smctx context.Context
 	smctx, cancelCtx := context.WithCancel(ctx)
 	waitMC := make(chan struct{})
@@ -94,7 +100,7 @@ func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
 	go mb.Miners.StatusMonitor(smctx, mb.StartingRound, waitMC)
 	go mb.Sharders.StatusMonitor(smctx, mb.StartingRound, waitSC)
 	return func() {
-		N2n.Debug("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
+		Logger.Info("[monitor] cancel status monitor", zap.Int64("starting round", mb.StartingRound))
 		cancelCtx()
 		select {
 		case <-waitMC:
@@ -605,27 +611,28 @@ type MagicBlockSaver interface {
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous). It uses given MagicBlock to get list
 // of sharders to request.
-func (sc *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
+func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 	mb *block.MagicBlock) (err error) {
 
-	lfmb := sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+	lfmb := c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
 	if lfmb == nil {
 		Logger.Warn("no new finalized magic lfmb from sharders given",
 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
 		return nil
 	}
 
-	cmb := sc.GetCurrentMagicBlock()
+	cmb := c.GetLatestFinalizedMagicBlock()
 
-	Logger.Info("get current magic lfmb from sharders",
+	Logger.Info("get magic lfmb from sharders",
 		zap.Any("number", lfmb.MagicBlockNumber),
 		zap.Any("sr", lfmb.StartingRound),
-		zap.Any("hash", lfmb.Hash))
+		zap.Any("hash", lfmb.Hash),
+		zap.Int64("local lfmb", lfmb.StartingRound))
 
 	if lfmb.MagicBlock.StartingRound <= cmb.StartingRound {
 		if lfmb.MagicBlock.StartingRound == cmb.StartingRound && lfmb.MagicBlock.Hash == cmb.Hash {
-			lfmb.MagicBlock = cmb
-			sc.SetLatestFinalizedMagicBlock(lfmb)
+			lfmb.MagicBlock = cmb.MagicBlock
+			c.SetLatestFinalizedMagicBlock(lfmb)
 			Logger.Debug(
 				"updated lfmb to add lfmb's parent lfmb to magicBlockStartRounds cache",
 				zap.Any("lfmb hash", lfmb.Hash),
@@ -637,19 +644,19 @@ func (sc *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 	}
 
 	var saveMagicBlock MagicBlockSaveFunc
-	if sc.magicBlockSaver != nil {
-		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
+	if c.magicBlockSaver != nil {
+		saveMagicBlock = c.magicBlockSaver.SaveMagicBlock()
 	}
 
-	err = sc.VerifyChainHistoryAndRepair(ctx, lfmb, saveMagicBlock)
+	err = c.VerifyChainHistoryAndRepair(ctx, lfmb, saveMagicBlock)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
 
-	if err = sc.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
+	if err = c.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic lfmb: %v", err.Error())
 	}
-	sc.SetLatestFinalizedMagicBlock(lfmb)
+	c.SetLatestFinalizedMagicBlock(lfmb)
 
 	return // ok, updated
 }
@@ -657,9 +664,9 @@ func (sc *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 // UpdateLatestMagicBlockFromSharders pulls latest finalized magic block
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous).
-func (sc *Chain) UpdateLatestMagicBlockFromSharders(ctx context.Context) (
+func (c *Chain) UpdateLatestMagicBlockFromSharders(ctx context.Context) (
 	err error) {
-	return sc.UpdateLatestMagicBlockFromShardersOn(ctx, sc.GetLatestMagicBlock())
+	return c.UpdateLatestMagicBlockFromShardersOn(ctx, c.GetLatestMagicBlock())
 }
 
 // UpdateMagicBlockWorker updates latest finalized magic block from active

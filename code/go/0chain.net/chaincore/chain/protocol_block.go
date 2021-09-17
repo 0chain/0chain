@@ -295,9 +295,16 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.SetLatestFinalizedBlock(fb)
 
 	if fb.MagicBlock != nil {
-		c.UpdateMagicBlock(fb.MagicBlock)
-		c.SetLatestFinalizedMagicBlock(fb)
+		if err := c.UpdateMagicBlock(fb.MagicBlock); err != nil {
+			logging.Logger.Error("finalize block - update magic block failed",
+				zap.Int64("round", fb.Round),
+				zap.Int64("mb_starting_round", fb.StartingRound),
+				zap.Error(err))
+		} else {
+			c.SetLatestFinalizedMagicBlock(fb)
+		}
 	}
+
 	if config.Development() {
 		ts := time.Now()
 		for _, txn := range fb.Txns {

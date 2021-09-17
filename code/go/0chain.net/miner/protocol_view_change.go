@@ -904,8 +904,9 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 		if mb == nil {
 			continue
 		}
-		mc.UpdateMagicBlock(mb.MagicBlock)
-		mc.SetLatestFinalizedMagicBlock(mb)
+		if err := mc.UpdateMagicBlock(mb.MagicBlock); err == nil {
+			mc.SetLatestFinalizedMagicBlock(mb)
+		}
 	}
 }
 

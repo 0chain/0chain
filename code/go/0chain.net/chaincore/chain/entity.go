@@ -916,13 +916,6 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 	return int(math.Ceil(thresholdCount))
 }
 
-// AreAllNodesActive - use this to check if all nodes needs to be active as in DKG
-func (c *Chain) AreAllNodesActive() bool {
-	mb := c.GetCurrentMagicBlock()
-	active := mb.Miners.GetActiveCount()
-	return active >= mb.Miners.Size()
-}
-
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
 	nodeConfig := config.ReadConfig(configFile)
@@ -1366,36 +1359,35 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlockBrief()
+		lfmb = c.GetLatestFinalizedMagicBlock()
 	)
 
-	if newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) && lfmb != nil &&
+	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
 		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
-		lfmb.MagicBlockHash != newMagicBlock.PreviousMagicBlockHash {
+		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 
 		logging.Logger.Error("failed to update magic block",
-			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
+			zap.Any("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
-			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
+			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
 	}
 
 	// initialize magicblock nodepools
 	c.UpdateNodesFromMagicBlock(newMagicBlock)
 
-	mb := c.GetCurrentMagicBlock()
-	if mb != nil {
+	if lfmb != nil {
 		logging.Logger.Info("update magic block",
-			zap.Int("old magic block miners num", mb.Miners.Size()),
+			zap.Int("old magic block miners num", lfmb.Miners.Size()),
 			zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
-			zap.Int64("old mb starting round", mb.StartingRound),
+			zap.Int64("old mb starting round", lfmb.StartingRound),
 			zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
-		if mb.Hash == newMagicBlock.PreviousMagicBlockHash {
+		if lfmb.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.Any("LFMB previous MB hash", mb.PreviousMagicBlockHash),
+				zap.Any("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
 				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
-			c.PreviousMagicBlock = mb
+			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
 	}
 

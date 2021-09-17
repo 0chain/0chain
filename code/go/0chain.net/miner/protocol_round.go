@@ -1804,14 +1804,16 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	logging.Logger.Info("ensure_lfb - set lfb",
 		zap.Int64("round", rcvd.Round))
 
-	// update magic block or notify to do finalization
-	lfmb := mc.GetLatestFinalizedMagicBlock()
-	if rcvd.StartingRound > lfmb.StartingRound {
-		// try to get
-		logging.Logger.Debug("ensure_lfb - update magic block",
-			zap.Int64("round", rcvd.Round))
-		if err := mc.UpdateMagicBlock(rcvd.MagicBlock); err == nil {
-			mc.SetLatestFinalizedMagicBlock(rcvd)
+	if rcvd.MagicBlock != nil {
+
+		// update magic block or notify to do finalization
+		lfmb := mc.GetLatestFinalizedMagicBlock()
+		if lfmb == nil || rcvd.StartingRound > lfmb.StartingRound {
+			logging.Logger.Debug("ensure_lfb - update magic block",
+				zap.Int64("round", rcvd.Round))
+			if err := mc.UpdateMagicBlock(rcvd.MagicBlock); err == nil {
+				mc.SetLatestFinalizedMagicBlock(rcvd)
+			}
 		}
 	}
 
