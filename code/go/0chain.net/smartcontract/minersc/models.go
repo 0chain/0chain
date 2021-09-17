@@ -969,6 +969,7 @@ type DKGMinerNodes struct {
 	T              int             `json:"t"`
 	K              int             `json:"k"`
 	N              int             `json:"n"`
+	XPercent       float64         `json:"x_percent"`
 	RevealedShares map[string]int  `json:"revealed_shares"`
 	Waited         map[string]bool `json:"waited"`
 
@@ -981,6 +982,7 @@ func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
 	dkgmn.MaxN = gn.MaxN
 	dkgmn.TPercent = gn.TPercent
 	dkgmn.KPercent = gn.KPercent
+	dkgmn.XPercent = gn.XPercent
 }
 
 func min(a, b int) int {
