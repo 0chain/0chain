@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/transaction"
 )
 
-
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
@@ -40,6 +39,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)
+	}
+
+	if err := updateBlockRewards(blobber.Capacity, 0, blobber, sp, conf, balances, nil); err != nil {
+		return fmt.Errorf("updating block rewrads: %v", err)
 	}
 
 	// update the list

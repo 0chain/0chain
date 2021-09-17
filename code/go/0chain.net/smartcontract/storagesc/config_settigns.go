@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/storagesc/blockrewards"
+
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -250,12 +252,12 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 		conf.MaxWritePrice = change
 	case BlockRewardBlockReward:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.BlockReward = change
 	case BlockRewardQualifyingStake:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.QualifyingStake = change
 	default:
@@ -308,22 +310,22 @@ func (conf *scConfig) setFloat64(key string, change float64) {
 		conf.ChallengeGenerationRate = change
 	case BlockRewardSharderWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.SharderWeight = change
 	case BlockRewardMinerWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.MinerWeight = change
 	case BlockRewardBlobberCapacityWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.BlobberCapacityWeight = change
 	case BlockRewardBlobberUsageWeight:
 		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+			conf.BlockReward = &blockrewards.BlockReward{}
 		}
 		conf.BlockReward.BlobberUsageWeight = change
 	default:

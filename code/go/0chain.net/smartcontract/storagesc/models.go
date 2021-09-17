@@ -310,7 +310,9 @@ type StorageNode struct {
 	LastHealthCheck common.Timestamp       `json:"last_health_check"`
 	PublicKey       string                 `json:"-"`
 	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	StakePoolSettings           stakePoolSettings `json:"stake_pool_settings"`
+	LastBlockRewardPaymentRound int64             `json:"last_block_reward_payment_round"`
+	BlockRewardCarry            float64           `json:"block_reward_carry"`
 }
 
 // validate the blobber configurations

@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -982,6 +983,21 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get user pools list: %v", err)
 	}
 	usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
+
+	var blobber *StorageNode
+	if blobber, err = ssc.getBlobber(spr.BlobberID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get the blobber: "+err.Error())
+	}
+	err = blockRewardModifiedStakePool(sp.stake(), conf, blobber, ssc, balances)
+	if err != nil {
+		return "", fmt.Errorf("updating block rewrads: %v", err)
+	}
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving blobber: "+err.Error())
+	}
 
 	if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",

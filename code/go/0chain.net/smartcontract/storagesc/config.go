@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	"0chain.net/smartcontract/storagesc/blockrewards"
+
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -51,6 +53,7 @@ type writePoolConfig struct {
 	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
+/*
 type blockReward struct {
 	BlockReward           state.Balance `json:"block_reward"`
 	QualifyingStake       state.Balance `json:"qualifying_stake"`
@@ -73,9 +76,8 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 		br.BlobberCapacityWeight = bCapcacityRatio / total
 		br.BlobberUsageWeight = bUsageRatio / total
 	}
-
 }
-
+*/
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
 	// TimeUnit is a duration used as divider for a write price. A write price
@@ -156,7 +158,7 @@ type scConfig struct {
 	// MaxCharge that blobber gets from rewards to its delegate_wallet.
 	MaxCharge float64 `json:"max_charge"`
 
-	BlockReward *blockReward `json:"block_reward"`
+	BlockReward *blockrewards.BlockReward `json:"block_reward"`
 
 	// Allow direct access to MPT
 	ExposeMpt bool `json:"expose_mpt"`
@@ -439,7 +441,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
-	conf.BlockReward = new(blockReward)
+	conf.BlockReward = new(blockrewards.BlockReward)
 	conf.BlockReward.BlockReward = state.Balance(scc.GetFloat64(pfx+"block_reward.block_reward") * 1e10)
 	conf.BlockReward.QualifyingStake = state.Balance(scc.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10)
 
@@ -448,7 +450,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlockReward.BlobberCapacityWeight = scc.GetFloat64(pfx + "block_reward.blobber_capacity_weight")
 	conf.BlockReward.BlobberUsageWeight = scc.GetFloat64(pfx + "block_reward.blobber_usage_weight" +
 		"blobber_usage_weight")
-	conf.BlockReward.setWeightsFromRatio(
+	conf.BlockReward.SetWeightsFromRatio(
 		scc.GetFloat64(pfx+"block_reward.sharder_ratio"),
 		scc.GetFloat64(pfx+"block_reward.miner_ratio"),
 		scc.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),

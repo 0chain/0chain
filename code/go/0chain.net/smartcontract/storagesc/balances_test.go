@@ -54,16 +54,18 @@ func (tb *testBalances) setTransaction(t testing.TB,
 }
 
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                   { return nil }
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI       { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string { return nil }
-func (tb *testBalances) Validate() error                          { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
-func (tb *testBalances) AddMint(*state.Mint) error                { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
-func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)    {}
+func (tb *testBalances) GetBlock() *block.Block                                 { return nil }
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI                     { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction               { return nil }
+func (tb *testBalances) GetBlockSharders(b *block.Block) []string               { return nil }
+func (tb *testBalances) Validate() error                                        { return nil }
+func (tb *testBalances) UpdateBlockRewardTotals(deltaCapacity, deltaUsed int64) {}
+func (tb *testBalances) GetBlockRewardDeltas() (int64, int64)                   { return 0, 0 }
+func (tb *testBalances) GetMints() []*state.Mint                                { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error                     { return nil }
+func (tb *testBalances) AddMint(*state.Mint) error                              { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer                        { return nil }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)                  {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {

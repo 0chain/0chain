@@ -124,6 +124,11 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp.Settings.ServiceCharge = blobber.StakePoolSettings.ServiceCharge
 	sp.Settings.NumDelegates = blobber.StakePoolSettings.NumDelegates
 
+	err = updateBlockRewards(blobber.Capacity-savedBlobber.Capacity, 0, blobber, sp, conf, balances, nil)
+	if err != nil {
+		return fmt.Errorf("updating block rewrads: %v", err)
+	}
+
 	// save stake pool
 	if err = sp.save(sc.ID, blobber.ID, balances); err != nil {
 		return fmt.Errorf("saving stake pool: %v", err)

@@ -235,6 +235,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 	}
 
+	if err := updateRewardTotalList(sctx); err != nil {
+		logging.Logger.Error("update block rewards error",
+			zap.Any("error", err),
+			zap.Any("transaction", txn.Hash),
+		)
+	}
+
 	// commit transaction
 	if err = b.ClientState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {

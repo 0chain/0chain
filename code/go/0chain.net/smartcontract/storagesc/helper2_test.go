@@ -53,7 +53,11 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock       
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	return sc.clientBalance, nil
 }
+func (sc *mockStateContext) GetBlockRewardDeltas() (int64, int64) {
+	return 0, 0
+}
 
+func (sc *mockStateContext) UpdateBlockRewardTotals(_, _ int64) {}
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
