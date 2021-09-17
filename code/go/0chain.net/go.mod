@@ -3,6 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
+	github.com/0chain/errors v1.0.3
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
@@ -17,9 +18,14 @@ require (
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/gorilla/handlers v1.5.1
+	github.com/gorilla/mux v1.8.0
+	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.6.0
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
+	github.com/improbable-eng/grpc-web v0.14.1
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -33,16 +39,17 @@ require (
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/cast v1.3.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.3
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/gozstd v1.5.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.7.0
-	go.uber.org/zap v1.17.0
+	go.uber.org/zap v1.19.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	google.golang.org/genproto v0.0.0-20210903162649-d08c68adba83
+	google.golang.org/grpc v1.40.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
 )

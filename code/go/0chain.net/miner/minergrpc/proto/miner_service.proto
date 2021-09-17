@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package miner;
+
+option go_package = "code/go/0chain.net/miner/minergrpc";
+
+import "miner_contract.proto";
+import "google/api/annotations.proto";
+
+service MinerService {
+  rpc GetNotarizedBlock(GetNotarizedBlockRequest) returns (GetNotarizedBlockResponse) {
+    option (google.api.http) = {
+      get: "/v2/_x2m/block/notarized_block/get"
+    };
+  }
+}

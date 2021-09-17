@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -14,7 +15,10 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/miner/handler"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/reflection"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -43,6 +47,7 @@ func main() {
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	initialStatesFile := flag.String("initial_states", "", "initial_states")
+
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -204,6 +209,8 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	initGRPC(node.Self.Underlying().GRPCPort)
+
 	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
@@ -297,6 +304,31 @@ func main() {
 	defer done(ctx)
 	<-ctx.Done()
 	time.Sleep(time.Second * 5)
+}
+
+func initGRPC(grpcPortString int) {
+	r := mux.NewRouter()
+	grpcServer := handler.NewGRPCServerWithMiddlewares(r)
+
+	if config.Development() {
+		reflection.Register(grpcServer)
+	}
+
+	logging.Logger.Info("Ready to listen to the requests")
+	go func(grpcPort int) {
+		if grpcPort == 0 {
+			logging.Logger.Error("Could not start grpc server since grpc port has not been specified." +
+				" Please specify the grpc port in the grpc_port property to start the grpc server")
+			return
+		}
+
+		logging.Logger.Info(fmt.Sprintf("listening too grpc requests on port - %d", grpcPort))
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+		log.Fatal(grpcServer.Serve(lis))
+	}(grpcPortString)
 }
 
 func done(ctx context.Context) {

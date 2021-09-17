@@ -336,13 +336,20 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 // NotarizedBlockSendHandler - handles a request for a notarized block.
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return getNotarizedBlock(ctx, r)
+	roundN, hash, err := getBlockInfoFromReq(r)
+	if err != nil {
+		return nil, err
+	}
+	return GetNotarizedBlock(ctx, roundN, hash)
 }
 
 // BlockStateChangeHandler - provide the state changes associated with a block.
 func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-
-	var b, err = getNotarizedBlock(ctx, r)
+	roundN, hash, err := getBlockInfoFromReq(r)
+	if err != nil {
+		return nil, err
+	}
+	b, err := GetNotarizedBlock(ctx, roundN, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -388,18 +395,28 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return ps, nil
 }
 
-func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, error) {
+func getBlockInfoFromReq(req *http.Request) (int64, string, error) {
+	hash := req.FormValue("block")
+	r    := req.FormValue("round")
+	if r == "" {
+		return 0, hash, common.NewError("none_round_or_hash_provided",
+			"no block hash or round number is provided")
+	}
 
-	var (
-		r    = req.FormValue("round")
-		hash = req.FormValue("block")
+	roundN, err := strconv.ParseInt(r, 10, 63)
+	if err != nil {
+		return 0, hash, err
+	}
 
-		mc = GetMinerChain()
-	)
+	return roundN, hash, nil
+}
+
+func GetNotarizedBlock(ctx context.Context, round int64, hash string) (*block.Block, error) {
+	mc := GetMinerChain()
 
 	errBlockNotAvailable := common.NewError("block_not_available",
-		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
-			mc.GetCurrentRound(), r, hash))
+		fmt.Sprintf("Requested block is not available, current round: %d, request round: %d, request hash: %s",
+			mc.GetCurrentRound(), round, hash))
 
 	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
@@ -413,17 +430,7 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 		return nil, errBlockNotAvailable
 	}
 
-	if r == "" {
-		return nil, common.NewError("none_round_or_hash_provided",
-			"no block hash or round number is provided")
-	}
-
-	roundN, err := strconv.ParseInt(r, 10, 63)
-	if err != nil {
-		return nil, err
-	}
-
-	rd := mc.GetRound(roundN)
+	rd := mc.GetRound(round)
 	if rd == nil {
 		return nil, errBlockNotAvailable
 	}
