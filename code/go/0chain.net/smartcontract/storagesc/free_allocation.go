@@ -1,16 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
 )
 
 const (
@@ -92,12 +92,13 @@ func (fsa *freeStorageAssigner) validate(
 	marker freeStorageMarker,
 	now common.Timestamp,
 	value state.Balance,
+	balances cstate.StateContextI,
 ) error {
 	if marker.Timestamp >= now {
 		return fmt.Errorf("marker timestamped in the future: %v", marker.Timestamp)
 	}
 
-	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey)
+	verified, err := verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
 	if err != nil {
 		return err
 	}
@@ -177,7 +178,11 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	return nil
 }
 
-func verifyFreeAllocationRequest(frm freeStorageMarker, publicKey string) (bool, error) {
+func verifyFreeAllocationRequest(
+	frm freeStorageMarker,
+	publicKey string,
+	balances cstate.StateContextI,
+) (bool, error) {
 	var request = struct {
 		Recipient  string           `json:"recipient"`
 		FreeTokens float64          `json:"free_tokens"`
@@ -189,7 +194,7 @@ func verifyFreeAllocationRequest(frm freeStorageMarker, publicKey string) (bool,
 	if err != nil {
 		return false, err
 	}
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
@@ -226,7 +231,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value)); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value), balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"marker verification failed: %v", err)
 	}
@@ -318,7 +323,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 			"error getting assigner details: %v", err)
 	}
 
-	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value)); err != nil {
+	if err := assigner.validate(marker, txn.CreationDate, state.Balance(txn.Value), balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"marker verification failed: %v", err)
 	}
