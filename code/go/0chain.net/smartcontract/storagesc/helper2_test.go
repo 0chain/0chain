@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -9,7 +11,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"time"
 )
 
 type mockStateContext struct {
@@ -38,12 +39,14 @@ var (
 	storageScId = approvedMinters[2]
 )
 
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
-func (sc *mockStateContext) Validate() error                                       { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)           { return }
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI          { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction    { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer { return nil }
+func (sc *mockStateContext) Validate() error                             { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
+	return encryption.NewBLS0ChainScheme()
+}
 func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             { return }
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }

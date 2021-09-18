@@ -364,7 +364,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
 	}
 
-	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
+	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't verify read marker: %v", err)
@@ -410,7 +410,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	// if 3rd party pays
-	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate)
+	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("commit_blobber_read", err.Error())
 	}
@@ -586,7 +586,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	detailsBytes, err := json.Marshal(details)
 
-	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey) {
+	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid signature for write marker")
 	}
