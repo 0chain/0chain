@@ -79,7 +79,7 @@ func updateRewardTotalList(balances cstate.StateContextI) error {
 		return fmt.Errorf("negative capaciy %d or used %d", qt.Capacity, qt.Used)
 	}
 	// todo have to handle case where block reward settings are changed
-	var qtl blockrewards.QualifyingTotalsList
+	var qtl blockrewards.QualifyingTotalsSlice
 	qtl, err = blockrewards.GetQualifyingTotalsList(balances)
 	if err != nil {
 		return err

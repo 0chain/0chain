@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -801,7 +802,8 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 	}
 	// stake pool not found
 	var blobbers = []*StorageNode{&b1, &b2}
-	requireErrMsg(t, ssc.addBlobbersOffers(&alloc, blobbers, balances), errMsg)
+	var conf = setConfig(t, balances)
+	requireErrMsg(t, ssc.addBlobbersOffers(&alloc, blobbers, conf, balances), errMsg)
 	// create stake pools
 	for _, b := range blobbers {
 		var sp = newStakePool()
@@ -809,7 +811,7 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 		require.NoError(t, err)
 	}
 	// add the offers
-	require.NoError(t, ssc.addBlobbersOffers(&alloc, blobbers, balances))
+	require.NoError(t, ssc.addBlobbersOffers(&alloc, blobbers, conf, balances))
 	// check out all
 	var sp1, sp2 *stakePool
 	// stake pool 1

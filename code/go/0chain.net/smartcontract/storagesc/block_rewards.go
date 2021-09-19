@@ -18,7 +18,7 @@ func updateBlockRewards(
 	sp *stakePool,
 	conf *scConfig,
 	balances cstate.StateContextI,
-	qtl blockrewards.QualifyingTotalsList,
+	qtl blockrewards.QualifyingTotalsSlice,
 ) error {
 	if deltaCapacity > 0 || deltaUsed > 0 { // todo what to do if sc.yaml block rewards changes
 		if sp.stake() >= conf.BlockReward.QualifyingStake {
@@ -26,7 +26,7 @@ func updateBlockRewards(
 		}
 	}
 
-	if err := payBlobberRewards(blobber, sp, conf, qtl, balances); err != nil {
+	if err := payBlobberRewards(blobber, sp, qtl, balances); err != nil {
 		return fmt.Errorf("paying blobber rewards: %v", err)
 	}
 	return nil
@@ -53,16 +53,16 @@ func blockRewardModifiedStakePool(
 		balances.UpdateBlockRewardTotals(blobber.Capacity, blobber.Used)
 	}
 
-	return payBlobberRewards(blobber, sp, conf, nil, balances)
+	return payBlobberRewards(blobber, sp, nil, balances)
 }
 
 func payBlobberRewards(
 	blobber *StorageNode,
 	sp *stakePool,
-	conf *scConfig,
-	qtl blockrewards.QualifyingTotalsList,
+	qtl blockrewards.QualifyingTotalsSlice,
 	balances cstate.StateContextI,
 ) error {
+	var round = balances.GetBlock().Round
 	if qtl == nil {
 		var err error
 		qtl, err = blockrewards.GetQualifyingTotalsList(balances)
@@ -76,9 +76,9 @@ func payBlobberRewards(
 		zap.Any("blobber", blobber),
 		zap.Any("stake pools", sp),
 	)
-	if int64(len(qtl)) < balances.GetBlock().Round-1 {
-		return fmt.Errorf("block reward totals not saved, length %d, round %d",
-			len(qtl), balances.GetBlock().Round)
+	if int64(len(qtl)) < round-1 {
+		return fmt.Errorf("block reward totals missing, length %d, exopected %d",
+			len(qtl), round)
 	}
 	if len(qtl) == 0 {
 		return nil
@@ -87,27 +87,29 @@ func payBlobberRewards(
 	if stakes == 0 {
 		return nil
 	}
-	numRounds := balances.GetBlock().Round - blobber.LastBlockRewardPaymentRound
-	if numRounds > int64(len(qtl)) {
-		numRounds = int64(len(qtl) - 1)
+
+	var startSettingsWereSet = qtl[blobber.LastBlockRewardPaymentRound].LastSettingsChange
+	var settings = qtl[startSettingsWereSet].SettingsChange
+	if settings == nil {
+		return fmt.Errorf("cannot find inital block rewards settings, "+
+			"not found on round %d", startSettingsWereSet)
 	}
-	var settings blockrewards.BlockReward = *conf.BlockReward
+
 	var reward = blobber.BlockRewardCarry
-	for i := int64(0); i < numRounds; i++ {
-		index := blobber.LastBlockRewardPaymentRound + i
-		if (qtl)[index].SettingsChange != nil {
-			settings = *(qtl)[index].SettingsChange
+	for i := blobber.LastBlockRewardPaymentRound; i < round; i++ {
+		if qtl[i].SettingsChange != nil {
+			settings = qtl[i].SettingsChange
 		}
 
 		var capRatio float64
-		if (qtl)[index].Capacity > 0 {
-			capRatio = float64(blobber.Capacity) / float64((qtl)[index].Capacity)
+		if qtl[i].Capacity > 0 {
+			capRatio = float64(blobber.Capacity) / float64(qtl[i].Capacity)
 		}
 		capacityReward := float64(settings.BlockReward) * settings.BlobberCapacityWeight * capRatio
 
 		var usedRatio float64
-		if (qtl)[index].Used > 0 {
-			usedRatio = float64(blobber.Used) / float64((qtl)[index].Used)
+		if qtl[i].Used > 0 {
+			usedRatio = float64(blobber.Used) / float64(qtl[i].Used)
 		}
 		usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
 

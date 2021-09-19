@@ -42,10 +42,11 @@ func (br *BlockReward) SetWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 }
 
 type QualifyingTotals struct {
-	Round          int64        `json:"round"` // todo probably remove after debug
-	Capacity       int64        `json:"capacity"`
-	Used           int64        `json:"used"`
-	SettingsChange *BlockReward `json:"settings_change"`
+	Round              int64        `json:"round"` // todo probably remove after debug
+	Capacity           int64        `json:"capacity"`
+	Used               int64        `json:"used"`
+	LastSettingsChange int64        `json:"last_settings_change"`
+	SettingsChange     *BlockReward `json:"settings_change"`
 }
 
 func (qt *QualifyingTotals) Encode() []byte {
@@ -75,13 +76,13 @@ func GetQualifyingTotals(balances cstate.StateContextI) (*QualifyingTotals, erro
 	return qt, nil
 }
 
-type QualifyingTotalsList []QualifyingTotals
+type QualifyingTotalsSlice []QualifyingTotals
 
-func NewQualifyingTotalsList() QualifyingTotalsList {
+func NewQualifyingTotalsList() QualifyingTotalsSlice {
 	return make([]QualifyingTotals, 1024)
 }
 
-func (qtl *QualifyingTotalsList) Encode() []byte {
+func (qtl *QualifyingTotalsSlice) Encode() []byte {
 	var b, err = json.Marshal(qtl)
 	if err != nil {
 		panic(err)
@@ -89,16 +90,16 @@ func (qtl *QualifyingTotalsList) Encode() []byte {
 	return b
 }
 
-func (qtl *QualifyingTotalsList) Decode(p []byte) error {
+func (qtl *QualifyingTotalsSlice) Decode(p []byte) error {
 	return json.Unmarshal(p, qtl)
 }
 
-func (qtl *QualifyingTotalsList) Save(balances cstate.StateContextI) error {
+func (qtl *QualifyingTotalsSlice) Save(balances cstate.StateContextI) error {
 	_, err := balances.InsertTrieNode(QualifyingTotalsPerBlockKey, qtl)
 	return err
 }
 
-func GetQualifyingTotalsList(balances cstate.StateContextI) (QualifyingTotalsList, error) {
+func GetQualifyingTotalsList(balances cstate.StateContextI) (QualifyingTotalsSlice, error) {
 	var val util.Serializable
 	val, err := balances.GetTrieNode(QualifyingTotalsPerBlockKey)
 	if err != nil {
