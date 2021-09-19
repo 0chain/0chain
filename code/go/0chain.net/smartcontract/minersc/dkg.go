@@ -750,7 +750,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 	magicBlock.PreviousMagicBlockHash = pmb.MagicBlock.Hash
 	magicBlock.StartingRound = pn.CurrentRound + PhaseRounds[Wait]
 
-	logging.Logger.Debug("create magic block",
+	Logger.Debug("create magic block",
 		zap.Int64("view change", magicBlock.StartingRound),
 		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)))
 
