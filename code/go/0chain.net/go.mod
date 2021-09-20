@@ -18,13 +18,11 @@ require (
 	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
-	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.6.0
 	github.com/hashicorp/golang-lru v0.5.1
 	github.com/herumi/bls v0.0.0-20210511012341-3f3850a6eac7
 	github.com/herumi/mcl v0.0.0-20210601112215-5faedff92a72
-	github.com/improbable-eng/grpc-web v0.14.1
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
@@ -33,6 +31,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
 	github.com/spf13/afero v1.2.2 // indirect

@@ -1,15 +1,13 @@
-package handler
+package server
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"0chain.net/core/logging"
-	"github.com/gorilla/mux"
+	"0chain.net/miner/minergrpc"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
-	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"google.golang.org/grpc"
 )
 
@@ -17,8 +15,9 @@ const (
 	TimeoutSeconds = 10 // to set deadline for requests
 )
 
-func NewGRPCServerWithMiddlewares(r *mux.Router) *grpc.Server {
+func NewGRPCServerWithMiddlewares() *grpc.Server {
 	srv := grpc.NewServer(
+		//grpc.Creds(credentials.NewServerTLSFromCert(cert)),
 		grpc.ChainStreamInterceptor(
 			grpc_zap.StreamServerInterceptor(logging.Logger),
 			grpc_recovery.StreamServerInterceptor(),
@@ -30,19 +29,7 @@ func NewGRPCServerWithMiddlewares(r *mux.Router) *grpc.Server {
 		),
 	)
 
-	registerGRPCServices(r, srv)
-
-	// adds grpc-web middleware
-	wrappedServer := grpcweb.WrapServer(srv)
-	r.Use(func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if wrappedServer.IsGrpcWebRequest(r) {
-				wrappedServer.ServeHTTP(w, r)
-				return
-			}
-			h.ServeHTTP(w, r)
-		})
-	})
+	minergrpc.RegisterMinerServiceServer(srv, NewMinerGRPCService())
 
 	return srv
 }

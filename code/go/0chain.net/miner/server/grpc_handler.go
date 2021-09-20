@@ -1,4 +1,4 @@
-package handler
+package server
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type minerGRPCService struct {
 }
 
 
-func newMinerGRPCService() *minerGRPCService {
+func NewMinerGRPCService() *minerGRPCService {
 	return &minerGRPCService{}
 }
 

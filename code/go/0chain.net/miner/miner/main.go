@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/miner/handler"
-	"github.com/gorilla/mux"
+	"0chain.net/miner/gateway"
+	"0chain.net/miner/server"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/reflection"
 
@@ -306,29 +306,32 @@ func main() {
 	time.Sleep(time.Second * 5)
 }
 
-func initGRPC(grpcPortString int) {
-	r := mux.NewRouter()
-	grpcServer := handler.NewGRPCServerWithMiddlewares(r)
+func initGRPC(grpcPort int) {
+	grpcServer := server.NewGRPCServerWithMiddlewares()
 
 	if config.Development() {
 		reflection.Register(grpcServer)
 	}
 
-	logging.Logger.Info("Ready to listen to the requests")
-	go func(grpcPort int) {
-		if grpcPort == 0 {
-			logging.Logger.Error("Could not start grpc server since grpc port has not been specified." +
-				" Please specify the grpc port in the grpc_port property to start the grpc server")
-			return
-		}
+	if grpcPort == 0 {
+		logging.Logger.Error("Could not start grpc server since grpc port has not been specified." +
+			" Please specify the grpc port in the grpc_port property to start the grpc server")
+		return
+	}
 
-		logging.Logger.Info(fmt.Sprintf("listening too grpc requests on port - %d", grpcPort))
-		lis, err := net.Listen("tcp", fmt.Sprintf(":%s", grpcPort))
+	addr := fmt.Sprintf("0.0.0.0:%d", grpcPort)
+
+	go func(addr string) {
+		lis, err := net.Listen("tcp", addr)
 		if err != nil {
 			log.Fatalf("failed to listen: %v", err)
 		}
+
+		logging.Logger.Info(fmt.Sprintf("listening grpc requests on port - %d", grpcPort))
 		log.Fatal(grpcServer.Serve(lis))
-	}(grpcPortString)
+	}(addr)
+
+	log.Fatalln(gateway.Run("dns:///" + addr))
 }
 
 func done(ctx context.Context) {
