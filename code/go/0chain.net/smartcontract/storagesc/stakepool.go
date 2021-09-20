@@ -116,6 +116,7 @@ type delegatePool struct {
 	Rewards           state.Balance    `json:"rewards"`     // total
 	Penalty           state.Balance    `json:"penalty"`     // total
 	Unstake           common.Timestamp `json:"unstake"`     // want to unstake
+	Carry             float64          `json:"carry"`
 }
 
 // stake pool settings

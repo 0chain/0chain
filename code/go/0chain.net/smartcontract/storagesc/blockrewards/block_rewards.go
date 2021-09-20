@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/viper"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -12,9 +14,14 @@ import (
 	"0chain.net/core/util"
 )
 
+const (
+	storagScAddress = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+)
+
 var (
-	QualifyingTotalsKey         = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("qualifying_totals"))
-	QualifyingTotalsPerBlockKey = datastore.Key("6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" + encryption.Hash("qualifying_totals_per_block"))
+	QualifyingTotalsKey         = datastore.Key(storagScAddress + encryption.Hash("qualifying_totals"))
+	QualifyingTotalsPerBlockKey = datastore.Key(storagScAddress + encryption.Hash("qualifying_totals_per_block"))
+	ConfigKey                   = datastore.Key(storagScAddress + ":configurations")
 )
 
 type BlockReward struct {
@@ -61,28 +68,15 @@ func (qt *QualifyingTotals) Decode(p []byte) error {
 	return json.Unmarshal(p, qt)
 }
 
-func GetQualifyingTotals(balances cstate.StateContextI) (*QualifyingTotals, error) {
-	var val util.Serializable
-	val, err := balances.GetTrieNode(QualifyingTotalsKey)
-	if err != nil {
-		return nil, err
-	}
-
-	qt := new(QualifyingTotals)
-	err = qt.Decode(val.Encode())
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	return qt, nil
+type QualifyingTotalsList struct {
+	Totals []QualifyingTotals `json:"totals"`
 }
 
-type QualifyingTotalsSlice []QualifyingTotals
-
-func NewQualifyingTotalsList() QualifyingTotalsSlice {
-	return make([]QualifyingTotals, 1024)
+func NewQualifyingTotalsList() *QualifyingTotalsList {
+	return &QualifyingTotalsList{make([]QualifyingTotals, 1024)}
 }
 
-func (qtl *QualifyingTotalsSlice) Encode() []byte {
+func (qtl *QualifyingTotalsList) Encode() []byte {
 	var b, err = json.Marshal(qtl)
 	if err != nil {
 		panic(err)
@@ -90,16 +84,67 @@ func (qtl *QualifyingTotalsSlice) Encode() []byte {
 	return b
 }
 
-func (qtl *QualifyingTotalsSlice) Decode(p []byte) error {
+func (qtl *QualifyingTotalsList) Decode(p []byte) error {
 	return json.Unmarshal(p, qtl)
 }
 
-func (qtl *QualifyingTotalsSlice) Save(balances cstate.StateContextI) error {
+func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.StateContextI) (*BlockReward, bool, error) {
+	val, err := balances.GetTrieNode(ConfigKey)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, false, err
+		}
+		if balances.GetBlock().Round > 1 {
+			return nil, false, nil
+		}
+		const pfx = "smart_contracts.storagesc."
+		br := BlockReward{
+			BlockReward:     state.Balance(viper.GetFloat64(pfx+"block_reward.block_reward") * 1e10),
+			QualifyingStake: state.Balance(viper.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10),
+		}
+		br.SetWeightsFromRatio(
+			viper.GetFloat64(pfx+"block_reward.sharder_ratio"),
+			viper.GetFloat64(pfx+"block_reward.miner_ratio"),
+			viper.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
+			viper.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
+		)
+		return &br, true, nil
+	}
+	b, err := json.Marshal(val)
+	if err != nil {
+		return nil, false, err
+	}
+	var conf = struct {
+		BlockReward *BlockReward `json:"block_reward"`
+	}{}
+	err = json.Unmarshal(b, &conf)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(qtl.Totals) == 0 {
+		return conf.BlockReward, true, nil
+	}
+
+	lastSettings := qtl.Totals[len(qtl.Totals)-1].LastSettingsChange
+	settings := qtl.Totals[lastSettings].SettingsChange
+
+	if settings.BlockReward != conf.BlockReward.BlockReward ||
+		settings.QualifyingStake != conf.BlockReward.QualifyingStake ||
+		settings.BlobberUsageWeight != conf.BlockReward.BlobberUsageWeight ||
+		settings.BlobberCapacityWeight != conf.BlockReward.BlobberCapacityWeight ||
+		settings.MinerWeight != conf.BlockReward.MinerWeight ||
+		settings.SharderWeight != conf.BlockReward.SharderWeight {
+		return conf.BlockReward, true, nil
+	}
+	return nil, false, nil
+}
+
+func (qtl *QualifyingTotalsList) Save(balances cstate.StateContextI) error {
 	_, err := balances.InsertTrieNode(QualifyingTotalsPerBlockKey, qtl)
 	return err
 }
 
-func GetQualifyingTotalsList(balances cstate.StateContextI) (QualifyingTotalsSlice, error) {
+func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsList, error) {
 	var val util.Serializable
 	val, err := balances.GetTrieNode(QualifyingTotalsPerBlockKey)
 	if err != nil {

@@ -46,10 +46,10 @@ func TestUpdateBlockRewards(t *testing.T) {
 		deltaCapacity, deltaUsed, lastBlockRewardPaymentRound int64
 		capacity, used                                        int64
 		round, lastSettingChange                              int64
-		blockRewardCarry, stake                               float64
+		stake                                                 float64
 		settings                                              map[int64]blockrewards.BlockReward
 		inputQtl                                              bool
-		numberStakePools                                      int
+		spCarries                                             []float64
 	}
 	type want struct {
 		error    bool
@@ -64,7 +64,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 		sp                       *stakePool
 		conf                     *scConfig
 		balances                 *mocks.StateContextI
-		qtl                      blockrewards.QualifyingTotalsSlice
+		qtl                      *blockrewards.QualifyingTotalsList
 	}
 
 	var getArgs = func(t *testing.T, p parameters) args {
@@ -80,10 +80,9 @@ func TestUpdateBlockRewards(t *testing.T) {
 			Capacity:                    mockCapacity,
 			Used:                        mockUsage,
 			LastBlockRewardPaymentRound: p.lastBlockRewardPaymentRound,
-			BlockRewardCarry:            p.blockRewardCarry,
 		}
 
-		var qtl blockrewards.QualifyingTotalsSlice = nil
+		var qtl blockrewards.QualifyingTotalsList
 		require.True(t, p.round > p.lastBlockRewardPaymentRound)
 		var lastSettingsChange int64 = 0
 		for i := int64(0); i < p.round; i++ {
@@ -99,20 +98,21 @@ func TestUpdateBlockRewards(t *testing.T) {
 				require.NotEqual(t, i, int64(0))
 			}
 			qt.LastSettingsChange = lastSettingsChange
-			qtl = append(qtl, qt)
+			qtl.Totals = append(qtl.Totals, qt)
 		}
 
 		var sp = newStakePool()
 		require.True(t, p.stake > -0)
-		require.True(t, p.numberStakePools >= 1)
+		require.True(t, len(p.spCarries) >= 1)
 		if p.stake > 0 {
-			for i := 0; i < p.numberStakePools; i++ {
+			for i := 0; i < len(p.spCarries); i++ {
 				id := strconv.Itoa(i)
 				var pool delegatePool
 				pool.ID = id
 				pool.DelegateID = mockDelegateWallet + id
 				pool.Balance = state.Balance(p.stake * 1e10 /
-					float64(p.numberStakePools))
+					float64(len(p.spCarries)))
+				pool.Carry = p.spCarries[i]
 				sp.Pools[id] = &pool
 			}
 		}
@@ -124,7 +124,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 			sp:            sp,
 			conf:          conf,
 			balances:      &balances,
-			qtl:           qtl,
+			qtl:           &qtl,
 		}
 	}
 
@@ -148,7 +148,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 			).Return().Once()
 		}
 
-		var reward = p.blockRewardCarry
+		var reward float64
 		require.True(t, p.lastBlockRewardPaymentRound < p.round)
 		require.True(t, 0 <= p.lastBlockRewardPaymentRound)
 		var settings *blockrewards.BlockReward
@@ -166,13 +166,13 @@ func TestUpdateBlockRewards(t *testing.T) {
 				settings = &newSettings
 			}
 			var capRatio float64
-			if args.qtl[i].Capacity > 0 {
-				capRatio = float64(args.blobber.Capacity) / float64(args.qtl[i].Capacity)
+			if args.qtl.Totals[i].Capacity > 0 {
+				capRatio = float64(args.blobber.Capacity) / float64(args.qtl.Totals[i].Capacity)
 			}
 			capacityReward := float64(settings.BlockReward) * settings.BlobberCapacityWeight * capRatio
 			var usedRatio float64
-			if args.qtl[i].Used > 0 {
-				usedRatio = float64(args.blobber.Used) / float64(args.qtl[i].Used)
+			if args.qtl.Totals[i].Used > 0 {
+				usedRatio = float64(args.blobber.Used) / float64(args.qtl.Totals[i].Used)
 			}
 			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
 			reward += capacityReward + usedReward
@@ -182,20 +182,19 @@ func TestUpdateBlockRewards(t *testing.T) {
 		require.NoError(t, sp.Decode(args.sp.Encode()))
 		require.EqualValues(t, state.Balance(p.stake*1e10), sp.stake())
 		if p.stake > 0 {
-			for _, pool := range args.sp.Pools {
-				poolReward := state.Balance(reward / float64(p.numberStakePools))
+			for _, pool := range sp.Pools {
+				poolReward := pool.Carry + reward/float64(len(p.spCarries))
+				toMint := state.Balance(poolReward)
+				pool.Carry = poolReward - float64(toMint)
+
 				args.balances.On("AddMint", state.NewMint(
-					ADDRESS, pool.DelegateID, poolReward,
+					ADDRESS, pool.DelegateID, toMint,
 				)).Return(nil).Once()
 			}
 		}
-		var paidReward = state.Balance(p.numberStakePools) *
-			state.Balance(reward/float64(p.numberStakePools))
-
 		var blobber StorageNode
 		require.NoError(t, blobber.Decode(args.blobber.Encode()))
 		blobber.LastBlockRewardPaymentRound = p.round
-		blobber.BlockRewardCarry = reward - float64(paidReward)
 
 		want.sp = sp
 		want.blobber = blobber
@@ -215,14 +214,13 @@ func TestUpdateBlockRewards(t *testing.T) {
 				deltaUsed:                   7,
 				lastBlockRewardPaymentRound: 5,
 				round:                       9,
-				blockRewardCarry:            0.3,
 				stake:                       17,
 				inputQtl:                    true,
 				settings: map[int64]blockrewards.BlockReward{
 					0: mockSettings,
 					7: mockSettings2,
 				},
-				numberStakePools: 2,
+				spCarries: []float64{0.1, 0.9},
 			},
 		},
 		{
@@ -232,14 +230,13 @@ func TestUpdateBlockRewards(t *testing.T) {
 				deltaUsed:                   7,
 				lastBlockRewardPaymentRound: 5,
 				round:                       7,
-				blockRewardCarry:            0.3,
 				stake:                       17,
 				inputQtl:                    true,
 				settings: map[int64]blockrewards.BlockReward{
 					0: mockSettings,
 					2: mockSettings2,
 				},
-				numberStakePools: 2,
+				spCarries: []float64{0.0, 0.9},
 			},
 		},
 
@@ -250,14 +247,13 @@ func TestUpdateBlockRewards(t *testing.T) {
 				deltaUsed:                   7,
 				lastBlockRewardPaymentRound: 5,
 				round:                       7,
-				blockRewardCarry:            0.3,
 				stake:                       17,
 				inputQtl:                    true,
 				settings: map[int64]blockrewards.BlockReward{
 					0: mockSettings,
 					1: mockSettings,
 				},
-				numberStakePools: 2,
+				spCarries: []float64{0.1, 0.9},
 			},
 		},
 	}
@@ -269,7 +265,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 			args := getArgs(t, tt.parameters)
 			want := setExpectations(t, tt.parameters, args, tt.want)
 			if !tt.parameters.inputQtl {
-				args.qtl = nil
+				args.qtl.Totals = nil
 			}
 
 			err := updateBlockRewards(
@@ -286,7 +282,9 @@ func TestUpdateBlockRewards(t *testing.T) {
 				return
 			}
 			require.EqualValues(t, want.blobber.LastBlockRewardPaymentRound, args.blobber.LastBlockRewardPaymentRound)
-			require.InDelta(t, want.blobber.BlockRewardCarry, args.blobber.BlockRewardCarry, carryDelta)
+			for key, pool := range want.sp.Pools {
+				require.InDelta(t, pool.Carry, args.sp.Pools[key].Carry, carryDelta)
+			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}

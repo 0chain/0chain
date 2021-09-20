@@ -63,6 +63,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 	ts := time.Now()
 	inter, err := smcoi.Execute(t, funcName, input, balances)
 	if err == nil {
+		logging.Logger.Info("piers about to execute", zap.String("func name", funcName))
 		if tm := smcoi.GetExecutionStats()[funcName]; tm != nil {
 			if timer, ok := tm.(metrics.Timer); ok {
 				timer.Update(time.Since(ts))

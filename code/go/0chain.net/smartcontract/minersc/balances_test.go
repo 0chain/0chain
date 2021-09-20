@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -9,7 +11,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type testBalances struct {
@@ -39,6 +40,12 @@ func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 
 func (tb *testBalances) setLFMB(lfmb *block.Block) {
 	tb.lfmb = lfmb
+}
+
+func (sc *testBalances) UpdateBlockRewardTotals(deltaCapacity, deltaUsed int64) {}
+
+func (sc *testBalances) GetBlockRewardDeltas() (int64, int64) {
+	return 0, 0
 }
 
 func (tb *testBalances) requireAllBeZeros(t *testing.T) {

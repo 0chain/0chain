@@ -234,8 +234,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 			// return
 		}
 	}
-
-	if err := updateRewardTotalList(sctx); err != nil {
+	//updateBlockRewardTotals
+	if err := UpdateRewardTotalList(sctx); err != nil {
 		logging.Logger.Error("update block rewards error",
 			zap.Any("error", err),
 			zap.Any("transaction", txn.Hash),

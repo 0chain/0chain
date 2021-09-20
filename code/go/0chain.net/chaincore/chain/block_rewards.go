@@ -3,17 +3,13 @@ package chain
 import (
 	"fmt"
 
-	"0chain.net/chaincore/block"
-	bcstate "0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/logging"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/storagesc/blockrewards"
 	"go.uber.org/zap"
 )
 
+/*
 func (c *Chain) updateBlockRewardTotals(sctx bcstate.StateContextI) error {
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
@@ -38,7 +34,7 @@ func (c *Chain) updateBlockRewardTotals(sctx bcstate.StateContextI) error {
 		return err
 	}
 	sctx.SetStateContext(ts)
-	_ = updateRewardTotalList(sctx)
+	_ = UpdateRewardTotalList(sctx)
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if state.DebugTxn() {
@@ -62,46 +58,51 @@ func (c *Chain) updateBlockRewardTotals(sctx bcstate.StateContextI) error {
 	}
 	return nil
 }
-
-func updateRewardTotalList(balances cstate.StateContextI) error {
-	qt, err := blockrewards.GetQualifyingTotals(balances)
+*/
+func UpdateRewardTotalList(balances cstate.StateContextI) error {
+	logging.Logger.Info("piers start UpdateRewardTotalList",
+		zap.Int64("round", balances.GetBlock().Round))
+	var qtl *blockrewards.QualifyingTotalsList
+	qtl, err := blockrewards.GetQualifyingTotalsList(balances)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return err
-		}
-		qt = new(blockrewards.QualifyingTotals)
+		return fmt.Errorf("getting qualifying totals list: %v", err)
 	}
-	qt.Round = balances.GetBlock().Round
-	deltaCapacity, deltaUsage := balances.GetBlockRewardDeltas()
-	qt.Capacity += deltaCapacity
-	qt.Used += deltaUsage
-	if qt.Capacity < 0 || qt.Used < 0 {
-		return fmt.Errorf("negative capaciy %d or used %d", qt.Capacity, qt.Used)
+
+	var nextQt blockrewards.QualifyingTotals
+	if len(qtl.Totals) > 0 {
+		nextQt = qtl.Totals[len(qtl.Totals)-1]
 	}
-	// todo have to handle case where block reward settings are changed
-	var qtl blockrewards.QualifyingTotalsSlice
-	qtl, err = blockrewards.GetQualifyingTotalsList(balances)
+	nextQt.Round = balances.GetBlock().Round
+	settings, changed, err := qtl.HasBlockRewardsSettingsChanged(balances)
 	if err != nil {
 		return err
 	}
-	//qtl[balances.GetBlock().Round] = *qt
-	qtl = append(qtl, *qt)
+	if changed {
+		nextQt.SettingsChange = settings
+		nextQt.LastSettingsChange = nextQt.Round
+	} else {
+		nextQt.SettingsChange = nil
+	}
+	deltaCapacity, deltaUsed := balances.GetBlockRewardDeltas()
+	nextQt.Capacity += deltaCapacity
+	nextQt.Used += deltaUsed
+
+	qtl.Totals = append(qtl.Totals, nextQt)
 	logging.Logger.Info("piers added qt of UpdateRewardTotalList",
 		zap.Int64("round number", balances.GetBlock().Round),
-		zap.Any("new qualifying totals", qt),
-		zap.Any("new entry totals", qtl[balances.GetBlock().Round]),
+		zap.Any("new qualifying totals", nextQt),
 	)
 	if err := qtl.Save(balances); err != nil {
-		return err
+		return fmt.Errorf("saving qualifying totals list: %v", err)
 	}
-	if len(qtl) > 3 {
+	if len(qtl.Totals) > 3 {
 		logging.Logger.Info("piers end UpdateRewardTotalList",
-			zap.Int("length qtl", len(qtl)),
-			zap.Any("new list", qtl[len(qtl)-3:]),
+			zap.Int("length qtl", len(qtl.Totals)),
+			zap.Any("new list", qtl.Totals[len(qtl.Totals)-3:]),
 		)
 	} else {
 		logging.Logger.Info("piers end UpdateRewardTotalList",
-			zap.Int("length qtl", len(qtl)),
+			zap.Int("length qtl", len(qtl.Totals)),
 			zap.Any("new list", qtl),
 		)
 	}

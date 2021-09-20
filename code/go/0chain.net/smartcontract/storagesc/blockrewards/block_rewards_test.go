@@ -51,3 +51,25 @@ func TestGetBlockPayments(t *testing.T) {
 		})
 	}
 }
+
+func TestHasBlockRewardsSettingsChanged(t *testing.T) {
+	type want struct {
+		reward BlockReward
+	}
+
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "ok",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+		})
+	}
+}
