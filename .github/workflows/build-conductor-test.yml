@@ -15,10 +15,18 @@ env:
 jobs:
   conductor_build: 
     name: CONDUCTOR-BUILD
-    runs-on: [self-hosted, conductor-test]
+    runs-on: [self-hosted, conductor-test01]
     
     steps:
     - uses: actions/checkout@v1
+
+    - name: Docker Init Setup.
+      run: |
+        bash ./docker.local/bin/init.setup.sh
+
+    - name: Docker Network Setup.
+      run: |
+        bash ./docker.local/bin/setup_network.sh || true
 
     - name: Setting Up View Change
       run: |
@@ -54,7 +62,7 @@ jobs:
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
-    runs-on: [self-hosted, conductor-test]
+    runs-on: [self-hosted, conductor-test01]
     
     needs:
     - conductor_build
