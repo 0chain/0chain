@@ -20,37 +20,37 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Setting Up View Change
-      run: |
-        cd ./docker.local/config
-        filename='0chain.yaml'
-        # Check the new text is empty or not
-        if ! grep -q view_change "$filename"; then
-          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-        else
-          sed -i '/view_change/d' $filename
-          sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-        fi
-      env:
-        VIEW_CHANGE: ${{ github.event.inputs.view_change }}
+    # - name: Setting Up View Change
+    #   run: |
+    #     cd ./docker.local/config
+    #     filename='0chain.yaml'
+    #     # Check the new text is empty or not
+    #     if ! grep -q view_change "$filename"; then
+    #       sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+    #     else
+    #       sed -i '/view_change/d' $filename
+    #       sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
+    #     fi
+    #   env:
+    #     VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
-    - name: Building Base Images
-      run: |
-        docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+    # - name: Building Base Images
+    #   run: |
+    #     docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+    #     docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
-    - name: Build Miner Docker Image For Integration Test.
-      run: |
-        bash ./docker.local/bin/build.miners-integration-tests.sh
+    # - name: Build Miner Docker Image For Integration Test.
+    #   run: |
+    #     bash ./docker.local/bin/build.miners-integration-tests.sh
 
-    - name: Build Sharder Docker Image For Integration Test.
-      run: |
-        bash ./docker.local/bin/build.sharders-integration-tests.sh
+    # - name: Build Sharder Docker Image For Integration Test.
+    #   run: |
+    #     bash ./docker.local/bin/build.sharders-integration-tests.sh
 
-    - name: View Change Rounds
-      run: |
-        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
-        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
+    # - name: View Change Rounds
+    #   run: |
+    #     awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+    #     awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
@@ -60,7 +60,7 @@ jobs:
     - conductor_build
 
     steps:
-    - uses: actions/checkout@v1
+    # - uses: actions/checkout@v1
 
     - uses: actions/setup-go@v2
       with:
