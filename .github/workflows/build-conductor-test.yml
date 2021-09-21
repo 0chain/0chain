@@ -34,18 +34,18 @@ jobs:
       env:
         VIEW_CHANGE: ${{ github.event.inputs.view_change }}
 
-    # - name: Building Base Images
-    #   run: |
-    #     docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-    #     docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+    - name: Building Base Images
+      run: |
+        docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
-    # - name: Build Miner Docker Image For Integration Test.
-    #   run: |
-    #     bash ./docker.local/bin/build.miners-integration-tests.sh
+    - name: Build Miner Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.miners-integration-tests.sh
 
-    # - name: Build Sharder Docker Image For Integration Test.
-    #   run: |
-    #     bash ./docker.local/bin/build.sharders-integration-tests.sh
+    - name: Build Sharder Docker Image For Integration Test.
+      run: |
+        bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: View Change Rounds
       run: |
@@ -68,11 +68,11 @@ jobs:
 
     - name: Running Standard Tests for Miners.
       run: |
-        sudo bash ./docker.local/bin/start.conductor.sh miners
+        bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
-        sudo bash ./docker.local/bin/start.conductor.sh sharders
+        bash ./docker.local/bin/start.conductor.sh sharders
   
   # conductor_vc_tests:
   #   name: CONDUCTOR-VIEW-CHANGE-TESTS
