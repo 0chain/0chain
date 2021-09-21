@@ -232,10 +232,25 @@ func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
 	return
 }
 
-type BurnPayload struct {
+type BurnPayloadResponse struct {
 	TxnID           string `json:"0chain_txn_id"`
 	Nonce           int64  `json:"nonce"`
 	Amount          int64  `json:"amount"`
+	EthereumAddress string `json:"ethereum_address"`
+}
+
+func (bp *BurnPayloadResponse) Encode() []byte {
+	buff, _ := json.Marshal(bp)
+	return buff
+}
+
+func (bp *BurnPayloadResponse) Decode(input []byte) error {
+	err := json.Unmarshal(input, bp)
+	return err
+}
+
+type BurnPayload struct {
+	Nonce           int64  `json:"nonce"`
 	EthereumAddress string `json:"ethereum_address"`
 }
 

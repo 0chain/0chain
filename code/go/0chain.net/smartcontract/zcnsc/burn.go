@@ -35,9 +35,6 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	payload.TxnID = trans.Hash
-	payload.Amount = trans.Value
-
 	// get user node and update nonce
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
@@ -65,6 +62,14 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 	if err != nil {
 		return "", err
 	}
-	resp = string(payload.Encode())
+
+	response := &BurnPayloadResponse{
+		TxnID:           trans.Hash,
+		Amount:          trans.Value,
+		Nonce:           payload.Nonce,
+		EthereumAddress: payload.EthereumAddress,
+	}
+
+	resp = string(response.Encode())
 	return
 }
