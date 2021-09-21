@@ -17,7 +17,7 @@ env:
 jobs:
   Dockerize_Miner_Sharder:
     name: Docker images for miner/sharder.
-    runs-on: load-test
+    runs-on: [self-hosted, conductor-test02]
     steps:
     - uses: actions/checkout@v2
 
@@ -46,11 +46,11 @@ jobs:
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $MINER_REGISTRY:$TAG -f "$DOCKERFILE_MINER" .
         docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:latest
         docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:staging
-        docker push $MINER_REGISTRY:$TAG
+        # docker push $MINER_REGISTRY:$TAG
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $SHARDER_REGISTRY:$TAG -f "$DOCKERFILE_SHARDER" .
         docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:latest
         docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:staging
-        docker push $SHARDER_REGISTRY:$TAG
+        # docker push $SHARDER_REGISTRY:$TAG
       env:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
@@ -68,9 +68,10 @@ jobs:
       env:
         PUSH_LATEST: "no"
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
   Conductor_Test:
     name: Conductor Tests for Miners & Sharders.
-    runs-on: load-test
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Dockerize_Miner_Sharder
@@ -101,7 +102,7 @@ jobs:
       
   Loadtestv1:
     name: Trigger loadtest v1.
-    runs-on: conductor-test
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Conductor_Test
@@ -128,7 +129,7 @@ jobs:
         repo: loadTest
         github_token: ${{ secrets.CHAIN_PAT }}
         workflow_file_name: load-test-v1.yml
-        ref: ${{ steps.get_tag.outputs.BRANCH }}
+        ref: staging
         inputs: ${{ steps.get_tag.outputs.JSON }}
         propagate_failure: true
         trigger_workflow: true
@@ -136,7 +137,7 @@ jobs:
 
   Update_Images:
     name: Update images over test.0chain.net.
-    runs-on: ubuntu-20.04
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Conductor_Test
