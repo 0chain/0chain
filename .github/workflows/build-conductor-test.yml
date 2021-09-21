@@ -18,9 +18,7 @@ jobs:
     runs-on: conductor-test
     
     steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v1
 
     - name: Get Branch
       id: get_info
