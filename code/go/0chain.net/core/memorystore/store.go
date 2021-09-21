@@ -3,7 +3,6 @@ package memorystore
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"0chain.net/core/common"
@@ -40,7 +39,7 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	if data == nil {
 		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), redisKey))
 	}
-	datastore.FromJSON(data, entity)
+	datastore.FromMsgpack(data, entity)
 	entity.ComputeProperties()
 	return nil
 }
@@ -51,7 +50,7 @@ func (ms *Store) Write(ctx context.Context, entity datastore.Entity) error {
 }
 
 func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) error {
-	buffer := datastore.ToJSON(entity)
+	buffer := datastore.ToMsgpack(entity)
 	redisKey := GetEntityKey(entity)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
@@ -157,7 +156,7 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 			continue
 		}
 		entity := entities[idx]
-		err = json.Unmarshal(ae.([]byte), entity)
+		err = datastore.FromMsgpack(ae.([]byte), entity)
 		if err != nil {
 			return err
 		}
@@ -195,7 +194,7 @@ func (ms *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.Ent
 		}
 		kvpair[2*idx] = GetEntityKey(entity)
 		kvpair[2*idx+1] = bytes.NewBuffer(make([]byte, 0, 256))
-		json.NewEncoder(kvpair[2*idx+1].(*bytes.Buffer)).Encode(entity)
+		datastore.WriteJSON(kvpair[2*idx+1].(*bytes.Buffer), entity)
 	}
 	c := GetEntityCon(ctx, entityMetadata)
 	c.Send("MSET", kvpair...)

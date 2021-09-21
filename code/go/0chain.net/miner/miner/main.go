@@ -221,6 +221,10 @@ func main() {
 	// if there is errors
 	mc.SetupLatestAndPreviousMagicBlocks(ctx)
 
+	if err := mc.LoadMinersPublicKeys(); err != nil {
+		logging.Logger.Error("failed to load miners public keys", zap.Error(err))
+	}
+
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		genesisDKG := viper.GetInt64("network.genesis_dkg")

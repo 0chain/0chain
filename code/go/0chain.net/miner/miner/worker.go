@@ -150,7 +150,7 @@ func TransactionGenerator(c *chain.Chain) {
 						} else {
 							txn = createDataTransaction(prng)
 						}
-						_, err := transaction.PutTransaction(ctx, txn)
+						_, err := transaction.PutTransactionWithoutValidate(ctx, txn)
 						if err != nil {
 							logging.Logger.Info("transaction generator", zap.Any("error", err))
 						}

@@ -318,7 +318,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	}
 	validChannel := make(chan bool, numWorkers)
 	validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
-		for idx, txn := range txns {
+		txnsLen := len(txns)
+		signs := make([]string, 0, txnsLen)
+		pks := make([]string, 0, txnsLen)
+		hashes := make([]string, 0, txnsLen)
+
+		for _, txn := range txns {
 			if cancel {
 				validChannel <- false
 				return
@@ -343,12 +348,24 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				return
 			}
 			if aggregate {
-				sigScheme, err := txn.GetSignatureScheme(ctx)
+				signs = append(signs, txn.Signature)
+				pk, err := txn.GetPublicKeyStr(ctx)
 				if err != nil {
-					panic(err)
+					cancel = true
+					logging.Logger.Error("failed to get transaction public key", zap.Error(err))
+					return
 				}
-				aggregateSignatureScheme.Aggregate(sigScheme, start+idx, txn.Signature, txn.Hash)
+
+				pks = append(pks, pk)
+				hashes = append(hashes, txn.Hash)
 			}
+			if b.PrevBlock == nil {
+				cancel = true
+				validChannel <- false
+				logging.Logger.Error("validate transactions - block does not have prior block", zap.Int64("round", b.Round))
+				return
+			}
+
 			ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
 			if ok || err != nil {
 				if err != nil {
@@ -358,6 +375,29 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
+		}
+
+		sig, err := encryption.BLS0ChainAggregateSignatures(signs)
+		if err != nil {
+			logging.Logger.Error("failed to aggregate signatures", zap.Error(err))
+			cancel = true
+			validChannel <- false
+			return
+		}
+
+		pubKeys, err := mc.GetMinersPublicKeys(pks)
+		if err != nil {
+			logging.Logger.Error("failed to get miners public keys", zap.Error(err))
+			cancel = true
+			validChannel <- false
+			return
+		}
+
+		if !sig.VerifyAggregate(pubKeys, hashes) {
+			logging.Logger.Error("failed to very aggregate signatures")
+			cancel = true
+			validChannel <- false
+			return
 		}
 		validChannel <- true
 	}
@@ -381,11 +421,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		count++
 		if count == numWorkers {
 			break
-		}
-	}
-	if aggregate {
-		if _, err := aggregateSignatureScheme.Verify(); err != nil {
-			return err
 		}
 	}
 	btvTimer.UpdateSince(ts)

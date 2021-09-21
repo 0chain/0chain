@@ -927,7 +927,7 @@ func (c *Chain) ReadNodePools(configFile string) {
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
-	for cb := b; cb != nil; pb, cb = cb, c.GetPreviousBlock(ctx, cb) {
+	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
 		if cb.Round == 0 {
 			return false, nil
 		}

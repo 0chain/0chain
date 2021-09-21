@@ -293,6 +293,19 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 	return co.GetSignatureScheme(), nil
 }
 
+func (t *Transaction) GetPublicKeyStr(ctx context.Context) (string, error) {
+	if t.PublicKey != "" {
+		return t.PublicKey, nil
+	}
+
+	co, err := client.GetClient(ctx, t.ClientID)
+	if err != nil {
+		return "", err
+	}
+
+	return co.PublicKey, nil
+}
+
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	t := &Transaction{}
