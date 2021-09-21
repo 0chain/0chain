@@ -28,12 +28,8 @@ func (conf *scConfig) Decode(p []byte) error {
 
 func TestUpdateRewardTotalList(t *testing.T) {
 	const (
-		mockBlobberId        = "mock blobber id"
-		mockDelegateWallet   = "mock delegate wallet"
-		carryDelta           = 0.1
-		mockNumberStakePools = 10
-		mockCapacity         = 1024
-		mockUsage            = 2048
+		mockCapacity = 1024
+		mockUsage    = 2048
 	)
 
 	var (
@@ -65,9 +61,6 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		errorMsg string
 	}
 
-	type args struct {
-	}
-
 	var setup = func(t *testing.T, p parameters) *mocks.StateContextI {
 		var balances = mocks.StateContextI{}
 
@@ -96,20 +89,20 @@ func TestUpdateRewardTotalList(t *testing.T) {
 
 		var beforeQtl blockrewards.QualifyingTotalsList
 		var afterQtl blockrewards.QualifyingTotalsList
-		for i := int64(0); i < p.round; i++ {
+		for round := int64(0); round < p.round; round++ {
 			var setting *blockrewards.BlockReward
-			if i == 0 {
+			if round == 0 {
 				setting = &mockSettings
 			}
 			beforeQtl.Totals = append(beforeQtl.Totals, blockrewards.QualifyingTotals{
-				Round:              i,
+				Round:              round,
 				Capacity:           mockCapacity,
 				Used:               mockUsage,
 				LastSettingsChange: 0,
 				SettingsChange:     setting,
 			})
 			afterQtl.Totals = append(afterQtl.Totals, blockrewards.QualifyingTotals{
-				Round:              i,
+				Round:              round,
 				Capacity:           mockCapacity,
 				Used:               mockUsage,
 				LastSettingsChange: 0,

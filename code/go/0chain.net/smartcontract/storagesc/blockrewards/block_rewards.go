@@ -15,13 +15,12 @@ import (
 )
 
 const (
-	storagScAddress = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+	storageScAddress = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 )
 
 var (
-	QualifyingTotalsKey         = datastore.Key(storagScAddress + encryption.Hash("qualifying_totals"))
-	QualifyingTotalsPerBlockKey = datastore.Key(storagScAddress + encryption.Hash("qualifying_totals_per_block"))
-	ConfigKey                   = datastore.Key(storagScAddress + ":configurations")
+	QualifyingTotalsPerBlockKey = datastore.Key(storageScAddress + encryption.Hash("qualifying_totals_per_block"))
+	ConfigKey                   = datastore.Key(storageScAddress + ":configurations")
 )
 
 type BlockReward struct {
@@ -127,6 +126,16 @@ func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.
 
 	lastSettings := qtl.Totals[len(qtl.Totals)-1].LastSettingsChange
 	settings := qtl.Totals[lastSettings].SettingsChange
+	if settings == nil {
+		panic(fmt.Sprintf(
+			"settings nil, index: %d, lastsettings: %d, totals now: %v,\ttotals lastsettings %v,\tall totals: %v",
+			len(qtl.Totals)-1,
+			lastSettings,
+			qtl.Totals[len(qtl.Totals)-1],
+			qtl.Totals[lastSettings],
+			qtl.Totals,
+		))
+	}
 
 	if settings.BlockReward != conf.BlockReward.BlockReward ||
 		settings.QualifyingStake != conf.BlockReward.QualifyingStake ||

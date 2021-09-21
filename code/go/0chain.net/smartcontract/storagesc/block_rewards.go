@@ -63,7 +63,7 @@ func payBlobberRewards(
 	balances cstate.StateContextI,
 ) error {
 	var round = balances.GetBlock().Round
-	if qtl.Totals == nil {
+	if qtl == nil {
 		var err error
 		qtl, err = blockrewards.GetQualifyingTotalsList(balances)
 		if err != nil {

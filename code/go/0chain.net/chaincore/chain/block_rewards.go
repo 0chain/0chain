@@ -60,8 +60,14 @@ func (c *Chain) updateBlockRewardTotals(sctx bcstate.StateContextI) error {
 }
 */
 func UpdateRewardTotalList(balances cstate.StateContextI) error {
+	round := balances.GetBlock().Round
+	if round < 0 {
+		return nil
+	}
+
 	logging.Logger.Info("piers start UpdateRewardTotalList",
-		zap.Int64("round", balances.GetBlock().Round))
+		zap.Int64("round", round))
+
 	var qtl *blockrewards.QualifyingTotalsList
 	qtl, err := blockrewards.GetQualifyingTotalsList(balances)
 	if err != nil {
@@ -71,11 +77,29 @@ func UpdateRewardTotalList(balances cstate.StateContextI) error {
 	var nextQt blockrewards.QualifyingTotals
 	if len(qtl.Totals) > 0 {
 		nextQt = qtl.Totals[len(qtl.Totals)-1]
+	} else {
+		if round > 0 {
+			return fmt.Errorf("update_block_rewards, "+
+				"corrupted chain, list empty on round %v", round)
+		}
 	}
-	nextQt.Round = balances.GetBlock().Round
+
+	if nextQt.Round != round-1 {
+		if nextQt.Round != round {
+			return fmt.Errorf("update_block_rewards, currupt chain,"+
+				" rounds not sequental %v, and %v", nextQt.Round, round)
+		}
+		return nil
+	}
+	if int64(len(qtl.Totals)) != round {
+		return fmt.Errorf("update_block_rewards, currupt chain block reward entries %d "+
+			"do not much round number %d", len(qtl.Totals), round)
+	}
+
+	nextQt.Round = round
 	settings, changed, err := qtl.HasBlockRewardsSettingsChanged(balances)
 	if err != nil {
-		return err
+		return fmt.Errorf("update_block_rewards: %v", err)
 	}
 	if changed {
 		nextQt.SettingsChange = settings
@@ -88,13 +112,16 @@ func UpdateRewardTotalList(balances cstate.StateContextI) error {
 	nextQt.Used += deltaUsed
 
 	qtl.Totals = append(qtl.Totals, nextQt)
+
 	logging.Logger.Info("piers added qt of UpdateRewardTotalList",
-		zap.Int64("round number", balances.GetBlock().Round),
+		zap.Int64("round number", round),
 		zap.Any("new qualifying totals", nextQt),
 	)
+
 	if err := qtl.Save(balances); err != nil {
-		return fmt.Errorf("saving qualifying totals list: %v", err)
+		return fmt.Errorf("update_block_rewards, saving qualifying totals list: %v", err)
 	}
+
 	if len(qtl.Totals) > 3 {
 		logging.Logger.Info("piers end UpdateRewardTotalList",
 			zap.Int("length qtl", len(qtl.Totals)),
@@ -106,5 +133,6 @@ func UpdateRewardTotalList(balances cstate.StateContextI) error {
 			zap.Any("new list", qtl),
 		)
 	}
+
 	return nil
 }
