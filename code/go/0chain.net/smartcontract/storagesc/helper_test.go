@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -32,9 +31,6 @@ func toks(val state.Balance) string {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
 	logging.Logger = zap.NewNop()
 }
