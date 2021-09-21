@@ -64,12 +64,10 @@ jobs:
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
-        cd /root/0chain/
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: View Change Rounds
       run: |
-        cd /root/0chain/
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
@@ -81,6 +79,8 @@ jobs:
     - conductor_build
 
     steps:
+    - uses: actions/checkout@v1
+    
     - name: Running Standard Tests for Miners.
       run: |
         bash ./docker.local/bin/start.conductor.sh miners
