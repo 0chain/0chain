@@ -73,25 +73,21 @@ jobs:
         awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
         awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
-  # conductor_standard_tests:
-  #   name: CONDUCTOR-STANDARD-TESTS
-  #   runs-on: conductor-test
+  conductor_standard_tests:
+    name: CONDUCTOR-STANDARD-TESTS
+    runs-on: conductor-test
     
-  #   needs:
-  #   - conductor_build
+    needs:
+    - conductor_build
 
-  #   steps:
-  #   - name: Running Standard Tests for Miners.
-  #     run: |
-  #       cd /root/0chain/
-  #       source ~/.profile
-  #       # bash ./docker.local/bin/start.conductor.sh miners
+    steps:
+    - name: Running Standard Tests for Miners.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh miners
 
-  #   - name: Running Standard Tests for Sharders.
-  #     run: |
-  #       cd /root/0chain/
-  #       source ~/.profile
-  #       bash ./docker.local/bin/start.conductor.sh sharders
+    - name: Running Standard Tests for Sharders.
+      run: |
+        bash ./docker.local/bin/start.conductor.sh sharders
   
   # conductor_vc_tests:
   #   name: CONDUCTOR-VIEW-CHANGE-TESTS
