@@ -17,7 +17,7 @@ env:
 jobs:
   Dockerize_Miner_Sharder:
     name: Docker images for miner/sharder.
-    runs-on: load-test
+    runs-on: [self-hosted, conductor-test02]
     steps:
     - uses: actions/checkout@v2
 
@@ -68,9 +68,10 @@ jobs:
       env:
         PUSH_LATEST: "no"
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
   Conductor_Test:
     name: Conductor Tests for Miners & Sharders.
-    runs-on: load-test
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Dockerize_Miner_Sharder
@@ -101,7 +102,7 @@ jobs:
       
   Loadtestv1:
     name: Trigger loadtest v1.
-    runs-on: conductor-test
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Conductor_Test
@@ -136,7 +137,7 @@ jobs:
 
   Update_Images:
     name: Update images over test.0chain.net.
-    runs-on: ubuntu-20.04
+    runs-on: [self-hosted, conductor-test02]
 
     needs:
     - Conductor_Test

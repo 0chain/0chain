@@ -68,8 +68,6 @@ jobs:
     - conductor_build
 
     steps:
-    # - uses: actions/checkout@v1
-
     - uses: actions/setup-go@v2
       with:
         go-version: '1.16.5'
@@ -82,44 +80,59 @@ jobs:
       run: |
         bash ./docker.local/bin/start.conductor.sh sharders
   
-  # conductor_vc_tests:
-  #   name: CONDUCTOR-VIEW-CHANGE-TESTS
-  #   runs-on: conductor-test
+  conductor_vc_tests:
+    name: CONDUCTOR-VIEW-CHANGE-TESTS
+    runs-on: [self-hosted, conductor-test01]
     
-  #   needs:
-  #   - conductor_standard_tests
+    needs:
+    - conductor_standard_tests
     
-  #   steps:
-  #   - name: Running Fault Tolerance Tests.
-  #     run: |
-  #       cd /root/0chain/
-  #       source ~/.profile
-  #       if [[ "$VIEW" == "true" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
-  #       elif [[ "$VIEW" == "false" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
-  #       fi
-  #     env:
-  #       VIEW: ${{ github.event.inputs.view_change }}
+    steps:
+    - name: Running Fault Tolerance Tests.
+      run: |
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
-  #   - name: Running Byzantine Tests.
-  #     run: |
-  #       cd /root/0chain/
-  #       if [[ "$VIEW" == "true" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh view-change.byzantine
-  #       elif [[ "$VIEW" == "false" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
-  #       fi
-  #     env:
-  #       VIEW: ${{ github.event.inputs.view_change }}
+    - name: Running Byzantine Tests.
+      run: |
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
-  #   - name: Running View Change-3 Tests.
-  #     run: |
-  #       cd /root/0chain/
-  #       if [[ "$VIEW" == "true" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh view-change-3
-  #       elif [[ "$VIEW" == "false" ]]; then
-  #         bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
-  #       fi
-  #     env:
-  #       VIEW: ${{ github.event.inputs.view_change }}
+    - name: Running View Change-3 Tests.
+      run: |
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change-3
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
+
+  upload_artifacts:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test01]
+    
+    if: always()
+    needs: [conductor_build, conductor_standard_tests, conductor_vc_tests]
+    
+    steps:
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-logs.tar.gz
+      
