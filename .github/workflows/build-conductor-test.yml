@@ -15,29 +15,10 @@ env:
 jobs:
   conductor_build: 
     name: CONDUCTOR-BUILD
-    runs-on: conductor-test
+    runs-on: [self-hosted, conductor-test]
     
     steps:
     - uses: actions/checkout@v1
-
-    - name: Get Branch
-      id: get_info
-      run: |
-        BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
-        echo "Branch == ${BRANCH}"
-
-    - name: Git Checkout
-      run: |
-        cd /root/0chain/
-        git checkout .
-        git pull
-        git checkout rrrooommmaaa/conductor-peter
-      env:
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
     - name: Setting Up View Change
       run: |
@@ -73,7 +54,7 @@ jobs:
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
-    runs-on: conductor-test
+    runs-on: [self-hosted, conductor-test]
     
     needs:
     - conductor_build
@@ -83,7 +64,7 @@ jobs:
 
     - uses: actions/setup-go@v2
       with:
-        go-version: '^1.16.5'
+        go-version: '1.16.5'
 
     - name: Running Standard Tests for Miners.
       run: |
