@@ -104,9 +104,7 @@ func CreateSmartContractGlobalNode() *GlobalNode {
 
 func createBurnPayload() *BurnPayload {
 	return &BurnPayload{
-		TxnID:           txHash,
 		Nonce:           1,
-		Amount:          200,
 		EthereumAddress: ADDRESS,
 	}
 }
