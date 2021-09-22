@@ -79,7 +79,7 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	ctx := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc(clientId, 10)
 
-	publicKey := &PublicKey{Key: tr.PublicKey}
+	publicKey := &AuthorizerParameter{PublicKey: tr.PublicKey}
 	data, _ := publicKey.Encode()
 
 	_, err := contract.AddAuthorizer(tr, data, ctx)
@@ -110,7 +110,7 @@ func Test_AuthorizersShouldNotBeInitializedWhenContextIsCreated(t *testing.T) {
 
 func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 	sc := MakeMockStateContext()
-	an := GetNewAuthorizer("public key", "id")
+	an := GetNewAuthorizer("public key", "id", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -134,7 +134,7 @@ func TestAuthorizerNodeShouldBeAbleToAddTransfer(t *testing.T) {
 }
 
 func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
-	an := GetNewAuthorizer("public key", "id")
+	an := GetNewAuthorizer("public key", "id", "https://localhost:9876")
 	tr := CreateDefaultTransactionToZcnsc()
 
 	var transfer *state.Transfer
@@ -151,7 +151,8 @@ func TestAuthorizerNodeShouldBeAbleToDigPool(t *testing.T) {
 }
 
 func Test_BasicShouldAddAuthorizer(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	sc := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc("client0", 10)
@@ -171,7 +172,8 @@ func Test_BasicShouldAddAuthorizer(t *testing.T) {
 }
 
 func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	sc := CreateZCNSmartContract()
 	balances := MakeMockStateContext()
 	tr := CreateTransactionToZcnsc("client0", 10)
@@ -251,7 +253,7 @@ func Test_Should_FailWithoutPublicKey(t *testing.T) {
 }
 
 func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
-	pk := &PublicKey{Key: "public Key"}
+	pk := &AuthorizerParameter{PublicKey: "public Key", URL: "https://localhost:9876"}
 	data, _ := json.Marshal(pk)
 	tr := CreateTransactionToZcnsc("client0", 10)
 	tr.PublicKey = ""
@@ -265,7 +267,8 @@ func Test_Transaction_Or_InputData_MustBe_A_Key_InputData(t *testing.T) {
 }
 
 func Test_Transaction_Or_InputData_MustBe_A_Key_Transaction(t *testing.T) {
-	var data []byte
+	param := CreateAuthorizerParam()
+	data, _ := param.Encode()
 	tr := CreateTransactionToZcnsc("client0", 10)
 	tr.PublicKey = "public Key"
 	balances := MakeMockStateContext()
@@ -316,7 +319,7 @@ func Test_LockingBasicLogicTest(t *testing.T) {
 
 func Test_Can_DigPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := GetNewAuthorizer("key", tr.ClientID)
+	an := GetNewAuthorizer("key", tr.ClientID, "https://localhost:9876")
 	_, _, err := an.Staking.DigPool(tr.Hash, tr)
 	require.NoError(t, err)
 }
@@ -324,19 +327,19 @@ func Test_Can_DigPool(t *testing.T) {
 func Test_Can_EmptyPool(t *testing.T) {
 	balances := MakeMockStateContext()
 	tr := CreateDefaultTransactionToZcnsc()
-	gn := GetGlobalNode(balances)
+	gn, err := GetGlobalNode(balances)
 
-	an := GetNewAuthorizer("key", tr.ClientID)
+	an := GetNewAuthorizer("key", tr.ClientID, "https://localhost:9876")
 
 	_, _, _ = an.Staking.DigPool(tr.Hash, tr)
-	_, _, err := an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
+	_, _, err = an.Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 
 	require.NoError(t, err)
 }
 
 func TestAuthorizerNodeShouldBeDecodedWithStakingPool(t *testing.T) {
 	tr := CreateDefaultTransactionToZcnsc()
-	an := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	an := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
 	require.NotNil(t, an.Staking.TokenLockInterface)
 
 	ans := &AuthorizerNodes{}
@@ -367,7 +370,7 @@ func Test_GetAuthorizerNodes_ShouldBeAbleToReturnNodes(t *testing.T) {
 	require.NotNil(t, ans)
 
 	tr := CreateTransactionToZcnsc("client0", 10)
-	an := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	an := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
 	err = ans.AddAuthorizer(an)
 	require.NoError(t, err)
 	require.NotNil(t, an.Staking.TokenLockInterface)
@@ -390,7 +393,7 @@ func Test_GetAuthorizerNodes_ShouldBeAbleToReturnNodes(t *testing.T) {
 func Test_NewAuthorizer_MustHave_LockPool_Initialized(t *testing.T) {
 	// Init
 	tr := CreateTransactionToZcnsc("client0", 10)
-	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID)
+	node := GetNewAuthorizer(tr.PublicKey, tr.ClientID, "https://localhost:9876")
 	require.NotNil(t, node.Staking.TokenLockInterface)
 	balances := MakeMockStateContext()
 
@@ -477,7 +480,7 @@ func Test_Authorizer_EmptyPool_SimpleTest_Transfer(t *testing.T) {
 	ans, err := GetAuthorizerNodes(ctx)
 	require.NoError(t, err)
 
-	gn := GetGlobalNode(ctx)
+	gn, err := GetGlobalNode(ctx)
 	transfer, resp, err := ans.NodeMap[tr.ClientID].Staking.EmptyPool(gn.ID, tr.ClientID, tr)
 	require.NoError(t, err)
 

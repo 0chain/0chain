@@ -26,9 +26,7 @@ func TestBurnPayload_Encode_Decode(t *testing.T) {
 	expected := createBurnPayload()
 	err := actual.Decode(expected.Encode())
 	require.NoError(t, err)
-	require.Equal(t, expected.Amount, actual.Amount)
 	require.Equal(t, expected.Nonce, actual.Nonce)
-	require.Equal(t, expected.TxnID, actual.TxnID)
 	require.Equal(t, expected.EthereumAddress, actual.EthereumAddress)
 }
 
@@ -189,8 +187,6 @@ func Test_Burn_should_return_encoded_payload(t *testing.T) {
 	actual := &BurnPayload{}
 	err = actual.Decode([]byte(resp))
 	require.NoError(t, err)
-	require.Equal(t, tr.Value, actual.Amount)
-	require.Equal(t, tr.Hash, actual.TxnID)
 }
 
 func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
@@ -207,7 +203,7 @@ func Test_Should_Have_Added_TransferAfter_Burn(t *testing.T) {
 	transfers := ctx.GetTransfers()
 	require.Equal(t, len(transfers), 1)
 
-	gn := GetGlobalNode(ctx)
+	gn, _ := GetGlobalNode(ctx)
 	require.NotNil(t, gn)
 
 	transfer := transfers[0]

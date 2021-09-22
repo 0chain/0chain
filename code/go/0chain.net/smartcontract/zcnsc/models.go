@@ -12,11 +12,13 @@ import (
 	"fmt"
 	"time"
 
-	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var (
@@ -67,18 +69,24 @@ func GetGlobalSavedNode(balances cstate.StateContextI) (*GlobalNode, error) {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		} else {
-			return gn, nil
+			return gn, err
 		}
 	}
-	_ = gn.Decode(gv.Encode())
-	return gn, err
+	if err := gn.Decode(gv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return gn, nil
 }
 
 // GetGlobalNode - returns global node
-func GetGlobalNode(balances cstate.StateContextI) *GlobalNode {
+func GetGlobalNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	gn, err := GetGlobalSavedNode(balances)
 	if err == nil {
-		return gn
+		return gn, nil
+	}
+
+	if gn == nil {
+		return nil, err
 	}
 
 	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.zcn.min_mint_amount"))
@@ -88,7 +96,7 @@ func GetGlobalNode(balances cstate.StateContextI) *GlobalNode {
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
 
-	return gn
+	return gn, nil
 }
 
 type AuthorizerSignature struct {
@@ -224,10 +232,25 @@ func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
 	return
 }
 
-type BurnPayload struct {
+type BurnPayloadResponse struct {
 	TxnID           string `json:"0chain_txn_id"`
 	Nonce           int64  `json:"nonce"`
 	Amount          int64  `json:"amount"`
+	EthereumAddress string `json:"ethereum_address"`
+}
+
+func (bp *BurnPayloadResponse) Encode() []byte {
+	buff, _ := json.Marshal(bp)
+	return buff
+}
+
+func (bp *BurnPayloadResponse) Decode(input []byte) error {
+	err := json.Unmarshal(input, bp)
+	return err
+}
+
+type BurnPayload struct {
+	Nonce           int64  `json:"nonce"`
 	EthereumAddress string `json:"ethereum_address"`
 }
 
@@ -241,16 +264,17 @@ func (bp *BurnPayload) Decode(input []byte) error {
 	return err
 }
 
-type PublicKey struct {
-	Key string `json:"public_key"`
+type AuthorizerParameter struct {
+	PublicKey string `json:"public_key"`
+	URL       string `json:"url"`
 }
 
-func (pk *PublicKey) Encode() (data []byte, err error) {
+func (pk *AuthorizerParameter) Encode() (data []byte, err error) {
 	data, err = json.Marshal(pk)
 	return
 }
 
-func (pk *PublicKey) Decode(input []byte) error {
+func (pk *AuthorizerParameter) Decode(input []byte) error {
 	err := json.Unmarshal(input, pk)
 	return err
 }
@@ -259,6 +283,7 @@ type AuthorizerNode struct {
 	ID        string                    `json:"id"`
 	PublicKey string                    `json:"public_key"`
 	Staking   *tokenpool.ZcnLockingPool `json:"staking"`
+	URL       string                    `json:"url"`
 }
 
 func (an *AuthorizerNode) Encode() []byte {
@@ -266,7 +291,9 @@ func (an *AuthorizerNode) Encode() []byte {
 	return bytes
 }
 
-func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+func (an *AuthorizerNode) Decode(input []byte) error {
+	tokenlock := &TokenLock{}
+
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -293,6 +320,16 @@ func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 		an.PublicKey = *pkStr
 	}
 
+	url, ok := objMap["url"]
+	if ok {
+		var urlStr *string
+		err = json.Unmarshal(*url, &urlStr)
+		if err != nil {
+			return err
+		}
+		an.URL = *urlStr
+	}
+
 	if an.Staking == nil {
 		an.Staking = &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
@@ -311,24 +348,35 @@ func (an *AuthorizerNode) Decode(input []byte, tokenlock tokenpool.TokenLockInte
 	return nil
 }
 
+func (an *AuthorizerNode) Save(balances cstate.StateContextI) (err error) {
+	_, err = balances.InsertTrieNode(ADDRESS + "auth_node" + an.ID, an)
+	if err != nil {
+		return common.NewError("save_auth_node_failed", "saving authorizer node: " + err.Error())
+	}
+	return nil
+}
+
 // GetNewAuthorizer To review: tokenLock init values
-func GetNewAuthorizer(pk string, id string) *AuthorizerNode {
+// pk = authorizer node public key
+// authId = authorizer node public id = Client ID
+func GetNewAuthorizer(pk string, authId string, url string) *AuthorizerNode {
 	return &AuthorizerNode{
+		ID:        authId,
 		PublicKey: pk,
+		URL: url,
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
-					ID:      "", // must be filled when DigPool is invoked
-					Balance: 0,
+					ID:      "", // must be filled when DigPool is invoked. Usually this is a trx.Hash
+					Balance: 0,  // filled when we dig pool
 				},
 			},
 			TokenLockInterface: TokenLock{
 				StartTime: 0,
 				Duration:  0,
-				Owner:     id,
+				Owner:     authId,
 			},
 		},
-		ID: id,
 	}
 }
 
@@ -357,7 +405,7 @@ func (an *AuthorizerNodes) Decode(input []byte) error {
 
 		for _, raw := range authorizerNodes {
 			target := &AuthorizerNode{}
-			err := target.Decode(raw, &TokenLock{})
+			err := target.Decode(raw)
 			if err != nil {
 				return err
 			}
@@ -430,19 +478,21 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 }
 
 func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
-	an := &AuthorizerNodes{}
-	av, err := balances.GetTrieNode(AllAuthorizerKey)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		} else {
-			an.NodeMap = make(map[string]*AuthorizerNode)
-			return an, nil
-		}
+	authNodes := &AuthorizerNodes{}
+	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
+	if authNodesBytes == nil {
+		authNodes.NodeMap = make(map[string]*AuthorizerNode)
+		return authNodes, nil
 	}
 
-	err = an.Decode(av.Encode())
-	return an, err
+	encoded := authNodesBytes.Encode()
+	logging.Logger.Info("get authorizer nodes", zap.String("hash", string(encoded)))
+
+	err = authNodes.Decode(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return authNodes, nil
 }
 
 type UserNode struct {
@@ -483,9 +533,8 @@ func GetUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
 	if err != nil {
 		return un, err
 	}
-	err = un.Decode(uv.Encode())
-	if err != nil {
-		return un, err
+	if err := un.Decode(uv.Encode()); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	return un, err
 }
@@ -519,11 +568,11 @@ func (tl TokenLock) LockStats(entity interface{}) []byte {
 }
 
 type poolStat struct {
-	ID           datastore.Key    `json:"pool_id"`
-	StartTime    common.Timestamp `json:"start_time"`
-	Duration     time.Duration    `json:"duration"`
-	TimeLeft     time.Duration    `json:"time_left"`
-	Locked       bool             `json:"locked"`
+	ID        datastore.Key    `json:"pool_id"`
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	TimeLeft  time.Duration    `json:"time_left"`
+	Locked    bool             `json:"locked"`
 }
 
 func (ps *poolStat) encode() []byte {

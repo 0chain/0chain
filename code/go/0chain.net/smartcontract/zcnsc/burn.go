@@ -9,17 +9,14 @@ import (
 	"0chain.net/core/common"
 )
 
-// Burn inputData - is a BurnPayload
+// Burn inputData - is a BurnPayload.
+// EthereumAddress => required
+// Nonce => required
 func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := GetGlobalNode(balances)
-
-	payload := &BurnPayload{}
-	err = payload.Decode(inputData)
+	gn, err := GetGlobalNode(balances)
 	if err != nil {
-		return
+		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
 	}
-
-	payload.TxnID = trans.Hash
 
 	// check burn amount
 	if trans.Value < gn.MinBurnAmount {
@@ -27,23 +24,27 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	payload.Amount = trans.Value
+	payload := &BurnPayload{}
+	err = payload.Decode(inputData)
+	if err != nil {
+		return
+	}
 
-	// get user node
+	if payload.EthereumAddress == "" {
+		err = common.NewError("failed to burn", "ethereum address is required")
+		return
+	}
+
+	// get user node and update nonce
 	un, err := GetUserNode(trans.ClientID, balances)
 	if err != nil && payload.Nonce != 1 {
-		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v)", err.Error()))
+		err = common.NewError("failed to burn", fmt.Sprintf("get user node error (%v) with nonce != 1, ClientID=%s, hash=%s", err.Error(), trans.ClientID, trans.Hash))
 		return
 	}
 
 	// check nonce is correct (current + 1)
 	if un.Nonce+1 != payload.Nonce {
 		err = common.NewError("failed to burn", fmt.Sprintf("the payload nonce (%v) should be 1 higher than the current nonce (%v)", payload.Nonce, un.Nonce))
-		return
-	}
-
-	if payload.EthereumAddress == "" {
-		err = common.NewError("failed to burn", "ethereum address is required")
 		return
 	}
 
@@ -61,6 +62,14 @@ func (zcn *ZCNSmartContract) Burn(trans *transaction.Transaction, inputData []by
 	if err != nil {
 		return "", err
 	}
-	resp = string(payload.Encode())
+
+	response := &BurnPayloadResponse{
+		TxnID:           trans.Hash,
+		Amount:          trans.Value,
+		Nonce:           payload.Nonce,
+		EthereumAddress: payload.EthereumAddress,
+	}
+
+	resp = string(response.Encode())
 	return
 }

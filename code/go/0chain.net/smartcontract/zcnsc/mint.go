@@ -11,7 +11,10 @@ import (
 
 // Mint inputData - is a MintPayload
 func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn := GetGlobalNode(balances)
+	gn, err := GetGlobalNode(balances)
+	if err != nil {
+		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
+	}
 
 	payload := &MintPayload{}
 	err = payload.Decode(inputData)
