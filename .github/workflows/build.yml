@@ -16,7 +16,7 @@ env:
 
 jobs:
   dockerize_miner:
-    runs-on: ubuntu-20.04
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v2
 
@@ -60,7 +60,7 @@ jobs:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
   dockerize_sharder:
-    runs-on: docker-builds
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v1
 
