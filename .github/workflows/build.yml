@@ -16,7 +16,7 @@ env:
 
 jobs:
   dockerize_miner:
-    runs-on: self-hosted
+    runs-on: [tests-suite01, tests-suite02, tests-suite03, tests-suite04, tests-suite05]
     steps:
     - uses: actions/checkout@v2
 
@@ -60,7 +60,7 @@ jobs:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
   dockerize_sharder:
-    runs-on: self-hosted
+    runs-on: [tests-suite01, tests-suite02, tests-suite03, tests-suite04, tests-suite05]
     steps:
     - uses: actions/checkout@v1
 
