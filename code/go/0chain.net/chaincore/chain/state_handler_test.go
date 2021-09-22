@@ -62,7 +62,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 	)
 
 	lfb := block.NewBlock("", 1)
-	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+	lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 	serverChain := chain.NewChainFromConfig()
 	serverChain.LatestFinalizedBlock = lfb
 
@@ -138,7 +138,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -171,7 +171,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(gn.ID + gn.ID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -208,7 +208,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				uk := encryption.Hash(faucetsc.ADDRESS + clientID)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
 					t.Fatal(err)
 				}
@@ -259,7 +259,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
@@ -301,7 +301,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
 				}
@@ -379,7 +379,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -415,7 +415,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.AllShardersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -443,7 +443,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -471,7 +471,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.GlobalNodeKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -499,7 +499,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.AllMinersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -527,7 +527,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ShardersKeepKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -555,7 +555,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.DKGMinersKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -583,7 +583,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -629,7 +629,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -681,7 +681,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				mk := encryption.Hash(minersc.ADDRESS + minerID)
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				if _, err := lfb.ClientState.Insert(util.Path(gk), &gv); err != nil {
 					t.Fatal(err)
 				}
@@ -733,7 +733,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.MinersMPKKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -775,7 +775,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.GroupShareOrSignsKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -817,7 +817,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.MagicBlockKey)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -851,7 +851,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(minersc.ADDRESS + clientID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -887,7 +887,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -937,7 +937,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + encryption.Hash(":"))
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -979,7 +979,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1007,7 +1007,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1098,7 +1098,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1174,7 +1174,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1217,7 +1217,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":blobberchallenge:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1245,7 +1245,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ALL_BLOBBERS_KEY)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1391,7 +1391,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1424,7 +1424,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1494,7 +1494,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				gv := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &gv); err != nil {
 					t.Fatal(err)
@@ -1530,7 +1530,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + ":configurations")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1589,7 +1589,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + allocationID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1632,7 +1632,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: blob}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(storagesc.ADDRESS + allocationID)
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)
@@ -1697,7 +1697,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 
 				lfb := block.NewBlock("", 1)
-				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1)
+				lfb.ClientState = util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), 1, nil)
 				k := encryption.Hash(vestingsc.ADDRESS + ":clientvestingpools:")
 				if _, err := lfb.ClientState.Insert(util.Path(k), &v); err != nil {
 					t.Fatal(err)

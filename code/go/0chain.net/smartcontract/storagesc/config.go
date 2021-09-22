@@ -1,17 +1,17 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
 
+	"0chain.net/smartcontract"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
@@ -29,6 +29,7 @@ type freeAllocationSettings struct {
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
 	WritePriceRange            PriceRange    `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	ReadPoolFraction           float64       `json:"read_pool_fraction"`
 }
 
 type stakePoolConfig struct {
@@ -249,6 +250,10 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative free_allocation_settings.max_challenge_completion_time: %v",
 			sc.FreeAllocationSettings.MaxChallengeCompletionTime)
 	}
+	if sc.FreeAllocationSettings.ReadPoolFraction < 0 || 1 < sc.FreeAllocationSettings.ReadPoolFraction {
+		return fmt.Errorf("free_allocation_settings.free_read_pool must be in [0,1]: %v",
+			sc.FreeAllocationSettings.ReadPoolFraction)
+	}
 
 	if sc.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
@@ -417,6 +422,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		Max: state.Balance(scc.GetFloat64(fas+"write_price_range.max") * 1e10),
 	}
 	conf.FreeAllocationSettings.MaxChallengeCompletionTime = scc.GetDuration(fas + "max_challenge_completion_time")
+	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
 	// allocation cancellation
 	conf.FailedChallengesToCancel = scc.GetInt(
@@ -495,10 +501,11 @@ func (ssc *StorageSmartContract) getConfig(
 
 const cantGetConfigErrMsg = "can't get config"
 
-func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
+func (ssc *StorageSmartContract) getConfigHandler(
+	ctx context.Context,
+	params url.Values,
+	balances chainState.StateContextI,
+) (resp interface{}, err error) {
 	var conf *scConfig
 	conf, err = ssc.getConfig(balances, false)
 
@@ -508,49 +515,13 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 
 	// return configurations from sc.yaml not saving them
 	if err == util.ErrValueNotPresent {
-		res, err := getConfiguredConfig()
+		conf, err = getConfiguredConfig()
 		if err != nil {
 			return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 		}
-		return res, nil
 	}
 
-	return conf, nil // actual value
-}
-
-// updateConfig is SC function used by SC owner
-// to update storage SC configurations
-func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	if t.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
-	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("update_config",
-			"can't get config: "+err.Error())
-	}
-
-	var update scConfig
-	if err = update.Decode(input); err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	if err = update.validate(); err != nil {
-		return
-	}
-
-	update.Minted = conf.Minted
-
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
-	if err != nil {
-		return "", common.NewError("update_config", err.Error())
-	}
-
-	return string(update.Encode()), nil
+	return conf.getConfigMap(), nil // actual value
 }
 
 // getWritePoolConfig

@@ -13,17 +13,6 @@ APP_ROOT="$ROOT/code/go/0chain.net"
 
 cmd="build"
 
-for arg in "$@"
-do
-    case $arg in
-        -m1|--m1|m1)
-        echo "The build will be performed for Apple M1 chip"
-        cmd="buildx build --platform linux/amd64"
-        shift
-        ;;
-    esac
-done
-
 if [[ "$*" == *"--dev"* ]]
 then
     echo -e "\nDevelopment mode: building miner locally\n"

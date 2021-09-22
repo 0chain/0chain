@@ -1,26 +1,28 @@
 package faucetsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
+	"time"
+
+	"0chain.net/chaincore/smartcontract"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	sc "0chain.net/smartcontract"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	owner     = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
 	name      = "faucet"
 )
@@ -63,7 +65,7 @@ func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _
 	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
 	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
 	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
-	fc.SmartContractExecutionStats["updateLimits"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "updateLimits"), nil)
+	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
 	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
 	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)
 	fc.SmartContractExecutionStats["tokens Poured"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", fc.ID, "tokens Poured"), nil, metrics.NewUniformSample(1024))
@@ -91,39 +93,38 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	return true, nil
 }
 
-func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) updateSettings(
+	t *transaction.Transaction,
+	inputData []byte,
+	balances c_state.StateContextI,
+	gn *GlobalNode,
+) (string, error) {
 	if t.ClientID != owner {
-		return "", common.NewError("unauthorized_access", "only the owner can update the limits")
-	}
-	var newRequest limitRequest
-	err := newRequest.decode(inputData)
-	if err != nil {
-		return "", common.NewError("bad_request", "limit request not formated correctly")
-	}
-	if newRequest.PourAmount > 0 {
-		gn.PourAmount = newRequest.PourAmount
+		return "", common.NewError("update_settings", "only the owner can update the limits")
 	}
 
-	if newRequest.MaxPourAmount > 0 {
-		gn.MaxPourAmount = newRequest.MaxPourAmount
+	var input sc.StringMap
+	err := input.Decode(inputData)
+	if err != nil {
+		return "", common.NewError("update_settings", "limit request not formated correctly")
 	}
-	if newRequest.PeriodicLimit > 0 {
-		gn.PeriodicLimit = newRequest.PeriodicLimit
+
+	if err := gn.updateConfig(input.Fields); err != nil {
+		return "", common.NewError("update_settings", err.Error())
 	}
-	if newRequest.GlobalLimit > 0 {
-		gn.GlobalLimit = newRequest.GlobalLimit
-	}
-	if newRequest.IndividualReset > 0 {
-		gn.IndividualReset = newRequest.IndividualReset
-	}
-	if newRequest.GlobalReset > 0 {
-		gn.GlobalReset = newRequest.GlobalReset
+
+	if err = gn.validate(); err != nil {
+		return "", common.NewError("update_settings", "cannot validate changes: "+err.Error())
 	}
 	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
 	if err != nil {
-		return "", err
+		return "", common.NewError("update_settings", "saving global node: "+err.Error())
 	}
 	return string(gn.Encode()), nil
+}
+
+func toSeconds(dur time.Duration) common.Timestamp {
+	return common.Timestamp(dur / time.Second)
 }
 
 func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
@@ -206,39 +207,47 @@ func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*G
 	if err := gn.Decode(gv.Encode()); err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
+	if gn.FaucetConfig == nil {
+		gn.FaucetConfig = getConfig()
+	}
 	return gn, nil
 }
 
-func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) *GlobalNode {
+func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, balances c_state.StateContextI) (*GlobalNode, error) {
 	gn, err := fc.getGlobalNode(balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, err
+	}
+	if gn.FaucetConfig == nil {
+		gn.FaucetConfig = getConfig()
+	}
+
 	if err == nil {
 		if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.GlobalReset {
 			gn.StartTime = common.ToTime(t.CreationDate)
 			gn.Used = 0
 		}
-		return gn
+		return gn, nil
 	}
-	gn.PourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_amount"))
-	gn.MaxPourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.max_pour_amount"))
-	gn.PeriodicLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.periodic_limit"))
-	gn.GlobalLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.global_limit"))
-	gn.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
-	gn.GlobalReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	gn.Used = 0
 	gn.StartTime = common.ToTime(t.CreationDate)
-	return gn
+	return gn, nil
 }
 
 func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
-	gn := fc.getGlobalVariables(t, balances)
+	gn, err := fc.getGlobalVariables(t, balances)
+	if err != nil {
+		return "", common.NewError(funcName, "cannot get global node: "+err.Error())
+	}
+
 	switch funcName {
-	case "updateLimits":
-		return fc.updateLimits(t, inputData, balances, gn)
+	case "update-settings":
+		return fc.updateSettings(t, inputData, balances, gn)
 	case "pour":
 		return fc.pour(t, inputData, balances, gn)
 	case "refill":
 		return fc.refill(t, balances, gn)
 	default:
-		return "", common.NewError("failed execution", "no function with that name")
+		return "", common.NewErrorf("failed execution", "no faucet smart contract method with name %s", funcName)
 	}
 }

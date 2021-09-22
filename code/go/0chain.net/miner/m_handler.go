@@ -356,7 +356,7 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 	if state.Debug() {
 		logging.Logger.Info("block state change handler", zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
-			zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())),
+			zap.Int("state_changes", b.ClientState.GetChangeCount()),
 			zap.Int("sc_nodes", len(bsc.Nodes)))
 	}
 

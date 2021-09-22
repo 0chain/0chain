@@ -21,6 +21,10 @@ type Executor interface {
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
 
+	// checks
+
+	ExpectActiveSet(emb ExpectMagicBlock) (err error)
+
 	// VC misbehavior
 
 	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
@@ -227,4 +231,17 @@ func setRevealed(name string, ex Executor, val interface{}, pin bool,
 		return ex.SetRevealed(ss, pin, tm)
 	}
 	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
+
+//
+// checks
+//
+
+func expectActiveSet(ex Executor, val interface{}) (err error) {
+	var emb ExpectMagicBlock
+	if err = mapstructure.Decode(val, &emb); err != nil {
+		return fmt.Errorf("invalid 'expect_active_set' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+	return ex.ExpectActiveSet(emb)
 }

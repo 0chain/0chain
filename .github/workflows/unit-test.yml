@@ -4,11 +4,11 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, staging ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, build]
     steps:
       - uses: actions/checkout@v2
 

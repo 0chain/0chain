@@ -30,6 +30,7 @@ type lockRequest struct {
 	AllocationID datastore.Key `json:"allocation_id"`
 	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
 	TargetId     datastore.Key `json:"target_id,omitempty"`
+	MintTokens   bool          `json:"mint_tokens,omitempty"`
 }
 
 func (lr *lockRequest) decode(input []byte) (err error) {

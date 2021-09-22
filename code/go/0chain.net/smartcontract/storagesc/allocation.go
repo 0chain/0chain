@@ -1561,23 +1561,6 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 	return txn.Hash, nil
 }
 
-type addCuratorInput struct {
-	CuratorId    string `json:"curator_id"`
-	AllocationId string `json:"allocation_id"`
-}
-
-func (aci *addCuratorInput) decode(input []byte) error {
-	return json.Unmarshal(input, aci)
-}
-
-func (sa StorageAllocation) isCurator(id string) bool {
-	for _, curator := range sa.Curators {
-		if curator == id {
-			return true
-		}
-	}
-	return false
-}
 func (sa StorageAllocation) hasWritePool(
 	ssc *StorageSmartContract,
 	id string,
@@ -1593,43 +1576,4 @@ func (sa StorageAllocation) hasWritePool(
 		}
 	}
 	return false
-}
-
-func (sc *StorageSmartContract) addCurator(
-	txn *transaction.Transaction,
-	input []byte,
-	balances chainstate.StateContextI,
-) (err error) {
-	var aci addCuratorInput
-	if err = aci.decode(input); err != nil {
-		return common.NewError("add_curator_failed",
-			"error unmarshalling input: "+err.Error())
-	}
-
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(aci.AllocationId, balances)
-	if err != nil {
-		return common.NewError("alloc_cancel_failed", err.Error())
-	}
-
-	if alloc.Owner != txn.ClientID {
-		return common.NewError("add_curator_failed",
-			"only owner can add a curator")
-	}
-
-	if alloc.isCurator(aci.CuratorId) {
-		return common.NewError("add_curator_failed",
-			"already a curator: "+aci.CuratorId)
-	}
-
-	alloc.Curators = append(alloc.Curators, aci.CuratorId)
-
-	// save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	if err != nil {
-		return common.NewError("add_curator_failed",
-			"cannot save allocation"+err.Error())
-	}
-
-	return nil
 }

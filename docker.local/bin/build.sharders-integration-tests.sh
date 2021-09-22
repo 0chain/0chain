@@ -19,7 +19,7 @@ echo "$GIT_COMMIT"
 
 docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Dockerfile.integration_tests . -t sharder
 
-for i in $(seq 1 3);
+for i in $(seq 1 4);
 do
   SHARDER=$i docker-compose -p sharder"$i" -f docker.local/build.sharder/docker-compose.yml build --force-rm
 done

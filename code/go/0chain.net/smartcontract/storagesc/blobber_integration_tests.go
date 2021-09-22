@@ -8,7 +8,6 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
 
 	crpc "0chain.net/conductor/conductrpc"
 )
@@ -16,8 +15,7 @@ import (
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
-	balances cstate.StateContextI
-) (err error) {
+	balances cstate.StateContextI) (err error) {
 	// check for duplicates
 	for _, b := range blobbers.Nodes {
 		if b.ID == blobber.ID || b.BaseURL == blobber.BaseURL {

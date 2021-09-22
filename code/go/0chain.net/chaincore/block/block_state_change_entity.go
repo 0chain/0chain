@@ -24,8 +24,8 @@ type StateChange struct {
 func NewBlockStateChange(b *Block) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
-	bsc.Hash = b.ClientState.GetRoot()
-	changes := b.ClientState.GetChangeCollector().GetChanges()
+	var changes []*util.NodeChange
+	bsc.Hash, changes, _, bsc.StartRoot = b.ClientState.GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
 		bsc.Nodes[idx] = change.New
@@ -71,6 +71,14 @@ func SetupStateChange(store datastore.Store) {
 	stateChangeEntityMetadata.Store = store
 	stateChangeEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("block_state_change", stateChangeEntityMetadata)
+}
+
+func (sc *StateChange) GetChanges() []*util.NodeChange {
+	changes := make([]*util.NodeChange, len(sc.Nodes))
+	for idx, node := range sc.Nodes {
+		changes[idx] = &util.NodeChange{New: node}
+	}
+	return changes
 }
 
 //MarshalJSON - implement Marshaler interface
