@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [tests-suite01, tests-suite02, tests-suite03, tests-suite04, tests-suite05]
+    runs-on: tests-suite
     steps:
       - uses: actions/checkout@v2
 
