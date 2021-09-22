@@ -195,6 +195,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	// set transaction information
 	blobber.ID = t.ClientID
 	blobber.PublicKey = t.PublicKey
+	blobber.LastBlockRewardPaymentRound = balances.GetBlock().Round
 
 	// insert, update or remove blobber
 	if err = sc.insertBlobber(t, conf, blobber, blobbers, balances); err != nil {

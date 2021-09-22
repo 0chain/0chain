@@ -475,6 +475,13 @@ func (ssc *StorageSmartContract) setupConfig(
 	return
 }
 
+func GetConfig(
+	balances chainState.StateContextI,
+) (conf *scConfig, err error) {
+	ssc := StorageSmartContract{}
+	return ssc.getConfig(balances, true)
+}
+
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
 	balances chainState.StateContextI, setup bool) (

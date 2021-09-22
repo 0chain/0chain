@@ -33,18 +33,15 @@ func updateBlockRewards(
 }
 
 func blockRewardModifiedStakePool(
-	newStake state.Balance,
+	change state.Balance,
+	originalSp *stakePool,
 	conf *scConfig,
 	blobber *StorageNode,
 	ssc *StorageSmartContract,
 	balances cstate.StateContextI,
 ) error {
-	var err error
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(blobber.ID, balances); err != nil { // todo is ok to get twice?
-		return fmt.Errorf("can't get stake pool: %v", err)
-	}
-	originalStake := sp.stake()
+	originalStake := originalSp.stake()
+	newStake := originalStake - change
 
 	qualify := conf.BlockReward.QualifyingStake
 	if originalStake >= qualify && newStake < qualify {
@@ -53,7 +50,7 @@ func blockRewardModifiedStakePool(
 		balances.UpdateBlockRewardTotals(blobber.Capacity, blobber.Used)
 	}
 
-	return payBlobberRewards(blobber, sp, nil, balances)
+	return payBlobberRewards(blobber, originalSp, nil, balances)
 }
 
 func payBlobberRewards(
@@ -77,8 +74,13 @@ func payBlobberRewards(
 		zap.Any("stake pools", sp),
 	)
 	if int64(len(qtl.Totals)) < round-1 {
-		return fmt.Errorf("block reward totals missing, length %d, exopected %d",
-			len(qtl.Totals), round)
+		logging.Logger.Info("piers big payBlobberRewards lengh does not match round",
+			zap.Int64("length", int64(len(qtl.Totals))),
+			zap.Int64("round", round),
+			zap.Any("qtl", qtl.Totals),
+		)
+		//return fmt.Errorf("block reward totals missing, length %d, exopected %d",
+		//	len(qtl.Totals), round)
 	}
 	if len(qtl.Totals) == 0 {
 		return nil
@@ -88,16 +90,31 @@ func payBlobberRewards(
 		return nil
 	}
 
+	if blobber.LastBlockRewardPaymentRound == 0 {
+		blobber.LastBlockRewardPaymentRound = balances.GetBlock().Round // todo should do this in proper place
+	}
+
 	var startSettingsWereSet = qtl.Totals[blobber.LastBlockRewardPaymentRound].LastSettingsChange
 	var settings = qtl.Totals[startSettingsWereSet].SettingsChange
 	if settings == nil {
 		return fmt.Errorf("cannot find inital block rewards settings, "+
-			"not found on round %d", startSettingsWereSet)
+			"not found on round %d, qtl %v", startSettingsWereSet, qtl)
 	}
 	var reward float64
+	logging.Logger.Info("piers piers2 payBlobberRewards about to calculate reward",
+		zap.Int64("blobber.LastBlockRewardPaymentRound", blobber.LastBlockRewardPaymentRound),
+		zap.Any("qtl LastBlockRewardPaymentRound", qtl.Totals[blobber.LastBlockRewardPaymentRound]),
+		zap.Int64("round", round),
+		zap.Int64("startSettingsWereSet", startSettingsWereSet),
+		zap.Any("new setting round", qtl.Totals[startSettingsWereSet]),
+	)
 	for i := blobber.LastBlockRewardPaymentRound; i < round; i++ {
 		if qtl.Totals[i].SettingsChange != nil {
 			settings = qtl.Totals[i].SettingsChange
+			logging.Logger.Info("piers piers2 payBlobberRewards setting change",
+				zap.Any("i", i),
+				zap.Any("config block rewards settings", settings),
+			)
 		}
 
 		var capRatio float64
@@ -112,12 +129,20 @@ func payBlobberRewards(
 		}
 		usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
 		reward += capacityReward + usedReward
+
+		//logging.Logger.Info("piers piers2 payBlobberRewards calculating reward",
+		//	zap.Any("i", i),
+		//	zap.Float64("reward", reward),
+		//	zap.Float64("capacityReward", capacityReward),
+		//	zap.Float64("usedReward", usedReward),
+		//	zap.Any("config block rewards settings", settings),
+		//)
 	}
 
 	for _, pool := range sp.Pools {
-		poolReward := pool.Carry + reward*float64(pool.Balance)/stakes
+		poolReward := pool.BlockRewardCarry + reward*float64(pool.Balance)/stakes
 		toMint := state.Balance(poolReward)
-		pool.Carry = poolReward - float64(toMint)
+		pool.BlockRewardCarry = poolReward - float64(toMint)
 		if err := balances.AddMint(state.NewMint(ADDRESS, pool.DelegateID, toMint)); err != nil {
 			return fmt.Errorf(
 				"error miniting block reward, mint: %v\terr: %v",
@@ -125,8 +150,9 @@ func payBlobberRewards(
 			)
 		}
 		logging.Logger.Info("piers piers2 payBlobberRewards paying stakeholder",
-			zap.Int64("reward", int64(poolReward)),
-			zap.Float64("carry", pool.Carry),
+			zap.Int64("reward", int64(reward)),
+			zap.Int64("poolReward", int64(poolReward)),
+			zap.Float64("carry", pool.BlockRewardCarry),
 			zap.Any("stake pools", pool),
 		)
 	}

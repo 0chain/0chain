@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/core/viper"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -71,9 +74,9 @@ type QualifyingTotalsList struct {
 	Totals []QualifyingTotals `json:"totals"`
 }
 
-func NewQualifyingTotalsList() *QualifyingTotalsList {
-	return &QualifyingTotalsList{make([]QualifyingTotals, 1024)}
-}
+//func NewQualifyingTotalsList() *QualifyingTotalsList {
+//	return &QualifyingTotalsList{make([]QualifyingTotals, 1024)}
+//}
 
 func (qtl *QualifyingTotalsList) Encode() []byte {
 	var b, err = json.Marshal(qtl)
@@ -87,6 +90,24 @@ func (qtl *QualifyingTotalsList) Decode(p []byte) error {
 	return json.Unmarshal(p, qtl)
 }
 
+var myViper = viper.New()
+
+func GetSettingsFromFile() BlockReward {
+	const pfx = "smart_contracts.storagesc."
+	br := BlockReward{
+		BlockReward:     state.Balance(myViper.GetFloat64(pfx+"block_reward.block_reward") * 1e10),
+		QualifyingStake: state.Balance(myViper.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10),
+	}
+	br.SetWeightsFromRatio(
+		myViper.GetFloat64(pfx+"block_reward.sharder_ratio"),
+		myViper.GetFloat64(pfx+"block_reward.miner_ratio"),
+		myViper.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
+		myViper.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
+	)
+	logging.Logger.Info("piers GetSettingsFromFile", zap.Any("block rewards", br), zap.Any("viper", myViper))
+	return br
+}
+
 func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.StateContextI) (*BlockReward, bool, error) {
 	val, err := balances.GetTrieNode(ConfigKey)
 	if err != nil {
@@ -96,19 +117,10 @@ func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.
 		if balances.GetBlock().Round > 1 {
 			return nil, false, nil
 		}
-		const pfx = "smart_contracts.storagesc."
-		br := BlockReward{
-			BlockReward:     state.Balance(viper.GetFloat64(pfx+"block_reward.block_reward") * 1e10),
-			QualifyingStake: state.Balance(viper.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10),
-		}
-		br.SetWeightsFromRatio(
-			viper.GetFloat64(pfx+"block_reward.sharder_ratio"),
-			viper.GetFloat64(pfx+"block_reward.miner_ratio"),
-			viper.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
-			viper.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
-		)
+		br := GetSettingsFromFile()
 		return &br, true, nil
 	}
+
 	b, err := json.Marshal(val)
 	if err != nil {
 		return nil, false, err
@@ -120,8 +132,18 @@ func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.
 	if err != nil {
 		return nil, false, err
 	}
-	if len(qtl.Totals) == 0 {
+	if len(qtl.Totals) == 0 || balances.GetBlock().Round == 1 {
 		return conf.BlockReward, true, nil
+	}
+
+	if conf.BlockReward == nil {
+		logging.Logger.Info("piers HasBlockRewardsSettingsChanged settings nil",
+			zap.Any("config", conf))
+		if balances.GetBlock().Round > 1 {
+			return nil, false, nil
+		}
+		br := GetSettingsFromFile()
+		return &br, true, nil
 	}
 
 	lastSettings := qtl.Totals[len(qtl.Totals)-1].LastSettingsChange
@@ -155,18 +177,18 @@ func (qtl *QualifyingTotalsList) Save(balances cstate.StateContextI) error {
 
 func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsList, error) {
 	var val util.Serializable
+	var qtl QualifyingTotalsList
 	val, err := balances.GetTrieNode(QualifyingTotalsPerBlockKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		return NewQualifyingTotalsList(), nil
+		return &qtl, nil
 	}
 
-	qtl := NewQualifyingTotalsList()
 	err = qtl.Decode(val.Encode())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return qtl, nil
+	return &qtl, nil
 }

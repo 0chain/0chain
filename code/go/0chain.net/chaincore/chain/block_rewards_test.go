@@ -50,7 +50,7 @@ func TestUpdateRewardTotalList(t *testing.T) {
 			BlobberUsageWeight:    0.25,
 		}
 	)
-
+	mockSettings2 = mockSettings2
 	type parameters struct {
 		round                    int64
 		deltaCapacity, deltaUsed int64
@@ -91,29 +91,22 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		var afterQtl blockrewards.QualifyingTotalsList
 		for round := int64(0); round < p.round; round++ {
 			var setting *blockrewards.BlockReward
-			if round == 0 {
+			if round == 1 {
 				setting = &mockSettings
 			}
-			beforeQtl.Totals = append(beforeQtl.Totals, blockrewards.QualifyingTotals{
-				Round:              round,
-				Capacity:           mockCapacity,
-				Used:               mockUsage,
-				LastSettingsChange: 0,
-				SettingsChange:     setting,
-			})
-			afterQtl.Totals = append(afterQtl.Totals, blockrewards.QualifyingTotals{
-				Round:              round,
-				Capacity:           mockCapacity,
-				Used:               mockUsage,
-				LastSettingsChange: 0,
-				SettingsChange:     setting,
-			})
+			var qt blockrewards.QualifyingTotals
+			if round > 0 {
+				qt = blockrewards.QualifyingTotals{
+					Round:              round,
+					Capacity:           mockCapacity,
+					Used:               mockUsage,
+					LastSettingsChange: 1,
+					SettingsChange:     setting,
+				}
+			}
+			beforeQtl.Totals = append(beforeQtl.Totals, qt)
+			afterQtl.Totals = append(afterQtl.Totals, qt)
 		}
-
-		balances.On(
-			"GetTrieNode",
-			blockrewards.QualifyingTotalsPerBlockKey,
-		).Return(&beforeQtl, nil).Once()
 
 		var qt blockrewards.QualifyingTotals
 		qt.Capacity += p.deltaCapacity
@@ -123,7 +116,7 @@ func TestUpdateRewardTotalList(t *testing.T) {
 			qt.LastSettingsChange = p.round
 			qt.SettingsChange = p.newBlockRewardSettings
 		} else {
-			qt.LastSettingsChange = 0
+			qt.LastSettingsChange = 1
 			qt.SettingsChange = nil
 		}
 
@@ -132,6 +125,26 @@ func TestUpdateRewardTotalList(t *testing.T) {
 			qt.Used += beforeQtl.Totals[len(beforeQtl.Totals)-1].Used
 		}
 		afterQtl.Totals = append(afterQtl.Totals, qt)
+
+		if p.round == 1 {
+			beforeQtl = blockrewards.QualifyingTotalsList{}
+			afterQtl = blockrewards.QualifyingTotalsList{
+				Totals: []blockrewards.QualifyingTotals{
+					0: {},
+					1: {
+						Round:              1,
+						SettingsChange:     &mockSettings,
+						LastSettingsChange: 1,
+					},
+				},
+			}
+		}
+
+		balances.On(
+			"GetTrieNode",
+			blockrewards.QualifyingTotalsPerBlockKey,
+		).Return(&beforeQtl, nil).Once()
+
 		balances.On(
 			"InsertTrieNode",
 			blockrewards.QualifyingTotalsPerBlockKey,
@@ -146,6 +159,12 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		parameters parameters
 		want       want
 	}{
+		{
+			name: "ok",
+			parameters: parameters{
+				round: 1,
+			},
+		},
 		{
 			name: "ok",
 			parameters: parameters{

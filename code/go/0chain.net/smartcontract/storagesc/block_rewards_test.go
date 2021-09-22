@@ -112,7 +112,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 				pool.DelegateID = mockDelegateWallet + id
 				pool.Balance = state.Balance(p.stake * 1e10 /
 					float64(len(p.spCarries)))
-				pool.Carry = p.spCarries[i]
+				pool.BlockRewardCarry = p.spCarries[i]
 				sp.Pools[id] = &pool
 			}
 		}
@@ -183,9 +183,9 @@ func TestUpdateBlockRewards(t *testing.T) {
 		require.EqualValues(t, state.Balance(p.stake*1e10), sp.stake())
 		if p.stake > 0 {
 			for _, pool := range sp.Pools {
-				poolReward := pool.Carry + reward/float64(len(p.spCarries))
+				poolReward := pool.BlockRewardCarry + reward/float64(len(p.spCarries))
 				toMint := state.Balance(poolReward)
-				pool.Carry = poolReward - float64(toMint)
+				pool.BlockRewardCarry = poolReward - float64(toMint)
 
 				args.balances.On("AddMint", state.NewMint(
 					ADDRESS, pool.DelegateID, toMint,
@@ -283,7 +283,7 @@ func TestUpdateBlockRewards(t *testing.T) {
 			}
 			require.EqualValues(t, want.blobber.LastBlockRewardPaymentRound, args.blobber.LastBlockRewardPaymentRound)
 			for key, pool := range want.sp.Pools {
-				require.InDelta(t, pool.Carry, args.sp.Pools[key].Carry, carryDelta)
+				require.InDelta(t, pool.BlockRewardCarry, args.sp.Pools[key].BlockRewardCarry, carryDelta)
 			}
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})

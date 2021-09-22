@@ -8,6 +8,10 @@ import (
 	"net/url"
 	"sort"
 
+	"go.uber.org/zap"
+
+	"0chain.net/core/logging"
+
 	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -116,7 +120,8 @@ type delegatePool struct {
 	Rewards           state.Balance    `json:"rewards"`     // total
 	Penalty           state.Balance    `json:"penalty"`     // total
 	Unstake           common.Timestamp `json:"unstake"`     // want to unstake
-	Carry             float64          `json:"carry"`
+	BlockRewardCarry  float64          `json:"block_reward_carry"`
+	InterestCarry     float64          `json:"interest_carry"`
 }
 
 // stake pool settings
@@ -970,6 +975,22 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving configurations: %v", err)
 	}
 
+	// pay rewards to blobber stake holders and react to change in total stake
+	var blobber *StorageNode
+	if blobber, err = ssc.getBlobber(spr.BlobberID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get the blobber: "+err.Error())
+	}
+	err = blockRewardModifiedStakePool(state.Balance(t.Value), sp, conf, blobber, ssc, balances)
+	if err != nil {
+		return "", fmt.Errorf("updating block rewrads: %v", err)
+	}
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving blobber: "+err.Error())
+	}
+
 	var dp *delegatePool // created delegate pool
 	if resp, dp, err = sp.dig(t, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -984,21 +1005,6 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get user pools list: %v", err)
 	}
 	usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
-
-	var blobber *StorageNode
-	if blobber, err = ssc.getBlobber(spr.BlobberID, balances); err != nil {
-		return "", common.NewError("stake_pool_lock_failed",
-			"can't get the blobber: "+err.Error())
-	}
-	err = blockRewardModifiedStakePool(sp.stake(), conf, blobber, ssc, balances)
-	if err != nil {
-		return "", fmt.Errorf("updating block rewrads: %v", err)
-	}
-	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
-	if err != nil {
-		return "", common.NewError("stake_pool_lock_failed",
-			"saving blobber: "+err.Error())
-	}
 
 	if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -1045,6 +1051,22 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 			"updating stake pool: %v", err)
 	}
 	conf.Minted += info.minted
+
+	// pay rewards to blobber stake holders and react to change in total stake
+	var blobber *StorageNode
+	if blobber, err = ssc.getBlobber(spr.BlobberID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get the blobber: "+err.Error())
+	}
+	err = blockRewardModifiedStakePool(-1*sp.Pools[spr.PoolID].Balance, sp, conf, blobber, ssc, balances)
+	if err != nil {
+		return "", fmt.Errorf("updating block rewrads: %v", err)
+	}
+	_, err = balances.InsertTrieNode(blobber.GetKey(ssc.ID), blobber)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving blobber: "+err.Error())
+	}
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
@@ -1159,26 +1181,29 @@ const cantGetStakePoolMsg = "can't get related stake pool"
 func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
-
+	logging.Logger.Info("piers6 getStakePoolStatHandler start")
 	var (
 		blobberID = datastore.Key(params.Get("blobber_id"))
 		conf      *scConfig
 		blobber   *StorageNode
 		sp        *stakePool
 	)
-
+	logging.Logger.Info("piers6 getStakePoolStatHandler start")
 	if conf, err = ssc.getConfig(balances, false); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
+	logging.Logger.Info("piers6 getStakePoolStatHandler got config", zap.Any("config", conf))
 	if blobber, err = ssc.getBlobber(blobberID, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetBlobberMsg)
 	}
 
+	logging.Logger.Info("piers6 getStakePoolStatHandler got blobber", zap.Any("blobber", blobber))
 	if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 	}
 
+	logging.Logger.Info("piers6 getStakePoolStatHandler got stake pool", zap.Any("sp", sp))
 	return sp.stat(conf, ssc.ID, common.Now(), blobber), nil
 }
 
