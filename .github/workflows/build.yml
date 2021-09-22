@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       latest_tag:
-        description: 'type yes for building latest tag'
+        description: 'type yes for building latest / staging tag'
         default: 'no'
         required: true
 
@@ -52,7 +52,7 @@ jobs:
       run: |
         if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $MINER_REGISTRY:latest
-         elif [[ "$BRANCH" == "staging" ]]; then
+         elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
            docker push $MINER_REGISTRY:staging
         fi
       env:
@@ -60,7 +60,7 @@ jobs:
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
 
   dockerize_sharder:
-    runs-on: ubuntu-20.04
+    runs-on: docker-builds
     steps:
     - uses: actions/checkout@v1
 
@@ -94,7 +94,7 @@ jobs:
       run: |
         if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $SHARDER_REGISTRY:latest
-        elif [[ "$BRANCH" == "staging" ]]; then
+        elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
           docker push $SHARDER_REGISTRY:staging
         fi
       env:

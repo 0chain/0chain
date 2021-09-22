@@ -18,7 +18,7 @@ env:
 
 jobs: 
   api_tests:
-    runs-on: ubuntu-20.04
+    runs-on: [self-hosted, tests-suite01, tests-suite02]
     steps:   
       - name: Validate network option
         id: network-check
