@@ -804,7 +804,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
 		bnb := r.GetBestRankedNotarizedBlock()
-		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+		if bnb == nil || bnb.Hash == b.Hash {
 			logging.Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 			go mc.SendVerificationTicket(ctx, b, bvt)
 		}
@@ -849,7 +849,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			r.SetState(round.RoundStateVerificationTimedOut)

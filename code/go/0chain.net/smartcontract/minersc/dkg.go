@@ -139,8 +139,8 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return common.NewErrorf("move_to_share_or_publish_failed",
 			"no miner from previous VC set in MPKS, l_mpks: %d, DB: %d, DB version: %d",
 			len(mpks.Mpks),
-			int(balances.GetState().GetVersion()),
-			int(balances.GetState().GetVersion()))
+			int(balances.GetVersion()),
+			int(balances.GetVersion()))
 	}
 
 	if len(mpks.Mpks) < dkgMinersList.K {
@@ -152,7 +152,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 	Logger.Debug("miner sc: move phase to share or publish",
 		zap.Int("mpks", len(mpks.Mpks)),
 		zap.Int("K", dkgMinersList.K),
-		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+		zap.Int64("DB version", int64(balances.GetVersion())))
 
 	return nil
 }
@@ -179,7 +179,7 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 		return common.NewErrorf("move_to_wait_failed",
 			"no miner from previous VC set in GSoS, "+
 				"l_gsos: %d, K: %d, DB version: %d, gsos_shares: %v",
-			len(gsos.Shares), dkgMinersList.K, int(balances.GetState().GetVersion()), gsos.Shares)
+			len(gsos.Shares), dkgMinersList.K, int(balances.GetVersion()), gsos.Shares)
 	}
 
 	if len(gsos.Shares) < dkgMinersList.K {
@@ -241,7 +241,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				zap.Any("phase", pn.Phase),
 				zap.Int64("phase start round", pn.StartRound),
 				zap.Int64("phase current round", pn.CurrentRound),
-				zap.Int64("DB version", int64(balances.GetState().GetVersion())),
+				zap.Int64("DB version", int64(balances.GetVersion())),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)),
 				zap.Error(err))
 			msc.RestartDKG(pn, balances)
@@ -507,7 +507,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	Logger.Debug("create_mpks in createMagicBlockForWait", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	Logger.Debug("create_mpks in createMagicBlockForWait", zap.Int64("DB version", int64(balances.GetVersion())))
 
 	gsos = block.NewGroupSharesOrSigns()
 	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
@@ -583,7 +583,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	Logger.Debug("contribute_mpk success",
-		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+		zap.Int64("DB version", int64(balances.GetVersion())))
 
 	return string(mpk.Encode()), nil
 }
@@ -667,7 +667,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 
 	Logger.Debug("update gsos",
 		zap.Int64("gn.LastRound", gn.LastRound),
-		zap.Int64("state.version", int64(balances.GetState().GetVersion())))
+		zap.Int64("state.version", int64(balances.GetVersion())))
 	err = updateGroupShareOrSigns(balances, gsos)
 	if err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
@@ -781,7 +781,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	balances cstate.StateContextI) {
-	Logger.Debug("RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	Logger.Debug("RestartDKG", zap.Int64("DB version", int64(balances.GetVersion())))
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 	mpks := block.NewMpks()
@@ -789,7 +789,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 
-	Logger.Debug("create_mpks in RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	Logger.Debug("create_mpks in RestartDKG", zap.Int64("DB version", int64(balances.GetVersion())))
 
 	gsos := block.NewGroupSharesOrSigns()
 	if err := updateGroupShareOrSigns(balances, gsos); err != nil {

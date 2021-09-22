@@ -84,7 +84,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balan
 			return "", err
 		}
 		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
-		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, t, smartContractData.FunctionName, smartContractData.InputData, balances)
 		if err != nil {
 			return "", err
 		}

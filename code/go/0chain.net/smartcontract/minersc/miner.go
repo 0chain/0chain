@@ -43,9 +43,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		return "", common.NewErrorf("add_miner", "invalid input: %v", err)
 	}
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
-
 	logging.Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	allMiners, err := getMinersList(balances)
@@ -369,8 +366,6 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 	all *MinerNodes, err error) {
 
-	lockAllMiners.Lock()
-	defer lockAllMiners.Unlock()
 	return getMinersList(balances)
 }
 

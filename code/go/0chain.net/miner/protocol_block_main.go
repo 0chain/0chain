@@ -47,6 +47,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 
 	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize)
+	b.AccessMap = make(map[datastore.Key]*block.AccessList)
 
 	var (
 		clients          = make(map[string]*client.Client)
@@ -88,7 +89,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			}
 			return false
 		}
-		if err := mc.UpdateState(ctx, b, txn); err != nil {
+		rset, wset, err := mc.UpdateState(ctx, b, txn)
+		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
 					zap.String("txn", txn.Hash), zap.Int32("idx", idx),
@@ -104,6 +106,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
 		b.Txns = append(b.Txns, txn)
+
+		b.AccessMap[txn.GetKey()] = block.NewAccessList(rset, wset)
 		if debugTxn {
 			logging.Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}

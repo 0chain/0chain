@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/smartcontract"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,9 +11,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
-
-	"0chain.net/smartcontract"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -88,8 +86,6 @@ var (
 	GroupShareOrSignsKey = globalKeyHash("group_share_or_signs")
 	ShardersKeepKey      = globalKeyHash("sharders_keep")
 	PhaseKey             = globalKeyHash("phase")
-
-	lockAllMiners sync.Mutex
 )
 
 type (

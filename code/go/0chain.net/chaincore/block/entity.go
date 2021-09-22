@@ -105,8 +105,79 @@ type UnverifiedBlockBody struct {
 
 	ClientStateHash util.Key `json:"state_hash"`
 
+	AccessMap map[datastore.Key]*AccessList `json:"accesses,omitempty"`
 	// The entire transaction payload to represent full block
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
+}
+
+type AccessList struct {
+	Reads  []datastore.Key `json:"reads,omitempty"`
+	Writes []datastore.Key `json:"writes,omitempty"`
+}
+
+func NewAccessList(rset, wset map[datastore.Key]bool) *AccessList {
+	var r, w []datastore.Key
+	for rkey := range rset {
+		r = append(r, rkey)
+	}
+	for wkey := range wset {
+		w = append(w, wkey)
+	}
+
+	return &AccessList{
+		Reads:  r,
+		Writes: w,
+	}
+}
+
+func (al *AccessList) Includes(rset, wset map[datastore.Key]bool) bool {
+	alr := al.Rset()
+	alw := al.Wset()
+
+	for rkey := range rset {
+		if !alr[rkey] {
+			return false
+		}
+	}
+	for wkey := range wset {
+		if !alw[wkey] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (al *AccessList) Rset() (rset map[datastore.Key]bool) {
+	rset = make(map[datastore.Key]bool)
+	for _, r := range al.Reads {
+		rset[r] = true
+	}
+
+	return rset
+}
+func (al *AccessList) Wset() (wset map[datastore.Key]bool) {
+	wset = make(map[datastore.Key]bool)
+	for _, w := range al.Writes {
+		wset[w] = true
+	}
+
+	return wset
+}
+
+func (al *AccessList) Clone() *AccessList {
+	clone := &AccessList{
+		Reads:  make([]datastore.Key, len(al.Reads)),
+		Writes: make([]datastore.Key, len(al.Writes)),
+	}
+	for _, r := range al.Reads {
+		clone.Reads = append(clone.Reads, r)
+	}
+	for _, w := range al.Writes {
+		clone.Writes = append(clone.Writes, w)
+	}
+
+	return clone
 }
 
 // SetRoundRandomSeed - set the random seed.
@@ -128,6 +199,14 @@ func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
 	for _, t := range u.Txns {
 		if t != nil {
 			cloneU.Txns = append(cloneU.Txns, t.Clone())
+		}
+	}
+	cloneU.AccessMap = make(map[datastore.Key]*AccessList, len(u.AccessMap))
+	for tx_key, al := range u.AccessMap {
+		if al != nil {
+			cloneU.AccessMap[tx_key] = al.Clone()
+		} else {
+			cloneU.AccessMap[tx_key] = nil
 		}
 	}
 
@@ -739,7 +818,7 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) error
+	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) (rset, wset map[datastore.Key]bool, err error)
 }
 
 // ComputeState computes block client state
@@ -843,7 +922,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		if err := c.UpdateState(ctx, b, txn); err != nil {
+		rset, wset, err := c.UpdateState(ctx, b, txn)
+		if err != nil {
 			b.SetStateStatus(StateFailed)
 			logging.Logger.Error("compute state - update state failed",
 				zap.Int64("round", b.Round),
@@ -854,6 +934,20 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				zap.Error(err))
 			return common.NewError("state_update_error", "error updating state")
 		}
+
+		//we skip this check for blocks that do not contain access maps yet, in the future we will check more strictly
+		if bal, ok := b.AccessMap[txn.GetKey()]; ok && !bal.Includes(rset, wset) {
+			b.SetStateStatus(StateFailed)
+			logging.Logger.Error("compute state - access lists are not equal",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("client_state", util.ToHex(b.ClientStateHash)),
+				zap.String("prev_block", b.PrevHash),
+				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+				zap.Error(err))
+			return common.NewError("state_access_error", "error access lists")
+		}
+
 	}
 
 	logging.Logger.Info("compute state", zap.Int64("round", b.Round),
