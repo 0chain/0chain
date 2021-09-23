@@ -207,10 +207,8 @@ func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
 	if val == nil {
 		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
-	var astate, ok = val.(*AState)
-	if !ok {
-		t.Fatalf("wrong state type: %T", val)
-	}
+	astate := AState{}
+	assert.NoError(t, astate.Decode(val.Encode()))
 	if astate.balance != value {
 		t.Fatalf("%s: wrong state value: %d, expected: %d", key, astate.balance,
 			value)
@@ -1959,6 +1957,24 @@ func TestMerklePatriciaTrie_MergeMPTChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMerklePatriciaTrie_IntegrityAfterValueUpdate(t *testing.T) {
+	t.Parallel()
+	db := NewLevelNodeDB(NewMemoryNodeDB(), NewMemoryNodeDB(), false)
+	mpt := NewMerklePatriciaTrie(db, Sequence(0), nil)
+	txn := &Txn{"1"}
+
+	_, err := mpt.Insert(Path("00"), txn)
+	require.NoError(t, err)
+	checkIterationHash(t, mpt, "34a278944ef883d7c642a7b69b5675cf9d8cc5c60dd90d00adea1c4164425037")
+	_, changes, _, _ := mpt.GetChanges()
+	oldEncodedValue := changes[0].New.Encode()
+	txn.Data = "2"
+	checkIterationHash(t, mpt, "34a278944ef883d7c642a7b69b5675cf9d8cc5c60dd90d00adea1c4164425037")
+	_, changes, _, _ = mpt.GetChanges()
+	assert.Equal(t, 1, len(changes))
+	assert.Equal(t, oldEncodedValue, changes[0].New.Encode())
 }
 
 func TestMerklePatriciaTrie_Validate(t *testing.T) {

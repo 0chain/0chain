@@ -410,7 +410,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	// if 3rd party pays
-	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate)
+	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("commit_blobber_read", err.Error())
 	}

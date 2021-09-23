@@ -10,8 +10,6 @@ import (
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
-
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -1092,23 +1090,30 @@ type AuthTicket struct {
 	OwnerID         string           `json:"owner_id"`
 	AllocationID    string           `json:"allocation_id"`
 	FilePathHash    string           `json:"file_path_hash"`
+	ActualFileHash  string           `json:"actual_file_hash"`
 	FileName        string           `json:"file_name"`
 	RefType         string           `json:"reference_type"`
 	Expiration      common.Timestamp `json:"expiration"`
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReEncryptionKey string           `json:"re_encryption_key"`
 	Signature       string           `json:"signature"`
+	Encrypted       bool             `json:"encrypted"`
 }
 
-func (at *AuthTicket) getHashData() (data string) {
-	data = fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v", at.AllocationID,
-		at.ClientID, at.OwnerID, at.FilePathHash, at.FileName, at.RefType,
-		at.ReEncryptionKey, at.Expiration, at.Timestamp)
-	return
+func (at *AuthTicket) getHashData() string {
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v:%v:%v:%v",
+		at.AllocationID, at.ClientID, at.OwnerID, at.FilePathHash,
+		at.FileName, at.RefType, at.ReEncryptionKey, at.Expiration, at.Timestamp,
+		at.ActualFileHash, at.Encrypted)
+	return hashData
 }
 
-func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
-	clientID string) (err error) {
+func (at *AuthTicket) verify(
+	alloc *StorageAllocation,
+	now common.Timestamp,
+	clientID string,
+	balances chainstate.StateContextI,
+) (err error) {
 
 	if at.AllocationID != alloc.ID {
 		return common.NewError("invalid_read_marker",
@@ -1135,10 +1140,8 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 			"Invalid auth ticket. Timestamp in future")
 	}
 
-	var (
-		ssn = chain.GetServerChain().ClientSignatureScheme
-		ss  = encryption.GetSignatureScheme(ssn)
-	)
+	var ss = balances.GetSignatureScheme()
+
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {
 		return common.NewErrorf("invalid_read_marker",
 			"setting owner public key: %v", err)
@@ -1184,9 +1187,11 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string, balances chainstat
 	return true
 }
 
-func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
-	now common.Timestamp) (err error) {
-
+func (rm *ReadMarker) verifyAuthTicket(
+	alloc *StorageAllocation,
+	now common.Timestamp,
+	balances chainstate.StateContextI,
+) (err error) {
 	// owner downloads, pays itself, no ticket needed
 	if rm.PayerID == alloc.Owner {
 		return
@@ -1195,7 +1200,7 @@ func (rm *ReadMarker) verifyAuthTicket(alloc *StorageAllocation,
 	if rm.AuthTicket == nil {
 		return common.NewError("invalid_read_marker", "missing auth. ticket")
 	}
-	return rm.AuthTicket.verify(alloc, now, rm.PayerID)
+	return rm.AuthTicket.verify(alloc, now, rm.PayerID, balances)
 }
 
 func (rm *ReadMarker) GetHashData() string {
@@ -1206,7 +1211,6 @@ func (rm *ReadMarker) GetHashData() string {
 }
 
 func (rm *ReadMarker) Verify(prevRM *ReadMarker, balances chainstate.StateContextI) error {
-
 	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
 		rm.Timestamp == 0 {
 
@@ -1244,11 +1248,11 @@ type ValidationTicket struct {
 	Signature    string           `json:"signature"`
 }
 
-func (vt *ValidationTicket) VerifySign() (bool, error) {
+func (vt *ValidationTicket) VerifySign(balances chainstate.StateContextI) (bool, error) {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
 		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := balances.GetSignatureScheme()
 	signatureScheme.SetPublicKey(vt.ValidatorKey)
 	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err

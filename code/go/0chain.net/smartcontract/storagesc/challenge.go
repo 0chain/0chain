@@ -383,7 +383,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	)
 	for _, vt := range challResp.ValidationTickets {
 		if vt != nil {
-			if ok, err := vt.VerifySign(); !ok || err != nil {
+			if ok, err := vt.VerifySign(balances); !ok || err != nil {
 				continue
 			}
 

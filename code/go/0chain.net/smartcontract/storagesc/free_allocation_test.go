@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
@@ -10,7 +11,6 @@ import (
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/chain"
-	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -883,7 +883,7 @@ func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, stri
 	}
 	responseBytes, err := json.Marshal(&request)
 	require.NoError(t, err)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 	signature, err := signatureScheme.Sign(hex.EncodeToString(responseBytes))
