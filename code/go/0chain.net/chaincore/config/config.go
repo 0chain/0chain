@@ -39,12 +39,13 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
 	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
 	viper.SetDefault("server_chain.smart_contract.timeout", 550*time.Millisecond)
+	viper.SetDefault("server_chain.smart_contract.setting_update_period", 300)
 	viper.SetDefault("server_chain.round_timeouts.softto_min", 300)
 	viper.SetDefault("server_chain.round_timeouts.softto_mult", 3)
 	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
 	// Health Check related fields
 	viper.SetDefault("server_chain.health_check.show_counters", true)
-
+	viper.SetDefault("server_chain.smart_contract.setting_update_period", true)
 	// Set defaults for deep scan.
 	viper.SetDefault("server_chain.health_check.deep_scan.enabled", true)
 	viper.SetDefault("server_chain.health_check.deep_scan.batch_size", 100)

@@ -213,18 +213,29 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
+
 	if config.DevConfiguration.IsFeeEnabled {
 		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, clients)
 		if err != nil {
 			return err
 		}
 	}
+
 	if config.DevConfiguration.IsBlockRewards {
 		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, clients)
 		if err != nil {
 			return err
 		}
 	}
+
+	if mc.SmartContractSettingUpdatePeriod != 0 &&
+		b.Round%mc.SmartContractSettingUpdatePeriod == 0 {
+		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, clients)
+		if err != nil {
+			return err
+		}
+	}
+
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if count > 10*mc.BlockSize {
 		logging.Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))

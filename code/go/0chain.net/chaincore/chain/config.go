@@ -80,10 +80,12 @@ type Config struct {
 	MinActiveSharders    int `json:"min_active_sharders"`    // Minimum active sharders required to validate blocks
 	MinActiveReplicators int `json:"min_active_replicators"` // Minimum active replicators of a block that should be active to verify the block
 
-	SmartContractTimeout   time.Duration `json:"smart_contract_timeout"` // time after which the smart contract execution will timeout
-	RoundTimeoutSofttoMin  int           `json:"softto_min"`             // minimum time for softtimeout to kick in milliseconds
-	RoundTimeoutSofttoMult int           `json:"softto_mult"`            // multiplier of mean network time for soft timeout
-	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
+	SmartContractTimeout             time.Duration `json:"smart_contract_timeout"`               // time after which the smart contract execution will timeout
+	SmartContractSettingUpdatePeriod int64         `json:"smart_contract_setting_update_period"` // rounds settings are updated
+
+	RoundTimeoutSofttoMin  int `json:"softto_min"`         // minimum time for softtimeout to kick in milliseconds
+	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
+	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 }
 
 func (conf *Config) Update(cf *minersc.GlobalSettings) {
@@ -123,6 +125,7 @@ func (conf *Config) Update(cf *minersc.GlobalSettings) {
 	if conf.SmartContractTimeout == 0 {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
+	conf.SmartContractSettingUpdatePeriod = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
 }
 
 // We don't need this yet, as the health check settings are used to set up a worker thread.

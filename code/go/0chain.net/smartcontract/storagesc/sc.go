@@ -288,6 +288,9 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "update_settings":
 		resp, err = sc.updateSettings(t, input, balances)
 
+	case "commit_settings_changes":
+		resp, err = sc.commitSettingChanges(t, input, balances)
+
 	default:
 		err = common.NewErrorf("invalid_storage_function_name",
 			"Invalid storage function '%s' called", funcName)
