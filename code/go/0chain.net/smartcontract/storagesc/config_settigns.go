@@ -5,9 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
@@ -572,20 +569,9 @@ func (ssc *StorageSmartContract) updateSettings(
 		return "", common.NewError("update_settings, getting setting changes", err.Error())
 	}
 
-	logging.Logger.Info("piers1 updateSettings",
-		//zap.Int64("round", balances.GetBlock().Round),
-		zap.Any("newChanges", newChanges),
-		zap.Any("existing changes", updateChanges),
-	)
-
 	for key, value := range newChanges.Fields {
 		updateChanges.Fields[key] = value
 	}
-
-	logging.Logger.Info("piers1 updateSettings",
-		//zap.Int64("round", balances.GetBlock().Round),
-		zap.Any("updated changes", updateChanges),
-	)
 
 	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)
 	if err != nil {
@@ -600,8 +586,6 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	logging.Logger.Info("piers1 commitSettingChanges start") //	zap.Int64("round", balances.GetBlock().Round),
-
 	if t.ClientID != balances.GetBlock().MinerID {
 		return "", common.NewError("pay_fee", "not minor generator")
 	}
@@ -617,12 +601,6 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", common.NewError("commitSettingChanges, getting setting changes", err.Error())
 	}
 
-	logging.Logger.Info("piers1 commitSettingChanges",
-		//zap.Int64("round", balances.GetBlock().Round),
-		zap.Any("changes from MPT", changes),
-		zap.Any("old config", conf),
-	)
-
 	if len(changes.Fields) == 0 {
 		return "", nil
 	}
@@ -635,11 +613,6 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", common.NewError("update_settings", err.Error())
 	}
 
-	logging.Logger.Info("piers1 commitSettingChanges",
-		//	zap.Int64("round", balances.GetBlock().Round),
-		zap.Any("new old config", conf),
-	)
-
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return "", common.NewError("update_settings", err.Error())
@@ -650,16 +623,13 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 
 func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
 	val, err := balances.GetTrieNode(settingChangesKey)
-	logging.Logger.Info("piers1 getSettingChanges",
-		//	zap.Any("round", balances.GetBlock().Round),
-		zap.Any("val from MPT", val))
-
 	if err != nil || val == nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 		return smartcontract.NewStringMap(), nil
 	}
+
 	var changes = new(smartcontract.StringMap)
 	err = changes.Decode(val.Encode())
 	if err != nil {

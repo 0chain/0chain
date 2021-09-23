@@ -230,9 +230,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 	if mc.SmartContractSettingUpdatePeriod != 0 &&
 		b.Round%mc.SmartContractSettingUpdatePeriod == 0 {
-		logging.Logger.Info("piers about to call storageScCommitSettingChangesTx",
-			zap.Int64("round", b.Round),
-		)
 		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, clients)
 		if err != nil {
 			return err
