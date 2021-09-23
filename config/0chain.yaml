@@ -98,6 +98,7 @@ server_chain:
       batch_size: 20
 
   smart_contract:
+    setting_update_period: 200 #rounds
     timeout: 150ms # milliseconds, 0 = no timeout
 
 network:
