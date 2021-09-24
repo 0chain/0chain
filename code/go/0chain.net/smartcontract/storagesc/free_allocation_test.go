@@ -1,16 +1,16 @@
 package storagesc
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
 	"testing"
 	"time"
 
+	cstate "0chain.net/chaincore/chain/state"
+
 	"0chain.net/core/encryption"
 
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
