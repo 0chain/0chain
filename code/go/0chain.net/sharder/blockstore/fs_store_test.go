@@ -1,6 +1,7 @@
 package blockstore
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -709,7 +710,14 @@ func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("bs data"),
 		},
+		MagicBlock: &block.MagicBlock{
+			HashIDField: datastore.HashIDField{
+				Hash: encryption.Hash("mb data"),
+			},
+			T: 1,
+		},
 	}
+	b.Round = 0
 
 	type fields struct {
 		RootDirectory         string
@@ -733,8 +741,9 @@ func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 				blockMetadataProvider: bs.blockMetadataProvider,
 				Minio:                 bs.Minio,
 			},
-			args:    args{b.GetSummary()},
-			wantErr: true,
+			want: &b,
+			args: args{b.GetSummary()},
+			//wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -747,6 +756,8 @@ func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 				blockMetadataProvider: tt.fields.blockMetadataProvider,
 				Minio:                 tt.fields.Minio,
 			}
+			err := fbs.Write(&b)
+			require.NoError(t, err)
 			got, err := fbs.ReadWithBlockSummary(tt.args.bs)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ReadWithBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
@@ -755,6 +766,11 @@ func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ReadWithBlockSummary() got = %v, want %v", got, tt.want)
 			}
+			v, err := json.MarshalIndent(got, "", "\t")
+			require.NoError(t, err)
+			fmt.Println(string(v))
+
+			//got, err := fbs.ReadWithBlockSummary()
 		})
 	}
 }

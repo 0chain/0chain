@@ -71,7 +71,11 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	if sc.IsBlockSharder(b, self.Underlying()) {
 		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
-		blockstore.GetStore().Write(b)
+		if err := blockstore.GetStore().Write(b); err != nil {
+			Logger.Error("store block failed",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+		}
 		duration := time.Since(ts)
 		blockSaveTimer.UpdateSince(ts)
 		p95 := blockSaveTimer.Percentile(.95)
@@ -662,6 +666,9 @@ func (sc *Chain) storeBlock(b *block.Block) error {
 	if err == nil {
 		sc.SharderStats.RepairBlocksCount++
 	} else {
+		Logger.Error("save block failed",
+			zap.Int64("round", b.Round),
+			zap.Error(err))
 		sc.SharderStats.RepairBlocksFailure++
 	}
 	if b.MagicBlock != nil {

@@ -1,6 +1,9 @@
 package memorystore_test
 
 import (
+	"context"
+	"fmt"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -8,11 +11,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
-	"context"
-	"fmt"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack"
+
 	"reflect"
 	"testing"
 	"time"
@@ -1498,6 +1503,24 @@ func TestStore_AddToCollection(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTxn(t *testing.T) {
+	type F struct {
+		ClientID datastore.Key `msgpack:"cid"`
+	}
+	foo := F{
+		ClientID: encryption.Hash("id"),
+	}
+
+	v, err := msgpack.Marshal(foo)
+	require.NoError(t, err)
+
+	var bar F
+	err = msgpack.Unmarshal(v, &bar)
+	require.NoError(t, err)
+	fmt.Println(bar.ClientID)
+	require.Equal(t, foo.ClientID, bar.ClientID)
 }
 
 func TestStore_DeleteFromCollection(t *testing.T) {

@@ -83,7 +83,7 @@ func (fbs *FSBlockStore) write(hash string, round int64, v datastore.Entity) err
 	if err != nil {
 		return err
 	}
-	if err := datastore.WriteJSON(w, v); err != nil {
+	if err := datastore.WriteMsgpack(w, v); err != nil {
 		return err
 	}
 	if err = w.Close(); err != nil {
@@ -104,6 +104,10 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 		return err
 	}
 	if b.MagicBlock != nil && b.Round == b.MagicBlock.StartingRound {
+		Logger.Debug("save magic block",
+			zap.Int64("round", b.Round),
+			zap.String("mb hash", b.MagicBlock.Hash),
+		)
 		return fbs.write(b.MagicBlock.Hash, b.MagicBlock.StartingRound, b)
 	}
 	return nil
@@ -202,7 +206,7 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	}
 	defer r.Close()
 	b := fbs.blockMetadataProvider.Instance().(*block.Block)
-	err = datastore.ReadJSON(r, b)
+	err = datastore.ReadMsgpack(r, b)
 	if err != nil {
 		return nil, err
 	}

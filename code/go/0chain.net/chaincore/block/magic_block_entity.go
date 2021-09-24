@@ -15,7 +15,7 @@ import (
 
 type MagicBlock struct {
 	datastore.HashIDField
-	mutex                  sync.RWMutex
+	mutex                  sync.RWMutex        `json:"-" msgpack:"-"`
 	PreviousMagicBlockHash datastore.Key       `json:"previous_hash"`
 	MagicBlockNumber       int64               `json:"magic_block_number"`
 	StartingRound          int64               `json:"starting_round"`

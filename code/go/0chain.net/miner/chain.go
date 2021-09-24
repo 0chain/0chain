@@ -17,6 +17,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
@@ -66,7 +67,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
-	minerChain.minersPublicKeys = make(map[string]*bls.PublicKey)
+	minerChain.minersPublicKeys = cache.NewLRUCache(1 << 16) // 65536
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -128,8 +129,7 @@ type Chain struct {
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
-	minersKeysMutex                      sync.RWMutex
-	minersPublicKeys                     map[string]*bls.PublicKey
+	minersPublicKeys                     *cache.LRU
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
@@ -483,36 +483,28 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 
 func (mc *Chain) LoadMinersPublicKeys() error {
 	mb := mc.GetLatestFinalizedMagicBlock()
-	pubkeys := make(map[string]*bls.PublicKey, len(mb.Miners.Nodes))
 	for _, nd := range mb.Miners.Nodes {
 		var pk bls.PublicKey
 		if err := pk.DeserializeHexStr(nd.PublicKey); err != nil {
 			return err
 		}
-		pubkeys[nd.ID] = &pk
+		mc.minersPublicKeys.Add(nd.ID, &pk)
 	}
 
-	mc.minersKeysMutex.Lock()
-	mc.minersPublicKeys = pubkeys
-	mc.minersKeysMutex.Unlock()
 	return nil
 }
 
 func (mc *Chain) GetMinersPublicKeys(keysStr []string) ([]bls.PublicKey, error) {
 	pubKeys := make([]bls.PublicKey, len(keysStr))
 	missingKeys := make([]int, 0, len(keysStr))
-	mc.minersKeysMutex.RLock()
-	var hitNum int
 	for i, k := range keysStr {
-		pk, ok := mc.minersPublicKeys[k]
-		if !ok {
+		pk, err := mc.minersPublicKeys.Get(k)
+		if err != nil {
 			missingKeys = append(missingKeys, i)
 			continue
 		}
-		hitNum++
-		pubKeys[i] = *pk
+		pubKeys[i] = *(pk.(*bls.PublicKey))
 	}
-	mc.minersKeysMutex.RUnlock()
 
 	if len(missingKeys) > 0 {
 		for _, idx := range missingKeys {
@@ -523,11 +515,10 @@ func (mc *Chain) GetMinersPublicKeys(keysStr []string) ([]bls.PublicKey, error) 
 			pubKeys[idx] = pk
 		}
 
-		mc.minersKeysMutex.Lock()
+		//mc.minersKeysMutex.Lock()
 		for _, idx := range missingKeys {
-			mc.minersPublicKeys[keysStr[idx]] = &pubKeys[idx]
+			mc.minersPublicKeys.Add(keysStr[idx], &pubKeys[idx])
 		}
-		mc.minersKeysMutex.Unlock()
 	}
 
 	return pubKeys, nil

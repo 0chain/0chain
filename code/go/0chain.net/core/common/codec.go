@@ -2,9 +2,10 @@ package common
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
+
+	"encoding/json"
 
 	. "0chain.net/core/logging"
 	"github.com/vmihailenco/msgpack"
@@ -19,15 +20,22 @@ const (
 )
 
 /*ToJSON - given an entity, get the json of that entity as a buffer */
-func ToJSON(entity interface{}) *bytes.Buffer {
+func ToJSON(entity interface{}) (*bytes.Buffer, error) {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
-	json.NewEncoder(buffer).Encode(entity)
-	return buffer
+	if err := json.NewEncoder(buffer).Encode(entity); err != nil {
+		return nil, err
+	}
+
+	return buffer, nil
 }
 
 /*WriteJSON - writes the entity json to a stream */
 func WriteJSON(w io.Writer, entity interface{}) error {
 	return json.NewEncoder(w).Encode(entity)
+}
+
+func WriteMsgpack(w io.Writer, entity interface{}) error {
+	return msgpack.NewEncoder(w).Encode(entity)
 }
 
 /*ToMsgpack - msgpack encoding */
@@ -39,7 +47,9 @@ func ToMsgpack(entity interface{}) *bytes.Buffer {
 		impl.DoReadLock()
 		defer impl.DoReadUnlock()
 	}
-	encoder.Encode(entity)
+	if err := encoder.Encode(entity); err != nil {
+		Logger.Error("msgpack encode failed", zap.Error(err))
+	}
 	return buffer
 }
 
@@ -77,6 +87,10 @@ func FromJSON(data interface{}, entity interface{}) error {
 /*ReadJSON - read entity json from a stream */
 func ReadJSON(r io.Reader, entity interface{}) error {
 	return json.NewDecoder(r).Decode(entity)
+}
+
+func ReadMsgpack(r io.Reader, entity interface{}) error {
+	return msgpack.NewDecoder(r).Decode(entity)
 }
 
 /*FromMsgpack - read data into an entity */

@@ -70,6 +70,7 @@ func PutTransactionWithoutValidate(ctx context.Context, entity datastore.Entity)
 	if err != nil || cli == nil || cli.PublicKey == "" {
 		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
+
 	if datastore.DoAsync(ctx, txn) {
 		IncTransactionCount()
 		return txn, nil

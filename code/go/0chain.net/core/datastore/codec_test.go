@@ -2,11 +2,13 @@ package datastore_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
 
+	"encoding/json"
+
+	"github.com/stretchr/testify/require"
 	"github.com/vmihailenco/msgpack"
 
 	"0chain.net/chaincore/block"
@@ -35,7 +37,11 @@ func TestToJSON(t *testing.T) {
 		{
 			name: "Test_ToJSON_OK",
 			args: args{entity: b},
-			want: common.ToJSON(b),
+			want: func() *bytes.Buffer {
+				b, err := common.ToJSON(b)
+				require.NoError(t, err)
+				return b
+			}(),
 		},
 	}
 	for _, tt := range tests {

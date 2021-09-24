@@ -1,6 +1,8 @@
 package encryption
 
 import (
+	"crypto/sha256"
+	"crypto/sha512"
 	"fmt"
 	"reflect"
 	"sync"
@@ -9,6 +11,154 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 	"github.com/stretchr/testify/require"
 )
+
+func TestBLS0ChainAggSignature(t *testing.T) {
+	total := 10
+	sigSchemes := make([]SignatureScheme, total)
+	msgs := make([]string, total)
+	msgHashes := make([]string, total)
+	msgSignatures := make([]string, total)
+	pubKeys := make([]string, total)
+	clientSignatureScheme := "bls0chain"
+	for i := 0; i < total; i++ {
+		sigSchemes[i] = GetSignatureScheme(clientSignatureScheme)
+		err := sigSchemes[i].GenerateKeys()
+		require.NoError(t, err)
+		pubKeys[i] = sigSchemes[i].GetPublicKey()
+		msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
+		msgHashes[i] = Hash(msgs[i])
+		sig, err := sigSchemes[i].Sign(msgHashes[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		msgSignatures[i] = sig
+	}
+
+	//require.True(t, BLS0ChainAggregateHashesVerify(msgSignatures, msgHashes, pubKeys))
+	//aggSign, err := BLS0ChainAggregateSignatures(msgSignatures)
+	//require.NoError(t, err)
+	//require.True(t, aggSign.BLS0ChainAggregateHashesVerify(pubKeys, msgHashes))
+}
+
+func HashA(buf []byte) []byte {
+	if bls.GetOpUnitSize() == 4 {
+		d := sha256.Sum256([]byte(buf))
+		return d[:]
+	}
+	// use SHA512 if bitSize > 256
+	d := sha512.Sum512([]byte(buf))
+	return d[:]
+}
+
+func TestAAAA(t *testing.T) {
+	n := 1000
+	pubVec := make([]bls.PublicKey, n)
+	sigVec := make([]bls.Sign, n)
+	h := make([][]byte, n)
+	for i := 0; i < n; i++ {
+		//sigScheme := GetSignatureScheme(clientSignatureScheme)
+		//err := sigScheme.GenerateKeys()
+		//require.NoError(t, err)
+		//sigScheme.(BLS)
+		//
+		sec := new(bls.SecretKey)
+		sec.SetByCSPRNG()
+		pubVec[i] = *sec.GetPublicKey()
+		m := fmt.Sprintf("abc-%d", i)
+		h[i] = []byte(Hash(m))
+		sigVec[i] = *sec.SignHash(h[i])
+	}
+
+	var sig bls.Sign
+	sig.Aggregate(sigVec)
+	// aggregate sig
+	//sig := sigVec[0]
+	//for i := 1; i < n; i++ {
+	//	sig.Add(sigVec[i])
+	//}
+
+	if !sig.VerifyAggregateHashes(pubVec, h) {
+		t.Errorf("sig.VerifyAggregateHashes")
+	}
+}
+
+//func BenchmarkAggregateSignaturesV2(b *testing.B) {
+//	for j := 0; j < b.N; j++ {
+//		total := 10
+//		msgs := make([]string, total)
+//		msgHashes := make([]string, total)
+//		msgSignatures := make([]string, total)
+//		clientSignatureScheme := "bls0chain"
+//		pubkeys := make([]bls.PublicKey, total)
+//		for i := 0; i < total; i++ {
+//			sigScheme := GetSignatureScheme(clientSignatureScheme)
+//			err := sigScheme.GenerateKeys()
+//			require.NoError(b, err)
+//
+//			var pk bls.PublicKey
+//			err = pk.DeserializeHexStr(sigScheme.GetPublicKey())
+//			require.NoError(b, err)
+//
+//			pubkeys[i] = pk
+//			msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
+//			msgHashes[i] = Hash(msgs[i])
+//			sig, err := sigScheme.Sign(Hash(msgs[i]))
+//			if err != nil {
+//				b.Fatal(err)
+//			}
+//			msgSignatures[i] = sig
+//		}
+//
+//		aggSig, err := BLS0ChainAggregateSignatures(msgSignatures)
+//		require.NoError(b, err)
+//		require.True(b, aggSig.VerifyAggregate(pubkeys, msgHashes))
+//	}
+//}
+
+//func init() {
+//gSeckeys := make([]bls.SecretKey, 1000)
+//gPubkeys := make([]bls.PublicKey, 1000)
+//}
+
+func TestAggregateSignaturesV2(t *testing.T) {
+	total := 1000
+	msgs := make([]string, total)
+	msgHashes := make([]string, total)
+	msgSignatures := make([]string, total)
+	pubkeys := make([]bls.PublicKey, total)
+	for i := 0; i < total; i++ {
+		clientSignatureScheme := "bls0chain"
+		sigScheme := GetSignatureScheme(clientSignatureScheme)
+		err := sigScheme.GenerateKeys()
+		require.NoError(t, err)
+		var pk bls.PublicKey
+		err = pk.DeserializeHexStr(sigScheme.GetPublicKey())
+		require.NoError(t, err)
+		pubkeys[i] = pk
+		msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
+		msgHashes[i] = Hash(msgs[i])
+		sig, err := sigScheme.Sign(Hash(msgs[i]))
+		if err != nil {
+			t.Fatal(err)
+		}
+		msgSignatures[i] = sig
+	}
+
+	wg := sync.WaitGroup{}
+	batchSize := 250
+	round := total / batchSize
+	for j := 0; j < round; j++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			start := i * batchSize
+			aggSig, err := BLS0ChainAggregateSignatures(msgSignatures[start : start+batchSize])
+			require.NoError(t, err)
+			require.True(t, aggSig.VerifyAggregate(pubkeys[start:start+batchSize], msgHashes[start:start+batchSize]))
+		}(j)
+	}
+	wg.Wait()
+}
 
 func TestAggregateSignatures(t *testing.T) {
 	total := 1000
@@ -25,7 +175,7 @@ func TestAggregateSignatures(t *testing.T) {
 		require.NoError(t, err)
 		msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
 		msgHashes[i] = Hash(msgs[i])
-		sig, err := sigSchemes[i].Sign(msgHashes[i])
+		sig, err := sigSchemes[i].SignV2(msgHashes[i])
 		if err != nil {
 			t.Fatal(err)
 		}

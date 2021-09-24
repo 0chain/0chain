@@ -13,6 +13,8 @@ import (
 	"0chain.net/core/memorystore"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack"
 )
 
 func init() {
@@ -53,6 +55,31 @@ func setupEntity() {
 	memorystore.AddPool(em.DB, memorystore.DefaultPool)
 
 	cliEntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
+}
+
+func TestSaveClients(t *testing.T) {
+	common.SetupRootContext(context.Background())
+	if err := initDefaultPool(); err != nil {
+		t.Fatal(err)
+	}
+	setupEntity()
+
+	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
+	entity := Provider()
+	client, ok := entity.(*Client)
+	if !ok {
+		t.Fatal("expected Client implementation")
+	}
+	client.SetPublicKey(publicKey)
+
+	v, err := msgpack.Marshal(client)
+	require.NoError(t, err)
+
+	var c Client
+	err = msgpack.Unmarshal(v, &c)
+	require.NoError(t, err)
+
+	require.Equal(t, client.PublicKey, c.PublicKey)
 }
 
 func TestClientChunkSave(t *testing.T) {

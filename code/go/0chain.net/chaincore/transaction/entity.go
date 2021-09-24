@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"encoding/json"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -41,11 +42,11 @@ func SetupTransactionDB() {
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField `json:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
-	PublicKey string        `json:"-" msgpack:"puk,omitempty"`
+	PublicKey string        `json:"public_key,omitempty" msgpack:"puk,omitempty"`
 
 	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
@@ -134,6 +135,10 @@ func (t *Transaction) ComputeClientID() {
 		if t.ClientID == "" {
 			logging.Logger.Error("invalid transaction", zap.String("txn", datastore.ToJSON(t).String()))
 		}
+	}
+
+	if t.ClientID == "" {
+		logging.Logger.Error("invalid transaction, client id is empty")
 	}
 }
 

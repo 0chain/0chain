@@ -976,7 +976,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 // MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	if bytes.Compare(mpt.GetRoot(), mpt2.GetRoot()) == 0 {
-		Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
+		//Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
 		return nil
 	}
 

@@ -104,7 +104,9 @@ func TestToJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := common.ToJSON(tt.args.entity); !bytes.Equal(got.Bytes(), tt.want.Bytes()) {
+			got, err := common.ToJSON(tt.args.entity)
+			require.NoError(t, err)
+			if !bytes.Equal(got.Bytes(), tt.want.Bytes()) {
 				t.Errorf("ToJSON() = %v, want %v", got.Bytes(), tt.want.Bytes())
 			}
 		})

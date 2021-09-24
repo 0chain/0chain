@@ -143,23 +143,23 @@ type Block struct {
 
 	ChainID     datastore.Key `json:"chain_id"`
 	ChainWeight float64       `json:"chain_weight"`
-	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
-	PrevBlock   *Block        `json:"-"`
+	RoundRank   int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
+	PrevBlock   *Block        `json:"-" msgpack:"-"`
 
-	TxnsMap   map[string]bool `json:"-"`
-	mutexTxns sync.RWMutex
+	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
+	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
 
-	ClientState           util.MerklePatriciaTrieI `json:"-"`
+	ClientState           util.MerklePatriciaTrieI `json:"-" msgpack:"-"`
 	stateStatus           int8
-	stateStatusMutex      sync.RWMutex `json:"-"`
-	stateMutex            sync.RWMutex `json:"-"`
+	stateStatusMutex      sync.RWMutex `json:"-" msgpack:"-"`
+	stateMutex            sync.RWMutex `json:"-" msgpack:"-"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          sync.RWMutex
+	ticketsMutex          sync.RWMutex `json:"-" msgpack:"-"`
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool `json:"-"`
-	*MagicBlock           `json:"magic_block,omitempty"`
+	UniqueBlockExtensions map[string]bool `json:"-" msgpack:"-"`
+	*MagicBlock           `json:"magic_block,omitempty" msgpack:"mb,omitempty"`
 }
 
 // NewBlock - create a new empty block

@@ -30,8 +30,8 @@ type Pool struct {
 	Type int8 `json:"type"`
 
 	// ---------------------------------------------
-	mmx      sync.RWMutex
-	Nodes    []*Node          `json:"-"`
+	mmx      sync.RWMutex     `json:"-" msgpack:"-"`
+	Nodes    []*Node          `json:"-" msgpack:"-"`
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
