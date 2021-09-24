@@ -215,7 +215,7 @@ func (sc *StorageSmartContract) addBlobbersOffers(
 	balances chainstate.StateContextI,
 ) (err error) {
 	// update blobbers' stakes and capacity used
-	qtl, err := blockrewards.GetQualifyingTotalsList(balances)
+	qtl, err := blockrewards.GetQualifyingTotalsList(0, balances)
 	if err != nil {
 		return fmt.Errorf("getting block reward totals: %v", err)
 	}

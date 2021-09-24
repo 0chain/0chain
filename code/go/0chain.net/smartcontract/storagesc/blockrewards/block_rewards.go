@@ -85,12 +85,23 @@ func (qtl *QualifyingTotalsList) Initialise() {
 	}
 }
 
+func (qtl *QualifyingTotalsList) GetCapacity(round int64) int64 {
+	return qtl.Totals[round].Capacity
+}
+
+func (qtl *QualifyingTotalsList) GetUsed(round int64) int64 {
+	return qtl.Totals[round].Used
+}
+
 func (qtl *QualifyingTotalsList) Save(balances cstate.StateContextI) error {
 	_, err := balances.InsertTrieNode(QualifyingTotalsPerBlockKey, qtl)
 	return err
 }
 
-func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsList, error) {
+func GetQualifyingTotalsList(
+	_ int64,
+	balances cstate.StateContextI,
+) (*QualifyingTotalsList, error) {
 	var val util.Serializable
 	var qtl QualifyingTotalsList
 	val, err := balances.GetTrieNode(QualifyingTotalsPerBlockKey)

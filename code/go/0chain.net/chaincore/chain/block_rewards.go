@@ -21,7 +21,7 @@ func UpdateRewardTotalList(balances cstate.StateContextI) error {
 	logging.Logger.Info("piers start UpdateRewardTotalList",
 		zap.Int64("round", round),
 	)
-	qtl, err := blockrewards.GetQualifyingTotalsList(balances)
+	qtl, err := blockrewards.GetQualifyingTotalsList(0, balances)
 	if err != nil {
 		return fmt.Errorf("getting qualifying totals list: %v", err)
 	}

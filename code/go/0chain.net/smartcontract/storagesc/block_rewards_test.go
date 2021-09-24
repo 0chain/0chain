@@ -175,14 +175,14 @@ func TestUpdateBlockRewards(t *testing.T) {
 				usedRatio = float64(args.blobber.Used) / float64(args.qtl.Totals[i].Used)
 			}
 			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
-			fmt.Println("i", i, "cap", capacityReward, "used", usedReward, "reward", reward,
-				"qtl cap", args.qtl.Totals[i].Capacity, "qtl used", args.qtl.Totals[i].Used)
+			fmt.Println("i", i, "cap", capacityReward, "used", usedReward, "reward", reward)
 			reward += capacityReward + usedReward
 		}
 
 		var sp stakePool
 		require.NoError(t, sp.Decode(args.sp.Encode()))
 		require.EqualValues(t, state.Balance(p.stake*1e10), sp.stake())
+		fmt.Println("reward", reward)
 		if p.stake > 0 {
 			for _, pool := range sp.Pools {
 				poolReward := pool.BlockRewardCarry + reward/float64(len(p.spCarries))

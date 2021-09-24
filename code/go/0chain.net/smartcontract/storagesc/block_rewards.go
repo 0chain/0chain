@@ -72,24 +72,23 @@ func calculateReward(
 ) float64 {
 	var reward float64
 	round := start - 1
-	for i := len(brc.Changes) - 1; i >= 0; i-- {
-		settings := brc.Changes[i].Change
-		for ; round > brc.Changes[i].Round && round >= end; round-- {
+	for change, i := brc.getLatestChange(); change != nil; change, i = brc.getPreviousChange(i) {
+		settings := change.Change
+		for ; round >= brc.Changes[i].Round && round >= end; round-- {
 			var capRatio float64
-			if qtl.Totals[round].Capacity > 0 {
-				capRatio = float64(capacity) / float64(qtl.Totals[round].Capacity)
+			if qtl.GetCapacity(round) > 0 {
+				capRatio = float64(capacity) / float64(qtl.GetCapacity(round))
 			}
 			capacityReward := float64(settings.BlockReward) * settings.BlobberCapacityWeight * capRatio
 
 			var usedRatio float64
-			if qtl.Totals[round].Used > 0 {
-				usedRatio = float64(used) / float64(qtl.Totals[round].Used)
+			if qtl.GetUsed(round) > 0 {
+				usedRatio = float64(used) / float64(qtl.GetUsed(round))
 			}
 			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
 			reward += capacityReward + usedReward
 			fmt.Println("i", i, "round", round, "cap", capacityReward,
-				"used", usedReward, "reward", reward,
-				"qtl.cap", qtl.Totals[round].Capacity, "qtl.used", qtl.Totals[round].Used)
+				"used", usedReward, "reward", reward)
 		}
 		if brc.Changes[i].Round < end {
 			return reward
@@ -104,10 +103,9 @@ func payBlobberRewards(
 	qtl *blockrewards.QualifyingTotalsList,
 	balances cstate.StateContextI,
 ) error {
-	//var round = balances.GetBlock().Round
 	if qtl == nil {
 		var err error
-		qtl, err = blockrewards.GetQualifyingTotalsList(balances)
+		qtl, err = blockrewards.GetQualifyingTotalsList(blobber.LastBlockRewardPaymentRound, balances)
 		if err != nil {
 			return fmt.Errorf("getting block reward totals: %v", err)
 		}
@@ -133,6 +131,7 @@ func payBlobberRewards(
 	)
 
 	stakes := float64(sp.stake())
+	fmt.Println("reward", reward, "stakes", stakes)
 	for _, pool := range sp.Pools {
 		poolReward := pool.BlockRewardCarry + reward*float64(pool.Balance)/stakes
 		toMint := state.Balance(poolReward)

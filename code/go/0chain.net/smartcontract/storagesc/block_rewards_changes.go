@@ -28,6 +28,20 @@ type blockRewardChanges struct {
 	Changes []blockRewardChange `json:"changes"`
 }
 
+func (brc *blockRewardChanges) getLatestChange() (*blockRewardChange, int) {
+	if len(brc.Changes) == 0 {
+		return nil, 0
+	}
+	return &brc.Changes[len(brc.Changes)-1], len(brc.Changes) - 1
+}
+
+func (brc *blockRewardChanges) getPreviousChange(index int) (*blockRewardChange, int) {
+	if index == 0 || index >= len(brc.Changes) {
+		return nil, 0
+	}
+	return &brc.Changes[index-1], index - 1
+}
+
 func updateBlockRewardSettingsList(
 	before, after blockrewards.BlockReward,
 	balances cstate.StateContextI,

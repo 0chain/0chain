@@ -97,11 +97,9 @@ func TestUpdateRewardTotalList(t *testing.T) {
 			var qt blockrewards.QualifyingTotals
 			if round > 0 {
 				qt = blockrewards.QualifyingTotals{
-					Round:              round,
-					Capacity:           mockCapacity,
-					Used:               mockUsage,
-					LastSettingsChange: 1,
-					SettingsChange:     setting,
+					Round:    round,
+					Capacity: mockCapacity,
+					Used:     mockUsage,
 				}
 			}
 			beforeQtl.Totals = append(beforeQtl.Totals, qt)
