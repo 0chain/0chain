@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -47,7 +48,8 @@ func TestUpdateBlockRewards(t *testing.T) {
 		capacity, used                                        int64
 		round, lastSettingChange                              int64
 		stake                                                 float64
-		settings                                              map[int64]blockrewards.BlockReward
+		settings                                              []blockrewards.BlockReward
+		settingChangePeriod                                   int64
 		inputQtl                                              bool
 		spCarries                                             []float64
 	}
@@ -68,13 +70,8 @@ func TestUpdateBlockRewards(t *testing.T) {
 	}
 
 	var getArgs = func(t *testing.T, p parameters) args {
-		_, ok := p.settings[p.lastSettingChange]
-		require.True(t, ok)
 
 		var balances = mocks.StateContextI{}
-		var conf = &scConfig{
-			BlockReward: &mockSettings,
-		}
 		var blobber = &StorageNode{
 			ID:                          mockBlobberId,
 			Capacity:                    mockCapacity,
@@ -83,22 +80,14 @@ func TestUpdateBlockRewards(t *testing.T) {
 		}
 
 		var qtl blockrewards.QualifyingTotalsList
+		qtl.Initialise()
 		require.True(t, p.round > p.lastBlockRewardPaymentRound)
-		var lastSettingsChange int64 = 0
-		for i := int64(0); i < p.round; i++ {
-			qt := blockrewards.QualifyingTotals{
+		for i := int64(1); i < p.round; i++ {
+			qtl.Totals = append(qtl.Totals, blockrewards.QualifyingTotals{
 				Round:    i,
 				Capacity: mockCapacity * i,
 				Used:     mockUsage * i,
-			}
-			if settings, ok := p.settings[i]; ok {
-				qt.SettingsChange = &settings
-				lastSettingsChange = i
-			} else {
-				require.NotEqual(t, i, int64(0))
-			}
-			qt.LastSettingsChange = lastSettingsChange
-			qtl.Totals = append(qtl.Totals, qt)
+			})
 		}
 
 		var sp = newStakePool()
@@ -122,9 +111,11 @@ func TestUpdateBlockRewards(t *testing.T) {
 			deltaUsed:     p.deltaUsed,
 			blobber:       blobber,
 			sp:            sp,
-			conf:          conf,
-			balances:      &balances,
-			qtl:           &qtl,
+			conf: &scConfig{
+				BlockReward: &p.settings[len(p.settings)-1],
+			},
+			balances: &balances,
+			qtl:      &qtl,
 		}
 	}
 
@@ -132,6 +123,19 @@ func TestUpdateBlockRewards(t *testing.T) {
 		var currentBlock block.Block
 		currentBlock.Round = p.round
 		args.balances.On("GetBlock").Return(&currentBlock)
+
+		require.True(t, len(p.settings) > 0)
+		var brc blockRewardChanges
+		for i, setting := range p.settings {
+			brc.Changes = append(brc.Changes, blockRewardChange{
+				Round:  int64(i) * p.settingChangePeriod,
+				Change: setting,
+			})
+		}
+		args.balances.On(
+			"GetTrieNode",
+			blockRewardChangesKey,
+		).Return(&brc, nil).Once()
 
 		if !p.inputQtl {
 			args.balances.On(
@@ -148,23 +152,19 @@ func TestUpdateBlockRewards(t *testing.T) {
 			).Return().Once()
 		}
 
-		var reward float64
 		require.True(t, p.lastBlockRewardPaymentRound < p.round)
-		require.True(t, 0 <= p.lastBlockRewardPaymentRound)
-		var settings *blockrewards.BlockReward
-		for i := p.lastBlockRewardPaymentRound; i >= 0; i-- {
-			iSettings, ok := p.settings[i]
-			if ok {
-				settings = &iSettings
-				break
-			}
-		}
-		require.NotNil(t, settings)
+		require.True(t, 0 < p.lastBlockRewardPaymentRound)
+		a := len(p.settings)
+		b := int(p.round / p.settingChangePeriod)
+		a = a
+		b = b
+		require.True(t, len(p.settings) == 1+int(p.round/p.settingChangePeriod))
+
+		var reward float64
 		for i := p.lastBlockRewardPaymentRound; i < p.round; i++ {
-			newSettings, ok := p.settings[i]
-			if ok {
-				settings = &newSettings
-			}
+			settingChange := i / p.settingChangePeriod
+			settingChange = settingChange
+			settings := p.settings[i/p.settingChangePeriod]
 			var capRatio float64
 			if args.qtl.Totals[i].Capacity > 0 {
 				capRatio = float64(args.blobber.Capacity) / float64(args.qtl.Totals[i].Capacity)
@@ -175,6 +175,8 @@ func TestUpdateBlockRewards(t *testing.T) {
 				usedRatio = float64(args.blobber.Used) / float64(args.qtl.Totals[i].Used)
 			}
 			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
+			fmt.Println("i", i, "cap", capacityReward, "used", usedReward, "reward", reward,
+				"qtl cap", args.qtl.Totals[i].Capacity, "qtl used", args.qtl.Totals[i].Used)
 			reward += capacityReward + usedReward
 		}
 
@@ -216,14 +218,15 @@ func TestUpdateBlockRewards(t *testing.T) {
 				round:                       9,
 				stake:                       17,
 				inputQtl:                    true,
-				settings: map[int64]blockrewards.BlockReward{
-					0: mockSettings,
-					7: mockSettings2,
+				settings: []blockrewards.BlockReward{
+					mockSettings,
+					mockSettings2,
 				},
-				spCarries: []float64{0.1, 0.9},
+				settingChangePeriod: 5,
+				spCarries:           []float64{0.1, 0.9},
 			},
 		},
-		{
+		/*{
 			name: "ok",
 			parameters: parameters{
 				deltaCapacity:               3,
@@ -232,11 +235,12 @@ func TestUpdateBlockRewards(t *testing.T) {
 				round:                       7,
 				stake:                       17,
 				inputQtl:                    true,
-				settings: map[int64]blockrewards.BlockReward{
-					0: mockSettings,
-					2: mockSettings2,
+				settings: []blockrewards.BlockReward{
+					mockSettings,
+					mockSettings2,
 				},
-				spCarries: []float64{0.0, 0.9},
+				settingChangePeriod: 5,
+				spCarries:           []float64{0.0, 0.9},
 			},
 		},
 
@@ -249,13 +253,14 @@ func TestUpdateBlockRewards(t *testing.T) {
 				round:                       7,
 				stake:                       17,
 				inputQtl:                    true,
-				settings: map[int64]blockrewards.BlockReward{
-					0: mockSettings,
-					1: mockSettings,
+				settings: []blockrewards.BlockReward{
+					mockSettings,
+					mockSettings2,
 				},
-				spCarries: []float64{0.1, 0.9},
+				settingChangePeriod: 5,
+				spCarries:           []float64{0.1, 0.9},
 			},
-		},
+		},*/
 	}
 
 	for _, tt := range tests {
@@ -288,8 +293,4 @@ func TestUpdateBlockRewards(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
-}
-
-func TestBlockRewardModifiedStakePool(t *testing.T) {
-
 }

@@ -79,7 +79,7 @@ func (qtl *QualifyingTotalsList) Decode(p []byte) error {
 	return json.Unmarshal(p, qtl)
 }
 
-func (qtl *QualifyingTotalsList) initialise() {
+func (qtl *QualifyingTotalsList) Initialise() {
 	qtl.Totals = []QualifyingTotals{
 		{},
 	}
@@ -98,7 +98,7 @@ func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsLi
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
-		qtl.initialise()
+		qtl.Initialise()
 		return &qtl, nil
 	}
 
@@ -107,7 +107,7 @@ func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsLi
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	if len(qtl.Totals) == 0 {
-		qtl.initialise()
+		qtl.Initialise()
 	}
 	return &qtl, nil
 }

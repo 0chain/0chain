@@ -121,7 +121,6 @@ type delegatePool struct {
 	Penalty           state.Balance    `json:"penalty"`     // total
 	Unstake           common.Timestamp `json:"unstake"`     // want to unstake
 	BlockRewardCarry  float64          `json:"block_reward_carry"`
-	InterestCarry     float64          `json:"interest_carry"`
 }
 
 // stake pool settings
