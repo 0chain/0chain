@@ -128,39 +128,39 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	t *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
-) error {
+) (string, error) {
 	if t.ClientID != owner {
-		return common.NewError("add_free_storage_assigner",
+		return "", common.NewError("add_free_storage_assigner",
 			"unauthorized access - only the owner can update the variables")
 	}
 
 	var assignerInfo newFreeStorageAssignerInfo
 	if err := assignerInfo.decode(input); err != nil {
-		return common.NewErrorf("add_free_storage_assigner",
+		return "", common.NewErrorf("add_free_storage_assigner",
 			"can't unmarshal input: %v", err)
 	}
 
 	var conf *scConfig
 	var err error
 	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return common.NewErrorf("add_free_storage_assigner",
+		return "", common.NewErrorf("add_free_storage_assigner",
 			"can't get config: %v", err)
 	}
 	var newTotalLimit = state.Balance(assignerInfo.TotalLimit * floatToBalance)
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
-		return common.NewErrorf("add_free_storage_assigner",
+		return "", common.NewErrorf("add_free_storage_assigner",
 			"total tokens limit %d exceeds maximum permitted: %d", newTotalLimit, conf.MaxTotalFreeAllocation)
 	}
 
 	var newIndividualLimit = state.Balance(assignerInfo.IndividualLimit * floatToBalance)
 	if newIndividualLimit > conf.MaxIndividualFreeAllocation {
-		return common.NewErrorf("add_free_storage_assigner",
+		return "", common.NewErrorf("add_free_storage_assigner",
 			"individual allocation token limit %d exceeds maximum permitted: %d", newIndividualLimit, conf.MaxIndividualFreeAllocation)
 	}
 
 	assigner, err := ssc.getFreeStorageAssigner(assignerInfo.Name, balances)
 	if err != nil && err != util.ErrValueNotPresent {
-		return common.NewError("add_free_storage_assigner", err.Error())
+		return "", common.NewError("add_free_storage_assigner", err.Error())
 	}
 	if err == util.ErrValueNotPresent || assigner == nil {
 		assigner = &freeStorageAssigner{
@@ -172,10 +172,10 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	assigner.IndividualLimit = newIndividualLimit
 	err = assigner.save(ssc.ID, balances)
 	if err != nil {
-		return common.NewErrorf("add_free_storage_assigner", "error saving new assigner: %v", err)
+		return "", common.NewErrorf("add_free_storage_assigner", "error saving new assigner: %v", err)
 	}
 
-	return nil
+	return "", nil
 }
 
 func verifyFreeAllocationRequest(

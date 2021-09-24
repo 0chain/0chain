@@ -32,7 +32,7 @@ func TestSettings(t *testing.T) {
 	}
 }
 
-func TestUpdateSettigns(t *testing.T) {
+func TestUpdateSettings(t *testing.T) {
 	type args struct {
 		msc      *MinerSmartContract
 		txn      *transaction.Transaction
@@ -198,9 +198,4 @@ func TestUpdateSettigns(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
-}
-
-func zcnToBalance(token float64) state.Balance {
-	const x10 float64 = 10 * 1000 * 1000 * 1000
-	return state.Balance(token * x10)
 }
