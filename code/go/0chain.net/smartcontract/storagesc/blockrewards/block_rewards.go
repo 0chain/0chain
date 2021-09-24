@@ -4,11 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	"0chain.net/core/viper"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -51,11 +46,9 @@ func (br *BlockReward) SetWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 }
 
 type QualifyingTotals struct {
-	Round              int64        `json:"round"` // todo probably remove after debug
-	Capacity           int64        `json:"capacity"`
-	Used               int64        `json:"used"`
-	LastSettingsChange int64        `json:"last_settings_change"`
-	SettingsChange     *BlockReward `json:"settings_change"`
+	Round    int64 `json:"round"` // todo probably remove after debug
+	Capacity int64 `json:"capacity"`
+	Used     int64 `json:"used"`
 }
 
 func (qt *QualifyingTotals) Encode() []byte {
@@ -74,10 +67,6 @@ type QualifyingTotalsList struct {
 	Totals []QualifyingTotals `json:"totals"`
 }
 
-//func NewQualifyingTotalsList() *QualifyingTotalsList {
-//	return &QualifyingTotalsList{make([]QualifyingTotals, 1024)}
-//}
-
 func (qtl *QualifyingTotalsList) Encode() []byte {
 	var b, err = json.Marshal(qtl)
 	if err != nil {
@@ -90,84 +79,10 @@ func (qtl *QualifyingTotalsList) Decode(p []byte) error {
 	return json.Unmarshal(p, qtl)
 }
 
-var myViper = viper.New()
-
-func GetSettingsFromFile() BlockReward {
-	const pfx = "smart_contracts.storagesc."
-	br := BlockReward{
-		BlockReward:     state.Balance(myViper.GetFloat64(pfx+"block_reward.block_reward") * 1e10),
-		QualifyingStake: state.Balance(myViper.GetFloat64(pfx+"block_reward.qualifying_stake") * 1e10),
+func (qtl *QualifyingTotalsList) initialise() {
+	qtl.Totals = []QualifyingTotals{
+		{},
 	}
-	br.SetWeightsFromRatio(
-		myViper.GetFloat64(pfx+"block_reward.sharder_ratio"),
-		myViper.GetFloat64(pfx+"block_reward.miner_ratio"),
-		myViper.GetFloat64(pfx+"block_reward.blobber_capacity_ratio"),
-		myViper.GetFloat64(pfx+"block_reward.blobber_usage_ratio"),
-	)
-	logging.Logger.Info("piers GetSettingsFromFile", zap.Any("block rewards", br), zap.Any("viper", myViper))
-	return br
-}
-
-func (qtl *QualifyingTotalsList) HasBlockRewardsSettingsChanged(balances cstate.StateContextI) (*BlockReward, bool, error) {
-	val, err := balances.GetTrieNode(ConfigKey)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, false, err
-		}
-		if balances.GetBlock().Round > 1 {
-			return nil, false, nil
-		}
-		br := GetSettingsFromFile()
-		return &br, true, nil
-	}
-
-	b, err := json.Marshal(val)
-	if err != nil {
-		return nil, false, err
-	}
-	var conf = struct {
-		BlockReward *BlockReward `json:"block_reward"`
-	}{}
-	err = json.Unmarshal(b, &conf)
-	if err != nil {
-		return nil, false, err
-	}
-	if len(qtl.Totals) == 0 || balances.GetBlock().Round == 1 {
-		return conf.BlockReward, true, nil
-	}
-
-	if conf.BlockReward == nil {
-		logging.Logger.Info("piers HasBlockRewardsSettingsChanged settings nil",
-			zap.Any("config", conf))
-		if balances.GetBlock().Round > 1 {
-			return nil, false, nil
-		}
-		br := GetSettingsFromFile()
-		return &br, true, nil
-	}
-
-	lastSettings := qtl.Totals[len(qtl.Totals)-1].LastSettingsChange
-	settings := qtl.Totals[lastSettings].SettingsChange
-	if settings == nil {
-		panic(fmt.Sprintf(
-			"settings nil, index: %d, lastsettings: %d, totals now: %v,\ttotals lastsettings %v,\tall totals: %v",
-			len(qtl.Totals)-1,
-			lastSettings,
-			qtl.Totals[len(qtl.Totals)-1],
-			qtl.Totals[lastSettings],
-			qtl.Totals,
-		))
-	}
-
-	if settings.BlockReward != conf.BlockReward.BlockReward ||
-		settings.QualifyingStake != conf.BlockReward.QualifyingStake ||
-		settings.BlobberUsageWeight != conf.BlockReward.BlobberUsageWeight ||
-		settings.BlobberCapacityWeight != conf.BlockReward.BlobberCapacityWeight ||
-		settings.MinerWeight != conf.BlockReward.MinerWeight ||
-		settings.SharderWeight != conf.BlockReward.SharderWeight {
-		return conf.BlockReward, true, nil
-	}
-	return nil, false, nil
 }
 
 func (qtl *QualifyingTotalsList) Save(balances cstate.StateContextI) error {
@@ -183,12 +98,16 @@ func GetQualifyingTotalsList(balances cstate.StateContextI) (*QualifyingTotalsLi
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
+		qtl.initialise()
 		return &qtl, nil
 	}
 
 	err = qtl.Decode(val.Encode())
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	if len(qtl.Totals) == 0 {
+		qtl.initialise()
 	}
 	return &qtl, nil
 }
