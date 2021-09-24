@@ -5,16 +5,16 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/storagesc/blockrewards"
-	"0chain.net/smartcontract"
 	chainState "0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract"
+	"0chain.net/smartcontract/storagesc/blockrewards"
 )
 
 type Setting int
@@ -604,9 +604,12 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", nil
 	}
 
+	var beforeBlockRewards = conf.BlockReward
 	if err := conf.update(*changes); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
+	var afterBlockRewards = conf.BlockReward
+	updateBlockRewardSettingsList(beforeBlockRewards, afterBlockRewards, balances)
 
 	if err = conf.validate(); err != nil {
 		return "", common.NewError("update_settings", err.Error())
