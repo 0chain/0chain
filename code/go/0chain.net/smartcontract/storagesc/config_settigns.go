@@ -609,7 +609,11 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 		return "", common.NewError("update_settings", err.Error())
 	}
 	var afterBlockRewards = conf.BlockReward
-	updateBlockRewardSettingsList(beforeBlockRewards, afterBlockRewards, balances)
+	err = updateBlockRewardSettingsList(*beforeBlockRewards, *afterBlockRewards, balances)
+	if err != nil {
+		return "", common.NewError("update_settings",
+			"error updating block reward settings list:  "+err.Error())
+	}
 
 	if err = conf.validate(); err != nil {
 		return "", common.NewError("update_settings", err.Error())

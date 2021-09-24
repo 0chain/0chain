@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -25,11 +28,29 @@ type blockRewardChanges struct {
 	Changes []blockRewardChange `json:"changes"`
 }
 
-func updateBlockRewardSettingsList(before, after *blockrewards.BlockReward, balances cstate.StateContextI) {
-	if *before == *after {
-		return
+func updateBlockRewardSettingsList(
+	before, after blockrewards.BlockReward,
+	balances cstate.StateContextI,
+) error {
+	if before == after {
+		return nil
 	}
-
+	changes, err := getBlockRewardChanges(balances)
+	if err != nil {
+		return err
+	}
+	changes.Changes = append(changes.Changes, blockRewardChange{
+		Round:  balances.GetBlock().Round,
+		Change: after,
+	})
+	logging.Logger.Info("piers7 updateBlockRewardSettingsList",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("before", before),
+		zap.Any("after", after),
+		zap.Any("changes", changes),
+	)
+	_, err = balances.InsertTrieNode(blockRewardChangesKey, changes)
+	return err
 }
 
 func (qt *blockRewardChanges) Encode() []byte {
