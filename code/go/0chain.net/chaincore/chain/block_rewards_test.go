@@ -85,15 +85,9 @@ func TestUpdateRewardTotalList(t *testing.T) {
 			conf.BlockReward = &mockSettings
 		}
 
-		balances.On("GetTrieNode", blockrewards.ConfigKey).Return(&conf, nil).Once()
-
 		var beforeQtl blockrewards.QualifyingTotalsList
 		var afterQtl blockrewards.QualifyingTotalsList
 		for round := int64(0); round < p.round; round++ {
-			var setting *blockrewards.BlockReward
-			if round == 1 {
-				setting = &mockSettings
-			}
 			var qt blockrewards.QualifyingTotals
 			if round > 0 {
 				qt = blockrewards.QualifyingTotals{
@@ -110,33 +104,12 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		qt.Capacity += p.deltaCapacity
 		qt.Used += p.deltaUsed
 		qt.Round = p.round
-		if p.newBlockRewardSettings != nil {
-			qt.LastSettingsChange = p.round
-			qt.SettingsChange = p.newBlockRewardSettings
-		} else {
-			qt.LastSettingsChange = 1
-			qt.SettingsChange = nil
-		}
 
 		if len(beforeQtl.Totals) > 0 {
 			qt.Capacity += beforeQtl.Totals[len(beforeQtl.Totals)-1].Capacity
 			qt.Used += beforeQtl.Totals[len(beforeQtl.Totals)-1].Used
 		}
 		afterQtl.Totals = append(afterQtl.Totals, qt)
-
-		if p.round == 1 {
-			beforeQtl = blockrewards.QualifyingTotalsList{}
-			afterQtl = blockrewards.QualifyingTotalsList{
-				Totals: []blockrewards.QualifyingTotals{
-					0: {},
-					1: {
-						Round:              1,
-						SettingsChange:     &mockSettings,
-						LastSettingsChange: 1,
-					},
-				},
-			}
-		}
 
 		balances.On(
 			"GetTrieNode",
@@ -146,7 +119,18 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		balances.On(
 			"InsertTrieNode",
 			blockrewards.QualifyingTotalsPerBlockKey,
-			&afterQtl,
+			mock.MatchedBy(func(qtl *blockrewards.QualifyingTotalsList) bool {
+				if len(afterQtl.Totals) != len(qtl.Totals) {
+					return false
+				}
+				for key, value := range afterQtl.Totals {
+					if qtl.Totals[key] != value {
+						return false
+					}
+				}
+				return true
+
+			}),
 		).Return("", nil).Once()
 
 		return want
@@ -166,10 +150,9 @@ func TestUpdateRewardTotalList(t *testing.T) {
 		{
 			name: "ok",
 			parameters: parameters{
-				round:                  5,
-				deltaCapacity:          1024,
-				deltaUsed:              2048,
-				newBlockRewardSettings: &mockSettings2,
+				round:         5,
+				deltaCapacity: 1024,
+				deltaUsed:     2048,
 			},
 		},
 	}

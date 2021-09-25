@@ -41,13 +41,14 @@ func UpdateRewardTotalList(balances cstate.StateContextI) error {
 	}
 	var newQt = qtl.Totals[len(qtl.Totals)-1]
 	deltaCapacity, deltaUsed := balances.GetBlockRewardDeltas()
+	newQt.Round = round
 	newQt.Capacity += deltaCapacity
 	newQt.Used += deltaUsed
 
 	switch int64(len(qtl.Totals)) {
-	case round - 1:
-		qtl.Totals = append(qtl.Totals, newQt)
 	case round:
+		qtl.Totals = append(qtl.Totals, newQt)
+	case round + 1:
 		qtl.Totals[len(qtl.Totals)-1] = newQt
 	default:
 		return fmt.Errorf("update_block_rewards, currupt chain,"+
