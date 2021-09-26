@@ -150,7 +150,7 @@ func setUpMpt(
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
 
-	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
+	return pMpt, pMpt.GetRoot(), benchmark.BenchData{
 		Clients:     clients,
 		PublicKeys:  publicKeys,
 		PrivateKeys: privateKeys,
