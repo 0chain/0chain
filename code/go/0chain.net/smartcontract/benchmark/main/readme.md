@@ -2,7 +2,7 @@ Benchmark 0chain smart-contract endpoints.
 
 Runs [testing.Benchmark](https://pkg.go.dev/testing#Benchmark) on each 0chain endpoint. 
 The blockchain database used in these tests is constructed from the parameters in the
-[benchmark.yaml](https://github.com/0chain/0chain/blob/bench-sc/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+[benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
 file. Smartcontracts do not (or should not) access tha chain so a populated 
 MPT database is enough to give a realistic benchmark.
 
