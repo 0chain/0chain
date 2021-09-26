@@ -926,6 +926,9 @@ type unlockResponse struct {
 // add delegated stake pool
 func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
+	logging.Logger.Info("piers2 stakePoolLock start",
+		zap.Int64("round", balances.GetBlock().Round),
+	)
 
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
@@ -949,6 +952,10 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get stake pool: %v", err)
 	}
+	logging.Logger.Info("piers2 stakePoolLock after get stake pool",
+		zap.Int64("round", balances.GetBlock().Round),
+		zap.Any("sp", sp),
+	)
 
 	if len(sp.Pools) >= conf.MaxDelegates {
 		return "", common.NewErrorf("stake_pool_lock_failed",
@@ -981,6 +988,9 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get the blobber: "+err.Error())
 	}
 	err = blockRewardModifiedStakePool(state.Balance(t.Value), sp, conf, blobber, ssc, balances)
+	logging.Logger.Info("piers2 blockRewardModifiedStakePool finished",
+		zap.Error(err),
+	)
 	if err != nil {
 		return "", fmt.Errorf("updating block rewrads: %v", err)
 	}
@@ -1014,7 +1024,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"saving stake pool: %v", err)
 	}
-
+	logging.Logger.Info("piers2 stake pool lock finished")
 	return
 }
 
@@ -1180,6 +1190,7 @@ const cantGetStakePoolMsg = "can't get related stake pool"
 func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
+	fmt.Println("piers6 starting getStakePoolStatHandler")
 	logging.Logger.Info("piers6 getStakePoolStatHandler start")
 	var (
 		blobberID = datastore.Key(params.Get("blobber_id"))

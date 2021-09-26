@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/core/logging"
@@ -44,6 +45,7 @@ func (brc *blockRewardChanges) getPreviousChange(index int) (*blockRewardChange,
 
 func updateBlockRewardSettingsList(
 	before, after blockrewards.BlockReward,
+	conf *scConfig,
 	balances cstate.StateContextI,
 ) error {
 	if before == after {
@@ -51,7 +53,10 @@ func updateBlockRewardSettingsList(
 	}
 	changes, err := getBlockRewardChanges(balances)
 	if err != nil {
-		return err
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		changes = newBlockRewardChanges(conf)
 	}
 	changes.Changes = append(changes.Changes, blockRewardChange{
 		Round:  balances.GetBlock().Round,
@@ -79,21 +84,17 @@ func (qt *blockRewardChanges) Decode(p []byte) error {
 	return json.Unmarshal(p, qt)
 }
 
-func (brc *blockRewardChanges) startBlockRewardChanges(balances cstate.StateContextI) error {
-	if len(brc.Changes) > 0 {
-		return nil
+func newBlockRewardChanges(
+	conf *scConfig,
+) *blockRewardChanges {
+	return &blockRewardChanges{
+		Changes: []blockRewardChange{
+			{
+				Round:  1,
+				Change: *conf.BlockReward,
+			},
+		},
 	}
-
-	conf, err := (&StorageSmartContract{}).setupConfig(balances)
-	if err != nil {
-		return err
-	}
-
-	brc.Changes = append(brc.Changes, blockRewardChange{
-		Round:  balances.GetBlock().Round,
-		Change: *conf.BlockReward,
-	})
-	return nil
 }
 
 func getBlockRewardChanges(balances cstate.StateContextI) (*blockRewardChanges, error) {
@@ -101,11 +102,7 @@ func getBlockRewardChanges(balances cstate.StateContextI) (*blockRewardChanges, 
 	var qtl blockRewardChanges
 	val, err := balances.GetTrieNode(blockRewardChangesKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		err = qtl.startBlockRewardChanges(balances)
-		return &qtl, err
+		return nil, err
 	}
 
 	err = qtl.Decode(val.Encode())
@@ -113,7 +110,7 @@ func getBlockRewardChanges(balances cstate.StateContextI) (*blockRewardChanges, 
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
 	if len(qtl.Changes) == 0 {
-		err = qtl.startBlockRewardChanges(balances)
+		return nil, errors.New("getBlockRewardChanges, empty changes list")
 	}
 	if err != nil {
 		return nil, err
