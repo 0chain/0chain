@@ -162,7 +162,7 @@ cassandra:
 # integration tests related configurations
 integration_tests:
   # address of the server
-  address: host.docker.internal:15210
+  address: 192.168.2.58:15210
   # lock_interval used by nodes to request server to connect to blockchain
   # after start
   lock_interval: 1s

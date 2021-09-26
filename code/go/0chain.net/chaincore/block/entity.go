@@ -918,36 +918,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 
 	beginState := b.ClientState.GetRoot()
 
-	for _, txn := range b.Txns {
-		if datastore.IsEmpty(txn.ClientID) {
-			txn.ComputeClientID()
-		}
-		rset, wset, err := c.UpdateState(ctx, b, txn)
-		if err != nil {
-			b.SetStateStatus(StateFailed)
-			logging.Logger.Error("compute state - update state failed",
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.String("client_state", util.ToHex(b.ClientStateHash)),
-				zap.String("prev_block", b.PrevHash),
-				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
-				zap.Error(err))
-			return common.NewError("state_update_error", "error updating state")
-		}
-
-		//we skip this check for blocks that do not contain access maps yet, in the future we will check more strictly
-		if bal, ok := b.AccessMap[txn.GetKey()]; ok && !bal.Includes(rset, wset) {
-			b.SetStateStatus(StateFailed)
-			logging.Logger.Error("compute state - access lists are not equal",
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.String("client_state", util.ToHex(b.ClientStateHash)),
-				zap.String("prev_block", b.PrevHash),
-				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
-				zap.Error(err))
-			return common.NewError("state_access_error", "error access lists")
-		}
-
+	err := b.applyTransactions(ctx, c, pb)
+	if err != nil {
+		return err
 	}
 
 	logging.Logger.Info("compute state", zap.Int64("round", b.Round),
@@ -975,6 +948,90 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		zap.Int("changes", b.ClientState.GetChangeCount()),
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+	return nil
+}
+
+func (b *Block) applyTransactions(ctx context.Context, c Chainer, pb *Block) error {
+	batcher := ContentionFreeBatcher{8}
+	batches := batcher.Batch(b)
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, 1)
+	finishChan := make(chan bool, 1)
+
+	for i, batch := range batches {
+		logging.Logger.Debug("apply transactions - running batch",
+			zap.Int("batch", i),
+			zap.Int("tx_count", len(batch)),
+		)
+
+		for _, txn := range batch {
+			ctx, cancel := context.WithCancel(ctx)
+			txn := txn
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				if err := b.applyTransaction(txn, c, ctx, pb); err != nil {
+					errChan <- err
+				}
+			}()
+
+			go func() {
+				wg.Wait()
+				finishChan <- true
+			}()
+
+			select {
+			case err := <-errChan:
+				logging.Logger.Error("apply transactions - batch failed with error",
+					zap.Error(err))
+				cancel()
+				return err
+			case <-ctx.Done():
+				logging.Logger.Warn("apply transactions - batch stopped due to context.Done()")
+				cancel()
+			case <-finishChan:
+				logging.Logger.Debug("apply transactions - batch processed successfully",
+					zap.Int("batch", i))
+			}
+
+		}
+	}
+
+	return nil
+}
+
+func (b *Block) applyTransaction(txn *transaction.Transaction, c Chainer, ctx context.Context, pb *Block) error {
+	if datastore.IsEmpty(txn.ClientID) {
+		txn.ComputeClientID()
+	}
+	rset, wset, err := c.UpdateState(ctx, b, txn)
+	if err != nil {
+		b.SetStateStatus(StateFailed)
+		logging.Logger.Error("compute state - update state failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("client_state", util.ToHex(b.ClientStateHash)),
+			zap.String("prev_block", b.PrevHash),
+			zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+			zap.Error(err))
+		return common.NewError("state_update_error", "error updating state")
+	}
+
+	//we skip this check for blocks that do not contain access maps yet, in the future we will check more strictly
+	if bal, ok := b.AccessMap[txn.GetKey()]; ok && !bal.Includes(rset, wset) {
+		b.SetStateStatus(StateFailed)
+		logging.Logger.Error("compute state - access lists are not equal",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("client_state", util.ToHex(b.ClientStateHash)),
+			zap.String("prev_block", b.PrevHash),
+			zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+			zap.Error(err))
+		return common.NewError("state_access_error", "error access lists")
+	}
+
 	return nil
 }
 
