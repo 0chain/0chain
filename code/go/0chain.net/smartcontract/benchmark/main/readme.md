@@ -32,7 +32,7 @@ go build -tags bn256
 ```
 
 You can also set all these options in the
-[benchmark.yaml](https://github.com/0chain/0chain/blob/bench-sc/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+[benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
 file. The command line options will take precedence over those in the `.yaml` file.
 
 The benchmark results are unlikely to be false positives but could  be false negatives, 
@@ -41,7 +41,7 @@ is accidentally skipped.
 
 The output results are coloured, red > `50ms`, purple `>10ms`, yellow >`1ms` 
 otherwise green. To turn off, set colour=false in
-[benchmark.yaml](https://github.com/0chain/0chain/blob/bench-sc/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
+[benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
 or use `--verbose=false`.
 
 For best results try to choose parameters so that benchmark timings are below a second.
