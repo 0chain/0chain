@@ -918,7 +918,8 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 
 	beginState := b.ClientState.GetRoot()
 
-	err := b.applyTransactions(ctx, c, pb)
+	batcher := &ContentionFreeBatcher{8}
+	err := b.applyTransactions(ctx, c, batcher)
 	if err != nil {
 		return err
 	}
@@ -951,8 +952,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	return nil
 }
 
-func (b *Block) applyTransactions(ctx context.Context, c Chainer, pb *Block) error {
-	batcher := ContentionFreeBatcher{8}
+func (b *Block) applyTransactions(ctx context.Context, c Chainer, batcher Batcher) error {
 	batches := batcher.Batch(b)
 
 	var wg sync.WaitGroup
@@ -972,7 +972,7 @@ func (b *Block) applyTransactions(ctx context.Context, c Chainer, pb *Block) err
 
 			go func() {
 				defer wg.Done()
-				if err := b.applyTransaction(txn, c, ctx, pb); err != nil {
+				if err := b.applyTransaction(txn, c, ctx); err != nil {
 					errChan <- err
 				}
 			}()
@@ -989,8 +989,8 @@ func (b *Block) applyTransactions(ctx context.Context, c Chainer, pb *Block) err
 				cancel()
 				return err
 			case <-ctx.Done():
-				logging.Logger.Warn("apply transactions - batch stopped due to context.Done()")
 				cancel()
+				return errors.New("batch stopped due to context.Done()")
 			case <-finishChan:
 				logging.Logger.Debug("apply transactions - batch processed successfully",
 					zap.Int("batch", i))
@@ -1002,7 +1002,7 @@ func (b *Block) applyTransactions(ctx context.Context, c Chainer, pb *Block) err
 	return nil
 }
 
-func (b *Block) applyTransaction(txn *transaction.Transaction, c Chainer, ctx context.Context, pb *Block) error {
+func (b *Block) applyTransaction(txn *transaction.Transaction, c Chainer, ctx context.Context) error {
 	if datastore.IsEmpty(txn.ClientID) {
 		txn.ComputeClientID()
 	}
@@ -1014,7 +1014,7 @@ func (b *Block) applyTransaction(txn *transaction.Transaction, c Chainer, ctx co
 			zap.String("block", b.Hash),
 			zap.String("client_state", util.ToHex(b.ClientStateHash)),
 			zap.String("prev_block", b.PrevHash),
-			zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+			zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.Error(err))
 		return common.NewError("state_update_error", "error updating state")
 	}
@@ -1027,7 +1027,7 @@ func (b *Block) applyTransaction(txn *transaction.Transaction, c Chainer, ctx co
 			zap.String("block", b.Hash),
 			zap.String("client_state", util.ToHex(b.ClientStateHash)),
 			zap.String("prev_block", b.PrevHash),
-			zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+			zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
 			zap.Error(err))
 		return common.NewError("state_access_error", "error access lists")
 	}

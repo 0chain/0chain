@@ -3,12 +3,11 @@ package block
 import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
-	"context"
 	"sort"
 )
 
 type Batcher interface {
-	Batch(ctx context.Context, pb *Block)
+	Batch(b *Block) (ret [][]*transaction.Transaction)
 }
 
 type ContentionFreeBatcher struct {

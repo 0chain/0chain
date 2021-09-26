@@ -82,8 +82,7 @@ func TestRankedTx_HasContention(t1 *testing.T) {
 				Transaction: &transaction.Transaction{}},
 			args: struct {
 				sets []map[datastore.Key]bool
-			}{sets: []map[datastore.Key]bool{{"1": true, "5": true, "6": true}},
-			},
+			}{sets: []map[datastore.Key]bool{{"1": true, "5": true, "6": true}}},
 			want: true,
 		},
 		{name: "large wset, several large value input contention",
@@ -151,7 +150,6 @@ func TestContentionFreeBatcher_Batch(t *testing.T) {
 	}
 
 	txs := make([]*transaction.Transaction, 15)
-
 	for i := 0; i < len(txs); i++ {
 		txs[i] = &transaction.Transaction{HashIDField: datastore.HashIDField{Hash: strconv.Itoa(i)}}
 	}

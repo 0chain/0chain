@@ -3,7 +3,10 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"go.uber.org/atomic"
 	"reflect"
+	"runtime"
 	"strconv"
 	"sync"
 	"testing"
@@ -3505,4 +3508,196 @@ func TestBlock_DoReadLock(t *testing.T) {
 			b.DoReadUnlock()
 		})
 	}
+}
+
+func TestBlock_applyTransactions(t *testing.T) {
+	runtime.GOMAXPROCS(8)
+
+	b := NewBlock("", 2)
+	pb := NewBlock("", 1)
+	b.PrevBlock = pb
+
+	type args struct {
+		ctx     context.Context
+		c       *StubChainer
+		batcher *StubBatcher
+	}
+
+	txs := make([]*transaction.Transaction, 15)
+	for i := 0; i < len(txs); i++ {
+		txs[i] = &transaction.Transaction{HashIDField: datastore.HashIDField{Hash: strconv.Itoa(i)}}
+	}
+
+	rich := [][]*transaction.Transaction{
+		{txs[0], txs[1], txs[2]},
+		{txs[3], txs[4], txs[5], txs[6]},
+		{txs[7]},
+		{txs[8]},
+		{txs[9], txs[10], txs[11]},
+		{txs[12], txs[13]},
+		{txs[14]},
+	}
+
+	b.AccessMap = map[datastore.Key]*AccessList{
+		"0": {
+			Reads:  []datastore.Key{"a6"},
+			Writes: []datastore.Key{},
+		},
+		"1": {
+			Reads:  []datastore.Key{"a0"},
+			Writes: []datastore.Key{"a7"},
+		},
+		"2": {
+			Reads:  []datastore.Key{"a8"},
+			Writes: nil,
+		},
+		"3": {
+			Reads:  []datastore.Key{"a2", "a4"},
+			Writes: []datastore.Key{"a11", "a13"},
+		},
+		"4": {
+			Reads:  []datastore.Key{"a9"},
+			Writes: []datastore.Key{"a9"},
+		},
+		"5": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a14"},
+		},
+		"6": {
+			Reads:  []datastore.Key{"a10"},
+			Writes: []datastore.Key{"a6"},
+		},
+		"7": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a7", "a11"},
+		},
+		"8": {
+			Reads:  []datastore.Key{"a11"},
+			Writes: []datastore.Key{"a8"},
+		},
+		"9": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a9", "a13"},
+		},
+		"10": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a10"},
+		},
+		"11": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a11", "a12"},
+		},
+		"12": {
+			Reads:  nil,
+			Writes: []datastore.Key{"a12"},
+		},
+		"13": {
+			Reads:  []datastore.Key{"a2"},
+			Writes: []datastore.Key{"a13"},
+		},
+		"14": {
+			Reads:  []datastore.Key{"a2"},
+			Writes: []datastore.Key{"a14"},
+		},
+	}
+
+	cancel, cf := context.WithCancel(context.Background())
+	tests := []struct {
+		name          string
+		args          args
+		wantErr       bool
+		wantExecCount int32
+	}{
+		{
+			name: "test for empty batch",
+			args: args{
+				ctx:     cancel,
+				c:       &StubChainer{b: b, callCount: atomic.NewInt32(0)},
+				batcher: &StubBatcher{nil},
+			},
+			wantErr: false,
+		}, {
+			name: "test for rich batch",
+			args: args{
+				ctx:     cancel,
+				c:       &StubChainer{callCount: atomic.NewInt32(0)},
+				batcher: &StubBatcher{rich},
+			},
+			wantErr: false,
+		}, {
+			name: "test for rich batch with error",
+			args: args{
+				ctx:     cancel,
+				c:       &StubChainer{errorIndex: 9, callCount: atomic.NewInt32(0)},
+				batcher: &StubBatcher{rich},
+			},
+			wantErr:       true,
+			wantExecCount: 9,
+		}, {
+			name: "test for cancelled context",
+			args: args{
+				ctx:     cancel,
+				c:       &StubChainer{errorIndex: 8, cancel: cf, callCount: atomic.NewInt32(0)},
+				batcher: &StubBatcher{rich},
+			},
+			wantErr:       true,
+			wantExecCount: 8,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := b.applyTransactions(tt.args.ctx, tt.args.c, tt.args.batcher); (err != nil) != tt.wantErr {
+				t.Errorf("applyTransactions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantExecCount != 0 && tt.wantExecCount != tt.args.c.callCount.Load() {
+				t.Errorf("applyTransactions() execCount = %v, wantExecCount  %v", tt.args.c.callCount, tt.wantExecCount)
+			}
+		})
+	}
+}
+
+type StubChainer struct {
+	b          *Block
+	callCount  *atomic.Int32
+	errorIndex int32
+	cancel     context.CancelFunc
+}
+
+func (s StubChainer) GetPreviousBlock(ctx context.Context, b *Block) *Block {
+	panic("implement me")
+}
+
+func (s StubChainer) GetBlockStateChange(b *Block) error {
+	panic("implement me")
+}
+
+func (s StubChainer) ComputeState(ctx context.Context, pb *Block) error {
+	return nil
+}
+
+func (s StubChainer) GetStateDB() util.NodeDB {
+	panic("implement me")
+}
+
+func (s StubChainer) UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) (rset, wset map[datastore.Key]bool, err error) {
+	s.callCount.Inc()
+	al := b.AccessMap[txn.GetKey()]
+
+	if s.callCount.Load() == s.errorIndex {
+		if s.cancel != nil {
+			s.cancel()
+			return al.Rset(), al.Wset(), nil
+		}
+		return nil, nil, errors.New("failed")
+	}
+
+	return al.Rset(), al.Wset(), nil
+}
+
+type StubBatcher struct {
+	ret [][]*transaction.Transaction
+}
+
+func (s StubBatcher) Batch(b *Block) (ret [][]*transaction.Transaction) {
+	return s.ret
 }
