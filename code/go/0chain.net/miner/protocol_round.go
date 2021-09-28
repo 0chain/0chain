@@ -341,13 +341,13 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	configMap, err := getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
 	if err != nil {
 		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", r.RandomSeed),
+			zap.Int64("start of round", r.GetRoundNumber()),
 			zap.Error(err),
 		)
 	} else {
 		err := mc.Config.Update(configMap)
 		logging.Logger.Error("cannot update global settings",
-			zap.Int64("start of round", r.RandomSeed),
+			zap.Int64("start of round", r.GetRoundNumber()),
 			zap.Error(err),
 		)
 	}
