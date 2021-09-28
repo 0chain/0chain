@@ -400,6 +400,7 @@ func NewChainFromConfig() *Chain {
 	if chain.SmartContractTimeout == 0 {
 		chain.SmartContractTimeout = DefaultSmartContractTimeout
 	}
+	chain.SmartContractSettingUpdatePeriod = viper.GetInt64("server_chain.smart_contract.setting_update_period")
 	chain.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
 	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
 	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")

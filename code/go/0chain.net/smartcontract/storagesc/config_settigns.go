@@ -5,15 +5,22 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
+
+	"0chain.net/core/datastore"
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
 type Setting int
+
+var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes"))
 
 const x10 = 10 * 1000 * 1000 * 1000
 
@@ -548,18 +555,53 @@ func (ssc *StorageSmartContract) updateSettings(
 			"unauthorized access - only the owner can update the variables")
 	}
 
+	var newChanges smartcontract.StringMap
+	if err = newChanges.Decode(input); err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	if len(newChanges.Fields) == 0 {
+		return "", nil
+	}
+
+	updateChanges, err := getSettingChanges(balances)
+	if err != nil {
+		return "", common.NewError("update_settings, getting setting changes", err.Error())
+	}
+
+	for key, value := range newChanges.Fields {
+		updateChanges.Fields[key] = value
+	}
+
+	_, err = balances.InsertTrieNode(settingChangesKey, updateChanges)
+	if err != nil {
+		return "", common.NewError("update_settings", err.Error())
+	}
+
+	return "", nil
+}
+
+func (ssc *StorageSmartContract) commitSettingChanges(
+	t *transaction.Transaction,
+	_ []byte,
+	balances chainState.StateContextI,
+) (resp string, err error) {
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
 			"can't get config: "+err.Error())
 	}
 
-	var changes smartcontract.StringMap
-	if err = changes.Decode(input); err != nil {
-		return "", common.NewError("update_settings", err.Error())
+	changes, err := getSettingChanges(balances)
+	if err != nil {
+		return "", common.NewError("commitSettingChanges, getting setting changes", err.Error())
 	}
 
-	if err := conf.update(changes); err != nil {
+	if len(changes.Fields) == 0 {
+		return "", nil
+	}
+
+	if err := conf.update(*changes); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
 
@@ -573,4 +615,24 @@ func (ssc *StorageSmartContract) updateSettings(
 	}
 
 	return "", nil
+}
+
+func getSettingChanges(balances cstate.StateContextI) (*smartcontract.StringMap, error) {
+	val, err := balances.GetTrieNode(settingChangesKey)
+	if err != nil || val == nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		return smartcontract.NewStringMap(), nil
+	}
+
+	var changes = new(smartcontract.StringMap)
+	err = changes.Decode(val.Encode())
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	if changes.Fields == nil {
+		return smartcontract.NewStringMap(), nil
+	}
+	return changes, nil
 }
