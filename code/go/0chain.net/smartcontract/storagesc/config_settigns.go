@@ -586,10 +586,6 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	if t.ClientID != balances.GetBlock().MinerID {
-		return "", common.NewError("pay_fee", "not minor generator")
-	}
-
 	var conf *scConfig
 	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
