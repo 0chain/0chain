@@ -18,7 +18,7 @@ const (
 
 var (
 	QualifyingTotalsPerBlockKey = datastore.Key(storageScAddress + encryption.Hash("qualifying_totals_per_block"))
-	ConfigKey                   = datastore.Key(storageScAddress + ":configurations")
+	//ConfigKey                   = datastore.Key(storageScAddress + ":configurations")
 )
 
 type BlockReward struct {

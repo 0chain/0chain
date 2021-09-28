@@ -126,7 +126,7 @@ func payBlobberRewards(
 	)
 
 	stakes := float64(sp.stake())
-	fmt.Println("reward", reward, "stakes", stakes)
+	//fmt.Println("reward", reward, "stakes", stakes)
 	for _, pool := range sp.Pools {
 		poolReward := pool.BlockRewardCarry + reward*float64(pool.Balance)/stakes
 		toMint := state.Balance(poolReward)

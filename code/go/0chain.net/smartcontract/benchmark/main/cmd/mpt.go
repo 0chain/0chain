@@ -106,8 +106,12 @@ func setUpMpt(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 	)
-
 	log.Println("created balances")
+
+	storagesc.AddMockRounds(balances)
+	log.Println("added previous rounds")
+	storagesc.AddMockSettingChanges(balances)
+	log.Println("added setting changes history")
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
 	validators := storagesc.AddMockValidators(balances)

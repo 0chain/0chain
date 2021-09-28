@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/storagesc/blockrewards"
+
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract/benchmark"
@@ -13,6 +15,50 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 )
+
+func AddMockRounds(balances cstate.StateContextI) {
+	const blobberCapacity = 1073741824 * 10
+	var qtl blockrewards.QualifyingTotalsList
+	qtl.Initialise()
+	for round := int64(1); round < viper.GetInt64(sc.NumRounds); round++ {
+		qtl.Totals = append(qtl.Totals, blockrewards.QualifyingTotals{
+			Round:    round,
+			Capacity: blobberCapacity,
+			Used:     blobberCapacity / 2,
+		})
+	}
+	_, err := balances.InsertTrieNode(blockrewards.QualifyingTotalsPerBlockKey, &qtl)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func AddMockSettingChanges(balances cstate.StateContextI) {
+	var mockSettings = blockrewards.BlockReward{
+		BlockReward:           1 * 1e10,
+		QualifyingStake:       1 * 1e10,
+		SharderWeight:         0.4,
+		MinerWeight:           0.1,
+		BlobberCapacityWeight: 0.1,
+		BlobberUsageWeight:    0.4,
+	}
+	var brc blockRewardChanges
+	brc.Changes = []blockRewardChange{
+		{Round: 1, Change: mockSettings},
+	}
+	var period = viper.GetInt64(sc.NumRounds) - 1/viper.GetInt64(sc.NumBlockRewardsSettingChanges)
+	for i := int64(1); i < viper.GetInt64(sc.NumBlockRewardsSettingChanges); i++ {
+		round := period * i
+		brc.Changes = append(brc.Changes, blockRewardChange{
+			Round:  round,
+			Change: mockSettings,
+		})
+	}
+	_, err := balances.InsertTrieNode(blockRewardChangesKey, &brc)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func AddMockAllocations(
 	clients, publicKeys []string,
@@ -276,12 +322,13 @@ func AddMockBlobbers(
 				Latitude:  latitudeStep*float64(i) - maxLatitude,
 				Longitude: longitudeStep*float64(i) - maxLongitude,
 			},
-			Terms:             getMockBlobberTerms(),
-			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
-			Used:              0,
-			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
-			PublicKey:         "",
-			StakePoolSettings: getMockStakePoolSettings(id),
+			Terms:                       getMockBlobberTerms(),
+			Capacity:                    viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
+			Used:                        0,
+			LastHealthCheck:             now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
+			PublicKey:                   "",
+			StakePoolSettings:           getMockStakePoolSettings(id),
+			LastBlockRewardPaymentRound: 1,
 		}
 		blobbers.Nodes.add(blobber)
 		rtvBlobbers = append(rtvBlobbers, blobber)
@@ -579,7 +626,7 @@ func SetMockConfig(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageFasMaxChallengeCompletionTime),
 		ReadPoolFraction:           viper.GetFloat64(sc.StorageFasReadPoolFraction),
 	}
-	conf.BlockReward = &blockReward{}
+	conf.BlockReward = &blockrewards.BlockReward{}
 	conf.ExposeMpt = true
 
 	var _, err = balances.InsertTrieNode(scConfigKey(ADDRESS), conf)

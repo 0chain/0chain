@@ -59,7 +59,8 @@ var (
 type SimulatorParameter int
 
 const (
-	SimulationNumClients SimulatorParameter = iota
+	SimulationNumRounds SimulatorParameter = iota
+	SimulationNumClients
 	SimulationNumMiners
 	SimulationNumActiveMiners
 	SimulationNumSharders
@@ -78,6 +79,7 @@ const (
 	SimulationNumVestingDestinationsClient
 	SimulationNumWriteRedeemAllocation
 	SimulationNumChallengesBlobber
+	SimulationNumBlockRewardsSettingChanges
 	NumberSimulationParameters
 )
 
@@ -162,6 +164,7 @@ const (
 
 func (w SimulatorParameter) String() string {
 	return [...]string{
+		"num_rounds",
 		"num_clients",
 		"num_miners",
 		"num_active_miners",
@@ -181,29 +184,32 @@ func (w SimulatorParameter) String() string {
 		"num_vesting_destinations_client",
 		"num_write_redeem_allocation",
 		"num_challenges_blobber",
+		"num_block_rewards_setting_changes",
 	}[w]
 }
 
 var (
-	NumClients                   = Simulation + SimulationNumClients.String()
-	NumMiners                    = Simulation + SimulationNumMiners.String()
-	NumActiveMiners              = Simulation + SimulationNumActiveMiners.String()
-	NumSharders                  = Simulation + SimulationNumSharders.String()
-	NumActiveSharders            = Simulation + SimulationNumActiveSharders.String()
-	NumAllocations               = Simulation + SimulationNumAllocations.String()
-	NumBlobbersPerAllocation     = Simulation + SimulationNumBlobbersPerAllocation.String()
-	NumBlobbers                  = Simulation + SimulationNumBlobbers.String()
-	NumAllocationPlayerPools     = Simulation + SimulationNumAllocationPlayerPools.String()
-	NumAllocationPlayer          = Simulation + SimulationNumAllocationPlayer.String()
-	NumBlobberDelegates          = Simulation + SimulationNumBlobberDelegates.String()
-	NumCurators                  = Simulation + SimulationNumCurators.String()
-	NumValidators                = Simulation + SimulationNumValidators.String()
-	NumFreeStorageAssigners      = Simulation + SimulationNumFreeStorageAssigners.String()
-	NumMinerDelegates            = Simulation + SimulationNumMinerDelegates.String()
-	NumSharderDelegates          = Simulation + SimulationNumSharderDelegates.String()
-	NumVestingDestinationsClient = Simulation + SimulationNumVestingDestinationsClient.String()
-	NumWriteRedeemAllocation     = Simulation + SimulationNumWriteRedeemAllocation.String()
-	NumChallengesBlobber         = Simulation + SimulationNumChallengesBlobber.String()
+	NumRounds                     = Simulation + SimulationNumRounds.String()
+	NumClients                    = Simulation + SimulationNumClients.String()
+	NumMiners                     = Simulation + SimulationNumMiners.String()
+	NumActiveMiners               = Simulation + SimulationNumActiveMiners.String()
+	NumSharders                   = Simulation + SimulationNumSharders.String()
+	NumActiveSharders             = Simulation + SimulationNumActiveSharders.String()
+	NumAllocations                = Simulation + SimulationNumAllocations.String()
+	NumBlobbersPerAllocation      = Simulation + SimulationNumBlobbersPerAllocation.String()
+	NumBlobbers                   = Simulation + SimulationNumBlobbers.String()
+	NumAllocationPlayerPools      = Simulation + SimulationNumAllocationPlayerPools.String()
+	NumAllocationPlayer           = Simulation + SimulationNumAllocationPlayer.String()
+	NumBlobberDelegates           = Simulation + SimulationNumBlobberDelegates.String()
+	NumCurators                   = Simulation + SimulationNumCurators.String()
+	NumValidators                 = Simulation + SimulationNumValidators.String()
+	NumFreeStorageAssigners       = Simulation + SimulationNumFreeStorageAssigners.String()
+	NumMinerDelegates             = Simulation + SimulationNumMinerDelegates.String()
+	NumSharderDelegates           = Simulation + SimulationNumSharderDelegates.String()
+	NumVestingDestinationsClient  = Simulation + SimulationNumVestingDestinationsClient.String()
+	NumWriteRedeemAllocation      = Simulation + SimulationNumWriteRedeemAllocation.String()
+	NumChallengesBlobber          = Simulation + SimulationNumChallengesBlobber.String()
+	NumBlockRewardsSettingChanges = Simulation + SimulationNumBlockRewardsSettingChanges.String()
 )
 
 type BenchTestI interface {

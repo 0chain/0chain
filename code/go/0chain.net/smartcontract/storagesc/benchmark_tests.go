@@ -93,7 +93,7 @@ func BenchmarkTests(
 			}(),
 		},
 		{
-			name:     "commit_connection",
+			name:     "storage.commit_connection",
 			endpoint: ssc.commitBlobberConnection,
 			txn: &transaction.Transaction{
 				ClientID:   getMockBlobberId(0),
@@ -130,6 +130,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: now,
 				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
 			},
@@ -158,6 +159,7 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID:     data.Clients[0],
+				ToClientID:   ADDRESS,
 				CreationDate: now,
 				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
 			},
@@ -192,6 +194,7 @@ func BenchmarkTests(
 						Hash: encryption.Hash("mock transaction hash"),
 					},
 					ClientID:     data.Clients[0],
+					ToClientID: ADDRESS,
 					CreationDate: now,
 					Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
 				},
@@ -220,8 +223,9 @@ func BenchmarkTests(
 				HashIDField: datastore.HashIDField{
 					Hash: encryption.Hash("mock transaction hash"),
 				},
-				ClientID: data.Clients[0],
-				Value:    100 * viper.GetInt64(bk.StorageMinAllocSize),
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+				Value:      100 * viper.GetInt64(bk.StorageMinAllocSize),
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&updateAllocationRequest{
@@ -591,8 +595,9 @@ func BenchmarkTests(
 			name:     "storage.stake_pool_lock",
 			endpoint: ssc.stakePoolLock,
 			txn: &transaction.Transaction{
-				ClientID: data.Clients[0],
-				Value:    int64(viper.GetFloat64(bk.StorageStakePoolMinLock) * 1e10),
+				ClientID:   data.Clients[0],
+				ToClientID: ADDRESS,
+				Value:      int64(viper.GetFloat64(bk.StorageStakePoolMinLock) * 1e10),
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{

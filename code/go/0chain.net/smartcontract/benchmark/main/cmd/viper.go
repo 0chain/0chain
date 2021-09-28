@@ -34,6 +34,12 @@ func validateConfig() {
 		log.Fatal(fmt.Errorf("avalable keys %d must be grater than zero",
 			viper.GetInt(bk.AvailableKeys)))
 	}
+
+	if viper.GetInt64(bk.NumRounds) < viper.GetInt64(bk.NumBlockRewardsSettingChanges) {
+		log.Fatal(fmt.Errorf("number of rounds%d must be more than the number of "+
+			"setting changes", viper.GetInt64(bk.NumRounds), viper.GetInt64(bk.NumBlockRewardsSettingChanges)))
+	}
+
 	if viper.GetInt(bk.NumClients) < viper.GetInt(bk.AvailableKeys) {
 		log.Fatal(fmt.Errorf("number of clients %d less than avalable keys %d",
 			viper.GetInt(bk.NumClients), viper.GetInt(bk.AvailableKeys)))
