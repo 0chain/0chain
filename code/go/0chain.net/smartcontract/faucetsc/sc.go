@@ -21,10 +21,9 @@ import (
 )
 
 const (
-	Seperator = smartcontractinterface.Seperator
-	owner     = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
-	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
-	name      = "faucet"
+	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
+	name    = "faucet"
 )
 
 type FaucetSmartContract struct {
@@ -62,7 +61,7 @@ func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
-	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit
+	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
 	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
 	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
 	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
@@ -127,7 +126,7 @@ func toSeconds(dur time.Duration) common.Timestamp {
 	return common.Timestamp(dur / time.Second)
 }
 
-func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	user := fc.getUserVariables(t, gn, balances)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {

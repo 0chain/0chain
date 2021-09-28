@@ -383,7 +383,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	)
 	for _, vt := range challResp.ValidationTickets {
 		if vt != nil {
-			if ok, err := vt.VerifySign(); !ok || err != nil {
+			if ok, err := vt.VerifySign(balances); !ok || err != nil {
 				continue
 			}
 
@@ -522,7 +522,7 @@ func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
 }
 
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
-	b *block.Block, input []byte, balances c_state.StateContextI) (err error) {
+	b *block.Block, _ []byte, balances c_state.StateContextI) (err error) {
 
 	var tp = time.Now()
 	defer sc.addGenerateChallengesStat(tp, &err)

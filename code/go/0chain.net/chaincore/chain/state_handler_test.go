@@ -237,12 +237,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Faucet_/globalPerodicLimit_Empty_Global_Node_404",
+			name:  "Faucet_/globalPeriodicLimit_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -251,7 +251,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Faucet_/globalPerodicLimit_Decoding_Global_Node_Err_500",
+			name: "Faucet_/globalPeriodicLimit_Decoding_Global_Node_Err_500",
 			chain: func() *chain.Chain {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
@@ -270,7 +270,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req

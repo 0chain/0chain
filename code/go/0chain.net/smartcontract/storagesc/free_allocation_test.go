@@ -1,21 +1,24 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/hex"
+	"encoding/json"
+	"strconv"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
+
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"testing"
-	"time"
 )
 
 func TestAddFreeStorageAssigner(t *testing.T) {
@@ -150,7 +153,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.addFreeStorageAssigner(args.txn, args.input, args.balances)
+			_, err := args.ssc.addFreeStorageAssigner(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
@@ -383,6 +386,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 					key == allocation.GetKey(ssc.ID)
 			}),
 		).Return(&allocation, nil).Once()
+
+		balances.On(
+			"GetSignatureScheme",
+		).Return(encryption.NewBLS0ChainScheme()).Once()
 
 		balances.On(
 			"AddMint", &state.Mint{
@@ -702,6 +709,10 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		).Return(&challengePool{}, nil).Once()
 
 		balances.On(
+			"GetSignatureScheme",
+		).Return(encryption.NewBLS0ChainScheme()).Once()
+
+		balances.On(
 			"InsertTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 			&freeStorageAssigner{
@@ -872,7 +883,7 @@ func signFreeAllocationMarker(t *testing.T, frm freeStorageMarker) (string, stri
 	}
 	responseBytes, err := json.Marshal(&request)
 	require.NoError(t, err)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := encryption.NewBLS0ChainScheme()
 	err = signatureScheme.GenerateKeys()
 	require.NoError(t, err)
 	signature, err := signatureScheme.Sign(hex.EncodeToString(responseBytes))
