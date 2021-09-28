@@ -195,7 +195,10 @@ func (conf *Config) Update(cf *minersc.GlobalSettings) error {
 	if conf.SmartContractTimeout == 0 {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
-	conf.SmartContractSettingUpdatePeriod = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
+	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
