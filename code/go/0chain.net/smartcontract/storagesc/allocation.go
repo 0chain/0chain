@@ -578,7 +578,12 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	// stake pool (offers)
 
 	for _, ba := range alloc.BlobberDetails {
-		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(ba.BlobberID, balances); err != nil {
+			return "", fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
+				err)
+		}
+		if err = sp.updateSakePoolOffer(sc.ID, ba, alloc, balances); err != nil {
 			return "", common.NewError("allocation_closing_failed",
 				err.Error())
 		}
@@ -729,6 +734,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	alloc *StorageAllocation,
 	blobbers []*StorageNode,
 	uar *updateAllocationRequest,
+	conf *scConfig,
 	mintTokens bool,
 	balances chainstate.StateContextI,
 ) (err error) {
@@ -750,6 +756,10 @@ func (sc *StorageSmartContract) extendAllocation(
 	alloc.Expiration += uar.Expiration // new expiration
 	alloc.Size += uar.Size             // new size
 
+	qtl, err := blockrewards.GetQualifyingTotalsList(0, balances)
+	if err != nil {
+		return fmt.Errorf("getting block reward totals: %v", err)
+	}
 	// 1. update terms
 	for i, details := range alloc.BlobberDetails {
 		oterms = append(oterms, details.Terms) // keep original terms will be changed
@@ -767,6 +777,16 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		b.Used += diff // new capacity used
+
+		var sp *stakePool
+		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", b.ID,
+				err)
+		}
+		err = updateBlockRewards(0, diff, b, sp, conf, balances, qtl)
+		if err != nil {
+			return fmt.Errorf("updating block rewrads: %v", err)
+		}
 
 		// update terms using weighted average
 		details.Terms = weightedAverage(&details.Terms, &b.Terms,
@@ -806,7 +826,12 @@ func (sc *StorageSmartContract) extendAllocation(
 
 	// extend offers after alloc.challenge_completion_time is known
 	for _, ba := range alloc.BlobberDetails {
-		if err := sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
+		var sp *stakePool
+		if sp, err = sc.getStakePool(ba.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
+				err)
+		}
+		if err := sp.updateSakePoolOffer(sc.ID, ba, alloc, balances); err != nil {
 			return common.NewError("allocation_extending_failed",
 				err.Error())
 		}
@@ -858,9 +883,13 @@ func (sc *StorageSmartContract) extendAllocation(
 
 // reduceAllocation reduces size or/and expiration (no one can be increased);
 // here we use the same terms of related blobbers
-func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
-	alloc *StorageAllocation, blobbers []*StorageNode,
-	uar *updateAllocationRequest, balances chainstate.StateContextI,
+func (sc *StorageSmartContract) reduceAllocation(
+	t *transaction.Transaction,
+	alloc *StorageAllocation,
+	blobbers []*StorageNode,
+	uar *updateAllocationRequest,
+	conf *scConfig,
+	balances chainstate.StateContextI,
 ) (err error) {
 	var (
 		diff = uar.getBlobbersSizeDiff(alloc) // size difference
@@ -873,14 +902,28 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	// adjust the expiration if changed, boundaries has already checked
 	alloc.Expiration += uar.Expiration
 	alloc.Size += uar.Size
+	qtl, err := blockrewards.GetQualifyingTotalsList(0, balances)
+	if err != nil {
+		return fmt.Errorf("getting block reward totals: %v", err)
+	}
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberDetails {
 		var b = blobbers[i]
 		b.Used += diff // new capacity used
+
+		var sp *stakePool
+		if sp, err = sc.getStakePool(ba.BlobberID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
+				err)
+		}
+		err = updateBlockRewards(0, diff, b, sp, conf, balances, qtl)
+		if err != nil {
+			return fmt.Errorf("updating block rewrads: %v", err)
+		}
 		ba.Size = size // new size
 		// update stake pool
-		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
+		if err = sp.updateSakePoolOffer(sc.ID, ba, alloc, balances); err != nil {
 			return common.NewErrorf("allocation_reducing_failed", "%v", err)
 		}
 	}
@@ -1037,13 +1080,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	// if size or expiration increased, then we use new terms
 	// otherwise, we use the same terms
 	if request.Size > 0 || request.Expiration > 0 {
-		err = sc.extendAllocation(t, alloc, blobbers, &request, mintTokens, balances)
+		err = sc.extendAllocation(t, alloc, blobbers, &request, conf, mintTokens, balances)
 	} else if request.Size != 0 || request.Expiration != 0 {
 		if mintTokens {
 			return "", common.NewError("allocation_updating_failed",
 				"cannot reduce when minting tokens")
 		}
-		err = sc.reduceAllocation(t, alloc, blobbers, &request, balances)
+		err = sc.reduceAllocation(t, alloc, blobbers, &request, conf, balances)
 	}
 	if err != nil {
 		return "", err
@@ -1421,6 +1464,11 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 	}
 	var passPayments state.Balance = 0
+	qtl, err := blockrewards.GetQualifyingTotalsList(0, balances)
+	if err != nil {
+		return fmt.Errorf("getting block reward totals: %v", err)
+	}
+
 	for i, d := range alloc.BlobberDetails {
 		var b = blobbers[i] // related blobber
 		if alloc.UsedSize > 0 && cpLeft > 0 && passRates[i] > 0 && d.Stats != nil {
@@ -1452,6 +1500,17 @@ func (sc *StorageSmartContract) finishAllocation(
 		conf.Minted += info.minted
 		// update the blobber
 		b.Used -= d.Size
+
+		var sp *stakePool
+		if sp, err = sc.getStakePool(b.ID, balances); err != nil {
+			return fmt.Errorf("can't get stake pool of %s: %v", b.ID,
+				err)
+		}
+		err = updateBlockRewards(0, -1*d.Size, b, sp, conf, balances, qtl)
+		if err != nil {
+			return fmt.Errorf("updating block rewrads: %v", err)
+		}
+
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return common.NewError("fini_alloc_failed",
 				"saving blobber "+d.BlobberID+": "+err.Error())

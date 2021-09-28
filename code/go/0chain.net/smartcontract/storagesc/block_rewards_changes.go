@@ -57,6 +57,7 @@ func updateBlockRewardSettingsList(
 			return err
 		}
 		changes = newBlockRewardChanges(conf)
+		changes.save(balances)
 	}
 	changes.Changes = append(changes.Changes, blockRewardChange{
 		Round:  balances.GetBlock().Round,
@@ -72,16 +73,21 @@ func updateBlockRewardSettingsList(
 	return err
 }
 
-func (qt *blockRewardChanges) Encode() []byte {
-	var b, err = json.Marshal(qt)
+func (brc *blockRewardChanges) Encode() []byte {
+	var b, err = json.Marshal(brc)
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-func (qt *blockRewardChanges) Decode(p []byte) error {
-	return json.Unmarshal(p, qt)
+func (brc *blockRewardChanges) Decode(p []byte) error {
+	return json.Unmarshal(p, brc)
+}
+
+func (brc *blockRewardChanges) save(balances cstate.StateContextI) error {
+	_, err := balances.InsertTrieNode(blockRewardChangesKey, brc)
+	return err
 }
 
 func newBlockRewardChanges(

@@ -151,8 +151,8 @@ smart_contracts:
     max_charge: 0.50
     # reward paid out every block
     block_reward:
-      block_reward: 0.1
-      qualifying_stake: 1
+      block_reward: 0.2
+      qualifying_stake: 0.1
       sharder_ratio: 10
       miner_ratio: 40
       blobber_capacity_ratio: 10

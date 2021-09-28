@@ -22,16 +22,13 @@ func updateBlockRewards(
 	balances cstate.StateContextI,
 	qtl *blockrewards.QualifyingTotalsList,
 ) error {
-	if sp.stake() < conf.BlockReward.QualifyingStake {
-		blobber.LastBlockRewardPaymentRound = balances.GetBlock().Round
-		return nil
-	}
-
-	if deltaCapacity > 0 || deltaUsed > 0 {
-		balances.UpdateBlockRewardTotals(deltaCapacity, deltaUsed)
-	}
-	if err := payBlobberRewards(blobber, sp, qtl, conf, balances); err != nil {
-		return fmt.Errorf("paying blobber rewards: %v", err)
+	if sp.stake() >= conf.BlockReward.QualifyingStake {
+		if deltaCapacity > 0 || deltaUsed > 0 {
+			balances.UpdateBlockRewardTotals(deltaCapacity, deltaUsed)
+		}
+		if err := payBlobberRewards(blobber, sp, qtl, conf, balances); err != nil {
+			return fmt.Errorf("paying blobber rewards: %v", err)
+		}
 	}
 	blobber.LastBlockRewardPaymentRound = balances.GetBlock().Round
 	return nil
@@ -68,47 +65,6 @@ func blockRewardModifiedStakePool(
 	return nil
 }
 
-func calculateReward(
-	qtl *blockrewards.QualifyingTotalsList,
-	brc *blockRewardChanges,
-	start, end int64,
-	capacity, used int64,
-) float64 {
-	var reward float64
-	round := start - 1
-	logging.Logger.Info("piers2 calculateReward",
-		zap.Int64("start", start),
-		zap.Int64("end", end),
-		zap.Int("qtl lenght", len(qtl.Totals)),
-		zap.Int64("capacity", capacity),
-		zap.Int64("used", used),
-		zap.Any("brc", brc),
-	)
-	for change, i := brc.getLatestChange(); change != nil; change, i = brc.getPreviousChange(i) {
-		settings := change.Change
-		for ; round >= brc.Changes[i].Round && round >= end; round-- {
-			var capRatio float64
-			if qtl.GetCapacity(round) > 0 {
-				capRatio = float64(capacity) / float64(qtl.GetCapacity(round))
-			}
-			capacityReward := float64(settings.BlockReward) * settings.BlobberCapacityWeight * capRatio
-
-			var usedRatio float64
-			if qtl.GetUsed(round) > 0 {
-				usedRatio = float64(used) / float64(qtl.GetUsed(round))
-			}
-			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
-			reward += capacityReward + usedReward
-			//fmt.Println("piers3 i", i, "round", round, "cap", capacityReward,
-			//	"used", usedReward, "reward", reward)
-		}
-		if brc.Changes[i].Round < end {
-			return reward
-		}
-	}
-	return reward
-}
-
 func payBlobberRewards(
 	blobber *StorageNode,
 	sp *stakePool,
@@ -132,7 +88,7 @@ func payBlobberRewards(
 	)
 
 	brc, err := getBlockRewardChanges(balances)
-	logging.Logger.Info("piers2 calculateReward",
+	logging.Logger.Info("piers2 payBlobberRewards",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.Int64("LastBlockRewardPaymentRound", blobber.LastBlockRewardPaymentRound),
 		zap.Any("block reward changes", brc),
@@ -143,8 +99,9 @@ func payBlobberRewards(
 			return err
 		}
 		brc = newBlockRewardChanges(conf)
+		brc.save(balances)
 	}
-	logging.Logger.Info("piers2 calculateReward after startBlockRewardChanges",
+	logging.Logger.Info("piers2 payBlobberRewards after startBlockRewardChanges",
 		zap.Int64("round", balances.GetBlock().Round),
 		zap.Int64("LastBlockRewardPaymentRound", blobber.LastBlockRewardPaymentRound),
 		zap.Any("block reward changes", brc),
@@ -184,26 +141,66 @@ func payBlobberRewards(
 			zap.Int64("reward", int64(reward)),
 			zap.Int64("poolReward", int64(poolReward)),
 			zap.Float64("carry", pool.BlockRewardCarry),
-			zap.Any("stake pools", pool),
 			zap.Any("minted", state.NewMint(ADDRESS, pool.DelegateID, toMint)),
 		)
 	}
-
-	if len(qtl.Totals) > 3 {
-		logging.Logger.Info("piers2 end payBlobberRewards",
-			zap.Int("length qtl", len(qtl.Totals)),
-			zap.Any("qtl last block", (qtl.Totals)[balances.GetBlock().Round-1]),
-			zap.Any("blobber", blobber),
-			zap.Any("stake pools", sp),
-		)
-	} else {
-		logging.Logger.Info("piers2 end payBlobberRewards",
-			zap.Int("length qtl", len(qtl.Totals)),
-			zap.Any("list", qtl.Totals),
-			zap.Any("blobber", blobber),
-			zap.Any("stake pools", sp),
-		)
-	}
-
+	/*
+		if len(qtl.Totals) > 3 {
+			logging.Logger.Info("piers2 end payBlobberRewards",
+				zap.Int("length qtl", len(qtl.Totals)),
+				zap.Any("qtl last block", (qtl.Totals)[balances.GetBlock().Round-1]),
+				zap.Any("blobber", blobber),
+				zap.Any("stake pools", sp),
+			)
+		} else {
+			logging.Logger.Info("piers2 end payBlobberRewards",
+				zap.Int("length qtl", len(qtl.Totals)),
+				zap.Any("list", qtl.Totals),
+				zap.Any("blobber", blobber),
+				zap.Any("stake pools", sp),
+			)
+		}
+	*/
 	return nil
+}
+
+func calculateReward(
+	qtl *blockrewards.QualifyingTotalsList,
+	brc *blockRewardChanges,
+	start, end int64,
+	capacity, used int64,
+) float64 {
+	var reward float64
+	round := start - 1
+	//logging.Logger.Info("piers2 calculateReward",
+	//	zap.Int64("start", start),
+	//	zap.Int64("end", end),
+	//	zap.Int("qtl lenght", len(qtl.Totals)),
+	//	zap.Int64("capacity", capacity),
+	//	zap.Int64("used", used),
+	//	zap.Any("brc", brc),
+	//)
+	for change, i := brc.getLatestChange(); change != nil; change, i = brc.getPreviousChange(i) {
+		settings := change.Change
+		for ; round >= brc.Changes[i].Round && round >= end; round-- {
+			var capRatio float64
+			if qtl.GetCapacity(round) > 0 {
+				capRatio = float64(capacity) / float64(qtl.GetCapacity(round))
+			}
+			capacityReward := float64(settings.BlockReward) * settings.BlobberCapacityWeight * capRatio
+
+			var usedRatio float64
+			if qtl.GetUsed(round) > 0 {
+				usedRatio = float64(used) / float64(qtl.GetUsed(round))
+			}
+			usedReward := float64(settings.BlockReward) * settings.BlobberUsageWeight * usedRatio
+			reward += capacityReward + usedReward
+			//fmt.Println("piers3 i", i, "round", round, "cap", capacityReward,
+			//	"used", usedReward, "reward", reward)
+		}
+		if brc.Changes[i].Round < end {
+			return reward
+		}
+	}
+	return reward
 }

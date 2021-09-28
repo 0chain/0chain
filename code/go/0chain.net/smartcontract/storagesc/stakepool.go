@@ -552,6 +552,23 @@ func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
 	return
 }
 
+func (sp *stakePool) updateSakePoolOffer(
+	sscID string,
+	ba *BlobberAllocation,
+	alloc *StorageAllocation,
+	balances chainstate.StateContextI,
+) (err error) {
+	if err = sp.extendOffer(alloc, ba); err != nil {
+		return fmt.Errorf("can't change stake pool offer %s: %v", ba.BlobberID,
+			err)
+	}
+	if err = sp.save(sscID, ba.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
+			err)
+	}
+	return
+}
+
 // slash represents blobber penalty; it returns number of tokens moved in
 // reality, with regards to division errors
 func (sp *stakePool) slash(
@@ -879,26 +896,6 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	sp.Settings.MaxStake = settings.MaxStake
 	sp.Settings.ServiceCharge = settings.ServiceCharge
 	sp.Settings.NumDelegates = settings.NumDelegates
-	return
-}
-
-func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
-	alloc *StorageAllocation, balances chainstate.StateContextI) (err error) {
-
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(ba.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
-			err)
-	}
-	if err = sp.extendOffer(alloc, ba); err != nil {
-		return fmt.Errorf("can't change stake pool offer %s: %v", ba.BlobberID,
-			err)
-	}
-	if err = sp.save(ssc.ID, ba.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
-			err)
-	}
-
 	return
 }
 
