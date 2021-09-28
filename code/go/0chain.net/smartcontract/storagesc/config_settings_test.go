@@ -208,7 +208,6 @@ func TestCommitSettingChanges(t *testing.T) {
 		var thisBlock = block.Block{}
 		thisBlock.MinerID = mockMinerId
 
-		balances.On("GetBlock").Return(&thisBlock, nil).Once()
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{}, nil).Once()
 		balances.On("GetTrieNode", settingChangesKey).Return(&smartcontract.StringMap{
 			Fields: p.inputMap,
