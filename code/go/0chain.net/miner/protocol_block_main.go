@@ -235,7 +235,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		return common.NewError("get_clients_error", err.Error())
 	}
 
-	logging.Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
+	logging.Logger.Debug("generate block (assemble)",
+		zap.Int64("round", b.Round),
+		zap.Int("txns", len(b.Txns)),
+		zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
@@ -253,7 +256,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 	b.ClientStateHash = b.ClientState.GetRoot()
 	bgTimer.UpdateSince(start)
-	logging.Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
+	logging.Logger.Debug("generate block (assemble+update)",
+		zap.Int64("round", b.Round),
+		zap.Int("txns", len(b.Txns)),
+		zap.Duration("time", time.Since(start)))
 
 	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
