@@ -87,6 +87,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 	var clients = make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
+	b.AccessMap = make(map[datastore.Key]*block.AccessList, mc.BlockSize)
 
 	// wasting this because []interface{} != []*transaction.Transaction in Go
 	var (
