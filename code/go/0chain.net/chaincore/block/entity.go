@@ -768,7 +768,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.PrevBlock = nil // reset (a real case, may be unexpected)
 	}
 
-	if pb == nil || (pb != nil && !pb.IsStateComputed()) {
+	if pb == nil || !pb.IsStateComputed() {
 		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
 			b.SetStateStatus(StateFailed)
