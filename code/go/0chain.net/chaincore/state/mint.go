@@ -15,7 +15,6 @@ type Mint struct {
 	Amount     Balance       `json:"amount"`
 }
 
-// NewMint NewTransfer - create a new transfer
 func NewMint(minter, toClientID datastore.Key, amount Balance) *Mint {
 	m := &Mint{Minter: minter, ToClientID: toClientID, Amount: amount}
 	return m
