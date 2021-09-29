@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"

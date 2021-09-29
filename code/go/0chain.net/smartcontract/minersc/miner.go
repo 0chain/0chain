@@ -378,7 +378,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	mn := NewMinerNode()
 	mn.ID = id
-	ms, err := state.GetTrieNode(mn.getKey())
+	ms, err := state.GetTrieNode(mn.GetKey())
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			return mn, nil

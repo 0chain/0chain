@@ -221,3 +221,8 @@ func (ps *PartialState) AddNode(node util.Node) {
 func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	return util.MergeState(ctx, ps.mndb, stateDB)
 }
+
+// GetNodeDB returns the node db containing all the changes
+func (ps *PartialState) GetNodeDB() util.NodeDB {
+	return ps.mndb
+}

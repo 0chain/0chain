@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1044,4 +1043,16 @@ func (mpt *MerklePatriciaTrie) mergeChanges(newRoot Key, changes []*NodeChange, 
 
 	mpt.setRoot(newRoot)
 	return nil
+}
+
+// MergeDB - merges the state changes from the node db directly
+func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+	handler := func(ctx context.Context, key Key, node Node) error {
+		_, _, err := mpt.insertNode(nil, node)
+		return err
+	}
+	mpt.root = root
+	return ndb.Iterate(context.TODO(), handler)
 }

@@ -7,6 +7,9 @@ import (
 	"io"
 	"runtime/debug"
 	"sync"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*NodeChange - track a change to the node */
