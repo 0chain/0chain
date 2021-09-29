@@ -3,7 +3,6 @@ package chain
 import (
 	"container/ring"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -375,7 +374,7 @@ const DefaultSmartContractTimeout = time.Second
 func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration.ChainID)
-	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	//chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
 	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
@@ -405,14 +404,9 @@ func NewChainFromConfig() *Chain {
 	conf.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
 	conf.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	conf.Settle = viper.GetDuration("server_chain.health_check.deep_scan.settle_secs")
+	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.deep_scan.repeat_interval_mins")
+	conf.ReportStatus = viper.GetDuration("server_chain.health_check.deep_scan.report_status_mins")
 
 	// Work on proximity scan
 	conf = &chain.HCCycleScan[ProximityScan]
@@ -421,18 +415,13 @@ func NewChainFromConfig() *Chain {
 	conf.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
 	conf.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
 
-	conf.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
-	conf.Settle = time.Duration(conf.SettleSecs) * time.Second
-
-	conf.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
-	conf.RepeatInterval = time.Duration(conf.RepeatIntervalMins) * time.Minute
-
-	conf.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
-	conf.ReportStatus = time.Duration(conf.ReportStatusMins) * time.Minute
+	conf.Settle = viper.GetDuration("server_chain.health_check.proximity_scan.settle_secs")
+	conf.RepeatInterval = viper.GetDuration("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	conf.ReportStatus = viper.GetDuration("server_chain.health_check.proximity_scan.report_status_mins")
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
-	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time")
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
 	if waitMode == "static" {
 		chain.BlockProposalWaitMode = BlockProposalWaitStatic
@@ -444,10 +433,11 @@ func NewChainFromConfig() *Chain {
 
 	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
 	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
-	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
+	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout")
 	if chain.SmartContractTimeout == 0 {
 		chain.SmartContractTimeout = DefaultSmartContractTimeout
 	}
+	chain.SmartContractSettingUpdatePeriod = viper.GetInt64("server_chain.smart_contract.setting_update_period")
 	chain.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
 	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
 	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
@@ -569,7 +559,7 @@ func (c *Chain) getInitialState(tokens state.Balance) util.Serializable {
 
 /*setupInitialState - setup the initial state based on configuration */
 func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatriciaTrieI {
-	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0))
+	pmt := util.NewMerklePatriciaTrie(c.stateDB, util.Sequence(0), nil)
 	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
@@ -582,7 +572,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
 func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.MagicBlock, initStates *state.InitStates) (round.RoundI, *block.Block) {
-	c.GenesisBlockHash = hash
+	//c.GenesisBlockHash = hash
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState(initStates)

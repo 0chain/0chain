@@ -1,15 +1,15 @@
 smart_contracts:
-  faucetsc: 
-    pour_limit: 10000000000
-    periodic_limit: 1000000000000
-    global_limit: 100000000000000
+  faucetsc:
+    pour_amount: 1
+    max_pour_amount: 10
+    periodic_limit: 1000
+    global_limit: 100000
     individual_reset: 3h # in hours
     global_reset: 48h # in hours
   interestpoolsc:
-    min_lock: 10 
-    interest_rate: 0.0
+    min_lock: 10
+    apr: 0.0
     min_lock_period: 2190h # max units hours
-    max_lock_period: 8760h # max units hours
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
   minersc:
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
@@ -55,6 +55,9 @@ smart_contracts:
     # allocation settings for free storage
     # these values are applied to all free allocations
     free_allocation_settings:
+      # the free payment is split between read and write pool in the ratio
+      # read_pool_fraction : (1-read_pool_fraction)
+      read_pool_fraction: 0.2
       data_shards: 10
       parity_shards: 5
       size: 10000000000
@@ -97,10 +100,10 @@ smart_contracts:
     block_reward:
       block_reward: 1000
       qualifying_stake: 1
-      sharder_ratio: 80
-      miner_ratio: 20
-      blobber_capacity_ratio: 20
-      blobber_usage_ratio: 80
+      sharder_ratio: 10
+      miner_ratio: 40
+      blobber_capacity_ratio: 10
+      blobber_usage_ratio: 40
     expose_mpt: true
   vestingsc:
     min_lock: 0.01

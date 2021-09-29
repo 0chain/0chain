@@ -15,33 +15,22 @@ env:
 jobs:
   conductor_build: 
     name: CONDUCTOR-BUILD
-    runs-on: self-hosted
+    runs-on: [self-hosted, conductor-test01]
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v1
 
-    - name: Get Branch
-      id: get_info
+    - name: Docker Init Setup.
       run: |
-        BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
-        echo "Branch == ${BRANCH}"
+        bash ./docker.local/bin/init.setup.sh
 
-    - name: Git Checkout
+    - name: Docker Network Setup.
       run: |
-        cd /root/0chain/
-        git checkout .
-        git pull
-        git checkout $BRANCH
-      env:
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+        bash ./docker.local/bin/setup_network.sh || true
 
     - name: Setting Up View Change
       run: |
-        cd /root/0chain/docker.local/config
+        cd ./docker.local/config
         filename='0chain.yaml'
         # Check the new text is empty or not
         if ! grep -q view_change "$filename"; then
@@ -55,65 +44,95 @@ jobs:
 
     - name: Building Base Images
       run: |
-        cd /root/0chain/
-        docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-        docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
+        docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
+        docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
 
     - name: Build Miner Docker Image For Integration Test.
       run: |
-        cd /root/0chain/
         bash ./docker.local/bin/build.miners-integration-tests.sh
 
     - name: Build Sharder Docker Image For Integration Test.
       run: |
-        cd /root/0chain/
         bash ./docker.local/bin/build.sharders-integration-tests.sh
 
     - name: View Change Rounds
       run: |
-        cd /root/0chain/
-        awk 'NR >= 30 && NR <= 34' /root/0chain/docker.local/config/sc.yaml
-        awk 'NR >= 9 && NR <= 14' /root/0chain/docker.local/config/0chain.yaml
+        awk 'NR >= 30 && NR <= 34' ./docker.local/config/sc.yaml
+        awk 'NR >= 9 && NR <= 14' ./docker.local/config/0chain.yaml
 
   conductor_standard_tests:
     name: CONDUCTOR-STANDARD-TESTS
-    runs-on: self-hosted
+    runs-on: [self-hosted, conductor-test01]
     
     needs:
     - conductor_build
 
     steps:
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.16.5'
+
     - name: Running Standard Tests for Miners.
       run: |
-        cd /root/0chain/
-        source ~/.profile
         bash ./docker.local/bin/start.conductor.sh miners
 
     - name: Running Standard Tests for Sharders.
       run: |
-        cd /root/0chain/
         bash ./docker.local/bin/start.conductor.sh sharders
   
   conductor_vc_tests:
     name: CONDUCTOR-VIEW-CHANGE-TESTS
-    runs-on: self-hosted
+    runs-on: [self-hosted, conductor-test01]
     
     needs:
     - conductor_standard_tests
     
     steps:
-    - name: Running View Change Fault Tolerance Tests.
+    - name: Running Fault Tolerance Tests.
       run: |
-        cd /root/0chain/
-        source ~/.profile
-        bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change.fault-tolerance
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.fault-tolerance
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
-    - name: Running View Change Byzantine Tests.
+    - name: Running Byzantine Tests.
       run: |
-        cd /root/0chain/
-        bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change.byzantine
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.byzantine
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
 
     - name: Running View Change-3 Tests.
       run: |
-        cd /root/0chain/
-        bash ./docker.local/bin/start.conductor.sh view-change-3
+        if [[ "$VIEW" == "true" ]]; then
+          bash ./docker.local/bin/start.conductor.sh view-change-3
+        elif [[ "$VIEW" == "false" ]]; then
+          bash ./docker.local/bin/start.conductor.sh no-view-change.view-change-3
+        fi
+      env:
+        VIEW: ${{ github.event.inputs.view_change }}
+
+  upload_artifacts:
+    name: UPLOAD-LOGS-AS-ARTIFACTS
+    runs-on: [self-hosted, conductor-test01]
+    
+    if: always()
+    needs: [conductor_build, conductor_standard_tests, conductor_vc_tests]
+    
+    steps:
+    - name: Creating Artifact con-tests-logs.tar.gz file.
+      run: |
+        find . -regex '.*/log/[^/]*.log' -print0 | tar -czvf con-tests-logs.tar.gz --null --files-from -
+
+    - name: Uploading artifact con-tests-logs.tar.gz file.
+      uses: actions/upload-artifact@v2
+      with:
+        name: Conductor-test-logs
+        path: ./con-tests-logs.tar.gz
+      

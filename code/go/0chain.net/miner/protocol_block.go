@@ -76,6 +76,18 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	return feeTxn
 }
 
+func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
+	scTxn := transaction.Provider().(*transaction.Transaction)
+	scTxn.ClientID = b.MinerID
+	scTxn.ToClientID = storagesc.ADDRESS
+	scTxn.CreationDate = b.CreationDate
+	scTxn.TransactionType = transaction.TxnTypeSmartContract
+	scTxn.TransactionData = fmt.Sprintf(`{"name":"commit_settings_changes","input":{"round":%v}}`, b.Round)
+	scTxn.Fee = 0
+	scTxn.Sign(node.Self.GetSignatureScheme())
+	return scTxn
+}
+
 func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = b.MinerID

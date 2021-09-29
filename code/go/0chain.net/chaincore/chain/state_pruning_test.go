@@ -71,7 +71,7 @@ func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	db, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	require.NoError(t, err)
 	lfb := block.NewBlock("", 2)
-	lfb.ClientState = util.NewMerklePatriciaTrie(db, 1)
+	lfb.ClientState = util.NewMerklePatriciaTrie(db, 1, nil)
 	// set up enough nodes to exceed BatchSize
 	for i := 0; i < util.BatchSize+1; i++ {
 		_, err := lfb.ClientState.Insert(util.Path(fmt.Sprintf("%032d", i)), &util.SecureSerializableValue{Buffer: []byte{1}})

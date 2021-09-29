@@ -1,12 +1,13 @@
 package multisigsc
 
 import (
-	"0chain.net/chaincore/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/chaincore/smartcontract"
 
 	"0chain.net/chaincore/chain/state"
 	c_state "0chain.net/chaincore/chain/state"
@@ -74,7 +75,7 @@ func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName str
 	case VoteFuncName:
 		return ms.vote(t.Hash, t.ClientID, balances.GetBlock().CreationDate, inputData, balances)
 	default:
-		return "err_execute_function_not_found: no function with that name: " + funcName, nil
+		return "err_execute_function_not_found: no multi sig smart contract function with that name: " + funcName, nil
 	}
 }
 
