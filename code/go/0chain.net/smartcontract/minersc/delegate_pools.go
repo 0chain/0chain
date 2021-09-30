@@ -35,17 +35,19 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		transfer *state.Transfer
 	)
 	mn, err = getMinerNode(dp.MinerID, balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		return "", common.NewErrorf("delegate_pool_add",
+			"miner not found or genesis miner used")
+	default:
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
 	}
+
 	if mn.Delete {
 		return "", common.NewError("delegate_pool_add",
 			"can't add delegate pool for miner being deleted")
-	}
-	if err == util.ErrValueNotPresent {
-		return "", common.NewErrorf("delegate_pool_add",
-			"miner not found or genesis miner used")
 	}
 
 	if fnd, lnd := mn.numDelegates(), mn.NumberOfDelegates; fnd >= lnd {

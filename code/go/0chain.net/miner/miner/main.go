@@ -213,7 +213,7 @@ func main() {
 		logging.Logger.Error("failed to wait sharders", zap.Error(err))
 	}
 
-	if err = mc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+	if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
 		logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
 	}
 

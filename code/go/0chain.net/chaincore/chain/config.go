@@ -80,67 +80,185 @@ type Config struct {
 	MinActiveSharders    int `json:"min_active_sharders"`    // Minimum active sharders required to validate blocks
 	MinActiveReplicators int `json:"min_active_replicators"` // Minimum active replicators of a block that should be active to verify the block
 
-	SmartContractTimeout   time.Duration `json:"smart_contract_timeout"` // time after which the smart contract execution will timeout
-	RoundTimeoutSofttoMin  int           `json:"softto_min"`             // minimum time for softtimeout to kick in milliseconds
-	RoundTimeoutSofttoMult int           `json:"softto_mult"`            // multiplier of mean network time for soft timeout
-	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
+	SmartContractTimeout             time.Duration `json:"smart_contract_timeout"`               // time after which the smart contract execution will timeout
+	SmartContractSettingUpdatePeriod int64         `json:"smart_contract_setting_update_period"` // rounds settings are updated
+
+	RoundTimeoutSofttoMin  int `json:"softto_min"`         // minimum time for softtimeout to kick in milliseconds
+	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
+	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
 }
 
-func (conf *Config) Update(cf *minersc.GlobalSettings) {
-	conf.MinBlockSize = cf.GetInt32(minersc.BlockMinSize)
-	conf.BlockSize = cf.GetInt32(minersc.BlockMaxSize)
-	conf.MaxByteSize = cf.GetInt64(minersc.BlockMaxByteSize)
-	conf.NumReplicators = cf.GetInt(minersc.BlockReplicators)
-	conf.BlockProposalMaxWaitTime = cf.GetDuration(minersc.BlockProposalMaxWaitTime)
-	waitMode := cf.GetString(minersc.BlockProposalWaitMode)
+func (conf *Config) Update(cf *minersc.GlobalSettings) error {
+	var err error
+	conf.MinBlockSize, err = cf.GetInt32(minersc.BlockMinSize)
+	if err != nil {
+		return err
+	}
+	conf.BlockSize, err = cf.GetInt32(minersc.BlockMaxSize)
+	if err != nil {
+		return err
+	}
+	conf.MaxByteSize, err = cf.GetInt64(minersc.BlockMaxByteSize)
+	if err != nil {
+		return err
+	}
+	conf.NumReplicators, err = cf.GetInt(minersc.BlockReplicators)
+	if err != nil {
+		return err
+	}
+	conf.BlockProposalMaxWaitTime, err = cf.GetDuration(minersc.BlockProposalMaxWaitTime)
+	if err != nil {
+		return err
+	}
+	waitMode, err := cf.GetString(minersc.BlockProposalWaitMode)
+	if err != nil {
+		return err
+	}
 	if waitMode == "static" {
 		conf.BlockProposalWaitMode = BlockProposalWaitStatic
 	} else if waitMode == "dynamic" {
 		conf.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
-	conf.ThresholdByCount = cf.GetInt(minersc.BlockConsensusThresholdByCount)
-	conf.ThresholdByStake = cf.GetInt(minersc.BlockConsensusThresholdByStake)
-	conf.MinActiveSharders = cf.GetInt(minersc.BlockShardingMinActiveSharders)
-	conf.MinActiveReplicators = cf.GetInt(minersc.BlockShardingMinActiveReplicators)
-	conf.ValidationBatchSize = cf.GetInt(minersc.BlockValidationBatchSize)
-	conf.ReuseTransactions = cf.GetBool(minersc.BlockReuseTransactions)
-	conf.MinGenerators = cf.GetInt(minersc.BlockMinGenerators)
-	conf.GeneratorsPercent = cf.GetFloat64(minersc.BlockGeneratorsPercent)
-	conf.RoundRange = cf.GetInt64(minersc.RoundRange)
-	conf.RoundTimeoutSofttoMin = cf.GetInt(minersc.RoundTimeoutsSofttoMin)
-	conf.RoundTimeoutSofttoMult = cf.GetInt(minersc.RoundTimeoutsSofttoMult)
-	conf.RoundRestartMult = cf.GetInt(minersc.RoundTimeoutsRoundRestartMult)
-	conf.TxnMaxPayload = cf.GetInt(minersc.TransactionPayloadMaxSize)
-	conf.ClientSignatureScheme = cf.GetString(minersc.ClientSignatureScheme)
-	verificationTicketsTo := cf.GetString(minersc.MessagesVerificationTicketsTo)
+	conf.ThresholdByCount, err = cf.GetInt(minersc.BlockConsensusThresholdByCount)
+	if err != nil {
+		return err
+	}
+	conf.ThresholdByStake, err = cf.GetInt(minersc.BlockConsensusThresholdByStake)
+	if err != nil {
+		return err
+	}
+	conf.MinActiveSharders, err = cf.GetInt(minersc.BlockShardingMinActiveSharders)
+	if err != nil {
+		return err
+	}
+	conf.MinActiveReplicators, err = cf.GetInt(minersc.BlockShardingMinActiveReplicators)
+	if err != nil {
+		return err
+	}
+	conf.ValidationBatchSize, err = cf.GetInt(minersc.BlockValidationBatchSize)
+	if err != nil {
+		return err
+	}
+	conf.ReuseTransactions, err = cf.GetBool(minersc.BlockReuseTransactions)
+	if err != nil {
+		return err
+	}
+	conf.MinGenerators, err = cf.GetInt(minersc.BlockMinGenerators)
+	if err != nil {
+		return err
+	}
+	conf.GeneratorsPercent, err = cf.GetFloat64(minersc.BlockGeneratorsPercent)
+	if err != nil {
+		return err
+	}
+	conf.RoundRange, err = cf.GetInt64(minersc.RoundRange)
+	if err != nil {
+		return err
+	}
+	conf.RoundTimeoutSofttoMin, err = cf.GetInt(minersc.RoundTimeoutsSofttoMin)
+	if err != nil {
+		return err
+	}
+	conf.RoundTimeoutSofttoMult, err = cf.GetInt(minersc.RoundTimeoutsSofttoMult)
+	if err != nil {
+		return err
+	}
+	conf.RoundRestartMult, err = cf.GetInt(minersc.RoundTimeoutsRoundRestartMult)
+	if err != nil {
+		return err
+	}
+	conf.TxnMaxPayload, err = cf.GetInt(minersc.TransactionPayloadMaxSize)
+	if err != nil {
+		return err
+	}
+	conf.ClientSignatureScheme, err = cf.GetString(minersc.ClientSignatureScheme)
+	if err != nil {
+		return err
+	}
+	verificationTicketsTo, err := cf.GetString(minersc.MessagesVerificationTicketsTo)
+	if err != nil {
+		return err
+	}
 	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
 		conf.VerificationTicketsTo = AllMiners
 	} else {
 		conf.VerificationTicketsTo = Generator
 	}
-	conf.PruneStateBelowCount = cf.GetInt(minersc.StatePruneBelowCount)
-	conf.SmartContractTimeout = cf.GetDuration(minersc.SmartContractTimeout)
+	conf.PruneStateBelowCount, err = cf.GetInt(minersc.StatePruneBelowCount)
+	if err != nil {
+		return err
+	}
+	conf.SmartContractTimeout, err = cf.GetDuration(minersc.SmartContractTimeout)
+	if err != nil {
+		return err
+	}
 	if conf.SmartContractTimeout == 0 {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
+	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // We don't need this yet, as the health check settings are used to set up a worker thread.
-func (conf *Config) UpdateHealthCheckSettings(cf *minersc.GlobalSettings) {
-	conf.HealthShowCounters = cf.GetBool(minersc.HealthCheckShowCounters)
+func (conf *Config) UpdateHealthCheckSettings(cf *minersc.GlobalSettings) error {
+	var err error
+	conf.HealthShowCounters, err = cf.GetBool(minersc.HealthCheckShowCounters)
+	if err != nil {
+		return err
+	}
 	ds := &conf.HCCycleScan[DeepScan]
-	ds.Enabled = cf.GetBool(minersc.HealthCheckDeepScanEnabled)
-	ds.BatchSize = cf.GetInt64(minersc.HealthCheckDeepScanBatchSize)
-	ds.Window = cf.GetInt64(minersc.HealthCheckDeepScanWindow)
-	ds.Settle = cf.GetDuration(minersc.HealthCheckDeepScanSettleSecs)
-	ds.RepeatInterval = cf.GetDuration(minersc.HealthCheckDeepScanIntervalMins)
-	ds.ReportStatus = cf.GetDuration(minersc.HealthCheckDeepScanReportStatusMins)
+	ds.Enabled, err = cf.GetBool(minersc.HealthCheckDeepScanEnabled)
+	if err != nil {
+		return err
+	}
+	ds.BatchSize, err = cf.GetInt64(minersc.HealthCheckDeepScanBatchSize)
+	if err != nil {
+		return err
+	}
+	ds.Window, err = cf.GetInt64(minersc.HealthCheckDeepScanWindow)
+	if err != nil {
+		return err
+	}
+	ds.Settle, err = cf.GetDuration(minersc.HealthCheckDeepScanSettleSecs)
+	if err != nil {
+		return err
+	}
+	ds.RepeatInterval, err = cf.GetDuration(minersc.HealthCheckDeepScanIntervalMins)
+	if err != nil {
+		return err
+	}
+	ds.ReportStatus, err = cf.GetDuration(minersc.HealthCheckDeepScanReportStatusMins)
+	if err != nil {
+		return err
+	}
 
 	ps := &conf.HCCycleScan[ProximityScan]
-	ps.Enabled = cf.GetBool(minersc.HealthCheckProximityScanEnabled)
-	ps.BatchSize = cf.GetInt64(minersc.HealthCheckProximityScanBatchSize)
-	ps.Window = cf.GetInt64(minersc.HealthCheckProximityScanWindow)
-	ps.Settle = cf.GetDuration(minersc.HealthCheckProximityScanSettleSecs)
-	ps.RepeatInterval = cf.GetDuration(minersc.HealthCheckProximityScanRepeatIntervalMins)
-	ps.ReportStatus = cf.GetDuration(minersc.HealthCheckProximityScanRejportStatusMins)
+	ps.Enabled, err = cf.GetBool(minersc.HealthCheckProximityScanEnabled)
+	if err != nil {
+		return err
+	}
+	ps.BatchSize, err = cf.GetInt64(minersc.HealthCheckProximityScanBatchSize)
+	if err != nil {
+		return err
+	}
+	ps.Window, err = cf.GetInt64(minersc.HealthCheckProximityScanWindow)
+	if err != nil {
+		return err
+	}
+	ps.Settle, err = cf.GetDuration(minersc.HealthCheckProximityScanSettleSecs)
+	if err != nil {
+		return err
+	}
+	ps.RepeatInterval, err = cf.GetDuration(minersc.HealthCheckProximityScanRepeatIntervalMins)
+	if err != nil {
+		return err
+	}
+	ps.ReportStatus, err = cf.GetDuration(minersc.HealthCheckProximityScanRejportStatusMins)
+	if err != nil {
+		return err
+	}
+	return nil
 }

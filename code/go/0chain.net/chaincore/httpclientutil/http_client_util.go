@@ -437,14 +437,14 @@ func MakeSCRestAPICall(ctx context.Context, scAddress string, relativePath strin
 		return nil
 	} else if nSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
-		logging.Logger.Error("SCRestAPI - error Getting consensus",
+		logging.N2n.Error("SCRestAPI - error Getting consensus",
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))
 		return common.NewError("err_getting_consensus", errStr)
 	} else if nErrs > 0 {
 		//We have received only errors
-		logging.Logger.Error("SCRestAPI - error running the request",
+		logging.N2n.Error("SCRestAPI - error running the request",
 			zap.Int32("Success", nSuccess),
 			zap.Int32("Errs", nErrs),
 			zap.Int("consensus", consensus))

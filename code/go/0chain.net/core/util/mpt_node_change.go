@@ -142,21 +142,12 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	nodes := make([]Node, len(cc.Changes))
 	idx := 0
 	for _, c := range cc.Changes {
-		if _, ok := c.New.(*LeafNode); ok && origin != c.New.GetOrigin() {
-			oldHash := c.New.GetHashBytes()
-			oldOrigin := c.New.GetOrigin()
+		// use old key as UpdateVersion would not change the key even the node has been updated
+		keys[idx] = c.New.GetHashBytes()
+		if origin != c.New.GetOrigin() {
 			c.New.SetOrigin(origin)
-			keys[idx] = c.New.GetHashBytes()
-			logging.Logger.Warn("Updating origin of a leaf node may break references ",
-				zap.Int64("oldOrigin", int64(oldOrigin)),
-				zap.String("oldHash", ToHex(oldHash)),
-				zap.Int64("newOrigin", int64(origin)),
-				zap.String("newHash", ToHex(keys[idx])),
-			)
-		} else {
-			c.New.SetOrigin(origin)
-			keys[idx] = c.New.GetHashBytes()
 		}
+
 		nodes[idx] = c.New
 		idx++
 	}

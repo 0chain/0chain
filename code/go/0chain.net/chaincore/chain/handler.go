@@ -57,7 +57,11 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
+	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(
+		datastore.ToJSONEntityReqResponse(
+			datastore.DoAsyncEntityJSONHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
 
 	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
 
@@ -133,11 +137,6 @@ func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error
 		}
 	}
 	return data, nil
-}
-
-/*LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetServerChain().GetLatestFinalizedMagicBlockSummary(), nil
 }
 
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */

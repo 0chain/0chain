@@ -71,6 +71,7 @@ const (
 	StuckCheckInterval // todo from chain
 	StuckTimeThreshold // todo from chain
 	SmartContractTimeout
+	SmartContractSettingUpdatePeriod
 	LfbTicketRebroadcastTimeout              // todo restart worker
 	LfbTicketAhead                           // todo from chain
 	AsyncFetchingMaxSimultaneousFromMiners   // todo restart worker
@@ -93,6 +94,8 @@ const (
 	NumOfGlobalSettings
 )
 
+// GlobalSettingName list of global settings keys. This key used to access each
+// global setting, either in smartcontract.StringMap or in the viper settings database.
 var GlobalSettingName = []string{
 	"development.state",
 	"development.dkg",
@@ -138,6 +141,7 @@ var GlobalSettingName = []string{
 	"server_chain.stuck.check_interval",
 	"server_chain.stuck.time_threshold",
 	"server_chain.smart_contract.timeout",
+	"server_chain.smart_contract.setting_update_period",
 	"server_chain.lfb_ticket.rebroadcast_timeout",
 	"server_chain.lfb_ticket.ahead",
 	"server_chain.async_blocks_fetching.max_simultaneous_from_miners",
@@ -158,54 +162,57 @@ var GlobalSettingName = []string{
 	"server_chain.health_check.show_counters",
 }
 
+// GlobalSettingInfo Indicates the type of each global settings, and whether it is possible to change each setting
 var GlobalSettingInfo = map[string]struct {
 	settingType smartcontract.ConfigType
 	mutable     bool
 }{
-	GlobalSettingName[State]:                                    {smartcontract.Boolean, false},
-	GlobalSettingName[Dkg]:                                      {smartcontract.Boolean, false},
-	GlobalSettingName[ViewChange]:                               {smartcontract.Boolean, false},
-	GlobalSettingName[BlockRewards]:                             {smartcontract.Boolean, false},
-	GlobalSettingName[Storage]:                                  {smartcontract.Boolean, false},
-	GlobalSettingName[Faucet]:                                   {smartcontract.Boolean, false},
-	GlobalSettingName[Zrc20]:                                    {smartcontract.Boolean, false},
-	GlobalSettingName[Interest]:                                 {smartcontract.Boolean, false},
-	GlobalSettingName[Miner]:                                    {smartcontract.Boolean, false},
-	GlobalSettingName[Multisig]:                                 {smartcontract.Boolean, false},
-	GlobalSettingName[Vesting]:                                  {smartcontract.Boolean, false},
-	GlobalSettingName[Owner]:                                    {smartcontract.String, false},
-	GlobalSettingName[BlockMinSize]:                             {smartcontract.Int32, true},
-	GlobalSettingName[BlockMaxSize]:                             {smartcontract.Int32, true},
-	GlobalSettingName[BlockMaxByteSize]:                         {smartcontract.Int64, true},
-	GlobalSettingName[BlockReplicators]:                         {smartcontract.Int, true},
-	GlobalSettingName[BlockGenerationTimout]:                    {smartcontract.Int, false},
-	GlobalSettingName[BlockGenerationRetryWaitTime]:             {smartcontract.Int, false},
-	GlobalSettingName[BlockProposalMaxWaitTime]:                 {smartcontract.Duration, true},
-	GlobalSettingName[BlockProposalWaitMode]:                    {smartcontract.String, true},
-	GlobalSettingName[BlockConsensusThresholdByCount]:           {smartcontract.Int, true},
-	GlobalSettingName[BlockConsensusThresholdByStake]:           {smartcontract.Int, true},
-	GlobalSettingName[BlockShardingMinActiveSharders]:           {smartcontract.Int, true},
-	GlobalSettingName[BlockShardingMinActiveReplicators]:        {smartcontract.Int, true},
-	GlobalSettingName[BlockValidationBatchSize]:                 {smartcontract.Int, true},
-	GlobalSettingName[BlockReuseTransactions]:                   {smartcontract.Boolean, true},
-	GlobalSettingName[BlockMinGenerators]:                       {smartcontract.Int, true},
-	GlobalSettingName[BlockGeneratorsPercent]:                   {smartcontract.Float64, true},
-	GlobalSettingName[RoundRange]:                               {smartcontract.Int64, true},
-	GlobalSettingName[RoundTimeoutsSofttoMin]:                   {smartcontract.Int, true},
-	GlobalSettingName[RoundTimeoutsSofttoMult]:                  {smartcontract.Int, true},
-	GlobalSettingName[RoundTimeoutsRoundRestartMult]:            {smartcontract.Int, true},
-	GlobalSettingName[RoundTimeoutsTimeoutCap]:                  {smartcontract.Int, false},
-	GlobalSettingName[TransactionPayloadMaxSize]:                {smartcontract.Int, true},
-	GlobalSettingName[TransactionTimeout]:                       {smartcontract.Int, false},
-	GlobalSettingName[TransactionMinFee]:                        {smartcontract.Int64, false},
-	GlobalSettingName[ClientSignatureScheme]:                    {smartcontract.String, true},
-	GlobalSettingName[ClientDiscover]:                           {smartcontract.Boolean, false},
-	GlobalSettingName[MessagesVerificationTicketsTo]:            {smartcontract.String, true},
-	GlobalSettingName[StatePruneBelowCount]:                     {smartcontract.Int, true},
-	GlobalSettingName[StateSyncTimeout]:                         {smartcontract.Duration, false},
-	GlobalSettingName[StuckCheckInterval]:                       {smartcontract.Duration, false},
-	GlobalSettingName[StuckTimeThreshold]:                       {smartcontract.Duration, false},
-	GlobalSettingName[SmartContractTimeout]:                     {smartcontract.Duration, true},
+	GlobalSettingName[State]:                             {smartcontract.Boolean, false},
+	GlobalSettingName[Dkg]:                               {smartcontract.Boolean, false},
+	GlobalSettingName[ViewChange]:                        {smartcontract.Boolean, false},
+	GlobalSettingName[BlockRewards]:                      {smartcontract.Boolean, false},
+	GlobalSettingName[Storage]:                           {smartcontract.Boolean, false},
+	GlobalSettingName[Faucet]:                            {smartcontract.Boolean, false},
+	GlobalSettingName[Zrc20]:                             {smartcontract.Boolean, false},
+	GlobalSettingName[Interest]:                          {smartcontract.Boolean, false},
+	GlobalSettingName[Miner]:                             {smartcontract.Boolean, false},
+	GlobalSettingName[Multisig]:                          {smartcontract.Boolean, false},
+	GlobalSettingName[Vesting]:                           {smartcontract.Boolean, false},
+	GlobalSettingName[Owner]:                             {smartcontract.String, false},
+	GlobalSettingName[BlockMinSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxSize]:                      {smartcontract.Int32, true},
+	GlobalSettingName[BlockMaxByteSize]:                  {smartcontract.Int64, true},
+	GlobalSettingName[BlockReplicators]:                  {smartcontract.Int, true},
+	GlobalSettingName[BlockGenerationTimout]:             {smartcontract.Int, false},
+	GlobalSettingName[BlockGenerationRetryWaitTime]:      {smartcontract.Int, false},
+	GlobalSettingName[BlockProposalMaxWaitTime]:          {smartcontract.Duration, true},
+	GlobalSettingName[BlockProposalWaitMode]:             {smartcontract.String, true},
+	GlobalSettingName[BlockConsensusThresholdByCount]:    {smartcontract.Int, true},
+	GlobalSettingName[BlockConsensusThresholdByStake]:    {smartcontract.Int, true},
+	GlobalSettingName[BlockShardingMinActiveSharders]:    {smartcontract.Int, true},
+	GlobalSettingName[BlockShardingMinActiveReplicators]: {smartcontract.Int, true},
+	GlobalSettingName[BlockValidationBatchSize]:          {smartcontract.Int, true},
+	GlobalSettingName[BlockReuseTransactions]:            {smartcontract.Boolean, true},
+	GlobalSettingName[BlockMinGenerators]:                {smartcontract.Int, true},
+	GlobalSettingName[BlockGeneratorsPercent]:            {smartcontract.Float64, true},
+	GlobalSettingName[RoundRange]:                        {smartcontract.Int64, true},
+	GlobalSettingName[RoundTimeoutsSofttoMin]:            {smartcontract.Int, true},
+	GlobalSettingName[RoundTimeoutsSofttoMult]:           {smartcontract.Int, true},
+	GlobalSettingName[RoundTimeoutsRoundRestartMult]:     {smartcontract.Int, true},
+	GlobalSettingName[RoundTimeoutsTimeoutCap]:           {smartcontract.Int, false},
+	GlobalSettingName[TransactionPayloadMaxSize]:         {smartcontract.Int, true},
+	GlobalSettingName[TransactionTimeout]:                {smartcontract.Int, false},
+	GlobalSettingName[TransactionMinFee]:                 {smartcontract.Int64, false},
+	GlobalSettingName[ClientSignatureScheme]:             {smartcontract.String, true},
+	GlobalSettingName[ClientDiscover]:                    {smartcontract.Boolean, false},
+	GlobalSettingName[MessagesVerificationTicketsTo]:     {smartcontract.String, true},
+	GlobalSettingName[StatePruneBelowCount]:              {smartcontract.Int, true},
+	GlobalSettingName[StateSyncTimeout]:                  {smartcontract.Duration, false},
+	GlobalSettingName[StuckCheckInterval]:                {smartcontract.Duration, false},
+	GlobalSettingName[StuckTimeThreshold]:                {smartcontract.Duration, false},
+	GlobalSettingName[SmartContractTimeout]:              {smartcontract.Duration, true},
+	GlobalSettingName[SmartContractSettingUpdatePeriod]:  {smartcontract.Int64, true},
+
 	GlobalSettingName[LfbTicketRebroadcastTimeout]:              {smartcontract.Duration, false},
 	GlobalSettingName[LfbTicketAhead]:                           {smartcontract.Int, false},
 	GlobalSettingName[AsyncFetchingMaxSimultaneousFromMiners]:   {smartcontract.Int, false},
@@ -273,7 +280,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		_, err = smartcontract.StringToInterface(value, info.settingType)
 		if err != nil {
-			return fmt.Errorf("%v value %v cannot be perased as a %s",
+			return fmt.Errorf("%v value %v cannot be parsed as a %s",
 				key, value, smartcontract.ConfigTypeName[info.settingType])
 		}
 		gl.Fields[key] = value
@@ -281,104 +288,153 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 	return nil
 }
 
-func (gl *GlobalSettings) GetInt(field GlobalSetting) int {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
+func getGlobalSettingName(field GlobalSetting) (string, error) {
+	if field >= NumOfGlobalSettings || 0 > field {
+		return "", fmt.Errorf("field out of range %d", field)
+	}
+	return GlobalSettingName[field], nil
+}
+
+// GetInt returns a global setting as an int, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetInt(field GlobalSetting) (int, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetInt(GlobalSettingName[field])
+		return viper.GetInt(key), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int)
 	if err != nil {
-		return viper.GetInt(GlobalSettingName[field])
+		return viper.GetInt(key), nil
 	}
 	value, ok := iValue.(int)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		return 0, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
-	return value
+	return value, nil
 }
 
-func (gl *GlobalSettings) GetInt32(field GlobalSetting) int32 {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
+// GetInt32 returns a global setting as an int32, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetInt32(field GlobalSetting) (int32, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetInt32(GlobalSettingName[field])
+		return viper.GetInt32(key), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int32)
 	if err != nil {
-		return viper.GetInt32(GlobalSettingName[field])
+		return viper.GetInt32(key), nil
 	}
 	value, ok := iValue.(int32)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		return 0, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
-	return value
+	return value, nil
 }
 
-func (gl *GlobalSettings) GetInt64(field GlobalSetting) int64 {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
+// GetInt64 returns a global setting as an int64, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetInt64(GlobalSettingName[field])
+		return viper.GetInt64(key), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Int64)
 	if err != nil {
-		return viper.GetInt64(GlobalSettingName[field])
+		return viper.GetInt64(key), nil
 	}
 	value, ok := iValue.(int64)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		panic(fmt.Sprintf("cannot convert key %s value %v to type int", key, value))
 	}
-	return value
+	return value, nil
 }
 
-func (gl *GlobalSettings) GetFloat64(field GlobalSetting) float64 {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
+// GetFloat64 returns a global setting as a float64, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetFloat64(field GlobalSetting) (float64, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetFloat64(GlobalSettingName[field])
+		return viper.GetFloat64(key), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Float64)
 	if err != nil {
-		return viper.GetFloat64(GlobalSettingName[field])
+		return viper.GetFloat64(key), nil
 	}
 	value, ok := iValue.(float64)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		return 0.0, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
-	return value
+	return value, nil
 }
 
-func (gl *GlobalSettings) GetDuration(field GlobalSetting) time.Duration {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
+// GetDuration returns a global setting as a duration, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetDuration(field GlobalSetting) (time.Duration, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return 0, err
+	}
+
+	sValue, found := gl.Fields[key]
 	if !found {
-		return viper.GetDuration(GlobalSettingName[field])
+		return viper.GetDuration(key), nil
 	}
 	iValue, err := smartcontract.StringToInterface(sValue, smartcontract.Duration)
 	if err != nil {
-		return viper.GetDuration(GlobalSettingName[field])
+		return viper.GetDuration(key), nil
 	}
 	value, ok := iValue.(time.Duration)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		return 0, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
-	return value
+	return value, nil
 }
 
-func (gl *GlobalSettings) GetString(field GlobalSetting) string {
-	sValue, found := gl.Fields[GlobalSettingName[field]]
-	if !found {
-		return viper.GetString(GlobalSettingName[field])
-	}
-	return sValue
-}
-
-func (gl *GlobalSettings) GetBool(field GlobalSetting) bool {
-	iValue, err := smartcontract.StringToInterface(gl.Fields[GlobalSettingName[field]], smartcontract.Boolean)
+// GetString returns a global setting as a string, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetString(field GlobalSetting) (string, error) {
+	key, err := getGlobalSettingName(field)
 	if err != nil {
-		return viper.GetBool(GlobalSettingName[field])
+		return "", err
+	}
+
+	sValue, found := gl.Fields[key]
+	if !found {
+		return viper.GetString(key), nil
+	}
+	return sValue, nil
+}
+
+// GetBool returns a global setting as a boolean, a check is made to confirm the setting's type.
+func (gl *GlobalSettings) GetBool(field GlobalSetting) (bool, error) {
+	key, err := getGlobalSettingName(field)
+	if err != nil {
+		return false, err
+	}
+
+	iValue, err := smartcontract.StringToInterface(gl.Fields[key], smartcontract.Boolean)
+	if err != nil {
+		return viper.GetBool(key), nil
 	}
 	value, ok := iValue.(bool)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", GlobalSettingName[field], value))
+		return false, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
-	return value
+	return value, nil
 }
 
 func getStringMapFromViper() map[string]string {

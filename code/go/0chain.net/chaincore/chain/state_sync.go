@@ -191,33 +191,46 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	psRequestor := PartialStateRequestor
 	params := &url.Values{}
 	params.Add("node", util.ToHex(key))
-	cctx, cancelf := context.WithCancel(ctx)
-	defer cancelf()
-	var ps *state.PartialState
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	psC := make(chan *state.PartialState, 1)
+	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
 		logging.Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
 		rps, ok := entity.(*state.PartialState)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		logging.Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
 		if bytes.Compare(key, rps.Hash) != 0 {
-			logging.Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
+			logging.Logger.Error("get partial state - state hash mismatch error",
+				zap.String("key", util.ToHex(key)),
+				zap.Any("hash", util.ToHex(rps.Hash)))
 			return nil, state.ErrHashMismatch
 		}
 		root := rps.GetRoot()
 		if root == nil {
-			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(ps.Nodes)))
+			logging.Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(rps.Nodes)))
 			return nil, common.NewError("state_root_error", "Partial state root calculcation error")
 		}
-		cancelf()
-		ps = rps
+		cancel()
+		select {
+		case psC <- rps:
+		default:
+		}
 		return rps, nil
 	}
 	c.RequestEntityFromMinersOnMB(cctx, c.GetCurrentMagicBlock(), psRequestor, params, handler)
+	var ps *state.PartialState
+	select {
+	case ps = <-psC:
+	default:
+	}
 	if ps == nil {
 		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
 	}
+
+	logging.Logger.Info("get partial state",
+		zap.String("key", util.ToHex(key)),
+		zap.Int("nodes", len(ps.Nodes)))
 	return ps, nil
 }
 
@@ -227,10 +240,10 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	cctx, cancelf := context.WithCancel(ctx)
-	defer cancelf()
-	var ns *state.Nodes
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	nodeStateC := make(chan *state.Nodes, 1)
+	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
@@ -238,19 +251,37 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		if len(rns.Nodes) == 0 {
 			return nil, util.ErrNodeNotFound
 		}
-		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
-		cancelf()
-		ns = rns
+		cancel()
+		select {
+		case nodeStateC <- rns:
+		default:
+		}
 		return rns, nil
 	}
 	mb := c.GetCurrentMagicBlock()
 	c.RequestEntityFromMinersOnMB(cctx, mb, nsRequestor, params, handler)
+	var ns *state.Nodes
+	select {
+	case ns = <-nodeStateC:
+	default:
+	}
+
 	if ns == nil {
 		c.RequestEntityFromShardersOnMB(cctx, mb, nsRequestor, params, handler)
 	}
-	if ns == nil {
-		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
+
+	select {
+	case ns = <-nodeStateC:
+	default:
 	}
+
+	if ns == nil {
+		return nil, common.NewError("state_nodes_error", "error getting the state nodes")
+	}
+
+	logging.Logger.Info("get state nodes",
+		zap.Int("keys", len(keys)),
+		zap.Int("nodes", len(ns.Nodes)))
 	return ns, nil
 }
 
@@ -260,10 +291,10 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 	for _, key := range keys {
 		params.Add("nodes", util.ToHex(key))
 	}
-	cctx, cancelf := context.WithCancel(ctx)
-	defer cancelf()
-	var ns *state.Nodes
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stateNodeC := make(chan *state.Nodes, 1)
+	handler := func(_ context.Context, entity datastore.Entity) (interface{}, error) {
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
@@ -271,27 +302,37 @@ func (c *Chain) getStateNodesFromSharders(ctx context.Context, keys []util.Key) 
 		if len(rns.Nodes) == 0 {
 			return nil, util.ErrNodeNotFound
 		}
-		logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
-		cancelf()
-		ns = rns
+		select {
+		case stateNodeC <- rns:
+		default:
+		}
+		cancel()
 		return rns, nil
 	}
+
 	c.RequestEntityFromShardersOnMB(cctx, c.GetCurrentMagicBlock(), nsRequestor, params, handler)
-	if ns == nil {
-		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
+	var ns *state.Nodes
+	select {
+	case ns = <-stateNodeC:
+	default:
 	}
+
+	if ns == nil {
+		return nil, common.NewError("state_nodes_error", "error getting the state nodes")
+	}
+
+	logging.Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
 	return ns, nil
 }
 
 func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
-	var (
-		params       = &url.Values{}
-		ctx, cancelf = context.WithCancel(common.GetRootContext())
-		bsc          *block.StateChange
-	)
+	cctx, cancel := context.WithCancel(common.GetRootContext())
+	defer cancel()
+	params := &url.Values{}
 	params.Add("block", b.Hash)
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (
+	stateChangesC := make(chan *block.StateChange, 1)
+	var handler = func(_ context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
 		var rsc, ok = entity.(*block.StateChange)
@@ -326,22 +367,37 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				"block state root calculation error")
 		}
 
-		logging.Logger.Debug("get_block_state_change - success with root",
-			zap.Int64("round", b.Round),
-			zap.String("bsc root", rsc.GetRoot().GetHash()),
-			zap.String("block state hash", util.ToHex(b.ClientStateHash)))
-		cancelf()
-		bsc = rsc
+		cancel()
+		select {
+		case stateChangesC <- rsc:
+		default:
+		}
 		return rsc, nil
 	}
 
-	c.RequestEntityFromMinersOnMB(ctx, c.GetMagicBlock(b.Round), BlockStateChangeRequestor, params, handler)
-
+	mb := c.GetMagicBlock(b.Round)
+	c.RequestEntityFromMinersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
+	var bsc *block.StateChange
+	select {
+	case bsc = <-stateChangesC:
+	default:
+	}
 	if bsc == nil {
-		return nil, common.NewError("block_state_change_error",
-			"error getting the block state change")
+		c.RequestEntityFromShardersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
+		select {
+		case bsc = <-stateChangesC:
+		default:
+		}
+		if bsc == nil {
+			return nil, common.NewError("block_state_change_error",
+				"error getting the block state change")
+		}
 	}
 
+	logging.Logger.Debug("get_block_state_change - success with root",
+		zap.Int64("round", b.Round),
+		zap.String("bsc root", bsc.GetRoot().GetHash()),
+		zap.String("block state hash", util.ToHex(b.ClientStateHash)))
 	return bsc, nil
 }
 
