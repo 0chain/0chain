@@ -331,7 +331,7 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 				BlockSyncStats: tt.fields.BlockSyncStats,
 				TieringStats:   tt.fields.TieringStats,
 			}
-			if err := sc.StoreBlockSummaryFromBlock(tt.args.ctx, tt.args.b); (err != nil) != tt.wantErr {
+			if err := sc.StoreBlockSummaryFromBlock(tt.args.b); (err != nil) != tt.wantErr {
 				t.Errorf("StoreBlockSummaryFromBlock() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
