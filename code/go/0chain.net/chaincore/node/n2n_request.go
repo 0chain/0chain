@@ -182,7 +182,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				eName = entityMetadata.GetName()
 			}
 			SetRequestHeaders(req, options, entityMetadata)
-			cctx, cancel := context.WithCancel(ctx)
+			cctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			req = req.WithContext(cctx)
 			// Keep the number of messages to a node bounded
@@ -197,7 +197,6 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				provider.Grab()
 				defer provider.Release()
 
-				time.AfterFunc(timeout, cancel)
 				ts = time.Now()
 				selfNode = Self.Underlying()
 				selfNode.SetLastActiveTime(ts)

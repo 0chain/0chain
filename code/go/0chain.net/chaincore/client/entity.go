@@ -9,9 +9,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"go.uber.org/zap"
 )
 
 var clientSignatureScheme string
@@ -213,9 +211,6 @@ func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error
 	if !ok {
 		return nil, common.NewError("entity_invalid_type", "Invalid entity type")
 	}
-	logging.Logger.Debug("put client",
-		zap.String("id", co.ID),
-		zap.String("pubkey", co.PublicKey))
 	response, err := datastore.PutEntityHandler(ctx, entity)
 	if err != nil {
 		return nil, err

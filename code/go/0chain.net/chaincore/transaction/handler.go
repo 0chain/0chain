@@ -22,8 +22,14 @@ func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
+// ValidatedTransactionsCache represents an interface for storing validated transactions
+type ValidatedTransactionsCache interface {
+	AddValidatedTxns(hash, sig string)
+	DeleteValidatedTxns(hashes []string)
+}
+
 /*PutTransaction - Given a transaction data, it stores it */
-func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+func PutTransaction(ctx context.Context, entity datastore.Entity, validTxnsCache ValidatedTransactionsCache) (interface{}, error) {
 	txn, ok := entity.(*Transaction)
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
@@ -31,7 +37,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	txn.ComputeProperties()
 	debugTxn := txn.DebugTxn()
 	err := txn.Validate(ctx)
-
 	if err != nil {
 		logging.Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
@@ -39,6 +44,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if debugTxn {
 		logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 	}
+
 	cli, err := txn.GetClient(ctx)
 	if err != nil || cli == nil || cli.PublicKey == "" {
 		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
@@ -52,11 +58,16 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		logging.Logger.Info("put transaction", zap.Any("error", err), zap.Any("txn", txn.Hash), zap.Any("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
+
+	if validTxnsCache != nil {
+		validTxnsCache.AddValidatedTxns(string(txn.Hash), txn.Signature)
+	}
+
 	IncTransactionCount()
 	return txn, nil
 }
 
-func PutTransactionWithoutValidate(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+func PutTransactionWithoutVerifySig(ctx context.Context, entity datastore.Entity, validTxnsCache ValidatedTransactionsCache) (interface{}, error) {
 	txn, ok := entity.(*Transaction)
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
@@ -80,6 +91,11 @@ func PutTransactionWithoutValidate(ctx context.Context, entity datastore.Entity)
 		logging.Logger.Info("put transaction", zap.Any("error", err), zap.Any("txn", txn.Hash), zap.Any("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
+
+	if validTxnsCache != nil {
+		validTxnsCache.AddValidatedTxns(string(txn.Hash), txn.Signature)
+	}
+
 	IncTransactionCount()
 	return txn, nil
 }

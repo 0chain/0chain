@@ -17,7 +17,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
@@ -67,7 +66,6 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
-	minerChain.minersPublicKeys = cache.NewLRUCache(1 << 16) // 65536
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -129,7 +127,6 @@ type Chain struct {
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
-	minersPublicKeys                     *cache.LRU
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
@@ -172,6 +169,18 @@ func (mc *Chain) SetDiscoverClients(b bool) {
 // GetBlockMessageChannel - get the block messages channel.
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 	return mc.blockMessageChannel
+}
+
+// PushBlockMessageChannel pushes the block message to the process channel
+func (mc *Chain) PushBlockMessageChannel(bm *BlockMessage) {
+	go func() {
+		select {
+		case mc.blockMessageChannel <- bm:
+		case <-time.After(3 * time.Second):
+			logging.Logger.Warn("push block message to channel timeout",
+				zap.Any("message type", bm.Type))
+		}
+	}()
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
@@ -479,47 +488,4 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	return mc.roundDkg.Put(dkg, startingRound)
-}
-
-func (mc *Chain) LoadMinersPublicKeys() error {
-	mb := mc.GetLatestFinalizedMagicBlock()
-	for _, nd := range mb.Miners.Nodes {
-		var pk bls.PublicKey
-		if err := pk.DeserializeHexStr(nd.PublicKey); err != nil {
-			return err
-		}
-		mc.minersPublicKeys.Add(nd.ID, &pk)
-	}
-
-	return nil
-}
-
-func (mc *Chain) GetMinersPublicKeys(keysStr []string) ([]bls.PublicKey, error) {
-	pubKeys := make([]bls.PublicKey, len(keysStr))
-	missingKeys := make([]int, 0, len(keysStr))
-	for i, k := range keysStr {
-		pk, err := mc.minersPublicKeys.Get(k)
-		if err != nil {
-			missingKeys = append(missingKeys, i)
-			continue
-		}
-		pubKeys[i] = *(pk.(*bls.PublicKey))
-	}
-
-	if len(missingKeys) > 0 {
-		for _, idx := range missingKeys {
-			var pk bls.PublicKey
-			if err := pk.DeserializeHexStr(keysStr[idx]); err != nil {
-				return nil, fmt.Errorf("decode publick key failed, key: %v", keysStr[idx])
-			}
-			pubKeys[idx] = pk
-		}
-
-		//mc.minersKeysMutex.Lock()
-		for _, idx := range missingKeys {
-			mc.minersPublicKeys.Add(keysStr[idx], &pubKeys[idx])
-		}
-	}
-
-	return pubKeys, nil
 }

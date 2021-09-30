@@ -199,7 +199,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	var msg = NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -230,7 +230,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 
 	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -242,7 +242,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	}
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	GetMinerChain().PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -270,7 +270,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 
 	var msg = NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 
@@ -334,7 +334,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		Type:   MessageNotarizedBlock,
 		Block:  b,
 	}
-	mc.GetBlockMessageChannel() <- msg
+	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
 

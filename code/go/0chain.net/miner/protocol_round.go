@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -317,6 +318,10 @@ func (mc *Chain) getClientState(
 ) *util.MerklePatriciaTrie {
 	pround := mc.GetRound(roundNumber - 1)
 	pb := mc.GetBlockToExtend(ctx, pround)
+	if pb == nil || pb.ClientState == nil {
+		return nil
+	}
+
 	pndb := pb.ClientState.GetNodeDB()
 	root := pb.ClientStateHash
 	mndb := util.NewMemoryNodeDB()
@@ -326,6 +331,10 @@ func (mc *Chain) getClientState(
 }
 
 func getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
+	if clientState == nil {
+		return nil, errors.New("client state is nil")
+	}
+
 	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
 	if err != nil {
 		return nil, err
@@ -867,6 +876,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		sendVerification = true
 	}
+	logging.Logger.Debug("verify block - r.delta", zap.Any("block timer", r.delta))
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
 	for true {
@@ -890,15 +900,19 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		case <-blockTimeTimer.C:
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
+			logging.Logger.Debug("verify block - get blocks to verify")
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
+					logging.Logger.Debug("verify block - try to verify and send")
 					verifyAndSend(ctx, r, b)
 				} else {
+					logging.Logger.Debug("verify block - rejected")
 					b.SetBlockState(block.StateVerificationRejected)
 				}
 			} else { // Accumulate all the blocks into this array till the BlockTime timeout
+				logging.Logger.Debug("verify block - pending")
 				b.SetBlockState(block.StateVerificationPending)
 				blocks = append(blocks, b)
 			}

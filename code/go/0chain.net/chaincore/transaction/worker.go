@@ -12,12 +12,12 @@ import (
 )
 
 //SetupWorkers - setup workers */
-func SetupWorkers(ctx context.Context) {
-	go CleanupWorker(ctx)
+func SetupWorkers(ctx context.Context, validTxnsCache ValidatedTransactionsCache) {
+	go CleanupWorker(ctx, validTxnsCache)
 }
 
 /*CleanupWorker - a worker to delete transactiosn that are no longer valid */
-func CleanupWorker(ctx context.Context) {
+func CleanupWorker(ctx context.Context, validTxnsCache ValidatedTransactionsCache) {
 	ticker := time.NewTicker(time.Second)
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
@@ -25,8 +25,11 @@ func CleanupWorker(ctx context.Context) {
 	if !ok {
 		return
 	}
-	var invalidHashes = make([]datastore.Entity, 0, 1024)
-	var invalidTxns = make([]datastore.Entity, 0, 1024)
+	var (
+		invalidHashes    = make([]datastore.Entity, 0, 1024)
+		invalidTxns      = make([]datastore.Entity, 0, 1024)
+		invalidTxnHashes = make([]string, 0, 1024)
+	)
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	collectionName := txn.GetCollectionName()
@@ -41,6 +44,7 @@ func CleanupWorker(ctx context.Context) {
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
+			invalidTxnHashes = append(invalidTxnHashes, txn.Hash)
 		}
 		err := transactionEntityMetadata.GetStore().Read(ctx, txn.Hash, txn)
 		cerr, ok := err.(*common.Error)
@@ -50,7 +54,7 @@ func CleanupWorker(ctx context.Context) {
 		return true
 	}
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -65,6 +69,7 @@ func CleanupWorker(ctx context.Context) {
 				if err != nil {
 					logging.Logger.Error("Error in MultiDelete", zap.Error(err))
 				} else {
+					validTxnsCache.DeleteValidatedTxns(invalidTxnHashes)
 					invalidTxns = invalidTxns[:0]
 				}
 			}

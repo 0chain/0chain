@@ -213,7 +213,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetSendHeaders(req, entity, options)
-			cctx, cancel := context.WithCancel(ctx)
+			cctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			req = req.WithContext(cctx)
 			// Keep the number of messages to a node bounded
@@ -226,7 +226,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				receiver.Grab()
 				defer receiver.Release()
 
-				time.AfterFunc(timeout, cancel)
 				ts = time.Now()
 				selfNode = Self.Underlying()
 				selfNode.SetLastActiveTime(ts)
