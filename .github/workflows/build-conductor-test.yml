@@ -87,7 +87,11 @@ jobs:
     needs:
     - conductor_standard_tests
     
-    steps:
+    steps:    
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.16.5'
+        
     - name: Running Fault Tolerance Tests.
       run: |
         if [[ "$VIEW" == "true" ]]; then
