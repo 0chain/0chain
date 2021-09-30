@@ -168,12 +168,12 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 	}
 
 	gsos, err := getGroupShareOrSigns(balances)
-	if err != nil {
-		return common.NewErrorf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
-	}
-
-	if len(gsos.Shares) == 0 {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
 		return common.NewError("move_to_wait_failed", "empty sharder or sign keys")
+	default:
+		return common.NewErrorf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
 	}
 
 	if !gn.hasPrevMinerInGSoS(gsos, balances) {
@@ -445,9 +445,14 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	}
 
 	gsos, err := getGroupShareOrSigns(balances)
-	if err != nil {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		gsos = block.NewGroupSharesOrSigns()
+	default:
 		return err
 	}
+
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 
@@ -590,7 +595,12 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	mpks, err := getMinersMPKs(balances)
-	if err != nil && err != util.ErrValueNotPresent {
+	switch err {
+	case util.ErrValueNotPresent:
+		// the mpks could be empty when the first time to contribute mpks
+		mpks = block.NewMpks()
+	case nil:
+	default:
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
@@ -632,11 +642,12 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 
 	var gsos *block.GroupSharesOrSigns
 	gsos, err = getGroupShareOrSigns(balances)
-	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return "", common.NewError("share_signs_or_shares_failed", err.Error())
-		}
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
 		gsos = block.NewGroupSharesOrSigns()
+	default:
+		return "", common.NewError("share_signs_or_shares_failed", err.Error())
 	}
 
 	var ok bool
@@ -666,7 +677,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 
-	var mpks = block.NewMpks()
+	var mpks *block.Mpks
 	mpks, err = getMinersMPKs(balances)
 	if err != nil {
 		return "", common.NewError("share_signs_or_shares_failed", err.Error())
