@@ -185,8 +185,8 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 
 		// send verify block message, then send notarized block
 		go func() {
-			mb.Miners.SendTo(VerifyBlockSender(hnb), found.ID)
-			mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
+			mb.Miners.SendTo(ctx, VerifyBlockSender(hnb), found.ID)
+			mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
 		}()
 
 		logging.Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
@@ -316,8 +316,12 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil // no previous round
 	}
 
-	if err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
+	if err := mc.VerifyNotarization(b, b.GetVerificationTickets(),
 		r.GetRoundNumber()); err != nil {
+		logging.Logger.Error("not. block handler -- verify notarization failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
 		return nil, err
 	}
 

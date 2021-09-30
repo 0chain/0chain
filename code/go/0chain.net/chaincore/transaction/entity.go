@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -40,7 +41,7 @@ func SetupTransactionDB() {
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField
+	datastore.CollectionMemberField `json:"-"`
 	datastore.VersionField
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
@@ -104,10 +105,13 @@ func (t *Transaction) ValidateFee() error {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
 		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err == nil {
-			if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
-				return nil
-			}
+		if err != nil {
+			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
+			return errors.New("invalid transaction data")
+		}
+
+		if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+			return nil
 		}
 	}
 	if t.Fee < TXN_MIN_FEE {

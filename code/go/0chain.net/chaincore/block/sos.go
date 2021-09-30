@@ -35,7 +35,7 @@ func (sos *ShareOrSigns) Hash() string {
 }
 
 func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, scheme encryption.SignatureScheme) ([]string, bool) {
-	var shares []string
+	var keys []string
 	for key, share := range sos.ShareOrSigns {
 		if share == nil {
 			continue
@@ -59,10 +59,10 @@ func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, sche
 				logging.Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("sij.pi", sij.GetPublicKey().GetHexString()))
 				return nil, false
 			}
-			shares = append(shares, key)
+			keys = append(keys, key)
 		}
 	}
-	return shares, true
+	return keys, true
 }
 
 func (sos *ShareOrSigns) Encode() []byte {

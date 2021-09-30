@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -167,8 +168,45 @@ type Chain struct {
 	unsubLFBTicket        chan chan *LFBTicket     // }
 	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
+	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
+	syncBlocksC chan *SyncBlockReq
+}
+
+// SyncBlockReq represents a request to sync blocks, it will be
+// send to sync block worker.
+type SyncBlockReq struct {
+	Hash     string
+	Round    int64
+	Num      int64
+	SaveToDB bool
+}
+
+// GetSyncBlocksChan returns the channel for receving block
+// sync request
+func (c *Chain) GetSyncBlocksChan() chan *SyncBlockReq {
+	return c.syncBlocksC
+}
+
+// AsyncSyncBlocks send a request to sync blocks back that startinng
+// from the given block or round,
+// return error if failed to push to channel or timeout
+func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case c.syncBlocksC <- &req:
+	case <-time.After(500 * time.Millisecond):
+		return errors.New("push block sync request to channel timeout")
+	}
+
+	return nil
+}
+
+// SyncLFBStateNow notify workers to start the LFB state sync immediately.
+func (c *Chain) SyncLFBStateNow() {
+	c.syncLFBStateNowC <- struct{}{}
 }
 
 // SetBCStuckTimeThreshold sets the BC stuck time threshold
@@ -442,8 +480,10 @@ func Provider() datastore.Entity {
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 	c.syncLFBStateC = make(chan *block.BlockSummary)
+	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
+	c.syncBlocksC = make(chan *SyncBlockReq, 100)
 
 	return c
 }
@@ -573,14 +613,6 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
 	return
 }
 
-// AddBlockNoPrevious adds block to cache and never calls
-// async fetch previous block.
-func (c *Chain) AddBlockNoPrevious(b *block.Block) *block.Block {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
-	return c.addBlockNoPrevious(b)
-}
-
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
@@ -588,7 +620,7 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
-/*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
+/*AddNotarizedBlockToRound - adds notarized block to cache and sync info from notarized block to round  */
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI, error) {
 	if b.GetRoundRandomSeed() == 0 {
 		return nil, nil, common.NewError("add_notarized_block_to_round", "block has no seed")
@@ -645,33 +677,10 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	return b
 }
 
-func (c *Chain) addBlockNoPrevious(b *block.Block) *block.Block {
-	if eb, ok := c.blocks[b.Hash]; ok {
-		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
-		}
-		return eb
-	}
-	c.blocks[b.Hash] = b
-	if b.PrevBlock == nil {
-		if pb, ok := c.blocks[b.PrevHash]; ok {
-			b.SetPreviousBlock(pb)
-		}
-	}
-	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
-		pb.AddUniqueBlockExtension(b)
-		if c.IsFinalizedDeterministically(pb) {
-			c.SetLatestDeterministicBlock(pb)
-			break
-		}
-	}
-	return b
-}
-
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
+			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
 		}
 		return eb
 	}
@@ -898,13 +907,6 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 	return int(math.Ceil(thresholdCount))
 }
 
-// AreAllNodesActive - use this to check if all nodes needs to be active as in DKG
-func (c *Chain) AreAllNodesActive() bool {
-	mb := c.GetCurrentMagicBlock()
-	active := mb.Miners.GetActiveCount()
-	return active >= mb.Miners.Size()
-}
-
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
 	nodeConfig := config.ReadConfig(configFile)
@@ -996,7 +998,7 @@ func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
 }
 
 /*DeleteRoundsBelow - delete rounds below */
-func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
+func (c *Chain) DeleteRoundsBelow(roundNumber int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
@@ -1158,13 +1160,20 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 // CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
-	logging.Logger.Debug("CanShareBlocks",
-		zap.Int("active sharders", mb.Sharders.GetActiveCount()),
-		zap.Int("sharders size", mb.Sharders.Size()),
-		zap.Int("min active sharders", c.MinActiveSharders),
-		zap.Int("left", mb.Sharders.GetActiveCount()*100),
-		zap.Int("right", mb.Sharders.Size()*c.MinActiveSharders))
-	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
+	activeShardersNum := mb.Sharders.GetActiveCount()
+	mbShardersNum := mb.Sharders.Size()
+
+	if activeShardersNum*100 < mbShardersNum*c.MinActiveSharders {
+		logging.Logger.Error("CanShardBlocks - can not shard blocks",
+			zap.Int("active sharders", activeShardersNum),
+			zap.Int("sharders size", mbShardersNum),
+			zap.Int("min active sharders", c.MinActiveSharders),
+			zap.Int("left", activeShardersNum*100),
+			zap.Int("right", mbShardersNum*c.MinActiveSharders))
+		return false
+	}
+
+	return true
 }
 
 // CanShardBlocksSharders - is the network able to effectively shard the blocks?
@@ -1282,9 +1291,13 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
 	c.LatestFinalizedBlock = b
 	if b != nil {
+		logging.Logger.Debug("set lfb",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Bool("state_computed", b.IsStateComputed()))
 		bs := b.GetSummary()
 		c.lfbSummary = bs
-		c.BroadcastLFBTicket(common.GetRootContext(), b)
+		c.BroadcastLFBTicket(context.Background(), b)
 		go c.notifyToSyncFinalizedRoundState(bs)
 	}
 	c.lfbMutex.Unlock()
@@ -1337,36 +1350,35 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlockBrief()
+		lfmb = c.GetLatestFinalizedMagicBlock()
 	)
 
-	if newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) && lfmb != nil &&
+	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
 		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
-		lfmb.MagicBlockHash != newMagicBlock.PreviousMagicBlockHash {
+		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 
 		logging.Logger.Error("failed to update magic block",
-			zap.Any("finalized_magic_block_hash", lfmb.MagicBlockHash),
+			zap.Any("finalized_magic_block_hash", lfmb.MagicBlock.Hash),
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
-			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlockHash))
+			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
 	}
 
 	// initialize magicblock nodepools
 	c.UpdateNodesFromMagicBlock(newMagicBlock)
 
-	mb := c.GetCurrentMagicBlock()
-	if mb != nil {
+	if lfmb != nil {
 		logging.Logger.Info("update magic block",
-			zap.Int("old magic block miners num", mb.Miners.Size()),
+			zap.Int("old magic block miners num", lfmb.Miners.Size()),
 			zap.Int("new magic block miners num", newMagicBlock.Miners.Size()),
-			zap.Int64("old mb starting round", mb.StartingRound),
+			zap.Int64("old mb starting round", lfmb.StartingRound),
 			zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
-		if mb.Hash == newMagicBlock.PreviousMagicBlockHash {
+		if lfmb.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.Any("LFMB previous MB hash", mb.Hash),
+				zap.Any("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
 				zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
-			c.PreviousMagicBlock = mb
+			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
 	}
 
@@ -1455,10 +1467,13 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		logging.Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
 			"hashes don't match up: chain's finalized block hash %v, block's"+
 			" magic block previous hash %v",
-			c.latestFinalizedMagicBlock.Hash,
+			latest.MagicBlock.Hash,
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
+	logging.Logger.Warn("update lfmb",
+		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
+		zap.String("mb_hash", b.MagicBlock.Hash))
 	c.latestFinalizedMagicBlock = b
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
 }
@@ -1512,7 +1527,7 @@ func (c *Chain) Stop() {
 }
 
 // PruneRoundStorage pruning storage
-func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage round.RoundStorage) int,
+func (c *Chain) PruneRoundStorage(getTargetCount func(storage round.RoundStorage) int,
 	storages ...round.RoundStorage) {
 
 	for _, storage := range storages {
@@ -1577,6 +1592,86 @@ func (c *Chain) notifyToSyncFinalizedRoundState(bs *block.BlockSummary) {
 	case <-time.NewTimer(notifySyncLFRStateTimeout).C:
 		logging.Logger.Error("Send sync state for finalized round timeout")
 	}
+}
+
+// UpdateBlock updates block
+func (c *Chain) UpdateBlocks(bs []*block.Block) {
+	for i := range bs {
+		r := c.GetRound(bs[i].Round)
+		if r != nil {
+			r.UpdateNotarizedBlock(bs[i])
+		}
+	}
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	for i := range bs {
+		c.blocks[bs[i].Hash] = bs[i]
+	}
+}
+
+func (c *Chain) pullNotarizedBlocks(ctx context.Context, b *block.Block, num int64) []*block.Block {
+	blocks := make([]*block.Block, 0, num)
+	cb := b
+	// get one more blocks from network in case the last block does not have previous block in local
+	for i := int64(0); i < num+1; i++ {
+		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
+		if nb == nil {
+			logging.Logger.Error("pull_notarized_block - could not get notarized block",
+				zap.Int64("end_round", b.Round),
+				zap.Int64("round", b.Round-1-i),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("index", i))
+			break
+		}
+		nb = nb.Clone()
+
+		logging.Logger.Debug("pull_notarized_block - got notarized block",
+			zap.Int64("round", nb.Round),
+			zap.String("block", nb.Hash),
+			zap.Int64("index", i))
+
+		// link blocks
+		if cb != b {
+			cb.SetPreviousBlock(nb)
+		}
+
+		cb = nb
+
+		blocks = append(blocks, nb)
+
+		// check if previous block does exist locally
+		pb, _ := c.GetBlock(ctx, cb.PrevHash)
+		if pb != nil {
+			cb.SetPreviousBlock(pb)
+			if pb.IsStateComputed() {
+				break
+			}
+		}
+	}
+
+	// set the last block's previous block
+	if len(blocks) == int(num+1) {
+		blocks = blocks[:num]
+	}
+
+	if len(blocks) > 0 {
+		// reverse blocks
+		for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
+			blocks[i], blocks[j] = blocks[j], blocks[i]
+		}
+
+		if blocks[0] == nil {
+			panic(fmt.Sprintf("last is nil, len(blocks)=%d, num: %v, blocks: %v", len(blocks), num, blocks))
+		}
+
+		if blocks[0].Round > 0 && blocks[0].PrevBlock == nil {
+			logging.Logger.Warn("pull_notarized_block - last block has no previous block",
+				zap.Int64("end_round", b.Round),
+				zap.Int64("round", blocks[0].Round))
+		}
+	}
+
+	return blocks
 }
 
 // The ViewChanger represents node makes view change where a block with new

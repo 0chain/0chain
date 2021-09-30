@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"0chain.net/core/datastore"
 )
@@ -55,6 +56,48 @@ func (mb *MagicBlockMap) Write(ctx context.Context) error {
 /*Delete - store read */
 func (mb *MagicBlockMap) Delete(ctx context.Context) error {
 	return mb.GetEntityMetadata().GetStore().Delete(ctx, mb)
+}
+
+// UnmarshalJSON decodes the magic block map data
+// we implement this because the ID field in cql is `bigint` type,
+// while we have string in the MagicBlockMap itself
+func (mb *MagicBlockMap) UnmarshalJSON(data []byte) error {
+	type Alias MagicBlockMap
+	var v = struct {
+		ID int64 `json:"id"`
+		*Alias
+	}{
+		Alias: (*Alias)(mb),
+	}
+
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	if v.ID > 0 {
+		mb.ID = strconv.FormatInt(v.ID, 10)
+	}
+	return nil
+}
+
+// MarshalJSON encodes the magic block map
+func (mb *MagicBlockMap) MarshalJSON() ([]byte, error) {
+	var id int64
+	if mb.ID != "" {
+		var err error
+		id, err = strconv.ParseInt(mb.ID, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+	}
+	type Alias MagicBlockMap
+	return json.Marshal(&struct {
+		ID int64 `json:"id"`
+		*Alias
+	}{
+		ID:    id,
+		Alias: (*Alias)(mb),
+	})
 }
 
 func (mb *MagicBlockMap) Encode() []byte {

@@ -150,6 +150,8 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 	)
 
 	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
+		// TODO: offsetRound could >= nextVCRound on start when the nextVCRound was not updated correctly.
+		logging.Logger.Warn("verify_block_mb_reference - required MB missing or still not finalized")
 		return common.NewError("verify_block_mb_reference",
 			"required MB missing or still not finalized")
 	}
@@ -423,12 +425,12 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	mc.FinalizeBlock(ctx, b)
-	go mc.SendFinalizedBlock(ctx, b)
+	go mc.SendFinalizedBlock(context.Background(), b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
 	}
-	mc.DeleteRoundsBelow(ctx, b.Round)
+	mc.DeleteRoundsBelow(b.Round)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

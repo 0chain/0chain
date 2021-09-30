@@ -86,22 +86,10 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.stateDB {
-		logging.Logger.Debug("finalize round - rebasing current state db",
-			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
-			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		lfb.ClientState.SetNodeDB(c.stateDB)
-		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
-			logging.Logger.Debug("finalize round - rebasing current state db",
-				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
-				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-			lndb.RebaseCurrentDB(c.stateDB)
-			logging.Logger.Debug("finalize round - rebased current state db",
-				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
-				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-		}
 		logging.Logger.Debug("finalize round - rebased current state db",
 			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
-			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
+			zap.String("state hash", util.ToHex(lfb.ClientState.GetRoot())))
 	}
 }
 
@@ -160,7 +148,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	if err != nil {
 		return common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
-			b.Hash, b.ClientStateHash, b.ClientState.GetRoot(), b.Round)
+			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
 	}
 
 	var (
@@ -175,8 +163,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		var output string
 		t := time.Now()
 		if output, err = c.ExecuteSmartContract(ctx, txn, sctx); err != nil {
-			logging.Logger.Error("Error executing the SC", zap.Any("txn", txn),
-				zap.Error(err))
+			logging.Logger.Error("Error executing the SC",
+				zap.Error(err),
+				zap.String("block", b.Hash),
+				zap.String("begin client state", util.ToHex(startRoot)),
+				zap.String("prev block", b.PrevBlock.Hash),
+				zap.Any("txn", txn))
 			return
 		}
 		txn.TransactionOutput = output
@@ -229,9 +221,9 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = c.mintAmount(sctx, mint.ToClientID, mint.Amount)
 		if err != nil {
 			logging.Logger.Error("mint error", zap.Any("error", err),
-				zap.Any("transaction", txn.Hash))
-			// Temporary disable returning on mint error: TODO: revert back @bbist
-			// return
+				zap.Any("transaction", txn.Hash),
+				zap.String("to clientID", mint.ToClientID))
+			return
 		}
 	}
 
@@ -375,7 +367,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return err
+		return common.NewError("mint_amount - get state", err.Error())
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
@@ -398,7 +390,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		if state.Debug() {
 			logging.Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
-		return err
+		return common.NewError("mint_amount - insert", err.Error())
 	}
 	return nil
 }
