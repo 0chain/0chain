@@ -1252,16 +1252,12 @@ func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) e
 }
 
 func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
-	mpks := block.NewMpks()
 	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-
-		return mpks, nil
+		return nil, err
 	}
 
+	mpks := block.NewMpks()
 	if err := mpks.Decode(mpksBytes.Encode()); err != nil {
 		return nil, fmt.Errorf("failed to decode node MinersMPKKey, err: %v", err)
 	}
@@ -1275,15 +1271,12 @@ func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
 }
 
 func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
-	magicBlock := block.NewMagicBlock()
 	magicBlockBytes, err := state.GetTrieNode(MagicBlockKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return magicBlock, nil
+		return nil, err
 	}
 
+	magicBlock := block.NewMagicBlock()
 	if err = magicBlock.Decode(magicBlockBytes.Encode()); err != nil {
 		return nil, fmt.Errorf("failed to decode MagicBlockKey, err: %v", err)
 	}
@@ -1300,10 +1293,7 @@ func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns
 	var gsos = block.NewGroupSharesOrSigns()
 	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return gsos, nil
+		return nil, err
 	}
 
 	if err = gsos.Decode(groupBytes.Encode()); err != nil {

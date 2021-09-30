@@ -173,7 +173,12 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	var mn *MinerNode
 	mn, err = getMinerNode(deleteMiner.ID, balances)
-	if err != nil {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		mn = NewMinerNode()
+		mn.ID = deleteMiner.ID
+	default:
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
@@ -318,7 +323,12 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 	var mn *MinerNode
 	mn, err = getMinerNode(update.ID, balances)
-	if err != nil {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		mn = NewMinerNode()
+		mn.ID = update.ID
+	default:
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
@@ -380,9 +390,6 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	mn.ID = id
 	ms, err := state.GetTrieNode(mn.GetKey())
 	if err != nil {
-		if err == util.ErrValueNotPresent {
-			return mn, nil
-		}
 		return nil, err
 	}
 

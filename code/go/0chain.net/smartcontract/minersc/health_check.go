@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 )
 
 func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
@@ -16,19 +17,30 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	var existingMiner *MinerNode
-	if existingMiner, err = getMinerNode(t.ClientID, balances); err != nil {
+	existingMiner, err = getMinerNode(t.ClientID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewError("miner_health_check_failed",
+			"can't get the miner "+t.ClientID+": "+err.Error())
+	}
+
+	// update the last health check time
+	for _, nd := range all.Nodes {
+		if nd.ID == t.ClientID {
+			nd.LastHealthCheck = t.CreationDate
+			// miner does not exist, use the one in the list
+			if existingMiner == nil {
+				existingMiner = nd
+			}
+			break
+		}
+	}
+
+	if existingMiner == nil {
 		return "", common.NewError("miner_health_check_failed",
 			"can't get the miner "+t.ClientID+": "+err.Error())
 	}
 
 	existingMiner.LastHealthCheck = t.CreationDate
-
-	for _, nodes := range all.Nodes {
-		if nodes.ID == t.ClientID {
-			nodes.LastHealthCheck = t.CreationDate
-			break
-		}
-	}
 
 	if err = updateMinersList(balances, all); err != nil {
 		return "", common.NewError("miner_health_check_failed",
@@ -54,19 +66,28 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 	}
 
 	var existingSharder *MinerNode
-	if existingSharder, err = msc.getSharderNode(t.ClientID, balances); err != nil {
+	existingSharder, err = msc.getSharderNode(t.ClientID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewError("sharder_health_check_failed",
+			"can't get the sharder "+t.ClientID+": "+err.Error())
+	}
+
+	for _, nd := range all.Nodes {
+		if nd.ID == t.ClientID {
+			nd.LastHealthCheck = t.CreationDate
+			if existingSharder == nil {
+				existingSharder = nd
+			}
+			break
+		}
+	}
+
+	if existingSharder == nil {
 		return "", common.NewError("sharder_health_check_failed",
 			"can't get the sharder "+t.ClientID+": "+err.Error())
 	}
 
 	existingSharder.LastHealthCheck = t.CreationDate
-
-	for _, nodes := range all.Nodes {
-		if nodes.ID == t.ClientID {
-			nodes.LastHealthCheck = t.CreationDate
-			break
-		}
-	}
 
 	if err = updateAllShardersList(balances, all); err != nil {
 		return "", common.NewError("sharder_health_check_failed",

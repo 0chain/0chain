@@ -294,26 +294,20 @@ func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,
-	balances cstate.StateContextI) (sn *MinerNode, err error) {
+	balances cstate.StateContextI) (*MinerNode, error) {
 
-	var ss util.Serializable
-	ss, err = balances.GetTrieNode(GetSharderKey(sid))
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
-	}
-
-	sn = NewMinerNode()
+	sn := NewMinerNode()
 	sn.ID = sid
-
-	if err == util.ErrValueNotPresent {
-		return // with error ErrValueNotPresent (that's very stupid)
+	ss, err := balances.GetTrieNode(sn.GetKey())
+	if err != nil {
+		return nil, err
 	}
 
 	if err = sn.Decode(ss.Encode()); err != nil {
 		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
 	}
 
-	return // got it!
+	return sn, nil
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
