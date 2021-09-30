@@ -185,9 +185,19 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	minerDelete := false
 	for i := len(miners.Nodes) - 1; i >= 0; i-- {
 		mn := miners.Nodes[i]
-		if mn, err = getMinerNode(mn.ID, balances); err != nil {
-			return fmt.Errorf("missing miner node: %v", err)
+
+		m, er := getMinerNode(mn.ID, balances)
+		switch er {
+		case nil:
+			mn = m
+			// ref back to the miners list, otherwise the changes on the miner would
+			// not be saved to the miners list.
+			miners.Nodes[i] = mn
+		case util.ErrValueNotPresent:
+		default:
+			return fmt.Errorf("could not get miner node: %v", er)
 		}
+
 		if err = msc.payInterests(mn, gn, balances); err != nil {
 			return
 		}
@@ -217,9 +227,16 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	sharderDelete := false
 	for i := len(sharders.Nodes) - 1; i >= 0; i-- {
 		sn := sharders.Nodes[i]
-		if sn, err = msc.getSharderNode(sn.ID, balances); err != nil {
-			return fmt.Errorf("missing sharder node: %v", err)
+		n, er := msc.getSharderNode(sn.ID, balances)
+		switch er {
+		case nil:
+			sn = n
+			sharders.Nodes[i] = sn
+		case util.ErrValueNotPresent:
+		default:
+			return fmt.Errorf("could not found sharder node: %v", er)
 		}
+
 		if err = msc.payInterests(sn, gn, balances); err != nil {
 			return
 		}
@@ -365,12 +382,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	// the mb generator
 	var mn *MinerNode
 	if mn, err = getMinerNode(mb.MinerID, balances); err != nil {
-		// TODO: remove this debug info after issue is fixed.
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			mb.MinerID, err)
 	}
-
-	originState := balances.GetState().GetRoot()
 
 	Logger.Debug("Pay fees, get miner id successfully",
 		zap.String("miner id", mb.MinerID),
@@ -424,10 +438,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// save node first, for the VC pools work
 	if err = mn.save(balances); err != nil {
-		Logger.Error("save miner failed",
-			zap.String("miner id", mn.ID),
-			zap.String("origin state root", util.ToHex(originState)),
-			zap.String("current state root", util.ToHex(balances.GetState().GetRoot())))
 		return "", common.NewErrorf("pay_fees",
 			"saving generator node: %v", err)
 	}
@@ -577,7 +587,12 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	for _, sid := range sids {
 		var sn *MinerNode
 		sn, err = msc.getSharderNode(sid, balances)
-		if err != nil && err != util.ErrValueNotPresent {
+		switch err {
+		case nil:
+		case util.ErrValueNotPresent:
+			sn = NewMinerNode()
+			sn.ID = sid
+		default:
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
 		sharders, err = append(sharders, sn), nil // even if it's nil, reset err
