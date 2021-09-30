@@ -21,10 +21,9 @@ import (
 )
 
 const (
-	Seperator = smartcontractinterface.Seperator
-	owner     = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
-	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
-	name      = "faucet"
+	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
+	name    = "faucet"
 )
 
 type FaucetSmartContract struct {
@@ -127,7 +126,7 @@ func toSeconds(dur time.Duration) common.Timestamp {
 	return common.Timestamp(dur / time.Second)
 }
 
-func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) pour(t *transaction.Transaction, _ []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	user := fc.getUserVariables(t, gn, balances)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {

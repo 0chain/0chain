@@ -31,6 +31,12 @@ type StringMap struct {
 	Fields map[string]string `json:"fields"`
 }
 
+func NewStringMap() *StringMap {
+	return &StringMap{
+		Fields: make(map[string]string),
+	}
+}
+
 func (im *StringMap) Decode(input []byte) error {
 	err := json.Unmarshal(input, im)
 	if err != nil {

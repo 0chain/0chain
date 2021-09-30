@@ -25,6 +25,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -1087,6 +1088,7 @@ type DKGMinerNodes struct {
 	T              int             `json:"t"`
 	K              int             `json:"k"`
 	N              int             `json:"n"`
+	XPercent       float64         `json:"x_percent"`
 	RevealedShares map[string]int  `json:"revealed_shares"`
 	Waited         map[string]bool `json:"waited"`
 
@@ -1099,6 +1101,7 @@ func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
 	dkgmn.MaxN = gn.MaxN
 	dkgmn.TPercent = gn.TPercent
 	dkgmn.KPercent = gn.KPercent
+	dkgmn.XPercent = gn.XPercent
 }
 
 func min(a, b int) int {
@@ -1143,7 +1146,7 @@ func (dkgmn *DKGMinerNodes) reduceNodes(
 	var n = len(dkgmn.SimpleNodes)
 
 	if n < dkgmn.MinN {
-		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
+		return fmt.Errorf("too few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
 
 	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
@@ -1243,12 +1246,12 @@ func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
 
 // updateDKGMinersList update the dkg miners list
 func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
+	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.SimpleNodes)))
 	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
 	return err
 }
 
 func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
-	var mpksBytes util.Serializable
 	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
 	if err != nil {
 		return nil, err
@@ -1287,12 +1290,12 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 }
 
 func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+	var gsos = block.NewGroupSharesOrSigns()
 	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
 	if err != nil {
 		return nil, err
 	}
 
-	var gsos = block.NewGroupSharesOrSigns()
 	if err = gsos.Decode(groupBytes.Encode()); err != nil {
 		return nil, fmt.Errorf("failed to decode GroupShareOrSignKey, err: %v", err)
 	}

@@ -261,7 +261,10 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+			if err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls); err != nil {
+				logging.Logger.Warn("sharder health check failed, try again")
+			}
+
 		}
 		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
 	}

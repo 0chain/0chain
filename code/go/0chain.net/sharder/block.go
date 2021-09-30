@@ -104,10 +104,10 @@ func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int
 }
 
 /*StoreBlockSummaryFromBlock - gets block summary from block and stores it to ememory/rocksdb */
-func (sc *Chain) StoreBlockSummaryFromBlock(ctx context.Context, b *block.Block) error {
+func (sc *Chain) StoreBlockSummaryFromBlock(b *block.Block) error {
 	bs := b.GetSummary()
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
-	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), bSummaryEntityMetadata)
 	defer ememorystore.Close(bctx)
 	if len(bs.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", bs.Hash))
@@ -145,9 +145,9 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 }
 
 /*StoreMagicBlockMapFromBlock - stores magic block number mapped to the block hash */
-func (sc *Chain) StoreMagicBlockMapFromBlock(ctx context.Context, mbm *block.MagicBlockMap) error {
+func (sc *Chain) StoreMagicBlockMapFromBlock(mbm *block.MagicBlockMap) error {
 	mbMapEntityMetadata := mbm.GetEntityMetadata()
-	mctx := persistencestore.WithEntityConnection(ctx, mbMapEntityMetadata)
+	mctx := persistencestore.WithEntityConnection(common.GetRootContext(), mbMapEntityMetadata)
 	defer persistencestore.Close(mctx)
 	if len(mbm.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", mbm.Hash), zap.Any("magic_block_number", mbm.ID))

@@ -95,6 +95,10 @@ func (mc *Chain) RegisterClient() {
 		}
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 	}
+
+	logging.Logger.Info("register client success",
+		zap.Int("registered", registered),
+		zap.Int("consensus", consensus))
 }
 
 func (mc *Chain) isRegistered(ctx context.Context) (is bool) {

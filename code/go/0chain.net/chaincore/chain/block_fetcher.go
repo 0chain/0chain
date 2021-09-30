@@ -121,9 +121,7 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 		total = fm + fs
 
 		// main channels
-		quit  = ctx.Done()
-		fetch = bf.fetchBlock
-		statq = bf.statq
+		quit = ctx.Done()
 
 		// internal mapping and replies
 		fetching = make(map[string]*blockFetchRequest, cap(bf.fetchBlock))
@@ -158,14 +156,14 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			return
 
 		// send statistics
-		case statq <- stat:
+		case bf.statq <- stat:
 
 		// update latest round known by sharders
 		case tk = <-tickets:
 			latest = tk.Round // update latest sharders round
 
 		// handle block fetch requests
-		case bfr := <-fetch:
+		case bfr := <-bf.fetchBlock:
 
 			var have, ok = fetching[bfr.hash]
 			if ok {
@@ -351,7 +349,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 				"wrong block hash")
 		}
 
-		err = c.VerifyNotarization(ctx, gfb, gfb.GetVerificationTickets(),
+		err = c.VerifyNotarization(gfb, gfb.GetVerificationTickets(),
 			gfb.Round)
 		if err != nil {
 			logging.Logger.Error("fetch_fb_from_sharders - not notarized",
@@ -405,23 +403,19 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 	b *block.Block, err error) {
 
-	var (
-		cround = c.GetCurrentRound()
-		params = make(url.Values)
-	)
-
+	params := make(url.Values)
 	params.Add("block", hash)
 
 	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 	defer cancel() // terminate the context after all anyway
+	blockC := make(chan *block.Block, 1)
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (
+	logging.Logger.Info("fetch_nb_from_miners",
+		zap.String("block", hash),
+		zap.Int64("current_round", c.GetCurrentRound()))
+
+	var handler = func(_ context.Context, entity datastore.Entity) (
 		_ interface{}, err error) {
-
-		logging.Logger.Info("fetch_nb_from_miners",
-			zap.String("block", hash),
-			zap.Int64("cround", cround),
-			zap.Int64("current_round", c.GetCurrentRound()))
 
 		var nb, ok = entity.(*block.Block)
 		if !ok {
@@ -435,7 +429,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 				"wrong block hash")
 		}
 
-		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(),
+		err = c.VerifyNotarization(nb, nb.GetVerificationTickets(),
 			nb.Round)
 		if err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - not notarized",
@@ -451,24 +445,30 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 			return nil, err
 		}
 
-		logging.Logger.Debug("fetch_nb_from_miners -- ok",
-			zap.String("block", nb.Hash),
-			zap.Int64("round", nb.Round),
-			zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
-
 		// stop requesting on first block accepted
 		cancel()
-		b = nb
+		select {
+		case blockC <- nb:
+		default:
+		}
 
 		return // (nil, nil), don't return the block back
 	}
 
 	c.RequestEntityFromMiners(lctx, MinerNotarizedBlockRequestor, &params, handler)
+	select {
+	case b = <-blockC:
+	default:
+	}
 
 	if b == nil {
 		return nil, common.NewError("get_notarized_block", "no block given")
 	}
 
+	logging.Logger.Debug("fetch_nb_from_miners -- ok",
+		zap.String("block", b.Hash),
+		zap.Int64("round", b.Round),
+		zap.Int("verification_tickers", b.VerificationTicketsSize()))
 	return
 }
 
