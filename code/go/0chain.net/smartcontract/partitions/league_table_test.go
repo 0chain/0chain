@@ -1,49 +1,47 @@
 package partitions
 
 import (
-	"0chain.net/chaincore/block"
+	"testing"
+
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAdd(t *testing.T) {
-	const (
+	const ()
 
-	)
+	var ()
 
-	var (
-
-	)
-/*
-	callbacks := []struct{
-		item OrderedPartitionItem
+	callbacks := []struct {
+		item     OrderedPartitionItem
 		from, to PartitionLocation
 	}{}
-	var mockCallBack  changePositionHandler = func(
+	var mockCallBack changePositionHandler = func(
 		item OrderedPartitionItem,
 		from, to PartitionLocation,
-		state.StateContextI,
+		_ state.StateContextI,
 	) error {
-		callbacks = append(callbacks, struct{
-			item OrderedPartitionItem
+		callbacks = append(callbacks, struct {
+			item     OrderedPartitionItem
 			from, to PartitionLocation
 		}{
-			item
+			item: item,
+			from: from,
+			to:   to,
 		})
 		return nil
 	}
-*/
+
 	type args struct {
-		lt leagueTable
-		in OrderedPartitionItem
+		lt       leagueTable
+		in       OrderedPartitionItem
 		balances *mocks.StateContextI
 	}
 	type parameters struct {
 		divisionSize int
-		numEntries int
+		numEntries   int
 	}
 	type want struct {
 		error    bool
@@ -58,7 +56,7 @@ func TestAdd(t *testing.T) {
 		t *testing.T,
 		p parameters,
 		balances *mocks.StateContextI,
-	)  {
+	) {
 
 	}
 
@@ -67,7 +65,10 @@ func TestAdd(t *testing.T) {
 		parameters parameters
 		want       want
 	}{
-
+		{
+			name:       "ok",
+			parameters: parameters{},
+		},
 	}
 
 	for _, tt := range tests {
@@ -88,5 +89,4 @@ func TestAdd(t *testing.T) {
 			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
 		})
 	}
-}
 }
