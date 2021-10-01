@@ -160,7 +160,7 @@ func (lt *leagueTable) Add(in OrderedPartitionItem, balances state.StateContextI
 		}
 	}
 	if targetDivision == notFound {
-		if len(lt.Divisions[len(lt.Divisions)-1].Members) == lt.DivisionSize {
+		if len(lt.Divisions) == 0 || len(lt.Divisions[len(lt.Divisions)-1].Members) == lt.DivisionSize {
 			lt.addDivision()
 		}
 		targetDivision = len(lt.Divisions) - 1
@@ -222,7 +222,7 @@ func (lt *leagueTable) Remove(name string, index PartitionId, balances state.Sta
 			return err
 		}
 		if promoted != nil {
-			if err := div.set(lt.DivisionSize, promoted); err != nil {
+			if err := div.set(lt.DivisionSize-1, promoted); err != nil {
 				return err
 			}
 			if lt.Callback != nil {
