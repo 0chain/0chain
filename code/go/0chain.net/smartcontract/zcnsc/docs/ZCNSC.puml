@@ -1,0 +1,137 @@
+@startuml
+
+control "Service provider" as provider
+actor Client as user
+participant "ZCNSC bridge" as zcnscbridge
+collections miners as m
+collections authorizers as auth
+collections sharders as s
+participant "Ethereum bridge smart contract" as ethbridge
+
+== Prepare authorizers ==
+provider -> zcnscbridge : Register authorizer
+note left
+Service provider
+Register authorizer wallet
+in blockchain in miners
+end note
+zcnscbridge -> m : Update state
+m -> s : Save transaction
+
+== Convert from ZCN to WZCN ==
+user -> zcnscbridge : Call **'burn'** function on ZCNSC to burn N token
+zcnscbridge -> m : Send **'burn'** txn
+m -> s : Save transaction
+user -> zcnscbridge : Call **GetAuthorizers**
+zcnscbridge --> user : Get registered authorizers on ZCN
+user -> auth : **Verify** transaction
+
+group for each authorizers (group, auth)
+autonumber
+auth -> s : Poll for txn confirmation
+s --> auth : Transaction Confirmation
+autonumber stop
+end
+
+auth -> user : **proof-of-ZCN-burn ticket** ticket signed by authorizers
+note left
+** Proof-of-Burn ticket **
+* The 0Chain transaction ID
+* The nonce value
+* The amount of WZCN to be minted
+* The Ethereum address to receive the WZCN
+* The authorizer’s signatures
+end note
+user -> user : collect signatures from Authorizers to send to ethereum smart contract
+user -> ethbridge : Call **'Mint'** function in ethereum bridge smart contract
+note left
+** Parameters **
+* Amount
+* TransactionID
+* Nonce
+* The authorizer’s signature
+end note
+ethbridge --> ethbridge : Check nonce
+ethbridge --> ethbridge : Create **signed message** from (sender address, amount, TX ID, nonce)
+ethbridge --> ethbridge : Calls **IsAuthorized** (signed message, signature from authorizer)
+ethbridge --> ethbridge : Check if signer is an authorizer
+ethbridge --> ethbridge : **Transfer** N tokens from Bridge contract to sender
+ethbridge --> ethbridge
+note right
+emit **Minted**(_to, _amount, _txid, _nonce) event
+end note
+
+== Convert from WZCN to ZCN ==
+
+alt Step 1: User calls Ethereum SC from device
+user -> ethbridge : Call **'Burn'** N ethers (amount, clientId)
+activate ethbridge
+
+note left
+**Parameters**
+* The amount of WZCN burned
+* The client’s ID on the 0chain blockchain
+* A sequential nonce
+end note
+
+ethbridge -> ethbridge : Transfer from sender to bridge smart contract
+ethbridge -> ethbridge : Increment nonce
+ethbridge -> ethbridge
+
+note right
+emit **Burned**(_from, _amount, _clientId, burnNonce)
+end note
+
+ethbridge --> user : **TransactionID**
+deactivate ethbridge
+end
+
+alt Step 2: User calls authorizer
+
+user -> auth : Verify Transaction Status : **IsTransactionSuccessful** ( TransactionID )
+activate auth
+group for each authorizer (auth)
+auth -> ethbridge : Poll for txn status
+activate ethbridge
+ethbridge --> auth : Transaction status
+deactivate ethbridge
+end
+auth --> user : **Transaction successful**
+deactivate auth
+end
+
+alt Step 3: User calls authorizer
+user -> user : Provide **clientId** and **ethereum address** to filter function
+user -> auth : Get proof-of-WZCN-burn : **GetBurnEventFromEthereum** (clientId, ethereum address, transactionId)
+activate auth
+auth -> ethbridge : Read all events
+activate ethbridge
+ethbridge -> ethbridge : Filter events by **sender address** and **clientId**
+ethbridge -> auth : Return transaction event
+deactivate ethbridge
+auth -> auth : Create signature
+auth -> auth : Create burn ticket
+note over auth
+**proof-of-WZCN-burn ticket**
+
+* The Ethereum transaction ID
+* The amount of ZCN to be minted
+* The client ID to receive the ZCN
+* The nonce provided the client in step 1 above
+* The authorizers' signature
+end note
+auth --> user : **Proof-of-WZCN-burn ticket**
+deactivate auth
+end
+
+alt Step 4: Client calls bridge in 0ZCN
+
+user -> zcnscbridge : Call **Mint** function (amount, signature)
+zcnscbridge -> zcnscbridge : Verify signature
+zcnscbridge -> m : **Transfer** transaction
+m -> s: Save transaction
+end
+
+user -> s : Verify transaction
+
+@enduml
