@@ -11,6 +11,12 @@ smart_contracts:
     apr: 0.1
     min_lock_period: 1m
     max_mint: 1500000.0
+  magma:
+    provider:
+      min_stake: 0.000000001 # tokens, min stake amount
+    access_point:
+      min_stake: 0.000000001 # tokens, min stake amount
+    service_charge: 0.2 # percentage
   minersc:
     # miners
     max_n: 7 # 100

@@ -11,6 +11,12 @@ smart_contracts:
     apr: 0.0
     min_lock_period: 2190h # max units hours
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
+  magma:
+    provider:
+      min_stake: 0.000000001 # tokens, min stake amount
+    access_point:
+      min_stake: 0.000000001 # tokens, min stake amount
+    service_charge: 0.2 # percentage
   minersc:
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
   storagesc:
