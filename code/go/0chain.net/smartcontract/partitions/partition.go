@@ -8,10 +8,9 @@ type PartitionItem interface {
 	Name() string
 }
 
-type PartitionLocation interface {
-	PartitionId() int
-	Position() int
-}
+type PartitionId int
+
+const NoPartition PartitionId = -1
 
 type OrderedPartitionItem interface {
 	PartitionItem
@@ -20,18 +19,15 @@ type OrderedPartitionItem interface {
 
 type Partition interface {
 	Add(PartitionItem, state.StateContextI) error
-	Remove(PartitionLocation, state.StateContextI) error
+	Remove(string, PartitionId, state.StateContextI) error
 }
 
 type changePositionHandler func(
-	OrderedPartitionItem,
-	PartitionLocation,
-	PartitionLocation,
-	state.StateContextI,
+	OrderedPartitionItem, PartitionId, PartitionId, state.StateContextI,
 ) error
 
 type OrderedPartition interface {
-	Change(OrderedPartitionItem, PartitionLocation, state.StateContextI) error
+	Change(OrderedPartitionItem, PartitionId, state.StateContextI) error
 	OnChangePosition(changePositionHandler)
 }
 
