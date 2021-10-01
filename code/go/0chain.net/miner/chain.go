@@ -166,11 +166,6 @@ func (mc *Chain) SetDiscoverClients(b bool) {
 	mc.discoverClients = b
 }
 
-// GetBlockMessageChannel - get the block messages channel.
-func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
-	return mc.blockMessageChannel
-}
-
 // PushBlockMessageChannel pushes the block message to the process channel
 func (mc *Chain) PushBlockMessageChannel(bm *BlockMessage) {
 	go func() {

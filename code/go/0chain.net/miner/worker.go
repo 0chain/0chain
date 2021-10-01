@@ -39,7 +39,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-mc.GetBlockMessageChannel():
+		case msg := <-mc.blockMessageChannel:
 			if !mc.isStarted() {
 				break
 			}

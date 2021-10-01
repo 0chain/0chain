@@ -205,12 +205,18 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			}()
 
 			duration := time.Since(ts)
-
-			if err != nil {
-				provider.AddSendErrors(1)
-				provider.AddErrorCount(1)
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
-					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+			switch err {
+			case nil:
+			default:
+				ue := err.(*url.Error)
+				if ue.Unwrap() != context.Canceled {
+					// requests could be canceled when the miner has received a response
+					// from any of the remotes.
+					provider.AddSendErrors(1)
+					provider.AddErrorCount(1)
+					logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+				}
 				return false
 			}
 

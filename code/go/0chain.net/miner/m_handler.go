@@ -222,13 +222,6 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
-	var err error
-	if err = b.Validate(ctx); err != nil {
-		logging.Logger.Debug("verify block handler -- can't validate",
-			zap.Int64("round", b.Round), zap.Error(err))
-		return nil, err
-	}
-
 	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil

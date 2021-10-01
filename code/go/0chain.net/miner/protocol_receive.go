@@ -25,6 +25,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 
 	var b = msg.Block
 
+	if err := b.Validate(ctx); err != nil {
+		logging.Logger.Debug("verify block handler -- can't validate",
+			zap.Int64("round", b.Round), zap.Error(err))
+		return
+	}
+
 	if b.Round < mc.GetCurrentRound()-1 {
 		logging.Logger.Debug("verify block (round mismatch)",
 			zap.Int64("current_round", mc.GetCurrentRound()),
