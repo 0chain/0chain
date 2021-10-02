@@ -97,14 +97,21 @@ func (d *divison) find(name string) int {
 func (d *divison) add(
 	in OrderedPartitionItem,
 	maxSize int,
+	promote bool,
 	balances state.StateContextI,
 ) (OrderedPartitionItem, error) {
 	index := sort.Search(len(d.Members), func(i int) bool {
 		return !d.Members[i].GraterThan(in)
 	})
-	var relegated OrderedPartitionItem
-	if len(d.Members) >= maxSize {
-		relegated = d.Members[len(d.Members)-1]
+	var moved OrderedPartitionItem
+	if len(d.Members) == maxSize {
+		if promote {
+			moved = d.Members[0]
+			d.Members = d.Members[1:]
+		} else {
+			moved = d.Members[maxSize-1]
+			d.Members = d.Members[:len(d.Members)-1]
+		}
 	}
 
 	if index != len(d.Members) {
@@ -114,7 +121,7 @@ func (d *divison) add(
 		return nil, err
 	}
 	d.changed = true
-	return relegated, nil
+	return moved, nil
 }
 
 //------------------------------------------------------------------------------
@@ -146,27 +153,32 @@ func (lt *leagueTable) OnChangePosition(f changePositionHandler) {
 	lt.Callback = f
 }
 
-func (lt *leagueTable) Add(in OrderedPartitionItem, balances state.StateContextI) error {
-	const notFound = -1
-	var targetDivision = notFound
+func (lt *leagueTable) findInsertDivision(toInsert OrderedPartitionItem, balances state.StateContextI) (int, error) {
 	for i := 0; i < len(lt.Divisions); i++ {
 		div, err := lt.getDivision(i, balances)
 		if err != nil {
-			return err
+			return -1, err
 		}
-		if div != nil && (len(div.Members) == 0 || in.GraterThan(div.floor())) {
-			targetDivision = i
-			break
+		if div != nil && (len(div.Members) == 0 || toInsert.GraterThan(div.floor())) {
+			return i, nil
 		}
-	}
-	if targetDivision == notFound {
-		if len(lt.Divisions) == 0 || len(lt.Divisions[len(lt.Divisions)-1].Members) == lt.DivisionSize {
-			lt.addDivision()
-		}
-		targetDivision = len(lt.Divisions) - 1
 	}
 
-	relegated, err := lt.Divisions[targetDivision].add(in, lt.DivisionSize, balances)
+	if len(lt.Divisions) == 0 || len(lt.Divisions[len(lt.Divisions)-1].Members) == lt.DivisionSize {
+		lt.addDivision()
+	}
+	return len(lt.Divisions) - 1, nil
+
+}
+
+func (lt *leagueTable) Add(in OrderedPartitionItem, balances state.StateContextI) error {
+	const notFound = -1
+	targetDivision, err := lt.findInsertDivision(in, balances)
+	if err != nil {
+		return fmt.Errorf("finding division to insert into, %v", err)
+	}
+
+	relegated, err := lt.Divisions[targetDivision].add(in, lt.DivisionSize, false, balances)
 	if err != nil {
 		return err
 	}
@@ -184,9 +196,16 @@ func (lt *leagueTable) Add(in OrderedPartitionItem, balances state.StateContextI
 		if err != nil {
 			return err
 		}
-		if err := lt.Callback(relegated, 0, 1, balances); err != nil {
-			return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
-				relegated, 0, 1)
+		if lt.Callback != nil {
+			if err := lt.Callback(
+				relegated,
+				PartitionId(targetDivision),
+				PartitionId(targetDivision+1),
+				balances,
+			); err != nil {
+				return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
+					relegated, 0, 1)
+			}
 		}
 	}
 	return nil
@@ -248,11 +267,115 @@ func (lt *leagueTable) Change(
 	from PartitionId,
 	balances state.StateContextI,
 ) error {
-	err := lt.Remove(changed.Name(), from, balances)
+	oldDiv, err := lt.getDivision(int(from), balances)
 	if err != nil {
 		return err
 	}
-	return lt.Add(changed, balances)
+	if oldDiv == nil {
+		return fmt.Errorf("partition %v not found", from)
+	}
+
+	oldPosition := oldDiv.find(changed.Name())
+	if oldPosition == notFound {
+		return err
+	}
+	newDivision, err := lt.findInsertDivision(changed, balances)
+	if err != nil {
+		return fmt.Errorf("finding division to insert into, %v", err)
+	}
+
+	newDiv, err := lt.getDivision(newDivision, balances)
+	if err != nil {
+		return err
+	}
+
+	// we are now moving changed
+	//   from position oldPosition in from
+	//   to position newPosition in newDivision
+
+	// remove changed from oldPosition
+	oldDiv.Members = append(oldDiv.Members[:oldPosition], oldDiv.Members[oldPosition+1:]...)
+
+	// get member to promote or relegate, move to new division
+	switch {
+	case newDivision < int(from):
+		relegated := newDiv.Members[lt.DivisionSize-1]
+		newDiv.Members = newDiv.Members[:lt.DivisionSize-1]
+		err := lt.relegatedTo(relegated, newDivision+1, balances)
+		if err != nil {
+			return err
+		}
+		if lt.Callback != nil {
+			if err := lt.Callback(
+				relegated,
+				PartitionId(newDivision),
+				PartitionId(newDivision+1),
+				balances,
+			); err != nil {
+				return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
+					relegated, 0, 1)
+			}
+		}
+		// need to insert changed member into newDiv
+		if err := newDiv.insertNew(changed); err != nil {
+			return err
+		}
+	case newDivision == int(from):
+		if err := newDiv.insertNew(changed); err != nil {
+			return err
+		}
+	case newDivision > int(from):
+		// insert change into new position
+		if err := newDiv.insertNew(changed); err != nil {
+			return err
+		}
+
+		// put newly promoted member into from to replace changed
+		// promoteFrom will stop automatically when it reaches newDiv
+		promoted, err := lt.promoteFrom(int(from)+1, balances)
+		if err != nil {
+			return err
+		}
+		if err := oldDiv.set(lt.DivisionSize-1, promoted); err != nil {
+			return err
+		}
+		if lt.Callback != nil {
+			if err := lt.Callback(
+				promoted, PartitionId(from), PartitionId(from+1), balances,
+			); err != nil {
+				return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
+					promoted, from, from+1)
+			}
+		}
+	default:
+		panic("impossible")
+	}
+
+	if lt.Callback != nil && newDivision != int(from) {
+		if err := lt.Callback(
+			changed, from, PartitionId(newDivision), balances,
+		); err != nil {
+			return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
+				changed, from, PartitionId(newDivision))
+		}
+	}
+
+	return nil
+}
+
+func (div divison) insertNew(in OrderedPartitionItem) error {
+	newPosition := sort.Search(len(div.Members), func(i int) bool {
+		return !div.Members[i].GraterThan(in)
+	})
+	if newPosition != len(div.Members)-1 {
+		div.Members = append(
+			div.Members[:newPosition+1], div.Members[newPosition:]...,
+		)
+	}
+	if err := div.set(newPosition, in); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (lt *leagueTable) promoteFrom(
@@ -343,7 +466,7 @@ func (lt *leagueTable) relegatedTo(
 
 func (lt *leagueTable) newDivision() *divison {
 	return &divison{
-		Members: make([]leagueMember, 0, lt.DivisionSize),
+		Members: make([]leagueMember, 0, lt.DivisionSize+1),
 	}
 }
 

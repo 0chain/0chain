@@ -16,6 +16,7 @@ import (
 )
 
 func TestFuzzyLeagueTable(t *testing.T) {
+	t.Skip()
 	const (
 		mockName         = "fuzzy league table"
 		mockSeed         = 0
@@ -475,7 +476,6 @@ func TestRemove(t *testing.T) {
 }
 
 func TestChange(t *testing.T) {
-	t.Skip()
 	const (
 		mockNewId = "mock new id"
 	)
@@ -536,7 +536,7 @@ func TestChange(t *testing.T) {
 				Callback:     mockCallBack,
 			},
 			item: leagueMember{
-				Id:    name,
+				Id:    p.name,
 				Value: p.value,
 			},
 			id:       PartitionId(p.divisionId),
@@ -571,12 +571,13 @@ func TestChange(t *testing.T) {
 		want       want
 	}{
 		{
-			name: "ok",
+			name: "ok_up",
 			parameters: parameters{
 				divisionSize: 5,
-				numEntries:   15,
-				name:         "divisions 1 position 4",
-				divisionId:   1,
+				numEntries:   20,
+				name:         "divisions 2 position 4",
+				divisionId:   2,
+				value:        700,
 			},
 		},
 	}
@@ -589,7 +590,6 @@ func TestChange(t *testing.T) {
 			tt.want = setExpectations(t, tt.parameters, args, tt.want)
 
 			callbacks = callbackCalls{}
-			args.lt.OnChangePosition(mockCallBack)
 			err := args.lt.Change(args.item, args.id, args.balances)
 
 			require.EqualValues(t, tt.want.error, err != nil)
