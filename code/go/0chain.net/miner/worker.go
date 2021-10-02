@@ -44,6 +44,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				break
 			}
 			go func(bmsg *BlockMessage) {
+				ts := time.Now()
 				if bmsg.Sender != nil {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
 				} else {
@@ -62,9 +63,15 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
 				}
 				if bmsg.Sender != nil {
-					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+					logging.Logger.Debug("message (done)",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("sender_index", bmsg.Sender.SetIndex),
+						zap.Any("id", bmsg.Sender.GetKey()),
+						zap.Any("duration", time.Since(ts)))
 				} else {
-					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+					logging.Logger.Debug("message (done)",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("duration", time.Since(ts)))
 				}
 			}(msg)
 		}

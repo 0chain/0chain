@@ -276,58 +276,12 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
-	var mc = GetMinerChain()
-	if b.Round < mc.GetCurrentRound()-1 {
-		logging.Logger.Debug("notarized block handler (round older than the current round)",
-			zap.String("block", b.Hash), zap.Any("round", b.Round))
-		return
-	}
-
-	var r = mc.getOrStartRoundNotAhead(ctx, b.Round)
-	if r == nil {
-		if mc.isAheadOfSharders(ctx, b.Round) {
-			logging.Logger.Debug("notarized block handler -- is ahead or no pr",
-				zap.String("block", b.Hash), zap.Any("round", b.Round),
-				zap.Bool("has_pr", mc.GetMinerRound(b.Round-1) != nil))
-			return
-		}
-		return // can't handle yet
-	}
-
-	if r.IsFinalizing() || r.IsFinalized() {
-		return // doesn't need a not. block
-	}
-
-	var lfb = mc.GetLatestFinalizedBlock()
-	if b.Round <= lfb.Round {
-		return nil, nil // doesn't need the not. block
-	}
-
-	if mc.GetMinerRound(b.Round-1) == nil {
-		logging.Logger.Error("not. block handler -- no previous round (ignore)",
-			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		return nil, nil // no previous round
-	}
-
-	if err := mc.VerifyNotarization(b, b.GetVerificationTickets(),
-		r.GetRoundNumber()); err != nil {
-		logging.Logger.Error("not. block handler -- verify notarization failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Error(err))
-		return nil, err
-	}
-
-	if r.GetRandomSeed() == 0 {
-		mc.SetRandomSeed(r, b.GetRoundRandomSeed())
-	}
-
 	var msg = &BlockMessage{
 		Sender: node.GetSender(ctx),
 		Type:   MessageNotarizedBlock,
 		Block:  b,
 	}
-	mc.PushBlockMessageChannel(msg)
+	GetMinerChain().PushBlockMessageChannel(msg)
 	return nil, nil
 }
 

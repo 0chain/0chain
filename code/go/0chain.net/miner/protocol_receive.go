@@ -267,45 +267,62 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	msg *BlockMessage) {
 
-	var (
-		nb = msg.Block
-		mr = mc.GetMinerRound(nb.Round)
-	)
+	nb := msg.Block
 
+	//var mc = GetMinerChain()
+	if nb.Round < mc.GetCurrentRound()-1 {
+		logging.Logger.Debug("notarized block handler (round older than the current round)",
+			zap.String("block", nb.Hash), zap.Any("round", nb.Round))
+		return
+	}
+
+	var lfb = mc.GetLatestFinalizedBlock()
+	if nb.Round <= lfb.Round {
+		return // doesn't need the not. block
+	}
+
+	if mc.GetMinerRound(nb.Round-1) == nil {
+		logging.Logger.Error("not. block handler -- no previous round (ignore)",
+			zap.Int64("round", nb.Round), zap.Int64("prev_round", nb.Round-1))
+		return // no previous round
+	}
+
+	var mr = mc.getOrStartRoundNotAhead(ctx, nb.Round)
 	if mr == nil {
+		logging.Logger.Debug("notarized block handler -- is ahead or no pr",
+			zap.String("block", nb.Hash), zap.Any("round", nb.Round),
+			zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
+		return // can't handle yet
+	}
 
-		if mr = mc.getOrStartRoundNotAhead(ctx, nb.Round); mr == nil {
-			logging.Logger.Error("handle not. block -- ahead of sharders or no pr",
-				zap.Int64("round", nb.Round),
-				zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
-			return
+	if mr.GetRandomSeed() == 0 {
+		mc.SetRandomSeed(mr, nb.GetRoundRandomSeed())
+	}
+
+	if mr.IsFinalizing() || mr.IsFinalized() {
+		return // doesn't need a not. block
+	}
+
+	if mr.IsVerificationComplete() {
+		return // verification for the round complete
+	}
+
+	for _, blk := range mr.GetNotarizedBlocks() {
+		if blk.Hash == nb.Hash {
+			return // already have
 		}
+	}
 
+	if err := mc.VerifyNotarization(nb, nb.GetVerificationTickets(), mr.GetRoundNumber()); err != nil {
+		logging.Logger.Error("not. block handler -- verify notarization failed",
+			zap.Int64("round", nb.Round),
+			zap.String("block", nb.Hash),
+			zap.Error(err))
+		return
+	}
+
+	if !mr.IsVRFComplete() {
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
-
-	} else {
-
-		if mc.GetMinerRound(nb.Round-1) == nil {
-			logging.Logger.Error("handle not. block -- no previous round (ignore)",
-				zap.Int64("round", nb.Round),
-				zap.Int64("prev_round", nb.Round-1))
-			return
-		}
-
-		if mr.IsVerificationComplete() {
-			return // verification for the round complete
-		}
-
-		for _, blk := range mr.GetNotarizedBlocks() {
-			if blk.Hash == nb.Hash {
-				return // already have
-			}
-		}
-
-		if !mr.IsVRFComplete() {
-			mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
-		}
-
 	}
 
 	var b = mc.AddRoundBlock(mr, nb)
