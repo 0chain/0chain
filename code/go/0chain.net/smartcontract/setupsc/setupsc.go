@@ -1,6 +1,8 @@
 package setupsc
 
 import (
+	"fmt"
+
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/viper"
@@ -11,8 +13,6 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"0chain.net/smartcontract/zrc20sc"
-	"fmt"
 )
 
 type SCName int
@@ -20,7 +20,6 @@ type SCName int
 const (
 	Faucet SCName = iota
 	Storage
-	Zrc20
 	Interest
 	Multisig
 	Miner
@@ -32,7 +31,6 @@ var (
 	SCNames = []string{
 		"faucet",
 		"storage",
-		"zrc20",
 		"interest",
 		"multisig",
 		"miner",
@@ -43,7 +41,6 @@ var (
 	SCCode = map[string]SCName{
 		"faucet":   Faucet,
 		"storage":  Storage,
-		"zrc20":    Zrc20,
 		"interest": Interest,
 		"multisig": Multisig,
 		"miner":    Miner,
@@ -72,8 +69,6 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return faucetsc.NewFaucetSmartContract()
 	case Storage:
 		return storagesc.NewStorageSmartContract()
-	case Zrc20:
-		return zrc20sc.NewZRC20SmartContract()
 	case Interest:
 		return interestpoolsc.NewInterestPoolSmartContract()
 	case Multisig:
