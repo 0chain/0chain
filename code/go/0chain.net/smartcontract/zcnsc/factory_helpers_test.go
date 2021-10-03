@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	AddAuthorizer = "AddAuthorizer"
+	AddAuthorizer = "AddAuthorizerFunc"
 )
 
 var (

@@ -93,6 +93,7 @@ const (
 	FaucetSc       = "faucetsc."
 	InterestPoolSC = "interestpoolsc."
 	VestingSc      = "vestingsc."
+	ZcnSc          = "zcn."
 
 	Fas = "free_allocation_settings."
 
@@ -160,6 +161,13 @@ const (
 	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
 	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
+
+	MinMintAmount      = SmartContract + ZcnSc + "min_mint_amount"
+	PercentAuthorizers = SmartContract + ZcnSc + "percent_authorizers"
+	MinAuthorizers     = SmartContract + ZcnSc + "min_authorizers"
+	MinBurnAmount      = SmartContract + ZcnSc + "min_burn_amount"
+	MinStakeAmount     = SmartContract + ZcnSc + "min_stake_amount"
+	BurnAddress        = SmartContract + ZcnSc + "burn_address"
 )
 
 func (w SimulatorParameter) String() string {

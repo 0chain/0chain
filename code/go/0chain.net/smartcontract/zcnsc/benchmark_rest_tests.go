@@ -2,6 +2,8 @@ package zcnsc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	bk "0chain.net/smartcontract/benchmark"
 	"context"
@@ -11,37 +13,57 @@ import (
 
 type restBenchTest struct {
 	name     string
-	endpoint func(
-		context.Context,
-		url.Values,
-		cstate.StateContextI,
-	) (interface{}, error)
-	params url.Values
+	endpoint smartcontractinterface.SmartContractRestHandler
+	params   url.Values
 }
 
 func (bt restBenchTest) Name() string {
-	return ""
+	return bt.name
 }
 
 func (bt restBenchTest) Transaction() *transaction.Transaction {
-	return nil
+	return &transaction.Transaction{}
 }
 
-func (bt restBenchTest) Run(_ cstate.StateContextI, _ *testing.B) {
+func (bt restBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+	_, err := bt.endpoint(context.TODO(), bt.params, balances)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func BenchmarkRestTests(
 	_ bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
-	var testsI []bk.BenchTestI
 
-	var tests []restBenchTest
+	sc := createSmartContract()
 
-	for _, test := range tests {
-		testsI = append(testsI, test)
+	return createSuite([]restBenchTest{
+		{
+			name:     "zcnsc_rest.getAuthorizerNodes",
+			endpoint: sc.getAuthorizerNodes,
+		},
+	})
+}
+
+func createSmartContract() ZCNSmartContract {
+	sc := ZCNSmartContract{
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
+
+	sc.setSC(sc.SmartContract, &smartcontract.BCContext{})
+	return sc
+}
+
+func createSuite(restTests []restBenchTest) bk.TestSuite {
+	var tests []bk.BenchTestI
+
+	for _, test := range restTests {
+		tests = append(tests, test)
+	}
+
 	return bk.TestSuite{
 		Source:     bk.ZCNSCBridgeRest,
-		Benchmarks: testsI,
+		Benchmarks: tests,
 	}
 }

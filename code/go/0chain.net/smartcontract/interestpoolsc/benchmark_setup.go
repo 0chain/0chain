@@ -6,7 +6,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/viper"
-	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark"
 )
 
 func AddMockNodes(clients []string, balances cstate.StateContextI) {
@@ -16,7 +16,7 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 		pool.ID = getInterestPoolId(i)
 		pool.Balance = 100 * 1e10
 		pool.TokenLockInterface = &tokenLock{
-			Duration: viper.GetDuration(bk.InterestPoolMinLockPeriod),
+			Duration: viper.GetDuration(benchmark.InterestPoolMinLockPeriod),
 			Owner:    client,
 		}
 
@@ -29,9 +29,9 @@ func AddMockNodes(clients []string, balances cstate.StateContextI) {
 	}
 
 	gn := newGlobalNode()
-	gn.MinLock = state.Balance(viper.GetFloat64(bk.InterestPoolMinLock))
-	gn.MinLockPeriod = viper.GetDuration(bk.InterestPoolMinLockPeriod)
-	gn.MaxMint = state.Balance(viper.GetFloat64(bk.InterestPoolMaxMint))
+	gn.MinLock = state.Balance(viper.GetFloat64(benchmark.InterestPoolMinLock))
+	gn.MinLockPeriod = viper.GetDuration(benchmark.InterestPoolMinLockPeriod)
+	gn.MaxMint = state.Balance(viper.GetFloat64(benchmark.InterestPoolMaxMint))
 	_, err := balances.InsertTrieNode(gn.getKey(), gn)
 	if err != nil {
 		panic(err)
