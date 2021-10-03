@@ -48,7 +48,7 @@ func runSuite(
 	root util.Key,
 	data benchmark.BenchData,
 ) []benchmarkResults {
-	benchmarkResult := []benchmarkResults{}
+	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup
 	for _, bm := range suite.Benchmarks {
 		wg.Add(1)

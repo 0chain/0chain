@@ -3,7 +3,7 @@ package zcnsc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark"
 	"testing"
 )
 
@@ -19,30 +19,37 @@ type benchTest struct {
 }
 
 func (bt benchTest) Name() string {
-	// TODO: Add name here
-	return ""
+	return bt.name
 }
 
 func (bt benchTest) Transaction() *transaction.Transaction {
-	return nil
+	return &transaction.Transaction{}
 }
 
 func (bt benchTest) Run(_ cstate.StateContextI, _ *testing.B) {
-	// TODO: Create smart contract here
+	// TODO: Complete
 }
 
-func BenchmarkTests(
-	_ bk.BenchData, _ bk.SignatureScheme,
-) bk.TestSuite {
-	var testsI []bk.BenchTestI
+func BenchmarkTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+	return createTestSuite(
+		[]benchTest{
+			{
+				name:     "zcnsc_rest.getAuthorizerNodes",
+				endpoint: nil,
+			},
+		},
+	)
+}
 
-	var tests []benchTest
+func createTestSuite(restTests []benchTest) benchmark.TestSuite {
+	var tests []benchmark.BenchTestI
 
-	for _, test := range tests {
-		testsI = append(testsI, test)
+	for _, test := range restTests {
+		tests = append(tests, test)
 	}
-	return bk.TestSuite{
-		Source:     bk.ZCNSCBridge,
-		Benchmarks: testsI,
+
+	return benchmark.TestSuite{
+		Source:     benchmark.ZCNSCBridge,
+		Benchmarks: tests,
 	}
 }

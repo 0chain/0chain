@@ -4,26 +4,29 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
-	bk "0chain.net/smartcontract/benchmark"
+	"0chain.net/smartcontract/benchmark"
 )
 
-func AddMockGlobalNode(balances cstate.StateContextI) {
+func Setup(clients []string, balances cstate.StateContextI) {
+	addMockGlobalNode(balances)
+	addMockUserNodes(clients, balances)
+	addMockAuthorizerNodes(clients, balances)
+}
+
+func addMockGlobalNode(balances cstate.StateContextI) {
 	gn := newGlobalNode()
 
-	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(bk.MinMintAmount))
-	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(bk.PercentAuthorizers)
-	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(bk.MinAuthorizers)
-	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(bk.MinBurnAmount)
-	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(bk.MinStakeAmount)
-	gn.BurnAddress = config.SmartContractConfig.GetString(bk.BurnAddress)
+	gn.MinMintAmount = state.Balance(config.SmartContractConfig.GetFloat64(benchmark.MinMintAmount))
+	gn.PercentAuthorizers = config.SmartContractConfig.GetFloat64(benchmark.PercentAuthorizers)
+	gn.MinAuthorizers = config.SmartContractConfig.GetInt64(benchmark.MinAuthorizers)
+	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount)
+	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount)
+	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
 
-func AddMockUserNodes(
-	clients []string,
-	balances cstate.StateContextI,
-) {
+func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 	for _, client := range clients {
 		un := &UserNode{
 			ID: client,
@@ -32,10 +35,14 @@ func AddMockUserNodes(
 	}
 }
 
+func addMockAuthorizerNodes(clients []string, balances cstate.StateContextI) {
+}
+
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
 		ID: ADDRESS,
 	}
 }
+
 
 // TODO: Add authorizer nodes

@@ -41,6 +41,8 @@ var (
 		"vesting",
 		"vesting_rest",
 		"multi_sig",
+		"zcnscbridge",
+		"zcnscbridge_rest",
 	}
 
 	SourceCode = map[string]Source{
@@ -55,6 +57,8 @@ var (
 		SourceNames[Vesting]:          Vesting,
 		SourceNames[VestingRest]:      VestingRest,
 		SourceNames[MultiSig]:         MultiSig,
+		SourceNames[ZCNSCBridge]:      ZCNSCBridge,
+		SourceNames[ZCNSCBridgeRest]:  ZCNSCBridgeRest,
 	}
 )
 
