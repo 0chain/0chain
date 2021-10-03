@@ -20,8 +20,8 @@ func TestFuzzyLeagueTable(t *testing.T) {
 	const (
 		mockName         = "fuzzy league table"
 		mockSeed         = 0
-		fuzzyRunLength   = 100
-		mockDivisionSize = 10
+		fuzzyRunLength   = 10000
+		mockDivisionSize = 100
 		addRatio         = 60
 		changeRation     = 20
 		removeRatio      = 20
@@ -87,6 +87,9 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		from, to PartitionId,
 		_ state.StateContextI,
 	) error {
+		if item.Name() == "test 35" {
+			require.True(t, true)
+		}
 		fmt.Println("\tcallback item", item, "from", from, "to", to)
 		if from == NoPartition {
 			items = append(items, fuzzyItem{
@@ -95,17 +98,18 @@ func TestFuzzyLeagueTable(t *testing.T) {
 			})
 			return nil
 		}
-
 		for i := 0; i < len(items); i++ {
 			if items[i].item.Id == item.Name() {
 				if items[i].division != from {
 					require.EqualValues(t, items[i].division, from)
 				}
+				require.EqualValues(t, items[i].division, from)
 				if to == NoPartition {
 					items = append(items[:i], items[i+1:]...)
-				} else {
-					items[i].division = to
+					return nil
 				}
+				items[i].item = item.(leagueMember)
+				items[i].division = to
 				return nil
 			}
 		}
@@ -150,16 +154,18 @@ func TestFuzzyLeagueTable(t *testing.T) {
 	}
 
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].item.Value < items[j].item.Value
+		return items[i].item.Value > items[j].item.Value
 	})
 	itemIndex := 0
 	for i := 0; i < len(lt.Divisions); i++ {
 		for j := 0; j < len(lt.Divisions[i].Members); j++ {
-			require.EqualValues(
-				t,
-				items[itemIndex].item.Value,
-				lt.Divisions[i].Members[j].Value,
-			)
+			if items[itemIndex].item.Value != lt.Divisions[i].Members[j].Value {
+				require.EqualValues(
+					t,
+					items[itemIndex].item.Value,
+					lt.Divisions[i].Members[j].Value,
+				)
+			}
 			itemIndex++
 		}
 	}

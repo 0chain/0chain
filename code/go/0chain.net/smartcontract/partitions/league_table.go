@@ -269,6 +269,14 @@ func (lt *leagueTable) Change(
 	if err != nil {
 		return err
 	}
+	if lt.Callback != nil {
+		if err := lt.Callback(
+			changed, from, PartitionId(newDivision), balances,
+		); err != nil {
+			return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
+				changed, from, PartitionId(newDivision))
+		}
+	}
 
 	// now fix the league to have the right number of members in each division
 	switch {
@@ -297,7 +305,7 @@ func (lt *leagueTable) Change(
 			}
 			if lt.Callback != nil {
 				if err := lt.Callback(
-					promoted, PartitionId(from), PartitionId(from+1), balances,
+					promoted, PartitionId(from+1), PartitionId(from), balances,
 				); err != nil {
 					return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
 						promoted, from, from+1)
@@ -308,14 +316,6 @@ func (lt *leagueTable) Change(
 		panic("impossible")
 	}
 
-	if lt.Callback != nil && newDivision != int(from) {
-		if err := lt.Callback(
-			changed, from, PartitionId(newDivision), balances,
-		); err != nil {
-			return fmt.Errorf("running callback, {in: %v, old position: %v, new poslitin: %v}",
-				changed, from, PartitionId(newDivision))
-		}
-	}
 	newDiv.changed = true
 	oldDiv.changed = true
 	return nil
