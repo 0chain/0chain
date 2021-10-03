@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"0chain.net/smartcontract/zcnsc"
 	"encoding/hex"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -149,6 +150,9 @@ func setUpMpt(
 	vestingsc.AddVestingPools(clients, balances)
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+	log.Println("added miners phase node")
+	zcnsc.Setup(clients, balances)
+	log.Println("added zcnsc")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,

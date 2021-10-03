@@ -35,6 +35,7 @@ func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 	}
 }
 
+// TODO: Add authorizer nodes
 func addMockAuthorizerNodes(clients []string, balances cstate.StateContextI) {
 }
 
@@ -43,6 +44,3 @@ func newGlobalNode() *GlobalNode {
 		ID: ADDRESS,
 	}
 }
-
-
-// TODO: Add authorizer nodes
