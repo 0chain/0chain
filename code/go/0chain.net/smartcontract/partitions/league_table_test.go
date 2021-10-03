@@ -16,7 +16,6 @@ import (
 )
 
 func TestFuzzyLeagueTable(t *testing.T) {
-	//t.Skip()
 	const (
 		mockName         = "fuzzy league table"
 		mockSeed         = 0
@@ -87,10 +86,7 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		from, to PartitionId,
 		_ state.StateContextI,
 	) error {
-		if item.Name() == "test 35" {
-			require.True(t, true)
-		}
-		fmt.Println("\tcallback item", item, "from", from, "to", to)
+		// fmt.Println("\tcallback item", item, "from", from, "to", to) todo remove line
 		if from == NoPartition {
 			items = append(items, fuzzyItem{
 				item:     item.(leagueMember),
@@ -137,7 +133,7 @@ func TestFuzzyLeagueTable(t *testing.T) {
 	for i := 0; i < fuzzyRunLength; i++ {
 		action := getAction(i)
 		actions = append(actions, action)
-		fmt.Println("i", i, "action", action)
+		// fmt.Println("i", i, "action", action) todo remove line
 		switch action.action {
 		case Add:
 			err := lt.Add(action.item, balances)
@@ -173,7 +169,6 @@ func TestFuzzyLeagueTable(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	t.Skip()
 	const (
 		mockNewId = "mock new id"
 	)
@@ -346,7 +341,6 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	t.Skip()
 	const (
 		mockNewId = "mock new id"
 	)
@@ -489,7 +483,6 @@ func TestRemove(t *testing.T) {
 }
 
 func TestChange(t *testing.T) {
-	t.Skip()
 	const (
 		mockNewId = "mock new id"
 	)
