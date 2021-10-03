@@ -16,7 +16,7 @@ import (
 )
 
 func TestFuzzyLeagueTable(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	const (
 		mockName         = "fuzzy league table"
 		mockSeed         = 0
@@ -256,8 +256,6 @@ func TestAdd(t *testing.T) {
 		if p.numEntries%p.divisionSize != 0 {
 			numDivisions++
 		}
-		//lowestFull := 0 == p.numEntries%p.divisionSize
-		//highestValue := numDivisions*p.divisionSize
 
 		var entryDivision = int(p.newEntry) / p.divisionSize
 		if int(p.newEntry)%p.divisionSize == 1 {
@@ -310,7 +308,6 @@ func TestAdd(t *testing.T) {
 				newEntry:     4,
 			},
 		},
-
 		{
 			name: "ok_new_partition",
 			parameters: parameters{
@@ -435,6 +432,16 @@ func TestRemove(t *testing.T) {
 		want       want
 	}{
 		{
+			name: "ok_first_member",
+			parameters: parameters{
+				divisionSize: 5,
+				numEntries:   16,
+				name:         "divisions 0 position 0",
+				divisionId:   0,
+			},
+		},
+
+		{
 			name: "ok_end_first_division",
 			parameters: parameters{
 				divisionSize: 5,
@@ -476,6 +483,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestChange(t *testing.T) {
+	t.Skip()
 	const (
 		mockNewId = "mock new id"
 	)
@@ -580,6 +588,16 @@ func TestChange(t *testing.T) {
 				value:        700,
 			},
 		},
+		{
+			name: "ok_down",
+			parameters: parameters{
+				divisionSize: 5,
+				numEntries:   20,
+				name:         "divisions 0 position 4",
+				divisionId:   0,
+				value:        0,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -626,7 +644,7 @@ func mockLeagueTable(
 	var lastDivision divison
 	for i := 0; i < entries%divisionSize; i++ {
 		lastDivision.Members = append(lastDivision.Members, leagueMember{
-			Id:    "divisions " + strconv.Itoa(fullDivisions+1) + " position " + strconv.Itoa(i),
+			Id:    "divisions " + strconv.Itoa(fullDivisions) + " position " + strconv.Itoa(i),
 			Value: int64((fullDivisions+1)*divisionSize - (fullDivisions)*divisionSize - i),
 		})
 	}
