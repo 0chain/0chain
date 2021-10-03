@@ -81,7 +81,7 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		return action
 	}
 
-	var mockCallBack changePositionHandler = func(
+	var mockCallBack ChangePositionHandler = func(
 		item OrderedPartitionItem,
 		from, to PartitionId,
 		_ state.StateContextI,
@@ -173,7 +173,7 @@ func TestAdd(t *testing.T) {
 	}
 	type callbackCalls []change
 	callbacks := callbackCalls{}
-	var mockCallBack changePositionHandler = func(
+	var mockCallBack ChangePositionHandler = func(
 		item OrderedPartitionItem,
 		from, to PartitionId,
 		_ state.StateContextI,
@@ -335,10 +335,6 @@ func TestAdd(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	const (
-		mockNewId = "mock new id"
-	)
-
 	type change struct {
 		item     OrderedPartitionItem
 		from, to PartitionId
@@ -346,7 +342,7 @@ func TestRemove(t *testing.T) {
 	type callbackCalls []change
 
 	callbacks := callbackCalls{}
-	var mockCallBack changePositionHandler = func(
+	var mockCallBack ChangePositionHandler = func(
 		item OrderedPartitionItem,
 		from, to PartitionId,
 		_ state.StateContextI,
@@ -477,10 +473,6 @@ func TestRemove(t *testing.T) {
 }
 
 func TestChange(t *testing.T) {
-	const (
-		mockNewId = "mock new id"
-	)
-
 	type change struct {
 		item     OrderedPartitionItem
 		from, to PartitionId
@@ -488,7 +480,7 @@ func TestChange(t *testing.T) {
 	type callbackCalls []change
 
 	callbacks := callbackCalls{}
-	var mockCallBack changePositionHandler = func(
+	var mockCallBack ChangePositionHandler = func(
 		item OrderedPartitionItem,
 		from, to PartitionId,
 		_ state.StateContextI,
@@ -616,7 +608,7 @@ func TestChange(t *testing.T) {
 func mockLeagueTable(
 	name string,
 	entries, divisionSize int,
-	callback changePositionHandler,
+	callback ChangePositionHandler,
 ) leagueTable {
 	var lt = leagueTable{
 		Name:         name,

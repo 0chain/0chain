@@ -22,13 +22,13 @@ type Partition interface {
 	Remove(string, PartitionId, state.StateContextI) error
 }
 
-type changePositionHandler func(
+type ChangePositionHandler func(
 	OrderedPartitionItem, PartitionId, PartitionId, state.StateContextI,
 ) error
 
 type OrderedPartition interface {
 	Change(OrderedPartitionItem, PartitionId, state.StateContextI) error
-	OnChangePosition(changePositionHandler)
+	OnChangePosition(ChangePositionHandler)
 }
 
 type LeagueTable interface {

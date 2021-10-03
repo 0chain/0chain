@@ -69,7 +69,7 @@ func (d *divison) Decode(b []byte) error {
 func (d *divison) set(index int, opi OrderedPartitionItem) error {
 	lm, ok := opi.(leagueMember)
 	if !ok {
-		fmt.Errorf("%v is not a league member", opi)
+		return fmt.Errorf("%v is not a league member", opi)
 	}
 	if len(d.Members) > index {
 		d.Members[index] = lm
@@ -114,7 +114,7 @@ type leagueTable struct {
 	Name         string                `json:"name"`
 	DivisionSize int                   `json:"division_size"`
 	Divisions    []*divison            `json:"divisions"`
-	Callback     changePositionHandler `json:"on_change_division"`
+	Callback     ChangePositionHandler `json:"on_change_division"`
 }
 
 func (lt *leagueTable) divisionKey(index int) datastore.Key {
@@ -133,7 +133,7 @@ func (lt *leagueTable) Decode(b []byte) error {
 	return json.Unmarshal(b, lt)
 }
 
-func (lt *leagueTable) OnChangePosition(f changePositionHandler) {
+func (lt *leagueTable) OnChangePosition(f ChangePositionHandler) {
 	lt.Callback = f
 }
 
@@ -156,7 +156,6 @@ func (lt *leagueTable) findInsertDivision(toInsert OrderedPartitionItem, balance
 }
 
 func (lt *leagueTable) Add(in OrderedPartitionItem, balances state.StateContextI) error {
-	const notFound = -1
 	targetDivision, err := lt.findInsertDivision(in, balances)
 	if err != nil {
 		return fmt.Errorf("finding division to insert into, %v", err)
@@ -209,7 +208,6 @@ func (lt *leagueTable) Remove(name string, index PartitionId, balances state.Sta
 	}
 
 	if len(div.Members) == lt.DivisionSize-1 {
-		const dontStop = -1
 		promoted, err := lt.promoteFrom(int(index+1), balances)
 		if err != nil {
 			return err
