@@ -9,10 +9,10 @@ import (
 	"0chain.net/core/encryption"
 )
 
-type BenchmarkSource int
+type Source int
 
 const (
-	Storage BenchmarkSource = iota
+	Storage Source = iota
 	StorageRest
 	Miner
 	MinerRest
@@ -23,11 +23,13 @@ const (
 	Vesting
 	VestingRest
 	MultiSig
+	ZCNSCBridge
+	ZCNSCBridgeRest
 	NumberOdfBenchmarkSources
 )
 
 var (
-	BenchmarkSourceNames = []string{
+	SourceNames = []string{
 		"storage",
 		"storage_rest",
 		"miner",
@@ -41,18 +43,18 @@ var (
 		"multi_sig",
 	}
 
-	BenchmarkSourceCode = map[string]BenchmarkSource{
-		BenchmarkSourceNames[Storage]:          Storage,
-		BenchmarkSourceNames[StorageRest]:      StorageRest,
-		BenchmarkSourceNames[Miner]:            Miner,
-		BenchmarkSourceNames[MinerRest]:        MinerRest,
-		BenchmarkSourceNames[Faucet]:           Faucet,
-		BenchmarkSourceNames[FaucetRest]:       FaucetRest,
-		BenchmarkSourceNames[InterestPool]:     InterestPool,
-		BenchmarkSourceNames[InterestPoolRest]: InterestPoolRest,
-		BenchmarkSourceNames[Vesting]:          Vesting,
-		BenchmarkSourceNames[VestingRest]:      VestingRest,
-		BenchmarkSourceNames[MultiSig]:         MultiSig,
+	SourceCode = map[string]Source{
+		SourceNames[Storage]:          Storage,
+		SourceNames[StorageRest]:      StorageRest,
+		SourceNames[Miner]:            Miner,
+		SourceNames[MinerRest]:        MinerRest,
+		SourceNames[Faucet]:           Faucet,
+		SourceNames[FaucetRest]:       FaucetRest,
+		SourceNames[InterestPool]:     InterestPool,
+		SourceNames[InterestPoolRest]: InterestPoolRest,
+		SourceNames[Vesting]:          Vesting,
+		SourceNames[VestingRest]:      VestingRest,
+		SourceNames[MultiSig]:         MultiSig,
 	}
 )
 
@@ -219,7 +221,7 @@ type SignatureScheme interface {
 }
 
 type TestSuite struct {
-	Source     BenchmarkSource
+	Source     Source
 	Benchmarks []BenchTestI
 }
 

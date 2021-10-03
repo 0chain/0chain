@@ -83,7 +83,7 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 	log.Println("made empty blockchain")
-	clients, publicKeys, privateKeys := addMockkClients(pMpt)
+	clients, publicKeys, privateKeys := addMockClients(pMpt)
 	log.Println("added clients")
 	faucetsc.FundMockFaucetSmartContract(pMpt)
 	log.Println("funded faucet")
@@ -158,7 +158,7 @@ func setUpMpt(
 	}
 }
 
-func addMockkClients(
+func addMockClients(
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
 	blsScheme := BLS0ChainScheme{}

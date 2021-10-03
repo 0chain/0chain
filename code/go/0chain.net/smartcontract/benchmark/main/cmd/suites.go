@@ -33,7 +33,7 @@ func runSuites(
 		go func(suite benchmark.TestSuite, wg *sync.WaitGroup) {
 			defer wg.Done()
 			results = append(results, suiteResults{
-				name:    benchmark.BenchmarkSourceNames[suite.Source],
+				name:    benchmark.SourceNames[suite.Source],
 				results: runSuite(suite, mpt, root, data),
 			})
 		}(suite, &wg)

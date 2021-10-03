@@ -15,11 +15,12 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
+var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
 	bk.Storage:          storagesc.BenchmarkTests,
 	bk.StorageRest:      storagesc.BenchmarkRestTests,
 	bk.Miner:            minersc.BenchmarkTests,
@@ -31,6 +32,8 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Vesting:          vestingsc.BenchmarkTests,
 	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
+	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
+	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
 }
 
 func init() {
