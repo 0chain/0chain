@@ -86,7 +86,6 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		from, to PartitionId,
 		_ state.StateContextI,
 	) error {
-		// fmt.Println("\tcallback item", item, "from", from, "to", to) todo remove line
 		if from == NoPartition {
 			items = append(items, fuzzyItem{
 				item:     item.(leagueMember),
@@ -129,11 +128,8 @@ func TestFuzzyLeagueTable(t *testing.T) {
 	}
 
 	rand.Seed(mockSeed)
-	var actions []methodCall
 	for i := 0; i < fuzzyRunLength; i++ {
 		action := getAction(i)
-		actions = append(actions, action)
-		// fmt.Println("i", i, "action", action) todo remove line
 		switch action.action {
 		case Add:
 			err := lt.Add(action.item, balances)
@@ -155,13 +151,11 @@ func TestFuzzyLeagueTable(t *testing.T) {
 	itemIndex := 0
 	for i := 0; i < len(lt.Divisions); i++ {
 		for j := 0; j < len(lt.Divisions[i].Members); j++ {
-			if items[itemIndex].item.Value != lt.Divisions[i].Members[j].Value {
-				require.EqualValues(
-					t,
-					items[itemIndex].item.Value,
-					lt.Divisions[i].Members[j].Value,
-				)
-			}
+			require.EqualValues(
+				t,
+				items[itemIndex].item.Value,
+				lt.Divisions[i].Members[j].Value,
+			)
 			itemIndex++
 		}
 	}
