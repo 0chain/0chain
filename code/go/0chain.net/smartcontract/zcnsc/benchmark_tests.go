@@ -4,6 +4,8 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/benchmark"
+	"github.com/stretchr/testify/require"
+	"strconv"
 	"testing"
 )
 
@@ -23,22 +25,45 @@ func (bt benchTest) Name() string {
 }
 
 func (bt benchTest) Transaction() *transaction.Transaction {
-	return &transaction.Transaction{}
+	return bt.txn
 }
 
-func (bt benchTest) Run(_ cstate.StateContextI, _ *testing.B) {
-	// TODO: Complete
+func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) {
+	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
+	require.NoError(b, err)
 }
 
-func BenchmarkTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {
+	sc := createSmartContract()
+
 	return createTestSuite(
 		[]benchTest{
 			{
-				name:     "zcnsc_rest.getAuthorizerNodes",
-				endpoint: nil,
+				name:     benchmark.Zcn + AddAuthorizerFunc,
+				endpoint: sc.AddAuthorizer,
+				txn:      createTransaction(),
+				input:    createAuthorizer(data.PublicKeys),
 			},
 		},
 	)
+}
+
+func createAuthorizer(publicKey []string) []byte {
+	index := randomIndex(len(publicKey))
+	node := authorizerNodeArg{
+		PublicKey: publicKey[index],
+		URL:       "http://localhost:303" + strconv.Itoa(index),
+	}
+	return node.Encode()
+}
+
+// TODO: complete transaction
+func createTransaction() *transaction.Transaction {
+	return &transaction.Transaction{}
+}
+
+func randomIndex(num int) int {
+	return 0
 }
 
 func createTestSuite(restTests []benchTest) benchmark.TestSuite {

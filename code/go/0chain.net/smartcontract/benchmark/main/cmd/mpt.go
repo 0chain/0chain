@@ -151,7 +151,7 @@ func setUpMpt(
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
 	log.Println("added miners phase node")
-	zcnsc.Setup(clients, balances)
+	zcnsc.Setup(clients, publicKeys, balances)
 	log.Println("added zcnsc")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{

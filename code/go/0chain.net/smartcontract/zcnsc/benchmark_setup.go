@@ -3,14 +3,16 @@ package zcnsc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/benchmark"
+	"encoding/json"
 )
 
-func Setup(clients []string, balances cstate.StateContextI) {
+func Setup(clients []string, publicKeys []string, balances cstate.StateContextI) {
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addMockAuthorizerNodes(clients, balances)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -35,12 +37,27 @@ func addMockUserNodes(clients []string, balances cstate.StateContextI) {
 	}
 }
 
-// TODO: Add authorizer nodes
-func addMockAuthorizerNodes(clients []string, balances cstate.StateContextI) {
+func createSmartContract() ZCNSmartContract {
+	sc := ZCNSmartContract{
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
+	}
+
+	sc.setSC(sc.SmartContract, &smartcontract.BCContext{})
+	return sc
 }
 
 func newGlobalNode() *GlobalNode {
 	return &GlobalNode{
 		ID: ADDRESS,
 	}
+}
+
+type authorizerNodeArg struct {
+	PublicKey string `json:"public_key"`
+	URL       string `json:"url"`
+}
+
+func (pk *authorizerNodeArg) Encode() []byte {
+	buff, _ := json.Marshal(pk)
+	return buff
 }

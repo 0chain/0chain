@@ -2,7 +2,6 @@ package zcnsc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/benchmark"
@@ -56,13 +55,4 @@ func createRestTestSuite(restTests []restBenchTest) benchmark.TestSuite {
 		Source:     benchmark.ZCNSCBridgeRest,
 		Benchmarks: tests,
 	}
-}
-
-func createSmartContract() ZCNSmartContract {
-	sc := ZCNSmartContract{
-		SmartContract: smartcontractinterface.NewSC(ADDRESS),
-	}
-
-	sc.setSC(sc.SmartContract, &smartcontract.BCContext{})
-	return sc
 }
