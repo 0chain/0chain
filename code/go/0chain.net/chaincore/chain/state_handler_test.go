@@ -1,6 +1,7 @@
 package chain_test
 
 import (
+	"0chain.net/smartcontract/zcnsc"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -44,6 +45,7 @@ func init() {
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.vesting", true)
 	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.zcn", true)
 	viper.Set("development.smart_contract.multisig", true)
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
@@ -1785,6 +1787,10 @@ func TestGetSCRestOutput(t *testing.T) {
 		{
 			name:    "zrc20sc",
 			address: zrc20sc.ADDRESS,
+		},
+		{
+			name:    "zcn",
+			address: zcnsc.ADDRESS,
 		},
 		{
 			name:    "invalid",

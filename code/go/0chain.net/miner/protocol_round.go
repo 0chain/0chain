@@ -314,15 +314,18 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 func (mc *Chain) getClientState(
 	ctx context.Context,
 	roundNumber int64,
-) *util.MerklePatriciaTrie {
+) (*util.MerklePatriciaTrie, error) {
 	pround := mc.GetRound(roundNumber - 1)
 	pb := mc.GetBlockToExtend(ctx, pround)
+	if pb == nil || pb.ClientState == nil {
+		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
+	}
 	pndb := pb.ClientState.GetNodeDB()
 	root := pb.ClientStateHash
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
-	return clientState
+	return clientState, nil
 }
 
 func getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
@@ -346,19 +349,29 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-
-	configMap, err := getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
+	clientState, err := mc.getClientState(ctx, r.GetRoundNumber())
 	if err != nil {
-		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", r.GetRoundNumber()),
+		// This might happen after stopping and starting the miners
+		// and the MPT has not been setup yet.
+		logging.Logger.Error("cannot get the client state from last block",
 			zap.Error(err),
 		)
 	} else {
-		err := mc.Config.Update(configMap)
-		logging.Logger.Error("cannot update global settings",
-			zap.Int64("start of round", r.GetRoundNumber()),
-			zap.Error(err),
-		)
+		configMap, err := getConfigMap(clientState)
+		if err != nil {
+			logging.Logger.Info("cannot get global settings",
+				zap.Int64("start of round", r.GetRoundNumber()),
+				zap.Error(err),
+			)
+		} else {
+			err := mc.Config.Update(configMap)
+			if err != nil {
+				logging.Logger.Error("cannot update global settings",
+					zap.Int64("start of round", r.GetRoundNumber()),
+					zap.Error(err),
+				)
+			}
+		}
 	}
 
 	mc.startNewRound(ctx, r)
