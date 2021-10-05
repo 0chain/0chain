@@ -25,7 +25,7 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		changeRation     = 20
 		removeRatio      = 20
 	)
-
+	rand.Seed(mockSeed)
 	type Action int
 	const (
 		Add Action = iota
@@ -127,7 +127,6 @@ func TestFuzzyLeagueTable(t *testing.T) {
 		).Return(nil, util.ErrValueNotPresent).Once()
 	}
 
-	rand.Seed(mockSeed)
 	for i := 0; i < fuzzyRunLength; i++ {
 		action := getAction(i)
 		switch action.action {
