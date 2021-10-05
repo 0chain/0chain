@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"testing"
 
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 	"github.com/rcrowley/go-metrics"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -35,21 +36,22 @@ func Test_NewMagmaSmartContract(t *testing.T) {
 	msc := &MagmaSmartContract{SmartContract: smartcontractinterface.NewSC(Address)}
 
 	// Magma smart contract REST handlers
-	msc.RestHandlers["/sessionAccepted"] = msc.sessionAccepted
-	msc.RestHandlers["/sessionAcceptedVerify"] = msc.sessionAcceptedVerify
-	msc.RestHandlers["/sessionExist"] = msc.sessionExist
-	msc.RestHandlers["/allConsumers"] = msc.allConsumers
-	msc.RestHandlers["/allProviders"] = msc.allProviders
-	msc.RestHandlers["/consumerExist"] = msc.consumerExist
-	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
-	msc.RestHandlers["/providerMinStakeFetch"] = msc.providerMinStakeFetch
-	msc.RestHandlers["/providerExist"] = msc.providerExist
-	msc.RestHandlers["/providerFetch"] = msc.providerFetch
-	msc.RestHandlers["/accessPointFetch"] = msc.accessPointFetch
-	msc.RestHandlers["/accessPointExist"] = msc.accessPointExist
-	msc.RestHandlers["/accessPointMinStakeFetch"] = msc.accessPointMinStakeFetch
+	msc.RestHandlers[zmc.SessionRP] = msc.sessionAccepted
+	msc.RestHandlers[zmc.VerifySessionAcceptedRP] = msc.sessionAcceptedVerify
+	msc.RestHandlers[zmc.IsSessionExistRP] = msc.sessionExist
+	msc.RestHandlers[zmc.GetAllConsumersRP] = msc.allConsumers
+	msc.RestHandlers[zmc.GetAllProvidersRP] = msc.allProviders
+	msc.RestHandlers[zmc.ConsumerRegisteredRP] = msc.consumerExist
+	msc.RestHandlers[zmc.ConsumerFetchRP] = msc.consumerFetch
+	msc.RestHandlers[zmc.ProviderMinStakeFetchRP] = msc.providerMinStakeFetch
+	msc.RestHandlers[zmc.ProviderRegisteredRP] = msc.providerExist
+	msc.RestHandlers[zmc.ProviderFetchRP] = msc.providerFetch
+	msc.RestHandlers[zmc.AccessPointFetchRP] = msc.accessPointFetch
+	msc.RestHandlers[zmc.AccessPointRegisteredRP] = msc.accessPointExist
+	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
 	msc.RestHandlers["/rewardPoolExist"] = msc.rewardPoolExist
 	msc.RestHandlers["/rewardPoolFetch"] = msc.rewardPoolFetch
+	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)

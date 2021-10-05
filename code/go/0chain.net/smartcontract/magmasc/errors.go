@@ -31,6 +31,8 @@ const (
 
 	errCodeInvalidFuncName = "invalid_func_name"
 	errTextInvalidFuncName = "function with provided name is not supported"
+
+	errCodeInvalidConfig = "invalid_config"
 )
 
 var (

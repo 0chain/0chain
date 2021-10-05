@@ -50,9 +50,18 @@ func (m *tokenPool) Decode(blob []byte) error {
 
 // create tries to create a new token poll by given session.
 func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI) error {
+	return m.createWithRatio(txn, cfg, sci, 1)
+}
+
+// create tries to create a new token poll by given session.
+func (m *tokenPool) createWithRatio(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI, ratio int64) error {
 	m.Balance = cfg.PoolBalance()
 	if m.Balance < 0 {
 		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
+	}
+
+	if ratio < 1 {
+		return errors.Wrap(errCodeTokenPoolCreate, "ratio can't be less than 1", errNegativeValue)
 	}
 
 	m.PayerID = cfg.PoolPayerID()
@@ -61,7 +70,7 @@ func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci ch
 		return errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
 	}
 
-	poolBalance := state.Balance(m.Balance)
+	poolBalance := state.Balance(m.Balance * ratio)
 	if clientBalance < poolBalance {
 		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
@@ -132,7 +141,7 @@ func (m *tokenPool) spendWithServiceCharge(txn *tx.Transaction, amount state.Bal
 	if amount < 0 {
 		return errors.Wrap(errCodeTokenPoolSpend, "spend amount is negative", errNegativeValue)
 	}
-	if !(serviceCharge >= 0 || serviceCharge < 1) {
+	if !(serviceCharge >= 0 && serviceCharge < 1) {
 		return errors.New(errCodeTokenPoolSpend, "service charge must be in [0;1) interval")
 	}
 

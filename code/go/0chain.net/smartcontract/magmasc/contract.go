@@ -166,7 +166,7 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	}
 
 	pool := newTokenPool()
-	if err = pool.create(txn, sess, sci); err != nil {
+	if err = pool.createWithRatio(txn, sess, sci, m.cfg.GetInt64(billingRatio)); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeSessionStart, "create token pool failed", err)
 	}
@@ -204,23 +204,36 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(errCodeSessionStop, "session not started yet", err)
 	}
 	if sess.Billing.CompletedAt == 0 { // must be completed
-		pool := newTokenPool()
-		if err = pool.Decode(sess.TokenPool.Encode()); err != nil {
-			return "", errors.New(errCodeSessionStop, err.Error())
-		}
-
-		servCharge, serviceID := m.cfg.GetFloat64(serviceCharge), sess.Provider.ID
-		if err = pool.spendWithServiceCharge(txn, state.Balance(sess.Billing.Amount), sci, servCharge, serviceID); err != nil {
-			return "", errors.New(errCodeSessionStop, err.Error())
-		}
-
-		sess.Billing.CompletedAt = time.Now()
-		if _, err = sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
-			return "", errors.Wrap(errCodeSessionStop, "update session failed", err)
+		if err := m.completeBilling(sess, txn, sci); err != nil {
+			return "", err
 		}
 	}
 
 	return string(sess.Encode()), nil
+}
+
+func (m *MagmaSmartContract) completeBilling(sess *zmc.Session, txn *tx.Transaction, sci chain.StateContextI) error {
+	pool := newTokenPool()
+	if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
+		return errors.New(errCodeSessionStop, err.Error())
+	}
+
+	amount := sess.Billing.Amount
+	if sess.Billing.DataMarker.IsQoSType() {
+		amount *= m.cfg.GetInt64(billingRatio)
+	}
+
+	servCharge, serviceID := m.cfg.GetFloat64(serviceCharge), sess.Provider.ID
+	if err := pool.spendWithServiceCharge(txn, state.Balance(amount), sci, servCharge, serviceID); err != nil {
+		return errors.New(errCodeSessionStop, err.Error())
+	}
+
+	sess.Billing.CompletedAt = time.Now()
+	if _, err := sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
+		return errors.Wrap(errCodeSessionStop, "update session failed", err)
+	}
+
+	return nil
 }
 
 // consumerUpdate updates the consumer data.
@@ -259,12 +272,12 @@ func (m *MagmaSmartContract) consumerUpdate(txn *tx.Transaction, blob []byte, sc
 
 // providerDataUsage updates the Provider billing session.
 func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	dataUsage := zmc.DataUsage{}
-	if err := dataUsage.Decode(blob); err != nil {
+	dataMarker := zmc.DataMarker{}
+	if err := dataMarker.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "decode data usage failed", err)
 	}
 
-	sess, err := m.session(dataUsage.SessionID, sci)
+	sess, err := m.session(dataMarker.DataUsage.SessionId, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "fetch session failed", err)
 	}
@@ -283,12 +296,22 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 		return "", errors.Wrap(errCodeDataUsage, "check owner id failed", err)
 	}
 
-	if err = sess.Billing.Validate(&dataUsage); err != nil {
+	if err = sess.Billing.Validate(dataMarker.DataUsage); err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "validate data usage failed", err)
 	}
 
+	if dataMarker.IsQoSType() {
+		verified, err := dataMarker.Verify()
+		if err != nil {
+			return "", errors.Wrap(errCodeDataUsage, "error while verifying signature", err)
+		}
+		if !verified {
+			return "", errors.New(errCodeDataUsage, "signature is unverified")
+		}
+	}
+
 	// update billing data
-	sess.Billing.DataUsage = dataUsage
+	sess.Billing.DataMarker = &dataMarker
 	sess.Billing.CalcAmount(sess.AccessPoint.Terms)
 	// TODO: make checks:
 	//  the billing amount is lower than token poll balance
@@ -300,8 +323,7 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 	return string(sess.Encode()), nil
 }
 
-// providerMinStakeFetch tries to extract registered provider
-// with given external id param and returns boolean value of it is exists.
+// providerMinStakeFetch returns configured providerMinStake.
 func (m *MagmaSmartContract) providerMinStakeFetch(context.Context, url.Values, chain.StateContextI) (interface{}, error) {
 	minStake := int64(m.cfg.GetFloat64(providerMinStake) * billion)
 	if minStake < 0 {
@@ -646,8 +668,7 @@ func (m *MagmaSmartContract) accessPointExist(_ context.Context, vals url.Values
 	return got != nil, nil
 }
 
-// accessPointMinStakeFetch tries to extract registered provider
-// with given external id param and returns boolean value of it is exists.
+// accessPointMinStakeFetch returns configured accessPointMinStake.
 func (m *MagmaSmartContract) accessPointMinStakeFetch(_ context.Context, _ url.Values, _ chain.StateContextI) (interface{}, error) {
 	minStake := int64(m.cfg.GetFloat64(accessPointMinStake) * billion)
 	if minStake < 0 {
@@ -754,6 +775,16 @@ func (m *MagmaSmartContract) rewardPoolUnlock(txn *tx.Transaction, blob []byte, 
 	}
 
 	return string(pool.Encode()), nil
+}
+
+// fetchBillingRatio returns configured billingRatio.
+func (m *MagmaSmartContract) fetchBillingRatio(_ context.Context, _ url.Values, _ chain.StateContextI) (interface{}, error) {
+	br := m.cfg.GetInt64(billingRatio)
+	if br < 1 {
+		br = 1
+	}
+
+	return br, nil
 }
 
 // nodeUID returns an uniq id for Node interacting with magma smart contract.

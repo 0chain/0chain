@@ -11,6 +11,7 @@ import (
 
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 	ts "github.com/0chain/gosdk/zmagmacore/time"
 	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
@@ -75,11 +76,15 @@ func mockSession() *zmc.Session {
 		SessionID:   "id:session:" + now,
 		AccessPoint: mockAccessPoint(prov.ExtID),
 		Billing: zmc.Billing{
-			DataUsage: zmc.DataUsage{
-				DownloadBytes: 3 * million,
-				UploadBytes:   2 * million,
-				SessionID:     "id:session:" + now,
-				SessionTime:   1 * 60, // 1 minute
+			DataMarker: &zmc.DataMarker{
+				DataMarker: &pb.DataMarker{
+					DataUsage: &pb.DataUsage{
+						DownloadBytes: 3 * million,
+						UploadBytes:   2 * million,
+						SessionId:     "id:session:" + now,
+						SessionTime:   1 * 60, // 1 minute
+					},
+				},
 			},
 		},
 		Consumer: mockConsumer(),
@@ -271,7 +276,7 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("GetClientBalance", argStr).Return(
 		func(id string) state.Balance {
 			if strings.Contains(id, "id:consumer:") {
-				return 1000 * 1e9 // 1000 * 1e9 units equal to one thousand coins
+				return 10000 * 1e9 // 1000 * 1e9 units equal to ten thousand coins
 			}
 			return 0
 		},

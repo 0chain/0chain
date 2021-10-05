@@ -84,7 +84,7 @@ func Test_MagmaSmartContract_session(t *testing.T) {
 				t.Errorf("session() error: %v | want: %v", err, test.error)
 				return
 			}
-			if err == nil && !reflect.DeepEqual(got, test.want) {
+			if err == nil && !reflect.DeepEqual(got.Encode(), test.want.Encode()) {
 				t.Errorf("session() got: %#v | want: %#v", got, test.want)
 			}
 		})
@@ -105,7 +105,7 @@ func Test_MagmaSmartContract_sessionAccepted(t *testing.T) {
 		vals  url.Values
 		sci   chain.StateContextI
 		msc   *MagmaSmartContract
-		want  interface{}
+		want  *zmc.Session
 		error bool
 	}{
 		{
@@ -138,8 +138,15 @@ func Test_MagmaSmartContract_sessionAccepted(t *testing.T) {
 				t.Errorf("sessionAccepted() error: %v | want: %v", err, test.error)
 				return
 			}
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("sessionAccepted() got: %#v | want: %#v", got, test.want)
+
+			if got != nil && test.want != nil {
+				gotSess, ok := got.(*zmc.Session)
+				if !ok {
+					t.Fatalf("must be *zmc.Session impplementation")
+				}
+				if !reflect.DeepEqual(gotSess.Encode(), test.want.Encode()) {
+					t.Errorf("sessionAccepted() got: %#v | want: %#v", got, test.want)
+				}
 			}
 		})
 	}
@@ -159,7 +166,7 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 		vals  url.Values
 		sci   chain.StateContextI
 		msc   *MagmaSmartContract
-		want  interface{}
+		want  *zmc.Session
 		error bool
 	}{
 		{
@@ -236,8 +243,15 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 				t.Errorf("sessionAcceptedVerify() error: %v | want: %v", err, test.error)
 				return
 			}
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("sessionAcceptedVerify() got: %#v | want: %#v", got, test.want)
+
+			if got != nil && test.want != nil {
+				gotSess, ok := got.(*zmc.Session)
+				if !ok {
+					t.Fatalf("must be *zmc.Session impplementation")
+				}
+				if !reflect.DeepEqual(gotSess.Encode(), test.want.Encode()) {
+					t.Errorf("sessionAcceptedVerify() got: %#v | want: %#v", got, test.want)
+				}
 			}
 		})
 	}
@@ -586,8 +600,8 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	txn.ClientID = sess.Consumer.ID
 
 	pool := newTokenPool()
-	if err := pool.create(txn, sess, sci); err != nil {
-		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
+	if err := pool.createWithRatio(txn, sess, sci, msc.cfg.GetInt64(billingRatio)); err != nil {
+		t.Fatalf("tokenPool.createWithRatio() error: %v | want: %v", err, nil)
 	}
 	sess.TokenPool = &pool.TokenPool
 
@@ -814,7 +828,7 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 		{
 			name:  "OK",
 			txn:   txn,
-			blob:  sess.Billing.DataUsage.Encode(),
+			blob:  sess.Billing.DataMarker.Encode(),
 			sci:   sci,
 			msc:   msc,
 			want:  string(sess.Encode()),

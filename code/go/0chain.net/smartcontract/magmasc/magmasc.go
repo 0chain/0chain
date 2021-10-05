@@ -9,6 +9,7 @@ import (
 
 	"github.com/0chain/gorocksdb"
 	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 	"github.com/rcrowley/go-metrics"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -40,21 +41,22 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc := MagmaSmartContract{SmartContract: sci.NewSC(Address)}
 
 	// Magma smart contract REST handlers
-	msc.RestHandlers["/sessionAccepted"] = msc.sessionAccepted
-	msc.RestHandlers["/sessionAcceptedVerify"] = msc.sessionAcceptedVerify
-	msc.RestHandlers["/sessionExist"] = msc.sessionExist
-	msc.RestHandlers["/allConsumers"] = msc.allConsumers
-	msc.RestHandlers["/allProviders"] = msc.allProviders
-	msc.RestHandlers["/consumerExist"] = msc.consumerExist
-	msc.RestHandlers["/consumerFetch"] = msc.consumerFetch
-	msc.RestHandlers["/providerMinStakeFetch"] = msc.providerMinStakeFetch
-	msc.RestHandlers["/providerExist"] = msc.providerExist
-	msc.RestHandlers["/providerFetch"] = msc.providerFetch
-	msc.RestHandlers["/accessPointFetch"] = msc.accessPointFetch
-	msc.RestHandlers["/accessPointExist"] = msc.accessPointExist
-	msc.RestHandlers["/accessPointMinStakeFetch"] = msc.accessPointMinStakeFetch
+	msc.RestHandlers[zmc.SessionRP] = msc.sessionAccepted
+	msc.RestHandlers[zmc.VerifySessionAcceptedRP] = msc.sessionAcceptedVerify
+	msc.RestHandlers[zmc.IsSessionExistRP] = msc.sessionExist
+	msc.RestHandlers[zmc.GetAllConsumersRP] = msc.allConsumers
+	msc.RestHandlers[zmc.GetAllProvidersRP] = msc.allProviders
+	msc.RestHandlers[zmc.ConsumerRegisteredRP] = msc.consumerExist
+	msc.RestHandlers[zmc.ConsumerFetchRP] = msc.consumerFetch
+	msc.RestHandlers[zmc.ProviderMinStakeFetchRP] = msc.providerMinStakeFetch
+	msc.RestHandlers[zmc.ProviderRegisteredRP] = msc.providerExist
+	msc.RestHandlers[zmc.ProviderFetchRP] = msc.providerFetch
+	msc.RestHandlers[zmc.AccessPointFetchRP] = msc.accessPointFetch
+	msc.RestHandlers[zmc.AccessPointRegisteredRP] = msc.accessPointExist
+	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
 	msc.RestHandlers["/rewardPoolExist"] = msc.rewardPoolExist
 	msc.RestHandlers["/rewardPoolFetch"] = msc.rewardPoolFetch
+	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
@@ -145,8 +147,37 @@ func (m *MagmaSmartContract) Setup(cfg *viper.Viper) error {
 		return errors.Wrap(errCodeInternal, "open magma smart contract store failed", err)
 	}
 
+	if err := validateCfg(cfg); err != nil {
+		return errors.Wrap(errCodeInternal, "configuration is invalid", err)
+	}
 	m.cfg = cfg
 	store.AddPool(storeName, m.db)
 
 	return nil
+}
+
+// validateCfg validates provided config.
+func validateCfg(cfg *viper.Viper) error {
+	var (
+		billRatio    = cfg.GetInt64(billingRatio)
+		servCharge   = cfg.GetFloat64(serviceCharge)
+		apMinStake   = cfg.GetFloat64(accessPointMinStake)
+		provMinStake = cfg.GetFloat64(providerMinStake)
+	)
+	switch {
+	case billRatio < 1:
+		return errors.New(errCodeInvalidConfig, "billing ratio can not be less than 1")
+
+	case !(servCharge >= 0 && servCharge < 1):
+		return errors.New(errCodeInvalidConfig, "service charge must be in [0;1) interval")
+
+	case apMinStake < 0:
+		return errors.New(errCodeInvalidConfig, "access point's min stake must be greater or equal than 0")
+
+	case provMinStake < 0:
+		return errors.New(errCodeInvalidConfig, "provider's min stake must be greater or equal than 0")
+
+	default:
+		return nil
+	}
 }

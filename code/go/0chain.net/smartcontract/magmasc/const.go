@@ -25,6 +25,9 @@ const (
 	// serviceCharge represents the key of a service charge config.
 	serviceCharge = "service_charge"
 
+	// billingRatio represents the key of a billing ratio config.
+	billingRatio = "billing.ratio"
+
 	// rootPath describes the magma smart contract's root path.
 	rootPath = ".0chain.net"
 
@@ -65,19 +68,19 @@ const (
 	consumerType = "consumer"
 
 	// consumerRegister represents name for Consumer's registration MagmaSmartContract function.
-	consumerRegister = "consumer_register"
+	consumerRegister = zmc.ConsumerRegisterFuncName
 
 	// consumerSessionStart represents the name of MagmaSmartContract function.
 	// When function is called it means that Consumer starts a new session.
-	consumerSessionStart = "consumer_session_start"
+	consumerSessionStart = zmc.ConsumerSessionStartFuncName
 
 	// consumerSessionStop represents the name of MagmaSmartContract function.
 	// When function is called it means that Consumer stops an active session.
-	consumerSessionStop = "consumer_session_stop"
+	consumerSessionStop = zmc.ConsumerSessionStopFuncName
 
 	// consumerUpdate represents name for
 	// consumer data update MagmaSmartContract function.
-	consumerUpdate = "consumer_update"
+	consumerUpdate = zmc.ConsumerUpdateFuncName
 )
 
 // These constants used to identify smart contract functions by Provider.
@@ -91,19 +94,19 @@ const (
 
 	// providerDataUsage represents name for
 	// Provider's data usage billing MagmaSmartContract function.
-	providerDataUsage = "provider_data_usage"
+	providerDataUsage = zmc.ProviderDataUsageFuncName
 
 	// providerRegister represents name for
 	// Provider's registration MagmaSmartContract function.
-	providerRegister = "provider_register"
+	providerRegister = zmc.ProviderRegisterFuncName
 
 	// providerSessionInit represents name for
 	// Provider's session init MagmaSmartContract function.
-	providerSessionInit = "provider_session_init"
+	providerSessionInit = zmc.ProviderSessionInitFuncName
 
 	// providerUpdate represents name for
 	// provider data update MagmaSmartContract function.
-	providerUpdate = "provider_update"
+	providerUpdate = zmc.ProviderUpdateFuncName
 
 	// providerStakeTokenPool contents a value of provider's stake token pool string type.
 	providerStakeTokenPool = "provider_stake_token_pool"
@@ -112,11 +115,11 @@ const (
 const (
 	// accessPointRegister represents name for
 	// Access Point's registration MagmaSmartContract function.
-	accessPointRegister = "access_point_register"
+	accessPointRegister = zmc.AccessPointRegisterFuncName
 
 	// accessPointUpdate represents name for
 	// access point data update MagmaSmartContract function.
-	accessPointUpdate = "access_point_update"
+	accessPointUpdate = zmc.AccessPointUpdateFuncName
 
 	// accessPointMinStake represents the key of a access point min stake config.
 	accessPointMinStake = "access_point.min_stake"
