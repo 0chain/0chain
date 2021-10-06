@@ -1,8 +1,8 @@
 name: Mirror repo to S3
 on:
   schedule:
-    # Runs everyday at 12 am
-    - cron: '15 0 * * * '
+    # Runs everyday at 12:25 am
+    - cron: '25 0 * * * '
   workflow_dispatch:
 jobs:
   s3Backup:
@@ -12,6 +12,8 @@ jobs:
       - name: Create backup
         run: |
           github-backup 0chain -P -t ${{ secrets.ACCESS_TOKEN }} --output-directory=/github-backup/0chain --all -O -R 0chain
+      - name: Create zip
+        run: zip -r 0chain.zip /github-backup/0chain
       - name: Set AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -20,4 +22,4 @@ jobs:
           aws-region: us-east-2
       - name: Backup to s3
         run: |
-          aws s3 sync /github-backup/0chain s3://${{ secrets.MIRROR_TARGET }}/0chain
+          aws s3 cp 0chain.zip s3://${{ secrets.MIRROR_TARGET }}/0chain.zip
