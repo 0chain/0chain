@@ -1,0 +1,26 @@
+version: v1beta1
+name: buf.build/0chain/blobber
+deps:
+  - buf.build/beta/googleapis
+build:
+  roots:
+    - code/go/0chain.net/blobbercore/blobbergrpc/proto
+lint:
+  use:
+    - DEFAULT
+  enum_zero_value_suffix: _UNSPECIFIED
+  rpc_allow_same_request_response: false
+  rpc_allow_google_protobuf_empty_requests: false
+  rpc_allow_google_protobuf_empty_responses: false
+  service_suffix: Service
+  ignore:
+    - google/api
+  except:
+    - PACKAGE_AFFINITY
+    - FILE_LAYOUT
+    - PACKAGE_VERSION_SUFFIX
+breaking:
+  use:
+    - FILE
+  except:
+    - FIELD_NO_DELETE
