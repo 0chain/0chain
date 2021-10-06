@@ -5,119 +5,117 @@ package miner;
 option go_package = "code/go/0chain.net/miner/proto/api/src";
 
 message GetNotarizedBlockRequest {
-    int64 round = 1;
-    string hash = 2;
+  int64 round = 1;
+  string hash = 2;
 }
 
-message GetNotarizedBlockResponse {
-    Block block = 1;
-}
+message GetNotarizedBlockResponse { Block block = 1; }
 
 message Block {
-    repeated VerificationTicket verification_tickets = 1;
+  repeated VerificationTicket verification_tickets = 1;
 
-    string hash = 2;
-    string signature = 3;
-    string chain_id = 4;
-    double chain_weight = 5;
-    int64 running_txn_count = 6;
+  string hash = 2;
+  string signature = 3;
+  string chain_id = 4;
+  double chain_weight = 5;
+  int64 running_txn_count = 6;
 
-    MagicBlock magic_block = 7;
+  MagicBlock magic_block = 7;
 
-    string version = 8;
-    int64 creation_date = 9;
-    string latest_finalized_magic_block_hash = 10;
-    int64 latest_finalized_magic_block_round = 11;
-    string prev_hash = 12;
-    repeated VerificationTicket prev_verification_tickets = 13;
-    string miner_id = 14;
-    int64 round = 15;
-    int64 round_random_seed = 16;
-    int64 round_timeout_count = 17;
-    string state_hash = 18;
-    repeated Transaction transactions = 19;
+  string version = 8;
+  int64 creation_date = 9;
+  string latest_finalized_magic_block_hash = 10;
+  int64 latest_finalized_magic_block_round = 11;
+  string prev_hash = 12;
+  repeated VerificationTicket prev_verification_tickets = 13;
+  string miner_id = 14;
+  int64 round = 15;
+  int64 round_random_seed = 16;
+  int64 round_timeout_count = 17;
+  string state_hash = 18;
+  repeated Transaction transactions = 19;
 }
 
 message VerificationTicket {
-    string verifier_id = 1;
-    string signature = 2;
+  string verifier_id = 1;
+  string signature = 2;
 }
 
 message MagicBlock {
-    message ShareOrSigns {
-        message DKGKeyShare {
-            string id = 1;
-            string message = 2;
-            string share = 3;
-            string sign = 4;
-        }
-
-        string id = 1;
-        map<string, DKGKeyShare> share_or_sign = 2;
-    }
-    message MPK {
-        string id = 1;
-        repeated string Mpk = 2;
+  message ShareOrSigns {
+    message DKGKeyShare {
+      string id = 1;
+      string message = 2;
+      string share = 3;
+      string sign = 4;
     }
 
-    string hash = 1;
-    string previous_hash = 2;
-    int64 magic_block_number = 3;
-    int64 starting_round = 4;
-    Pool miners = 5;
-    Pool sharders = 6;
-    map<string, ShareOrSigns> shares = 7;
-    map<string, MPK> mpks = 8;
-    int64 t = 9;
-    int64 k = 10;
-    int64 n = 11;
+    string id = 1;
+    map<string, DKGKeyShare> share_or_sign = 2;
+  }
+  message MPK {
+    string id = 1;
+    repeated string mpk = 2;
+  }
+
+  string hash = 1;
+  string previous_hash = 2;
+  int64 magic_block_number = 3;
+  int64 starting_round = 4;
+  Pool miners = 5;
+  Pool sharders = 6;
+  map<string, ShareOrSigns> shares = 7;
+  map<string, MPK> mpks = 8;
+  int64 t = 9;
+  int64 k = 10;
+  int64 n = 11;
 }
 
 message Pool {
-    message Node {
-        message Info {
-            string build_tag = 1;
-            int64 state_missing_nodes = 2;
-            int64 miners_median_network_time = 3;
-            int64 avg_block_txns = 4;
-        }
-
-        string id = 1;
-        string version = 2;
-        int64 creation_date = 3;
-        string public_key = 4;
-
-        string n2n_host = 5;
-        string host = 6;
-        int64 port = 7;
-        int64 grpc_port = 8;
-        string path = 9;
-        int64 type = 10;
-        string description = 11;
-        int64 set_index = 12;
-        int64 status = 13;
-        bool in_prev_mb = 14;
-        Info info = 15;
+  message Node {
+    message Info {
+      string build_tag = 1;
+      int64 state_missing_nodes = 2;
+      int64 miners_median_network_time = 3;
+      int64 avg_block_txns = 4;
     }
 
-    int64 type = 1;
-    map<string, Node> nodes = 2;
+    string id = 1;
+    string version = 2;
+    int64 creation_date = 3;
+    string public_key = 4;
+
+    string n2n_host = 5;
+    string host = 6;
+    int64 port = 7;
+    int64 grpc_port = 8;
+    string path = 9;
+    int64 type = 10;
+    string description = 11;
+    int64 set_index = 12;
+    int64 status = 13;
+    bool in_prev_mb = 14;
+    Info info = 15;
+  }
+
+  int64 type = 1;
+  map<string, Node> nodes = 2;
 }
 
 message Transaction {
-    string hash = 1;
-    string version = 2;
+  string hash = 1;
+  string version = 2;
 
-    string client_id = 3;
-    string to_client_id = 4;
-    string chain_id = 5;
-    string transaction_data = 6;
-    int64 transaction_value = 7;
-    string signature = 8;
-    int64 creation_date = 9;
-    int64 transaction_fee = 10;
-    int64 transaction_type = 11;
-    string transaction_output = 12;
-    string txn_output_hash = 13;
-    int64 transaction_status = 14;
+  string client_id = 3;
+  string to_client_id = 4;
+  string chain_id = 5;
+  string transaction_data = 6;
+  int64 transaction_value = 7;
+  string signature = 8;
+  int64 creation_date = 9;
+  int64 transaction_fee = 10;
+  int64 transaction_type = 11;
+  string transaction_output = 12;
+  string txn_output_hash = 13;
+  int64 transaction_status = 14;
 }
