@@ -2,11 +2,11 @@
 // source: miner_service.proto
 
 /*
-Package src is a reverse proxy.
+Package proto is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package src
+package proto
 
 import (
 	"context"
