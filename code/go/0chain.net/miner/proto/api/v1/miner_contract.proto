@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package miner;
 
-option go_package = "code/go/0chain.net/miner/proto/api/src";
+option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
 message GetNotarizedBlockRequest {
   int64 round = 1;
