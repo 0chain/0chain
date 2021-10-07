@@ -13,5 +13,5 @@ jobs:
         with:
           against: 'https://github.com/0chain/0chain.git#branch=${{ github.base_ref }}'
       - uses: bufbuild/buf-push-action@v1
-        with:
-          buf_token: ${{ secrets.BUF_TOKEN }}
+        # with:
+        #   buf_token: ${{ secrets.BUF_TOKEN }}
