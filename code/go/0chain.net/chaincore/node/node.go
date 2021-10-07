@@ -112,6 +112,7 @@ type Node struct {
 	N2NHost        string        `json:"n2n_host" yaml:"n2n_ip"`
 	Host           string        `json:"host" yaml:"public_ip"`
 	Port           int           `json:"port" yaml:"port"`
+	GRPCPort       int           `json:"grpc_port" yaml:"grpc_port"`
 	Path           string        `json:"path" yaml:"path"`
 	Type           int8          `json:"type"`
 	Description    string        `json:"description" yaml:"description"`
