@@ -86,3 +86,26 @@ jobs:
           helm upgrade --install --wait --timeout 120s blobber-stake -n helmtest --set blobberStack.blobberCount=6 --set blobberStack.host=devnet-0chain.net --set blobberStack.image.tag=latest 0chain-helm/blobberStake
 
           rm -rf ~/.kube
+        
+  buf-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        if: success()
+        uses: actions/checkout@v2
+        with:
+          ref: master
+      - name: checkout-master
+        if: success()
+        run: git checkout master
+      - name: checkout
+        if: success()
+        uses: actions/checkout@v2
+      - name: setup
+        if: success()
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.6
+      - name: make local
+        if: success()
+        run: make local
