@@ -34,3 +34,25 @@ type OrderedPartition interface {
 type LeagueTable interface {
 	OrderedPartition
 }
+
+type ItemToPartition func(PartitionItem) (string, error)
+type RangeToPartitionList func(PartitionRange) ([]string, error)
+type Validator func(PartitionRange, string) bool
+
+type PartitionRange interface {
+}
+
+type PartitionIterator interface {
+	Start(PartitionRange) error
+	Next() string
+}
+
+type CrossPartition interface {
+	Add(PartitionItem, state.StateContextI) error
+	Remove(PartitionItem, state.StateContextI) error
+	Change(PartitionItem, PartitionItem, state.StateContextI) error
+	GetItems(PartitionRange, int, state.StateContextI) ([]string, error)
+	SetPartitionHandler(ItemToPartition)
+	SetPartitionIterator(PartitionIterator)
+	SetItemValidator(Validator)
+}
