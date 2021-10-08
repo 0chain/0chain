@@ -23,6 +23,7 @@ const (
 	Vesting
 	VestingRest
 	MultiSig
+	Control
 	NumberOdfBenchmarkSources
 )
 
@@ -39,6 +40,7 @@ var (
 		"vesting",
 		"vesting_rest",
 		"multi_sig",
+		"control",
 	}
 
 	BenchmarkSourceCode = map[string]BenchmarkSource{
@@ -53,6 +55,7 @@ var (
 		BenchmarkSourceNames[Vesting]:          Vesting,
 		BenchmarkSourceNames[VestingRest]:      VestingRest,
 		BenchmarkSourceNames[MultiSig]:         MultiSig,
+		BenchmarkSourceNames[Control]:          Control,
 	}
 )
 
@@ -104,6 +107,8 @@ const (
 	Satisfactory            = Internal + "satisfactory"
 	TimeUnit                = Internal + "time_unit"
 	Colour                  = Internal + "colour"
+	ControlM                = Internal + "control_m"
+	ControlN                = Internal + "control_n"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"

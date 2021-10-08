@@ -1,7 +1,7 @@
 simulation:
-  num_clients: 100
-  num_miners: 100
-  num_active_miners: 25
+  num_clients: 1000
+  num_miners: 1000
+  num_active_miners: 100
   nun_sharders: 100
   num_active_sharders: 25
   num_allocations: 1000
@@ -22,17 +22,7 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "storage"
-    - "storage_rest"
-    - "miner"
-    - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "interest_pool"
-    - "interest_pool_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
+    - "control"
   omitted_tests:
     - "miner.payFees"
     - "storage.cancel_allocation"
@@ -140,3 +130,5 @@ internal:
   satisfactory: 1ms
   time_unit: 1ms
   colour: true
+  control_m: 250000
+  control_n: 900

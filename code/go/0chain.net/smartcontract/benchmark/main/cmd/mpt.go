@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/benchmark/main/cmd/control"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
 	"0chain.net/smartcontract/multisigsc"
@@ -149,6 +151,9 @@ func setUpMpt(
 	vestingsc.AddVestingPools(clients, balances)
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+	log.Println("added phase node")
+	control.AddControlObjects(balances)
+	log.Println("added control objects")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,
