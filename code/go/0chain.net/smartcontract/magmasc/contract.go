@@ -365,10 +365,6 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderReg, "register provider failed", err)
 	}
-	if err = m.providerStakePoolManage(txn, provider, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeProviderReg, "manage stake pool failed", err)
-	}
 	if err = db.Commit(); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderReg, "commit changes failed", err)
@@ -376,6 +372,68 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 
 	// update provider register metric
 	m.SmartContractExecutionStats[providerRegister].(metrics.Counter).Inc(1)
+
+	return string(provider.Encode()), nil
+}
+
+func (m *MagmaSmartContract) providerStake(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	provider := &zmc.Provider{}
+	if err := provider.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeProviderReg, "decode provider failed", err)
+	}
+
+	var pool *tokenPool
+	_, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID))
+	if errors.Is(err, util.ErrValueNotPresent) {
+		stake := newProviderStakeReq(provider, m.cfg)
+		if err := stake.Validate(); err != nil {
+			return "", errors.Wrap(errCodeProviderStake, "validate stake request failed", err)
+		}
+		if stake.MinStake != txn.Value {
+			want := strconv.FormatInt(stake.MinStake, 10)
+			return "", errors.Wrap(errCodeProviderStake, "transaction value must be equal to "+want, err)
+		}
+
+		pool = newTokenPool()
+		if err = pool.create(txn, stake, sci); err != nil {
+			return "", errors.Wrap(errCodeProviderStake, "create stake pool failed", err)
+		}
+	}
+
+	if pool != nil { // insert new data into state context
+		if _, err = sci.InsertTrieNode(nodeUID(m.ID, providerStakeTokenPool, pool.ID), pool); err != nil {
+			return "", errors.Wrap(errCodeProviderStake, "insert stake pool failed", err)
+		}
+	}
+
+	return string(provider.Encode()), nil
+}
+
+func (m *MagmaSmartContract) providerUnstake(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	provider := &zmc.Provider{}
+	if err := provider.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeProviderUnstake, "decode provider failed", err)
+	}
+
+	var pool *tokenPool
+	data, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID))
+	if err != nil {
+		return "", errors.Wrap(errCodeProviderUnstake, "data not found", err)
+	}
+	pool = newTokenPool()
+	if err = pool.Decode(data.Encode()); err != nil {
+		return "", errDecodeData.Wrap(err)
+	}
+	if pool.Balance != txn.Value {
+		want := strconv.FormatInt(pool.Balance, 10)
+		return "", errors.Wrap(errCodeProviderUnstake, "transaction value must be equal to "+want, err)
+	}
+	if err = pool.spend(txn, 0, sci); err != nil {
+		return "", errors.Wrap(errCodeProviderUnstake, "refund stake pool failed", err)
+	}
+	if _, err := sci.DeleteTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID)); err != nil {
+		return "", errors.Wrap(errCodeProviderUnstake, "deleting stake pool failed", err)
+	}
 
 	return string(provider.Encode()), nil
 }
@@ -392,12 +450,11 @@ func (m *MagmaSmartContract) providerSessionInit(txn *tx.Transaction, blob []byt
 	if req.Provider, err = providerFetch(m.ID, req.Provider.ExtID, m.db, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionInit, "fetch provider failed", err)
 	}
-	switch { // validate provider's preconditions
-	case req.Provider.ID != txn.ClientID:
+	if req.Provider.ID != txn.ClientID {
 		return "", errors.New(errCodeSessionInit, "check owner id failed")
-
-	case req.Provider.MinStake == 0:
-		return "", errors.New(errCodeSessionInit, "session can not be started with 0 min-staked provider")
+	}
+	if _, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, req.Provider.ID)); err != nil {
+		return "", errors.New(errCodeSessionInit, "error while fetching provider's stake pool")
 	}
 
 	if req.AccessPoint, err = accessPointFetch(m.ID, req.AccessPoint.ID, m.db, sci); err != nil {
@@ -460,69 +517,13 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderUpdate, "update providers list failed", err)
 	}
-	if err = m.providerStakePoolManage(txn, provider, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeProviderReg, "manage stake pool failed", err)
-	}
+
 	if err = db.Commit(); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderUpdate, "commit changes failed", err)
 	}
 
 	return string(provider.Encode()), nil
-}
-
-// providerStakePool tries to create a stake token pool for the given provider.
-func (m *MagmaSmartContract) providerStakePoolManage(txn *tx.Transaction, provider *zmc.Provider, sci chain.StateContextI) error {
-	if provider.ID != txn.ClientID {
-		return errors.New(providerStakeTokenPool, "check owner id failed")
-	}
-
-	var pool *tokenPool
-	data, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID))
-	if provider.MinStake > 0 {
-		if errors.Is(err, util.ErrValueNotPresent) {
-			stake := newProviderStakeReq(provider, m.cfg)
-			if err = stake.Validate(); err != nil {
-				return errors.Wrap(providerStakeTokenPool, "validate stake request failed", err)
-			}
-			if stake.MinStake != txn.Value {
-				want := strconv.FormatInt(stake.MinStake, 10)
-				return errors.Wrap(providerStakeTokenPool, "transaction value must be equal to "+want, err)
-			}
-
-			pool = newTokenPool()
-			if err = pool.create(txn, stake, sci); err != nil {
-				return errors.Wrap(providerStakeTokenPool, "create stake pool failed", err)
-			}
-		}
-	} else {
-		if data != nil {
-			pool = newTokenPool()
-			if err = pool.Decode(data.Encode()); err != nil {
-				return errDecodeData.Wrap(err)
-			}
-			//if pool.Balance != txn.Value {
-			//	want := strconv.FormatInt(pool.Balance, 10)
-			//	return errors.Wrap(providerStakeTokenPool, "transaction value must be equal to "+want, err)
-			//} // murashovven: TODO: check is muted, don't know why it is needed
-			if err = pool.spend(txn, 0, sci); err != nil {
-				return errors.Wrap(providerStakeTokenPool, "refund stake pool failed", err)
-			}
-
-			if _, err := sci.DeleteTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID)); err != nil {
-				return errors.Wrap(providerStakeTokenPool, "deleting stake pool failed", err)
-			}
-		}
-	}
-
-	if pool != nil { // insert new data into state context
-		if _, err = sci.InsertTrieNode(nodeUID(m.ID, providerStakeTokenPool, pool.ID), pool); err != nil {
-			return errors.Wrap(providerStakeTokenPool, "insert stake pool failed", err)
-		}
-	}
-
-	return nil
 }
 
 // providerRegister allows registering provider node in the blockchain

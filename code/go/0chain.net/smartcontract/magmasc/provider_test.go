@@ -58,7 +58,7 @@ func Test_providerFetch(t *testing.T) {
 			t.Parallel()
 
 			got, err := providerFetch(Address, test.id, msc.db, test.sci)
-			if err == nil && !reflect.DeepEqual(got, test.want) {
+			if err == nil && !reflect.DeepEqual(got.Encode(), test.want.Encode()) {
 				t.Errorf("providerFetch() got: %#v | want: %#v", err, test.want)
 				return
 			}

@@ -1,8 +1,11 @@
 package magmasc
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
@@ -43,8 +46,12 @@ func Test_Providers_add(t *testing.T) {
 			error: true,
 		},
 		{
-			name:  "Provider_Insert_Trie_Node_ERR",
-			prov:  &zmc.Provider{ExtID: "cannot_insert_id"},
+			name: "Provider_Insert_Trie_Node_ERR",
+			prov: &zmc.Provider{
+				Provider: &pb.Provider{
+					ExtID: "cannot_insert_id",
+				},
+			},
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -125,8 +132,12 @@ func Test_Providers_del(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  "FALSE",
-			prov:  &zmc.Provider{ExtID: "not_present_id"},
+			name: "FALSE",
+			prov: &zmc.Provider{
+				Provider: &pb.Provider{
+					ExtID: "not_present_id",
+				},
+			},
 			msc:   msc,
 			list:  list,
 			want:  &Providers{Sorted: make([]*zmc.Provider, 0)},
@@ -407,10 +418,26 @@ func Test_Providers_put(t *testing.T) {
 	t.Parallel()
 
 	list := Providers{}
-	prov0 := zmc.Provider{ExtID: "0"}
-	prov1 := zmc.Provider{ExtID: "1"}
-	prov2 := zmc.Provider{ExtID: "2"}
-	prov3 := zmc.Provider{ExtID: "3"}
+	prov0 := zmc.Provider{
+		Provider: &pb.Provider{
+			ExtID: "0",
+		},
+	}
+	prov1 := zmc.Provider{
+		Provider: &pb.Provider{
+			ExtID: "1",
+		},
+	}
+	prov2 := zmc.Provider{
+		Provider: &pb.Provider{
+			ExtID: "2",
+		},
+	}
+	prov3 := zmc.Provider{
+		Provider: &pb.Provider{
+			ExtID: "3",
+		},
+	}
 
 	tests := [6]struct {
 		name string
@@ -558,7 +585,10 @@ func Test_providersFetch(t *testing.T) {
 			t.Parallel()
 
 			got, err := providersFetch(test.id, msc.db)
-			if err == nil && !reflect.DeepEqual(got, test.want) {
+			resp, _ := json.Marshal(got)
+			want, _ := json.Marshal(test.want)
+
+			if err == nil && !reflect.DeepEqual(resp, want) {
 				t.Errorf("providersFetch() got: %#v | want: %#v", got, test.want)
 				return
 			}

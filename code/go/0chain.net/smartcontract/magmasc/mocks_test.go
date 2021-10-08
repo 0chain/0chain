@@ -212,9 +212,11 @@ func mockProvider() *zmc.Provider {
 	sum := sha3.Sum256(bin)
 	fix := hex.EncodeToString(sum[:])
 	return &zmc.Provider{
-		ID:    "id:provider:" + fix,
-		ExtID: "id:provider:external:" + fix,
-		Host:  "host.provider.local:" + fix,
+		Provider: &pb.Provider{
+			ID:    "id:provider:" + fix,
+			ExtID: "id:provider:external:" + fix,
+			Host:  "host.provider.local:" + fix,
+		},
 	}
 }
 

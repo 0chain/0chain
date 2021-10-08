@@ -1,8 +1,6 @@
 package magmasc
 
 import (
-	"strconv"
-
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
@@ -37,7 +35,7 @@ func newProviderStakeReq(provider *zmc.Provider, cfg *viper.Viper) *providerStak
 
 // PoolBalance implements PoolConfigurator interface.
 func (m *providerStakeReq) PoolBalance() int64 {
-	return m.Provider.MinStake
+	return m.MinStake
 }
 
 // PoolID implements PoolConfigurator interface.
@@ -71,9 +69,6 @@ func (m *providerStakeReq) Validate() (err error) {
 
 	case m.Provider.ExtID == "":
 		err = errors.New(errCodeBadRequest, "provider external id is required")
-
-	case m.Provider.MinStake < m.MinStake:
-		err = errors.New(errCodeInternal, "min stake value must be no less than: "+strconv.Itoa(int(m.MinStake)))
 	}
 
 	return err
