@@ -25,12 +25,43 @@ const (
 	ErrNoResourceCode = "resource_not_found"
 	ErrBadRequestCode = "invalid_request"
 	ErrInternalCode   = "internal_error"
+
+	// GRPC Code "Internal (13)"
+	Internal CodeString = "Internal"
+	// GRPC Code "Not Found (5)"
+	Notfound CodeString = "NotFound"
+	// InvalidGRPCRequest is HTTP Status "400 Bad Request" and GRPC Code "400 Bad Request".
+	InvalidGRPCRequest CodeString = "InvalidRequest"
+	// Unauthenticated
+	Unauthenticated CodeString = "Unauthenticated"
+	// PermissionDenied
+	PermissionDenied CodeString = "PermissionDenied"
+	// TemporaryUnavailable
+	TemporaryUnavailable CodeString = "TemporaryUnavailable"
+	// Canceled
+	Canceled CodeString = "Canceled"
+	// Timeout
+	Timeout CodeString = "Timeout"
+	// Unknown
+	Unknown CodeString = "Unknown"
 )
+
+type Code interface {
+	ErrorCode() string
+}
+
+// StringCode represents an error Code in string.
+type CodeString string
+
+// ErrorCode implements the Code interface so that
+func (c CodeString) ErrorCode() string {
+	return string(c)
+}
 
 /*Error type for a new application error */
 type Error struct {
-	Code string `json:"code,omitempty"`
-	Msg  string `json:"msg"`
+	Code CodeString `json:"code,omitempty"`
+	Msg  string     `json:"msg"`
 }
 
 func (err *Error) Error() string {
@@ -47,12 +78,12 @@ func (err *Error) Is(target error) bool {
 }
 
 /*NewError - create a new error */
-func NewError(code string, msg string) *Error {
+func NewError(code CodeString, msg string) *Error {
 	return &Error{Code: code, Msg: msg}
 }
 
 /*NewErrorf - create a new formated error */
-func NewErrorf(code string, format string, args ...interface{}) *Error {
+func NewErrorf(code CodeString, format string, args ...interface{}) *Error {
 	return &Error{Code: code, Msg: fmt.Sprintf(format, args...)}
 }
 
