@@ -57,6 +57,8 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc.RestHandlers["/rewardPoolExist"] = msc.rewardPoolExist
 	msc.RestHandlers["/rewardPoolFetch"] = msc.rewardPoolFetch
 	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
+	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
+	msc.RestHandlers[zmc.UserFetchRP] = msc.userFetch
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
@@ -104,6 +106,12 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 		return m.rewardPoolLock(txn, blob, sci)
 	case rewardPoolUnlock:
 		return m.rewardPoolUnlock(txn, blob, sci)
+
+	// user's functions list
+	case userRegister:
+		return m.userRegister(txn, blob, sci)
+	case userUpdate:
+		return m.userUpdate(txn, blob, sci)
 	}
 
 	return "", errInvalidFuncName

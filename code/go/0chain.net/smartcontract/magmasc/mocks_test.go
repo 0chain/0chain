@@ -350,6 +350,9 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.AccessPoint")).
 		Return(funcInsertID, errFuncInsertID)
 
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.User")).
+		Return(funcInsertID, errFuncInsertID)
+
 	nodeInvalid := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := stateContext.InsertTrieNode(nodeInvalid.ID, &nodeInvalid); err != nil {
 		log.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
@@ -368,4 +371,26 @@ func mockTokenPool() *tokenPool {
 	pool.Balance = 1000
 
 	return pool
+}
+
+func mockUsers() *Users {
+	list := &Users{}
+	for i := 0; i < 10; i++ {
+		list.put(mockUser())
+	}
+
+	return list
+}
+
+func mockUser() *zmc.User {
+	now := time.Now()
+	bin, _ := now.MarshalBinary()
+	sum := sha3.Sum256(bin)
+	fix := hex.EncodeToString(sum[:])
+	return &zmc.User{
+		User: &pb.User{
+			ID:         "id:user:" + fix,
+			ConsumerID: "id:consumer:" + fix,
+		},
+	}
 }

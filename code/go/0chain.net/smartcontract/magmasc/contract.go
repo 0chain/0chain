@@ -793,3 +793,89 @@ func (m *MagmaSmartContract) fetchBillingRatio(_ context.Context, _ url.Values, 
 func nodeUID(scID, prefix, key string) string {
 	return "sc:" + scID + colon + prefix + colon + key
 }
+
+// userRegister allows registering user in the blockchain
+// and saves results in provided state.StateContextI.
+func (m *MagmaSmartContract) userRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	user := &zmc.User{}
+	if err := user.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeUserReg, "decode user failed", err)
+	}
+
+	// check consumer existence
+	_, err := consumerFetch(m.ID, user.ConsumerID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeUserReg, "consumer is not registered", err)
+	}
+
+	db := store.GetTransaction(m.db)
+	list, err := usersFetch(AllUsersKey, m.db)
+	if err != nil {
+		return "", errors.Wrap(errCodeUserReg, "fetch users list failed", err)
+	}
+
+	user.ID = txn.ClientID
+	if err = list.add(m.ID, user, m.db, sci); err != nil {
+		_ = db.Conn.Rollback()
+		return "", errors.Wrap(errCodeUserReg, "register user failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		_ = db.Conn.Rollback()
+		return "", errors.Wrap(errCodeUserReg, "commit changes failed", err)
+	}
+
+	// update user register metric
+	m.SmartContractExecutionStats[userRegister].(metrics.Counter).Inc(1)
+
+	return string(user.Encode()), nil
+}
+
+// userUpdate updates the current user.
+func (m *MagmaSmartContract) userUpdate(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	user := &zmc.User{}
+	if err := user.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeUserUpdate, "decode access point data failed", err)
+	}
+
+	// check consumer existence
+	_, err := consumerFetch(m.ID, user.ConsumerID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeUserUpdate, "consumer is not registered", err)
+	}
+
+	_, err = userFetch(m.ID, user.ID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeUserUpdate, "fetch user failed", err)
+	}
+
+	db := store.GetTransaction(m.db)
+	list, err := usersFetch(AllUsersKey, m.db)
+	if err != nil {
+		return "", errors.Wrap(errCodeUserUpdate, "fetch users list failed", err)
+	}
+
+	user.ID = txn.ClientID
+	if err = list.write(m.ID, user, m.db, sci); err != nil {
+		_ = db.Conn.Rollback()
+		return "", errors.Wrap(errCodeUserUpdate, "update users list failed", err)
+	}
+	if err = db.Commit(); err != nil {
+		_ = db.Conn.Rollback()
+		return "", errors.Wrap(errCodeUserUpdate, "commit changes failed", err)
+	}
+
+	return string(user.Encode()), nil
+}
+
+// userFetch tries to extract registered user
+// with given external id param and returns raw user data.
+func (m *MagmaSmartContract) userFetch(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
+	return userFetch(m.ID, vals.Get("id"), m.db, sci)
+}
+
+// userExist tries to extract registered user
+// with given external id param and returns raw user data.
+func (m *MagmaSmartContract) userExist(_ context.Context, vals url.Values, sci chain.StateContextI) (interface{}, error) {
+	got, _ := sci.GetTrieNode(nodeUID(m.ID, userType, vals.Get("id")))
+	return got != nil, nil
+}

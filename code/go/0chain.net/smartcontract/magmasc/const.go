@@ -144,3 +144,20 @@ const (
 	// accessPointType contents a value of type of Access Point's node.
 	accessPointType = "access-point"
 )
+
+// These constants used to identify smart contract functions by User.
+const (
+	// AllUsersKey is a concatenated Address
+	// and SHA3-256 hex encoded hash of "all_users" string.
+	AllUsersKey = Address + "c076883a6a9d262d0f3405b07fb2f02a57a35f22679db452f1bc6fc509068c90"
+
+	// userType contents a value of type of User's.
+	userType = "user"
+
+	// userRegister represents name for Consumer's registration MagmaSmartContract function.
+	userRegister = "user_register"
+
+	// userUpdate represents name for
+	// user data update MagmaSmartContract function.
+	userUpdate = "user_update"
+)

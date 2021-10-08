@@ -34,6 +34,9 @@ const (
 	errCodeInvalidFuncName = "invalid_func_name"
 	errTextInvalidFuncName = "function with provided name is not supported"
 
+	errCodeUserReg    = "user_reg"
+	errCodeUserUpdate = "user_update"
+
 	errCodeInvalidConfig = "invalid_config"
 )
 
