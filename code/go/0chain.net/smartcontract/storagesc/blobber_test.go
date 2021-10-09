@@ -152,7 +152,7 @@ func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 
 	var blob = newClient(0, balances)
 	blob.terms = avgTerms
-	blob.cap = 2*GB
+	blob.cap = 2 * GB
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)
@@ -1396,8 +1396,8 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 //
 // The storage SC doesn't care about this confirmation. If a
 // blobber chosen, then it should be rewarded by the SC regardless
-// any its side confirmation. A blobber can loose it rewards only
-// by the challenges mechanism.
+// any side confirmation. A blobber can lose it rewards only
+// by the challenges' mechanism.
 
 // Blobber makes an agreement with itself for a huge amount of
 // very cheap storage, in the hopes of starving other blobbers.

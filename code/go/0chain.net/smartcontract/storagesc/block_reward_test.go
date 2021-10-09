@@ -34,7 +34,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 
 	var blobberRewards = func(p parameters) []blockRewards {
 		var totalQStake float64
-		var rewards = []blockRewards{}
+		var rewards []blockRewards
 		var blobberStakes []float64
 		for _, blobber := range p.blobberStakes {
 			var stakes float64

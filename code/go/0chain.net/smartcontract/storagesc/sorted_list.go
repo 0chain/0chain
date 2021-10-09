@@ -21,7 +21,7 @@ func (sl sortedList) getIndex(id string) (i int, ok bool) {
 }
 
 func (sl *sortedList) removeByIndex(i int) {
-	(*sl) = append((*sl)[:i], (*sl)[i+1:]...)
+	*sl = append((*sl)[:i], (*sl)[i+1:]...)
 }
 
 func (sl *sortedList) remove(id string) (ok bool) {
@@ -35,7 +35,7 @@ func (sl *sortedList) remove(id string) (ok bool) {
 
 func (sl *sortedList) add(id string) (ok bool) {
 	if len(*sl) == 0 {
-		(*sl) = append((*sl), id)
+		*sl = append(*sl, id)
 		return true // added
 	}
 	var i = sort.Search(len(*sl), func(i int) bool {
@@ -43,7 +43,7 @@ func (sl *sortedList) add(id string) (ok bool) {
 	})
 	// out of bounds
 	if i == len(*sl) {
-		(*sl) = append((*sl), id)
+		*sl = append(*sl, id)
 		return true // added
 	}
 	// the same
@@ -51,7 +51,7 @@ func (sl *sortedList) add(id string) (ok bool) {
 		return false // already have
 	}
 	// next
-	(*sl) = append((*sl)[:i], append([]string{id}, (*sl)[i:]...)...)
+	*sl = append((*sl)[:i], append([]string{id}, (*sl)[i:]...)...)
 	return true // added
 }
 
@@ -87,7 +87,7 @@ func (sb sortedBlobbers) get(id string) (b *StorageNode, ok bool) {
 }
 
 func (sb *sortedBlobbers) removeByIndex(i int) {
-	(*sb) = append((*sb)[:i], (*sb)[i+1:]...)
+	*sb = append((*sb)[:i], (*sb)[i+1:]...)
 }
 
 func (sb *sortedBlobbers) remove(id string) (ok bool) {
@@ -101,7 +101,7 @@ func (sb *sortedBlobbers) remove(id string) (ok bool) {
 
 func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
 	if len(*sb) == 0 {
-		(*sb) = append((*sb), b)
+		*sb = append(*sb, b)
 		return true // added
 	}
 	var i = sort.Search(len(*sb), func(i int) bool {
@@ -109,7 +109,7 @@ func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
 	})
 	// out of bounds
 	if i == len(*sb) {
-		(*sb) = append((*sb), b)
+		*sb = append(*sb, b)
 		return true // added
 	}
 	// the same
@@ -118,7 +118,7 @@ func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
 		return false // already have
 	}
 	// next
-	(*sb) = append((*sb)[:i], append([]*StorageNode{b}, (*sb)[i:]...)...)
+	*sb = append((*sb)[:i], append([]*StorageNode{b}, (*sb)[i:]...)...)
 	return true // added
 }
 

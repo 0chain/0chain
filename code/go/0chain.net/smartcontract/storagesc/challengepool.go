@@ -30,13 +30,13 @@ func newChallengePool() *challengePool {
 }
 
 func challengePoolKey(scKey, allocationID string) datastore.Key {
-	return datastore.Key(scKey + ":challengepool:" + allocationID)
+	return scKey + ":challengepool:" + allocationID
 }
 
 func (cp *challengePool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(cp); err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return
 }
@@ -196,7 +196,7 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 }
 
 // newChallengePool SC function creates new
-// challenge pool for a client don't saving it
+// challenge pool for a client don't save it
 func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
 	cp *challengePool, err error) {
@@ -252,7 +252,7 @@ func (ssc *StorageSmartContract) getChallengePoolStatHandler(
 	resp interface{}, err error) {
 
 	var (
-		allocationID = datastore.Key(params.Get("allocation_id"))
+		allocationID = params.Get("allocation_id")
 		alloc        *StorageAllocation
 		cp           *challengePool
 	)

@@ -10,7 +10,7 @@ import (
 )
 
 func fundedPoolsKey(scKey, clientID string) datastore.Key {
-	return datastore.Key(scKey + ":fundedpools:" + clientID)
+	return scKey + ":fundedpools:" + clientID
 }
 
 type fundedPools []string
@@ -18,7 +18,7 @@ type fundedPools []string
 func (fp *fundedPools) Encode() []byte {
 	var b, err = json.Marshal(fp)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return b
 }

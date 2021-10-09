@@ -3,7 +3,6 @@ package storagesc
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -24,10 +23,6 @@ import (
 )
 
 // test helpers
-
-func toks(val state.Balance) string {
-	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
-}
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
@@ -362,8 +357,6 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 	conf.StakePool = &stakePoolConfig{
 		MinLock:          10,
-		InterestRate:     0.01,
-		InterestInterval: 5 * time.Second,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)

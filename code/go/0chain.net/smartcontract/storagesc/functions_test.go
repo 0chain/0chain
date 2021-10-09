@@ -5,7 +5,6 @@ import (
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/core/datastore"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"strconv"
@@ -33,8 +32,8 @@ func TestTransferReward(t *testing.T) {
 		var balances = &mocks.StateContextI{}
 		var serviceCharge = p.value * p.serviceCharge
 		balances.On("AddTransfer", &state.Transfer{
-			ClientID:   datastore.Key(p.from),
-			ToClientID: datastore.Key(p.to),
+			ClientID:   p.from,
+			ToClientID: p.to,
 			Amount:     zcnToBalance(serviceCharge),
 		}).Return(nil).Once()
 
@@ -45,8 +44,8 @@ func TestTransferReward(t *testing.T) {
 		var paidToDelegates = p.value - serviceCharge
 		for i, d := range p.delegates {
 			balances.On("AddTransfer", &state.Transfer{
-				ClientID:   datastore.Key(p.from),
-				ToClientID: datastore.Key(strconv.Itoa(i)),
+				ClientID:   p.from,
+				ToClientID: strconv.Itoa(i),
 				Amount:     zcnToBalance(paidToDelegates * d / total),
 			}).Return(nil).Once()
 		}
@@ -143,7 +142,7 @@ func TestMintReward(t *testing.T) {
 		var serviceCharge = p.value * p.serviceCharge
 		balances.On("AddMint", &state.Mint{
 			Minter:     ADDRESS,
-			ToClientID: datastore.Key(p.to),
+			ToClientID: p.to,
 			Amount:     zcnToBalance(serviceCharge),
 		}).Return(nil).Once()
 
@@ -155,7 +154,7 @@ func TestMintReward(t *testing.T) {
 		for i, d := range p.delegates {
 			balances.On("AddMint", &state.Mint{
 				Minter:     ADDRESS,
-				ToClientID: datastore.Key(strconv.Itoa(i)),
+				ToClientID: strconv.Itoa(i),
 				Amount:     zcnToBalance(paidToDelegates * d / total),
 			}).Return(nil).Once()
 		}

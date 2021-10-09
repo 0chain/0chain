@@ -22,7 +22,7 @@ import (
 //
 
 func readPoolKey(scKey, clientID string) datastore.Key {
-	return datastore.Key(scKey + ":readpool:" + clientID)
+	return scKey + ":readpool:" + clientID
 }
 
 // readPool represents client's read pool consist of allocation read pools
@@ -44,7 +44,7 @@ func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
 func (rp *readPool) Encode() []byte {
 	var b, err = json.Marshal(rp)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return b
 }
@@ -163,7 +163,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	// all redeems to response at the end
 	var redeems []readPoolRedeem
 
-	var torm []*allocationPool // to remove later (empty allocation pools)
+	var toRemove []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
 		if value == 0 {
 			break // all required tokens has moved to the blobber
@@ -198,7 +198,7 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 			ap.Blobbers.removeByIndex(bi)
 		}
 		if ap.Balance == 0 {
-			torm = append(torm, ap) // remove the allocation pool later
+			toRemove = append(toRemove, ap) // remove the allocation pool later
 		}
 	}
 
@@ -208,18 +208,18 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	}
 
 	// remove empty allocation pools
-	rp.removeEmpty(allocID, torm)
+	rp.removeEmpty(allocID, toRemove)
 
 	// return the read redeems for blobbers read pools cache
 	return toJson(redeems), nil // ok
 }
 
 // take read pool by ID to unlock (the take is get and remove)
-func (wp *readPool) take(poolID string, now common.Timestamp) (
+func (rp *readPool) take(poolID string, now common.Timestamp) (
 	took *allocationPool, err error) {
 
 	var i int
-	for _, ap := range wp.Pools {
+	for _, ap := range rp.Pools {
 		if ap.ID == poolID {
 			if ap.ExpireAt >= now {
 				return nil, errors.New("the pool is not expired yet")
@@ -227,9 +227,9 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 			took = ap
 			continue // delete
 		}
-		wp.Pools[i], i = ap, i+1
+		rp.Pools[i], i = ap, i+1
 	}
-	wp.Pools = wp.Pools[:i]
+	rp.Pools = rp.Pools[:i]
 
 	if took == nil {
 		return nil, errors.New("pool not found")
@@ -261,12 +261,12 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	balances cstate.StateContextI) (rp *readPool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
+	var pool []byte
+	if pool, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
 		return
 	}
 	rp = new(readPool)
-	err = rp.Decode(poolb)
+	err = rp.Decode(pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
@@ -400,7 +400,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			BlobberID: lr.BlobberID,
 		})
 	} else {
-		// divide depending read price range for all blobbers of the
+		// divide depending on read price range for all blobbers of the
 		// allocation
 		var total float64 // total read price
 		for _, b := range alloc.BlobberDetails {
@@ -516,7 +516,10 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 // statistic for an allocation/blobber (used by blobbers)
 func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
+	_ context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (
@@ -550,15 +553,16 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	return &stat, nil
 }
 
-const cantReadPoolMsg = "can't get read pool"
-
 // statistic for all locked tokens of the read pool
-func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
+func (ssc *StorageSmartContract) getReadPoolStatHandler(
+	_ context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
+		clientID = params.Get("client_id")
 		rp       *readPool
 	)
 

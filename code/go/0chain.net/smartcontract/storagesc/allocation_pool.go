@@ -99,7 +99,7 @@ func (bps blobberPools) get(blobberID string) (
 }
 
 func (bps *blobberPools) removeByIndex(i int) {
-	(*bps) = append((*bps)[:i], (*bps)[i+1:]...)
+	*bps = append((*bps)[:i], (*bps)[i+1:]...)
 }
 
 func (bps *blobberPools) remove(blobberID string) (ok bool) {
@@ -113,7 +113,7 @@ func (bps *blobberPools) remove(blobberID string) (ok bool) {
 
 func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 	if len(*bps) == 0 {
-		(*bps) = append((*bps), bp)
+		*bps = append(*bps, bp)
 		return true // added
 	}
 	var i = sort.Search(len(*bps), func(i int) bool {
@@ -121,7 +121,7 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 	})
 	// out of bounds
 	if i == len(*bps) {
-		(*bps) = append((*bps), bp)
+		*bps = append(*bps, bp)
 		return true // added
 	}
 	// the same
@@ -130,7 +130,7 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 		return false   // already have
 	}
 	// next
-	(*bps) = append((*bps)[:i], append([]*blobberPool{bp},
+	*bps = append((*bps)[:i], append([]*blobberPool{bp},
 		(*bps)[i:]...)...)
 	return true // added
 }
@@ -224,7 +224,7 @@ func (aps allocationPools) get(allocID string) (
 
 func (aps *allocationPools) add(ap *allocationPool) {
 	if len(*aps) == 0 {
-		(*aps) = append((*aps), ap)
+		*aps = append(*aps, ap)
 		return
 	}
 	var i = sort.Search(len(*aps), func(i int) bool {
@@ -232,11 +232,11 @@ func (aps *allocationPools) add(ap *allocationPool) {
 	})
 	// out of bounds
 	if i == len(*aps) {
-		(*aps) = append((*aps), ap)
+		*aps = append(*aps, ap)
 		return
 	}
 	// insert next after the found one
-	(*aps) = append((*aps)[:i], append(allocationPools{ap},
+	*aps = append((*aps)[:i], append(allocationPools{ap},
 		(*aps)[i:]...)...)
 	return
 }
@@ -291,7 +291,7 @@ func isInTOMRList(torm []*allocationPool, ax *allocationPool) bool {
 	return false
 }
 
-// remove empty pools of an allocation (all given pools should belongs to
+// remove empty pools of an allocation (all given pools should belong to
 // one allocation)
 func (aps *allocationPools) removeEmpty(allocID string,
 	torm []*allocationPool) {
@@ -313,7 +313,7 @@ Outer:
 		}
 		(*aps)[i], i = ax, i+1
 	}
-	(*aps) = (*aps)[:i]
+	*aps = (*aps)[:i]
 }
 
 func (aps *allocationPools) moveToChallenge(

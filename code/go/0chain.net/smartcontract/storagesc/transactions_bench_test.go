@@ -71,7 +71,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 		// mpts.pndb.Flush()
 	}
 
-	// for a worst case, no cached data, and we have to get everything from
+	// for the worst case, no cached data, and we have to get everything from
 	// the persistent store, from rocksdb
 
 	mpts.mndb = util.NewMemoryNodeDB()                           //

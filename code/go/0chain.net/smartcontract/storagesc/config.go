@@ -304,10 +304,6 @@ func (sc *scConfig) validate() (err error) {
 	return
 }
 
-func (sc *scConfig) canMint() bool {
-	return sc.Minted < sc.MaxMint
-}
-
 func (sc *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	if min < sc.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,

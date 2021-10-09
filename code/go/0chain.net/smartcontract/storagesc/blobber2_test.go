@@ -236,7 +236,7 @@ func testCommitBlobberRead(
 	}
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 		ClientID:     clientId,
 		ToClientID:   storageScId,
@@ -403,7 +403,7 @@ func confirmCommitBlobberRead(
 	newStakePool *stakePool,
 	ctx *mockStateContext,
 ) {
-	var respArray = []cbrResponse{}
+	var respArray []cbrResponse
 	require.NoError(t, json.Unmarshal([]byte(resp), &respArray))
 	require.Len(t, respArray, 1)
 	require.EqualValues(t, blobberId, respArray[0].Pool_id)
@@ -457,7 +457,7 @@ func (f formulaeCommitBlobberRead) delegateRward(id int64) int64 {
 		totalStaked += zcnToInt64(stake.zcnAmount)
 	}
 	var delegateStake = float64(zcnToInt64(f.stakes[id].zcnAmount))
-	var shareRatio = float64(delegateStake) / float64(totalStaked)
+	var shareRatio = delegateStake / float64(totalStaked)
 	var blobberEarnings = float64(f.blobberReward())
 	var serviceCharge = f.blobberYaml.serviceCharge
 

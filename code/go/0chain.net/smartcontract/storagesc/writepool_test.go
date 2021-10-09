@@ -170,10 +170,10 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	var alloc = StorageAllocation{
 		ID: allocID,
 		BlobberDetails: []*BlobberAllocation{
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
-			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
+			{MinLockDemand: 10, Spent: 0},
 		},
 		Expiration:              10,
 		ChallengeCompletionTime: 200 * time.Second,

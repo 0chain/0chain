@@ -72,11 +72,11 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	)
 
 	list = []*StorageNode{
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration:        8 * time.Second,
 			ChallengeCompletionTime: 10 * time.Second,
 		}},
-		&StorageNode{Terms: Terms{
+		{Terms: Terms{
 			MaxOfferDuration:        6 * time.Second,
 			ChallengeCompletionTime: 20 * time.Second,
 		}},
@@ -134,10 +134,10 @@ func TestStorageAllocation_diversifyBlobbers(t *testing.T) {
 	}
 
 	var locations = []*StorageNode{
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}},  // Cape Town
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}},   // St Petersburg
-		&StorageNode{Geolocation: StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}},  // Kaohsiung City
+		{Geolocation: StorageNodeGeolocation{Latitude: 37.773972, Longitude: -122.431297}}, // San Francisco
+		{Geolocation: StorageNodeGeolocation{Latitude: -33.918861, Longitude: 18.423300}},  // Cape Town
+		{Geolocation: StorageNodeGeolocation{Latitude: 59.937500, Longitude: 30.308611}},   // St Petersburg
+		{Geolocation: StorageNodeGeolocation{Latitude: 22.633333, Longitude: 120.266670}},  // Kaohsiung City
 	}
 
 	tests := []struct {

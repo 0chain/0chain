@@ -22,7 +22,7 @@ import (
 //
 
 func writePoolKey(scKey, clientID string) datastore.Key {
-	return datastore.Key(scKey + ":writepool:" + clientID)
+	return scKey + ":writepool:" + clientID
 }
 
 // writePool represents client's write pool consist of allocation write pools
@@ -44,7 +44,7 @@ func (wp *writePool) removeEmpty(allocID string, ap []*allocationPool) {
 func (wp *writePool) Encode() []byte {
 	var b, err = json.Marshal(wp)
 	if err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return b
 }
@@ -156,12 +156,12 @@ func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
 	balances chainState.StateContextI) (wp *writePool, err error) {
 
-	var poolb []byte
-	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
+	var pool []byte
+	if pool, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
 		return
 	}
 	wp = new(writePool)
-	err = wp.Decode(poolb)
+	err = wp.Decode(pool)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
@@ -315,7 +315,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			BlobberID: lr.BlobberID,
 		})
 	} else {
-		// divide depending write price range for all blobbers of the
+		// divide depending on write price range for all blobbers of the
 		// allocation
 		var total float64 // total write price
 		for _, b := range alloc.BlobberDetails {
@@ -357,7 +357,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
-	// remembers who funded the write pool, so tokens get returned to funder on unlock
+	// remembers who funded to write pool, so tokens get returned to funder on unlock
 	if err := ssc.addToFundedPools(t.ClientID, ap.ID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
@@ -419,10 +419,10 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
 			want  = alloc.restMinLockDemand()
-			unitl = alloc.Until()
-			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
+			until = alloc.Until()
+			leave = wp.allocUntil(ap.AllocationID, until) - ap.Balance
 		)
-		if leave < want && ap.ExpireAt >= unitl {
+		if leave < want && ap.ExpireAt >= until {
 			return "", common.NewError("write_pool_unlock_failed",
 				"can't unlock, because min lock demand is not paid yet")
 		}
@@ -456,7 +456,10 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 // statistic for an allocation/blobber (used by blobbers)
 func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
+	_ context.Context,
+	params url.Values,
+	balances chainState.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (
@@ -492,9 +495,12 @@ func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
 
 const cantGetWritePoolMsg = "can't get write pool"
 
-// statistic for all locked tokens of the write pool
-func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
+// statistic for all locked tokens of write pool
+func (ssc *StorageSmartContract) getWritePoolStatHandler(
+	_ context.Context,
+	params url.Values,
+	balances chainState.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (

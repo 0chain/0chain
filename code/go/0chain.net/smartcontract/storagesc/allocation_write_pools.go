@@ -48,10 +48,10 @@ func (awp *allocationWritePools) moveToChallenge(
 	return awp.allocationPools.moveToChallenge(allocID, blobID, cp, now, value)
 }
 
-func (aps allocationWritePools) allocUntil(
+func (awp allocationWritePools) allocUntil(
 	allocID string, until common.Timestamp,
 ) (value state.Balance) {
-	return aps.allocationPools.allocUntil(allocID, until)
+	return awp.allocationPools.allocUntil(allocID, until)
 }
 
 func (awp *allocationWritePools) addOwnerWritePool(ap *allocationPool) error {

@@ -191,32 +191,32 @@ func Test_allocationPools(t *testing.T) {
 
 	var cut = aps.allocationCut(a1)
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{AllocationID: a1},
-		&allocationPool{AllocationID: a1},
+		{AllocationID: a1},
+		{AllocationID: a1},
 	}, cut)
 
 	cut = aps.allocationCut(a2)
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{AllocationID: a2},
-		&allocationPool{AllocationID: a2},
+		{AllocationID: a2},
+		{AllocationID: a2},
 	}, cut)
 
 	cut = aps.allocationCut(a3)
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{AllocationID: a3},
-		&allocationPool{AllocationID: a3},
+		{AllocationID: a3},
+		{AllocationID: a3},
 	}, cut)
 
 	cut = aps.allocationCut(a4)
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{AllocationID: a4},
-		&allocationPool{AllocationID: a4},
+		{AllocationID: a4},
+		{AllocationID: a4},
 	}, cut)
 
 	cut = aps.allocationCut(a5)
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{AllocationID: a5},
-		&allocationPool{AllocationID: a5},
+		{AllocationID: a5},
+		{AllocationID: a5},
 	}, cut)
 
 	aps = allocationPools{
@@ -256,7 +256,7 @@ func Test_allocationPools(t *testing.T) {
 	}
 
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -264,14 +264,14 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 152},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
 				&blobberPool{BlobberID: "b1", Balance: 0},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -290,7 +290,7 @@ func Test_allocationPools(t *testing.T) {
 	cut = aps.allocationCut(a2)
 	cut = removeBlobberExpired(cut, "b1", 0)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -298,7 +298,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 152},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -310,7 +310,7 @@ func Test_allocationPools(t *testing.T) {
 
 	sortExpireAt(cut)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -318,7 +318,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 154},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -330,7 +330,7 @@ func Test_allocationPools(t *testing.T) {
 
 	cut = removeBlobberExpired(cut, "b2", 15)
 	assert.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -341,7 +341,7 @@ func Test_allocationPools(t *testing.T) {
 	}, cut)
 
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -349,7 +349,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 154},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -360,7 +360,7 @@ func Test_allocationPools(t *testing.T) {
 	}, aps.blobberCut(a2, "b2", 0))
 
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     10,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -368,7 +368,7 @@ func Test_allocationPools(t *testing.T) {
 				&blobberPool{BlobberID: "b2", Balance: 154},
 			},
 		},
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{
@@ -379,7 +379,7 @@ func Test_allocationPools(t *testing.T) {
 	}, aps.blobberCut(a2, "b2", 0))
 
 	require.EqualValues(t, []*allocationPool{
-		&allocationPool{
+		{
 			ExpireAt:     20,
 			AllocationID: "a2",
 			Blobbers: blobberPools{

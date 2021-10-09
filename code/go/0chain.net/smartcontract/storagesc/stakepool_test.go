@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -100,11 +99,11 @@ const (
 )
 
 type splResponse struct {
-	Txn_hash    string
-	To_pool     string
-	Value       float64
-	From_client string
-	To_client   string
+	TxnHash string
+	ToPool  string
+	Value      float64
+	FromClient string
+	ToClient   string
 }
 
 func TestStakePoolLock(t *testing.T) {
@@ -113,10 +112,7 @@ func TestStakePoolLock(t *testing.T) {
 		MaxDelegates: 200,
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
-
 		StakePool: &stakePoolConfig{
-			InterestRate:     0.0000334,
-			InterestInterval: 1 * time.Minute,
 			MinLock:          int64(zcnToBalance(0.1)),
 		},
 	}
@@ -124,7 +120,7 @@ func TestStakePoolLock(t *testing.T) {
 	t.Run("stake pool lock", func(t *testing.T) {
 		var value = 10 * scYaml.StakePool.MinLock
 
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
+		var period = common.Timestamp(3600)
 		creationDate = period * 2
 		var delegates = []mockStakePool{
 			{2, creationDate - period - 1},
@@ -132,6 +128,7 @@ func TestStakePoolLock(t *testing.T) {
 			{5, 0},
 			{3, creationDate - period},
 		}
+
 		var offers = []common.Timestamp{creationDate + 1, creationDate - 1, creationDate}
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.NoError(t, err)
@@ -140,10 +137,10 @@ func TestStakePoolLock(t *testing.T) {
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		var value = scYaml.StakePool.MinLock - 1
 
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
+		var period = common.Timestamp(3600)
 		creationDate = period * 2
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
+		var offers []common.Timestamp
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
@@ -152,10 +149,10 @@ func TestStakePoolLock(t *testing.T) {
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
 		var value = 10 * scYaml.StakePool.MinLock
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
+		var period = common.Timestamp(3600)
 		creationDate = period * 2
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
+		var offers []common.Timestamp
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errStakePoolLock))
@@ -174,7 +171,7 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 
 		ClientID:     clientId,
@@ -263,7 +260,7 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, f.now, txPool.MintAt)
 	}
 
-	var minted = []bool{}
+	var minted []bool
 	for range f.delegates {
 		minted = append(minted, false)
 	}
@@ -292,10 +289,10 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 
 	var respObj = &splResponse{}
 	require.NoError(t, json.Unmarshal([]byte(resp), respObj))
-	require.EqualValues(t, transactionHash, respObj.Txn_hash)
-	require.EqualValues(t, transactionHash, respObj.To_pool)
+	require.EqualValues(t, transactionHash, respObj.TxnHash)
+	require.EqualValues(t, transactionHash, respObj.ToPool)
 	require.EqualValues(t, f.value, respObj.Value)
-	require.EqualValues(t, storageScId, respObj.To_client)
+	require.EqualValues(t, storageScId, respObj.ToClient)
 }
 
 type formulaeStakePoolLock struct {
@@ -308,16 +305,14 @@ type formulaeStakePoolLock struct {
 }
 
 func (f formulaeStakePoolLock) delegateInterest(delegate int) int64 {
-	var interestRate = scYaml.StakePool.InterestRate
 	var numberOfPayments = float64(f.numberOfInterestPayments(delegate))
 	var stake = float64(zcnToInt64(f.delegates[delegate].zcnAmount))
-
-	return int64(stake * numberOfPayments * interestRate)
+	return int64(stake * numberOfPayments)
 }
 
 func (f formulaeStakePoolLock) numberOfInterestPayments(delegate int) int64 {
 	var activeTime = int64(f.now - f.delegates[delegate].MintAt)
-	var period = int64(f.scYaml.StakePool.InterestInterval.Seconds())
+	var period = int64(3600)
 	var periods = activeTime / period
 
 	// round down to previous integer
