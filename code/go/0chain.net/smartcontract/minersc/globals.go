@@ -16,13 +16,11 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
 )
 
 type GlobalSetting int
 
 const (
-	// development
 	State        GlobalSetting = iota // todo from development
 	Dkg                               // todo from development
 	ViewChange                        // todo from development
@@ -95,7 +93,7 @@ const (
 )
 
 // GlobalSettingName list of global settings keys. This key used to access each
-// global setting, either in smartcontract.StringMap or in the viper settings database.
+// global setting, either in smartcontract. StringMap or in the viper settings database.
 var GlobalSettingName = []string{
 	"development.state",
 	"development.dkg",
@@ -233,11 +231,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[HealthCheckShowCounters]:                    {smartcontract.Boolean, false},
 }
 
-var GLOBALS_KEY = datastore.Key(encryption.Hash("global_settings"))
-
-func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
-}
+var GLOBALS_KEY = encryption.Hash("global_settings")
 
 type GlobalSettings struct {
 	Fields map[string]string `json:"fields"`

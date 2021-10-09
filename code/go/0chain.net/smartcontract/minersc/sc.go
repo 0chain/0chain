@@ -76,12 +76,12 @@ func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ipsc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (msc *MinerSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return msc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (msc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
+	return msc.SmartContractExecutionStats
 }
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {

@@ -32,8 +32,6 @@ smart_contracts:
     share_rounds: 50
     publish_rounds: 50
     wait_rounds: 50
-    # stake interests, will be declined every epoch
-    interest_rate: 0.0 # [0; 1)
     # reward rate for generators, will be declined every epoch
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1
@@ -53,9 +51,8 @@ smart_contracts:
     max_mint: 1500000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests
     reward_round_frequency: 250
-
   storagesc:
-    # the time_unit is a duration used as divider for a write price; a write
+    # the time_unit is a duration used as divider for write price; write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
     time_unit: "720h"
@@ -75,7 +72,7 @@ smart_contracts:
     min_blobber_capacity: 1024
     # users' read pool related configurations
     readpool:
-      min_lock: 0.1 # toekns
+      min_lock: 0.1 # tokens
       min_lock_period: 1m
       max_lock_period: 8760h
     # users' write pool related configurations
@@ -87,13 +84,9 @@ smart_contracts:
     stakepool:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
-      # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.0
-      # interest_interval is interval to pay interests for a stake
-      interest_interval: 1m
     # following settings are for free storage rewards
     #
-    # largest value you can have for the total allowed free storage
+    # the largest value you can have for the total allowed free storage
     # that a single user can assign
     max_total_free_allocation: 10000
     # maximum setting for the largest number of tokens permitted in
@@ -146,8 +139,7 @@ smart_contracts:
     # max delegates per stake pool allowed by SC
     max_delegates: 200
     # max_charge allowed for blobbers; the charge is part of blobber rewards
-    # goes to blobber's delegate wallets, other part goes to related stake
-    # holders
+    # goes to blobber's delegate wallets, other part goes to related stakeholders
     max_charge: 0.50
     # reward paid out every block
     block_reward:
@@ -163,7 +155,6 @@ smart_contracts:
     max_duration: "2h"
     max_destinations: 3
     max_description_length: 20
-
   zcn:
     min_mint_amount: 1
     percent_authorizers: 0.7
