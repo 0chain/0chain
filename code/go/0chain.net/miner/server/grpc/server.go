@@ -18,7 +18,9 @@ func NewGRPCServerWithMiddlewares() *grpc.Server {
 		grpc.ChainUnaryInterceptor(
 			grpc_zap.UnaryServerInterceptor(logging.Logger),
 			grpc_recovery.UnaryServerInterceptor(),
-			unaryTimeoutInterceptor(), // should always be the lastest, to be "innermost"
+			// Add db transactiion injector if needed
+			// Add rate limiter if needed
+			unaryTimeoutInterceptor(), // should always be the last, to be "innermost"
 		),
 	)
 

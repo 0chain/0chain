@@ -8,7 +8,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"net/http"
@@ -428,10 +427,6 @@ func initWorkers(ctx context.Context) {
 
 func initGRPCServer(grpcPort int) {
 	grpcServer := server.NewGRPCServerWithMiddlewares()
-
-	if config.Development() {
-		reflection.Register(grpcServer)
-	}
 
 	if grpcPort == 0 {
 		logging.Logger.Error("Could not start grpc server since grpc port has not been specified." +
