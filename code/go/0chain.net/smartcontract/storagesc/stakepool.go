@@ -410,65 +410,18 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 	if op == nil {
 		return errors.New("missing offer pool for " + alloc.ID)
 	}
-	// unlike a write pool, here we can reduce a lock
+	// unlike write pool, here we can reduce a lock
 	op.Lock = newLock
 	op.Expire = alloc.Until()
 	return
 }
 
-func maxBalance(a, b state.Balance) state.Balance {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func minBalance(a, b state.Balance) state.Balance {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 type stakePoolUpdateInfo struct {
 	stake  state.Balance // stake of all delegate pools
 	offers state.Balance // offers stake
-	minted state.Balance // minted tokens
 }
 
-// mintPool for a period
-func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
-	now common.Timestamp, rate float64, period common.Timestamp,
-	balances chainstate.StateContextI) (mint state.Balance, err error) {
-
-	var at = dp.MintAt // last periodic mint
-
-	var floatMint = 0.0
-	for ; at+period < now; at += period {
-		floatMint += rate * float64(dp.Balance)
-	}
-	mint = state.Balance(floatMint)
-	dp.MintAt = at // update last minting time
-
-	if mint == 0 {
-		return // no mints for the pool
-	}
-
-	err = balances.AddMint(&state.Mint{
-		Minter:     sscID,         // storage SC
-		ToClientID: dp.DelegateID, // delegate wallet
-		Amount:     mint,          // move total mints at once
-	})
-
-	if err != nil {
-		return mint, fmt.Errorf("adding mint: %v", err)
-	}
-
-	dp.Interests += mint
-	return
-}
-
-// interests not payed yet (virtual interests)
+// interests not paid yet (virtual interests)
 func (sp *stakePool) interests(dp *delegatePool, now common.Timestamp,
 	rate float64, period common.Timestamp) (mint state.Balance) {
 
@@ -493,61 +446,18 @@ func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 	return
 }
 
-// pay interests for stake pool
-func (sp *stakePool) minting(conf *scConfig, sscID string,
-	now common.Timestamp, balances chainstate.StateContextI) (
-	minted state.Balance, err error) {
-
-	if !conf.canMint() {
-		return // can't mint anymore, max_mint reached
-	}
-
-	if len(sp.Pools) == 0 {
-		return
-	}
-
-	var (
-		rate   = conf.StakePool.InterestRate                // %
-		period = toSeconds(conf.StakePool.InterestInterval) // interests period
-	)
-
-	if period == 0 {
-		return // invalid period
-	}
-
-	// ordered
-
-	var mint state.Balance
-	for _, dp := range sp.orderedPools() {
-		mint, err = sp.mintPool(sscID, dp, now, rate, period, balances)
-		if err != nil {
-			return
-		}
-		minted += mint
-	}
-
-	return
-}
-
 // update information about the stake pool internals
-func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
-	balances chainstate.StateContextI) (info *stakePoolUpdateInfo, err error) {
-
-	// mints
-	var mint state.Balance
-	if mint, err = sp.minting(conf, sscID, now, balances); err != nil {
-		return
-	}
+func (sp *stakePool) update(now common.Timestamp) (info *stakePoolUpdateInfo) {
 
 	info = new(stakePoolUpdateInfo)
 	info.stake = sp.stake()                  // capacity stake
 	info.offers = sp.offersStake(now, false) // offers stake
-	info.minted = mint                       // minted tokens
+
 	return
 }
 
 // slash represents blobber penalty; it returns number of tokens moved in
-// reality, with regards to division errors
+// reality, in regard to division errors
 func (sp *stakePool) slash(
 	alloc *StorageAllocation,
 	blobID string,
@@ -953,13 +863,6 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			conf.MaxDelegates)
 	}
 
-	var info *stakePoolUpdateInfo
-	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_lock_failed",
-			"updating stake pool: %v", err)
-	}
-	conf.Minted += info.minted
 	if conf.Minted >= conf.MaxMint {
 		return "", common.NewErrorf("stake_pool_lock_failed", "reached max mint")
 	}
@@ -1023,13 +926,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-
-	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewErrorf("stake_pool_unlock_failed",
-			"updating stake pool: %v", err)
-	}
-	conf.Minted += info.minted
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
@@ -1112,14 +1008,6 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"can't get related stake pool: "+err.Error())
 	}
-
-	var info *stakePoolUpdateInfo
-	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"updating stake pool: "+err.Error())
-	}
-	conf.Minted += info.minted
 
 	// save configuration (minted tokens)
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)

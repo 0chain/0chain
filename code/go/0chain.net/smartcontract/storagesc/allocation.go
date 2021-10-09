@@ -280,23 +280,17 @@ func (ssc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 		// clean capacity (without delegate pools want to 'unstake')
 		var free = sp.cleanCapacity(now, b.Terms.WritePrice)
 		return free < size // kick off if it hasn't enough free space
-	})
+	}
 }
 
 // newAllocationRequest creates new allocation
-func (sc *StorageSmartContract) newAllocationRequest(
+func (ssc *StorageSmartContract) newAllocationRequest(
 	t *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
-	var err error
-	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"can't get config: %v", err)
-	}
 
-	resp, err := sc.newAllocationRequestInternal(t, input, conf, false, balances)
+	resp, err := ssc.newAllocationRequestInternal(t, input, false, balances)
 	if err != nil {
 		return "", err
 	}
