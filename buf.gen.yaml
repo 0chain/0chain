@@ -1,0 +1,11 @@
+version: v1beta1
+plugins:
+  - name: go
+    out: code/go/0chain.net/miner/proto/api/src/proto
+    opt: paths=source_relative
+  - name: go-grpc
+    out: code/go/0chain.net/miner/proto/api/src/proto
+    opt: paths=source_relative,require_unimplemented_servers=false
+  - name: grpc-gateway
+    out: code/go/0chain.net/miner/proto/api/src/proto
+    opt: paths=source_relative,allow_delete_body=true
