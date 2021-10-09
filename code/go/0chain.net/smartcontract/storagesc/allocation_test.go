@@ -930,7 +930,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg5p9 = "allocation_creation_failed: " +
 			"invalid request: missing owner id"
 		errMsg6 = "allocation_creation_failed: " +
-			"Not enough blobbers to honor the allocation"
+			"not enough blobbers to honor the allocation"
 		errMsg7 = "allocation_creation_failed: " +
 			"Not enough blobbers to honor the allocation"
 		errMsg8 = "allocation_creation_failed: " +
