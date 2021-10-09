@@ -103,7 +103,7 @@ func TestUpdateSettings(t *testing.T) {
 		want       want
 	}{
 		{
-			title: "all_settigns",
+			title: "all_settings",
 			parameters: parameters{
 				client:      owner,
 				previousMap: map[string]string{},
@@ -125,8 +125,6 @@ func TestUpdateSettings(t *testing.T) {
 					"writepool.max_lock_period": "8760h",
 
 					"stakepool.min_lock":          "10",
-					"stakepool.interest_rate":     "0.0",
-					"stakepool.interest_interval": "1m",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -307,7 +305,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		want       want
 	}{
 		{
-			title: "all_settigns",
+			title: "all_settings",
 			parameters: parameters{
 				client: mockMinerId,
 				inputMap: map[string]string{
@@ -328,8 +326,6 @@ func TestCommitSettingChanges(t *testing.T) {
 					"writepool.max_lock_period": "8760h",
 
 					"stakepool.min_lock":          "10",
-					"stakepool.interest_rate":     "0.0",
-					"stakepool.interest_interval": "1m",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",
@@ -418,10 +414,6 @@ func getConfField(conf scConfig, field string) interface{} {
 
 	case StakePoolMinLock:
 		return conf.StakePool.MinLock
-	case StakePoolInterestRate:
-		return conf.StakePool.InterestRate
-	case StakePoolInterestInterval:
-		return conf.StakePool.InterestInterval
 
 	case MaxTotalFreeAllocation:
 		return conf.MaxTotalFreeAllocation

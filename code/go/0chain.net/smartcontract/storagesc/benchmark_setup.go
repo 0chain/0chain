@@ -32,12 +32,12 @@ func AddMockAllocations(
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
 		fps         = make([]fundedPools, len(clients), len(clients))
 
-		challanges = make([]BlobberChallenge, len(blobbers), len(blobbers))
+		challenges = make([]BlobberChallenge, len(blobbers), len(blobbers))
 	)
 	for i := 0; i < viper.GetInt(sc.NumAllocations); i++ {
 		cIndex := getMockClientFromAllocationIndex(i, len(clients))
 		sa := addMockAllocation(
-			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challanges, validators,
+			i, cIndex, cas, publicKeys[cIndex], clients, sps, blobbers, challenges, validators,
 		)
 		_, err := balances.InsertTrieNode(sa.GetKey(sscId), sa)
 		if err != nil {
@@ -127,7 +127,7 @@ func AddMockAllocations(
 			}
 		}
 	}
-	for _, ch := range challanges {
+	for _, ch := range challenges {
 		if len(ch.Challenges) > 0 {
 			ch.LatestCompletedChallenge = ch.Challenges[0]
 		}
@@ -150,7 +150,7 @@ func addMockAllocation(
 	clients []string,
 	sps []*stakePool,
 	blobbers []*StorageNode,
-	challanges []BlobberChallenge,
+	challenges []BlobberChallenge,
 	validators []*ValidationNode,
 ) *StorageAllocation {
 	const mockMinLockDemand = 1
@@ -176,14 +176,14 @@ func addMockAllocation(
 		DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
 		WritePoolOwners:            []string{clients[cIndex]},
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1,
-			NumWrites:                 1,
-			NumReads:                  1,
-			TotalChallenges:           1,
-			OpenChallenges:            1,
-			SuccessChallenges:         1,
-			FailedChallenges:          1,
-			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
+			UsedSize:                 1,
+			NumWrites:                1,
+			NumReads:                 1,
+			TotalChallenges:          1,
+			OpenChallenges:           1,
+			SuccessChallenges:        1,
+			FailedChallenges:         1,
+			LatestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
@@ -228,7 +228,7 @@ func addMockAllocation(
 			getMockAllocationId(i),
 			bIndex,
 			blobbers[bIndex],
-			&challanges[bIndex],
+			&challenges[bIndex],
 			validators,
 		)
 	}
@@ -422,14 +422,14 @@ func AddMockStats(
 ) {
 	_, _ = balances.InsertTrieNode(STORAGE_STATS_KEY, &StorageStats{
 		Stats: &StorageAllocationStats{
-			UsedSize:                  1000,
-			NumWrites:                 1000,
-			NumReads:                  1000,
-			TotalChallenges:           1000,
-			OpenChallenges:            1000,
-			SuccessChallenges:         1000,
-			FailedChallenges:          1000,
-			LastestClosedChallengeTxn: "latest closed challenge transaction",
+			UsedSize:                 1000,
+			NumWrites:                1000,
+			NumReads:                 1000,
+			TotalChallenges:          1000,
+			OpenChallenges:           1000,
+			SuccessChallenges:        1000,
+			FailedChallenges:         1000,
+			LatestClosedChallengeTxn: "latest closed challenge transaction",
 		},
 		LastChallengedSize: 100,
 		LastChallengedTime: 1,
@@ -508,8 +508,8 @@ func getMockAllocationId(allocation int) string {
 	return encryption.Hash("mock allocation id" + strconv.Itoa(allocation))
 }
 
-func getMockClientFromAllocationIndex(allocation, numClinets int) int {
-	return (allocation % (numClinets - 1 - viper.GetInt(sc.NumAllocationPlayerPools)))
+func getMockClientFromAllocationIndex(allocation, numClients int) int {
+	return allocation % (numClients - 1 - viper.GetInt(sc.NumAllocationPlayerPools))
 }
 
 func getMockBlobberBlockFromAllocationIndex(i int) int {
@@ -560,8 +560,6 @@ func SetMockConfig(
 
 	conf.StakePool = &stakePoolConfig{
 		MinLock:          int64(viper.GetFloat64(sc.StorageStakePoolMinLock) * 1e10),
-		InterestRate:     0.01,
-		InterestInterval: 5 * time.Second,
 	}
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),

@@ -36,7 +36,7 @@ func TestSelectBlobbers(t *testing.T) {
 		confMinAllocDuration = 5 * time.Minute
 		mockMaxOffDuration   = 744 * time.Hour
 	)
-	var mockStatke = zcnToBalance(100)
+	var mockState = zcnToBalance(100)
 	var mockBlobberCapacity int64 = 1000 * confMinAllocSize
 	var mockMaxPrice = zcnToBalance(100.0)
 	var mockReadPrice = zcnToBalance(0.01)
@@ -102,7 +102,7 @@ func TestSelectBlobbers(t *testing.T) {
 					mockPoolId: {},
 				},
 			}
-			sp.Pools[mockPoolId].Balance = mockStatke
+			sp.Pools[mockPoolId].Balance = mockState
 			balances.On(
 				"GetTrieNode",
 				stakePoolKey(ssc.ID, mockBlobberId+strconv.Itoa(i)),
@@ -219,19 +219,15 @@ func TestSelectBlobbers(t *testing.T) {
 
 func TestExtendAllocation(t *testing.T) {
 	const (
-		randomSeed                  = 1
 		mockURL                     = "mock_url"
 		mockOwner                   = "mock owner"
-		mockNotTheOwner             = "mock not the owner"
 		mockWpOwner                 = "mock write pool owner"
 		mockPublicKey               = "mock public key"
 		mockBlobberId               = "mock_blobber_id"
 		mockPoolId                  = "mock pool id"
 		mockAllocationId            = "mock allocation id"
 		mockMinPrice                = 0
-		confTimeUnit                = 720 * time.Hour
 		confMinAllocSize            = 1024
-		confMinAllocDuration        = 5 * time.Minute
 		mockMaxOffDuration          = 744 * time.Hour
 		mocksSize                   = 10000000000
 		mockDataShards              = 2
@@ -242,7 +238,6 @@ func TestExtendAllocation(t *testing.T) {
 		mockChallengeCompletionTime = 1 * time.Hour
 		mockMinLockDemand           = 0.1
 		mockTimeUnit                = 1 * time.Hour
-		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
 	)
 	var mockBlobberCapacity int64 = 3700000000 * confMinAllocSize
@@ -741,7 +736,7 @@ func isEqualStrings(a, b []string) (eq bool) {
 }
 
 func Test_newAllocationRequest_storageAllocation(t *testing.T) {
-	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
+	const clientID, clientPk = "client_hex", "pk"
 	var nar newAllocationRequest
 	nar.DataShards = 2
 	nar.ParityShards = 3
@@ -896,10 +891,10 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        200 * time.Second,
 				ChallengeCompletionTime: 15 * time.Second,
 			},
-			Capacity: 20 * GB, // 20 GB
-			Used:     5 * GB,  //  5 GB
+			Capacity:        20 * GB, // 20 GB
+			Used:            5 * GB,  //  5 GB
 			LastHealthCheck: 0,
-				},
+		},
 		{
 			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
@@ -910,10 +905,10 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        250 * time.Second,
 				ChallengeCompletionTime: 10 * time.Second,
 			},
-			Capacity: 20 * GB, // 20 GB
-			Used:     10 * GB, // 10 GB
+			Capacity:        20 * GB, // 20 GB
+			Used:            10 * GB, // 10 GB
 			LastHealthCheck: 0,
-				},
+		},
 	}
 	return
 }
@@ -1137,7 +1132,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Terms:         sb.Nodes[0].Terms,
 			MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
-				},
+		},
 		{
 			BlobberID:     "b2",
 			AllocationID:  txHash,
@@ -1146,7 +1141,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Terms:         sb.Nodes[1].Terms,
 			MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
-				},
+		},
 	}
 
 	assert.EqualValues(t, details, aresp.BlobberDetails)
@@ -1377,8 +1372,8 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 		errMsg1 = "allocation_closing_failed: " +
 			"doesn't need to close allocation is about to expire"
-		errMsg2 = "allocation_closing_failed: " +
-			"doesn't need to close allocation is about to expire"
+		//errMsg2 = "allocation_closing_failed: " +
+		//	"doesn't need to close allocation is about to expire"
 	)
 
 	var (

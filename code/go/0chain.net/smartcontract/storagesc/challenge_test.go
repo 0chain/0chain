@@ -243,7 +243,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var challengePoolIntegralValue = state.Balance(73000000)
 	var challengePoolBalance = state.Balance(700000)
 	var partial = 0.9
-	var preiviousChallenge = common.Timestamp(3)
+	var previousChallenge = common.Timestamp(3)
 	var thisChallenge = common.Timestamp(5)
 	var thisExpires = common.Timestamp(222)
 	var now = common.Timestamp(101)
@@ -256,10 +256,7 @@ func TestBlobberPenalty(t *testing.T) {
 	var otherWritePools = 4
 	var scYaml = scConfig{
 		MaxMint: zcnToBalance(4000000.0),
-		StakePool: &stakePoolConfig{
-			InterestRate:     0.0000334,
-			InterestInterval: time.Minute,
-		},
+		StakePool: &stakePoolConfig{},
 		BlobberSlash:               0.1,
 		ValidatorReward:            0.025,
 		MaxChallengeCompletionTime: 30 * time.Minute,
@@ -276,7 +273,7 @@ func TestBlobberPenalty(t *testing.T) {
 	t.Run("test blobberPenalty ", func(t *testing.T) {
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, blobberOffer, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -284,7 +281,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var blobberOffer = int64(10000)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, blobberOffer, previousChallenge, thisChallenge, thisExpires, now)
 		require.NoError(t, err)
 	})
 
@@ -292,7 +289,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var thisChallenge = thisExpires + toSeconds(blobberYaml.challengeCompletionTime) + 1
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, blobberOffer, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errLate)
 	})
@@ -301,7 +298,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var validatorStakes = [][]int64{{45, 666, 4533}, {}, {10}}
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, blobberOffer, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errNoStakePools))
 		require.True(t, strings.Contains(err.Error(), errRewardValidator))
@@ -311,7 +308,7 @@ func TestBlobberPenalty(t *testing.T) {
 		var challengePoolBalance = state.Balance(0)
 		err := testBlobberPenalty(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
-			challengePoolBalance, partial, blobberOffer, preiviousChallenge, thisChallenge, thisExpires, now)
+			challengePoolBalance, partial, blobberOffer, previousChallenge, thisChallenge, thisExpires, now)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errTokensChallengePool))
 	})
@@ -330,7 +327,7 @@ func testBlobberPenalty(
 	challengePoolIntegralValue, challengePoolBalance state.Balance,
 	partial float64,
 	blobberOffer int64,
-	previous, thisChallange, thisExpires, now common.Timestamp,
+	previous, thisChallenge, thisExpires, now common.Timestamp,
 ) (err error) {
 	var f = formulaeBlobberReward{
 		t:                          t,
@@ -345,9 +342,9 @@ func testBlobberPenalty(
 		challengePoolIntegralValue: int64(challengePoolIntegralValue),
 		challengePoolBalance:       int64(challengePoolBalance),
 		partial:                    partial,
-		previousChallange:          previous,
+		previousChallenge:          previous,
 		blobberOffer:               blobberOffer,
-		thisChallange:              thisChallange,
+		thisChallenge:              thisChallenge,
 		thisExpires:                thisExpires,
 		now:                        now,
 	}
@@ -364,7 +361,7 @@ func testBlobberPenalty(
 		otherWritePools,
 		challengePoolIntegralValue,
 		challengePoolBalance,
-		thisChallange,
+		thisChallenge,
 		thisExpires,
 		now,
 		blobberOffer,
@@ -400,7 +397,7 @@ func testBlobberReward(
 	otherWritePools int,
 	challengePoolIntegralValue, challengePoolBalance state.Balance,
 	partial float64,
-	previous, thisChallange, thisExpires, now common.Timestamp,
+	previous, thisChallenge, thisExpires, now common.Timestamp,
 ) (err error) {
 	require.Len(t, validatorStakes, len(validators))
 
@@ -417,15 +414,15 @@ func testBlobberReward(
 		challengePoolIntegralValue: int64(challengePoolIntegralValue),
 		challengePoolBalance:       int64(challengePoolBalance),
 		partial:                    partial,
-		previousChallange:          previous,
-		thisChallange:              thisChallange,
+		previousChallenge:          previous,
+		thisChallenge:              thisChallenge,
 		thisExpires:                thisExpires,
 		now:                        now,
 	}
 
 	var _, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 		wpBalances, otherWritePools, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, 0)
+		challengePoolBalance, thisChallenge, thisExpires, now, 0)
 
 	err = ssc.blobberReward(allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {
@@ -456,7 +453,7 @@ func setupChallengeMocks(
 	wpBalances []int64,
 	otherWritePools int,
 	challengePoolIntegralValue, challengePoolBalance state.Balance,
-	thisChallange, thisExpires, now common.Timestamp,
+	thisChallenge, thisExpires, now common.Timestamp,
 	blobberOffer int64,
 ) (*transaction.Transaction, *StorageSmartContract, *StorageAllocation,
 	*BlobberChallenge, *BlobberAllocation, *mockStateContext) {
@@ -472,7 +469,7 @@ func setupChallengeMocks(
 	var challenge = &BlobberChallenge{
 		BlobberID: blobberId,
 		LatestCompletedChallenge: &StorageChallenge{
-			Created: thisChallange,
+			Created: thisChallenge,
 		},
 	}
 	var details = &BlobberAllocation{
@@ -589,14 +586,14 @@ type formulaeBlobberReward struct {
 	otherWritePools                                    int
 	challengePoolIntegralValue, challengePoolBalance   int64
 	partial                                            float64
-	previousChallange, thisChallange, thisExpires, now common.Timestamp
+	previousChallenge, thisChallenge, thisExpires, now common.Timestamp
 	blobberOffer                                       int64
 }
 
 func (f formulaeBlobberReward) reward() int64 {
 	var challengePool = float64(f.challengePoolIntegralValue)
-	var passedPrevious = float64(f.previousChallange)
-	var passedCurrent = float64(f.thisChallange)
+	var passedPrevious = float64(f.previousChallenge)
+	var passedCurrent = float64(f.thisChallenge)
 	var currentExpires = float64(f.thisExpires)
 	var interpolationFraction = (passedCurrent - passedPrevious) / (currentExpires - passedPrevious)
 
@@ -675,8 +672,8 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 	}
 	var delegateStake = float64(f.validatorStakes[vIndex][delegate])
 	var validatorReward = float64(f.validatorsReward()) / float64(len(f.validators))
-	var deleatesReward = validatorReward - float64(f.validatorServiceCharge(validator))
-	return int64(deleatesReward * delegateStake / totalStake)
+	var deletesReward = validatorReward - float64(f.validatorServiceCharge(validator))
+	return int64(deletesReward * delegateStake / totalStake)
 }
 
 func (f formulaeBlobberReward) totalMoved() int64 {

@@ -655,8 +655,6 @@ func BenchmarkTests(
 					"writepool.max_lock_period": "8760h",
 
 					"stakepool.min_lock":          "10",
-					"stakepool.interest_rate":     "0.0",
-					"stakepool.interest_interval": "1m",
 
 					"max_total_free_allocation":      "10000",
 					"max_individual_free_allocation": "100",

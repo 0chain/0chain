@@ -41,8 +41,6 @@ const (
 	WritePoolMaxLockPeriod
 
 	StakePoolMinLock
-	StakePoolInterestRate
-	StakePoolInterestInterval
 
 	MaxTotalFreeAllocation
 	MaxIndividualFreeAllocation
@@ -100,8 +98,6 @@ var (
 		"writepool.max_lock_period",
 
 		"stakepool.min_lock",
-		"stakepool.interest_rate",
-		"stakepool.interest_interval",
 
 		"max_total_free_allocation",
 		"max_individual_free_allocation",
@@ -158,9 +154,7 @@ var (
 		"writepool.min_lock_period": {WritePoolMinLockPeriod, smartcontract.Duration},
 		"writepool.max_lock_period": {WritePoolMaxLockPeriod, smartcontract.Duration},
 
-		"stakepool.min_lock":          {StakePoolMinLock, smartcontract.Int64},
-		"stakepool.interest_rate":     {StakePoolInterestRate, smartcontract.Float64},
-		"stakepool.interest_interval": {StakePoolInterestInterval, smartcontract.Duration},
+		"stakepool.min_lock": {StakePoolMinLock, smartcontract.Int64},
 
 		"max_total_free_allocation":      {MaxTotalFreeAllocation, smartcontract.StateBalance},
 		"max_individual_free_allocation": {MaxIndividualFreeAllocation, smartcontract.StateBalance},
@@ -299,11 +293,6 @@ func (sc *scConfig) setInt64(key string, change int64) {
 
 func (sc *scConfig) setFloat64(key string, change float64) {
 	switch Settings[key].setting {
-	case StakePoolInterestRate:
-		if sc.StakePool == nil {
-			sc.StakePool = &stakePoolConfig{}
-		}
-		sc.StakePool.InterestRate = change
 	case FreeAllocationReadPoolFraction:
 		sc.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
@@ -367,11 +356,6 @@ func (sc *scConfig) setDuration(key string, change time.Duration) {
 			sc.WritePool = &writePoolConfig{}
 		}
 		sc.WritePool.MaxLockPeriod = change
-	case StakePoolInterestInterval:
-		if sc.StakePool == nil {
-			sc.StakePool = &stakePoolConfig{}
-		}
-		sc.StakePool.InterestInterval = change
 	case FreeAllocationDuration:
 		sc.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
@@ -466,10 +450,6 @@ func (sc *scConfig) get(key Setting) interface{} {
 		return sc.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
 		return sc.StakePool.MinLock
-	case StakePoolInterestRate:
-		return sc.StakePool.InterestRate
-	case StakePoolInterestInterval:
-		return sc.StakePool.InterestInterval
 	case MaxTotalFreeAllocation:
 		return sc.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
