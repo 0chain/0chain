@@ -22,20 +22,9 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "control"
+    - "storage"
+    - "storage_rest"
   omitted_tests:
-    - "miner.payFees"
-    - "storage.cancel_allocation"
-    - "storage.finalize_allocation"
-    - "storage.free_allocation_request"
-    - "storage.free_update_allocation"
-    - "storage.new_allocation_request_preferred"
-    - "storage.new_allocation_request_random"
-    - "storage.update_allocation_request"
-    - "storage_rest.allocation_min_lock"
-    - "storage_rest.getStakePoolStat"
-    - "storage_rest.getUserStakePoolStat"
-    - "storage.generate_challenges"
 
 smart_contracts:
   minersc:
@@ -82,6 +71,7 @@ smart_contracts:
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
+    max_challenges_per_generation: 100
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
