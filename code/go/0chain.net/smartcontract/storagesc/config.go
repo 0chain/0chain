@@ -18,7 +18,7 @@ import (
 )
 
 func scConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
+	return scKey + ":configurations"
 }
 
 type freeAllocationSettings struct {
@@ -60,8 +60,8 @@ type blockReward struct {
 	BlobberUsageWeight    float64       `json:"blobber_usage_weight"`
 }
 
-func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityRatio, bUsageRatio float64) {
-	total := sharderRatio + minerRatio + bCapcacityRatio + bUsageRatio
+func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, capacityRatio, bUsageRatio float64) {
+	total := sharderRatio + minerRatio + capacityRatio + bUsageRatio
 	if total == 0 {
 		br.SharderWeight = 0
 		br.MinerWeight = 0
@@ -70,7 +70,7 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 	} else {
 		br.SharderWeight = sharderRatio / total
 		br.MinerWeight = minerRatio / total
-		br.BlobberCapacityWeight = bCapcacityRatio / total
+		br.BlobberCapacityWeight = capacityRatio / total
 		br.BlobberUsageWeight = bUsageRatio / total
 	}
 
@@ -78,7 +78,7 @@ func (br *blockReward) setWeightsFromRatio(sharderRatio, minerRatio, bCapcacityR
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
-	// TimeUnit is a duration used as divider for a write price. A write price
+	// TimeUnit is a duration used as divider for write price. A write price
 	// measured in tok / GB / time unit. Where the time unit is this
 	// configuration.
 	TimeUnit time.Duration `json:"time_unit"`
@@ -116,7 +116,7 @@ type scConfig struct {
 
 	// MaxReadPrice allowed for a blobber.
 	MaxReadPrice state.Balance `json:"max_read_price"`
-	// MaxWrtiePrice
+	// MaxWritePrice
 	MaxWritePrice state.Balance `json:"max_write_price"`
 
 	// allocation cancellation
@@ -142,7 +142,7 @@ type scConfig struct {
 	// at once for a blobber-allocation pair with size difference for the
 	// moment of the generation.
 	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
-	// ChallengeGenerationRate is number of challenges generated for a MB/min.
+	// ChallengeGenerationRate is number of challenges generated for MB/min.
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 
 	// MinStake allowed by a blobber/validator (entire SC boundary).
@@ -315,18 +315,18 @@ func (sc *scConfig) validate() (err error) {
 	return
 }
 
-func (conf *scConfig) canMint() bool {
-	return conf.Minted < conf.MaxMint
+func (sc *scConfig) canMint() bool {
+	return sc.Minted < sc.MaxMint
 }
 
-func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
-	if min < conf.MinStake {
+func (sc *scConfig) validateStakeRange(min, max state.Balance) (err error) {
+	if min < sc.MinStake {
 		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
-			conf.MinStake)
+			sc.MinStake)
 	}
-	if max > conf.MaxStake {
+	if max > sc.MaxStake {
 		return fmt.Errorf("max_stake is greater than allowed by SC: %v > %v",
-			max, conf.MaxStake)
+			max, sc.MaxStake)
 	}
 	if max < min {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", min, max)
@@ -334,16 +334,16 @@ func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 	return
 }
 
-func (conf *scConfig) Encode() (b []byte) {
+func (sc *scConfig) Encode() (b []byte) {
 	var err error
-	if b, err = json.Marshal(conf); err != nil {
-		panic(err) // must not happens
+	if b, err = json.Marshal(sc); err != nil {
+		panic(err) // must not happen
 	}
 	return
 }
 
-func (conf *scConfig) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
+func (sc *scConfig) Decode(b []byte) error {
+	return json.Unmarshal(b, sc)
 }
 
 //
@@ -380,31 +380,23 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
-	conf.MaxReadPrice = state.Balance(
-		scc.GetFloat64(pfx+"max_read_price") * 1e10)
-	conf.MaxWritePrice = state.Balance(
-		scc.GetFloat64(pfx+"max_write_price") * 1e10)
+	conf.MaxReadPrice = state.Balance(scc.GetFloat64(pfx+"max_read_price") * 1e10)
+	conf.MaxWritePrice = state.Balance(scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
-	conf.ReadPool.MinLockPeriod = scc.GetDuration(
-		pfx + "readpool.min_lock_period")
-	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
-		pfx + "readpool.max_lock_period")
+	conf.ReadPool.MinLockPeriod = scc.GetDuration(pfx + "readpool.min_lock_period")
+	conf.ReadPool.MaxLockPeriod = scc.GetDuration(pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
 	conf.WritePool.MinLock = int64(scc.GetFloat64(pfx+"writepool.min_lock") * 1e10)
-	conf.WritePool.MinLockPeriod = scc.GetDuration(
-		pfx + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = scc.GetDuration(
-		pfx + "writepool.max_lock_period")
+	conf.WritePool.MinLockPeriod = scc.GetDuration(pfx + "writepool.min_lock_period")
+	conf.WritePool.MaxLockPeriod = scc.GetDuration(pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
 	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
-	conf.StakePool.InterestRate = scc.GetFloat64(
-		pfx + "stakepool.interest_rate")
-	conf.StakePool.InterestInterval = scc.GetDuration(
-		pfx + "stakepool.interest_interval")
+	conf.StakePool.InterestRate = scc.GetFloat64(pfx + "stakepool.interest_rate")
+	conf.StakePool.InterestInterval = scc.GetDuration(pfx + "stakepool.interest_interval")
 
 	conf.MaxTotalFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_total_free_allocation") * 1e10)
 	conf.MaxIndividualFreeAllocation = state.Balance(scc.GetFloat64(pfx+"max_individual_free_allocation") * 1e10)
@@ -425,17 +417,12 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.FreeAllocationSettings.ReadPoolFraction = scc.GetFloat64(fas + "read_pool_fraction")
 
 	// allocation cancellation
-	conf.FailedChallengesToCancel = scc.GetInt(
-		pfx + "failed_challenges_to_cancel")
-	conf.FailedChallengesToRevokeMinLock = scc.GetInt(
-		pfx + "failed_challenges_to_revoke_min_lock")
+	conf.FailedChallengesToCancel = scc.GetInt(pfx + "failed_challenges_to_cancel")
+	conf.FailedChallengesToRevokeMinLock = scc.GetInt(pfx + "failed_challenges_to_revoke_min_lock")
 	// challenges generating
 	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
-	conf.MaxChallengesPerGeneration = scc.GetInt(
-		pfx + "max_challenges_per_generation")
-	conf.ChallengeGenerationRate = scc.GetFloat64(
-		pfx + "challenge_rate_per_mb_min")
-
+	conf.MaxChallengesPerGeneration = scc.GetInt(pfx + "max_challenges_per_generation")
+	conf.ChallengeGenerationRate = scc.GetFloat64(pfx + "challenge_rate_per_mb_min")
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
@@ -502,8 +489,8 @@ func (ssc *StorageSmartContract) getConfig(
 const cantGetConfigErrMsg = "can't get config"
 
 func (ssc *StorageSmartContract) getConfigHandler(
-	ctx context.Context,
-	params url.Values,
+	_ context.Context,
+	_ url.Values,
 	balances chainState.StateContextI,
 ) (resp interface{}, err error) {
 	var conf *scConfig

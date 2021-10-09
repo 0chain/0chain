@@ -52,7 +52,7 @@ func TestAddChallenge(t *testing.T) {
 	}
 
 	parametersToArgs := func(p parameters) args {
-		var blobbers = []*StorageNode{}
+		var blobbers []*StorageNode
 		var blobberMap = make(map[string]*BlobberAllocation)
 		for i := 0; i < p.numBlobbers; i++ {
 			var sn = StorageNode{
@@ -217,7 +217,7 @@ func TestBlobberReward(t *testing.T) {
 	})
 
 	t.Run(errNoStakePools, func(t *testing.T) {
-		var stakes = []int64{}
+		var stakes []int64
 		err := testBlobberReward(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 			writePoolBalances, otherWritePools, challengePoolIntegralValue,
 			challengePoolBalance, partial, previousChallenge, thisChallenge, thisExpires, now)
@@ -352,11 +352,25 @@ func testBlobberPenalty(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
-		wpBalances, otherWritePools, challengePoolIntegralValue,
-		challengePoolBalance, thisChallange, thisExpires, now, blobberOffer)
+	var _, ssc, allocation, challenge, details, ctx = setupChallengeMocks(
+		t,
+		scYaml,
+		blobberYaml,
+		validatorYamls,
+		stakes,
+		validators,
+		validatorStakes,
+		wpBalances,
+		otherWritePools,
+		challengePoolIntegralValue,
+		challengePoolBalance,
+		thisChallange,
+		thisExpires,
+		now,
+		blobberOffer,
+	)
 
-	err = ssc.blobberPenalty(txn, allocation, previous, challenge, details, validators, ctx)
+	err = ssc.blobberPenalty(allocation, previous, challenge, details, validators, ctx)
 	if err != nil {
 		return err
 	}
@@ -409,11 +423,11 @@ func testBlobberReward(
 		now:                        now,
 	}
 
-	var txn, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
+	var _, ssc, allocation, challenge, details, ctx = setupChallengeMocks(t, scYaml, blobberYaml, validatorYamls, stakes, validators, validatorStakes,
 		wpBalances, otherWritePools, challengePoolIntegralValue,
 		challengePoolBalance, thisChallange, thisExpires, now, 0)
 
-	err = ssc.blobberReward(txn, allocation, previous, challenge, details, validators, partial, ctx)
+	err = ssc.blobberReward(allocation, previous, challenge, details, validators, partial, ctx)
 	if err != nil {
 		return err
 	}
@@ -471,7 +485,7 @@ func setupChallengeMocks(
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 		ClientID:     clientId,
 		ToClientID:   storageScId,
@@ -541,7 +555,7 @@ func setupChallengeMocks(
 	sp.Settings.DelegateWallet = blobberId + " wallet"
 	require.NoError(t, sp.save(ssc.ID, challenge.BlobberID, ctx))
 
-	var validatorsSPs = []*stakePool{}
+	var validatorsSPs []*stakePool
 	for i, validator := range validators {
 		var sPool = newStakePool()
 		sPool.Settings.ServiceCharge = validatorYamls[i].serviceCharge
@@ -667,7 +681,7 @@ func (f formulaeBlobberReward) validatorDelegateReward(validator string, delegat
 
 func (f formulaeBlobberReward) totalMoved() int64 {
 	var reward = float64(f.reward())
-	var validators = float64((f.validatorsReward()))
+	var validators = float64(f.validatorsReward())
 	var partial = f.partial
 	var movedBack = (reward - validators) * (1 - partial)
 
@@ -823,9 +837,9 @@ func confirmBlobberReward(
 	}
 
 	var blobberPaid = false
-	var blobberDelegaresPaid = []bool{}
+	var blobberDelegatesPaid []bool
 	for range f.stakes {
-		blobberDelegaresPaid = append(blobberDelegaresPaid, false)
+		blobberDelegatesPaid = append(blobberDelegatesPaid, false)
 	}
 	validators := make(map[string]bool)
 	for _, v := range f.validators {
@@ -854,9 +868,9 @@ func confirmBlobberReward(
 		if wallet[0] == "delegate" { // payment  to blobber delegate
 			index, err := strconv.Atoi(wallet[1])
 			require.NoError(t, err)
-			require.False(t, blobberDelegaresPaid[index])
+			require.False(t, blobberDelegatesPaid[index])
 			require.InDelta(t, f.blobberDelegateReward(index), amount, errDelta)
-			blobberDelegaresPaid[index] = true
+			blobberDelegatesPaid[index] = true
 			continue
 		}
 		var validator = wallet[0]
@@ -883,7 +897,7 @@ func confirmBlobberReward(
 		require.InDelta(t, f.blobberServiceCharge(), 0, errDelta)
 	}
 	require.True(t, blobberPaid)
-	for index, done := range blobberDelegaresPaid {
+	for index, done := range blobberDelegatesPaid {
 		if !done {
 			require.InDelta(t, f.blobberDelegateReward(index), 0, errDelta)
 		}

@@ -28,7 +28,7 @@ const (
 	ErrNotOwner          = "only owner can cancel an allocation"
 	ErrNotEnoughFailiars = "not enough failed challenges of allocation to cancel"
 	ErrNotEnoughLock     = "paying min_lock for"
-	ErrFinalizedFailed   = "fini_alloc_failed"
+	ErrFinalizedFailed   = "finish_alloc_failed"
 	ErrFinalizedTooSoon  = "allocation is not expired yet, or waiting a challenge completion"
 )
 
@@ -107,8 +107,8 @@ func TestNewAllocation(t *testing.T) {
 }
 
 func TestCancelAllocationRequest(t *testing.T) {
-	var blobberStakePools = [][]mockStakePool{}
-	var challenges = [][]common.Timestamp{}
+	var blobberStakePools [][]mockStakePool
+	var challenges [][]common.Timestamp
 	var scYaml = scConfig{
 		MaxMint: zcnToBalance(4000000.0),
 		StakePool: &stakePoolConfig{
@@ -262,7 +262,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 func TestFinalizeAllocation(t *testing.T) {
 	var now = common.Timestamp(300)
-	var blobberStakePools = [][]mockStakePool{}
+	var blobberStakePools [][]mockStakePool
 	var scYaml = scConfig{
 		MaxMint: zcnToBalance(4000000.0),
 		StakePool: &stakePoolConfig{
@@ -518,7 +518,7 @@ func confirmFinalizeAllocation(
 	var minted = f.scYaml.Minted
 	require.EqualValues(t, 0, challengePool.Balance)
 
-	var delegateMints = [][]bool{}
+	var delegateMints [][]bool
 	for i := range f.bStakes {
 		if len(f.bStakes[i]) > 0 {
 			delegateMints = append(delegateMints, []bool{})
@@ -549,10 +549,10 @@ func confirmFinalizeAllocation(
 		}
 	}
 
-	var rewardTransfers = []bool{}
-	var minLockTransfers = []bool{}
-	var rewardDelegateTransfers = [][]bool{}
-	var minLockdelegateTransfers = [][]bool{}
+	var rewardTransfers []bool
+	var minLockTransfers []bool
+	var rewardDelegateTransfers [][]bool
+	var minLockdelegateTransfers [][]bool
 	for i := range f.bStakes {
 		rewardTransfers = append(rewardTransfers, false)
 		minLockTransfers = append(minLockTransfers, false)
@@ -658,7 +658,7 @@ func setupMocksFinishAllocation(
 	var err error
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 		ClientID:     sAllocation.ID,
 		ToClientID:   storageScId,
@@ -781,8 +781,8 @@ type formulaeFinalizeAllocation struct {
 }
 
 func (f *formulaeFinalizeAllocation) _challengePool() int64 {
-	var initial int64 = f.challengePoolBalance
-	var minLockPayment int64 = f._minLockTotal()
+	var initial = f.challengePoolBalance
+	var minLockPayment = f._minLockTotal()
 	require.True(f.t, initial >= minLockPayment)
 
 	return initial - minLockPayment
@@ -873,7 +873,7 @@ func (f *formulaeFinalizeAllocation) _numberOfInterestPayments(blobberIndex, del
 
 func (f *formulaeFinalizeAllocation) blobberServiceCharge(blobberIndex int) int64 {
 	var serviceCharge = blobberYaml.serviceCharge
-	var blobberRewards = float64(f._blobberReward(blobberIndex))
+	var blobberRewards = f._blobberReward(blobberIndex)
 
 	return int64(blobberRewards * serviceCharge)
 }
@@ -889,7 +889,7 @@ func (f *formulaeFinalizeAllocation) blobberDelegateReward(bIndex, dIndex int) i
 	var totalDelegateReward = f._blobberReward(bIndex) - float64(f.blobberServiceCharge(bIndex))
 
 	require.True(f.t, totalStake > 0)
-	return int64(float64(totalDelegateReward) * delegateStake / totalStake)
+	return int64(totalDelegateReward * delegateStake / totalStake)
 }
 
 func (f *formulaeFinalizeAllocation) _blobberReward(blobberIndex int) float64 {
@@ -964,7 +964,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 
 	var txn = &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
-			Hash: datastore.Key(transactionHash),
+			Hash: transactionHash,
 		},
 		Value:        request.Size,
 		ClientID:     clientId,
@@ -1030,7 +1030,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 		individualBlobbers.add(b)
 	}
 
-	var newStakePools = []*stakePool{}
+	var newStakePools []*stakePool
 	for _, blobber := range allBlobbersList.Nodes {
 		var sp, err = ssc.getStakePool(blobber.ID, ctx)
 		require.NoError(t, err)

@@ -87,7 +87,7 @@ func TestUpdateSettings(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}
@@ -218,7 +218,7 @@ func TestCommitSettingChanges(t *testing.T) {
 			scConfigKey(ssc.ID),
 			mock.MatchedBy(func(conf *scConfig) bool {
 				for key, value := range p.inputMap {
-					var setting interface{} = getConfField(*conf, key)
+					var setting = getConfField(*conf, key)
 					fmt.Println("setting", setting, "value", value)
 					switch Settings[key].configType {
 					case smartcontract.Int:
@@ -291,7 +291,7 @@ func TestCommitSettingChanges(t *testing.T) {
 		return args{
 			ssc:      ssc,
 			txn:      txn,
-			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			input:    (&smartcontract.StringMap{Fields: p.inputMap}).Encode(),
 			balances: balances,
 		}
 	}

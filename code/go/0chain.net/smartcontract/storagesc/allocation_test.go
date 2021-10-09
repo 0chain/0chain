@@ -200,7 +200,7 @@ func TestSelectBlobbers(t *testing.T) {
 			}
 
 			size := int64(sa.DataShards + sa.ParityShards)
-			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
+			require.EqualValues(t, (sa.Size+size-1)/size, outSize)
 
 			for _, blobber := range outBlobbers {
 				found := false
@@ -240,7 +240,7 @@ func TestExtendAllocation(t *testing.T) {
 		mockExpiration              = common.Timestamp(17000)
 		mockStake                   = 3
 		mockChallengeCompletionTime = 1 * time.Hour
-		mockMinLockDemmand          = 0.1
+		mockMinLockDemand           = 0.1
 		mockTimeUnit                = 1 * time.Hour
 		mockBlobberBalance          = 11
 		mockHash                    = "mock hash"
@@ -335,7 +335,7 @@ func TestExtendAllocation(t *testing.T) {
 				blobbers = append(blobbers, mockBlobber)
 				sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
 					BlobberID:     mockBlobber.ID,
-					MinLockDemand: zcnToBalance(mockMinLockDemmand),
+					MinLockDemand: zcnToBalance(mockMinLockDemand),
 					Terms: Terms{
 						ChallengeCompletionTime: mockChallengeCompletionTime,
 						WritePrice:              mockWritePrice,
@@ -415,7 +415,7 @@ func TestExtendAllocation(t *testing.T) {
 				}
 				newFunds := sizeInGB(size) *
 					float64(mockWritePrice) *
-					float64(sa.durationInTimeUnits(args.request.Expiration))
+					sa.durationInTimeUnits(args.request.Expiration)
 				return cp.Balance/10 == state.Balance(newFunds/10) // ignore type cast errors
 			}),
 		).Return("", nil).Once()
@@ -796,8 +796,8 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 	alloc.ChallengeCompletionTime = 150 * time.Second
 	alloc.Expiration = 100
 	alloc.BlobberDetails = []*BlobberAllocation{
-		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 12000}},
-		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 4000}},
+		{Size: 20 * 1024, Terms: Terms{WritePrice: 12000}},
+		{Size: 20 * 1024, Terms: Terms{WritePrice: 4000}},
 	}
 	// stake pool not found
 	var blobbers = []*StorageNode{&b1, &b2}
@@ -886,7 +886,7 @@ func Test_sizeInGB(t *testing.T) {
 func newTestAllBlobbers() (all *StorageNodes) {
 	all = new(StorageNodes)
 	all.Nodes = []*StorageNode{
-		&StorageNode{
+		{
 			ID:      "b1",
 			BaseURL: "http://blobber1.test.ru:9100/api",
 			Terms: Terms{
@@ -896,11 +896,11 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        200 * time.Second,
 				ChallengeCompletionTime: 15 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Used:            5 * GB,  //  5 GB
+			Capacity: 20 * GB, // 20 GB
+			Used:     5 * GB,  //  5 GB
 			LastHealthCheck: 0,
-		},
-		&StorageNode{
+				},
+		{
 			ID:      "b2",
 			BaseURL: "http://blobber2.test.ru:9100/api",
 			Terms: Terms{
@@ -910,10 +910,10 @@ func newTestAllBlobbers() (all *StorageNodes) {
 				MaxOfferDuration:        250 * time.Second,
 				ChallengeCompletionTime: 10 * time.Second,
 			},
-			Capacity:        20 * GB, // 20 GB
-			Used:            10 * GB, // 10 GB
+			Capacity: 20 * GB, // 20 GB
+			Used:     10 * GB, // 10 GB
 			LastHealthCheck: 0,
-		},
+				},
 	}
 	return
 }
@@ -1129,7 +1129,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// details
 	var details = []*BlobberAllocation{
-		&BlobberAllocation{
+		{
 			BlobberID:     "b1",
 			AllocationID:  txHash,
 			Size:          10 * GB,
@@ -1137,8 +1137,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Terms:         sb.Nodes[0].Terms,
 			MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
-		},
-		&BlobberAllocation{
+				},
+		{
 			BlobberID:     "b2",
 			AllocationID:  txHash,
 			Size:          10 * GB,
@@ -1146,7 +1146,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Terms:         sb.Nodes[1].Terms,
 			MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
-		},
+				},
 	}
 
 	assert.EqualValues(t, details, aresp.BlobberDetails)
@@ -1219,7 +1219,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 4. ok
-	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
+	alloc.BlobberDetails = []*BlobberAllocation{{}}
 	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 
@@ -1431,9 +1431,9 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 	}
 }
 
-func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
+func (sa *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
-	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
+	require.NoError(t, cp.Decode(mustEncode(t, sa)))
 	return
 }
 

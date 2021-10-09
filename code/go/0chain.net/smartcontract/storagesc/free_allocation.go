@@ -258,7 +258,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	readPoolTokens := int64(float64(txn.Value) * conf.FreeAllocationSettings.ReadPoolFraction)
 	txn.Value -= readPoolTokens
 
-	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, conf, true, balances)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, true, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}
@@ -290,7 +290,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		return "", common.NewErrorf("free_allocation_failed", "locking tokens in read pool: %v", err)
 	}
 
-	return string(resp), err
+	return resp, err
 }
 
 func (ssc *StorageSmartContract) updateFreeStorageRequest(

@@ -12,7 +12,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -37,15 +37,15 @@ func NewStorageSmartContract() sci.SmartContractInterface {
 	return sscCopy
 }
 
-func (ipsc *StorageSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
-	return ipsc.SmartContract.HandlerStats(ctx, params)
+func (ssc *StorageSmartContract) GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error) {
+	return ssc.SmartContract.HandlerStats(ctx, params)
 }
 
-func (ipsc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
-	return ipsc.SmartContractExecutionStats
+func (ssc *StorageSmartContract) GetExecutionStats() map[string]interface{} {
+	return ssc.SmartContractExecutionStats
 }
 
-func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
+func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, _ sci.BCContextI) {
 	ssc.SmartContract = sc
 	ssc.SmartContract.RestHandlers["/get_mpt_key"] = ssc.GetMptKey
 	// sc configurations
@@ -167,7 +167,7 @@ func (ssc *StorageSmartContract) statDecr(name string) {
 
 // functions execution
 
-func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
+func (ssc *StorageSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances chainstate.StateContextI) (
 	resp string, err error) {
 
@@ -176,20 +176,20 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// read/write markers
 
 	case "read_redeem":
-		if resp, err = sc.commitBlobberRead(t, input, balances); err != nil {
+		if resp, err = ssc.commitBlobberRead(t, input, balances); err != nil {
 			return
 		}
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			err = ssc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
 			}
 		}
 
 	case "commit_connection":
-		resp, err = sc.commitBlobberConnection(t, input, balances)
+		resp, err = ssc.commitBlobberConnection(t, input, balances)
 		if err != nil {
 			return
 		}
@@ -197,7 +197,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			err = ssc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
 			}
@@ -206,74 +206,74 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// allocations
 
 	case "new_allocation_request":
-		resp, err = sc.newAllocationRequest(t, input, balances)
+		resp, err = ssc.newAllocationRequest(t, input, balances)
 	case "update_allocation_request":
-		resp, err = sc.updateAllocationRequest(t, input, balances)
+		resp, err = ssc.updateAllocationRequest(t, input, balances)
 	case "finalize_allocation":
-		resp, err = sc.finalizeAllocation(t, input, balances)
+		resp, err = ssc.finalizeAllocation(t, input, balances)
 	case "cancel_allocation":
-		resp, err = sc.cancelAllocationRequest(t, input, balances)
+		resp, err = ssc.cancelAllocationRequest(t, input, balances)
 
 	// free allocations
 
 	case "add_free_storage_assigner":
-		resp, err = sc.addFreeStorageAssigner(t, input, balances)
+		resp, err = ssc.addFreeStorageAssigner(t, input, balances)
 	case "free_allocation_request":
-		resp, err = sc.freeAllocationRequest(t, input, balances)
+		resp, err = ssc.freeAllocationRequest(t, input, balances)
 	case "free_update_allocation":
-		resp, err = sc.updateFreeStorageRequest(t, input, balances)
+		resp, err = ssc.updateFreeStorageRequest(t, input, balances)
 	case "curator_transfer_allocation":
-		resp, err = sc.curatorTransferAllocation(t, input, balances)
+		resp, err = ssc.curatorTransferAllocation(t, input, balances)
 
 	//curator
 	case "add_curator":
-		resp, err = sc.addCurator(t, input, balances)
+		resp, err = ssc.addCurator(t, input, balances)
 	case "remove_curator":
-		resp, err = sc.removeCurator(t, input, balances)
+		resp, err = ssc.removeCurator(t, input, balances)
 
 	// blobbers
 
 	case "add_blobber":
-		resp, err = sc.addBlobber(t, input, balances)
+		resp, err = ssc.addBlobber(t, input, balances)
 	case "add_validator":
-		resp, err = sc.addValidator(t, input, balances)
+		resp, err = ssc.addValidator(t, input, balances)
 	case "blobber_health_check":
-		resp, err = sc.blobberHealthCheck(t, input, balances)
+		resp, err = ssc.blobberHealthCheck(t, input, balances)
 	case "update_blobber_settings":
-		resp, err = sc.updateBlobberSettings(t, input, balances)
+		resp, err = ssc.updateBlobberSettings(t, input, balances)
 	case "pay_blobber_block_rewards":
-		err = sc.payBlobberBlockRewards(balances)
+		err = ssc.payBlobberBlockRewards(balances)
 
 	// read_pool
 
 	case "new_read_pool":
-		resp, err = sc.newReadPool(t, input, balances)
+		resp, err = ssc.newReadPool(t, input, balances)
 	case "read_pool_lock":
-		resp, err = sc.readPoolLock(t, input, balances)
+		resp, err = ssc.readPoolLock(t, input, balances)
 	case "read_pool_unlock":
-		resp, err = sc.readPoolUnlock(t, input, balances)
+		resp, err = ssc.readPoolUnlock(t, input, balances)
 
 	// write pool
 
 	case "write_pool_lock":
-		resp, err = sc.writePoolLock(t, input, balances)
+		resp, err = ssc.writePoolLock(t, input, balances)
 	case "write_pool_unlock":
-		resp, err = sc.writePoolUnlock(t, input, balances)
+		resp, err = ssc.writePoolUnlock(t, input, balances)
 
 		// stake pool
 
 	case "stake_pool_lock":
-		resp, err = sc.stakePoolLock(t, input, balances)
+		resp, err = ssc.stakePoolLock(t, input, balances)
 	case "stake_pool_unlock":
-		resp, err = sc.stakePoolUnlock(t, input, balances)
+		resp, err = ssc.stakePoolUnlock(t, input, balances)
 	case "stake_pool_pay_interests":
-		resp, err = sc.stakePoolPayInterests(t, input, balances)
+		resp, err = ssc.stakePoolPayInterests(t, input, balances)
 
 	case "generate_challenges":
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			err = ssc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return
 			}
@@ -283,15 +283,15 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		return "Challenges generated", nil
 
 	case "challenge_response":
-		resp, err = sc.verifyChallenge(t, input, balances)
+		resp, err = ssc.verifyChallenge(t, input, balances)
 
 	// configurations
 
 	case "update_settings":
-		resp, err = sc.updateSettings(t, input, balances)
+		resp, err = ssc.updateSettings(t, input, balances)
 
 	case "commit_settings_changes":
-		resp, err = sc.commitSettingChanges(t, input, balances)
+		resp, err = ssc.commitSettingChanges(t, input, balances)
 
 	default:
 		err = common.NewErrorf("invalid_storage_function_name",

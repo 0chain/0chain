@@ -15,7 +15,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -86,7 +85,7 @@ func (usp *userStakePools) remove(scKey, clientID datastore.Key,
 }
 
 func userStakePoolsKey(scKey, clientID datastore.Key) datastore.Key {
-	return datastore.Key(scKey + ":stakepool:userpools:" + clientID)
+	return scKey + ":stakepool:userpools:" + clientID
 }
 
 // offerPool represents stake tokens of a blobber locked
@@ -129,7 +128,7 @@ type stakePoolSettings struct {
 	// NumDelegates maximum allowed.
 	NumDelegates int `json:"num_delegates"`
 	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
-	// [0; 1) range). If the ServiceCharge greater than max_charge of the SC
+	// [0; 1] range). If the ServiceCharge greater than max_charge of the SC
 	// then the blobber can't be registered / updated.
 	ServiceCharge float64 `json:"service_charge"`
 }
@@ -176,18 +175,14 @@ func newStakePool() *stakePool {
 
 // stake pool key for the storage SC and  blobber
 func stakePoolKey(scKey, blobberID string) datastore.Key {
-	return datastore.Key(scKey + ":stakepool:" + blobberID)
-}
-
-func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
+	return scKey + ":stakepool:" + blobberID
 }
 
 // Encode to []byte
 func (sp *stakePool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(sp); err != nil {
-		panic(err) // must never happens
+		panic(err) // must never happen
 	}
 	return
 }
@@ -275,7 +270,7 @@ func (sp *stakePool) dig(t *transaction.Transaction,
 	return
 }
 
-// The timeToUnstake is time where given balance can be unstaked. The
+// The timeToUnstake is time when given balance can be unstaked. The
 // timeToUnstake should be called after 'unpdate' and before the new pool
 // will be marked as unstake.
 func (sp *stakePool) timeToUnstake(dp *delegatePool) (
@@ -317,7 +312,7 @@ func (sp *stakePool) timeToUnstake(dp *delegatePool) (
 		// skip already 'unstaked' pools first
 		if unstake > 0 {
 			if unstake -= op.Lock; unstake < 0 {
-				dpb -= (-unstake)
+				dpb -= -unstake
 				unstake = 0
 			}
 		}
@@ -340,9 +335,15 @@ func (sp *stakePool) timeToUnstake(dp *delegatePool) (
 }
 
 // empty a delegate pool if possible, call update before the empty
-func (sp *stakePool) empty(sscID, poolID, clientID string,
-	info *stakePoolUpdateInfo, balances chainstate.StateContextI) (
-	resp string, unstake common.Timestamp, err error) {
+func (sp *stakePool) empty(
+	sscID, poolID, clientID string,
+	info *stakePoolUpdateInfo,
+	balances chainstate.StateContextI,
+) (
+	resp string,
+	unstake common.Timestamp,
+	err error,
+) {
 
 	var dp, ok = sp.Pools[poolID]
 	if !ok {
@@ -353,7 +354,7 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 		return "", 0, errors.New("trying to unlock not by delegate pool owner")
 	}
 
-	if info.stake-info.offers-dp.Balance < 0 {
+	if info.stake - info.offers - dp.Balance < 0 {
 		// is marked as 'unstake'
 		if dp.Unstake > 0 {
 			return "", 0, errors.New("the stake pool locked for opened " +
@@ -382,8 +383,7 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 }
 
 // add offer of an allocation related to blobber owns this stake pool
-func (sp *stakePool) addOffer(alloc *StorageAllocation,
-	balloc *BlobberAllocation) {
+func (sp *stakePool) addOffer(alloc *StorageAllocation, balloc *BlobberAllocation) {
 
 	sp.Offers[alloc.ID] = &offerPool{
 		Lock: state.Balance(
@@ -564,7 +564,7 @@ func (sp *stakePool) slash(
 	}
 
 	// the move is total movements, but it should be divided by all
-	// related stake holders, that can loose some tokens due to
+	// related stakeholders, that can loose some tokens due to
 	// division error;
 
 	var ap = wp.allocPool(alloc.ID, until)
@@ -579,7 +579,7 @@ func (sp *stakePool) slash(
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio = (float64(slash) / float64(sp.stake()))
+	var ratio = float64(slash) / float64(sp.stake())
 
 	for _, dp := range sp.orderedPools() {
 		var one = state.Balance(float64(dp.Balance) * ratio)
@@ -618,7 +618,7 @@ func (sp *stakePool) cleanCapacity(now common.Timestamp,
 	var total, offers = sp.cleanStake(), sp.offersStake(now, dryRun)
 	if total <= offers {
 		// zero, since the offer stake (not updated) can be greater
-		// then the clean stake
+		// than the clean stake
 		return
 	}
 	free = int64((float64(total-offers) / float64(writePrice)) * GB)
@@ -636,8 +636,11 @@ func (sp *stakePool) capacity(now common.Timestamp,
 }
 
 // update the pool to get the stat
-func (sp *stakePool) stat(conf *scConfig, sscKey string,
-	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
+func (sp *stakePool) stat(
+	conf *scConfig,
+	now common.Timestamp,
+	blobber *StorageNode,
+) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
 	stat.ID = blobber.ID
@@ -720,9 +723,9 @@ type delegatePoolStat struct {
 	Balance          state.Balance    `json:"balance"`           // current balance
 	DelegateID       datastore.Key    `json:"delegate_id"`       // wallet
 	Rewards          state.Balance    `json:"rewards"`           // total for all time
-	Interests        state.Balance    `json:"interests"`         // total for all time (payed)
+	Interests        state.Balance    `json:"interests"`         // total for all time (paid)
 	Penalty          state.Balance    `json:"penalty"`           // total for all time
-	PendingInterests state.Balance    `json:"pending_interests"` // not payed yet
+	PendingInterests state.Balance    `json:"pending_interests"` // not paid yet
 	Unstake          common.Timestamp `json:"unstake"`           // want to unstake
 }
 
@@ -911,7 +914,7 @@ func (spr *stakePoolRequest) decode(p []byte) (err error) {
 // unlock response
 type unlockResponse struct {
 	// one of the fields is set in a response, the Unstake if can't unstake
-	// for now and the TokenPoolTransferResponse if has a pool had unlocked
+	// for now and the TokenPoolTransferResponse if it has a pool had unlocked
 
 	Unstake common.Timestamp `json:"unstake"` // max time to wait to unstake
 	tokenpool.TokenPoolTransferResponse
@@ -927,7 +930,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get SC configurations: %v", err)
 	}
 
-	if t.Value < int64(conf.StakePool.MinLock) {
+	if t.Value < conf.StakePool.MinLock {
 		return "", common.NewError("stake_pool_lock_failed",
 			"too small stake to lock")
 	}
@@ -1002,7 +1005,6 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 
 	var (
 		sp   *stakePool
-		info *stakePoolUpdateInfo
 		conf *scConfig
 	)
 
@@ -1044,8 +1046,9 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	}
 
 	var unstake common.Timestamp
-	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info,
-		balances)
+	info := sp.update(t.CreationDate)
+
+	resp, unstake, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
@@ -1082,10 +1085,12 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	return
 }
 
-// pay interests not payed for now
+// pay interests not paid for now
 func (ssc *StorageSmartContract) stakePoolPayInterests(
-	t *transaction.Transaction, input []byte,
-	balances chainstate.StateContextI) (resp string, err error) {
+	_ *transaction.Transaction,
+	input []byte,
+	balances chainstate.StateContextI,
+) (resp string, err error) {
 
 	var (
 		sp   *stakePool
@@ -1139,12 +1144,15 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 const cantGetStakePoolMsg = "can't get related stake pool"
 
 // statistic for all locked tokens of a stake pool
-func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+func (ssc *StorageSmartContract) getStakePoolStatHandler(
+	_ context.Context,
+	params url.Values,
+	balances chainstate.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (
-		blobberID = datastore.Key(params.Get("blobber_id"))
+		blobberID = params.Get("blobber_id")
 		conf      *scConfig
 		blobber   *StorageNode
 		sp        *stakePool
@@ -1162,7 +1170,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetStakePoolMsg)
 	}
 
-	return sp.stat(conf, ssc.ID, common.Now(), blobber), nil
+	return sp.stat(conf, common.Now(), blobber), nil
 }
 
 type userPoolStat struct {
@@ -1170,12 +1178,15 @@ type userPoolStat struct {
 }
 
 // user oriented statistic
-func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+func (ssc *StorageSmartContract) getUserStakePoolStatHandler(
+	_ context.Context,
+	params url.Values,
+	balances chainstate.StateContextI,
+) (
 	resp interface{}, err error) {
 
 	var (
-		clientID = datastore.Key(params.Get("client_id"))
+		clientID = params.Get("client_id")
 		now      = common.Now()
 		conf     *scConfig
 		usp      *userStakePools

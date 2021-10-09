@@ -8,7 +8,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
-	"0chain.net/core/datastore"
 	"0chain.net/smartcontract"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -20,7 +19,7 @@ import (
 
 type Setting int
 
-var settingChangesKey = datastore.Key(ADDRESS + encryption.Hash("setting_changes"))
+var settingChangesKey = ADDRESS + encryption.Hash("setting_changes")
 
 const x10 = 10 * 1000 * 1000 * 1000
 
@@ -199,11 +198,11 @@ var (
 	}
 )
 
-func (conf *scConfig) getConfigMap() smartcontract.StringMap {
+func (sc *scConfig) getConfigMap() smartcontract.StringMap {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		iSetting := conf.get(info.setting)
+		iSetting := sc.get(info.setting)
 		if info.configType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
@@ -216,218 +215,218 @@ func (conf *scConfig) getConfigMap() smartcontract.StringMap {
 	return im
 }
 
-func (conf *scConfig) setInt(key string, change int) {
+func (sc *scConfig) setInt(key string, change int) {
 	switch Settings[key].setting {
 	case FreeAllocationDataShards:
-		conf.FreeAllocationSettings.DataShards = change
+		sc.FreeAllocationSettings.DataShards = change
 	case FreeAllocationParityShards:
-		conf.FreeAllocationSettings.ParityShards = change
+		sc.FreeAllocationSettings.ParityShards = change
 	case FailedChallengesToCancel:
-		conf.FailedChallengesToCancel = change
+		sc.FailedChallengesToCancel = change
 	case FailedChallengesToRevokeMinLock:
-		conf.FailedChallengesToRevokeMinLock = change
+		sc.FailedChallengesToRevokeMinLock = change
 	case MaxChallengesPerGeneration:
-		conf.MaxChallengesPerGeneration = change
+		sc.MaxChallengesPerGeneration = change
 	case MaxDelegates:
-		conf.MaxDelegates = change
+		sc.MaxDelegates = change
 	default:
 		panic("key: " + key + "not implemented as int")
 	}
 }
 
-func (conf *scConfig) setBalance(key string, change state.Balance) {
+func (sc *scConfig) setBalance(key string, change state.Balance) {
 	switch Settings[key].setting {
 	case MaxMint:
-		conf.MaxMint = change
+		sc.MaxMint = change
 	case MaxTotalFreeAllocation:
-		conf.MaxTotalFreeAllocation = change
+		sc.MaxTotalFreeAllocation = change
 	case MaxIndividualFreeAllocation:
-		conf.MaxIndividualFreeAllocation = change
+		sc.MaxIndividualFreeAllocation = change
 	case FreeAllocationReadPriceRangeMin:
-		conf.FreeAllocationSettings.ReadPriceRange.Min = change
+		sc.FreeAllocationSettings.ReadPriceRange.Min = change
 	case FreeAllocationReadPriceRangeMax:
-		conf.FreeAllocationSettings.ReadPriceRange.Max = change
+		sc.FreeAllocationSettings.ReadPriceRange.Max = change
 	case FreeAllocationWritePriceRangeMin:
-		conf.FreeAllocationSettings.WritePriceRange.Min = change
+		sc.FreeAllocationSettings.WritePriceRange.Min = change
 	case FreeAllocationWritePriceRangeMax:
-		conf.FreeAllocationSettings.WritePriceRange.Max = change
+		sc.FreeAllocationSettings.WritePriceRange.Max = change
 	case MaxReadPrice:
-		conf.MaxReadPrice = change
+		sc.MaxReadPrice = change
 	case MaxWritePrice:
-		conf.MaxWritePrice = change
+		sc.MaxWritePrice = change
 	case BlockRewardBlockReward:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlockReward = change
+		sc.BlockReward.BlockReward = change
 	case BlockRewardQualifyingStake:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.QualifyingStake = change
+		sc.BlockReward.QualifyingStake = change
 	default:
 		panic("key: " + key + "not implemented as balance")
 	}
 }
 
-func (conf *scConfig) setInt64(key string, change int64) {
+func (sc *scConfig) setInt64(key string, change int64) {
 	switch Settings[key].setting {
 	case MinAllocSize:
-		conf.MinAllocSize = change
+		sc.MinAllocSize = change
 	case MinBlobberCapacity:
-		conf.MinBlobberCapacity = change
+		sc.MinBlobberCapacity = change
 	case ReadPoolMinLock:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+		if sc.ReadPool == nil {
+			sc.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MinLock = change
+		sc.ReadPool.MinLock = change
 	case WritePoolMinLock:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+		if sc.WritePool == nil {
+			sc.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MinLock = change
+		sc.WritePool.MinLock = change
 	case StakePoolMinLock:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+		if sc.StakePool == nil {
+			sc.StakePool = &stakePoolConfig{}
 		}
-		conf.StakePool.MinLock = change
+		sc.StakePool.MinLock = change
 	case FreeAllocationSize:
-		conf.FreeAllocationSettings.Size = change
+		sc.FreeAllocationSettings.Size = change
 	default:
 		panic("key: " + key + "not implemented as int64")
 	}
 }
 
-func (conf *scConfig) setFloat64(key string, change float64) {
+func (sc *scConfig) setFloat64(key string, change float64) {
 	switch Settings[key].setting {
 	case StakePoolInterestRate:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+		if sc.StakePool == nil {
+			sc.StakePool = &stakePoolConfig{}
 		}
-		conf.StakePool.InterestRate = change
+		sc.StakePool.InterestRate = change
 	case FreeAllocationReadPoolFraction:
-		conf.FreeAllocationSettings.ReadPoolFraction = change
+		sc.FreeAllocationSettings.ReadPoolFraction = change
 	case ValidatorReward:
-		conf.ValidatorReward = change
+		sc.ValidatorReward = change
 	case BlobberSlash:
-		conf.BlobberSlash = change
+		sc.BlobberSlash = change
 	case ChallengeGenerationRate:
-		conf.ChallengeGenerationRate = change
+		sc.ChallengeGenerationRate = change
 	case BlockRewardSharderWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.SharderWeight = change
+		sc.BlockReward.SharderWeight = change
 	case BlockRewardMinerWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.MinerWeight = change
+		sc.BlockReward.MinerWeight = change
 	case BlockRewardBlobberCapacityWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberCapacityWeight = change
+		sc.BlockReward.BlobberCapacityWeight = change
 	case BlockRewardBlobberUsageWeight:
-		if conf.BlockReward == nil {
-			conf.BlockReward = &blockReward{}
+		if sc.BlockReward == nil {
+			sc.BlockReward = &blockReward{}
 		}
-		conf.BlockReward.BlobberUsageWeight = change
+		sc.BlockReward.BlobberUsageWeight = change
 	default:
 		panic("key: " + key + "not implemented as float64")
 	}
 }
 
-func (conf *scConfig) setDuration(key string, change time.Duration) {
+func (sc *scConfig) setDuration(key string, change time.Duration) {
 	switch Settings[key].setting {
 	case TimeUnit:
-		conf.TimeUnit = change
+		sc.TimeUnit = change
 	case MinAllocDuration:
-		conf.MinAllocDuration = change
+		sc.MinAllocDuration = change
 	case MaxChallengeCompletionTime:
-		conf.MaxChallengeCompletionTime = change
+		sc.MaxChallengeCompletionTime = change
 	case MinOfferDuration:
-		conf.MinOfferDuration = change
+		sc.MinOfferDuration = change
 	case ReadPoolMinLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+		if sc.ReadPool == nil {
+			sc.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MinLockPeriod = change
+		sc.ReadPool.MinLockPeriod = change
 	case ReadPoolMaxLockPeriod:
-		if conf.ReadPool == nil {
-			conf.ReadPool = &readPoolConfig{}
+		if sc.ReadPool == nil {
+			sc.ReadPool = &readPoolConfig{}
 		}
-		conf.ReadPool.MaxLockPeriod = change
+		sc.ReadPool.MaxLockPeriod = change
 	case WritePoolMinLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+		if sc.WritePool == nil {
+			sc.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MinLockPeriod = change
+		sc.WritePool.MinLockPeriod = change
 	case WritePoolMaxLockPeriod:
-		if conf.WritePool == nil {
-			conf.WritePool = &writePoolConfig{}
+		if sc.WritePool == nil {
+			sc.WritePool = &writePoolConfig{}
 		}
-		conf.WritePool.MaxLockPeriod = change
+		sc.WritePool.MaxLockPeriod = change
 	case StakePoolInterestInterval:
-		if conf.StakePool == nil {
-			conf.StakePool = &stakePoolConfig{}
+		if sc.StakePool == nil {
+			sc.StakePool = &stakePoolConfig{}
 		}
-		conf.StakePool.InterestInterval = change
+		sc.StakePool.InterestInterval = change
 	case FreeAllocationDuration:
-		conf.FreeAllocationSettings.Duration = change
+		sc.FreeAllocationSettings.Duration = change
 	case FreeAllocationMaxChallengeCompletionTime:
-		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
+		sc.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	default:
 		panic("key: " + key + "not implemented as duration")
 	}
 }
 
-func (conf *scConfig) setBoolean(key string, change bool) {
+func (sc *scConfig) setBoolean(key string, change bool) {
 	switch Settings[key].setting {
 	case ChallengeEnabled:
-		conf.ChallengeEnabled = change
+		sc.ChallengeEnabled = change
 	case ExposeMpt:
-		conf.ExposeMpt = change
+		sc.ExposeMpt = change
 	default:
 		panic("key: " + key + "not implemented as boolean")
 	}
 }
 
-func (conf *scConfig) set(key string, change string) error {
+func (sc *scConfig) set(key string, change string) error {
 	switch Settings[key].configType {
 	case smartcontract.Int:
 		if value, err := strconv.Atoi(change); err == nil {
-			conf.setInt(key, value)
+			sc.setInt(key, value)
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setBalance(key, state.Balance(value*x10))
+			sc.setBalance(key, state.Balance(value*x10))
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
 	case smartcontract.Int64:
 		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			conf.setInt64(key, value)
+			sc.setInt64(key, value)
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
 	case smartcontract.Float64:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setFloat64(key, value)
+			sc.setFloat64(key, value)
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
 	case smartcontract.Duration:
 		if value, err := time.ParseDuration(change); err == nil {
-			conf.setDuration(key, value)
+			sc.setDuration(key, value)
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
 		}
 	case smartcontract.Boolean:
 		if value, err := strconv.ParseBool(change); err == nil {
-			conf.setBoolean(key, value)
+			sc.setBoolean(key, value)
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
@@ -437,106 +436,106 @@ func (conf *scConfig) set(key string, change string) error {
 	return nil
 }
 
-func (conf *scConfig) get(key Setting) interface{} {
+func (sc *scConfig) get(key Setting) interface{} {
 	switch key {
 	case MaxMint:
-		return conf.MaxMint
+		return sc.MaxMint
 	case TimeUnit:
-		return conf.TimeUnit
+		return sc.TimeUnit
 	case MinAllocSize:
-		return conf.MinAllocSize
+		return sc.MinAllocSize
 	case MinAllocDuration:
-		return conf.MinAllocDuration
+		return sc.MinAllocDuration
 	case MaxChallengeCompletionTime:
-		return conf.MaxChallengeCompletionTime
+		return sc.MaxChallengeCompletionTime
 	case MinOfferDuration:
-		return conf.MinOfferDuration
+		return sc.MinOfferDuration
 	case MinBlobberCapacity:
-		return conf.MinBlobberCapacity
+		return sc.MinBlobberCapacity
 	case ReadPoolMinLock:
-		return conf.ReadPool.MinLock
+		return sc.ReadPool.MinLock
 	case ReadPoolMinLockPeriod:
-		return conf.ReadPool.MinLockPeriod
+		return sc.ReadPool.MinLockPeriod
 	case ReadPoolMaxLockPeriod:
-		return conf.ReadPool.MaxLockPeriod
+		return sc.ReadPool.MaxLockPeriod
 	case WritePoolMinLock:
-		return conf.WritePool.MinLock
+		return sc.WritePool.MinLock
 	case WritePoolMinLockPeriod:
-		return conf.WritePool.MinLockPeriod
+		return sc.WritePool.MinLockPeriod
 	case WritePoolMaxLockPeriod:
-		return conf.WritePool.MaxLockPeriod
+		return sc.WritePool.MaxLockPeriod
 	case StakePoolMinLock:
-		return conf.StakePool.MinLock
+		return sc.StakePool.MinLock
 	case StakePoolInterestRate:
-		return conf.StakePool.InterestRate
+		return sc.StakePool.InterestRate
 	case StakePoolInterestInterval:
-		return conf.StakePool.InterestInterval
+		return sc.StakePool.InterestInterval
 	case MaxTotalFreeAllocation:
-		return conf.MaxTotalFreeAllocation
+		return sc.MaxTotalFreeAllocation
 	case MaxIndividualFreeAllocation:
-		return conf.MaxIndividualFreeAllocation
+		return sc.MaxIndividualFreeAllocation
 	case FreeAllocationDataShards:
-		return conf.FreeAllocationSettings.DataShards
+		return sc.FreeAllocationSettings.DataShards
 	case FreeAllocationParityShards:
-		return conf.FreeAllocationSettings.ParityShards
+		return sc.FreeAllocationSettings.ParityShards
 	case FreeAllocationSize:
-		return conf.FreeAllocationSettings.Size
+		return sc.FreeAllocationSettings.Size
 	case FreeAllocationDuration:
-		return conf.FreeAllocationSettings.Duration
+		return sc.FreeAllocationSettings.Duration
 	case FreeAllocationReadPriceRangeMin:
-		return conf.FreeAllocationSettings.ReadPriceRange.Min
+		return sc.FreeAllocationSettings.ReadPriceRange.Min
 	case FreeAllocationReadPriceRangeMax:
-		return conf.FreeAllocationSettings.ReadPriceRange.Max
+		return sc.FreeAllocationSettings.ReadPriceRange.Max
 	case FreeAllocationWritePriceRangeMin:
-		return conf.FreeAllocationSettings.WritePriceRange.Min
+		return sc.FreeAllocationSettings.WritePriceRange.Min
 	case FreeAllocationWritePriceRangeMax:
-		return conf.FreeAllocationSettings.WritePriceRange.Max
+		return sc.FreeAllocationSettings.WritePriceRange.Max
 	case FreeAllocationMaxChallengeCompletionTime:
-		return conf.FreeAllocationSettings.MaxChallengeCompletionTime
+		return sc.FreeAllocationSettings.MaxChallengeCompletionTime
 	case FreeAllocationReadPoolFraction:
-		return conf.FreeAllocationSettings.ReadPoolFraction
+		return sc.FreeAllocationSettings.ReadPoolFraction
 	case ValidatorReward:
-		return conf.ValidatorReward
+		return sc.ValidatorReward
 	case BlobberSlash:
-		return conf.BlobberSlash
+		return sc.BlobberSlash
 	case MaxReadPrice:
-		return conf.MaxReadPrice
+		return sc.MaxReadPrice
 	case MaxWritePrice:
-		return conf.MaxWritePrice
+		return sc.MaxWritePrice
 	case FailedChallengesToCancel:
-		return conf.FailedChallengesToCancel
+		return sc.FailedChallengesToCancel
 	case FailedChallengesToRevokeMinLock:
-		return conf.FailedChallengesToRevokeMinLock
+		return sc.FailedChallengesToRevokeMinLock
 	case ChallengeEnabled:
-		return conf.ChallengeEnabled
+		return sc.ChallengeEnabled
 	case ChallengeGenerationRate:
-		return conf.ChallengeGenerationRate
+		return sc.ChallengeGenerationRate
 	case MaxChallengesPerGeneration:
-		return conf.MaxChallengesPerGeneration
+		return sc.MaxChallengesPerGeneration
 	case MaxDelegates:
-		return conf.MaxDelegates
+		return sc.MaxDelegates
 	case BlockRewardBlockReward:
-		return conf.BlockReward.BlockReward
+		return sc.BlockReward.BlockReward
 	case BlockRewardQualifyingStake:
-		return conf.BlockReward.QualifyingStake
+		return sc.BlockReward.QualifyingStake
 	case BlockRewardSharderWeight:
-		return conf.BlockReward.SharderWeight
+		return sc.BlockReward.SharderWeight
 	case BlockRewardMinerWeight:
-		return conf.BlockReward.MinerWeight
+		return sc.BlockReward.MinerWeight
 	case BlockRewardBlobberCapacityWeight:
-		return conf.BlockReward.BlobberCapacityWeight
+		return sc.BlockReward.BlobberCapacityWeight
 	case BlockRewardBlobberUsageWeight:
-		return conf.BlockReward.BlobberUsageWeight
+		return sc.BlockReward.BlobberUsageWeight
 	case ExposeMpt:
-		return conf.ExposeMpt
+		return sc.ExposeMpt
 	default:
 		panic("Setting not implemented")
 	}
 }
 
-func (conf *scConfig) update(changes smartcontract.StringMap) error {
+func (sc *scConfig) update(changes smartcontract.StringMap) error {
 	for key, value := range changes.Fields {
-		if err := conf.set(key, value); err != nil {
+		if err := sc.set(key, value); err != nil {
 			return err
 		}
 	}
@@ -582,7 +581,7 @@ func (ssc *StorageSmartContract) updateSettings(
 }
 
 func (ssc *StorageSmartContract) commitSettingChanges(
-	t *transaction.Transaction,
+	_ *transaction.Transaction,
 	_ []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {

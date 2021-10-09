@@ -90,7 +90,7 @@ func getPayments(sp *stakePool, value float64) ([]payment, float64, error) {
 		return nil, 0, fmt.Errorf("no stake pools to move tokens to")
 	}
 
-	valueLeft := float64(value) - serviceCharge
+	valueLeft := value - serviceCharge
 	var stake = float64(sp.stake())
 
 	var moved = 0.0

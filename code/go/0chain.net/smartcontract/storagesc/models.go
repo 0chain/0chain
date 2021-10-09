@@ -19,10 +19,10 @@ import (
 )
 
 var (
-	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+	ALL_BLOBBERS_KEY    = ADDRESS + encryption.Hash("all_blobbers")
+	ALL_VALIDATORS_KEY  = ADDRESS + encryption.Hash("all_validators")
+	ALL_ALLOCATIONS_KEY = ADDRESS + encryption.Hash("all_allocations")
+	STORAGE_STATS_KEY   = ADDRESS + encryption.Hash("all_storage")
 )
 
 type ClientAllocation struct {
@@ -31,7 +31,7 @@ type ClientAllocation struct {
 }
 
 func (sn *ClientAllocation) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ClientID)
+	return globalKey + sn.ClientID
 }
 
 func (sn *ClientAllocation) Encode() []byte {
@@ -59,8 +59,8 @@ type Allocations struct {
 	List sortedList
 }
 
-func (a *Allocations) has(id string) (ok bool) {
-	_, ok = a.List.getIndex(id)
+func (an *Allocations) has(id string) (ok bool) {
+	_, ok = an.List.getIndex(id)
 	return // false
 }
 
@@ -98,7 +98,7 @@ type BlobberChallenge struct {
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + ":blobberchallenge:" + sn.BlobberID)
+	return globalKey + ":blobberchallenge:" + sn.BlobberID
 }
 
 func (sn *BlobberChallenge) Encode() []byte {
@@ -165,7 +165,7 @@ type ValidationNode struct {
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.ID)
+	return globalKey + "validator:" + sn.ID
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -226,13 +226,13 @@ type Terms struct {
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
 	MinLockDemand float64 `json:"min_lock_demand"`
-	// MaxOfferDuration with this prices and the demand.
+	// MaxOfferDuration with these prices and the demand.
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	// ChallengeCompletionTime is duration required to complete a challenge.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
-// The minLockDemand returns min lock demand value for this Terms (the
+// The minLockDemand returns min lock demand value for these Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
 func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
@@ -278,7 +278,7 @@ const (
 	MinLongitude = -180
 )
 
-// Move to the core, in case of multi-entity use of geo data
+// StorageNodeGeolocation Move to the core, in case of multi-entity use of geo data
 type StorageNodeGeolocation struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -333,7 +333,7 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+	return globalKey + sn.ID
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -403,7 +403,7 @@ type BlobberAllocation struct {
 	// Spent is number of tokens sent from write pool to challenge pool
 	// for this blobber. It's used to calculate min lock demand left
 	// for this blobber. For a case, where a client uses > 1 parity shards
-	// and don't sends a data to one of blobbers, the blobber should
+	// and don't send a data to one of blobbers, the blobber should
 	// receive its min_lock_demand tokens. Thus, we can't use shared
 	// (for allocation) min_lock_demand and spent.
 	Spent state.Balance `json:"spent"`
@@ -411,12 +411,12 @@ type BlobberAllocation struct {
 	Penalty state.Balance `json:"penalty"`
 	// ReadReward of the blobber.
 	ReadReward state.Balance `json:"read_reward"`
-	// Returned back to write pool on challenge failed.
+	// Returned to write pool on challenge failed.
 	Returned state.Balance `json:"returned"`
 	// ChallengeReward of the blobber.
 	ChallengeReward state.Balance `json:"challenge_reward"`
 	// FinalReward is number of tokens moved to the blobber on finalization.
-	// It can be greater than zero, if user didn't spent the min lock demand
+	// It can be greater than zero, if user didn't spend the min lock demand
 	// during the allocation.
 	FinalReward state.Balance `json:"final_reward"`
 
@@ -491,9 +491,7 @@ type BlobberAllocation struct {
 
 // The upload used after commitBlobberConnection (size > 0) to calculate
 // internal integral value.
-func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
-	rdtu float64) (move state.Balance) {
-
+func (d *BlobberAllocation) upload(size int64, rdtu float64) (move state.Balance) {
 	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue += move
 	return
@@ -502,9 +500,7 @@ func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
 // The upload used after commitBlobberConnection (size < 0) to calculate
 // internal integral value. The size argument expected to be positive (not
 // negative).
-func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
-	rdtu float64) (move state.Balance) {
-
+func (d *BlobberAllocation) delete(size int64, rdtu float64) (move state.Balance) {
 	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
 	d.ChallengePoolIntegralValue -= move
 	return
@@ -948,27 +944,27 @@ func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
 	return false // unknown
 }
 
-func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+func (sa *StorageAllocation) GetKey(globalKey string) datastore.Key {
+	return globalKey + sa.ID
 }
 
-func (sn *StorageAllocation) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
+func (sa *StorageAllocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, sa)
 	if err != nil {
 		return err
 	}
-	sn.BlobberMap = make(map[string]*BlobberAllocation)
-	for _, blobberAllocation := range sn.BlobberDetails {
+	sa.BlobberMap = make(map[string]*BlobberAllocation)
+	for _, blobberAllocation := range sa.BlobberDetails {
 		if blobberAllocation.Stats != nil {
-			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+			sa.UsedSize += blobberAllocation.Stats.UsedSize // total used
 		}
-		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
+		sa.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil
 }
 
-func (sn *StorageAllocation) Encode() []byte {
-	buff, _ := json.Marshal(sn)
+func (sa *StorageAllocation) Encode() []byte {
+	buff, _ := json.Marshal(sa)
 	return buff
 }
 
@@ -1060,8 +1056,7 @@ type ReadConnection struct {
 }
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey +
-		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+	return globalKey + encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID)
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

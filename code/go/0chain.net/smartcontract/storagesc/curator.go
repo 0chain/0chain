@@ -17,7 +17,7 @@ func (aci *curatorInput) decode(input []byte) error {
 	return json.Unmarshal(input, aci)
 }
 
-func (sc *StorageSmartContract) removeCurator(
+func (ssc *StorageSmartContract) removeCurator(
 	txn *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
@@ -30,7 +30,7 @@ func (sc *StorageSmartContract) removeCurator(
 	}
 
 	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(rci.AllocationId, balances)
+	alloc, err = ssc.getAllocation(rci.AllocationId, balances)
 	if err != nil {
 		return "", common.NewError("remove_curator_failed alloc_cancel_failed", err.Error())
 	}
@@ -59,7 +59,7 @@ func (sc *StorageSmartContract) removeCurator(
 			"cannot find curator: "+rci.CuratorId)
 	}
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("remove_curator_failed",
 			"cannot save allocation"+err.Error())
@@ -68,7 +68,7 @@ func (sc *StorageSmartContract) removeCurator(
 	return "", nil
 }
 
-func (sc *StorageSmartContract) addCurator(
+func (ssc *StorageSmartContract) addCurator(
 	txn *transaction.Transaction,
 	input []byte,
 	balances chainstate.StateContextI,
@@ -81,7 +81,7 @@ func (sc *StorageSmartContract) addCurator(
 	}
 
 	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(aci.AllocationId, balances)
+	alloc, err = ssc.getAllocation(aci.AllocationId, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -98,7 +98,7 @@ func (sc *StorageSmartContract) addCurator(
 
 	alloc.Curators = append(alloc.Curators, aci.CuratorId)
 
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 	if err != nil {
 		return "", common.NewError("add_curator_failed",
 			"cannot save allocation"+err.Error())

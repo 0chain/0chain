@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"sort"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
-func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI) (*ValidatorNodes, error) {
+func (ssc *StorageSmartContract) getValidatorsList(balances cstate.StateContextI) (*ValidatorNodes, error) {
 	allValidatorsList := &ValidatorNodes{}
 	allValidatorsBytes, err := balances.GetTrieNode(ALL_VALIDATORS_KEY)
 	if allValidatorsBytes == nil {
@@ -25,8 +25,8 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 	return allValidatorsList, nil
 }
 
-func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
-	allValidatorsList, err := sc.getValidatorsList(balances)
+func (ssc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+	allValidatorsList, err := ssc.getValidatorsList(balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed", "Failed to get validator list."+err.Error())
 	}
@@ -37,34 +37,34 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	blobberBytes, _ := balances.GetTrieNode(newValidator.GetKey(sc.ID))
+	blobberBytes, _ := balances.GetTrieNode(newValidator.GetKey(ssc.ID))
 	if blobberBytes == nil {
 		allValidatorsList.Nodes = append(allValidatorsList.Nodes, newValidator)
 		// allValidatorsBytes, _ := json.Marshal(allValidatorsList)
 		balances.InsertTrieNode(ALL_VALIDATORS_KEY, allValidatorsList)
-		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+		balances.InsertTrieNode(newValidator.GetKey(ssc.ID), newValidator)
 
-		sc.statIncr(statAddValidator)
-		sc.statIncr(statNumberOfValidators)
+		ssc.statIncr(statAddValidator)
+		ssc.statIncr(statNumberOfValidators)
 	} else {
-		sc.statIncr(statUpdateValidator)
+		ssc.statIncr(statUpdateValidator)
 	}
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)
 	}
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
+	sp, err = ssc.getOrCreateStakePool(conf, t.ClientID,
 		&newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}
-	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("add_validator_failed",
 			"saving stake pool error: "+err.Error())
 	}
