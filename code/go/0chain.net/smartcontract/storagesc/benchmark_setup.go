@@ -185,6 +185,7 @@ func addMockAllocation(
 			FailedChallenges:          1,
 			LastestClosedChallengeTxn: "latest closed challenge transaction:" + id,
 		},
+		TimeUnit: 1 * time.Hour,
 	}
 	for j := 0; j < viper.GetInt(sc.NumCurators); j++ {
 		sa.Curators = append(sa.Curators, clients[j])
@@ -218,7 +219,7 @@ func addMockAllocation(
 			ID:                bId,
 			BaseURL:           bId + ".com",
 			Terms:             getMockBlobberTerms(),
-			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 10000,
+			Capacity:          viper.GetInt64(sc.StorageMinBlobberCapacity) * 100000,
 			Used:              0,
 			LastHealthCheck:   now, //common.Timestamp(viper.GetInt64(sc.Now) - 1),
 			PublicKey:         "",
@@ -298,6 +299,7 @@ func AddMockBlobbers(
 }
 
 func AddMockValidators(
+	publicKeys []string,
 	balances cstate.StateContextI,
 ) []*ValidationNode {
 	var sscId = StorageSmartContract{
@@ -309,6 +311,7 @@ func AddMockValidators(
 		validator := &ValidationNode{
 			ID:                id,
 			BaseURL:           id + ".com",
+			PublicKey:         publicKeys[i],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		validators.Nodes = append(validators.Nodes, validator)
@@ -343,7 +346,7 @@ func GetMockStakePools(
 			Settings: getMockStakePoolSettings(bId),
 		}
 		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
-			id := getMockStakePoolId(i, j)
+			id := getMockBlobberStakePoolId(i, j)
 			clientIndex := (i&len(clients) + j) % len(clients)
 			sp.Pools[id] = &delegatePool{}
 			sp.Pools[id].ID = id
@@ -360,6 +363,7 @@ func GetMockStakePools(
 		}
 		sps = append(sps, sp)
 	}
+
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
@@ -373,6 +377,41 @@ func GetMockStakePools(
 	}
 
 	return sps
+}
+
+func GetMockValidatorStakePools(
+	clients []string,
+	balances cstate.StateContextI,
+) {
+	var sscId = StorageSmartContract{
+		SmartContract: sci.NewSC(ADDRESS),
+	}.ID
+	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
+		bId := getMockValidatorId(i)
+		sp := &stakePool{
+			Pools:  make(map[string]*delegatePool),
+			Offers: make(map[string]*offerPool),
+			Rewards: stakePoolRewards{
+				Charge:    0,
+				Blobber:   0,
+				Validator: 0,
+			},
+			Settings: getMockStakePoolSettings(bId),
+		}
+		for j := 0; j < viper.GetInt(sc.NumBlobberDelegates); j++ {
+			id := getMockValidatorStakePoolId(i, j)
+			clientIndex := (i&len(clients) + j) % len(clients)
+			sp.Pools[id] = &delegatePool{}
+			sp.Pools[id].ID = id
+			sp.Pools[id].Balance = state.Balance(viper.GetInt64(sc.StorageMaxStake) * 1e10)
+
+			sp.Pools[id].DelegateID = clients[clientIndex]
+			err := sp.save(sscId, getMockValidatorId(i), balances)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
 }
 
 func SaveMockStakePools(
@@ -467,7 +506,7 @@ func getMockBlobberTerms() Terms {
 	return Terms{
 		ReadPrice:               state.Balance(0.1 * 1e10),
 		WritePrice:              state.Balance(0.1 * 1e10),
-		MinLockDemand:           1,
+		MinLockDemand:           0.0007,
 		MaxOfferDuration:        10000 * viper.GetDuration(sc.StorageMinOfferDuration),
 		ChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 	}
@@ -491,8 +530,12 @@ func getMockWritePoolId(allocation, client, index int) string {
 	return encryption.Hash("write pool" + strconv.Itoa(client) + strconv.Itoa(allocation) + strconv.Itoa(index))
 }
 
-func getMockStakePoolId(blobber, stake int) string {
+func getMockBlobberStakePoolId(blobber, stake int) string {
 	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
+}
+
+func getMockValidatorStakePoolId(blobber, stake int) string {
+	return encryption.Hash(getMockValidatorId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
 func getMockBlobberId(index int) string {

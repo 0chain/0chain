@@ -112,12 +112,14 @@ func setUpMpt(
 	log.Println("created balances")
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
-	validators := storagesc.AddMockValidators(balances)
+	validators := storagesc.AddMockValidators(publicKeys, balances)
 	log.Println("added validators")
 	blobbers := storagesc.AddMockBlobbers(balances)
 	log.Println("added blobbers")
 	stakePools := storagesc.GetMockStakePools(clients, balances)
 	log.Println("added stake pools")
+	storagesc.GetMockValidatorStakePools(clients, balances)
+	log.Println("added validator stake pools")
 	storagesc.AddMockAllocations(
 		clients, publicKeys, stakePools, blobbers, validators, balances,
 	)
