@@ -932,7 +932,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg6 = "allocation_creation_failed: " +
 			"not enough blobbers to honor the allocation"
 		errMsg7 = "allocation_creation_failed: " +
-			"Not enough blobbers to honor the allocation"
+			"not enough blobbers to honor the allocation"
 		errMsg8 = "allocation_creation_failed: " +
 			"not enough tokens to honor the min lock demand (0 < 270)"
 		errMsg9 = "allocation_creation_failed: " +
