@@ -93,7 +93,12 @@ func init() {
 		return waitSharderKeep(ex, val, tm)
 	})
 
-	// control nodes behavior / misbehavior (view change)
+	// control nodes behavior / misbehavior
+
+	register("generators_failure", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return configureGeneratorsFailure(name, ex, val)
+	})
 
 	register("set_revealed", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
