@@ -1229,15 +1229,13 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 					ClientID:               client.id,
 				},
 			}
-			cc.WriteMarker.Signature, err = client.scheme.Sign(
-				encryption.Hash(cc.WriteMarker.GetHashData()))
+			cc.WriteMarker.Signature, err = client.scheme.Sign(encryption.Hash(cc.WriteMarker.GetHashData()))
 			require.NoError(t, err)
 			// write
 			var tx = newTransaction(b.id, ssc.ID, 0, tp)
 			balances.setTransaction(t, tx)
 			var resp string
-			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-				balances)
+			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
 			require.NoError(t, err)
 			require.NotZero(t, resp)
 		}
@@ -1285,8 +1283,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 		// ---------------
 
-		var fc = int64(maxInt(conf.FailedChallengesToCancel,
-			conf.FailedChallengesToRevokeMinLock))
+		var fc = int64(maxInt(conf.FailedChallengesToCancel, conf.FailedChallengesToRevokeMinLock))
 
 		tp += 10
 
@@ -1306,8 +1303,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 				if i > 0 {
 					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
 				}
-				genChall(t, ssc, b.id, tp, prevID, challID, i,
-					validators.Nodes, alloc.ID, blobber, allocRoot, balances)
+				genChall(t, ssc, b.id, tp, prevID, challID, i, validators.Nodes, alloc.ID, blobber, allocRoot, balances)
 			}
 		}
 
@@ -1386,9 +1382,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			assert.Zero(t, vsp.Rewards.Validator)
 			assert.Zero(t, balances.balances[val.id])
 		}
-
 	})
-
 }
 
 // Client cancels a transaction before the blobber has written a

@@ -399,9 +399,7 @@ func (sp *stakePool) findOffer(allocID string) *offerPool {
 }
 
 // extendOffer changes offer lock and expiration on update allocations
-func (sp *stakePool) extendOffer(alloc *StorageAllocation,
-	balloc *BlobberAllocation) (err error) {
-
+func (sp *stakePool) extendOffer(alloc *StorageAllocation, balloc *BlobberAllocation) (err error) {
 	var (
 		op      = sp.findOffer(alloc.ID)
 		newLock = state.Balance(sizeInGB(balloc.Size) * float64(balloc.Terms.WritePrice))
@@ -624,8 +622,8 @@ type stakePoolStat struct {
 	Offers      []offerPoolStat `json:"offers"`       //
 	OffersTotal state.Balance   `json:"offers_total"` //
 	// delegate pools
-	Delegate  []delegatePoolStat `json:"delegate"`
-	Penalty   state.Balance      `json:"penalty"`   // total for all
+	Delegate []delegatePoolStat `json:"delegate"`
+	Penalty  state.Balance      `json:"penalty"` // total for all
 	// rewards
 	Rewards rewardsStat `json:"rewards"`
 

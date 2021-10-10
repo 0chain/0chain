@@ -300,8 +300,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		blobs = append(blobs, b)
 	}
 
-	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
-		balances)
+	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now, balances)
 	require.NoError(t, err)
 
 	var deco StorageAllocation

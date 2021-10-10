@@ -1187,7 +1187,7 @@ func (ssc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 // If blobbers doesn't provide their services, then user can use this
 // cancel_allocation transaction to close allocation and unlock all tokens
-// of write pool back to himself. The canecl_allocation doesn't pay min_lock
+// of write pool back to himself. The cancel_allocation doesn't pay min_lock
 // demand to blobbers.
 func (ssc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
@@ -1243,12 +1243,16 @@ func (ssc *StorageSmartContract) cancelAllocationRequest(
 	for _, d := range alloc.BlobberDetails {
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
-			return "", common.NewError("finish_alloc_failed",
-				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+			return "", common.NewError(
+				"finish_alloc_failed",
+				"can't get stake pool of "+d.BlobberID+": "+err.Error(),
+			)
 		}
 		if err = sp.extendOffer(alloc, d); err != nil {
-			return "", common.NewError("alloc_cancel_failed",
-				"removing stake pool offer for "+d.BlobberID+": "+err.Error())
+			return "", common.NewError(
+				"alloc_cancel_failed",
+				"removing stake pool offer for "+d.BlobberID+": "+err.Error(),
+			)
 		}
 		sps = append(sps, sp)
 	}
@@ -1481,13 +1485,6 @@ func (ssc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return common.NewError("finish_alloc_failed",
 			"saving all allocations list: "+err.Error())
-	}
-
-	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return common.NewError("finish_alloc_failed",
-			"saving configurations: "+err.Error())
 	}
 
 	return nil
