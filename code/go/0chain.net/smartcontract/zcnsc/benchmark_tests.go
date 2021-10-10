@@ -3,8 +3,11 @@ package zcnsc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
 	"github.com/stretchr/testify/require"
+	"math/rand"
 	"strconv"
 	"testing"
 )
@@ -41,7 +44,7 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 			{
 				name:     benchmark.Zcn + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createTransaction(),
+				txn:      createTransaction(data.Clients, data.PublicKeys),
 				input:    createAuthorizer(data.PublicKeys),
 			},
 		},
@@ -57,13 +60,21 @@ func createAuthorizer(publicKey []string) []byte {
 	return node.Encode()
 }
 
-// TODO: complete transaction
-func createTransaction() *transaction.Transaction {
-	return &transaction.Transaction{}
+func createTransaction(clients, publicKey []string) *transaction.Transaction {
+	index := randomIndex(len(clients))
+	return &transaction.Transaction{
+		HashIDField: datastore.HashIDField{
+			Hash: encryption.Hash("mock transaction hash"),
+		},
+		ClientID:   clients[index],
+		PublicKey:  publicKey[index],
+		ToClientID: ADDRESS,
+		Value:      3000,
+	}
 }
 
-func randomIndex(num int) int {
-	return 0
+func randomIndex(max int) int {
+	return rand.Intn(max)
 }
 
 func createTestSuite(restTests []benchTest) benchmark.TestSuite {
