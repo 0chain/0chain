@@ -14,6 +14,10 @@ const (
 	commonClientId = 0
 )
 
+var (
+	nonce = int64(0)
+)
+
 func Setup(clients []string, publicKeys []string, balances cstate.StateContextI) {
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)

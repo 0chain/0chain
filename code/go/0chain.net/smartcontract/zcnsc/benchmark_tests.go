@@ -54,8 +54,33 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 				txn:      createTransaction(data.Clients[commonClientId], data.PublicKeys[commonClientId]),
 				input:    nil,
 			},
+			{
+				name:     benchmark.Zcn + BurnFunc,
+				endpoint: sc.Burn,
+				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				input:    createBurnPayload(),
+			},
+			{
+				name:     benchmark.Zcn + MintFunc,
+				endpoint: sc.Mint,
+				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				input:    createMintPayload(),
+			},
 		},
 	)
+}
+
+func createMintPayload() []byte {
+	return nil
+}
+
+func createBurnPayload() []byte {
+	nonce = nonce + 1
+	payload := BurnPayload{
+		Nonce:           nonce,
+		EthereumAddress: "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
+	}
+	return payload.Encode()
 }
 
 func createRandomAuthorizer(publicKey []string) []byte {
