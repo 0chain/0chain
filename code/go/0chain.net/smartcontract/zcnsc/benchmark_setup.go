@@ -15,7 +15,8 @@ const (
 )
 
 var (
-	nonce = int64(0)
+	nonce       = int64(0)
+	authorizers []*AuthorizerNode
 )
 
 func Setup(clients []string, publicKeys []string, balances cstate.StateContextI) {
@@ -23,7 +24,6 @@ func Setup(clients []string, publicKeys []string, balances cstate.StateContextI)
 	addMockUserNodes(clients, balances)
 	addAuthorizersNode(balances)
 	addCommonAuthorizer(publicKeys, balances)
-	addRandomAuthorizer(publicKeys, balances)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -76,15 +76,19 @@ func addCommonAuthorizer(keys []string, balances cstate.StateContextI) {
 	if err != nil {
 		panic(err)
 	}
-	bytes := createAuthorizer(keys[commonClientId], commonClientId)
-	authorizer := &AuthorizerNode{}
-	err = authorizer.Decode(bytes)
-	if err != nil {
-		panic(err)
-	}
-	err = ans.AddAuthorizer(authorizer)
-	if err != nil {
-		return
+
+	for i := 0; i < len(keys); i++ {
+		bytes := createAuthorizer(keys[i], i)
+		authorizer := &AuthorizerNode{}
+		err = authorizer.Decode(bytes)
+		if err != nil {
+			panic(err)
+		}
+		authorizers = append(authorizers, authorizer)
+		err = ans.AddAuthorizer(authorizer)
+		if err != nil {
+			return
+		}
 	}
 	err = ans.Save(balances)
 	if err != nil {

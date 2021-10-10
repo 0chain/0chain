@@ -71,7 +71,15 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 }
 
 func createMintPayload() []byte {
-	return nil
+	nonce = nonce + 1
+	payload := MintPayload{
+		EthereumTxnID:     "0xc8285f5304b1B7aAB09a7d26721D6F585448D0ed",
+		Amount:            1,
+		Nonce:             nonce,
+		Signatures:        nil, // TODO: fill
+		ReceivingClientID: "",  // TODO: fill
+	}
+	return payload.Encode()
 }
 
 func createBurnPayload() []byte {
