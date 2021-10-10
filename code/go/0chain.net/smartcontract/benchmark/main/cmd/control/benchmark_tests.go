@@ -45,12 +45,20 @@ func BenchmarkTests(
 ) bk.TestSuite {
 	var tests = []BenchTest{
 		{
-			name:     "control.array." + strconv.Itoa(viper.GetInt(bk.ControlM)),
+			name:     "control.access_array." + strconv.Itoa(viper.GetInt(bk.ControlM)),
 			endpoint: controlArray,
 		},
 		{
-			name:     "control.individual." + strconv.Itoa(viper.GetInt(bk.ControlN)),
+			name:     "control.access_individual." + strconv.Itoa(viper.GetInt(bk.ControlN)),
 			endpoint: controlIndividual,
+		},
+		{
+			name:     "control.update_array." + strconv.Itoa(viper.GetInt(bk.ControlM)),
+			endpoint: controlUpdateArray,
+		},
+		{
+			name:     "control.update_individual." + strconv.Itoa(viper.GetInt(bk.ControlN)),
+			endpoint: controlUpdateIndividual,
 		},
 		{
 			name:     "control.all_miners." + strconv.Itoa(viper.GetInt(bk.NumMiners)),
@@ -89,6 +97,32 @@ func controlIndividual(balances cstate.StateContextI) error {
 	return nil
 }
 
+func controlUpdateIndividual(balances cstate.StateContextI) error {
+	m := viper.GetInt(bk.ControlM)
+	n := viper.GetInt(bk.ControlN)
+	if m == 0 || n > m {
+		return nil
+	}
+
+	for i := 0; i < n; i++ {
+		var it item
+		val, err := balances.GetTrieNode(getControlNKey(i))
+		if err != nil {
+			return err
+		}
+		if err := it.Decode(val.Encode()); err != nil {
+			return fmt.Errorf("%w: %s", common.ErrDecoding, err)
+		}
+
+		it.Field = 1
+		_, err = balances.InsertTrieNode(getControlNKey(i), &it)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func controlArray(balances cstate.StateContextI) error {
 	m := viper.GetInt(bk.ControlM)
 	n := viper.GetInt(bk.ControlN)
@@ -104,6 +138,31 @@ func controlArray(balances cstate.StateContextI) error {
 	if err := ia.Decode(val.Encode()); err != nil {
 		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
+	return nil
+}
+
+func controlUpdateArray(balances cstate.StateContextI) error {
+	m := viper.GetInt(bk.ControlM)
+	n := viper.GetInt(bk.ControlN)
+	if m == 0 || n > m {
+		return nil
+	}
+
+	var ia itemArray
+	val, err := balances.GetTrieNode(controlMKey)
+	if err != nil {
+		return err
+	}
+	if err := ia.Decode(val.Encode()); err != nil {
+		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+
+	ia.Fields = append(ia.Fields, 1)
+	_, err = balances.InsertTrieNode(controlMKey, &ia)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
