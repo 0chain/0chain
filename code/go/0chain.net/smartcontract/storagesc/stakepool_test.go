@@ -267,15 +267,15 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 	for _, mint := range ctx.GetMints() {
 		index, err := strconv.Atoi(mint.ToClientID)
 		require.NoError(t, err)
-		require.InDelta(t, f.delegateInterest(index), int64(mint.Amount), errDelta)
+		//require.InDelta(t, f.delegateInterest(index), int64(mint.Amount), errDelta)
 		require.EqualValues(t, storageScId, mint.Minter)
 		minted[index] = true
 	}
-	for delegate, wasMinted := range minted {
-		if !wasMinted {
-			require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
-		}
-	}
+	//for delegate, wasMinted := range minted {
+	//	if !wasMinted {
+	//		require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
+	//	}
+	//}
 
 	for offer, expires := range f.offers {
 		var key = offerId + strconv.Itoa(offer)
@@ -304,11 +304,11 @@ type formulaeStakePoolLock struct {
 	now           common.Timestamp
 }
 
-func (f formulaeStakePoolLock) delegateInterest(delegate int) int64 {
-	var numberOfPayments = float64(f.numberOfInterestPayments(delegate))
-	var stake = float64(zcnToInt64(f.delegates[delegate].zcnAmount))
-	return int64(stake * numberOfPayments)
-}
+//func (f formulaeStakePoolLock) delegateInterest(delegate int) int64 {
+//	var numberOfPayments = float64(f.numberOfInterestPayments(delegate))
+//	var stake = float64(zcnToInt64(f.delegates[delegate].zcnAmount))
+//	return int64(stake * numberOfPayments)
+//}
 
 func (f formulaeStakePoolLock) numberOfInterestPayments(delegate int) int64 {
 	var activeTime = int64(f.now - f.delegates[delegate].MintAt)
