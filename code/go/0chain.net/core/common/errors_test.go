@@ -10,7 +10,7 @@ func TestError_Error(t *testing.T) {
 	t.Parallel()
 
 	type fields struct {
-		Code string
+		Code CodeString
 		Msg  string
 	}
 	tests := []struct {
@@ -76,7 +76,7 @@ func TestNewError(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		code string
+		code CodeString
 		msg  string
 	}
 	tests := []struct {
@@ -106,7 +106,7 @@ func TestNewErrorf(t *testing.T) {
 	t.Parallel()
 
 	type args struct {
-		code   string
+		code   CodeString
 		format string
 		args   []interface{}
 	}
