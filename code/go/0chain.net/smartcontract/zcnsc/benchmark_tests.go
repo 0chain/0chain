@@ -32,6 +32,7 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 }
 
 func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) {
+	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
 	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
 	require.NoError(b, err)
 }
@@ -44,30 +45,44 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 			{
 				name:     benchmark.Zcn + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createTransaction(data.Clients, data.PublicKeys),
-				input:    createAuthorizer(data.PublicKeys),
+				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				input:    createRandomAuthorizer(data.PublicKeys),
+			},
+			{
+				name:     benchmark.Zcn + DeleteAuthorizerFunc,
+				endpoint: sc.DeleteAuthorizer,
+				txn:      createTransaction(data.Clients[commonClientId], data.PublicKeys[commonClientId]),
+				input:    nil,
 			},
 		},
 	)
 }
 
-func createAuthorizer(publicKey []string) []byte {
+func createRandomAuthorizer(publicKey []string) []byte {
 	index := randomIndex(len(publicKey))
+	return createAuthorizer(publicKey[index], index)
+}
+
+func createAuthorizer(publicKey string, index int) []byte {
 	node := authorizerNodeArg{
-		PublicKey: publicKey[index],
+		PublicKey: publicKey,
 		URL:       "http://localhost:303" + strconv.Itoa(index),
 	}
 	return node.Encode()
 }
 
-func createTransaction(clients, publicKey []string) *transaction.Transaction {
+func createRandomTransaction(clients, publicKey []string) *transaction.Transaction {
 	index := randomIndex(len(clients))
+	return createTransaction(clients[index], publicKey[index])
+}
+
+func createTransaction(clientId, publicKey string) *transaction.Transaction {
 	return &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
 		},
-		ClientID:   clients[index],
-		PublicKey:  publicKey[index],
+		ClientID:   clientId,
+		PublicKey:  publicKey,
 		ToClientID: ADDRESS,
 		Value:      3000,
 	}

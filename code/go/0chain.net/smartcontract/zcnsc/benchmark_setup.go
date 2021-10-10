@@ -10,9 +10,16 @@ import (
 	"encoding/json"
 )
 
+const (
+	commonClientId = 0
+)
+
 func Setup(clients []string, publicKeys []string, balances cstate.StateContextI) {
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
+	addAuthorizersNode(balances)
+	addCommonAuthorizer(publicKeys, balances)
+	addRandomAuthorizer(publicKeys, balances)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -26,6 +33,59 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
+}
+
+func addAuthorizersNode(balances cstate.StateContextI) {
+	ans, err := GetAuthorizerNodes(balances)
+	if err != nil {
+		panic(err)
+	}
+	err = ans.Save(balances)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func addRandomAuthorizer(keys []string, balances cstate.StateContextI) {
+	ans, err := GetAuthorizerNodes(balances)
+	if err != nil {
+		panic(err)
+	}
+	bytes := createRandomAuthorizer(keys)
+	authorizer := &AuthorizerNode{}
+	err = authorizer.Decode(bytes)
+	if err != nil {
+		panic(err)
+	}
+	err = ans.AddAuthorizer(authorizer)
+	if err != nil {
+		return
+	}
+	err = ans.Save(balances)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func addCommonAuthorizer(keys []string, balances cstate.StateContextI) {
+	ans, err := GetAuthorizerNodes(balances)
+	if err != nil {
+		panic(err)
+	}
+	bytes := createAuthorizer(keys[commonClientId], commonClientId)
+	authorizer := &AuthorizerNode{}
+	err = authorizer.Decode(bytes)
+	if err != nil {
+		panic(err)
+	}
+	err = ans.AddAuthorizer(authorizer)
+	if err != nil {
+		return
+	}
+	err = ans.Save(balances)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func addMockUserNodes(clients []string, balances cstate.StateContextI) {
