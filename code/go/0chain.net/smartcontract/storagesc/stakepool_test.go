@@ -98,14 +98,6 @@ const (
 	errStakeTooSmall = "too small stake to lock"
 )
 
-type splResponse struct {
-	TxnHash string
-	ToPool  string
-	Value      float64
-	FromClient string
-	ToClient   string
-}
-
 func TestStakePoolLock(t *testing.T) {
 	var err error
 	scYaml = &scConfig{
@@ -248,8 +240,14 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 	return nil
 }
 
-func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, newStakePool stakePool,
-	newUsp userStakePools, ctx cstate.StateContextI) {
+func confirmPoolLockResult(
+	t *testing.T,
+	f formulaeStakePoolLock,
+	resp string,
+	newStakePool stakePool,
+	newUsp userStakePools,
+	ctx cstate.StateContextI,
+) {
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, f.value, int64(transfer.Amount))
 		require.EqualValues(t, storageScId, transfer.ToClientID)
@@ -278,11 +276,11 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 	//}
 
 	// TODO: review this commented test
-	//for offer, expires := range f.offers {
-	//	var key = offerId + strconv.Itoa(offer)
-	//	_, ok := newStakePool.Offers[key]
-	//	require.EqualValues(t, expires > f.now, ok)
-	//}
+	for offer, expires := range f.offers {
+		var key = offerId + strconv.Itoa(offer)
+		_, ok := newStakePool.Offers[key]
+		require.EqualValues(t, expires > f.now, ok)
+	}
 
 	pools, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
