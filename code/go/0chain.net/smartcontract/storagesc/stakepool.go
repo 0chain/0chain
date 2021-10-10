@@ -432,11 +432,9 @@ func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 
 // update information about the stake pool internals
 func (sp *stakePool) update(now common.Timestamp) (info *stakePoolUpdateInfo) {
-
 	info = new(stakePoolUpdateInfo)
 	info.stake = sp.stake()                  // capacity stake
 	info.offers = sp.offersStake(now, false) // offers stake
-
 	return
 }
 

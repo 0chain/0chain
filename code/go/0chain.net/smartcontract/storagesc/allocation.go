@@ -554,7 +554,7 @@ func (ssc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"doesn't need to close allocation is about to expire")
 	}
 
-	// mark as expired, but it will be alive at least chellenge_competion_time
+	// mark as expired, but it will be alive at least challenge_competition_time
 	alloc.Expiration = t.CreationDate
 
 	// stake pool (offers)
@@ -1102,7 +1102,7 @@ func (ssc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([
 	if alloc.Stats == nil {
 		alloc.Stats = &StorageAllocationStats{}
 	}
-	var failed, succesful int64 = 0, 0
+	var failed, successful int64 = 0, 0
 	var passRates = make([]float64, 0, len(alloc.BlobberDetails))
 	for _, blobber := range alloc.BlobberDetails {
 		if blobber.Stats == nil {
@@ -1116,10 +1116,10 @@ func (ssc *StorageSmartContract) finalizedPassRates(alloc *StorageAllocation) ([
 			continue
 		}
 		passRates = append(passRates, float64(blobber.Stats.SuccessChallenges)/float64(blobber.Stats.TotalChallenges))
-		succesful += blobber.Stats.SuccessChallenges
+		successful += blobber.Stats.SuccessChallenges
 		failed += blobber.Stats.FailedChallenges
 	}
-	alloc.Stats.SuccessChallenges = succesful
+	alloc.Stats.SuccessChallenges = successful
 	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
@@ -1136,7 +1136,7 @@ func (ssc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		alloc.Stats = &StorageAllocationStats{}
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
-	var failed, succesful int64 = 0, 0
+	var failed, successful int64 = 0, 0
 	// range over all related blobbers
 	for _, d := range alloc.BlobberDetails {
 		// check out blobber challenges
@@ -1175,10 +1175,10 @@ func (ssc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 		// success rate for the blobber allocation
 		//fmt.Println("pass rate i", i, "successful", d.Stats.SuccessChallenges, "failed", d.Stats.FailedChallenges)
 		passRates = append(passRates, float64(d.Stats.SuccessChallenges)/float64(d.Stats.TotalChallenges))
-		succesful += d.Stats.SuccessChallenges
+		successful += d.Stats.SuccessChallenges
 		failed += d.Stats.FailedChallenges
 	}
-	alloc.Stats.SuccessChallenges = succesful
+	alloc.Stats.SuccessChallenges = successful
 	alloc.Stats.FailedChallenges = failed
 	alloc.Stats.TotalChallenges = alloc.Stats.FailedChallenges + alloc.Stats.FailedChallenges
 	alloc.Stats.OpenChallenges = 0
@@ -1257,7 +1257,7 @@ func (ssc *StorageSmartContract) cancelAllocationRequest(
 		sps = append(sps, sp)
 	}
 
-	err = ssc.finishAllocation(alloc, passRates, sps, balances)
+	err = ssc.finishAllocation(t, alloc, passRates, sps, balances)
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
@@ -1331,7 +1331,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 		sps = append(sps, sp)
 	}
 
-	err = ssc.finishAllocation(alloc, passRates, sps, balances)
+	err = ssc.finishAllocation(t, alloc, passRates, sps, balances)
 	if err != nil {
 		return "", common.NewError("finish_alloc_failed", err.Error())
 	}
@@ -1347,6 +1347,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 }
 
 func (ssc *StorageSmartContract) finishAllocation(
+	t *transaction.Transaction,
 	alloc *StorageAllocation,
 	passRates []float64,
 	sps []*stakePool,
@@ -1380,8 +1381,8 @@ func (ssc *StorageSmartContract) finishAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
-	var allb *StorageNodes
-	if allb, err = ssc.getBlobbersList(balances); err != nil {
+	var storageNodes *StorageNodes
+	if storageNodes, err = ssc.getBlobbersList(balances); err != nil {
 		return common.NewError("finish_alloc_failed",
 			"can't get all blobbers list: "+err.Error())
 	}
@@ -1426,6 +1427,8 @@ func (ssc *StorageSmartContract) finishAllocation(
 			passPayments += move
 		}
 
+		_ = sps[i].update(t.CreationDate)
+
 		if err := sps[i].save(ssc.ID, d.BlobberID, balances); err != nil {
 			return common.NewError("finish_alloc_failed",
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
@@ -1438,7 +1441,7 @@ func (ssc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 		// update the blobber in all (replace with existing one)
-		allb.Nodes.update(b)
+		storageNodes.Nodes.update(b)
 	}
 	cp.Balance = cpLeft - passPayments
 	// move challenge pool rest to write pool
@@ -1450,7 +1453,7 @@ func (ssc *StorageSmartContract) finishAllocation(
 	}
 
 	// save all blobbers list
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allb)
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, storageNodes)
 	if err != nil {
 		return common.NewError("finish_alloc_failed",
 			"saving all blobbers list: "+err.Error())
