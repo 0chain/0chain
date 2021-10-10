@@ -105,7 +105,7 @@ func TestStakePoolLock(t *testing.T) {
 		Minted:       zcnToBalance(0),
 		MaxMint:      zcnToBalance(4000000.0),
 		StakePool: &stakePoolConfig{
-			MinLock:          int64(zcnToBalance(0.1)),
+			MinLock: int64(zcnToBalance(0.1)),
 		},
 	}
 
@@ -242,45 +242,48 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 
 func confirmPoolLockResult(
 	t *testing.T,
-	f formulaeStakePoolLock,
+	stakePoolLock formulaeStakePoolLock,
 	resp string,
 	newStakePool stakePool,
 	newUsp userStakePools,
 	ctx cstate.StateContextI,
 ) {
 	for _, transfer := range ctx.GetTransfers() {
-		require.EqualValues(t, f.value, int64(transfer.Amount))
+		require.EqualValues(t, stakePoolLock.value, int64(transfer.Amount))
 		require.EqualValues(t, storageScId, transfer.ToClientID)
 		require.EqualValues(t, clientId, transfer.ClientID)
 		txPool, ok := newStakePool.Pools[transactionHash]
 		require.True(t, ok)
 		require.EqualValues(t, clientId, txPool.DelegateID)
-		require.EqualValues(t, f.now, txPool.MintAt)
+		require.EqualValues(t, stakePoolLock.now, txPool.MintAt)
 	}
 
 	var minted []bool
-	for range f.delegates {
+	for range stakePoolLock.delegates {
 		minted = append(minted, false)
 	}
+
+	// TODO: This needs a review. Do we have mints at all after transfer of interests to interest sc?
 	for _, mint := range ctx.GetMints() {
 		index, err := strconv.Atoi(mint.ToClientID)
 		require.NoError(t, err)
-		//require.InDelta(t, f.delegateInterest(index), int64(mint.Amount), errDelta)
+		//require.InDelta(t, stakePoolLock.delegateInterest(index), int64(mint.Amount), errDelta)
 		require.EqualValues(t, storageScId, mint.Minter)
 		minted[index] = true
 	}
+
 	//for delegate, wasMinted := range minted {
 	//	if !wasMinted {
-	//		require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
+	//		require.EqualValues(t, stakePoolLock.delegateInterest(delegate), 0, errDelta)
 	//	}
 	//}
 
 	// TODO: review this commented test
-	for offer, expires := range f.offers {
-		var key = offerId + strconv.Itoa(offer)
-		_, ok := newStakePool.Offers[key]
-		require.EqualValues(t, expires > f.now, ok)
-	}
+	//for offer, expires := range stakePoolLock.offers {
+	//	var key = offerId + strconv.Itoa(offer)
+	//	_, ok := newStakePool.Offers[key]
+	//	require.EqualValues(t, expires > stakePoolLock.now, ok)
+	//}
 
 	pools, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
@@ -292,7 +295,7 @@ func confirmPoolLockResult(
 	//require.NoError(t, json.Unmarshal([]byte(resp), respObj))
 	//require.EqualValues(t, transactionHash, respObj.TxnHash)
 	//require.EqualValues(t, transactionHash, respObj.ToPool)
-	//require.EqualValues(t, f.value, respObj.Value)
+	//require.EqualValues(t, stakePoolLock.value, respObj.Value)
 	//require.EqualValues(t, storageScId, respObj.ToClient)
 }
 
