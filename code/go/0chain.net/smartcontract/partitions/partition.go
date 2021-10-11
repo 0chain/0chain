@@ -15,7 +15,7 @@ type Partition interface {
 	Remove(PartitionItem, int, state.StateContextI) error
 }
 
-type RandomisingPartition interface {
+type RandPartition interface {
 	Partition
 	GetRandomPartition(int64, state.StateContextI) ([]PartitionItem, error)
 }

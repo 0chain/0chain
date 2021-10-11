@@ -97,8 +97,12 @@ type randomSelector struct {
 	Callback      ChangePartitionCallback `json:"callback"`
 }
 
-func NewRandomSelector(name string, size int, callback ChangePartitionCallback) randomSelector {
-	return randomSelector{
+func NewRandomSelector(
+	name string,
+	size int,
+	callback ChangePartitionCallback,
+) RandPartition {
+	return &randomSelector{
 		Name:          name,
 		PartitionSize: size,
 		Callback:      callback,
@@ -245,7 +249,7 @@ func (rs *randomSelector) getPartition(i int, balances state.StateContextI) (*it
 func GetRandomSelector(
 	key datastore.Key,
 	balances state.StateContextI,
-) (RandomisingPartition, error) {
+) (RandPartition, error) {
 	var rs randomSelector
 	val, err := balances.GetTrieNode(key)
 	if err != nil {

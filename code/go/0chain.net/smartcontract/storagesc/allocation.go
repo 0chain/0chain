@@ -50,23 +50,6 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string,
 	return clientAlloc.Allocations, nil
 }
 
-func (sc *StorageSmartContract) getAllAllocationsList(
-	balances chainstate.StateContextI) (*Allocations, error) {
-
-	allocationList := &Allocations{}
-
-	allocationListBytes, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY)
-	if allocationListBytes == nil {
-		return allocationList, nil
-	}
-	err = json.Unmarshal(allocationListBytes.Encode(), allocationList)
-	if err != nil {
-		return nil, common.NewError("getAllAllocationsList_failed",
-			"Failed to retrieve existing allocations list")
-	}
-	return allocationList, nil
-}
-
 func (sc *StorageSmartContract) removeUserAllocation(
 	oldUser string,
 	alloc *StorageAllocation,
