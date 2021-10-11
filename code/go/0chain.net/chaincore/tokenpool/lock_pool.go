@@ -19,8 +19,8 @@ func (p *ZcnLockingPool) Encode() []byte {
 	return buff
 }
 
-func (p *ZcnLockingPool) Decode(input []byte, tokelock TokenLockInterface) error {
-	p.TokenLockInterface = tokelock
+func (p *ZcnLockingPool) Decode(input []byte, tokenlock TokenLockInterface) error {
+	p.TokenLockInterface = tokenlock
 	err := json.Unmarshal(input, p)
 	return err
 }

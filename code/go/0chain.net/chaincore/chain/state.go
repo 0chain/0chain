@@ -183,6 +183,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
 			state.Balance(txn.Value)))
 		if err != nil {
+			logging.Logger.Error("Failed to add transfer",
+				zap.Any("txn type", txn.TransactionType),
+				zap.Any("transaction_ClientID", txn.ClientID),
+				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
 	default:
@@ -194,6 +199,11 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS,
 			state.Balance(txn.Fee)))
 		if err != nil {
+			logging.Logger.Error("Failed to add transfer",
+				zap.Any("txn type", txn.TransactionType),
+				zap.Any("transaction_ClientID", txn.ClientID),
+				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
 	}
@@ -205,6 +215,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	for _, transfer := range sctx.GetTransfers() {
 		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
+			logging.Logger.Error("Failed to transfer amount",
+				zap.Any("transfer_ClientID", transfer.ClientID),
+				zap.Any("to_ClientID", transfer.ToClientID),
+				zap.Any("amount", transfer.Amount))
 			return
 		}
 	}
@@ -213,6 +227,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = c.transferAmount(sctx, signedTransfer.ClientID,
 			signedTransfer.ToClientID, signedTransfer.Amount)
 		if err != nil {
+			logging.Logger.Error("Failed to process signed transfer",
+				zap.Any("signedTransfer_ClientID", signedTransfer.ClientID),
+				zap.Any("signedTransfer_to_ClientID", signedTransfer.ToClientID),
+				zap.Any("signedTransfer_amount", signedTransfer.Amount))
 			return
 		}
 	}
