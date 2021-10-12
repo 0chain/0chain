@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -111,7 +113,7 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"Failed to get allocation list: %v", err)
 	}
-	all, err := sc.getAllAllocationsList(balances)
+	all, err := getAllAllocationsList(balances)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"Failed to get allocation list: %v", err)
@@ -130,9 +132,12 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewError("add_allocation_failed", err.Error())
 	}
 
-	all.List.add(alloc.ID)
+	alloc.AllAllocationsPartition, err = all.Add(partitions.ItemFromString(alloc.ID), balances)
+	if err != nil {
+		return "", common.NewError("add_allocation_failed", err.Error())
+	}
 
-	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
+	if err = all.Save(balances); err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving all allocations list: %v", err)
 	}
@@ -1458,19 +1463,19 @@ func (sc *StorageSmartContract) finishAllocation(
 
 	alloc.Finalized = true
 
-	var all *Allocations
-	if all, err = sc.getAllAllocationsList(balances); err != nil {
+	all, err := getAllAllocationsList(balances)
+	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"getting all allocations list: "+err.Error())
 	}
 
-	if !all.List.remove(alloc.ID) {
+	err = all.Remove(partitions.ItemFromString(alloc.ID), alloc.AllAllocationsPartition, balances)
+	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"invalid state: allocation not found in all allocations list")
 	}
 
-	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
-	if err != nil {
+	if err = all.Save(balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving all allocations list: "+err.Error())
 	}

@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract/benchmark"
@@ -26,7 +28,7 @@ func AddMockAllocations(
 		sscId = StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
-		allocations Allocations
+		allocations []partitions.PartitionItem
 		wps         = make([]*writePool, len(clients), len(clients))
 		rps         = make([]*readPool, len(clients), len(clients))
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
@@ -43,7 +45,7 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
-		allocations.List.add(sa.ID)
+		allocations = append(allocations, partitions.ItemFromString(sa.ID))
 
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
@@ -137,7 +139,10 @@ func AddMockAllocations(
 		}
 	}
 
-	_, err := balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allocations)
+	all := partitions.NewPopulatedRandomSelector(
+		ALL_ALLOCATIONS_KEY, allAllocationsPartitionSize, nil, allocations,
+	)
+	err := all.Save(balances)
 	if err != nil {
 		panic(err)
 	}

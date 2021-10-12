@@ -13,9 +13,13 @@ type ChangePartitionCallback = func(PartitionItem, int, int, state.StateContextI
 type Partition interface {
 	Add(PartitionItem, state.StateContextI) (int, error)
 	Remove(PartitionItem, int, state.StateContextI) error
+
+	SetCallback(ChangePartitionCallback)
+	Size(i state.StateContextI) (int, error)
+	Save(state.StateContextI) error
 }
 
 type RandPartition interface {
 	Partition
-	GetRandomPartition(int64, state.StateContextI) ([]PartitionItem, error)
+	GetRandomSlice(int64, state.StateContextI) ([]PartitionItem, error)
 }

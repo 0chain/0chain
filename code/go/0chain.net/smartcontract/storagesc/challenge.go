@@ -594,27 +594,30 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			"not enough validators for the challenge")
 	}
 
-	var all *Allocations
-	if all, err = sc.getAllAllocationsList(balances); err != nil {
+	all, err := getAllAllocationsList(balances)
+	if err != nil {
 		return common.NewErrorf("adding_challenge_error",
 			"error getting the allocation list: %v", err)
 	}
 
-	if len(all.List) == 0 {
+	randomSlice, err := all.GetRandomSlice(int64(t.CreationDate), balances)
+	if len(randomSlice) == 0 {
 		return common.NewError("adding_challenge_error",
 			"no allocations at this time")
 	}
 
+	numChallenges = int64(math.Min(float64(numChallenges), float64(len(randomSlice))))
+
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
-		alloc, err = sc.getAllocation(all.List[i], balances)
+		alloc, err = sc.getAllocation(randomSlice[i].Name(), balances)
 		if err != nil && err != util.ErrValueNotPresent {
 			return nil, common.NewErrorf("adding_challenge_error",
 				"unexpected error getting allocation: %v", err)
 		}
 		if err == util.ErrValueNotPresent {
 			Logger.Error("client state has invalid allocations",
-				zap.Any("allocation_list", all.List),
-				zap.Any("selected_allocation", all.List[i]))
+				zap.Any("allocation_list", randomSlice),
+				zap.Any("selected_allocation", randomSlice[i].Name()))
 			return nil, common.NewErrorf("invalid_allocation",
 				"client state has invalid allocations")
 		}
@@ -640,7 +643,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 		// looking for allocation with NumWrites > 0
 
-		alloc, err = selectAlloc(r.Intn(len(all.List)))
+		alloc, err = selectAlloc(int(i))
 		if err != nil {
 			return err
 		}
@@ -763,7 +766,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
 	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
-	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(balances, storageChallenge.Created)
 	return string(challengeBytes), err

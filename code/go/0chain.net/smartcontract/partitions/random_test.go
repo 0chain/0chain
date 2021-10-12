@@ -92,7 +92,11 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 
 	balances := &mocks.StateContextI{}
-	rs := NewRandomSelector(mockName, mockDivisionSize, mockCallBack)
+	rs := randomSelector{
+		Name:          mockName,
+		PartitionSize: mockDivisionSize,
+		Callback:      mockCallBack,
+	}
 
 	for i := 0; i <= fuzzyRunLength/mockDivisionSize; i++ {
 		balances.On(
@@ -117,7 +121,6 @@ func TestFuzzyRandom(t *testing.T) {
 			})
 
 		case Remove:
-			fmt.Println("remove", action)
 			err := rs.Remove(action.item, action.divisionId, balances)
 			require.NoError(t, err, fmt.Sprintf("action Remove: %v, error: %v", action, err))
 			for index, fuzzyItem := range items {
@@ -128,10 +131,9 @@ func TestFuzzyRandom(t *testing.T) {
 				}
 			}
 		case GetRandomPartition:
-			list, err := rs.GetRandomPartition(int64(i), balances)
+			list, err := rs.GetRandomSlice(int64(i), balances)
 			require.NoError(t, err, fmt.Sprintf("action Change: %v, error: %v", action, err))
-			//	fmt.Println("i", i, "list", list)
-			list = list
+			require.True(t, len(list) <= rs.PartitionSize)
 		default:
 			require.Fail(t, "action not found")
 		}

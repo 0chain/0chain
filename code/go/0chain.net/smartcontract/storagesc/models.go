@@ -545,19 +545,20 @@ type StorageAllocation struct {
 	// Tx keeps hash with which the allocation has created or updated.
 	Tx string `json:"tx"`
 
-	DataShards        int                           `json:"data_shards"`
-	ParityShards      int                           `json:"parity_shards"`
-	Size              int64                         `json:"size"`
-	Expiration        common.Timestamp              `json:"expiration_date"`
-	Blobbers          []*StorageNode                `json:"blobbers"`
-	Owner             string                        `json:"owner_id"`
-	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Stats             *StorageAllocationStats       `json:"stats"`
-	DiverseBlobbers   bool                          `json:"diverse_blobbers"`
-	PreferredBlobbers []string                      `json:"preferred_blobbers"`
-	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap        map[string]*BlobberAllocation `json:"-"`
-	IsImmutable       bool                          `json:"is_immutable"`
+	DataShards              int                           `json:"data_shards"`
+	ParityShards            int                           `json:"parity_shards"`
+	Size                    int64                         `json:"size"`
+	Expiration              common.Timestamp              `json:"expiration_date"`
+	Blobbers                []*StorageNode                `json:"blobbers"`
+	Owner                   string                        `json:"owner_id"`
+	OwnerPublicKey          string                        `json:"owner_public_key"`
+	Stats                   *StorageAllocationStats       `json:"stats"`
+	DiverseBlobbers         bool                          `json:"diverse_blobbers"`
+	PreferredBlobbers       []string                      `json:"preferred_blobbers"`
+	BlobberDetails          []*BlobberAllocation          `json:"blobber_details"`
+	BlobberMap              map[string]*BlobberAllocation `json:"-"`
+	IsImmutable             bool                          `json:"is_immutable"`
+	AllAllocationsPartition int                           `json:"all_allocations_partition"`
 
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`
