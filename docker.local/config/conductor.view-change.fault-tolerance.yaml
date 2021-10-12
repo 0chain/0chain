@@ -33,7 +33,8 @@ enable:
 sets:
   - name: "Complex scenarios"
     tests:
-      - "All nodes fail and recover randomly (scenario 2)"
+      #- "All nodes fail and recover randomly (scenario 2)"
+      - "Generators fail at start of round"
 
 tests:
   - name: "All nodes fail and recover randomly (scenario 2)"
@@ -87,3 +88,23 @@ tests:
           expect_magic_block:
             sharders: ["sharder-1"]
             miners: ["miner-1", "miner-2", "miner-3"]
+
+  - name: "Generators fail at start of round"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6", "miner-7", "miner-8"]
+          start: true
+      - wait_view_change:
+          timeout: "10m"
+          expect_magic_block:
+            number: 2
+            sharders: ["sharder-1"]
+            miners_count: 7
+      - wait_round:
+          round: 300
+      - generators_failure: 310 # setup failure for generators selected on start of round 310
+      - wait_round:
+          shift: 350
