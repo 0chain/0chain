@@ -277,7 +277,7 @@ func mockStateContextI() *mockStateContext {
 	)
 	stateContext.On("GetClientBalance", argStr).Return(
 		func(id string) state.Balance {
-			if strings.Contains(id, "id:consumer:") {
+			if strings.Contains(id, "id:consumer:") || strings.Contains(id, "id:provider:") {
 				return 10000 * 1e9 // 1000 * 1e9 units equal to ten thousand coins
 			}
 			return 0

@@ -90,8 +90,6 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 		return m.providerStake(txn, blob, sci)
 	case providerUnstake:
 		return m.providerUnstake(txn, blob, sci)
-	case providerSessionInit:
-		return m.providerSessionInit(txn, blob, sci)
 	case providerUpdate:
 		return m.providerUpdate(txn, blob, sci)
 

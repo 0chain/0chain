@@ -7,9 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
-
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 	"github.com/0chain/gosdk/zmagmacore/time"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -597,6 +596,7 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	sess := mockSession()
+	sess.AccessPoint.MinStake = 1
 	sess.Billing = zmc.Billing{} // initial value
 	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, session, sess.SessionID), sess); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
@@ -619,6 +619,20 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	provList := Providers{}
 	if err := provList.add(msc.ID, sess.Provider, msc.db, sci); err != nil {
 		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
+	}
+
+	apList := AccessPoints{}
+	if err := apList.add(msc.ID, sess.AccessPoint, msc.db, sci); err != nil {
+		t.Fatalf("AccessPoints.add() error: %v | want: %v", err, nil)
+	}
+
+	stake := newProviderStakeReq(sess.Provider, msc.cfg)
+	pool = newTokenPool()
+	if err := pool.create(txn, stake, sci); err != nil {
+		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
+	}
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerStakeTokenPool, pool.ID), pool); err != nil {
+		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	tests := [1]struct {
@@ -1032,71 +1046,6 @@ func Test_MagmaSmartContract_providerRegister(t *testing.T) {
 			}
 			if got != test.want {
 				t.Errorf("providerRegister() got: %v | want: %v", got, test.want)
-			}
-		})
-	}
-}
-
-func TestMagmaSmartContract_providerSessionInit(t *testing.T) {
-	t.Skip("fixme")
-	t.Parallel()
-
-	sess, msc, sci := mockSession(), mockMagmaSmartContract(), mockStateContextI()
-	sess.AccessPoint.MinStake = 1
-
-	sess.Billing = zmc.Billing{}
-	blob := sess.Encode()
-
-	consList := Consumers{}
-	if err := consList.add(msc.ID, sess.Consumer, msc.db, sci); err != nil {
-		t.Fatalf("Consumers.add() error: %v | want: %v", err, nil)
-	}
-
-	provList := Providers{}
-	if err := provList.add(msc.ID, sess.Provider, msc.db, sci); err != nil {
-		t.Fatalf("Providers.add() error: %v | want: %v", err, nil)
-	}
-
-	apList := AccessPoints{}
-	if err := apList.add(msc.ID, sess.AccessPoint, msc.db, sci); err != nil {
-		t.Fatalf("AccessPoints.add() error: %v | want: %v", err, nil)
-	}
-
-	txn := sci.GetTransaction()
-	txn.ClientID = sess.Provider.ID
-
-	tests := [1]struct {
-		name  string
-		txn   *tx.Transaction
-		blob  []byte
-		sci   chain.StateContextI
-		msc   *MagmaSmartContract
-		want  string
-		error bool
-	}{
-		{
-			name:  "OK",
-			txn:   txn,
-			blob:  blob,
-			sci:   sci,
-			msc:   msc,
-			want:  string(blob),
-			error: false,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := test.msc.providerSessionInit(test.txn, test.blob, test.sci)
-			if (err != nil) != test.error {
-				t.Errorf("providerSessionInit() error: %v | want: %v", err, test.error)
-				return
-			}
-			if got != test.want {
-				t.Errorf("providerSessionInit() got: %v | want: %v", got, test.want)
 			}
 		})
 	}

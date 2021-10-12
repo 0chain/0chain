@@ -108,10 +108,6 @@ const (
 	// Provider's registration MagmaSmartContract function.
 	providerUnstake = zmc.ProviderUnStakeFuncName
 
-	// providerSessionInit represents name for
-	// Provider's session init MagmaSmartContract function.
-	providerSessionInit = zmc.ProviderSessionInitFuncName
-
 	// providerUpdate represents name for
 	// provider data update MagmaSmartContract function.
 	providerUpdate = zmc.ProviderUpdateFuncName

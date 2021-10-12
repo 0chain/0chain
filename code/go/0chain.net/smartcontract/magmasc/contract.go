@@ -3,6 +3,7 @@ package magmasc
 import (
 	"context"
 	"net/url"
+	"reflect"
 	"strconv"
 
 	"github.com/0chain/gosdk/zmagmacore/errors"
@@ -138,31 +139,56 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 	return string(consumer.Encode()), nil
 }
 
-// consumerSessionStart checks input for validity then inserts resulted session
-// in provided state.StateContextI and starts a new session with lock tokens into
-// a new token pool by accepted session data.
+// consumerSessionStart checks input for validity and inits a new session
+// with inserts resulted session in provided state.StateContextI and starts
+// the session with lock tokens into a new token pool by accepted session data.
 func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
 	var err error
-
 	sess := &zmc.Session{}
 	if err = sess.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "decode session data failed", err)
 	}
-	if sess, err = m.session(sess.SessionID, sci); err != nil {
-		return "", errors.New(errCodeSessionStart, err.Error())
+
+	if sess.Consumer, err = consumerFetch(m.ID, sess.Consumer.ExtID, m.db, sci); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "fetch consumer failed", err)
 	}
 	if sess.Consumer.ID != txn.ClientID {
 		return "", errors.Wrap(errCodeSessionStart, "check owner id failed", err)
 	}
-	if err = sess.AccessPoint.Terms.Validate(); err != nil {
-		return "", errors.Wrap(errCodeSessionStart, "invalid provider terms", err)
+
+	ap, err := accessPointFetch(m.ID, sess.AccessPoint.ID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "fetch access point failed", err)
+	}
+	switch { // validate access point's preconditions
+	case ap.MinStake == 0:
+		return "", errors.New(errCodeSessionStart, "session can not be initialized with 0 min-staked access point")
+
+	case ap.ProviderExtID != sess.Provider.ExtID:
+		return "", errors.New(errCodeSessionStart, "access point is not registered with provider")
+
+	case !reflect.DeepEqual(ap.Terms.Encode(), sess.AccessPoint.Terms.Encode()):
+		return "", errors.New(errCodeSessionStart, "terms should be equal to the terms from the state")
+
+	default:
+		if err = sess.AccessPoint.Terms.Validate(); err != nil {
+			return "", errors.Wrap(errCodeSessionStart, "invalid access point terms", err)
+		}
+	}
+	sess.AccessPoint = ap
+
+	if sess.Provider, err = providerFetch(m.ID, sess.Provider.ExtID, m.db, sci); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "fetch provider failed", err)
+	}
+	if _, err = sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, sess.Provider.ID)); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "error while fetching provider's stake pool", err)
 	}
 
 	db := store.GetTransaction(m.db)
 	pools, err := rewardPoolsFetch(allRewardPoolsKey, db)
 	if err != nil {
 		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeRewardPoolLock, "fetch token pools list failed", err)
+		return "", errors.Wrap(errCodeSessionStart, "fetch token pools list failed", err)
 	}
 
 	pool := newTokenPool()
@@ -436,59 +462,6 @@ func (m *MagmaSmartContract) providerUnstake(txn *tx.Transaction, blob []byte, s
 	}
 
 	return string(provider.Encode()), nil
-}
-
-// providerSessionInit checks input for validity and inits a new session
-// with inserts resulted session in provided state.StateContextI.
-func (m *MagmaSmartContract) providerSessionInit(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	req := &zmc.Session{}
-	err := req.Decode(blob)
-	if err != nil {
-		return "", errors.Wrap(errCodeSessionInit, "decode session data failed", err)
-	}
-
-	if req.Provider, err = providerFetch(m.ID, req.Provider.ExtID, m.db, sci); err != nil {
-		return "", errors.Wrap(errCodeSessionInit, "fetch provider failed", err)
-	}
-	if req.Provider.ID != txn.ClientID {
-		return "", errors.New(errCodeSessionInit, "check owner id failed")
-	}
-	if _, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, req.Provider.ID)); err != nil {
-		return "", errors.New(errCodeSessionInit, "error while fetching provider's stake pool")
-	}
-
-	if req.AccessPoint, err = accessPointFetch(m.ID, req.AccessPoint.ID, m.db, sci); err != nil {
-		return "", errors.Wrap(errCodeSessionInit, "fetch access point failed", err)
-	}
-	switch { // validate access point's preconditions
-	case req.AccessPoint.MinStake == 0:
-		return "", errors.New(errCodeSessionInit, "session can not be initialized with 0 min-staked access point")
-
-	case req.AccessPoint.ProviderExtID != req.Provider.ExtID:
-		return "", errors.New(errCodeSessionInit, "access point is not registered with provider")
-
-	default:
-		if err = req.AccessPoint.Terms.Validate(); err != nil {
-			return "", errors.Wrap(errCodeSessionInit, "invalid access point terms", err)
-		}
-	}
-
-	req.Consumer, err = consumerFetch(m.ID, req.Consumer.ExtID, m.db, sci)
-	if err != nil {
-		return "", errors.Wrap(errCodeSessionInit, "fetch consumer failed", err)
-	}
-
-	sess := &zmc.Session{
-		SessionID:   req.SessionID,
-		AccessPoint: req.AccessPoint,
-		Consumer:    req.Consumer,
-		Provider:    req.Provider,
-	}
-	if _, err = sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
-		return "", errors.Wrap(errCodeSessionInit, "insert session failed", err)
-	}
-
-	return string(sess.Encode()), nil
 }
 
 // providerUpdate updates the current provider terms.

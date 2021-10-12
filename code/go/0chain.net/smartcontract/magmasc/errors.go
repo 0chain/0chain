@@ -16,7 +16,6 @@ const (
 	errCodeProviderStake   = "provider_stake"
 	errCodeProviderUnstake = "provider_unstake"
 	errCodeProviderUpdate  = "provider_update"
-	errCodeSessionInit     = "session_init"
 	errCodeSessionStart    = "session_start"
 	errCodeSessionStop     = "session_stop"
 
