@@ -55,7 +55,7 @@ func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci ch
 
 // create tries to create a new token poll by given session.
 func (m *tokenPool) createWithRatio(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI, ratio int64) error {
-	m.Balance = cfg.PoolBalance()
+	m.Balance = cfg.PoolBalance() * ratio
 	if m.Balance < 0 {
 		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
 	}
@@ -70,7 +70,7 @@ func (m *tokenPool) createWithRatio(txn *tx.Transaction, cfg zmc.PoolConfigurato
 		return errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
 	}
 
-	poolBalance := state.Balance(m.Balance * ratio)
+	poolBalance := state.Balance(m.Balance)
 	if clientBalance < poolBalance {
 		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
 	}
