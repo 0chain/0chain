@@ -119,3 +119,18 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// SignRequest
+message SignRequest {
+  string public_key = 1;
+  string private_key = 2;
+  string data = 3;
+  string time_stamp = 4;
+}
+
+// SignResponse
+message SignResponse {
+  string client_id = 1;
+  string hash = 2;
+  string signature = 3;
+}
