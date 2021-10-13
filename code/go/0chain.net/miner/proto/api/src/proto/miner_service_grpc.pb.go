@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerServiceClient interface {
 	GetNotarizedBlock(ctx context.Context, in *GetNotarizedBlockRequest, opts ...grpc.CallOption) (*GetNotarizedBlockResponse, error)
+	Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*HashResponse, error)
 }
 
 type minerServiceClient struct {
@@ -38,11 +39,21 @@ func (c *minerServiceClient) GetNotarizedBlock(ctx context.Context, in *GetNotar
 	return out, nil
 }
 
+func (c *minerServiceClient) Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*HashResponse, error) {
+	out := new(HashResponse)
+	err := c.cc.Invoke(ctx, "/miner.MinerService/Hash", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinerServiceServer is the server API for MinerService service.
 // All implementations should embed UnimplementedMinerServiceServer
 // for forward compatibility
 type MinerServiceServer interface {
 	GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error)
+	Hash(context.Context, *HashRequest) (*HashResponse, error)
 }
 
 // UnimplementedMinerServiceServer should be embedded to have forward compatible implementations.
@@ -51,6 +62,9 @@ type UnimplementedMinerServiceServer struct {
 
 func (UnimplementedMinerServiceServer) GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotarizedBlock not implemented")
+}
+func (UnimplementedMinerServiceServer) Hash(context.Context, *HashRequest) (*HashResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Hash not implemented")
 }
 
 // UnsafeMinerServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -82,6 +96,24 @@ func _MinerService_GetNotarizedBlock_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MinerService_Hash_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HashRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServiceServer).Hash(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.MinerService/Hash",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServiceServer).Hash(ctx, req.(*HashRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MinerService_ServiceDesc is the grpc.ServiceDesc for MinerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -92,6 +124,10 @@ var MinerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotarizedBlock",
 			Handler:    _MinerService_GetNotarizedBlock_Handler,
+		},
+		{
+			MethodName: "Hash",
+			Handler:    _MinerService_Hash_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

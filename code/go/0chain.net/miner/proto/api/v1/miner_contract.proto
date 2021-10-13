@@ -119,3 +119,13 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// Hash Request
+message HashRequest {
+  string text = 1;
+}
+
+// Hash Response
+message HashResponse {
+  string hash = 1;
+}
