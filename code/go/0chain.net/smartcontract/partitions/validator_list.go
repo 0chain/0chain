@@ -10,42 +10,72 @@ import (
 	"0chain.net/core/util"
 )
 
+func NewPopulatedValidatorSelector(
+	name string,
+	size int,
+	data []ValidationNode,
+) RandPartition {
+	rs := &randomSelector{
+		Name:          name,
+		PartitionSize: size,
+		ItemType:      ItemValidator,
+	}
+
+	for i := 0; i < len(data)/size; i++ {
+		partition := validatorItemList{
+			Key:     rs.partitionKey(i),
+			Items:   data[size*i : size*(i+1)],
+			Changed: true,
+		}
+		rs.Partitions = append(rs.Partitions, &partition)
+		rs.NumPartitions++
+	}
+	if len(data)%size > 0 {
+		partition := validatorItemList{
+			Key:     rs.partitionKey(rs.NumPartitions),
+			Items:   data[rs.NumPartitions*size:],
+			Changed: true,
+		}
+		rs.Partitions = append(rs.Partitions, &partition)
+		rs.NumPartitions++
+	}
+
+	return rs
+}
+
 //------------------------------------------------------------------------------
 
-type ValidatorItem struct {
-	StringItem
+type ValidationNode struct {
+	Id  string `json:"id"`
 	Url string `json:"url"`
 }
 
-func (si *ValidatorItem) Encode() []byte {
-	var b, err = json.Marshal(si)
+func (vn *ValidationNode) Encode() []byte {
+	var b, err = json.Marshal(vn)
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-func (si *ValidatorItem) Decode(b []byte) error {
-	return json.Unmarshal(b, si)
+func (vn *ValidationNode) Decode(b []byte) error {
+	return json.Unmarshal(b, vn)
 }
 
-func (si *ValidatorItem) Data() []byte {
-	return []byte(si.Url)
+func (vn *ValidationNode) Data() string {
+	return vn.Url
 }
 
-func NewValidatorItem(name, url string) PartitionItem {
-	return &ValidatorItem{
-		StringItem: StringItem{name},
-		Url:        url,
-	}
+func (vn *ValidationNode) Name() string {
+	return vn.Id
 }
 
 //------------------------------------------------------------------------------
 
 type validatorItemList struct {
-	Key     datastore.Key   `json:"-"`
-	Items   []ValidatorItem `json:"items"`
-	Changed bool            `json:"-"`
+	Key     datastore.Key    `json:"-"`
+	Items   []ValidationNode `json:"items"`
+	Changed bool             `json:"-"`
 }
 
 func (il *validatorItemList) Encode() []byte {
@@ -83,11 +113,9 @@ func (il *validatorItemList) get(key datastore.Key, balances state.StateContextI
 }
 
 func (il *validatorItemList) add(it PartitionItem) {
-	vit, ok := it.(*ValidatorItem)
-	ok = ok
-	il.Items = append(il.Items, ValidatorItem{
-		StringItem: StringItem{it.Name()},
-		Url:        vit.Url,
+	il.Items = append(il.Items, ValidationNode{
+		Id:  it.Name(),
+		Url: string(it.Data()),
 	})
 	il.Changed = true
 }
@@ -115,6 +143,14 @@ func (il *validatorItemList) cutTail() PartitionItem {
 	il.Items = il.Items[:len(il.Items)-1]
 	il.Changed = true
 	return &tail
+}
+
+func (il *validatorItemList) length() int {
+	return len(il.Items)
+}
+
+func (il *validatorItemList) changed() bool {
+	return il.Changed
 }
 
 func (il *validatorItemList) itemRange(start, end int) []PartitionItem {

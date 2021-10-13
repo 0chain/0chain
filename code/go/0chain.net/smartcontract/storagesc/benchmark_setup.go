@@ -138,7 +138,7 @@ func AddMockAllocations(
 		}
 	}
 
-	all := partitions.NewPopulatedRandomSelector(
+	all := partitions.NewPopulatedAllocationsSelector(
 		ALL_ALLOCATIONS_KEY, allAllocationsPartitionSize, nil, allocations,
 	)
 	err := all.Save(balances)
@@ -304,37 +304,33 @@ func AddMockBlobbers(
 }
 
 func AddMockValidators(
-	publicKeys []string,
 	balances cstate.StateContextI,
 ) []*ValidationNode {
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var validatornodes []*ValidationNode
-	var validators []partitions.PartitionItem
+	var validators []partitions.ValidationNode
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
 			ID:      id,
 			BaseURL: id + ".com",
-			//PublicKey:         publicKeys[i],
-			//StakePoolSettings: getMockStakePoolSettings(id),
 		}
 		validatornodes = append(validatornodes, validator)
-		validators = append(validators, partitions.ItemFromString(validator.ID))
-		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
+		validators = append(validators, partitions.ValidationNode{
+			Id:  id,
+			Url: id + ".com",
+		})
+		_, err := balances.InsertTrieNode(getValidatorKey(sscId, id), &ValidatorFlag{})
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	//all := partitions.NewPopulatedRandomSelector(
-	//	ALL_VALIDATORS_KEY, allValidatorsPartitionSize, nil, validators,
-	//)
-	all := partitions.NewRandomSelector(ALL_VALIDATORS_KEY, allValidatorsPartitionSize, nil)
-	for _, item := range validators {
-		_, _ = all.Add(item, balances)
-	}
+	all := partitions.NewPopulatedValidatorSelector(
+		ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validators,
+	)
 
 	err := all.Save(balances)
 	if err != nil {

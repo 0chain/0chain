@@ -766,7 +766,8 @@ func (sc *StorageSmartContract) addChallenge(
 		if randSlice[perm[i]].Name() != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
 				&ValidationNode{
-					ID: randSlice[perm[i]].Name(),
+					ID:      randSlice[perm[i]].Name(),
+					BaseURL: randSlice[perm[i]].Data(),
 				})
 		}
 		if len(selectedValidators) >= alloc.DataShards {

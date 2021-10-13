@@ -413,7 +413,7 @@ func BenchmarkTests(
 				ToClientID:   ADDRESS,
 			},
 			input: func() []byte {
-				bytes, _ := json.Marshal(&ValidationNode{
+				bytes, _ := json.Marshal(&InputValidationNode{
 					ID:                encryption.Hash("my_new_validator"),
 					BaseURL:           "my_new_validator.com",
 					StakePoolSettings: getMockStakePoolSettings(encryption.Hash("my_new_validator")),

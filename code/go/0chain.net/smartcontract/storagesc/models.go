@@ -157,29 +157,18 @@ type StorageChallenge struct {
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
-type ValidationNode struct {
-	ID      string `json:"id"`
-	BaseURL string `json:"url"`
-	//PublicKey              string            `json:"-"`
+type InputValidationNode struct {
+	ID                string            `json:"id"`
+	BaseURL           string            `json:"url"`
 	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
-	//AllValidatorsPartition int               `json:"all_validators_partition"`
 }
 
-type ValidationURl struct {
-	ID      string `json:"id"`
-	BaseURL string `json:"url"`
-}
-
-func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + "validator:" + sn.ID)
-}
-
-func (sn *ValidationNode) Encode() []byte {
+func (sn *InputValidationNode) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff
 }
 
-func (sn *ValidationNode) Decode(input []byte) error {
+func (sn *InputValidationNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, sn)
 	if err != nil {
 		return err
@@ -187,6 +176,31 @@ func (sn *ValidationNode) Decode(input []byte) error {
 	return nil
 }
 
+type ValidationNode struct {
+	ID      string `json:"id"`
+	BaseURL string `json:"url"`
+}
+
+type ValidatorFlag struct{}
+
+func getValidatorKey(globalKey, id string) datastore.Key {
+	return datastore.Key(globalKey + "validator:" + id)
+}
+
+func (sn *ValidatorFlag) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *ValidatorFlag) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
 func (sn *ValidationNode) GetHash() string {
 	return util.ToHex(sn.GetHashBytes())
 }
@@ -194,7 +208,7 @@ func (sn *ValidationNode) GetHash() string {
 func (sn *ValidationNode) GetHashBytes() []byte {
 	return encryption.RawHash(sn.Encode())
 }
-
+*/
 type ValidatorNodes struct {
 	Nodes []*ValidationNode
 }

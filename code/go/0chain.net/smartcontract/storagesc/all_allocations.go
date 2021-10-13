@@ -25,6 +25,7 @@ func getAllAllocationsList(balances state.StateContextI) (partitions.RandPartiti
 			ALL_ALLOCATIONS_KEY,
 			allAllocationsPartitionSize,
 			allocationChangedPartition,
+			partitions.ItemString,
 		)
 	}
 	all.SetCallback(allocationChangedPartition)
