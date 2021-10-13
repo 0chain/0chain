@@ -55,13 +55,13 @@ func TestFuzzyRandom(t *testing.T) {
 		case random < addRatio:
 			action = methodCall{
 				action: Add,
-				item:   item("test " + strconv.Itoa(testId)),
+				item:   stringItem("test " + strconv.Itoa(testId)),
 			}
 		case random < addRatio+removeRatio:
 			toRemove := items[rand.Intn(len(items))]
 			action = methodCall{
 				action:     Remove,
-				item:       item(toRemove.item),
+				item:       stringItem(toRemove.item),
 				divisionId: toRemove.division,
 			}
 		default:
@@ -109,6 +109,7 @@ func TestFuzzyRandom(t *testing.T) {
 		).Return("", nil).Maybe()
 	}
 
+	r := rand.New(rand.NewSource(mockSeed))
 	for i := 0; i < fuzzyRunLength; i++ {
 		action := getAction(i)
 		switch action.action {
@@ -131,7 +132,7 @@ func TestFuzzyRandom(t *testing.T) {
 				}
 			}
 		case GetRandomPartition:
-			list, err := rs.GetRandomSlice(int64(i), balances)
+			list, err := rs.GetRandomSlice(r, balances)
 			require.NoError(t, err, fmt.Sprintf("action Change: %v, error: %v", action, err))
 			require.True(t, len(list) <= rs.PartitionSize)
 		default:

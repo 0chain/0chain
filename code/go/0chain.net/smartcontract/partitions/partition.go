@@ -1,6 +1,8 @@
 package partitions
 
 import (
+	"math/rand"
+
 	"0chain.net/chaincore/chain/state"
 )
 
@@ -15,11 +17,11 @@ type Partition interface {
 	Remove(PartitionItem, int, state.StateContextI) error
 
 	SetCallback(ChangePartitionCallback)
-	Size(i state.StateContextI) (int, error)
+	Size(state.StateContextI) (int, error)
 	Save(state.StateContextI) error
 }
 
 type RandPartition interface {
 	Partition
-	GetRandomSlice(int64, state.StateContextI) ([]PartitionItem, error)
+	GetRandomSlice(*rand.Rand, state.StateContextI) ([]string, error)
 }

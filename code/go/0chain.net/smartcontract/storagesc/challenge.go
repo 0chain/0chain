@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -583,15 +585,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	// select allocations for the challenges
 
-	var validators *ValidatorNodes
-	if validators, err = sc.getValidatorsList(balances); err != nil {
+	validators, err := getValidatorsList(balances)
+	if err != nil {
 		return common.NewErrorf("adding_challenge_error",
 			"error getting the validators list: %v", err)
-	}
-
-	if len(validators.Nodes) == 0 {
-		return common.NewError("no_validators",
-			"not enough validators for the challenge")
 	}
 
 	all, err := getAllAllocationsList(balances)
@@ -609,7 +606,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	numChallenges = int64(math.Min(float64(numChallenges), float64(len(randomSlice))))
 
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
-		alloc, err = sc.getAllocation(randomSlice[i].Name(), balances)
+		alloc, err = sc.getAllocation(randomSlice[i], balances)
 		if err != nil && err != util.ErrValueNotPresent {
 			return nil, common.NewErrorf("adding_challenge_error",
 				"unexpected error getting allocation: %v", err)
@@ -617,7 +614,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		if err == util.ErrValueNotPresent {
 			Logger.Error("client state has invalid allocations",
 				zap.Any("allocation_list", randomSlice),
-				zap.Any("selected_allocation", randomSlice[i].Name()))
+				zap.Any("selected_allocation", randomSlice[i]))
 			return nil, common.NewErrorf("invalid_allocation",
 				"client state has invalid allocations")
 		}
@@ -683,11 +680,15 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	return nil
 }
 
-func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
-	validators *ValidatorNodes, challengeID string,
-	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
-	balances c_state.StateContextI) (resp string, err error) {
-
+func (sc *StorageSmartContract) addChallenge(
+	alloc *StorageAllocation,
+	validators partitions.RandPartition,
+	challengeID string,
+	creationDate common.Timestamp,
+	r *rand.Rand,
+	challengeSeed int64,
+	balances c_state.StateContextI,
+) (resp string, err error) {
 	sort.SliceStable(alloc.Blobbers, func(i, j int) bool {
 		return alloc.Blobbers[i].ID < alloc.Blobbers[j].ID
 	})
@@ -719,12 +720,14 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			alloc.ID, blobberAllocation.BlobberID)
 	}
 
-	selectedValidators := make([]*ValidationNode, 0)
-	perm := r.Perm(len(validators.Nodes))
-	for i := 0; i < minInt(len(validators.Nodes), alloc.DataShards+1); i++ {
-		if validators.Nodes[perm[i]].ID != selectedBlobberObj.ID {
+	selectedValidators := make([]string, 0)
+	randSlice, err := validators.GetRandomSlice(r, balances)
+
+	perm := r.Perm(len(randSlice))
+	for i := 0; i < minInt(len(randSlice), alloc.DataShards+1); i++ {
+		if randSlice[perm[i]] != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
-				validators.Nodes[perm[i]])
+				randSlice[perm[i]])
 		}
 		if len(selectedValidators) >= alloc.DataShards {
 			break

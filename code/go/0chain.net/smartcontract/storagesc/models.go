@@ -158,10 +158,11 @@ type StorageChallenge struct {
 }
 
 type ValidationNode struct {
-	ID                string            `json:"id"`
-	BaseURL           string            `json:"url"`
-	PublicKey         string            `json:"-"`
-	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	ID                     string            `json:"id"`
+	BaseURL                string            `json:"url"`
+	PublicKey              string            `json:"-"`
+	StakePoolSettings      stakePoolSettings `json:"stake_pool_settings"`
+	AllValidatorsPartition int               `json:"all_validators_partition"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {

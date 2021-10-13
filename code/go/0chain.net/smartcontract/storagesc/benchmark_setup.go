@@ -28,7 +28,7 @@ func AddMockAllocations(
 		sscId = StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
-		allocations []partitions.PartitionItem
+		allocations []string
 		wps         = make([]*writePool, len(clients), len(clients))
 		rps         = make([]*readPool, len(clients), len(clients))
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
@@ -45,8 +45,7 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
-		allocations = append(allocations, partitions.ItemFromString(sa.ID))
-
+		allocations = append(allocations, sa.ID)
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
 		cp.Balance = mockMinLockDemand * 100
@@ -180,6 +179,7 @@ func addMockAllocation(
 		MaxChallengeCompletionTime: viper.GetDuration(sc.StorageMaxChallengeCompletionTime),
 		DiverseBlobbers:            viper.GetBool(sc.StorageDiverseBlobbers),
 		WritePoolOwners:            []string{clients[cIndex]},
+		AllAllocationsPartition:    i / allAllocationsPartitionSize,
 		Stats: &StorageAllocationStats{
 			UsedSize:                  1,
 			NumWrites:                 1,

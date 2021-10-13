@@ -10,7 +10,10 @@ import (
 	"0chain.net/chaincore/chain/state"
 )
 
-var allAllocationsPartitionSize = 100
+const (
+	allAllocationsPartitionSize = 100
+	allValidatorsPartitionSize  = 50
+)
 
 func getAllAllocationsList(balances state.StateContextI) (partitions.RandPartition, error) {
 	all, err := partitions.GetRandomSelector(ALL_ALLOCATIONS_KEY, balances)

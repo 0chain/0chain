@@ -19,21 +19,21 @@ const notFound = -1
 
 //------------------------------------------------------------------------------
 
-type item string
+type stringItem string
 
-func (ri item) Name() string {
+func (ri stringItem) Name() string {
 	return string(ri)
 }
 
 func ItemFromString(name string) PartitionItem {
-	return item(name)
+	return stringItem(name)
 }
 
 //------------------------------------------------------------------------------
 
 type itemList struct {
-	Items   []PartitionItem `json:"partition"`
-	changed bool            `json:"-"`
+	Items   []string `json:"items"`
+	changed bool     `json:"-"`
 }
 
 func (il *itemList) Encode() []byte {
@@ -48,7 +48,7 @@ func (il *itemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *itemList) add(item PartitionItem) {
+func (il *itemList) add(item string) {
 	il.Items = append(il.Items, item)
 	il.changed = true
 }
@@ -67,9 +67,9 @@ func (il *itemList) remove(item PartitionItem) error {
 	return nil
 }
 
-func (il *itemList) cutTail() PartitionItem {
+func (il *itemList) cutTail() string {
 	if len(il.Items) == 0 {
-		return nil
+		return ""
 	}
 
 	tail := il.Items[len(il.Items)-1]
@@ -80,7 +80,7 @@ func (il *itemList) cutTail() PartitionItem {
 
 func (il *itemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
-		if item.Name() == searchItem.Name() {
+		if item == searchItem.Name() {
 			return i
 		}
 	}
@@ -91,7 +91,7 @@ func (il *itemList) find(searchItem PartitionItem) int {
 
 type randomSelector struct {
 	Name          datastore.Key           `json:"name"`
-	PartitionSize int                     `json:"size"`
+	PartitionSize int                     `json:"partition_size"`
 	NumPartitions int                     `json:"num_partitions"`
 	partitions    []*itemList             `json:"-"`
 	Callback      ChangePartitionCallback `json:"-"`
@@ -113,7 +113,7 @@ func NewPopulatedRandomSelector(
 	name string,
 	size int,
 	callback ChangePartitionCallback,
-	data []PartitionItem,
+	data []string,
 ) RandPartition {
 	rs := &randomSelector{
 		Name:          name,
@@ -123,7 +123,7 @@ func NewPopulatedRandomSelector(
 
 	for i := 0; i < len(data)/size; i++ {
 		partition := itemList{
-			Items:   data[size*i : size*i+1],
+			Items:   data[size*i : size*(i+1)],
 			changed: true,
 		}
 		rs.partitions = append(rs.partitions, &partition)
@@ -164,7 +164,7 @@ func (rs *randomSelector) Add(
 	if len(rs.partitions) == 0 || len(part.Items) >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
-	part.add(item)
+	part.add(item.Name())
 	return len(rs.partitions) - 1, nil
 }
 
@@ -198,11 +198,11 @@ func (rs *randomSelector) Remove(
 	}
 
 	replacment := lastPart.cutTail()
-	if replacment == nil {
+	if replacment == "" {
 		fmt.Errorf("empty last partitions, currpt data")
 	}
 	part.add(replacment)
-	err = rs.Callback(replacment, len(rs.partitions)-1, index, balances)
+	err = rs.Callback(stringItem(replacment), len(rs.partitions)-1, index, balances)
 	if err != nil {
 		return err
 	}
@@ -217,12 +217,12 @@ func (rs *randomSelector) Remove(
 }
 
 func (rs *randomSelector) GetRandomSlice(
-	seed int64,
+	r *rand.Rand,
 	balances state.StateContextI,
-) ([]PartitionItem, error) {
-	rand.Seed(seed)
-	var rtv []PartitionItem
-	index := rand.Intn(rs.NumPartitions)
+) ([]string, error) {
+	index := r.Intn(rs.NumPartitions)
+
+	var rtv []string
 	partition, err := rs.getPartition(index, balances)
 	if err != nil {
 		return nil, err
@@ -278,7 +278,7 @@ func (rs *randomSelector) Size(balances state.StateContextI) (int, error) {
 func (rs *randomSelector) Save(balances state.StateContextI) error {
 	var numPartitions = 0
 	for i, division := range rs.partitions {
-		if division.changed {
+		if division != nil && division.changed {
 			if len(division.Items) > 0 {
 				_, err := balances.InsertTrieNode(rs.partitionKey(i), division)
 				if err != nil {
