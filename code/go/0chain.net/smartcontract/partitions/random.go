@@ -19,21 +19,40 @@ const notFound = -1
 
 //------------------------------------------------------------------------------
 
-type stringItem string
+type StringItem struct {
+	Item string `json:"item"`
+}
 
-func (ri stringItem) Name() string {
-	return string(ri)
+func (ri StringItem) Name() string {
+	return ri.Item
+}
+
+func (si *StringItem) Encode() []byte {
+	var b, err = json.Marshal(si)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+func (si *StringItem) Decode(b []byte) error {
+	return json.Unmarshal(b, si)
+}
+
+func (si *StringItem) Data() []byte {
+	return nil
 }
 
 func ItemFromString(name string) PartitionItem {
-	return stringItem(name)
+	return &StringItem{Item: name}
 }
 
 //------------------------------------------------------------------------------
 
 type itemList struct {
-	Items   []string `json:"items"`
-	changed bool     `json:"-"`
+	Key     datastore.Key `json:"-"`
+	Items   []StringItem  `json:"items"`
+	Changed bool          `json:"-"`
 }
 
 func (il *itemList) Encode() []byte {
@@ -48,9 +67,31 @@ func (il *itemList) Decode(b []byte) error {
 	return json.Unmarshal(b, il)
 }
 
-func (il *itemList) add(item string) {
-	il.Items = append(il.Items, item)
-	il.changed = true
+func (il *itemList) save(balances state.StateContextI) error {
+	_, err := balances.InsertTrieNode(il.Key, il)
+	return err
+}
+
+func (il *itemList) get(key datastore.Key, balances state.StateContextI) error {
+	val, err := balances.GetTrieNode(key)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return err
+		}
+		il = &itemList{
+			Key: key,
+		}
+	}
+	if err := il.Decode(val.Encode()); err != nil {
+		return fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	il.Key = key
+	return nil
+}
+
+func (il *itemList) add(it PartitionItem) {
+	il.Items = append(il.Items, StringItem{it.Name()})
+	il.Changed = true
 }
 
 func (il *itemList) remove(item PartitionItem) error {
@@ -63,24 +104,36 @@ func (il *itemList) remove(item PartitionItem) error {
 	}
 	il.Items[index] = il.Items[len(il.Items)-1]
 	il.Items = il.Items[:len(il.Items)-1]
-	il.changed = true
+	il.Changed = true
 	return nil
 }
 
-func (il *itemList) cutTail() string {
+func (il *itemList) cutTail() PartitionItem {
 	if len(il.Items) == 0 {
-		return ""
+		return nil
 	}
 
 	tail := il.Items[len(il.Items)-1]
 	il.Items = il.Items[:len(il.Items)-1]
-	il.changed = true
-	return tail
+	il.Changed = true
+	return &tail
+}
+
+func (il *itemList) itemRange(start, end int) []PartitionItem {
+	if start > end || end > len(il.Items) {
+		return nil
+	}
+
+	var rtv []PartitionItem
+	for i := start; i < end; i++ {
+		rtv = append(rtv, &il.Items[i])
+	}
+	return rtv
 }
 
 func (il *itemList) find(searchItem PartitionItem) int {
 	for i, item := range il.Items {
-		if item == searchItem.Name() {
+		if item.Name() == searchItem.Name() {
 			return i
 		}
 	}
@@ -93,7 +146,7 @@ type randomSelector struct {
 	Name          datastore.Key           `json:"name"`
 	PartitionSize int                     `json:"partition_size"`
 	NumPartitions int                     `json:"num_partitions"`
-	partitions    []*itemList             `json:"-"`
+	Partitions    []*itemList             `json:"-"`
 	Callback      ChangePartitionCallback `json:"-"`
 }
 
@@ -113,7 +166,7 @@ func NewPopulatedRandomSelector(
 	name string,
 	size int,
 	callback ChangePartitionCallback,
-	data []string,
+	data []StringItem,
 ) RandPartition {
 	rs := &randomSelector{
 		Name:          name,
@@ -123,18 +176,20 @@ func NewPopulatedRandomSelector(
 
 	for i := 0; i < len(data)/size; i++ {
 		partition := itemList{
+			Key:     rs.partitionKey(i),
 			Items:   data[size*i : size*(i+1)],
-			changed: true,
+			Changed: true,
 		}
-		rs.partitions = append(rs.partitions, &partition)
+		rs.Partitions = append(rs.Partitions, &partition)
 		rs.NumPartitions++
 	}
 	if len(data)%size > 0 {
 		partition := itemList{
+			Key:     rs.partitionKey(rs.NumPartitions),
 			Items:   data[rs.NumPartitions*size:],
-			changed: true,
+			Changed: true,
 		}
-		rs.partitions = append(rs.partitions, &partition)
+		rs.Partitions = append(rs.Partitions, &partition)
 		rs.NumPartitions++
 	}
 
@@ -155,17 +210,17 @@ func (rs *randomSelector) Add(
 ) (int, error) {
 	var part *itemList
 	var err error
-	if len(rs.partitions) > 0 {
-		part, err = rs.getPartition(len(rs.partitions)-1, balances)
+	if len(rs.Partitions) > 0 {
+		part, err = rs.getPartition(len(rs.Partitions)-1, balances)
 		if err != nil {
 			return 0, err
 		}
 	}
-	if len(rs.partitions) == 0 || len(part.Items) >= rs.PartitionSize {
+	if len(rs.Partitions) == 0 || len(part.Items) >= rs.PartitionSize {
 		part = rs.addPartition()
 	}
-	part.add(item.Name())
-	return len(rs.partitions) - 1, nil
+	part.add(item)
+	return len(rs.Partitions) - 1, nil
 }
 
 func (rs *randomSelector) Remove(
@@ -183,7 +238,7 @@ func (rs *randomSelector) Remove(
 		return err
 	}
 
-	lastPart, err := rs.getPartition(len(rs.partitions)-1, balances)
+	lastPart, err := rs.getPartition(len(rs.Partitions)-1, balances)
 	if err != nil {
 		return err
 	}
@@ -198,11 +253,11 @@ func (rs *randomSelector) Remove(
 	}
 
 	replacment := lastPart.cutTail()
-	if replacment == "" {
+	if replacment == nil {
 		fmt.Errorf("empty last partitions, currpt data")
 	}
 	part.add(replacment)
-	err = rs.Callback(stringItem(replacment), len(rs.partitions)-1, index, balances)
+	err = rs.Callback(replacment, len(rs.Partitions)-1, index, balances)
 	if err != nil {
 		return err
 	}
@@ -219,15 +274,15 @@ func (rs *randomSelector) Remove(
 func (rs *randomSelector) GetRandomSlice(
 	r *rand.Rand,
 	balances state.StateContextI,
-) ([]string, error) {
+) ([]PartitionItem, error) {
 	index := r.Intn(rs.NumPartitions)
 
-	var rtv []string
+	var rtv []PartitionItem
 	partition, err := rs.getPartition(index, balances)
 	if err != nil {
 		return nil, err
 	}
-	rtv = append(rtv, partition.Items...)
+	rtv = append(rtv, partition.itemRange(0, len(partition.Items))...)
 	if index == rs.NumPartitions-1 && len(rtv) < rs.PartitionSize && rs.NumPartitions > 1 {
 		secondLast, err := rs.getPartition(index-1, balances)
 		if err != nil {
@@ -238,7 +293,7 @@ func (rs *randomSelector) GetRandomSlice(
 			return nil, fmt.Errorf("second last partition too small %d instead of %d",
 				len(secondLast.Items), rs.NumPartitions)
 		}
-		rtv = append(rtv, secondLast.Items[len(secondLast.Items)-want:]...)
+		rtv = append(rtv, partition.itemRange(len(secondLast.Items)-1, len(partition.Items))...)
 	}
 
 	return rtv, nil
@@ -246,19 +301,20 @@ func (rs *randomSelector) GetRandomSlice(
 
 func (rs *randomSelector) addPartition() *itemList {
 	var newPartition itemList
-	rs.partitions = append(rs.partitions, &newPartition)
+	newPartition.Key = rs.partitionKey(rs.NumPartitions)
+	rs.Partitions = append(rs.Partitions, &newPartition)
 	rs.NumPartitions++
 	return &newPartition
 }
 
 func (rs *randomSelector) deleteTail(balances state.StateContextI) error {
-	_, err := balances.DeleteTrieNode(rs.partitionKey(len(rs.partitions) - 1))
+	_, err := balances.DeleteTrieNode(rs.partitionKey(len(rs.Partitions) - 1))
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return err
 		}
 	}
-	rs.partitions = rs.partitions[:len(rs.partitions)-1]
+	rs.Partitions = rs.Partitions[:len(rs.Partitions)-1]
 	rs.NumPartitions--
 	return nil
 }
@@ -277,14 +333,18 @@ func (rs *randomSelector) Size(balances state.StateContextI) (int, error) {
 
 func (rs *randomSelector) Save(balances state.StateContextI) error {
 	var numPartitions = 0
-	for i, division := range rs.partitions {
-		if division != nil && division.changed {
-			if len(division.Items) > 0 {
-				_, err := balances.InsertTrieNode(rs.partitionKey(i), division)
+	for i, partition := range rs.Partitions {
+		if partition != nil && partition.Changed {
+			if len(partition.Items) > 0 {
+				err := partition.save(balances)
 				if err != nil {
 					return err
 				}
 				numPartitions++
+
+				var part itemList
+				_ = part.get(rs.partitionKey(i), balances)
+				part = part
 			} else {
 				_, err := balances.DeleteTrieNode(rs.partitionKey(i))
 				if err != nil {
@@ -305,21 +365,18 @@ func (rs *randomSelector) Save(balances state.StateContextI) error {
 }
 
 func (rs *randomSelector) getPartition(i int, balances state.StateContextI) (*itemList, error) {
-	if i >= len(rs.partitions) {
-		return nil, fmt.Errorf("partition id %v grater than numbr of partitions %v", i, len(rs.partitions))
+	if i >= len(rs.Partitions) {
+		return nil, fmt.Errorf("partition id %v grater than numbr of partitions %v", i, len(rs.Partitions))
 	}
-	if rs.partitions[i] != nil {
-		return rs.partitions[i], nil
+	if rs.Partitions[i] != nil {
+		return rs.Partitions[i], nil
 	}
 	var part itemList
-	val, err := balances.GetTrieNode(rs.partitionKey(i))
+	err := part.get(rs.partitionKey(i), balances)
 	if err != nil {
 		return nil, err
 	}
-	if err := part.Decode(val.Encode()); err != nil {
-		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
-	}
-	rs.partitions[i] = &part
+	rs.Partitions[i] = &part
 	return &part, nil
 }
 
@@ -349,6 +406,6 @@ func (rs *randomSelector) Encode() []byte {
 
 func (rs *randomSelector) Decode(b []byte) error {
 	err := json.Unmarshal(b, rs)
-	rs.partitions = make([]*itemList, rs.NumPartitions, rs.NumPartitions)
+	rs.Partitions = make([]*itemList, rs.NumPartitions, rs.NumPartitions)
 	return err
 }

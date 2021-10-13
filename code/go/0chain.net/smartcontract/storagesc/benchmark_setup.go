@@ -28,7 +28,7 @@ func AddMockAllocations(
 		sscId = StorageSmartContract{
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
-		allocations []string
+		allocations []partitions.StringItem
 		wps         = make([]*writePool, len(clients), len(clients))
 		rps         = make([]*readPool, len(clients), len(clients))
 		cas         = make([]*ClientAllocation, len(clients), len(clients))
@@ -45,7 +45,7 @@ func AddMockAllocations(
 		if err != nil {
 			panic(err)
 		}
-		allocations = append(allocations, sa.ID)
+		allocations = append(allocations, partitions.StringItem{sa.ID})
 		cp := newChallengePool()
 		cp.TokenPool.ID = challengePoolKey(sscId, sa.ID)
 		cp.Balance = mockMinLockDemand * 100
@@ -252,9 +252,9 @@ func setupMockChallenges(
 	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		bc.addChallenge(&StorageChallenge{
-			ID:           getMockChallengeId(bIndex, i),
-			Validators:   selValidators,
-			Blobber:      blobber,
+			ID:         getMockChallengeId(bIndex, i),
+			Validators: selValidators,
+			//Blobber:      blobber,
 			AllocationID: allocationId,
 		})
 	}
@@ -310,26 +310,38 @@ func AddMockValidators(
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
-	var validators ValidatorNodes
+	var validatornodes []*ValidationNode
+	var validators []partitions.PartitionItem
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
-			ID:                id,
-			BaseURL:           id + ".com",
-			PublicKey:         publicKeys[i],
-			StakePoolSettings: getMockStakePoolSettings(id),
+			ID:      id,
+			BaseURL: id + ".com",
+			//PublicKey:         publicKeys[i],
+			//StakePoolSettings: getMockStakePoolSettings(id),
 		}
-		validators.Nodes = append(validators.Nodes, validator)
+		validatornodes = append(validatornodes, validator)
+		validators = append(validators, partitions.ItemFromString(validator.ID))
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
 		if err != nil {
 			panic(err)
 		}
 	}
-	_, err := balances.InsertTrieNode(ALL_VALIDATORS_KEY, &validators)
+
+	//all := partitions.NewPopulatedRandomSelector(
+	//	ALL_VALIDATORS_KEY, allValidatorsPartitionSize, nil, validators,
+	//)
+	all := partitions.NewRandomSelector(ALL_VALIDATORS_KEY, allValidatorsPartitionSize, nil)
+	for _, item := range validators {
+		_, _ = all.Add(item, balances)
+	}
+
+	err := all.Save(balances)
 	if err != nil {
 		panic(err)
 	}
-	return validators.Nodes
+	return validatornodes
+
 }
 
 func GetMockStakePools(

@@ -146,23 +146,28 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 }
 
 type StorageChallenge struct {
-	Created        common.Timestamp   `json:"created"`
-	ID             string             `json:"id"`
-	PrevID         string             `json:"prev_id"`
-	Validators     []*ValidationNode  `json:"validators"`
-	RandomNumber   int64              `json:"seed"`
-	AllocationID   string             `json:"allocation_id"`
-	Blobber        *StorageNode       `json:"blobber"`
+	Created      common.Timestamp  `json:"created"`
+	ID           string            `json:"id"`
+	PrevID       string            `json:"prev_id"`
+	Validators   []*ValidationNode `json:"validators"`
+	RandomNumber int64             `json:"seed"`
+	AllocationID string            `json:"allocation_id"`
+	//Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
 	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
 type ValidationNode struct {
-	ID                     string            `json:"id"`
-	BaseURL                string            `json:"url"`
-	PublicKey              string            `json:"-"`
-	StakePoolSettings      stakePoolSettings `json:"stake_pool_settings"`
-	AllValidatorsPartition int               `json:"all_validators_partition"`
+	ID      string `json:"id"`
+	BaseURL string `json:"url"`
+	//PublicKey              string            `json:"-"`
+	StakePoolSettings stakePoolSettings `json:"stake_pool_settings"`
+	//AllValidatorsPartition int               `json:"all_validators_partition"`
+}
+
+type ValidationURl struct {
+	ID      string `json:"id"`
+	BaseURL string `json:"url"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {

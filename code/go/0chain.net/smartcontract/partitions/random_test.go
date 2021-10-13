@@ -55,13 +55,13 @@ func TestFuzzyRandom(t *testing.T) {
 		case random < addRatio:
 			action = methodCall{
 				action: Add,
-				item:   stringItem("test " + strconv.Itoa(testId)),
+				item:   ItemFromString("test " + strconv.Itoa(testId)),
 			}
 		case random < addRatio+removeRatio:
 			toRemove := items[rand.Intn(len(items))]
 			action = methodCall{
 				action:     Remove,
-				item:       stringItem(toRemove.item),
+				item:       ItemFromString(toRemove.item),
 				divisionId: toRemove.division,
 			}
 		default:
@@ -141,8 +141,8 @@ func TestFuzzyRandom(t *testing.T) {
 	}
 
 	var count = 0
-	for i := 0; i < len(rs.partitions); i++ {
-		for j := 0; j < len(rs.partitions[i].Items); j++ {
+	for i := 0; i < len(rs.Partitions); i++ {
+		for j := 0; j < len(rs.Partitions[i].Items); j++ {
 			count++
 		}
 	}
