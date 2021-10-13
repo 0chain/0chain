@@ -749,54 +749,6 @@ func (x *HashRequest) GetText() string {
 	return ""
 }
 
-// Hash Response
-type HashResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Hash string `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-}
-
-func (x *HashResponse) Reset() {
-	*x = HashResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HashResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HashResponse) ProtoMessage() {}
-
-func (x *HashResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HashResponse.ProtoReflect.Descriptor instead.
-func (*HashResponse) Descriptor() ([]byte, []int) {
-	return file_miner_contract_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *HashResponse) GetHash() string {
-	if x != nil {
-		return x.Hash
-	}
-	return ""
-}
-
 type MagicBlock_ShareOrSigns struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -809,7 +761,7 @@ type MagicBlock_ShareOrSigns struct {
 func (x *MagicBlock_ShareOrSigns) Reset() {
 	*x = MagicBlock_ShareOrSigns{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[9]
+		mi := &file_miner_contract_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -822,7 +774,7 @@ func (x *MagicBlock_ShareOrSigns) String() string {
 func (*MagicBlock_ShareOrSigns) ProtoMessage() {}
 
 func (x *MagicBlock_ShareOrSigns) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[9]
+	mi := &file_miner_contract_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -864,7 +816,7 @@ type MagicBlock_MPK struct {
 func (x *MagicBlock_MPK) Reset() {
 	*x = MagicBlock_MPK{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[10]
+		mi := &file_miner_contract_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -877,7 +829,7 @@ func (x *MagicBlock_MPK) String() string {
 func (*MagicBlock_MPK) ProtoMessage() {}
 
 func (x *MagicBlock_MPK) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[10]
+	mi := &file_miner_contract_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +873,7 @@ type MagicBlock_ShareOrSigns_DKGKeyShare struct {
 func (x *MagicBlock_ShareOrSigns_DKGKeyShare) Reset() {
 	*x = MagicBlock_ShareOrSigns_DKGKeyShare{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[13]
+		mi := &file_miner_contract_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -934,7 +886,7 @@ func (x *MagicBlock_ShareOrSigns_DKGKeyShare) String() string {
 func (*MagicBlock_ShareOrSigns_DKGKeyShare) ProtoMessage() {}
 
 func (x *MagicBlock_ShareOrSigns_DKGKeyShare) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[13]
+	mi := &file_miner_contract_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1003,7 +955,7 @@ type Pool_Node struct {
 func (x *Pool_Node) Reset() {
 	*x = Pool_Node{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[15]
+		mi := &file_miner_contract_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1016,7 +968,7 @@ func (x *Pool_Node) String() string {
 func (*Pool_Node) ProtoMessage() {}
 
 func (x *Pool_Node) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[15]
+	mi := &file_miner_contract_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1151,7 +1103,7 @@ type Pool_Node_Info struct {
 func (x *Pool_Node_Info) Reset() {
 	*x = Pool_Node_Info{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_miner_contract_proto_msgTypes[17]
+		mi := &file_miner_contract_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1164,7 +1116,7 @@ func (x *Pool_Node_Info) String() string {
 func (*Pool_Node_Info) ProtoMessage() {}
 
 func (x *Pool_Node_Info) ProtoReflect() protoreflect.Message {
-	mi := &file_miner_contract_proto_msgTypes[17]
+	mi := &file_miner_contract_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1419,12 +1371,10 @@ var file_miner_contract_proto_rawDesc = []byte{
 	0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
 	0x22, 0x21, 0x0a, 0x0b, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x12, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74,
-	0x65, 0x78, 0x74, 0x22, 0x22, 0x0a, 0x0c, 0x48, 0x61, 0x73, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x61, 0x73, 0x68, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x04, 0x68, 0x61, 0x73, 0x68, 0x42, 0x2e, 0x5a, 0x2c, 0x63, 0x6f, 0x64, 0x65, 0x2f,
-	0x67, 0x6f, 0x2f, 0x30, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x2e, 0x6e, 0x65, 0x74, 0x2f, 0x6d, 0x69,
-	0x6e, 0x65, 0x72, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x72,
-	0x63, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x78, 0x74, 0x42, 0x2e, 0x5a, 0x2c, 0x63, 0x6f, 0x64, 0x65, 0x2f, 0x67, 0x6f, 0x2f, 0x30,
+	0x63, 0x68, 0x61, 0x69, 0x6e, 0x2e, 0x6e, 0x65, 0x74, 0x2f, 0x6d, 0x69, 0x6e, 0x65, 0x72, 0x2f,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x72, 0x63, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1439,7 +1389,7 @@ func file_miner_contract_proto_rawDescGZIP() []byte {
 	return file_miner_contract_proto_rawDescData
 }
 
-var file_miner_contract_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_miner_contract_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_miner_contract_proto_goTypes = []interface{}{
 	(*GetNotarizedBlockRequest)(nil),  // 0: miner.GetNotarizedBlockRequest
 	(*GetNotarizedBlockResponse)(nil), // 1: miner.GetNotarizedBlockResponse
@@ -1449,16 +1399,15 @@ var file_miner_contract_proto_goTypes = []interface{}{
 	(*Pool)(nil),                      // 5: miner.Pool
 	(*Transaction)(nil),               // 6: miner.Transaction
 	(*HashRequest)(nil),               // 7: miner.HashRequest
-	(*HashResponse)(nil),              // 8: miner.HashResponse
-	(*MagicBlock_ShareOrSigns)(nil),   // 9: miner.MagicBlock.ShareOrSigns
-	(*MagicBlock_MPK)(nil),            // 10: miner.MagicBlock.MPK
-	nil,                               // 11: miner.MagicBlock.SharesEntry
-	nil,                               // 12: miner.MagicBlock.MpksEntry
-	(*MagicBlock_ShareOrSigns_DKGKeyShare)(nil), // 13: miner.MagicBlock.ShareOrSigns.DKGKeyShare
-	nil,                    // 14: miner.MagicBlock.ShareOrSigns.ShareOrSignEntry
-	(*Pool_Node)(nil),      // 15: miner.Pool.Node
-	nil,                    // 16: miner.Pool.NodesEntry
-	(*Pool_Node_Info)(nil), // 17: miner.Pool.Node.Info
+	(*MagicBlock_ShareOrSigns)(nil),   // 8: miner.MagicBlock.ShareOrSigns
+	(*MagicBlock_MPK)(nil),            // 9: miner.MagicBlock.MPK
+	nil,                               // 10: miner.MagicBlock.SharesEntry
+	nil,                               // 11: miner.MagicBlock.MpksEntry
+	(*MagicBlock_ShareOrSigns_DKGKeyShare)(nil), // 12: miner.MagicBlock.ShareOrSigns.DKGKeyShare
+	nil,                    // 13: miner.MagicBlock.ShareOrSigns.ShareOrSignEntry
+	(*Pool_Node)(nil),      // 14: miner.Pool.Node
+	nil,                    // 15: miner.Pool.NodesEntry
+	(*Pool_Node_Info)(nil), // 16: miner.Pool.Node.Info
 }
 var file_miner_contract_proto_depIdxs = []int32{
 	2,  // 0: miner.GetNotarizedBlockResponse.block:type_name -> miner.Block
@@ -1468,15 +1417,15 @@ var file_miner_contract_proto_depIdxs = []int32{
 	6,  // 4: miner.Block.transactions:type_name -> miner.Transaction
 	5,  // 5: miner.MagicBlock.miners:type_name -> miner.Pool
 	5,  // 6: miner.MagicBlock.sharders:type_name -> miner.Pool
-	11, // 7: miner.MagicBlock.shares:type_name -> miner.MagicBlock.SharesEntry
-	12, // 8: miner.MagicBlock.mpks:type_name -> miner.MagicBlock.MpksEntry
-	16, // 9: miner.Pool.nodes:type_name -> miner.Pool.NodesEntry
-	14, // 10: miner.MagicBlock.ShareOrSigns.share_or_sign:type_name -> miner.MagicBlock.ShareOrSigns.ShareOrSignEntry
-	9,  // 11: miner.MagicBlock.SharesEntry.value:type_name -> miner.MagicBlock.ShareOrSigns
-	10, // 12: miner.MagicBlock.MpksEntry.value:type_name -> miner.MagicBlock.MPK
-	13, // 13: miner.MagicBlock.ShareOrSigns.ShareOrSignEntry.value:type_name -> miner.MagicBlock.ShareOrSigns.DKGKeyShare
-	17, // 14: miner.Pool.Node.info:type_name -> miner.Pool.Node.Info
-	15, // 15: miner.Pool.NodesEntry.value:type_name -> miner.Pool.Node
+	10, // 7: miner.MagicBlock.shares:type_name -> miner.MagicBlock.SharesEntry
+	11, // 8: miner.MagicBlock.mpks:type_name -> miner.MagicBlock.MpksEntry
+	15, // 9: miner.Pool.nodes:type_name -> miner.Pool.NodesEntry
+	13, // 10: miner.MagicBlock.ShareOrSigns.share_or_sign:type_name -> miner.MagicBlock.ShareOrSigns.ShareOrSignEntry
+	8,  // 11: miner.MagicBlock.SharesEntry.value:type_name -> miner.MagicBlock.ShareOrSigns
+	9,  // 12: miner.MagicBlock.MpksEntry.value:type_name -> miner.MagicBlock.MPK
+	12, // 13: miner.MagicBlock.ShareOrSigns.ShareOrSignEntry.value:type_name -> miner.MagicBlock.ShareOrSigns.DKGKeyShare
+	16, // 14: miner.Pool.Node.info:type_name -> miner.Pool.Node.Info
+	14, // 15: miner.Pool.NodesEntry.value:type_name -> miner.Pool.Node
 	16, // [16:16] is the sub-list for method output_type
 	16, // [16:16] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
@@ -1587,18 +1536,6 @@ func file_miner_contract_proto_init() {
 			}
 		}
 		file_miner_contract_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HashResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_miner_contract_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MagicBlock_ShareOrSigns); i {
 			case 0:
 				return &v.state
@@ -1610,7 +1547,7 @@ func file_miner_contract_proto_init() {
 				return nil
 			}
 		}
-		file_miner_contract_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_miner_contract_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MagicBlock_MPK); i {
 			case 0:
 				return &v.state
@@ -1622,7 +1559,7 @@ func file_miner_contract_proto_init() {
 				return nil
 			}
 		}
-		file_miner_contract_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_miner_contract_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*MagicBlock_ShareOrSigns_DKGKeyShare); i {
 			case 0:
 				return &v.state
@@ -1634,7 +1571,7 @@ func file_miner_contract_proto_init() {
 				return nil
 			}
 		}
-		file_miner_contract_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_miner_contract_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Pool_Node); i {
 			case 0:
 				return &v.state
@@ -1646,7 +1583,7 @@ func file_miner_contract_proto_init() {
 				return nil
 			}
 		}
-		file_miner_contract_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+		file_miner_contract_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Pool_Node_Info); i {
 			case 0:
 				return &v.state
@@ -1665,7 +1602,7 @@ func file_miner_contract_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_miner_contract_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

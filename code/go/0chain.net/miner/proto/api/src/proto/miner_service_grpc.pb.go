@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+	httpbody "google.golang.org/genproto/googleapis/api/httpbody"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerServiceClient interface {
 	GetNotarizedBlock(ctx context.Context, in *GetNotarizedBlockRequest, opts ...grpc.CallOption) (*GetNotarizedBlockResponse, error)
-	Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*HashResponse, error)
+	Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 }
 
 type minerServiceClient struct {
@@ -39,8 +40,8 @@ func (c *minerServiceClient) GetNotarizedBlock(ctx context.Context, in *GetNotar
 	return out, nil
 }
 
-func (c *minerServiceClient) Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*HashResponse, error) {
-	out := new(HashResponse)
+func (c *minerServiceClient) Hash(ctx context.Context, in *HashRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	out := new(httpbody.HttpBody)
 	err := c.cc.Invoke(ctx, "/miner.MinerService/Hash", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func (c *minerServiceClient) Hash(ctx context.Context, in *HashRequest, opts ...
 // for forward compatibility
 type MinerServiceServer interface {
 	GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error)
-	Hash(context.Context, *HashRequest) (*HashResponse, error)
+	Hash(context.Context, *HashRequest) (*httpbody.HttpBody, error)
 }
 
 // UnimplementedMinerServiceServer should be embedded to have forward compatible implementations.
@@ -63,7 +64,7 @@ type UnimplementedMinerServiceServer struct {
 func (UnimplementedMinerServiceServer) GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotarizedBlock not implemented")
 }
-func (UnimplementedMinerServiceServer) Hash(context.Context, *HashRequest) (*HashResponse, error) {
+func (UnimplementedMinerServiceServer) Hash(context.Context, *HashRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Hash not implemented")
 }
 

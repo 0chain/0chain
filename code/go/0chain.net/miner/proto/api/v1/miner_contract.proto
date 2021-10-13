@@ -124,8 +124,3 @@ message Transaction {
 message HashRequest {
   string text = 1;
 }
-
-// Hash Response
-message HashResponse {
-  string hash = 1;
-}

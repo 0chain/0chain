@@ -6,6 +6,7 @@ option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
 import "miner_contract.proto";
 import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
 
 service MinerService {
   rpc GetNotarizedBlock(GetNotarizedBlockRequest)
@@ -15,7 +16,7 @@ service MinerService {
     };
   }
 
-  rpc Hash(HashRequest) returns (HashResponse) {
+  rpc Hash(HashRequest) returns (google.api.HttpBody) {
     option (google.api.http) = {
       get : "/_hash"
     };
