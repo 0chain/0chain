@@ -113,7 +113,6 @@ development:
   smart_contract:
     storage: true
     faucet: true
-    zrc20: true
     interest: true
     miner: true
     multisig: true
