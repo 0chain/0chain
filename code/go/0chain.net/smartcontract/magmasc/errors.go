@@ -19,8 +19,11 @@ const (
 	errCodeSessionStart    = "session_start"
 	errCodeSessionStop     = "session_stop"
 
-	errCodeAccessPointReg    = "access_point_reg"
-	errCodeAccessPointUpdate = "access_point_update"
+	errCodeAccessPointReg            = "access_point_reg"
+	errCodeAccessPointUpdTerms       = "access_point_upd_terms"
+	errCodeAccessPointStake          = "access_point_stake"
+	errCodeAccessPointUnstake        = "access_point_unstake"
+	errCodeAccessPointChangeProvider = "access_point_change_provider"
 
 	errCodeRewardPoolLock   = "reward_pool_lock"
 	errCodeRewardPoolUnlock = "reward_pool_unlock"

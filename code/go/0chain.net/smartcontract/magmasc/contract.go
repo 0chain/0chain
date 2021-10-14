@@ -3,11 +3,11 @@ package magmasc
 import (
 	"context"
 	"net/url"
-	"reflect"
 	"strconv"
 
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 	"github.com/0chain/gosdk/zmagmacore/time"
 	"github.com/rcrowley/go-metrics"
 
@@ -52,13 +52,13 @@ func (m *MagmaSmartContract) sessionAcceptedVerify(_ context.Context, vals url.V
 	}
 
 	switch {
-	case sess.AccessPoint.ID != vals.Get("access_point_id"):
+	case sess.AccessPoint.Id != vals.Get("access_point_id"):
 		return nil, errInvalidAccessPointID
 
 	case sess.Consumer == nil || sess.Consumer.ExtID != vals.Get("consumer_ext_id"):
 		return nil, errInvalidConsumerExtID
 
-	case sess.Provider == nil || sess.Provider.ExtID != vals.Get("provider_ext_id"):
+	case sess.Provider == nil || sess.Provider.ExtId != vals.Get("provider_ext_id"):
 		return nil, errInvalidProviderExtID
 	}
 
@@ -142,13 +142,20 @@ func (m *MagmaSmartContract) consumerRegister(txn *tx.Transaction, blob []byte, 
 // consumerSessionStart checks input for validity and inits a new session
 // with inserts resulted session in provided state.StateContextI and starts
 // the session with lock tokens into a new token pool by accepted session data.
-func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	var err error
+func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (resp string, err error) {
 	sess := &zmc.Session{}
 	if err = sess.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "decode session data failed", err)
 	}
 
+	if _, err = sci.GetTrieNode(nodeUID(m.ID, session, sess.SessionID)); !errors.Is(err, util.ErrValueNotPresent) {
+		return "", errors.New(errCodeSessionStart, "session with provided ID already exist")
+	}
+
+	// flush Billing and set only Ratio field
+	sess.Billing = zmc.Billing{Ratio: m.cfg.GetInt64(billingRatio)}
+
+	// fetching, checking and setting Consumer
 	if sess.Consumer, err = consumerFetch(m.ID, sess.Consumer.ExtID, m.db, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "fetch consumer failed", err)
 	}
@@ -156,31 +163,26 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.Wrap(errCodeSessionStart, "check owner id failed", err)
 	}
 
-	ap, err := accessPointFetch(m.ID, sess.AccessPoint.ID, m.db, sci)
+	// fetching, checking and setting Access Point
+	ap, err := accessPointFetch(m.ID, sess.AccessPoint.Id, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "fetch access point failed", err)
 	}
-	switch { // validate access point's preconditions
-	case ap.MinStake == 0:
-		return "", errors.New(errCodeSessionStart, "session can not be initialized with 0 min-staked access point")
-
-	case ap.ProviderExtID != sess.Provider.ExtID:
-		return "", errors.New(errCodeSessionStart, "access point is not registered with provider")
-
-	case !reflect.DeepEqual(ap.Terms.Encode(), sess.AccessPoint.Terms.Encode()):
+	if ap.Terms.String() != sess.AccessPoint.Terms.String() {
 		return "", errors.New(errCodeSessionStart, "terms should be equal to the terms from the state")
-
-	default:
-		if err = sess.AccessPoint.Terms.Validate(); err != nil {
-			return "", errors.Wrap(errCodeSessionStart, "invalid access point terms", err)
-		}
+	}
+	// checking if access point has provided min-stake
+	if _, err = sci.GetTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, sess.AccessPoint.Id)); err != nil {
+		return "", errors.Wrap(errCodeSessionStart, "error while fetching access point's stake pool", err)
 	}
 	sess.AccessPoint = ap
 
-	if sess.Provider, err = providerFetch(m.ID, sess.Provider.ExtID, m.db, sci); err != nil {
+	// fetching, checking and setting Provider
+	if sess.Provider, err = providerFetch(m.ID, sess.AccessPoint.ProviderExtId, m.db, sci); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "fetch provider failed", err)
 	}
-	if _, err = sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, sess.Provider.ID)); err != nil {
+	// checking if provider has provided min-stake
+	if _, err = sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, sess.Provider.Id)); err != nil {
 		return "", errors.Wrap(errCodeSessionStart, "error while fetching provider's stake pool", err)
 	}
 
@@ -192,11 +194,10 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 	}
 
 	pool := newTokenPool()
-	if err = pool.createWithRatio(txn, sess, sci, m.cfg.GetInt64(billingRatio)); err != nil {
+	if err = pool.create(txn, sess, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeSessionStart, "create token pool failed", err)
 	}
-
 	if err = pools.add(m.ID, pool, db, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeSessionStart, "add lock pool to list failed", err)
@@ -249,7 +250,7 @@ func (m *MagmaSmartContract) completeBilling(sess *zmc.Session, txn *tx.Transact
 		amount *= m.cfg.GetInt64(billingRatio)
 	}
 
-	servCharge, serviceID := m.cfg.GetFloat64(serviceCharge), sess.Provider.ID
+	servCharge, serviceID := m.cfg.GetFloat64(serviceCharge), sess.Provider.Id
 	if err := pool.spendWithServiceCharge(txn, state.Balance(amount), sci, servCharge, serviceID); err != nil {
 		return errors.New(errCodeSessionStop, err.Error())
 	}
@@ -314,11 +315,11 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 		return "", errors.Wrap(errCodeDataUsage, "session already completed", err)
 	}
 
-	provider, err := providerFetch(m.ID, sess.Provider.ExtID, m.db, sci)
+	provider, err := providerFetch(m.ID, sess.Provider.ExtId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeDataUsage, "fetch provider failed", err)
 	}
-	if provider.ID != txn.ClientID {
+	if provider.Id != txn.ClientID {
 		return "", errors.Wrap(errCodeDataUsage, "check owner id failed", err)
 	}
 
@@ -338,7 +339,7 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 
 	// update billing data
 	sess.Billing.DataMarker = &dataMarker
-	sess.Billing.CalcAmount(sess.AccessPoint.Terms)
+	sess.Billing.CalcAmount(sess.AccessPoint)
 	// TODO: make checks:
 	//  the billing amount is lower than token poll balance
 	//  the session is not expired yet
@@ -386,7 +387,7 @@ func (m *MagmaSmartContract) providerRegister(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(errCodeProviderReg, "fetch providers list failed", err)
 	}
 
-	provider.ID = txn.ClientID
+	provider.Id = txn.ClientID
 	if err = list.add(m.ID, provider, m.db, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderReg, "register provider failed", err)
@@ -409,7 +410,7 @@ func (m *MagmaSmartContract) providerStake(txn *tx.Transaction, blob []byte, sci
 	}
 
 	var pool *tokenPool
-	_, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID))
+	_, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.Id))
 	if errors.Is(err, util.ErrValueNotPresent) {
 		stake := newProviderStakeReq(provider, m.cfg)
 		if err := stake.Validate(); err != nil {
@@ -417,7 +418,7 @@ func (m *MagmaSmartContract) providerStake(txn *tx.Transaction, blob []byte, sci
 		}
 		if stake.MinStake != txn.Value {
 			want := strconv.FormatInt(stake.MinStake, 10)
-			return "", errors.Wrap(errCodeProviderStake, "transaction value must be equal to "+want, err)
+			return "", errors.New(errCodeProviderStake, "transaction value must be equal to "+want)
 		}
 
 		pool = newTokenPool()
@@ -442,7 +443,7 @@ func (m *MagmaSmartContract) providerUnstake(txn *tx.Transaction, blob []byte, s
 	}
 
 	var pool *tokenPool
-	data, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID))
+	data, err := sci.GetTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.Id))
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderUnstake, "data not found", err)
 	}
@@ -457,7 +458,7 @@ func (m *MagmaSmartContract) providerUnstake(txn *tx.Transaction, blob []byte, s
 	if err = pool.spend(txn, 0, sci); err != nil {
 		return "", errors.Wrap(errCodeProviderUnstake, "refund stake pool failed", err)
 	}
-	if _, err := sci.DeleteTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.ID)); err != nil {
+	if _, err := sci.DeleteTrieNode(nodeUID(m.ID, providerStakeTokenPool, provider.Id)); err != nil {
 		return "", errors.Wrap(errCodeProviderUnstake, "deleting stake pool failed", err)
 	}
 
@@ -471,11 +472,11 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 		return "", errors.Wrap(errCodeProviderUpdate, "decode provider data failed", err)
 	}
 
-	got, err := providerFetch(m.ID, provider.ExtID, m.db, sci)
+	got, err := providerFetch(m.ID, provider.ExtId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch provider failed", err)
 	}
-	if got.ID != txn.ClientID {
+	if got.Id != txn.ClientID {
 		return "", errors.Wrap(errCodeProviderUpdate, "check owner id failed", err)
 	}
 
@@ -485,7 +486,7 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 		return "", errors.Wrap(errCodeProviderUpdate, "fetch providers list failed", err)
 	}
 
-	provider.ID = txn.ClientID
+	provider.Id = txn.ClientID
 	if err = list.write(m.ID, provider, m.db, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeProviderUpdate, "update providers list failed", err)
@@ -502,35 +503,33 @@ func (m *MagmaSmartContract) providerUpdate(txn *tx.Transaction, blob []byte, sc
 // providerRegister allows registering provider node in the blockchain
 // and saves results in provided state.StateContextI.
 func (m *MagmaSmartContract) accessPointRegister(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	ap := &zmc.AccessPoint{}
-	if err := ap.Decode(blob); err != nil {
+	req := zmc.NewAccessPoint()
+	if err := req.Decode(blob); err != nil {
 		return "", errors.Wrap(errCodeAccessPointReg, "decode access point failed", err)
 	}
 
-	// check provider existence
-	_, err := providerFetch(m.ID, ap.ProviderExtID, m.db, sci)
+	provList, err := providersFetch(AllProvidersKey, m.db)
 	if err != nil {
-		return "", errors.Wrap(errCodeAccessPointReg, "provider is not registered", err)
+		return "", errors.Wrap(errCodeAccessPointReg, "fetch access point failed", err)
+	}
+	prov, err := provList.random(int64(txn.CreationDate)) // pseudo-random provider, because the provided seed is always same for txn
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointReg, "error while picking provider", err)
 	}
 
-	db := store.GetTransaction(m.db)
+	ap := &zmc.AccessPoint{
+		AccessPoint: &pb.AccessPoint{
+			Id:            txn.ClientID,
+			ProviderExtId: prov.ExtId,
+			Terms:         req.Terms,
+		},
+	}
 	list, err := accessPointsFetch(AllAccessPointsKey, m.db)
 	if err != nil {
 		return "", errors.Wrap(errCodeAccessPointReg, "fetch access points list failed", err)
 	}
-
-	ap.ID = txn.ClientID
 	if err = list.add(m.ID, ap, m.db, sci); err != nil {
-		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeAccessPointReg, "register access point failed", err)
-	}
-	if err = m.accessPointStakePoolManage(txn, ap, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeAccessPointReg, "manage stake pool failed", err)
-	}
-	if err = db.Commit(); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeAccessPointReg, "commit changes failed", err)
 	}
 
 	// update access point register metric
@@ -539,91 +538,116 @@ func (m *MagmaSmartContract) accessPointRegister(txn *tx.Transaction, blob []byt
 	return string(ap.Encode()), nil
 }
 
-// accessPointStakePoolManage tries to create a stake token pool for the given access point.
-func (m *MagmaSmartContract) accessPointStakePoolManage(txn *tx.Transaction, ap *zmc.AccessPoint, sci chain.StateContextI) error {
-	if ap.ID != txn.ClientID {
-		return errors.New(accessPointStakeTokenPool, "check owner id failed")
+// providerRegister allows updating registered access point's terms.
+func (m *MagmaSmartContract) accessPointUpdateTerms(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
+	req := zmc.NewAccessPoint()
+	if err := req.Decode(blob); err != nil {
+		return "", errors.Wrap(errCodeAccessPointUpdTerms, "decode terms failed", err)
+	}
+
+	ap, err := accessPointFetch(m.ID, txn.ClientID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointUpdTerms, "fetch access point failed", err)
+	}
+	ap.Terms = req.Terms
+
+	list, err := accessPointsFetch(AllAccessPointsKey, m.db)
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointUpdTerms, "fetch access points list failed", err)
+	}
+
+	if err = list.write(m.ID, ap, m.db, sci); err != nil {
+		return "", errors.Wrap(errCodeAccessPointUpdTerms, "update access points list failed", err)
+	}
+
+	return string(ap.Encode()), nil
+}
+
+func (m *MagmaSmartContract) accessPointStake(txn *tx.Transaction, _ []byte, sci chain.StateContextI) (string, error) {
+	ap, err := accessPointFetch(m.ID, txn.ClientID, m.db, sci)
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointUnstake, "error while fetching access point", err)
 	}
 
 	var pool *tokenPool
-	data, err := sci.GetTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, ap.ID))
-	if ap.MinStake > 0 {
-		if errors.Is(err, util.ErrValueNotPresent) {
-			stake := newAccessPointStakeReq(ap, m.cfg)
-			if err = stake.Validate(); err != nil {
-				return errors.Wrap(accessPointStakeTokenPool, "validate stake request failed", err)
-			}
-			if stake.MinStake != txn.Value {
-				want := strconv.FormatInt(stake.MinStake, 10)
-				return errors.Wrap(accessPointStakeTokenPool, "transaction value must be equal to "+want, err)
-			}
-
-			pool = newTokenPool()
-			if err = pool.create(txn, stake, sci); err != nil {
-				return errors.Wrap(accessPointStakeTokenPool, "create stake pool failed", err)
-			}
+	_, err = sci.GetTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, txn.ClientID))
+	if errors.Is(err, util.ErrValueNotPresent) {
+		stake := newAccessPointStakeReq(ap, m.cfg)
+		if err := stake.Validate(); err != nil {
+			return "", errors.Wrap(errCodeAccessPointStake, "validate stake request failed", err)
 		}
-	} else {
-		if data != nil {
-			pool = newTokenPool()
-			if err = pool.Decode(data.Encode()); err != nil {
-				return errDecodeData.Wrap(err)
-			}
-			if err = pool.spend(txn, 0, sci); err != nil {
-				return errors.Wrap(accessPointStakeTokenPool, "refund stake pool failed", err)
-			}
+		if stake.MinStake != txn.Value {
+			want := strconv.FormatInt(stake.MinStake, 10)
+			return "", errors.New(errCodeAccessPointStake, "transaction value must be equal to "+want)
+		}
 
-			if _, err := sci.DeleteTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, ap.ID)); err != nil {
-				return errors.Wrap(accessPointStakeTokenPool, "deleting stake pool failed", err)
-			}
+		pool = newTokenPool()
+		if err = pool.create(txn, stake, sci); err != nil {
+			return "", errors.Wrap(errCodeAccessPointStake, "create stake pool failed", err)
 		}
 	}
 
 	if pool != nil { // insert new data into state context
 		if _, err = sci.InsertTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, pool.ID), pool); err != nil {
-			return errors.Wrap(accessPointStakeTokenPool, "insert stake pool failed", err)
+			return "", errors.Wrap(errCodeAccessPointStake, "insert stake pool failed", err)
 		}
 	}
 
-	return nil
+	return string(ap.Encode()), nil
 }
 
-// accessPointUpdate updates the current provider terms.
-func (m *MagmaSmartContract) accessPointUpdate(txn *tx.Transaction, blob []byte, sci chain.StateContextI) (string, error) {
-	ap := &zmc.AccessPoint{}
-	if err := ap.Decode(blob); err != nil {
-		return "", errors.Wrap(errCodeAccessPointUpdate, "decode access point data failed", err)
-	}
-
-	// check provider existence
-	_, err := providerFetch(m.ID, ap.ProviderExtID, m.db, sci)
+func (m *MagmaSmartContract) accessPointUnstake(txn *tx.Transaction, _ []byte, sci chain.StateContextI) (string, error) {
+	ap, err := accessPointFetch(m.ID, txn.ClientID, m.db, sci)
 	if err != nil {
-		return "", errors.Wrap(errCodeAccessPointUpdate, "provider is not registered", err)
+		return "", errors.Wrap(errCodeAccessPointUnstake, "error while fetching access point", err)
 	}
 
-	_, err = accessPointFetch(m.ID, ap.ID, m.db, sci)
+	var pool *tokenPool
+	data, err := sci.GetTrieNode(nodeUID(m.ID, accessPointStakeTokenPool, ap.Id))
 	if err != nil {
-		return "", errors.Wrap(errCodeAccessPointUpdate, "fetch access point failed", err)
+		return "", errors.Wrap(errCodeAccessPointUnstake, "data not found", err)
+	}
+	pool = newTokenPool()
+	if err = pool.Decode(data.Encode()); err != nil {
+		return "", errDecodeData.Wrap(err)
+	}
+	if pool.Balance != txn.Value {
+		want := strconv.FormatInt(pool.Balance, 10)
+		return "", errors.Wrap(errCodeAccessPointUnstake, "transaction value must be equal to "+want, err)
+	}
+	if err = pool.spend(txn, 0, sci); err != nil {
+		return "", errors.Wrap(errCodeAccessPointUnstake, "refund stake pool failed", err)
+	}
+	if _, err := sci.DeleteTrieNode(nodeUID(m.ID, providerStakeTokenPool, ap.Id)); err != nil {
+		return "", errors.Wrap(errCodeAccessPointUnstake, "deleting stake pool failed", err)
 	}
 
-	db := store.GetTransaction(m.db)
+	return string(ap.Encode()), nil
+}
+
+// accessPointChangeProvider changes provider for access point by picking random from registered.
+func (m *MagmaSmartContract) accessPointChangeProvider(txn *tx.Transaction, _ []byte, sci chain.StateContextI) (string, error) {
+	ap, err := accessPointFetch(m.ID, txn.ClientID, m.db, sci)
+	if err != nil {
+		return "", err
+	}
+
+	provList, err := providersFetch(AllProvidersKey, m.db)
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointChangeProvider, "fetch access point failed", err)
+	}
+	prov, err := provList.random(int64(txn.CreationDate)) // pseudo-random provider, because the provided seed is always same for txn
+	if err != nil {
+		return "", errors.Wrap(errCodeAccessPointChangeProvider, "error while picking provider", err)
+	}
+	ap.ProviderExtId = prov.ExtId
+
 	list, err := accessPointsFetch(AllAccessPointsKey, m.db)
 	if err != nil {
-		return "", errors.Wrap(errCodeAccessPointUpdate, "fetch access points list failed", err)
+		return "", errors.Wrap(errCodeAccessPointChangeProvider, "fetch access points list failed", err)
 	}
-
-	ap.ID = txn.ClientID
 	if err = list.write(m.ID, ap, m.db, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeAccessPointUpdate, "update access points list failed", err)
-	}
-	if err = m.accessPointStakePoolManage(txn, ap, sci); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeAccessPointUpdate, "manage stake pool failed", err)
-	}
-	if err = db.Commit(); err != nil {
-		_ = db.Conn.Rollback()
-		return "", errors.Wrap(errCodeAccessPointUpdate, "commit changes failed", err)
+		return "", errors.Wrap(errCodeAccessPointChangeProvider, "update access points list failed", err)
 	}
 
 	return string(ap.Encode()), nil
@@ -685,7 +709,7 @@ func (m *MagmaSmartContract) rewardPoolLock(txn *tx.Transaction, blob []byte, sc
 		return "", errors.Wrap(errCodeRewardPoolLock, "decode lock request failed", err)
 	}
 
-	req.Provider, err = providerFetch(m.ID, req.Provider.ExtID, m.db, sci)
+	req.Provider, err = providerFetch(m.ID, req.Provider.ExtId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeRewardPoolLock, "fetch provider failed", err)
 	}
@@ -718,7 +742,7 @@ func (m *MagmaSmartContract) rewardPoolUnlock(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(errCodeRewardPoolUnlock, "decode unlock request failed", err)
 	}
 
-	req.Provider, err = providerFetch(m.ID, req.Provider.ExtID, m.db, sci)
+	req.Provider, err = providerFetch(m.ID, req.Provider.ExtId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeRewardPoolUnlock, "fetch provider failed", err)
 	}
@@ -776,7 +800,7 @@ func (m *MagmaSmartContract) userRegister(txn *tx.Transaction, blob []byte, sci 
 	}
 
 	// check consumer existence
-	_, err := consumerFetch(m.ID, user.ConsumerID, m.db, sci)
+	_, err := consumerFetch(m.ID, user.ConsumerId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeUserReg, "consumer is not registered", err)
 	}
@@ -787,7 +811,7 @@ func (m *MagmaSmartContract) userRegister(txn *tx.Transaction, blob []byte, sci 
 		return "", errors.Wrap(errCodeUserReg, "fetch users list failed", err)
 	}
 
-	user.ID = txn.ClientID
+	user.Id = txn.ClientID
 	if err = list.add(m.ID, user, m.db, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeUserReg, "register user failed", err)
@@ -811,12 +835,12 @@ func (m *MagmaSmartContract) userUpdate(txn *tx.Transaction, blob []byte, sci ch
 	}
 
 	// check consumer existence
-	_, err := consumerFetch(m.ID, user.ConsumerID, m.db, sci)
+	_, err := consumerFetch(m.ID, user.ConsumerId, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeUserUpdate, "consumer is not registered", err)
 	}
 
-	_, err = userFetch(m.ID, user.ID, m.db, sci)
+	_, err = userFetch(m.ID, user.Id, m.db, sci)
 	if err != nil {
 		return "", errors.Wrap(errCodeUserUpdate, "fetch user failed", err)
 	}
@@ -827,7 +851,7 @@ func (m *MagmaSmartContract) userUpdate(txn *tx.Transaction, blob []byte, sci ch
 		return "", errors.Wrap(errCodeUserUpdate, "fetch users list failed", err)
 	}
 
-	user.ID = txn.ClientID
+	user.Id = txn.ClientID
 	if err = list.write(m.ID, user, m.db, sci); err != nil {
 		_ = db.Conn.Rollback()
 		return "", errors.Wrap(errCodeUserUpdate, "update users list failed", err)

@@ -2,6 +2,7 @@ package magmasc
 
 import (
 	"encoding/json"
+	"math/rand"
 	"reflect"
 	"sort"
 
@@ -24,8 +25,8 @@ func (m *Providers) add(scID string, item *zmc.Provider, db *gorocksdb.Transacti
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if got, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.ExtID)); got != nil {
-		return errors.New(errCodeInternal, "provider already registered: "+item.ExtID)
+	if got, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.ExtId)); got != nil {
+		return errors.New(errCodeInternal, "provider already registered: "+item.ExtId)
 	}
 
 	return m.write(scID, item, db, sci)
@@ -77,7 +78,7 @@ func (m *Providers) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Provi
 }
 
 func (m *Providers) hasEqual(item *zmc.Provider) bool {
-	if got, found := m.get(item.ExtID); !found || !reflect.DeepEqual(got, item) {
+	if got, found := m.get(item.ExtId); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
 
@@ -115,9 +116,9 @@ func (m *Providers) getIndex(id string) (int, bool) {
 	size := len(m.Sorted)
 	if size > 0 {
 		idx := sort.Search(size, func(idx int) bool {
-			return m.Sorted[idx].ExtID >= id
+			return m.Sorted[idx].ExtId >= id
 		})
-		if idx < size && m.Sorted[idx].ExtID == id {
+		if idx < size && m.Sorted[idx].ExtId == id {
 			return idx, true // found
 		}
 	}
@@ -137,13 +138,13 @@ func (m *Providers) put(item *zmc.Provider) (int, bool) {
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
-		return m.Sorted[idx].ExtID >= item.ExtID
+		return m.Sorted[idx].ExtId >= item.ExtId
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, item)
 		return idx, true // appended
 	}
-	if m.Sorted[idx].ExtID == item.ExtID { // the same
+	if m.Sorted[idx].ExtId == item.ExtId { // the same
 		m.Sorted[idx] = item // replace
 		return idx, false    // already have
 	}
@@ -154,18 +155,27 @@ func (m *Providers) put(item *zmc.Provider) (int, bool) {
 	return idx, true // inserted
 }
 
+func (m *Providers) random(seed int64) (*zmc.Provider, error) {
+	if len(m.Sorted) == 0 {
+		return nil, errors.New(errCodeInternal, "provider can not be picked with empty list")
+	}
+
+	rand.Seed(seed)
+	return m.Sorted[rand.Intn(len(m.Sorted))], nil
+}
+
 func (m *Providers) write(scID string, item *zmc.Provider, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtID), item); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtId), item); err != nil {
 		return errors.Wrap(errCodeInternal, "insert provider failed", err)
 	}
 
 	var list *Providers
 	if !m.hasEqual(item) { // check if an equal item already added
 		got, found := m.getByHost(item.Host)
-		if found && item.ID != got.ID { // check if a host already registered
+		if found && item.Id != got.Id { // check if a host already registered
 			return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
 		}
 

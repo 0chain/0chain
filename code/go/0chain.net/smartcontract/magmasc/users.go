@@ -24,8 +24,8 @@ func (m *Users) add(scID string, item *zmc.User, db *gorocksdb.TransactionDB, sc
 	if item == nil {
 		return errors.New(errCodeInternal, "user invalid value").Wrap(errNilPointerValue)
 	}
-	if got, _ := sci.GetTrieNode(nodeUID(scID, userType, item.ID)); got != nil {
-		return errors.New(errCodeInternal, "user already registered: "+item.ID)
+	if got, _ := sci.GetTrieNode(nodeUID(scID, userType, item.Id)); got != nil {
+		return errors.New(errCodeInternal, "user already registered: "+item.Id)
 	}
 	return m.write(scID, item, db, sci)
 }
@@ -76,7 +76,7 @@ func (m *Users) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.User, err
 }
 
 func (m *Users) hasEqual(item *zmc.User) bool {
-	if got, found := m.get(item.ID); !found || !reflect.DeepEqual(got, item) {
+	if got, found := m.get(item.Id); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
 
@@ -94,7 +94,7 @@ func (m *Users) get(id string) (*zmc.User, bool) {
 
 func (m *Users) getByConsumer(consumerID string) (*zmc.User, bool) {
 	for _, item := range m.Sorted {
-		if item.ConsumerID == consumerID {
+		if item.ConsumerId == consumerID {
 			return item, true // found
 		}
 	}
@@ -114,9 +114,9 @@ func (m *Users) getIndex(id string) (int, bool) {
 	size := len(m.Sorted)
 	if size > 0 {
 		idx := sort.Search(size, func(idx int) bool {
-			return m.Sorted[idx].ID >= id
+			return m.Sorted[idx].Id >= id
 		})
-		if idx < size && m.Sorted[idx].ID == id {
+		if idx < size && m.Sorted[idx].Id == id {
 			return idx, true // found
 		}
 	}
@@ -136,13 +136,13 @@ func (m *Users) put(item *zmc.User) (int, bool) {
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
-		return m.Sorted[idx].ID >= item.ID
+		return m.Sorted[idx].Id >= item.Id
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, item)
 		return idx, true // appended
 	}
-	if m.Sorted[idx].ID == item.ID { // the same
+	if m.Sorted[idx].Id == item.Id { // the same
 		m.Sorted[idx] = item // replace
 		return idx, false    // already have
 	}
@@ -157,15 +157,15 @@ func (m *Users) write(scID string, item *zmc.User, db *gorocksdb.TransactionDB, 
 	if item == nil {
 		return errors.New(errCodeInternal, "user invalid value").Wrap(errNilPointerValue)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, userType, item.ID), item); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, userType, item.Id), item); err != nil {
 		return errors.Wrap(errCodeInternal, "insert user failed", err)
 	}
 
 	var list *Users
 	if !m.hasEqual(item) { // check if an equal item already added
-		got, found := m.getByConsumer(item.ConsumerID)
-		if found && item.ID != got.ID { // check if a consumer already registered
-			return errors.New(errCodeInternal, "user's consumer already registered: "+item.ConsumerID)
+		got, found := m.getByConsumer(item.ConsumerId)
+		if found && item.Id != got.Id { // check if a consumer already registered
+			return errors.New(errCodeInternal, "user's consumer already registered: "+item.ConsumerId)
 		}
 
 		list = m.copy()

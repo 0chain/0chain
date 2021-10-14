@@ -2,8 +2,10 @@ package magmasc
 
 import (
 	"encoding/json"
+	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 
@@ -49,7 +51,7 @@ func Test_Providers_add(t *testing.T) {
 			name: "Provider_Insert_Trie_Node_ERR",
 			prov: &zmc.Provider{
 				Provider: &pb.Provider{
-					ExtID: "cannot_insert_id",
+					ExtId: "cannot_insert_id",
 				},
 			},
 			msc:   msc,
@@ -135,7 +137,7 @@ func Test_Providers_del(t *testing.T) {
 			name: "FALSE",
 			prov: &zmc.Provider{
 				Provider: &pb.Provider{
-					ExtID: "not_present_id",
+					ExtId: "not_present_id",
 				},
 			},
 			msc:   msc,
@@ -150,7 +152,7 @@ func Test_Providers_del(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running to avoid detect race conditions because of
 			// everything is happening in a single smart contract so there is only one thread
-			got, err := test.list.del(test.prov.ExtID, msc.db)
+			got, err := test.list.del(test.prov.ExtId, msc.db)
 			if (err != nil) != test.error {
 				t.Errorf("del() error: %v | want: %v", err, test.error)
 				return
@@ -184,7 +186,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 		error bool
 	}{
 		{
-			name:  prov2.ExtID + "_del_OK",
+			name:  prov2.ExtId + "_del_OK",
 			idx:   2,
 			msc:   msc,
 			list:  list,
@@ -192,7 +194,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  prov3.ExtID + "_del_OK",
+			name:  prov3.ExtId + "_del_OK",
 			idx:   2,
 			msc:   msc,
 			list:  list,
@@ -200,7 +202,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  prov0.ExtID + "_del_OK",
+			name:  prov0.ExtId + "_del_OK",
 			idx:   0,
 			msc:   msc,
 			list:  list,
@@ -208,7 +210,7 @@ func Test_Providers_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  prov1.ExtID + "_del_OK",
+			name:  prov1.ExtId + "_del_OK",
 			idx:   0,
 			msc:   msc,
 			list:  list,
@@ -255,7 +257,7 @@ func Test_Providers_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   list.Sorted[idx].ExtID,
+			id:   list.Sorted[idx].ExtId,
 			list: list,
 			want: list.Sorted[idx],
 			ret:  true,
@@ -384,7 +386,7 @@ func Test_Providers_getIndex(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   list.Sorted[idx].ExtID,
+			id:   list.Sorted[idx].ExtId,
 			list: list,
 			want: idx,
 			ret:  true,
@@ -420,22 +422,22 @@ func Test_Providers_put(t *testing.T) {
 	list := Providers{}
 	prov0 := zmc.Provider{
 		Provider: &pb.Provider{
-			ExtID: "0",
+			ExtId: "0",
 		},
 	}
 	prov1 := zmc.Provider{
 		Provider: &pb.Provider{
-			ExtID: "1",
+			ExtId: "1",
 		},
 	}
 	prov2 := zmc.Provider{
 		Provider: &pb.Provider{
-			ExtID: "2",
+			ExtId: "2",
 		},
 	}
 	prov3 := zmc.Provider{
 		Provider: &pb.Provider{
-			ExtID: "3",
+			ExtId: "3",
 		},
 	}
 
@@ -594,6 +596,54 @@ func Test_providersFetch(t *testing.T) {
 			}
 			if (err != nil) != test.error {
 				t.Errorf("providersFetch() error: %v | want: %v", err, test.error)
+			}
+		})
+	}
+}
+
+func TestProviders_random(t *testing.T) {
+	t.Parallel()
+
+	list := mockProviders()
+
+	seed := time.Now().Unix()
+	rand.Seed(seed)
+	randInd := rand.Intn(len(list.Sorted))
+
+	tests := []struct {
+		name      string
+		providers *Providers
+		seed      int64
+		want      *zmc.Provider
+		wantErr   bool
+	}{
+		{
+			name:      "OK",
+			providers: list,
+			seed:      seed,
+			want:      list.Sorted[randInd],
+			wantErr:   false,
+		},
+		{
+			name:      "Empty_List_ERR",
+			providers: &Providers{},
+			seed:      seed,
+			want:      nil,
+			wantErr:   true,
+		},
+	}
+	for ind := range tests {
+		test := tests[ind]
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := test.providers.random(test.seed)
+			if (err != nil) != test.wantErr {
+				t.Errorf("random() error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("random() got = %v, want %v", got, test.want)
 			}
 		})
 	}

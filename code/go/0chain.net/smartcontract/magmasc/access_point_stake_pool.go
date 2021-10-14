@@ -1,8 +1,6 @@
 package magmasc
 
 import (
-	"strconv"
-
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 
@@ -37,12 +35,12 @@ func newAccessPointStakeReq(ap *zmc.AccessPoint, cfg *viper.Viper) *accessPointS
 
 // PoolBalance implements PoolConfigurator interface.
 func (m *accessPointStakeReq) PoolBalance() int64 {
-	return m.AccessPoint.MinStake
+	return m.MinStake
 }
 
 // PoolID implements PoolConfigurator interface.
 func (m *accessPointStakeReq) PoolID() string {
-	return m.AccessPoint.ID
+	return m.AccessPoint.Id
 }
 
 // PoolHolderID implements PoolConfigurator interface.
@@ -52,12 +50,12 @@ func (m *accessPointStakeReq) PoolHolderID() string {
 
 // PoolPayerID implements PoolConfigurator interface.
 func (m *accessPointStakeReq) PoolPayerID() string {
-	return m.AccessPoint.ID
+	return m.AccessPoint.Id
 }
 
 // PoolPayeeID implements PoolConfigurator interface.
 func (m *accessPointStakeReq) PoolPayeeID() string {
-	return m.AccessPoint.ID
+	return m.AccessPoint.Id
 }
 
 // Validate checks accessPointStakeReq for correctness.
@@ -66,11 +64,8 @@ func (m *accessPointStakeReq) Validate() (err error) {
 	case m.AccessPoint == nil:
 		err = errors.New(errCodeInternal, "access point is required")
 
-	case m.AccessPoint.ID == "":
+	case m.AccessPoint.Id == "":
 		err = errors.New(errCodeBadRequest, "provider id is required")
-
-	case m.AccessPoint.MinStake < m.MinStake:
-		err = errors.New(errCodeInternal, "min stake value must be no less than: "+strconv.Itoa(int(m.MinStake)))
 	}
 
 	return err

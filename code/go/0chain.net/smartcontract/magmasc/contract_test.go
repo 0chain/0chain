@@ -3,6 +3,7 @@ package magmasc
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"net/url"
 	"reflect"
 	"testing"
@@ -10,9 +11,11 @@ import (
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 	"github.com/0chain/gosdk/zmagmacore/time"
+	"github.com/stretchr/testify/assert"
 
 	chain "0chain.net/chaincore/chain/state"
 	tx "0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 )
 
 func Test_MagmaSmartContract_session(t *testing.T) {
@@ -176,9 +179,9 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 			ctx:  nil,
 			vals: url.Values{
 				"session_id":      {sess.SessionID},
-				"access_point_id": {sess.AccessPoint.ID},
+				"access_point_id": {sess.AccessPoint.Id},
 				"consumer_ext_id": {sess.Consumer.ExtID},
-				"provider_ext_id": {sess.Provider.ExtID},
+				"provider_ext_id": {sess.Provider.ExtId},
 			},
 			sci:   sci,
 			msc:   msc,
@@ -200,7 +203,7 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 			vals: url.Values{
 				"session_id":      {sess.SessionID},
 				"consumer_ext_id": {sess.Consumer.ExtID},
-				"provider_ext_id": {sess.Provider.ExtID},
+				"provider_ext_id": {sess.Provider.ExtId},
 			},
 			sci:   sci,
 			msc:   msc,
@@ -212,8 +215,8 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 			ctx:  nil,
 			vals: url.Values{
 				"session_id":      {sess.SessionID},
-				"access_point_id": {sess.AccessPoint.ID},
-				"provider_ext_id": {sess.Provider.ExtID},
+				"access_point_id": {sess.AccessPoint.Id},
+				"provider_ext_id": {sess.Provider.ExtId},
 			},
 			sci:   sci,
 			msc:   msc,
@@ -225,7 +228,7 @@ func Test_MagmaSmartContract_sessionAcceptedVerify(t *testing.T) {
 			ctx:  nil,
 			vals: url.Values{
 				"session_id":      {sess.SessionID},
-				"access_point_id": {sess.AccessPoint.ID},
+				"access_point_id": {sess.AccessPoint.Id},
 				"consumer_ext_id": {sess.Consumer.ExtID},
 			},
 			sci:   sci,
@@ -596,17 +599,13 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	sess := mockSession()
-	sess.AccessPoint.MinStake = 1
-	sess.Billing = zmc.Billing{} // initial value
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, session, sess.SessionID), sess); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
+	sess.Billing = zmc.Billing{Ratio: msc.cfg.GetInt64(billingRatio)}
 
 	txn := sci.GetTransaction()
 	txn.ClientID = sess.Consumer.ID
 
 	pool := newTokenPool()
-	if err := pool.createWithRatio(txn, sess, sci, msc.cfg.GetInt64(billingRatio)); err != nil {
+	if err := pool.create(txn, sess, sci); err != nil {
 		t.Fatalf("tokenPool.createWithRatio() error: %v | want: %v", err, nil)
 	}
 	sess.TokenPool = &pool.TokenPool
@@ -626,12 +625,21 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 		t.Fatalf("AccessPoints.add() error: %v | want: %v", err, nil)
 	}
 
-	stake := newProviderStakeReq(sess.Provider, msc.cfg)
+	provStake := newProviderStakeReq(sess.Provider, msc.cfg)
 	pool = newTokenPool()
-	if err := pool.create(txn, stake, sci); err != nil {
+	if err := pool.create(txn, provStake, sci); err != nil {
 		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
 	}
 	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerStakeTokenPool, pool.ID), pool); err != nil {
+		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	apStake := newAccessPointStakeReq(sess.AccessPoint, msc.cfg)
+	pool = newTokenPool()
+	if err := pool.create(txn, apStake, sci); err != nil {
+		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
+	}
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStakeTokenPool, pool.ID), pool); err != nil {
 		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -651,11 +659,6 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 				SessionID:   sess.SessionID,
 				AccessPoint: sess.AccessPoint,
 				Consumer:    &zmc.Consumer{ExtID: sess.Consumer.ExtID},
-				Provider: &zmc.Provider{
-					Provider: &pb.Provider{
-						ExtID: sess.Provider.ExtID,
-					},
-				},
 			}).Encode(),
 			sci:   sci,
 			msc:   msc,
@@ -704,7 +707,7 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 
 	pool := newTokenPool()
 	pool.PayerID = sess.Consumer.ID
-	pool.PayeeID = sess.Provider.ID
+	pool.PayeeID = sess.Provider.Id
 	pool.ID = sess.SessionID
 	pool.Balance = 1000
 	pool.Transfers = []zmc.TokenPoolTransfer{{
@@ -735,7 +738,7 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 				Consumer:    &zmc.Consumer{ExtID: sess.Consumer.ExtID},
 				Provider: &zmc.Provider{
 					Provider: &pb.Provider{
-						ExtID: sess.Provider.ExtID,
+						ExtId: sess.Provider.ExtId,
 					},
 				},
 			}).Encode(),
@@ -827,11 +830,11 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 	}
 
 	txn := sci.GetTransaction()
-	txn.ClientID = sess.Provider.ID
+	txn.ClientID = sess.Provider.Id
 
 	pool := newTokenPool()
 	pool.PayerID = sess.Consumer.ID
-	pool.PayeeID = sess.Provider.ID
+	pool.PayeeID = sess.Provider.Id
 	pool.ID = sess.SessionID
 	pool.Balance = 1000
 	pool.Transfers = []zmc.TokenPoolTransfer{{
@@ -841,7 +844,7 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 		ToClient:   pool.PayeeID,
 	}}
 
-	sess.Billing.CalcAmount(sess.AccessPoint.Terms)
+	sess.Billing.CalcAmount(sess.AccessPoint)
 	sess.TokenPool = &pool.TokenPool
 
 	tests := [1]struct {
@@ -887,7 +890,7 @@ func Test_MagmaSmartContract_providerExist(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtId), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -903,7 +906,7 @@ func Test_MagmaSmartContract_providerExist(t *testing.T) {
 		{
 			name:  "OK",
 			ctx:   nil,
-			vals:  url.Values{"ext_id": {prov.ExtID}},
+			vals:  url.Values{"ext_id": {prov.ExtId}},
 			sci:   sci,
 			msc:   msc,
 			want:  true,
@@ -943,7 +946,7 @@ func Test_MagmaSmartContract_providerFetch(t *testing.T) {
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
 	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtId), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -959,7 +962,7 @@ func Test_MagmaSmartContract_providerFetch(t *testing.T) {
 		{
 			name:  "OK",
 			ctx:   nil,
-			vals:  url.Values{"ext_id": {prov.ExtID}},
+			vals:  url.Values{"ext_id": {prov.ExtId}},
 			sci:   sci,
 			msc:   msc,
 			want:  prov,
@@ -1007,7 +1010,7 @@ func Test_MagmaSmartContract_providerRegister(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			txn:   &tx.Transaction{ClientID: prov.ID},
+			txn:   &tx.Transaction{ClientID: prov.Id},
 			blob:  blob,
 			sci:   sci,
 			msc:   msc,
@@ -1075,7 +1078,7 @@ func Test_MagmaSmartContract_providerUpdate(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			txn:   &tx.Transaction{ClientID: prov.ID},
+			txn:   &tx.Transaction{ClientID: prov.Id},
 			blob:  blob,
 			sci:   sci,
 			msc:   msc,
@@ -1106,20 +1109,26 @@ func Test_MagmaSmartContract_accessPointRegister(t *testing.T) {
 
 	msc, sci := mockMagmaSmartContract(), mockStateContextI()
 
-	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	numProviders, provList := 10, &Providers{}
+	for i := 0; i < numProviders; i++ {
+		if err := provList.add(msc.ID, mockProvider(), msc.db, sci); err != nil {
+			t.Fatalf("add() error: %v | want: %v", err, nil)
+		}
 	}
 
-	ap := mockAccessPoint(prov.ExtID)
+	now := time.Now()
+	rand.Seed(int64(now))
+	randInd := rand.Intn(len(provList.Sorted))
+
+	ap := mockAccessPoint(provList.Sorted[randInd].ExtId)
 	blob := ap.Encode()
 
 	sciInvalid, nodeInvalid := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sciInvalid.InsertTrieNode(AllAccessPointsKey, &nodeInvalid); err != nil {
+	if _, err := sciInvalid.InsertTrieNode(nodeUID(msc.ID, accessPointType, nodeInvalid.ID), &nodeInvalid); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
-	tests := [4]struct {
+	tests := [3]struct {
 		name  string
 		txn   *tx.Transaction
 		blob  []byte
@@ -1130,7 +1139,7 @@ func Test_MagmaSmartContract_accessPointRegister(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			txn:   &tx.Transaction{ClientID: ap.ID},
+			txn:   &tx.Transaction{ClientID: ap.Id, CreationDate: common.Timestamp(now)},
 			blob:  blob,
 			sci:   sci,
 			msc:   msc,
@@ -1155,15 +1164,6 @@ func Test_MagmaSmartContract_accessPointRegister(t *testing.T) {
 			want:  "",
 			error: true,
 		},
-		{
-			name:  "Provider_Is_Not_registered_ERR",
-			txn:   &tx.Transaction{ClientID: ap.ID},
-			blob:  mockAccessPoint("invalid_provider").Encode(),
-			sci:   sci,
-			msc:   msc,
-			want:  "",
-			error: true,
-		},
 	}
 
 	for idx := range tests {
@@ -1176,65 +1176,7 @@ func Test_MagmaSmartContract_accessPointRegister(t *testing.T) {
 				t.Errorf("accessPointRegister() error: %v | want: %v", err, test.error)
 				return
 			}
-			if got != test.want {
-				t.Errorf("accessPointRegister() got: %v | want: %v", got, test.want)
-			}
-		})
-	}
-}
-
-func Test_MagmaSmartContract_accessPointUpdate(t *testing.T) {
-	t.Parallel()
-
-	list, msc, sci := AccessPoints{}, mockMagmaSmartContract(), mockStateContextI()
-
-	prov := mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerType, prov.ExtID), prov); err != nil {
-		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
-	}
-
-	ap := mockAccessPoint(prov.ExtID)
-	if err := list.add(msc.ID, ap, msc.db, sci); err != nil {
-		t.Fatalf("add() error: %v | want: %v", err, nil)
-	}
-
-	ap.Terms.Price++
-
-	blob := ap.Encode()
-
-	tests := [1]struct {
-		name  string
-		txn   *tx.Transaction
-		blob  []byte
-		sci   chain.StateContextI
-		msc   *MagmaSmartContract
-		want  string
-		error bool
-	}{
-		{
-			name:  "OK",
-			txn:   &tx.Transaction{ClientID: ap.ID},
-			blob:  blob,
-			sci:   sci,
-			msc:   msc,
-			want:  string(blob),
-			error: false,
-		},
-	}
-
-	for idx := range tests {
-		test := tests[idx]
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, err := test.msc.accessPointUpdate(test.txn, test.blob, test.sci)
-			if (err != nil) != test.error {
-				t.Errorf("accessPointUpdate() error: %v | want: %v", err, test.error)
-				return
-			}
-			if got != test.want {
-				t.Errorf("accessPointUpdate() got: %v, want: %v", got, test.want)
-			}
+			assert.Equal(t, test.want, got, "accessPointRegister()")
 		})
 	}
 }
@@ -1244,7 +1186,7 @@ func Test_MagmaSmartContract_accessPointExist(t *testing.T) {
 
 	ap, msc, sci := mockAccessPoint("prov-ext-id"), mockMagmaSmartContract(), mockStateContextI()
 
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.ID), ap); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -1260,7 +1202,7 @@ func Test_MagmaSmartContract_accessPointExist(t *testing.T) {
 		{
 			name:  "OK",
 			ctx:   nil,
-			vals:  url.Values{"id": {ap.ID}},
+			vals:  url.Values{"id": {ap.Id}},
 			sci:   sci,
 			msc:   msc,
 			want:  true,
@@ -1299,7 +1241,7 @@ func Test_MagmaSmartContract_accessPointFetch(t *testing.T) {
 
 	ap, msc, sci := mockAccessPoint("prov-ext-id"), mockMagmaSmartContract(), mockStateContextI()
 
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.ID), ap); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -1309,13 +1251,13 @@ func Test_MagmaSmartContract_accessPointFetch(t *testing.T) {
 		vals  url.Values
 		sci   chain.StateContextI
 		msc   *MagmaSmartContract
-		want  interface{}
+		want  *zmc.AccessPoint
 		error bool
 	}{
 		{
 			name:  "OK",
 			ctx:   nil,
-			vals:  url.Values{"id": {ap.ID}},
+			vals:  url.Values{"id": {ap.Id}},
 			sci:   sci,
 			msc:   msc,
 			want:  ap,
@@ -1333,9 +1275,221 @@ func Test_MagmaSmartContract_accessPointFetch(t *testing.T) {
 				t.Errorf("accessPointFetch() error: %v | want: %v", err, test.error)
 				return
 			}
-			if !reflect.DeepEqual(got, test.want) {
-				t.Errorf("accessPointFetch() got: %v | want: %v", got, test.want)
+
+			gotAP, ok := got.(*zmc.AccessPoint)
+			if !ok {
+				t.Fatal("expected *zmc.AccessPoint type")
 			}
+			assert.Equal(t, test.want.String(), gotAP.String(), "accessPointFetch()")
+		})
+	}
+}
+
+func TestMagmaSmartContract_accessPointUpdateTerms(t *testing.T) {
+	msc, sci := mockMagmaSmartContract(), mockStateContextI()
+	provID := "prov-id"
+	ap := mockAccessPoint(provID)
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	req := mockAccessPoint(provID)
+	req.Id = ""
+	req.ProviderExtId = ""
+	req.Terms.Price++
+
+	tests := []struct {
+		name    string
+		msc     *MagmaSmartContract
+		txn     *tx.Transaction
+		blob    []byte
+		sci     chain.StateContextI
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			msc:  msc,
+			txn:  &tx.Transaction{ClientID: ap.Id},
+			blob: req.Encode(),
+			sci:  sci,
+			want: string(
+				(&zmc.AccessPoint{
+					AccessPoint: &pb.AccessPoint{
+						Id:            ap.Id,
+						ProviderExtId: ap.ProviderExtId,
+						Terms:         req.Terms,
+					},
+				}).Encode(),
+			),
+			wantErr: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := test.msc.accessPointUpdateTerms(test.txn, test.blob, test.sci)
+			if (err != nil) != test.wantErr {
+				t.Errorf("accessPointUpdateTerms() error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+			if got != test.want {
+				t.Errorf("accessPointUpdateTerms() got = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestMagmaSmartContract_accessPointStake(t *testing.T) {
+	msc, sci := mockMagmaSmartContract(), mockStateContextI()
+	ap := mockAccessPoint("prov-id")
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	anotherAP := mockAccessPoint("prov-id")
+	anotherAP.Id = ap.Id + "2"
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, anotherAP.Id), anotherAP); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	tests := []struct {
+		name    string
+		msc     *MagmaSmartContract
+		txn     *tx.Transaction
+		sci     chain.StateContextI
+		wantErr bool
+	}{
+		{
+			name:    "OK",
+			msc:     msc,
+			txn:     &tx.Transaction{ClientID: ap.Id, Value: int64(msc.cfg.GetFloat64(accessPointMinStake) * billion)},
+			sci:     sci,
+			wantErr: false,
+		},
+		{
+			name:    "Zero_Value_Txn_ERR",
+			msc:     msc,
+			txn:     &tx.Transaction{ClientID: anotherAP.Id},
+			sci:     sci,
+			wantErr: true,
+		},
+	}
+	for ind := range tests {
+		test := tests[ind]
+		t.Run(test.name, func(t *testing.T) {
+			_, err := test.msc.accessPointStake(test.txn, nil, test.sci)
+			if (err != nil) != test.wantErr {
+				t.Errorf("accessPointStake() error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+
+			if !test.wantErr {
+				if _, err = test.sci.GetTrieNode(nodeUID(test.msc.ID, accessPointStakeTokenPool, test.txn.ClientID)); err != nil {
+					t.Errorf("GetTrieNode() error = %v, wantErr %v", err, nil)
+				}
+			}
+		})
+	}
+}
+
+func TestMagmaSmartContract_accessPointUnstake(t *testing.T) {
+	msc, sci, ap := mockMagmaSmartContract(), mockStateContextI(), mockAccessPoint("provider-id")
+
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	txn := sci.GetTransaction()
+	txn.ClientID = ap.Id
+	txn.Value = int64(msc.cfg.GetFloat64(accessPointMinStake) * billion)
+
+	apStake := newAccessPointStakeReq(ap, msc.cfg)
+	pool := newTokenPool()
+	if err := pool.create(txn, apStake, sci); err != nil {
+		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
+	}
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStakeTokenPool, pool.ID), pool); err != nil {
+		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+
+	tests := []struct {
+		name    string
+		msc     *MagmaSmartContract
+		txn     *tx.Transaction
+		sci     chain.StateContextI
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "OK",
+			msc:     msc,
+			txn:     txn,
+			sci:     sci,
+			want:    string(ap.Encode()),
+			wantErr: false,
+		},
+	}
+	for ind := range tests {
+		test := tests[ind]
+		t.Run(test.name, func(t *testing.T) {
+			got, err := test.msc.accessPointUnstake(test.txn, nil, test.sci)
+			if (err != nil) != test.wantErr {
+				t.Errorf("accessPointUnstake() error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+			if got != test.want {
+				t.Errorf("accessPointUnstake() got = %v, want %v", got, test.want)
+			}
+		})
+	}
+}
+
+func TestMagmaSmartContract_accessPointChangeProvider(t *testing.T) {
+	msc, sci := mockMagmaSmartContract(), mockStateContextI()
+
+	numProviders, provList := 10, &Providers{}
+	for i := 0; i < numProviders; i++ {
+		if err := provList.add(msc.ID, mockProvider(), msc.db, sci); err != nil {
+			t.Fatalf("add() error: %v | want: %v", err, nil)
+		}
+	}
+
+	now := time.Now()
+	rand.Seed(int64(now))
+	randInd := rand.Intn(len(provList.Sorted))
+
+	ap := mockAccessPoint("")
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointType, ap.Id), ap); err != nil {
+		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
+	}
+	ap.ProviderExtId = provList.Sorted[randInd].ExtId
+
+	tests := []struct {
+		name    string
+		msc     *MagmaSmartContract
+		txn     *tx.Transaction
+		sci     chain.StateContextI
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "OK",
+			msc:     msc,
+			txn:     &tx.Transaction{ClientID: ap.Id, CreationDate: common.Timestamp(now)},
+			sci:     sci,
+			want:    string(ap.Encode()),
+			wantErr: false,
+		},
+	}
+	for ind := range tests {
+		test := tests[ind]
+		t.Run(test.name, func(t *testing.T) {
+			got, err := test.msc.accessPointChangeProvider(test.txn, nil, test.sci)
+			if (err != nil) != test.wantErr {
+				t.Errorf("accessPointChangeProvider() error = %v, wantErr %v", err, test.wantErr)
+				return
+			}
+			assert.Equal(t, test.want, got)
 		})
 	}
 }

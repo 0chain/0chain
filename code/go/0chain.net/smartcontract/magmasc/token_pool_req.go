@@ -71,7 +71,7 @@ func (m *tokenPoolReq) PoolPayerID() string {
 
 // PoolPayeeID implements PoolConfigurator interface.
 func (m *tokenPoolReq) PoolPayeeID() string {
-	return m.Provider.ID
+	return m.Provider.Id
 }
 
 // Validate checks tokenPoolReq for correctness.
@@ -86,7 +86,7 @@ func (m *tokenPoolReq) Validate() (err error) {
 	case m.ID == "":
 		err = errors.New(errCodeBadRequest, "pool id is required")
 
-	case m.Provider == nil || m.Provider.ExtID == "":
+	case m.Provider == nil || m.Provider.ExtId == "":
 		err = errors.New(errCodeBadRequest, "provider external id is required")
 	}
 

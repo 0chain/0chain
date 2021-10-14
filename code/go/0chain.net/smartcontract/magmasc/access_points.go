@@ -24,8 +24,8 @@ func (m *AccessPoints) add(scID string, item *zmc.AccessPoint, db *gorocksdb.Tra
 	if item == nil {
 		return errors.New(errCodeInternal, "access point invalid value").Wrap(errNilPointerValue)
 	}
-	if got, _ := sci.GetTrieNode(nodeUID(scID, accessPointType, item.ID)); got != nil {
-		return errors.New(errCodeInternal, "access point already registered: "+item.ID)
+	if got, _ := sci.GetTrieNode(nodeUID(scID, accessPointType, item.Id)); got != nil {
+		return errors.New(errCodeInternal, "access point already registered: "+item.Id)
 	}
 
 	return m.write(scID, item, db, sci)
@@ -77,7 +77,7 @@ func (m *AccessPoints) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Ac
 }
 
 func (m *AccessPoints) hasEqual(item *zmc.AccessPoint) bool {
-	if got, found := m.get(item.ID); !found || !reflect.DeepEqual(got, item) {
+	if got, found := m.get(item.Id); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
 
@@ -106,9 +106,9 @@ func (m *AccessPoints) getIndex(id string) (int, bool) {
 	size := len(m.Sorted)
 	if size > 0 {
 		idx := sort.Search(size, func(idx int) bool {
-			return m.Sorted[idx].ID >= id
+			return m.Sorted[idx].Id >= id
 		})
-		if idx < size && m.Sorted[idx].ID == id {
+		if idx < size && m.Sorted[idx].Id == id {
 			return idx, true // found
 		}
 	}
@@ -128,13 +128,13 @@ func (m *AccessPoints) put(item *zmc.AccessPoint) (int, bool) {
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
-		return m.Sorted[idx].ID >= item.ID
+		return m.Sorted[idx].Id >= item.Id
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, item)
 		return idx, true // appended
 	}
-	if m.Sorted[idx].ID == item.ID { // the same
+	if m.Sorted[idx].Id == item.Id { // the same
 		m.Sorted[idx] = item // replace
 		return idx, false    // already have
 	}
@@ -149,7 +149,7 @@ func (m *AccessPoints) write(scID string, item *zmc.AccessPoint, db *gorocksdb.T
 	if item == nil {
 		return errors.New(errCodeInternal, "access point invalid value").Wrap(errNilPointerValue)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, accessPointType, item.ID), item); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, accessPointType, item.Id), item); err != nil {
 		return errors.Wrap(errCodeInternal, "insert access point failed", err)
 	}
 

@@ -13,7 +13,7 @@ func Test_providerFetch(t *testing.T) {
 	t.Parallel()
 
 	msc, sci, prov := mockMagmaSmartContract(), mockStateContextI(), mockProvider()
-	if _, err := sci.InsertTrieNode(nodeUID(Address, providerType, prov.ExtID), prov); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(Address, providerType, prov.ExtId), prov); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -31,7 +31,7 @@ func Test_providerFetch(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    prov.ExtID,
+			id:    prov.ExtId,
 			sci:   sci,
 			want:  prov,
 			error: false,

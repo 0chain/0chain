@@ -15,7 +15,7 @@ func Test_Users_add(t *testing.T) {
 
 	list, msc, sci := mockUsers(), mockMagmaSmartContract(), mockStateContextI()
 	user, _ := list.getByIndex(0)
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, userType, user.ID), user); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, userType, user.Id), user); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -53,7 +53,7 @@ func Test_Users_add(t *testing.T) {
 		},
 		{
 			name:  "User_Insert_ERR",
-			user:  &zmc.User{User: &pb.User{ID: "cannot_insert_id"}},
+			user:  &zmc.User{User: &pb.User{Id: "cannot_insert_id"}},
 			msc:   msc,
 			sci:   sci,
 			list:  list,
@@ -136,7 +136,7 @@ func Test_Users_del(t *testing.T) {
 		},
 		{
 			name:  "Delete_Not_Present_ID_ERR",
-			user:  &zmc.User{User: &pb.User{ID: "not_present_id"}},
+			user:  &zmc.User{User: &pb.User{Id: "not_present_id"}},
 			msc:   msc,
 			list:  list,
 			want:  &Users{Sorted: make([]*zmc.User, 0)},
@@ -149,7 +149,7 @@ func Test_Users_del(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// do not use parallel running to avoid detect race conditions because of
 			// everything is happening in a single smart contract so there is only one thread
-			got, err := test.list.del(test.user.ID, msc.db)
+			got, err := test.list.del(test.user.Id, msc.db)
 			if (err != nil) != test.error {
 				t.Errorf("del() error: %v | want: %v", err, test.error)
 				return
@@ -183,7 +183,7 @@ func Test_Users_delByIndex(t *testing.T) {
 		error bool
 	}{
 		{
-			name:  user2.ID + "_del_OK",
+			name:  user2.Id + "_del_OK",
 			idx:   2,
 			msc:   msc,
 			list:  list,
@@ -191,7 +191,7 @@ func Test_Users_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  user3.ID + "_del_OK",
+			name:  user3.Id + "_del_OK",
 			idx:   2,
 			msc:   msc,
 			list:  list,
@@ -199,7 +199,7 @@ func Test_Users_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  user0.ID + "_del_OK",
+			name:  user0.Id + "_del_OK",
 			idx:   0,
 			msc:   msc,
 			list:  list,
@@ -207,7 +207,7 @@ func Test_Users_delByIndex(t *testing.T) {
 			error: false,
 		},
 		{
-			name:  user1.ID + "_del_OK",
+			name:  user1.Id + "_del_OK",
 			idx:   0,
 			msc:   msc,
 			list:  list,
@@ -262,7 +262,7 @@ func Test_Users_get(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   list.Sorted[idx].ID,
+			id:   list.Sorted[idx].Id,
 			list: list,
 			want: list.Sorted[idx],
 			ret:  true,
@@ -305,7 +305,7 @@ func Test_Users_getByConsumer(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			cons: list.Sorted[idx].ConsumerID,
+			cons: list.Sorted[idx].ConsumerId,
 			list: list,
 			want: list.Sorted[idx],
 			ret:  true,
@@ -398,7 +398,7 @@ func Test_Users_getIndex(t *testing.T) {
 	}{
 		{
 			name: "TRUE",
-			id:   list.Sorted[idx].ID,
+			id:   list.Sorted[idx].Id,
 			list: list,
 			want: idx,
 			ret:  true,
@@ -432,10 +432,10 @@ func Test_Users_put(t *testing.T) {
 	t.Parallel()
 
 	list := Users{}
-	user0 := zmc.User{User: &pb.User{ID: "0"}}
-	user1 := zmc.User{User: &pb.User{ID: "1"}}
-	user2 := zmc.User{User: &pb.User{ID: "2"}}
-	user3 := zmc.User{User: &pb.User{ID: "3"}}
+	user0 := zmc.User{User: &pb.User{Id: "0"}}
+	user1 := zmc.User{User: &pb.User{Id: "1"}}
+	user2 := zmc.User{User: &pb.User{Id: "2"}}
+	user3 := zmc.User{User: &pb.User{Id: "3"}}
 
 	tests := [6]struct {
 		name string

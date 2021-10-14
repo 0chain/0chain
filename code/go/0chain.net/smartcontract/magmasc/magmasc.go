@@ -96,8 +96,14 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 	// access-point's functions list
 	case accessPointRegister:
 		return m.accessPointRegister(txn, blob, sci)
-	case accessPointUpdate:
-		return m.accessPointUpdate(txn, blob, sci)
+	case accessPointUpdateTerms:
+		return m.accessPointUpdateTerms(txn, blob, sci)
+	case accessPointStake:
+		return m.accessPointStake(txn, blob, sci)
+	case accessPointUnstake:
+		return m.accessPointUnstake(txn, blob, sci)
+	case accessPointChangeProvider:
+		return m.accessPointChangeProvider(txn, blob, sci)
 
 	// reward token pools functions list
 	case rewardPoolLock:

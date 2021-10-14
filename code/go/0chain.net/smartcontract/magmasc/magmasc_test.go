@@ -136,7 +136,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		},
 		{
 			name:  "Provider_DataUsage_OK",
-			txn:   &tx.Transaction{ClientID: prov.ID},
+			txn:   &tx.Transaction{ClientID: prov.Id},
 			call:  providerDataUsage,
 			blob:  nil,
 			sci:   sci,
@@ -145,7 +145,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		},
 		{
 			name:  "Provider_Register_OK",
-			txn:   &tx.Transaction{ClientID: prov.ID},
+			txn:   &tx.Transaction{ClientID: prov.Id},
 			call:  providerRegister,
 			blob:  nil,
 			sci:   sci,
@@ -154,7 +154,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		},
 		{
 			name:  "Provider_Update_OK",
-			txn:   &tx.Transaction{ClientID: prov.ID},
+			txn:   &tx.Transaction{ClientID: prov.Id},
 			call:  providerUpdate,
 			blob:  nil,
 			sci:   sci,

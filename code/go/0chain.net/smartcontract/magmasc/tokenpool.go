@@ -50,18 +50,9 @@ func (m *tokenPool) Decode(blob []byte) error {
 
 // create tries to create a new token poll by given session.
 func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI) error {
-	return m.createWithRatio(txn, cfg, sci, 1)
-}
-
-// create tries to create a new token poll by given session.
-func (m *tokenPool) createWithRatio(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI, ratio int64) error {
-	m.Balance = cfg.PoolBalance() * ratio
+	m.Balance = cfg.PoolBalance()
 	if m.Balance < 0 {
 		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
-	}
-
-	if ratio < 1 {
-		return errors.Wrap(errCodeTokenPoolCreate, "ratio can't be less than 1", errNegativeValue)
 	}
 
 	m.PayerID = cfg.PoolPayerID()

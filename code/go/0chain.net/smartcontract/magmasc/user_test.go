@@ -13,7 +13,7 @@ func Test_userFetch(t *testing.T) {
 	t.Parallel()
 
 	msc, sci, user := mockMagmaSmartContract(), mockStateContextI(), mockUser()
-	if _, err := sci.InsertTrieNode(nodeUID(Address, userType, user.ID), user); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(Address, userType, user.Id), user); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -31,7 +31,7 @@ func Test_userFetch(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    user.ID,
+			id:    user.Id,
 			sci:   sci,
 			want:  user,
 			error: false,

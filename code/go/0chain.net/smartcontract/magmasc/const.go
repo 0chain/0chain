@@ -101,11 +101,11 @@ const (
 	providerRegister = zmc.ProviderRegisterFuncName
 
 	// providerStake represents name for
-	// Provider's registration MagmaSmartContract function.
+	// Provider's stake MagmaSmartContract function.
 	providerStake = zmc.ProviderStakeFuncName
 
 	// providerUnstake represents name for
-	// Provider's registration MagmaSmartContract function.
+	// Provider's unstake MagmaSmartContract function.
 	providerUnstake = zmc.ProviderUnStakeFuncName
 
 	// providerUpdate represents name for
@@ -116,20 +116,33 @@ const (
 	providerStakeTokenPool = "provider_stake_token_pool"
 )
 
+// These constants used to identify smart contract functions by Access Point.
 const (
 	// accessPointRegister represents name for
 	// Access Point's registration MagmaSmartContract function.
 	accessPointRegister = zmc.AccessPointRegisterFuncName
-
-	// accessPointUpdate represents name for
-	// access point data update MagmaSmartContract function.
-	accessPointUpdate = zmc.AccessPointUpdateFuncName
 
 	// accessPointMinStake represents the key of a access point min stake config.
 	accessPointMinStake = "access_point.min_stake"
 
 	// accessPointStakeTokenPool contents a value of access point's stake token pool string type.
 	accessPointStakeTokenPool = "access_point_stake_token_pool"
+
+	// accessPointStakeTokenPool represents name for
+	// Access Point's stake MagmaSmartContract function.
+	accessPointStake = zmc.AccessPointStakeFuncName
+
+	// accessPointStakeTokenPool represents name for
+	// Access Point's unstake MagmaSmartContract function.
+	accessPointUnstake = zmc.AccessPointUnStakeFuncName
+
+	// accessPointStakeTokenPool represents name for
+	// Access Point's update terms MagmaSmartContract function.
+	accessPointUpdateTerms = zmc.AccessPointUpdateTermsFuncName
+
+	// accessPointStakeTokenPool represents name for
+	// Access Point's change provider MagmaSmartContract function.
+	accessPointChangeProvider = zmc.AccessPointChangeProviderFuncName
 )
 
 const (

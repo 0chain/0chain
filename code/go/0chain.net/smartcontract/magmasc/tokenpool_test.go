@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/stretchr/testify/assert"
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -95,15 +96,17 @@ func Test_tokenPool_create(t *testing.T) {
 	t.Parallel()
 
 	sess, sci := mockSession(), mockStateContextI()
+	sess.Billing.Ratio = 1
 
 	txn := sci.GetTransaction()
-	txn.Value = sess.AccessPoint.Terms.GetAmount()
+	txn.Value = sess.AccessPoint.TermsGetAmount()
 	txn.ClientID = sess.Consumer.ID
 
 	sessClientBalanceErr := mockSession()
 	sessClientBalanceErr.Consumer.ID = ""
 
 	sessInsufficientFundsErr := mockSession()
+	sessInsufficientFundsErr.Billing.Ratio = 1
 	sessInsufficientFundsErr.Consumer.ID = "insolvent_id"
 
 	tests := [3]struct {
@@ -124,7 +127,7 @@ func Test_tokenPool_create(t *testing.T) {
 			want: []zmc.TokenPoolTransfer{{
 				TxnHash:    txn.Hash,
 				ToPool:     sess.SessionID,
-				Value:      sess.AccessPoint.Terms.GetAmount(),
+				Value:      sess.AccessPoint.TermsGetAmount(),
 				FromClient: sess.Consumer.ID,
 				ToClient:   txn.ToClientID,
 			}},
@@ -159,10 +162,8 @@ func Test_tokenPool_create(t *testing.T) {
 				t.Errorf("create() error: %v | want: %v", err, test.error)
 				return
 			}
-			if !reflect.DeepEqual(test.pool.Transfers, test.want) {
-				t.Errorf("create() got: %#v | want: %#v", test.pool.Transfers, test.want)
-				return
-			}
+
+			assert.Equal(t, test.want, test.pool.Transfers, "create()")
 		})
 	}
 }

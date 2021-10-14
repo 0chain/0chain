@@ -12,11 +12,11 @@ import (
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
-	ts "github.com/0chain/gosdk/zmagmacore/time"
-	magma "github.com/magma/augmented-networks/accounting/protos"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/sha3"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	chain "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -74,7 +74,7 @@ func mockSession() *zmc.Session {
 
 	return &zmc.Session{
 		SessionID:   "id:session:" + now,
-		AccessPoint: mockAccessPoint(prov.ExtID),
+		AccessPoint: mockAccessPoint(prov.ExtId),
 		Billing: zmc.Billing{
 			DataMarker: &zmc.DataMarker{
 				DataMarker: &pb.DataMarker{
@@ -119,24 +119,26 @@ func mockAccessPoint(providerID string) *zmc.AccessPoint {
 	sum := sha3.Sum256(bin)
 	fix := hex.EncodeToString(sum[:])
 	return &zmc.AccessPoint{
-		ID: "id:ap:" + fix,
-		Terms: zmc.Terms{
-			Price:           0.1,
-			PriceAutoUpdate: 0.001,
-			MinCost:         0.5,
-			Volume:          0,
-			QoS: &magma.QoS{
-				DownloadMbps: 5.4321,
-				UploadMbps:   1.2345,
+		AccessPoint: &pb.AccessPoint{
+			Id: "id:ap:" + fix,
+			Terms: &pb.Terms{
+				Price:           0.1,
+				PriceAutoUpdate: 0.001,
+				MinCost:         0.5,
+				Volume:          0,
+				Qos: &pb.QoS{
+					DownloadMbps: 5.4321,
+					UploadMbps:   1.2345,
+				},
+				QosAutoUpdate: &pb.QoSAutoUpdate{
+					DownloadMbps: 0.001,
+					UploadMbps:   0.001,
+				},
+				ProlongDuration: durationpb.New(time.Hour),
+				ExpiredAt:       timestamppb.New(time.Now().Add(time.Hour)),
 			},
-			QoSAutoUpdate: &zmc.QoSAutoUpdate{
-				DownloadMbps: 0.001,
-				UploadMbps:   0.001,
-			},
-			ProlongDuration: 1 * 60 * 60,              // 1 hour
-			ExpiredAt:       ts.Now() + (1 * 60 * 60), // 1 hour from now
+			ProviderExtId: providerID,
 		},
-		ProviderExtID: providerID,
 	}
 }
 
@@ -213,8 +215,8 @@ func mockProvider() *zmc.Provider {
 	fix := hex.EncodeToString(sum[:])
 	return &zmc.Provider{
 		Provider: &pb.Provider{
-			ID:    "id:provider:" + fix,
-			ExtID: "id:provider:external:" + fix,
+			Id:    "id:provider:" + fix,
+			ExtId: "id:provider:external:" + fix,
 			Host:  "host.provider.local:" + fix,
 		},
 	}
@@ -263,6 +265,21 @@ func mockStateContextI() *mockStateContext {
 		return nil
 	}
 
+	funcDeleteID := func(id string) string {
+		if !strings.Contains(id, "cannot_delete_id") {
+			stateContext.Lock()
+			delete(stateContext.store, id)
+			stateContext.Unlock()
+		}
+		return ""
+	}
+	errFuncDeleteID := func(id string) error {
+		if strings.Contains(id, "cannot_delete_id") {
+			return errors.New(errCodeInternal, errTextUnexpected)
+		}
+		return nil
+	}
+
 	sess := mockSession()
 	sess.SessionID = "cannot_insert_id"
 	stateContext.store[nodeUID(Address, session, sess.SessionID)] = sess
@@ -277,7 +294,7 @@ func mockStateContextI() *mockStateContext {
 	)
 	stateContext.On("GetClientBalance", argStr).Return(
 		func(id string) state.Balance {
-			if strings.Contains(id, "id:consumer:") || strings.Contains(id, "id:provider:") {
+			if strings.Contains(id, "id:consumer:") || strings.Contains(id, "id:provider:") || strings.Contains(id, "id:ap:") {
 				return 10000 * 1e9 // 1000 * 1e9 units equal to ten thousand coins
 			}
 			return 0
@@ -353,6 +370,9 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.User")).
 		Return(funcInsertID, errFuncInsertID)
 
+	stateContext.On("DeleteTrieNode", argStr).
+		Return(funcDeleteID, errFuncDeleteID)
+
 	nodeInvalid := mockInvalidJson{ID: "invalid_json_id"}
 	if _, err := stateContext.InsertTrieNode(nodeInvalid.ID, &nodeInvalid); err != nil {
 		log.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
@@ -389,8 +409,8 @@ func mockUser() *zmc.User {
 	fix := hex.EncodeToString(sum[:])
 	return &zmc.User{
 		User: &pb.User{
-			ID:         "id:user:" + fix,
-			ConsumerID: "id:consumer:" + fix,
+			Id:         "id:user:" + fix,
+			ConsumerId: "id:consumer:" + fix,
 		},
 	}
 }

@@ -40,7 +40,7 @@ func (m *providerStakeReq) PoolBalance() int64 {
 
 // PoolID implements PoolConfigurator interface.
 func (m *providerStakeReq) PoolID() string {
-	return m.Provider.ID
+	return m.Provider.Id
 }
 
 // PoolHolderID implements PoolConfigurator interface.
@@ -50,12 +50,12 @@ func (m *providerStakeReq) PoolHolderID() string {
 
 // PoolPayerID implements PoolConfigurator interface.
 func (m *providerStakeReq) PoolPayerID() string {
-	return m.Provider.ID
+	return m.Provider.Id
 }
 
 // PoolPayeeID implements PoolConfigurator interface.
 func (m *providerStakeReq) PoolPayeeID() string {
-	return m.Provider.ID
+	return m.Provider.Id
 }
 
 // Validate checks providerStakeReq for correctness.
@@ -64,10 +64,10 @@ func (m *providerStakeReq) Validate() (err error) {
 	case m.Provider == nil:
 		err = errors.New(errCodeInternal, "provider is required")
 
-	case m.Provider.ID == "":
+	case m.Provider.Id == "":
 		err = errors.New(errCodeBadRequest, "provider id is required")
 
-	case m.Provider.ExtID == "":
+	case m.Provider.ExtId == "":
 		err = errors.New(errCodeBadRequest, "provider external id is required")
 	}
 
