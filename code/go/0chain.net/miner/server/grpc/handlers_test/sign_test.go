@@ -2,52 +2,58 @@ package handlers_test
 
 import (
 	"context"
+	"log"
 	"testing"
 
 	minerproto "0chain.net/miner/proto/api/src/proto"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func TestSignHandler(t *testing.T) {
-	t.Parallel()
-
-	// init grpc
-	client, err := makeTestClient(nil)
-	if err != nil {
-		t.Error(err)
-		return
+	tests := []struct {
+		name   string
+		req    *minerproto.SignRequest
+		resp   *minerproto.SignResponse
+		status codes.Code
+		err    string
+	}{
+		{
+			name: "bad request",
+		},
+		{
+			name: "bad public key",
+		},
+		{
+			name: "bad private key",
+		},
+		{
+			name: "empty data",
+		},
 	}
 
-	// server, err := makeTestServer()
-	// if err != nil {
-	// 	t.Error(err)
-	// 	return
-	// }
+	// created new grpc conn with dialer()
+	conn, err := grpc.DialContext(context.Background(), "", grpc.WithInsecure(), grpc.WithContextDialer(dialer()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-	cases := []struct {
-		name             string
-		context          metadata.MD
-		input            *minerproto.SignRequest
-		expectedFileName string
-		expectingError   bool
-	}{}
+	// grpc client used "bufconn"
+	client := minerproto.NewMinerServiceClient(conn)
 
-	for _, tc := range cases {
+	for _, tt := range tests {
 		ctx := context.Background()
-		ctx = metadata.NewOutgoingContext(ctx, tc.context)
 
-		resp, err := client.Sign(ctx, tc.input)
-		if err != nil {
-			if !tc.expectingError {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := client.Sign(ctx, tt.req)
+			if err != nil {
 				t.Fatal(err)
 			}
-			continue
-		}
 
-		if tc.expectingError {
-			t.Fatal("expected error")
-		}
-
-		t.Log(resp)
+			if resp != tt.resp {
+				t.Fatal("not expected", err)
+			}
+		})
 	}
 }
