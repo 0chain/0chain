@@ -17,7 +17,6 @@ simulation:
   num_free_storage_assigners: 10
   num_vesting_destinations_client: 10
   num_write_redeem_allocation: 10
-  num_challenges_blobber: 10
 
 options:
   verbose: true
