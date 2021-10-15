@@ -23,10 +23,10 @@ type (
 
 func (m *Providers) add(scID string, item *zmc.Provider, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "provider invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if got, _ := sci.GetTrieNode(nodeUID(scID, providerType, item.ExtId)); got != nil {
-		return errors.New(errCodeInternal, "provider already registered: "+item.ExtId)
+		return errors.New(zmc.ErrCodeInternal, "provider already registered: "+item.ExtId)
 	}
 
 	return m.write(scID, item, db, sci)
@@ -47,12 +47,12 @@ func (m *Providers) del(id string, db *gorocksdb.TransactionDB) (*zmc.Provider, 
 		return m.delByIndex(idx, db)
 	}
 
-	return nil, errors.New(errCodeInternal, "value not present")
+	return nil, errors.New(zmc.ErrCodeInternal, "value not present")
 }
 
 func (m *Providers) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Provider, error) {
 	if idx >= len(m.Sorted) {
-		return nil, errors.New(errCodeInternal, "index out of range")
+		return nil, errors.New(zmc.ErrCodeInternal, "index out of range")
 	}
 
 	list := m.copy()
@@ -61,15 +61,15 @@ func (m *Providers) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Provi
 
 	blob, err := json.Marshal(list.Sorted)
 	if err != nil {
-		return nil, errors.Wrap(errCodeInternal, "encode providers list failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "encode providers list failed", err)
 	}
 
 	tx := store.GetTransaction(db)
-	if err = tx.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "insert providers list failed", err)
+	if err = tx.Conn.Put([]byte(allProvidersKey), blob); err != nil {
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "insert providers list failed", err)
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 	}
 
 	m.Sorted = list.Sorted
@@ -157,7 +157,7 @@ func (m *Providers) put(item *zmc.Provider) (int, bool) {
 
 func (m *Providers) random(seed int64) (*zmc.Provider, error) {
 	if len(m.Sorted) == 0 {
-		return nil, errors.New(errCodeInternal, "provider can not be picked with empty list")
+		return nil, errors.New(zmc.ErrCodeInternal, "provider can not be picked with empty list")
 	}
 
 	rand.Seed(seed)
@@ -166,32 +166,32 @@ func (m *Providers) random(seed int64) (*zmc.Provider, error) {
 
 func (m *Providers) write(scID string, item *zmc.Provider, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "provider invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "provider invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, providerType, item.ExtId), item); err != nil {
-		return errors.Wrap(errCodeInternal, "insert provider failed", err)
+		return errors.Wrap(zmc.ErrCodeInternal, "insert provider failed", err)
 	}
 
 	var list *Providers
 	if !m.hasEqual(item) { // check if an equal item already added
 		got, found := m.getByHost(item.Host)
 		if found && item.Id != got.Id { // check if a host already registered
-			return errors.New(errCodeInternal, "provider host already registered: "+item.Host)
+			return errors.New(zmc.ErrCodeInternal, "provider host already registered: "+item.Host)
 		}
 
 		list = m.copy()
 		list.put(item) // add or replace
 		blob, err := json.Marshal(list.Sorted)
 		if err != nil {
-			return errors.Wrap(errCodeInternal, "encode providers list failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "encode providers list failed", err)
 		}
 
 		tx := store.GetTransaction(db)
-		if err = tx.Conn.Put([]byte(AllProvidersKey), blob); err != nil {
-			return errors.Wrap(errCodeInternal, "insert providers list failed", err)
+		if err = tx.Conn.Put([]byte(allProvidersKey), blob); err != nil {
+			return errors.Wrap(zmc.ErrCodeInternal, "insert providers list failed", err)
 		}
 		if err = tx.Commit(); err != nil {
-			return errors.Wrap(errCodeInternal, "commit changes failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 		}
 	}
 	if list != nil {
@@ -208,14 +208,14 @@ func providersFetch(id string, db *gorocksdb.TransactionDB) (*Providers, error) 
 	tx := store.GetTransaction(db)
 	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
-		return list, errors.Wrap(errCodeInternal, "get providers list failed", err)
+		return list, errors.Wrap(zmc.ErrCodeInternal, "get providers list failed", err)
 	}
 	defer buf.Free()
 
 	blob := buf.Data()
 	if blob != nil {
 		if err = json.Unmarshal(blob, &list.Sorted); err != nil {
-			return list, errors.Wrap(errCodeInternal, "decode providers list failed", err)
+			return list, errors.Wrap(zmc.ErrCodeInternal, "decode providers list failed", err)
 		}
 	}
 

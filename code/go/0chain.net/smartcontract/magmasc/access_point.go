@@ -12,7 +12,7 @@ import (
 func accessPointFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*zmc.AccessPoint, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, accessPointType, id))
 	if err != nil {
-		if list, _ := accessPointsFetch(AllAccessPointsKey, db); list != nil {
+		if list, _ := accessPointsFetch(allAccessPointsKey, db); list != nil {
 			_, _ = list.del(id, db) // sync list
 		}
 
@@ -21,7 +21,7 @@ func accessPointFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.St
 
 	ap := zmc.AccessPoint{}
 	if err = ap.Decode(data.Encode()); err != nil {
-		return nil, errDecodeData.Wrap(err)
+		return nil, zmc.ErrDecodeData.Wrap(err)
 	}
 
 	return &ap, nil

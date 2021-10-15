@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/0chain/gosdk/zmagmacore/errors"
+	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
 	"github.com/0chain/gosdk/zmagmacore/time"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -21,10 +22,10 @@ type (
 
 func (m *rewardPools) add(scID string, item *tokenPool, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "token pool invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "token pool invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if got, _ := sci.GetTrieNode(nodeUID(scID, rewardTokenPool, item.ID)); got != nil {
-		return errors.New(errCodeInternal, "token pool already registered")
+		return errors.New(zmc.ErrCodeInternal, "token pool already registered")
 	}
 
 	return m.write(scID, item, db, sci)
@@ -50,7 +51,7 @@ func (m *rewardPools) del(payeeID, poolID string, db *store.Connection) (*tokenP
 	pool, found := m.List[payeeID][poolID]
 	if found {
 		if pool.ExpireAt > time.Now() {
-			return nil, errors.New(errCodeInternal, "token pool is not expired yet")
+			return nil, errors.New(zmc.ErrCodeInternal, "token pool is not expired yet")
 		}
 
 		pools = m.copy()
@@ -58,13 +59,13 @@ func (m *rewardPools) del(payeeID, poolID string, db *store.Connection) (*tokenP
 
 		blob, err := json.Marshal(pools.List)
 		if err != nil {
-			return nil, errors.Wrap(errCodeInternal, "encode pools list failed", err)
+			return nil, errors.Wrap(zmc.ErrCodeInternal, "encode pools list failed", err)
 		}
 		if err = db.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
-			return nil, errors.Wrap(errCodeInternal, "insert pools list failed", err)
+			return nil, errors.Wrap(zmc.ErrCodeInternal, "insert pools list failed", err)
 		}
 		if err = db.Commit(); err != nil {
-			return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+			return nil, errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 		}
 	}
 	if pools != nil {
@@ -93,7 +94,7 @@ func (m *rewardPools) put(item *tokenPool) {
 
 func (m *rewardPools) write(scID string, item *tokenPool, db *store.Connection, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "token pool invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "token pool invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 
 	var pools *rewardPools
@@ -103,17 +104,17 @@ func (m *rewardPools) write(scID string, item *tokenPool, db *store.Connection, 
 
 		blob, err := json.Marshal(pools.List)
 		if err != nil {
-			return errors.Wrap(errCodeInternal, "encode pools list failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "encode pools list failed", err)
 		}
 		if err = db.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
-			return errors.Wrap(errCodeInternal, "insert pools list failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "insert pools list failed", err)
 		}
 	}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, rewardTokenPool, item.ID), item); err != nil {
-		return errors.Wrap(errCodeInternal, "insert token pool failed", err)
+		return errors.Wrap(zmc.ErrCodeInternal, "insert token pool failed", err)
 	}
 	if err := db.Commit(); err != nil {
-		return errors.Wrap(errCodeInternal, "commit changes failed", err)
+		return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 	}
 	if pools != nil {
 		m.List = pools.List
@@ -128,14 +129,14 @@ func rewardPoolsFetch(id string, db *store.Connection) (*rewardPools, error) {
 
 	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))
 	if err != nil {
-		return pools, errors.Wrap(errCodeInternal, "get token pools list failed", err)
+		return pools, errors.Wrap(zmc.ErrCodeInternal, "get token pools list failed", err)
 	}
 	defer buf.Free()
 
 	blob := buf.Data()
 	if blob != nil {
 		if err = json.Unmarshal(blob, &pools.List); err != nil {
-			return pools, errors.Wrap(errCodeInternal, "decode token pools list failed", err)
+			return pools, errors.Wrap(zmc.ErrCodeInternal, "decode token pools list failed", err)
 		}
 	}
 

@@ -22,10 +22,10 @@ type (
 
 func (m *Consumers) add(scID string, item *zmc.Consumer, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "consumer invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if got, _ := sci.GetTrieNode(nodeUID(scID, consumerType, item.ExtID)); got != nil {
-		return errors.New(errCodeInternal, "consumer already registered: "+item.ExtID)
+		return errors.New(zmc.ErrCodeInternal, "consumer already registered: "+item.ExtID)
 	}
 
 	return m.write(scID, item, db, sci)
@@ -46,12 +46,12 @@ func (m *Consumers) del(id string, db *gorocksdb.TransactionDB) (*zmc.Consumer, 
 		return m.delByIndex(idx, db)
 	}
 
-	return nil, errors.New(errCodeInternal, "value not present")
+	return nil, errors.New(zmc.ErrCodeInternal, "value not present")
 }
 
 func (m *Consumers) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Consumer, error) {
 	if idx >= len(m.Sorted) {
-		return nil, errors.New(errCodeInternal, "index out of range")
+		return nil, errors.New(zmc.ErrCodeInternal, "index out of range")
 	}
 
 	list := m.copy()
@@ -60,15 +60,15 @@ func (m *Consumers) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Consu
 
 	blob, err := json.Marshal(list.Sorted)
 	if err != nil {
-		return nil, errors.Wrap(errCodeInternal, "encode consumers list failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "encode consumers list failed", err)
 	}
 
 	tx := store.GetTransaction(db)
-	if err = tx.Conn.Put([]byte(AllConsumersKey), blob); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "insert consumers list failed", err)
+	if err = tx.Conn.Put([]byte(allConsumersKey), blob); err != nil {
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "insert consumers list failed", err)
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 	}
 
 	m.Sorted = list.Sorted
@@ -156,32 +156,32 @@ func (m *Consumers) put(item *zmc.Consumer) (int, bool) {
 
 func (m *Consumers) write(scID string, item *zmc.Consumer, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "consumer invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "consumer invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, consumerType, item.ExtID), item); err != nil {
-		return errors.Wrap(errCodeInternal, "insert consumer failed", err)
+		return errors.Wrap(zmc.ErrCodeInternal, "insert consumer failed", err)
 	}
 
 	var list *Consumers
 	if !m.hasEqual(item) { // check if an equal item already added
 		got, found := m.getByHost(item.Host)
 		if found && item.ID != got.ID { // check if a host already registered
-			return errors.New(errCodeInternal, "consumer host already registered: "+item.Host)
+			return errors.New(zmc.ErrCodeInternal, "consumer host already registered: "+item.Host)
 		}
 
 		list = m.copy()
 		list.put(item) // add or replace
 		blob, err := json.Marshal(list.Sorted)
 		if err != nil {
-			return errors.Wrap(errCodeInternal, "encode consumers list failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "encode consumers list failed", err)
 		}
 
 		tx := store.GetTransaction(db)
-		if err = tx.Conn.Put([]byte(AllConsumersKey), blob); err != nil {
-			return errors.Wrap(errCodeInternal, "insert consumers list failed", err)
+		if err = tx.Conn.Put([]byte(allConsumersKey), blob); err != nil {
+			return errors.Wrap(zmc.ErrCodeInternal, "insert consumers list failed", err)
 		}
 		if err = tx.Commit(); err != nil {
-			return errors.Wrap(errCodeInternal, "commit changes failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 		}
 	}
 	if list != nil {
@@ -198,14 +198,14 @@ func consumersFetch(id string, db *gorocksdb.TransactionDB) (*Consumers, error) 
 	tx := store.GetTransaction(db)
 	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
-		return list, errors.Wrap(errCodeInternal, "get consumers list failed", err)
+		return list, errors.Wrap(zmc.ErrCodeInternal, "get consumers list failed", err)
 	}
 	defer buf.Free()
 
 	blob := buf.Data()
 	if blob != nil {
 		if err = json.Unmarshal(blob, &list.Sorted); err != nil {
-			return list, errors.Wrap(errCodeInternal, "decode consumers list failed", err)
+			return list, errors.Wrap(zmc.ErrCodeInternal, "decode consumers list failed", err)
 		}
 	}
 

@@ -563,7 +563,7 @@ func Test_usersFetch(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    AllUsersKey,
+			id:    allUsersKey,
 			msc:   msc,
 			want:  list,
 			error: false,

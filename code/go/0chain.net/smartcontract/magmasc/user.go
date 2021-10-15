@@ -12,7 +12,7 @@ import (
 func userFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*zmc.User, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, userType, id))
 	if err != nil {
-		if list, _ := usersFetch(AllUsersKey, db); list != nil {
+		if list, _ := usersFetch(allUsersKey, db); list != nil {
 			_, _ = list.del(id, db) // sync list
 		}
 
@@ -21,7 +21,7 @@ func userFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.StateCont
 
 	user := zmc.User{}
 	if err = user.Decode(data.Encode()); err != nil {
-		return nil, errDecodeData.Wrap(err)
+		return nil, zmc.ErrDecodeData.Wrap(err)
 	}
 
 	return &user, nil

@@ -12,7 +12,7 @@ import (
 func providerFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*zmc.Provider, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, providerType, id))
 	if err != nil {
-		if list, _ := providersFetch(AllProvidersKey, db); list != nil {
+		if list, _ := providersFetch(allProvidersKey, db); list != nil {
 			_, _ = list.del(id, db) // sync list
 		}
 
@@ -21,7 +21,7 @@ func providerFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.State
 
 	provider := zmc.Provider{}
 	if err = provider.Decode(data.Encode()); err != nil {
-		return nil, errDecodeData.Wrap(err)
+		return nil, zmc.ErrDecodeData.Wrap(err)
 	}
 
 	return &provider, nil

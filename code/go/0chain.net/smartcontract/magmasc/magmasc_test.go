@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 func Test_NewMagmaSmartContract(t *testing.T) {
 	t.Parallel()
 
-	msc := &MagmaSmartContract{SmartContract: smartcontractinterface.NewSC(Address)}
+	msc := &MagmaSmartContract{SmartContract: smartcontractinterface.NewSC(zmc.Address)}
 
 	// Magma smart contract REST handlers
 	msc.RestHandlers[zmc.SessionRP] = msc.sessionAccepted
@@ -49,16 +49,16 @@ func Test_NewMagmaSmartContract(t *testing.T) {
 	msc.RestHandlers[zmc.AccessPointFetchRP] = msc.accessPointFetch
 	msc.RestHandlers[zmc.AccessPointRegisteredRP] = msc.accessPointExist
 	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
-	msc.RestHandlers["/rewardPoolExist"] = msc.rewardPoolExist
-	msc.RestHandlers["/rewardPoolFetch"] = msc.rewardPoolFetch
+	msc.RestHandlers[zmc.RewardPoolExistRP] = msc.rewardPoolExist
+	msc.RestHandlers[zmc.RewardPoolFetchRP] = msc.rewardPoolFetch
 	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
 	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
 	msc.RestHandlers[zmc.UserFetchRP] = msc.userFetch
 
 	// metrics setup section
-	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
-	msc.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+providerRegister, nil)
-	msc.SmartContractExecutionStats[accessPointRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
+	msc.SmartContractExecutionStats[zmc.ConsumerRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ConsumerRegisterFuncName, nil)
+	msc.SmartContractExecutionStats[zmc.ProviderRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ProviderRegisterFuncName, nil)
+	msc.SmartContractExecutionStats[zmc.AccessPointRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.AccessPointRegisterFuncName, nil)
 
 	tests := [1]struct {
 		name string
@@ -101,7 +101,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Consumer_Register_OK",
 			txn:   &tx.Transaction{ClientID: cons.ID},
-			call:  consumerRegister,
+			call:  zmc.ConsumerRegisterFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -110,7 +110,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Consumer_Session_Start_OK",
 			txn:   &tx.Transaction{ClientID: cons.ID},
-			call:  consumerSessionStart,
+			call:  zmc.ConsumerSessionStartFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -119,7 +119,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Consumer_Session_Stop_OK",
 			txn:   &tx.Transaction{ClientID: cons.ID},
-			call:  consumerSessionStop,
+			call:  zmc.ConsumerSessionStopFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -128,7 +128,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Consumer_Update_OK",
 			txn:   &tx.Transaction{ClientID: cons.ID},
-			call:  consumerUpdate,
+			call:  zmc.ConsumerUpdateFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -137,7 +137,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Provider_DataUsage_OK",
 			txn:   &tx.Transaction{ClientID: prov.Id},
-			call:  providerDataUsage,
+			call:  zmc.ProviderDataUsageFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -146,7 +146,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Provider_Register_OK",
 			txn:   &tx.Transaction{ClientID: prov.Id},
-			call:  providerRegister,
+			call:  zmc.ProviderRegisterFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -155,7 +155,7 @@ func Test_MagmaSmartContract_Execute(t *testing.T) {
 		{
 			name:  "Provider_Update_OK",
 			txn:   &tx.Transaction{ClientID: prov.Id},
-			call:  providerUpdate,
+			call:  zmc.ProviderUpdateFuncName,
 			blob:  nil,
 			sci:   sci,
 			msc:   msc,
@@ -196,8 +196,8 @@ func Test_MagmaSmartContract_GetAddress(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		t.Parallel()
 
-		if got := msc.GetAddress(); got != Address {
-			t.Errorf("GetAddress() got: %v | want: %v", got, Address)
+		if got := msc.GetAddress(); got != zmc.Address {
+			t.Errorf("GetAddress() got: %v | want: %v", got, zmc.Address)
 		}
 	})
 }

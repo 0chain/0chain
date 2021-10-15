@@ -60,7 +60,7 @@ var (
 
 // Decode implements util.Serializable interface.
 func (m *mockInvalidJson) Decode([]byte) error {
-	return errDecodeData
+	return zmc.ErrDecodeData
 }
 
 // Encode implements util.Serializable interface.
@@ -153,13 +153,13 @@ func mockSmartContractI() *mockSmartContract {
 	smartContract := mockSmartContract{ID: msc.ID, SC: msc}
 	smartContract.On("Execute", argTxn, argStr, argBlob, argSci).Return(
 		func(txn *tx.Transaction, call string, blob []byte, sci chain.StateContextI) string {
-			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errors.Is(err, errInvalidFuncName) {
+			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errors.Is(err, zmc.ErrInvalidFuncName) {
 				return ""
 			}
 			return call
 		},
 		func(txn *tx.Transaction, call string, blob []byte, sci chain.StateContextI) error {
-			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errors.Is(err, errInvalidFuncName) {
+			if _, err := smartContract.SC.Execute(txn, call, blob, sci); errors.Is(err, zmc.ErrInvalidFuncName) {
 				return err
 			}
 			return nil
@@ -174,7 +174,7 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	defer mutexMockMSC.Unlock()
 
 	const prefix = "test."
-	msc := &MagmaSmartContract{SmartContract: sci.NewSC(Address)}
+	msc := &MagmaSmartContract{SmartContract: sci.NewSC(zmc.Address)}
 	path := filepath.Join(os.TempDir(), rootPath, prefix+time.Now().Format(time.RFC3339Nano))
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
@@ -201,9 +201,9 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	}
 	msc.cfg = config.SmartContractConfig.Sub("smart_contracts." + Name)
 
-	msc.SmartContractExecutionStats[consumerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
-	msc.SmartContractExecutionStats[providerRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+providerRegister, nil)
-	msc.SmartContractExecutionStats[accessPointRegister] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+consumerRegister, nil)
+	msc.SmartContractExecutionStats[zmc.ConsumerRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ConsumerRegisterFuncName, nil)
+	msc.SmartContractExecutionStats[zmc.ProviderRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ProviderRegisterFuncName, nil)
+	msc.SmartContractExecutionStats[zmc.AccessPointRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.AccessPointRegisterFuncName, nil)
 
 	return msc
 }
@@ -244,7 +244,7 @@ func mockStateContextI() *mockStateContext {
 	}
 	errFuncInsertID := func(id string, _ util.Serializable) error {
 		if strings.Contains(id, "cannot_insert_id") {
-			return errors.New(errCodeInternal, errTextUnexpected)
+			return errors.New(zmc.ErrCodeInternal, zmc.ErrTextUnexpected)
 		}
 		return nil
 	}
@@ -260,7 +260,7 @@ func mockStateContextI() *mockStateContext {
 	errFuncInsertList := func(_ string, val util.Serializable) error {
 		json := string(val.Encode())
 		if strings.Contains(json, "cannot_insert_list") {
-			return errors.New(errCodeInternal, errTextUnexpected)
+			return errors.New(zmc.ErrCodeInternal, zmc.ErrTextUnexpected)
 		}
 		return nil
 	}
@@ -275,14 +275,14 @@ func mockStateContextI() *mockStateContext {
 	}
 	errFuncDeleteID := func(id string) error {
 		if strings.Contains(id, "cannot_delete_id") {
-			return errors.New(errCodeInternal, errTextUnexpected)
+			return errors.New(zmc.ErrCodeInternal, zmc.ErrTextUnexpected)
 		}
 		return nil
 	}
 
 	sess := mockSession()
 	sess.SessionID = "cannot_insert_id"
-	stateContext.store[nodeUID(Address, session, sess.SessionID)] = sess
+	stateContext.store[nodeUID(zmc.Address, session, sess.SessionID)] = sess
 
 	stateContext.On("AddTransfer", mock.AnythingOfType("*state.Transfer")).Return(
 		func(transfer *state.Transfer) error {
@@ -313,7 +313,7 @@ func mockStateContextI() *mockStateContext {
 		func() *tx.Transaction {
 			bin, _ := time.Now().MarshalBinary()
 			hash := sha3.Sum256(bin)
-			txn := tx.Transaction{ToClientID: Address}
+			txn := tx.Transaction{ToClientID: zmc.Address}
 			txn.Hash = hex.EncodeToString(hash[:])
 			return &txn
 		},
@@ -332,7 +332,7 @@ func mockStateContextI() *mockStateContext {
 				return util.ErrValueNotPresent
 			}
 			if strings.Contains(id, "unexpected_id") {
-				return errInternalUnexpected
+				return zmc.ErrInternalUnexpected
 			}
 			stateContext.Lock()
 			defer stateContext.Unlock()

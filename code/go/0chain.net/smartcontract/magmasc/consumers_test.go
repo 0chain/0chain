@@ -540,7 +540,7 @@ func Test_consumersFetch(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    AllConsumersKey,
+			id:    allConsumersKey,
 			msc:   msc,
 			want:  list,
 			error: false,

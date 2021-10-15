@@ -22,10 +22,10 @@ type (
 
 func (m *AccessPoints) add(scID string, item *zmc.AccessPoint, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "access point invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "access point invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if got, _ := sci.GetTrieNode(nodeUID(scID, accessPointType, item.Id)); got != nil {
-		return errors.New(errCodeInternal, "access point already registered: "+item.Id)
+		return errors.New(zmc.ErrCodeInternal, "access point already registered: "+item.Id)
 	}
 
 	return m.write(scID, item, db, sci)
@@ -46,12 +46,12 @@ func (m *AccessPoints) del(id string, db *gorocksdb.TransactionDB) (*zmc.AccessP
 		return m.delByIndex(idx, db)
 	}
 
-	return nil, errors.New(errCodeInternal, "value not present")
+	return nil, errors.New(zmc.ErrCodeInternal, "value not present")
 }
 
 func (m *AccessPoints) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.AccessPoint, error) {
 	if idx >= len(m.Sorted) {
-		return nil, errors.New(errCodeInternal, "index out of range")
+		return nil, errors.New(zmc.ErrCodeInternal, "index out of range")
 	}
 
 	list := m.copy()
@@ -60,15 +60,15 @@ func (m *AccessPoints) delByIndex(idx int, db *gorocksdb.TransactionDB) (*zmc.Ac
 
 	blob, err := json.Marshal(list.Sorted)
 	if err != nil {
-		return nil, errors.Wrap(errCodeInternal, "encode access points list failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "encode access points list failed", err)
 	}
 
 	tx := store.GetTransaction(db)
-	if err = tx.Conn.Put([]byte(AllAccessPointsKey), blob); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "insert access points list failed", err)
+	if err = tx.Conn.Put([]byte(allAccessPointsKey), blob); err != nil {
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "insert access points list failed", err)
 	}
 	if err = tx.Commit(); err != nil {
-		return nil, errors.Wrap(errCodeInternal, "commit changes failed", err)
+		return nil, errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 	}
 
 	m.Sorted = list.Sorted
@@ -147,10 +147,10 @@ func (m *AccessPoints) put(item *zmc.AccessPoint) (int, bool) {
 
 func (m *AccessPoints) write(scID string, item *zmc.AccessPoint, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
-		return errors.New(errCodeInternal, "access point invalid value").Wrap(errNilPointerValue)
+		return errors.New(zmc.ErrCodeInternal, "access point invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
 	if _, err := sci.InsertTrieNode(nodeUID(scID, accessPointType, item.Id), item); err != nil {
-		return errors.Wrap(errCodeInternal, "insert access point failed", err)
+		return errors.Wrap(zmc.ErrCodeInternal, "insert access point failed", err)
 	}
 
 	var list *AccessPoints
@@ -159,15 +159,15 @@ func (m *AccessPoints) write(scID string, item *zmc.AccessPoint, db *gorocksdb.T
 		list.put(item) // add or replace
 		blob, err := json.Marshal(list.Sorted)
 		if err != nil {
-			return errors.Wrap(errCodeInternal, "encode access points list failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "encode access points list failed", err)
 		}
 
 		tx := store.GetTransaction(db)
-		if err = tx.Conn.Put([]byte(AllAccessPointsKey), blob); err != nil {
-			return errors.Wrap(errCodeInternal, "insert access points list failed", err)
+		if err = tx.Conn.Put([]byte(allAccessPointsKey), blob); err != nil {
+			return errors.Wrap(zmc.ErrCodeInternal, "insert access points list failed", err)
 		}
 		if err = tx.Commit(); err != nil {
-			return errors.Wrap(errCodeInternal, "commit changes failed", err)
+			return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 		}
 	}
 	if list != nil {
@@ -184,14 +184,14 @@ func accessPointsFetch(id string, db *gorocksdb.TransactionDB) (*AccessPoints, e
 	tx := store.GetTransaction(db)
 	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
-		return list, errors.Wrap(errCodeInternal, "get access points  list failed", err)
+		return list, errors.Wrap(zmc.ErrCodeInternal, "get access points  list failed", err)
 	}
 	defer buf.Free()
 
 	blob := buf.Data()
 	if blob != nil {
 		if err = json.Unmarshal(blob, &list.Sorted); err != nil {
-			return list, errors.Wrap(errCodeInternal, "decode access points  list failed", err)
+			return list, errors.Wrap(zmc.ErrCodeInternal, "decode access points  list failed", err)
 		}
 	}
 

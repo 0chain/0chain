@@ -13,12 +13,12 @@ func Test_consumerFetch(t *testing.T) {
 	t.Parallel()
 
 	msc, sci, cons := mockMagmaSmartContract(), mockStateContextI(), mockConsumer()
-	if _, err := sci.InsertTrieNode(nodeUID(Address, consumerType, cons.ExtID), cons); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(zmc.Address, consumerType, cons.ExtID), cons); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
 	node := mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sci.InsertTrieNode(nodeUID(Address, consumerType, node.ID), &node); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(zmc.Address, consumerType, node.ID), &node); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -57,7 +57,7 @@ func Test_consumerFetch(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := consumerFetch(Address, test.id, msc.db, test.sci)
+			got, err := consumerFetch(zmc.Address, test.id, msc.db, test.sci)
 			if err == nil && !reflect.DeepEqual(got, test.want) {
 				t.Errorf("consumerFetch() got: %#v | want: %#v", err, test.want)
 				return

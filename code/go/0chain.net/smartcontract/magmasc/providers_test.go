@@ -567,7 +567,7 @@ func Test_providersFetch(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			id:    AllProvidersKey,
+			id:    allProvidersKey,
 			msc:   msc,
 			want:  list,
 			error: false,

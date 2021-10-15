@@ -22,7 +22,7 @@ var (
 
 // newProviderStakeReq returns a new constructed provider's stake pool.
 func newProviderStakeReq(provider *zmc.Provider, cfg *viper.Viper) *providerStakeReq {
-	minStake := int64(cfg.GetFloat64(providerMinStake) * billion)
+	minStake := int64(cfg.GetFloat64(providerMinStake) * zmc.Billion)
 	if minStake < 0 {
 		minStake = 0
 	}
@@ -45,7 +45,7 @@ func (m *providerStakeReq) PoolID() string {
 
 // PoolHolderID implements PoolConfigurator interface.
 func (m *providerStakeReq) PoolHolderID() string {
-	return Address
+	return zmc.Address
 }
 
 // PoolPayerID implements PoolConfigurator interface.
@@ -62,13 +62,13 @@ func (m *providerStakeReq) PoolPayeeID() string {
 func (m *providerStakeReq) Validate() (err error) {
 	switch { // is invalid
 	case m.Provider == nil:
-		err = errors.New(errCodeInternal, "provider is required")
+		err = errors.New(zmc.ErrCodeInternal, "provider is required")
 
 	case m.Provider.Id == "":
-		err = errors.New(errCodeBadRequest, "provider id is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "provider id is required")
 
 	case m.Provider.ExtId == "":
-		err = errors.New(errCodeBadRequest, "provider external id is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "provider external id is required")
 	}
 
 	return err

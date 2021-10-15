@@ -12,7 +12,7 @@ import (
 func consumerFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*zmc.Consumer, error) {
 	data, err := sci.GetTrieNode(nodeUID(scID, consumerType, id))
 	if err != nil {
-		if list, _ := consumersFetch(AllConsumersKey, db); list != nil {
+		if list, _ := consumersFetch(allConsumersKey, db); list != nil {
 			_, _ = list.del(id, db) // sync list
 		}
 
@@ -21,7 +21,7 @@ func consumerFetch(scID, id string, db *gorocksdb.TransactionDB, sci chain.State
 
 	consumer := zmc.Consumer{}
 	if err = consumer.Decode(data.Encode()); err != nil {
-		return nil, errDecodeData.Wrap(err)
+		return nil, zmc.ErrDecodeData.Wrap(err)
 	}
 
 	return &consumer, nil

@@ -525,7 +525,7 @@ func Test_MagmaSmartContract_consumerRegister(t *testing.T) {
 	blob := cons.Encode()
 
 	sciInvalid, nodeInvalid := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sciInvalid.InsertTrieNode(AllConsumersKey, &nodeInvalid); err != nil {
+	if _, err := sciInvalid.InsertTrieNode(allConsumersKey, &nodeInvalid); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -995,7 +995,7 @@ func Test_MagmaSmartContract_providerRegister(t *testing.T) {
 	blob := prov.Encode()
 
 	sciInvalid, nodeInvalid := mockStateContextI(), mockInvalidJson{ID: "invalid_json_id"}
-	if _, err := sciInvalid.InsertTrieNode(AllProvidersKey, &nodeInvalid); err != nil {
+	if _, err := sciInvalid.InsertTrieNode(allProvidersKey, &nodeInvalid); err != nil {
 		t.Fatalf("InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -1362,7 +1362,7 @@ func TestMagmaSmartContract_accessPointStake(t *testing.T) {
 		{
 			name:    "OK",
 			msc:     msc,
-			txn:     &tx.Transaction{ClientID: ap.Id, Value: int64(msc.cfg.GetFloat64(accessPointMinStake) * billion)},
+			txn:     &tx.Transaction{ClientID: ap.Id, Value: int64(msc.cfg.GetFloat64(accessPointMinStake) * zmc.Billion)},
 			sci:     sci,
 			wantErr: false,
 		},
@@ -1401,7 +1401,7 @@ func TestMagmaSmartContract_accessPointUnstake(t *testing.T) {
 
 	txn := sci.GetTransaction()
 	txn.ClientID = ap.Id
-	txn.Value = int64(msc.cfg.GetFloat64(accessPointMinStake) * billion)
+	txn.Value = int64(msc.cfg.GetFloat64(accessPointMinStake) * zmc.Billion)
 
 	apStake := newAccessPointStakeReq(ap, msc.cfg)
 	pool := newTokenPool()
@@ -1500,13 +1500,13 @@ func Test_nodeUID(t *testing.T) {
 	const (
 		nodeID   = "id:node"
 		nodeType = "type:node"
-		wantUID  = "sc:" + Address + colon + nodeType + colon + nodeID
+		wantUID  = "sc:" + zmc.Address + colon + nodeType + colon + nodeID
 	)
 
 	t.Run("OK", func(t *testing.T) {
 		t.Parallel()
 
-		if got := nodeUID(Address, nodeType, nodeID); got != wantUID {
+		if got := nodeUID(zmc.Address, nodeType, nodeID); got != wantUID {
 			t.Errorf("nodeUID() got: %v | want: %v", got, wantUID)
 		}
 	})

@@ -35,7 +35,7 @@ func newTokenPool() *tokenPool {
 func (m *tokenPool) Decode(blob []byte) error {
 	var pool tokenPool
 	if err := json.Unmarshal(blob, &pool); err != nil {
-		return errDecodeData.Wrap(err)
+		return zmc.ErrDecodeData.Wrap(err)
 	}
 
 	m.ID = pool.ID
@@ -52,24 +52,24 @@ func (m *tokenPool) Decode(blob []byte) error {
 func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci chain.StateContextI) error {
 	m.Balance = cfg.PoolBalance()
 	if m.Balance < 0 {
-		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errNegativeValue)
+		return errors.Wrap(zmc.ErrCodeTokenPoolCreate, zmc.ErrTextUnexpected, zmc.ErrNegativeValue)
 	}
 
 	m.PayerID = cfg.PoolPayerID()
 	clientBalance, err := sci.GetClientBalance(m.PayerID)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
-		return errors.Wrap(errCodeTokenPoolCreate, "fetch client balance failed", err)
+		return errors.Wrap(zmc.ErrCodeTokenPoolCreate, "fetch client balance failed", err)
 	}
 
 	poolBalance := state.Balance(m.Balance)
 	if clientBalance < poolBalance {
-		return errors.Wrap(errCodeTokenPoolCreate, errTextUnexpected, errInsufficientFunds)
+		return errors.Wrap(zmc.ErrCodeTokenPoolCreate, zmc.ErrTextUnexpected, zmc.ErrInsufficientFunds)
 	}
 
 	m.HolderID = cfg.PoolHolderID()
 	transfer := state.NewTransfer(m.PayerID, m.HolderID, poolBalance)
 	if err = sci.AddTransfer(transfer); err != nil {
-		return errors.Wrap(errCodeTokenPoolCreate, "transfer token pool failed", err)
+		return errors.Wrap(zmc.ErrCodeTokenPoolCreate, "transfer token pool failed", err)
 	}
 
 	m.ID = cfg.PoolID()
@@ -88,13 +88,13 @@ func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci ch
 // spend tries to spend the token pool by given amount.
 func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.StateContextI) error {
 	if amount < 0 {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend amount is negative", errNegativeValue)
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
 	}
 
 	payee, poolBalance := m.PayeeID, state.Balance(m.Balance)
 	switch {
 	case amount > poolBalance: // wrong amount
-		return errors.New(errCodeTokenPoolSpend, "amount greater then pool balance")
+		return errors.New(zmc.ErrCodeTokenPoolSpend, "amount greater then pool balance")
 
 	case poolBalance == 0: // nothing to spend
 		return nil
@@ -104,7 +104,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.S
 
 	case amount < poolBalance: // spend part of token pool to payee
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
-			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		poolBalance -= amount
 		payee = m.PayerID // refund remaining token pool balance to payer
@@ -112,7 +112,7 @@ func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.S
 
 	// spend token pool by balance
 	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 
 	m.Balance = 0
@@ -130,16 +130,16 @@ func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.S
 // spend tries to spend the token pool by given amount with serviceChargeConfigurator.
 func (m *tokenPool) spendWithServiceCharge(txn *tx.Transaction, amount state.Balance, sci chain.StateContextI, serviceCharge float64, serviceID string) error {
 	if amount < 0 {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend amount is negative", errNegativeValue)
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
 	}
 	if !(serviceCharge >= 0 && serviceCharge < 1) {
-		return errors.New(errCodeTokenPoolSpend, "service charge must be in [0;1) interval")
+		return errors.New(zmc.ErrCodeTokenPoolSpend, "service charge must be in [0;1) interval")
 	}
 
 	payee, poolBalance := m.PayeeID, state.Balance(m.Balance)
 	switch {
 	case amount > poolBalance: // wrong amount
-		return errors.New(errCodeTokenPoolSpend, "amount greater then pool balance")
+		return errors.New(zmc.ErrCodeTokenPoolSpend, "amount greater then pool balance")
 
 	case poolBalance == 0: // nothing to spend
 		return nil
@@ -151,14 +151,14 @@ func (m *tokenPool) spendWithServiceCharge(txn *tx.Transaction, amount state.Bal
 		// paying charge
 		charge := state.Balance(float64(amount) * serviceCharge)
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, serviceID, charge)); err != nil {
-			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		poolBalance -= charge
 
 		// paying reward
 		servicePay := amount - charge
 		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, servicePay)); err != nil {
-			return errors.Wrap(errCodeTokenPoolSpend, "transfer token pool failed", err)
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
 		}
 		poolBalance -= servicePay
 
@@ -167,7 +167,7 @@ func (m *tokenPool) spendWithServiceCharge(txn *tx.Transaction, amount state.Bal
 
 	// spend token pool by balance
 	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
-		return errors.Wrap(errCodeTokenPoolSpend, "spend token pool failed", err)
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend token pool failed", err)
 	}
 
 	m.Balance = 0

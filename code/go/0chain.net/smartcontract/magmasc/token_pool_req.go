@@ -31,7 +31,7 @@ var (
 func (m *tokenPoolReq) Decode(blob []byte) error {
 	req := tokenPoolReq{txn: m.txn}
 	if err := json.Unmarshal(blob, &req); err != nil {
-		return errDecodeData.Wrap(err)
+		return zmc.ErrDecodeData.Wrap(err)
 	}
 	if err := req.Validate(); err != nil {
 		return err
@@ -61,7 +61,7 @@ func (m *tokenPoolReq) PoolID() string {
 
 // PoolHolderID implements PoolConfigurator interface.
 func (m *tokenPoolReq) PoolHolderID() string {
-	return Address
+	return zmc.Address
 }
 
 // PoolPayerID implements PoolConfigurator interface.
@@ -78,16 +78,16 @@ func (m *tokenPoolReq) PoolPayeeID() string {
 func (m *tokenPoolReq) Validate() (err error) {
 	switch { // is invalid
 	case m.txn == nil:
-		err = errors.New(errCodeInternal, "transaction data is required")
+		err = errors.New(zmc.ErrCodeInternal, "transaction data is required")
 
 	case m.txn.Value <= 0:
-		err = errors.New(errCodeInternal, "transaction value is required")
+		err = errors.New(zmc.ErrCodeInternal, "transaction value is required")
 
 	case m.ID == "":
-		err = errors.New(errCodeBadRequest, "pool id is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "pool id is required")
 
 	case m.Provider == nil || m.Provider.ExtId == "":
-		err = errors.New(errCodeBadRequest, "provider external id is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "provider external id is required")
 	}
 
 	return err

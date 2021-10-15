@@ -22,7 +22,7 @@ var (
 
 // newAccessPointStakeReq returns a new constructed access point's stake pool.
 func newAccessPointStakeReq(ap *zmc.AccessPoint, cfg *viper.Viper) *accessPointStakeReq {
-	minStake := int64(cfg.GetFloat64(accessPointMinStake) * billion)
+	minStake := int64(cfg.GetFloat64(accessPointMinStake) * zmc.Billion)
 	if minStake < 0 {
 		minStake = 0
 	}
@@ -45,7 +45,7 @@ func (m *accessPointStakeReq) PoolID() string {
 
 // PoolHolderID implements PoolConfigurator interface.
 func (m *accessPointStakeReq) PoolHolderID() string {
-	return Address
+	return zmc.Address
 }
 
 // PoolPayerID implements PoolConfigurator interface.
@@ -62,10 +62,10 @@ func (m *accessPointStakeReq) PoolPayeeID() string {
 func (m *accessPointStakeReq) Validate() (err error) {
 	switch { // is invalid
 	case m.AccessPoint == nil:
-		err = errors.New(errCodeInternal, "access point is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "access point is required")
 
 	case m.AccessPoint.Id == "":
-		err = errors.New(errCodeBadRequest, "provider id is required")
+		err = errors.New(zmc.ErrCodeBadRequest, "provider id is required")
 	}
 
 	return err
