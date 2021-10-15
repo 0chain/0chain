@@ -17,13 +17,14 @@ simulation:
   num_free_storage_assigners: 10
   num_vesting_destinations_client: 10
   num_write_redeem_allocation: 10
-  num_challenges_blobber: 100
+  num_challenges_blobber: 10
 
 options:
   verbose: true
   test_suites:
     - "storage"
     - "storage_rest"
+    - "control"
   omitted_tests:
 
 smart_contracts:
@@ -71,7 +72,7 @@ smart_contracts:
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
-    max_challenges_per_generation: 100
+    max_challenges_per_generation: 10
     readpool:
       min_lock: 0.3
       min_lock_period: 1m

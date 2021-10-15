@@ -8,6 +8,8 @@ import (
 	"0chain.net/smartcontract/partitions"
 )
 
+const allValidatorsPartitionSize = 50
+
 func getValidatorsList(balances c_state.StateContextI) (partitions.RandPartition, error) {
 	all, err := partitions.GetRandomSelector(ALL_VALIDATORS_KEY, balances)
 	if err != nil {

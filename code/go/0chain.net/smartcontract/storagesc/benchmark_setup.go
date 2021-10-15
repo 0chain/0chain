@@ -80,11 +80,11 @@ func AddMockAllocations(
 				numAllocBlobbers := sa.DataShards + sa.ParityShards
 				for l := 0; l < numAllocBlobbers; l++ {
 					wap.Blobbers.add(&blobberPool{
-						BlobberID: getMockBlobberId(startBlobbers + l),
+						BlobberID: GetMockBlobberId(startBlobbers + l),
 						Balance:   amountPerBlobber,
 					})
 					rap.Blobbers.add(&blobberPool{
-						BlobberID: getMockBlobberId(startBlobbers + l),
+						BlobberID: GetMockBlobberId(startBlobbers + l),
 						Balance:   amountPerBlobber,
 					})
 				}
@@ -206,7 +206,7 @@ func addMockAllocation(
 	startBlobbers := getMockBlobberBlockFromAllocationIndex(i)
 	for j := 0; j < numAllocBlobbers; j++ {
 		bIndex := startBlobbers + j
-		bId := getMockBlobberId(bIndex)
+		bId := GetMockBlobberId(bIndex)
 		sa.BlobberDetails = append(sa.BlobberDetails, &BlobberAllocation{
 			BlobberID:      bId,
 			AllocationID:   sa.ID,
@@ -274,7 +274,7 @@ func AddMockBlobbers(
 	latitudeStep := 2 * maxLatitude / float64(viper.GetInt(sc.NumBlobbers))
 	longitudeStep := 2 * maxLongitude / float64(viper.GetInt(sc.NumBlobbers))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
-		id := getMockBlobberId(i)
+		id := GetMockBlobberId(i)
 		blobber := &StorageNode{
 			ID:      id,
 			BaseURL: id + ".com",
@@ -347,7 +347,7 @@ func GetMockStakePools(
 	sps := make([]*stakePool, 0, viper.GetInt(sc.NumBlobbers))
 	usps := make([]*userStakePools, len(clients), len(clients))
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
-		bId := getMockBlobberId(i)
+		bId := GetMockBlobberId(i)
 		sp := &stakePool{
 			Pools:  make(map[string]*delegatePool),
 			Offers: make(map[string]*offerPool),
@@ -435,7 +435,7 @@ func SaveMockStakePools(
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for i, sp := range sps {
-		bId := getMockBlobberId(i)
+		bId := GetMockBlobberId(i)
 		err := sp.save(sscId, bId, balances)
 		if err != nil {
 			panic(err)
@@ -498,7 +498,7 @@ func AddMockWriteRedeems(
 			rm := ReadMarker{
 				ClientID:        clients[client],
 				ClientPublicKey: publicKeys[client],
-				BlobberID:       getMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
+				BlobberID:       GetMockBlobberId(getMockBlobberBlockFromAllocationIndex(i)),
 				AllocationID:    getMockAllocationId(i),
 				OwnerID:         clients[client],
 				ReadCounter:     viper.GetInt64(sc.NumWriteRedeemAllocation),
@@ -544,14 +544,14 @@ func getMockWritePoolId(allocation, client, index int) string {
 }
 
 func getMockBlobberStakePoolId(blobber, stake int) string {
-	return encryption.Hash(getMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
+	return encryption.Hash(GetMockBlobberId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
 func getMockValidatorStakePoolId(blobber, stake int) string {
 	return encryption.Hash(getMockValidatorId(blobber) + "pool" + strconv.Itoa(stake))
 }
 
-func getMockBlobberId(index int) string {
+func GetMockBlobberId(index int) string {
 	return encryption.Hash("mockBlobber_" + strconv.Itoa(index))
 }
 

@@ -171,7 +171,7 @@ func (w SimulatorParameter) String() string {
 		"num_miners",
 		"num_active_miners",
 		"nun_sharders",
-		"nun__active_sharders",
+		"nun_active_sharders",
 		"num_allocations",
 		"num_blobbers_per_Allocation",
 		"num_blobbers",

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	"0chain.net/smartcontract/storagesc"
+
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/common"
@@ -64,6 +66,10 @@ func BenchmarkTests(
 			name:     "control.all_miners." + strconv.Itoa(viper.GetInt(bk.NumMiners)),
 			endpoint: allMiners,
 		},
+		{
+			name:     "control.blobber_challenges." + strconv.Itoa(viper.GetInt(bk.StorageMaxChallengesPerGeneration)),
+			endpoint: blobberChallenges,
+		},
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
@@ -73,6 +79,27 @@ func BenchmarkTests(
 		Source:     bk.Storage,
 		Benchmarks: testsI,
 	}
+}
+
+func blobberChallenges(balances cstate.StateContextI) error {
+	for i := 0; i < viper.GetInt(bk.StorageMaxChallengesPerGeneration); i++ {
+		blobberChallengeObj := &storagesc.BlobberChallenge{}
+		blobberChallengeObj.BlobberID = storagesc.GetMockBlobberId(0)
+		blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(storagesc.ADDRESS))
+		if err != nil {
+			panic(err)
+		}
+		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = balances.InsertTrieNode(blobberChallengeObj.GetKey(storagesc.ADDRESS), blobberChallengeObj)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return nil
 }
 
 func controlIndividual(balances cstate.StateContextI) error {

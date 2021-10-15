@@ -17,6 +17,8 @@ import (
 	"0chain.net/core/util"
 )
 
+const maxChallengesPerGeneration = 100
+
 func scConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":configurations")
 }
@@ -267,6 +269,11 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
 			sc.MaxChallengesPerGeneration)
 	}
+	if sc.MaxChallengesPerGeneration > maxChallengesPerGeneration {
+		return fmt.Errorf("invalid max_challenges_per_generation > %v: %v",
+			maxChallengesPerGeneration, sc.MaxChallengesPerGeneration)
+	}
+
 	if sc.ChallengeGenerationRate < 0 {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)

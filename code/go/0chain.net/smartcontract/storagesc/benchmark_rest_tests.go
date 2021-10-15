@@ -70,7 +70,7 @@ func BenchmarkRestTests(
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
 				values.Set("client", data.Clients[0])
-				values.Set("blobber", getMockBlobberId(0))
+				values.Set("blobber", GetMockBlobberId(0))
 				return values
 			}(),
 		},
@@ -120,7 +120,7 @@ func BenchmarkRestTests(
 			endpoint: ssc.OpenChallengeHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("blobber", getMockBlobberId(0))
+				values.Set("blobber", GetMockBlobberId(0))
 				return values
 			}(),
 		},
@@ -129,7 +129,7 @@ func BenchmarkRestTests(
 			endpoint: ssc.GetChallengeHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("blobber", getMockBlobberId(0))
+				values.Set("blobber", GetMockBlobberId(0))
 				values.Set("challenge", getMockChallengeId(0, 0))
 				return values
 			}(),
@@ -143,7 +143,7 @@ func BenchmarkRestTests(
 			endpoint: ssc.GetBlobberHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("blobber_id", getMockBlobberId(0))
+				values.Set("blobber_id", GetMockBlobberId(0))
 				return values
 			}(),
 		},
@@ -163,7 +163,7 @@ func BenchmarkRestTests(
 				var values url.Values = make(map[string][]string)
 				values.Set("client_id", data.Clients[0])
 				values.Set("allocation_id", getMockAllocationId(0))
-				values.Set("blobber_id", getMockBlobberId(0))
+				values.Set("blobber_id", GetMockBlobberId(0))
 				return values
 			}(),
 		},
@@ -183,7 +183,7 @@ func BenchmarkRestTests(
 				var values url.Values = make(map[string][]string)
 				values.Set("client_id", data.Clients[0])
 				values.Set("allocation_id", getMockAllocationId(0))
-				values.Set("blobber_id", getMockBlobberId(0))
+				values.Set("blobber_id", GetMockBlobberId(0))
 				return values
 			}(),
 		},
@@ -192,7 +192,7 @@ func BenchmarkRestTests(
 			endpoint: ssc.getStakePoolStatHandler,
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
-				values.Set("blobber_id", getMockBlobberId(0))
+				values.Set("blobber_id", GetMockBlobberId(0))
 				return values
 			}(),
 		},

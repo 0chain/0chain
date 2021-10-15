@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	allAllocationsPartitionSize = 100
-	allValidatorsPartitionSize  = 50
+	allAllocationsPartitionSize = maxChallengesPerGeneration
 )
 
 func getAllAllocationsList(balances state.StateContextI) (partitions.RandPartition, error) {
