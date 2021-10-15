@@ -48,25 +48,10 @@ func (sc *StorageSmartContract) newChallenge(
 	statectx c_state.StateContextI,
 	challengeTimestamp common.Timestamp,
 ) {
-	//stats := &StorageStats{}
-	//stats.Stats = &StorageAllocationStats{}
-	//statsBytes, err := statectx.GetTrieNode(stats.GetKey(sc.ID))
-	//if err != nil {
-	//	return
-	//}
-	//if statsBytes != nil {
-	//	err = stats.Decode(statsBytes.Encode())
-	//	if err != nil {
-	//		Logger.Error("storage stats decode error")
-	//		return
-	//	}
-	//}
-
 	stats.Stats.OpenChallenges++
 	stats.Stats.TotalChallenges++
 	stats.LastChallengedSize = stats.Stats.UsedSize
 	stats.LastChallengedTime = challengeTimestamp
-	//statectx.InsertTrieNode(stats.GetKey(sc.ID), stats)
 }
 
 func (sc *StorageSmartContract) challengeResolved(statectx c_state.StateContextI, challengedPassed bool) {

@@ -631,21 +631,16 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		return nil, nil
 	}
 
-	//
-	//
-	//
-
 	var alloc *StorageAllocation
 	var wg sync.WaitGroup
 	for i := int64(0); i < numChallenges; i++ {
 		wg.Add(1)
-		// looking for allocation with NumWrites > 0
 
+		// looking for allocation with NumWrites > 0
 		alloc, err = selectAlloc(int(i))
 		if err != nil {
 			return err
 		}
-
 		if alloc == nil {
 			continue // try another one
 		}
@@ -661,7 +656,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 					zap.Any("challengeID", challengeID))
 				return
 			}
-			// statistics
 			var (
 				tp              = time.Now()
 				challengeString string
@@ -688,7 +682,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 				}
 			}
 		}(i)
-
 	}
 	wg.Wait()
 
@@ -696,8 +689,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	if err != nil {
 		return err
 	}
-	//sc.newChallenge(stats, balances, t.CreationDate)
-
 	return nil
 }
 
@@ -790,13 +781,19 @@ func (sc *StorageSmartContract) addChallenge(
 		return string(challengeBytes), err
 	}
 
-	balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	_, err = balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+	if err != nil {
+		return "", err
+	}
 
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
-	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", err
+	}
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(stats, balances, storageChallenge.Created)
 	return string(challengeBytes), err
