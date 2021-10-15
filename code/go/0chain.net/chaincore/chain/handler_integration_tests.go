@@ -4,7 +4,6 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"net/http"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -45,14 +44,4 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
 	}
 
 	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
-}
-
-// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(); lfmb != nil {
-		return lfmb.GetSummary(), nil
-	}
-
-	return nil, errors.New("could not find latest finalized magic block")
 }
