@@ -2,6 +2,7 @@ package partitions
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -110,9 +111,11 @@ func (rs *randomSelector) Remove(
 		fmt.Errorf("empty last partitions, currpt data")
 	}
 	part.add(replacment)
-	err = rs.Callback(replacment, len(rs.Partitions)-1, index, balances)
-	if err != nil {
-		return err
+	if rs.Callback != nil {
+		err = rs.Callback(replacment, len(rs.Partitions)-1, index, balances)
+		if err != nil {
+			return err
+		}
 	}
 
 	if lastPart.length() == 0 {
@@ -124,10 +127,50 @@ func (rs *randomSelector) Remove(
 	return nil
 }
 
+func (rs *randomSelector) AddRand(
+	item PartitionItem,
+	r *rand.Rand,
+	balances state.StateContextI,
+) (int, error) {
+	if rs.NumPartitions == 0 {
+		return rs.Add(item, balances)
+	}
+	index := r.Intn(rs.NumPartitions)
+	if index == rs.NumPartitions-1 {
+		return rs.Add(item, balances)
+	}
+
+	partition, err := rs.getPartition(index, balances)
+	if err != nil {
+		return -1, err
+	}
+	moving := partition.cutTail()
+	if moving == nil {
+		fmt.Errorf("empty partitions, currpt data")
+	}
+	partition.add(item)
+
+	movedTo, err := rs.Add(moving, balances)
+	if err != nil {
+		return -1, err
+	}
+	if rs.Callback != nil {
+		err = rs.Callback(moving, index, movedTo, balances)
+		if err != nil {
+			return -1, err
+		}
+	}
+
+	return index, nil
+}
+
 func (rs *randomSelector) GetRandomSlice(
 	r *rand.Rand,
 	balances state.StateContextI,
 ) ([]PartitionItem, error) {
+	if rs.NumPartitions == 0 {
+		return nil, errors.New("Empty list, no items to return")
+	}
 	index := r.Intn(rs.NumPartitions)
 
 	var rtv []PartitionItem

@@ -42,5 +42,6 @@ type Partition interface {
 
 type RandPartition interface {
 	Partition
+	AddRand(PartitionItem, *rand.Rand, state.StateContextI) (int, error)
 	GetRandomSlice(*rand.Rand, state.StateContextI) ([]PartitionItem, error)
 }

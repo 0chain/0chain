@@ -106,8 +106,11 @@ func (sc *StorageSmartContract) addUserAllocation(
 	return nil
 }
 
-func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
-	balances chainstate.StateContextI) (string, error) {
+func (sc *StorageSmartContract) addAllocation(
+	alloc *StorageAllocation,
+	seed int64,
+	balances chainstate.StateContextI,
+) (string, error) {
 	var err error
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
@@ -131,8 +134,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	if err := sc.addUserAllocation(alloc.Owner, alloc, balances); err != nil {
 		return "", common.NewError("add_allocation_failed", err.Error())
 	}
-
-	alloc.AllAllocationsPartition, err = all.Add(partitions.ItemFromString(alloc.ID), balances)
+	r := rand.New(rand.NewSource(seed))
+	alloc.AllAllocationsPartition, err = all.AddRand(partitions.ItemFromString(alloc.ID), r, balances)
 	if err != nil {
 		return "", common.NewError("add_allocation_failed", err.Error())
 	}
@@ -383,7 +386,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	if resp, err = sc.addAllocation(sa, balances); err != nil {
+	if resp, err = sc.addAllocation(sa, seed, balances); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
 

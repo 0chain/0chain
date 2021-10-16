@@ -114,7 +114,7 @@ func TestFuzzyRandom(t *testing.T) {
 		action := getAction(i)
 		switch action.action {
 		case Add:
-			partition, err := rs.Add(action.item, balances)
+			partition, err := rs.AddRand(action.item, r, balances)
 			require.NoError(t, err, fmt.Sprintf("action Add: %v, error: %v", action, err))
 			items = append(items, fuzzyItem{
 				item:     action.item.Name(),
@@ -142,9 +142,7 @@ func TestFuzzyRandom(t *testing.T) {
 
 	var count = 0
 	for i := 0; i < len(rs.Partitions); i++ {
-		for j := 0; j < len(rs.Partitions[i].Items); j++ {
-			count++
-		}
+		count += rs.Partitions[i].length()
 	}
 	require.EqualValues(t, count, len(items))
 
