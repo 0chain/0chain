@@ -50,8 +50,12 @@ func NewRandomSelector(
 	}
 }
 
+func PartitionKey(name string, index int) datastore.Key {
+	return datastore.Key(name + encryption.Hash(":partition:"+strconv.Itoa(index)))
+}
+
 func (rs *randomSelector) partitionKey(index int) datastore.Key {
-	return datastore.Key(rs.Name + encryption.Hash(":partition:"+strconv.Itoa(index)))
+	return PartitionKey(rs.Name, index)
 }
 
 func (rs *randomSelector) SetCallback(callback ChangePartitionCallback) {

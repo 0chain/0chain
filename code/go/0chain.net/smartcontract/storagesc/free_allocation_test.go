@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	cstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/core/encryption"
@@ -316,7 +318,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
 			"GetTrieNode", ALL_ALLOCATIONS_KEY,
-		).Return(&Allocations{}, nil).Once()
+		).Return(nil, util.ErrValueNotPresent).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
 		balances.On(
@@ -331,7 +333,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On(
 			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
-		).Return("", nil).Once()
+		).Return("", nil).Maybe()
 		balances.On(
 			"InsertTrieNode", clientAlloc.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
@@ -412,6 +414,12 @@ func TestFreeAllocationRequest(t *testing.T) {
 					pool.AllocationID == mockTransactionHash &&
 					pool.ExpireAt == txn.CreationDate+toSeconds(conf.FreeAllocationSettings.Duration)
 			})).Return("", nil).Once()
+
+		balances.On(
+			"InsertTrieNode",
+			partitions.PartitionKey(ALL_ALLOCATIONS_KEY, 0),
+			mock.Anything,
+		).Return("", nil).Maybe()
 
 		return args{ssc, txn, input, balances}
 	}
