@@ -1,6 +1,14 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -9,14 +17,8 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
-	"fmt"
+	"0chain.net/smartcontract/partitions"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -37,11 +39,12 @@ func TestAddChallenge(t *testing.T) {
 
 	type args struct {
 		alloc         *StorageAllocation
-		validators    *ValidatorNodes
+		validators    partitions.RandPartition
 		challengeID   string
 		creationDate  common.Timestamp
 		r             *rand.Rand
 		challengeSeed int64
+		stats         *StorageStats
 		balances      cstate.StateContextI
 	}
 
@@ -64,12 +67,27 @@ func TestAddChallenge(t *testing.T) {
 				Stats:          &StorageAllocationStats{},
 			}
 		}
-		var validators = ValidatorNodes{}
-		for i := 0; i < p.numValidators; i++ {
-			validators.Nodes = append(validators.Nodes, &ValidationNode{
-				ID: strconv.Itoa(i),
-			})
+
+		//var validators = ValidatorNodes{}
+		validators := partitions.NewRandomSelector(
+			ALL_VALIDATORS_KEY,
+			allValidatorsPartitionSize,
+			nil,
+			partitions.ItemValidator,
+		)
+		balances := &mockStateContext{
+			store: make(map[datastore.Key]util.Serializable),
 		}
+		for i := 0; i < p.numValidators; i++ {
+			_, err := validators.Add(
+				&partitions.ValidationNode{
+					Id:  strconv.Itoa(i),
+					Url: strconv.Itoa(i) + ".com",
+				}, balances,
+			)
+			require.NoError(t, err)
+		}
+
 		return args{
 			alloc: &StorageAllocation{
 				Blobbers:   blobbers,
@@ -77,11 +95,10 @@ func TestAddChallenge(t *testing.T) {
 				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
-			validators: &validators,
+			validators: validators,
 			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
-			balances: &mockStateContext{
-				store: make(map[datastore.Key]util.Serializable),
-			},
+			stats:      &StorageStats{},
+			balances:   balances,
 		}
 	}
 
@@ -156,7 +173,7 @@ func TestAddChallenge(t *testing.T) {
 			}
 
 			resp, err := ssc.addChallenge(args.alloc, args.validators, args.challengeID,
-				args.creationDate, args.r, args.challengeSeed, args.balances)
+				args.creationDate, args.r, args.challengeSeed, args.stats, args.balances)
 			validate(t, resp, err, tt.parameters, tt.want)
 		})
 	}

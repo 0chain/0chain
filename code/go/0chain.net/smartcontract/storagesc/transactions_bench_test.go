@@ -415,8 +415,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	b.ResetTimer()
 	b.Log("start benchmark")
 
-	var valids *ValidatorNodes
-	valids, err = ssc.getValidatorsList(balances)
+	valids, err := getValidatorsList(balances)
 	require.NoError(b, err)
 
 	// 6. add challenge for an allocation and verify it (successive case)
@@ -447,9 +446,10 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
 					challBytes string
+					stats      = &StorageStats{}
 				)
 				challBytes, err = ssc.addChallenge(alloc, valids, challID,
-					common.Timestamp(tp), r, tp, balances)
+					common.Timestamp(tp), r, tp, stats, balances)
 				require.NoError(b, err)
 
 				var chall StorageChallenge
@@ -460,17 +460,17 @@ func Benchmark_verifyChallenge(b *testing.B) {
 
 				var challResp ChallengeResponse
 				challResp.ID = chall.ID
-
+				blobberID = alloc.Blobbers[0].ID
 				for _, v := range chall.Validators {
 					var vx = blobsMap[v.ID]
 					challResp.ValidationTickets = append(
 						challResp.ValidationTickets,
-						vx.validTicket(b, chall.ID, chall.Blobber.ID, true, tp),
+						vx.validTicket(b, chall.ID, blobberID, true, tp),
 					)
 				}
 
 				// 6.3 keep for the benchmark
-				blobberID = chall.Blobber.ID
+				blobberID = blobberID
 
 				// 6.4 prepare transaction
 				tp += 1

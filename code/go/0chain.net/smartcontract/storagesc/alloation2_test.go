@@ -1,6 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
+	"0chain.net/smartcontract/partitions"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -9,13 +18,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 type blobberStakes []int64
@@ -419,7 +422,10 @@ func testCancelAllocation(
 		require.NoError(t, err)
 	}
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
+	allAllocationsBefore, err := getAllAllocationsList(ctx)
+	require.NoError(t, err)
+	before, err := allAllocationsBefore.Size(ctx)
+	require.NoError(t, err)
 
 	resp, err := ssc.cancelAllocationRequest(txn, input, ctx)
 	if err != nil {
@@ -427,9 +433,11 @@ func testCancelAllocation(
 	}
 	require.EqualValues(t, "canceled", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
+	allAllocationsAfter, err := getAllAllocationsList(ctx)
 	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+	after, err := allAllocationsAfter.Size(ctx)
+	require.NoError(t, err)
+	require.EqualValues(t, before-1, after)
 
 	var newScYaml = &scConfig{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -476,17 +484,21 @@ func testFinalizeAllocation(
 		state.Balance(challengePoolBalance), blobberOffer, thisExpires, now,
 	)
 
-	allAllocationsBefore, err := ssc.getAllAllocationsList(ctx)
-
+	allAllocationsBefore, err := getAllAllocationsList(ctx)
+	require.NoError(t, err)
+	before, err := allAllocationsBefore.Size(ctx)
+	require.NoError(t, err)
 	resp, err := ssc.finalizeAllocation(txn, input, ctx)
 	if err != nil {
 		return err
 	}
 	require.EqualValues(t, "finalized", resp)
 
-	allAllocationsAfter, err := ssc.getAllAllocationsList(ctx)
+	allAllocationsAfter, err := getAllAllocationsList(ctx)
 	require.NoError(t, err)
-	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
+	after, err := allAllocationsAfter.Size(ctx)
+	require.NoError(t, err)
+	require.EqualValues(t, before-1, after)
 
 	var newScYaml = &scConfig{}
 	newScYaml, err = ssc.getConfig(ctx, false)
@@ -687,9 +699,16 @@ func setupMocksFinishAllocation(
 	_, err = ctx.InsertTrieNode(sAllocation.GetKey(ssc.ID), &sAllocation)
 	require.NoError(t, err)
 
-	var allications = Allocations{}
-	allications.List.add(sAllocation.ID)
-	_, err = ctx.InsertTrieNode(ALL_ALLOCATIONS_KEY, &allications)
+	var allications = partitions.NewRandomSelector(
+		ALL_ALLOCATIONS_KEY,
+		allAllocationsPartitionSize,
+		allocationChangedPartition,
+		partitions.ItemString,
+	)
+	_, err = allications.Add(partitions.ItemFromString(sAllocation.ID), ctx)
+	require.NoError(t, err)
+	err = allications.Save(ctx)
+	require.NoError(t, err)
 
 	var cPool = challengePool{
 		ZcnPool: &tokenpool.ZcnPool{
