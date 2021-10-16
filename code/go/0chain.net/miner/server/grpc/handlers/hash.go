@@ -3,11 +3,9 @@ package handlers
 import (
 	"context"
 
-	"google.golang.org/genproto/googleapis/api/httpbody"
-
-	minerproto "0chain.net/miner/proto/api/src/proto"
-
 	"0chain.net/core/encryption"
+	minerproto "0chain.net/miner/proto/api/src/proto"
+	"google.golang.org/genproto/googleapis/api/httpbody"
 )
 
 // Hash is the handler for the Hash RPC
