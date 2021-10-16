@@ -97,8 +97,10 @@ func TestAddChallenge(t *testing.T) {
 			},
 			validators: validators,
 			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
-			stats:      &StorageStats{},
-			balances:   balances,
+			stats: &StorageStats{
+				Stats: &StorageAllocationStats{},
+			},
+			balances: balances,
 		}
 	}
 
@@ -115,9 +117,7 @@ func TestAddChallenge(t *testing.T) {
 		} else {
 			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
 		}
-		for i, v := range want.validators {
-			require.EqualValues(t, strconv.Itoa(v), challenge.Validators[i].ID)
-		}
+		require.EqualValues(t, len(want.validators), len(challenge.Validators))
 	}
 
 	tests := []struct {
