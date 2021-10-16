@@ -1,0 +1,15 @@
+@startuml "Block Store flow Diagram"
+(*top) --> [Chain generates new block] "New Block"
+--> [Send block for storage] "BlockStoreDb"
+--> [Select able HDD as per strategy] "HDD"
+note right: "Strategies: MinSize, MinFiles, RoundRobin, Random"
+
+
+--> ===B1===
+===B1=== --> [Block Meta Record] "Store BMR"
+--> ===B2===
+
+===B1=== --> "Compress and store block in HDD"
+--> ===B2===
+-->(*)
+@enduml
