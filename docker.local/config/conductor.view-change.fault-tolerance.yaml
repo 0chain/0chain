@@ -107,4 +107,4 @@ tests:
           round: 300
       - generators_failure: 310 # setup failure for generators selected on start of round 310
       - wait_round:
-          shift: 350
+          round: 330
