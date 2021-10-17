@@ -134,7 +134,6 @@ func printResults(results []suiteResults) {
 					takenMs,
 				)
 			}
-
 		}
 	}
 }

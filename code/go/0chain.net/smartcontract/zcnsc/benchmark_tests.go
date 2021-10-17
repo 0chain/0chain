@@ -6,7 +6,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
-	"github.com/stretchr/testify/require"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -21,6 +20,11 @@ type benchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
+	error
+}
+
+func (bt benchTest) Error() error {
+	return bt.error
 }
 
 func (bt benchTest) Name() string {
@@ -33,8 +37,7 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 
 func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) {
 	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
-	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
-	require.NoError(b, err)
+	_, bt.error = bt.endpoint(bt.Transaction(), bt.input, state)
 }
 
 func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {

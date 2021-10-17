@@ -3,7 +3,7 @@ module 0chain.net
 go 1.16
 
 require (
-	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
+	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481 // indirect
 	github.com/alicebob/miniredis/v2 v2.14.3
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.7.0
-	github.com/valyala/gozstd v1.5.0
+	github.com/valyala/gozstd v1.13.0
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0

@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 type Source int
 
 const (
-	Storage Source = iota
+	Storage = Source(iota)
 	StorageRest
 	Miner
 	MinerRest
@@ -174,6 +175,16 @@ const (
 	BurnAddress        = SmartContract + Zcn + "burn_address"
 )
 
+func (s Source) String() string {
+	i := int(s)
+	switch {
+	case i <= int(NumberOdfBenchmarkSources):
+		return SourceNames[i]
+	default:
+		return strconv.Itoa(i)
+	}
+}
+
 func (w SimulatorParameter) String() string {
 	return [...]string{
 		"num_clients",
@@ -224,6 +235,7 @@ type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
 	Run(state.StateContextI, *testing.B)
+	Error() error
 }
 
 type SignatureScheme interface {

@@ -28,6 +28,11 @@ type BenchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
+	error
+}
+
+func (bt BenchTest) Error() error {
+	return bt.error
 }
 
 func (bt BenchTest) Name() string {
@@ -66,10 +71,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = bt.endpoint(bt.Transaction(), bt.input, gn, balances)
-	if err != nil {
-		panic(err)
-	}
+	_, bt.error = bt.endpoint(bt.Transaction(), bt.input, gn, balances)
 }
 
 func BenchmarkTests(
