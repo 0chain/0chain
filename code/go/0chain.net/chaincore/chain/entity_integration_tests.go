@@ -29,7 +29,7 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 			logging.Logger.Info("we're still pretending to be not a generator for round", zap.Int64("round", r.GetRoundNumber()))
 			return false
 		}
-		if config.Round(r.GetRoundNumber()) == state.GeneratorsFailureRoundNumber && c.GetRoundTimeoutCount() == 0 {
+		if config.Round(r.GetRoundNumber()) == state.GeneratorsFailureRoundNumber && r.GetTimeoutCount() == 0 {
 			logging.Logger.Info("we're a failing generator for round", zap.Int64("round", r.GetRoundNumber()))
 			// remember this round as failing
 			myFailingRound = r.GetRoundNumber()
