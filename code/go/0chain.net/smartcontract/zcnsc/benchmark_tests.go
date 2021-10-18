@@ -20,10 +20,10 @@ type benchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
-	error
+	error string
 }
 
-func (bt benchTest) Error() error {
+func (bt benchTest) Error() string {
 	return bt.error
 }
 
@@ -37,7 +37,10 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 
 func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) {
 	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
-	_, bt.error = bt.endpoint(bt.Transaction(), bt.input, state)
+	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
+	if err != nil {
+		bt.error = err.Error()
+	}
 }
 
 func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {

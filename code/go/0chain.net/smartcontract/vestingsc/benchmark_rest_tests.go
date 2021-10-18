@@ -20,10 +20,10 @@ type RestBenchTest struct {
 		cstate.StateContextI,
 	) (interface{}, error)
 	params url.Values
-	error
+	error  string
 }
 
-func (rbt RestBenchTest) Error() error {
+func (rbt RestBenchTest) Error() string {
 	return rbt.error
 }
 
@@ -36,7 +36,10 @@ func (rbt RestBenchTest) Transaction() *transaction.Transaction {
 }
 
 func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
-	_, rbt.error = rbt.endpoint(context.TODO(), rbt.params, balances)
+	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
+	if err != nil {
+		rbt.error = err.Error()
+	}
 }
 
 func BenchmarkRestTests(

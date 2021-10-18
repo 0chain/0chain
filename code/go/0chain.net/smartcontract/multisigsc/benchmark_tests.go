@@ -20,10 +20,10 @@ type BenchTest struct {
 	endpoint string
 	txn      *transaction.Transaction
 	input    []byte
-	error
+	error    string
 }
 
-func (bt BenchTest) Error() error {
+func (bt BenchTest) Error() string {
 	return bt.error
 }
 
@@ -68,7 +68,9 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 		panic("unknown endpoint: " + bt.endpoint)
 	}
 
-	bt.error = err
+	if err != nil {
+		bt.error = err.Error()
+	}
 }
 
 func BenchmarkTests(

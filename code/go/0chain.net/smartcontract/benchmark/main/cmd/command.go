@@ -118,20 +118,40 @@ func printResults(results []suiteResults) {
 			} else {
 				colour = colourGreen
 			}
+
+			statusColor := colourGreen
+			status := "OK"
+			errMessage := ""
+			err := bkResult.test.Error()
+
+			if err != "" {
+				status = "FAILED"
+				errMessage = " - " + err
+				statusColor = colourRed
+			}
+
 			if verbose {
 				fmt.Printf(
-					"%s%s,%f%s%s\n",
+					"%s%s,%f%s%s %s%s%s%s\n",
 					colour,
 					bkResult.test.Name(),
 					takenMs,
 					colourReset,
 					"ms",
+					statusColor,
+					status,
+					errMessage,
+					colourReset,
 				)
 			} else {
 				fmt.Printf(
-					"%s,%f\n",
+					"%s,%f %s%s%s%s\n",
 					bkResult.test.Name(),
 					takenMs,
+					statusColor,
+					status,
+					errMessage,
+					colourReset,
 				)
 			}
 		}

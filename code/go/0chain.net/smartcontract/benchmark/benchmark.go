@@ -235,7 +235,7 @@ type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
 	Run(state.StateContextI, *testing.B)
-	Error() error
+	Error() string
 }
 
 type SignatureScheme interface {

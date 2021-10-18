@@ -32,14 +32,14 @@ type BenchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
-	error
+	error string
 }
 
-func (bt BenchTest) Error() error {
+func (bt *BenchTest) Error() string {
 	return bt.error
 }
 
-func (bt BenchTest) Name() string {
+func (bt *BenchTest) Name() string {
 	return bt.name
 }
 
@@ -56,8 +56,11 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 }
 
 func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
-	_, bt.error = bt.endpoint(bt.Transaction(), bt.input, balances)
-	require.NoError(b, bt.error)
+	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
+	if err != nil {
+		bt.error = err.Error()
+	}
+	require.NoError(b, err)
 }
 
 func BenchmarkTests(
@@ -725,7 +728,7 @@ func BenchmarkTests(
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
-		testsI = append(testsI, test)
+		testsI = append(testsI, &test)
 	}
 	return bk.TestSuite{
 		Source:     bk.Storage,
