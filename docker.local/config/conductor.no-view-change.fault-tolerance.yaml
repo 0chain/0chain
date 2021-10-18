@@ -36,7 +36,6 @@ sets:
   - name: "NODES GO DOWN AND COME UP"
     tests:
       - "All nodes go down and come up"
-      - "Generators fail at start of round"
 
   - name: "NODES FAIL AND RECOVER RANDOMLY"
     tests:
@@ -184,20 +183,6 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_round:
           shift: 100
-
-  - name: "Generators fail at start of round"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - wait_add:
-          sharders: ["sharder-1"]
-          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
-          start: true
-      - wait_round:
-          round: 50
-      - generators_failure: 60 # setup failure for generators selected on start of round 60
-      - wait_round:
-          shift: 50
 
   # NODES FAIL AND RECOVER RANDOMLY
   - name: "Nodes fail and recover randomly"
