@@ -1383,6 +1383,11 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
 	}
 
+	// there's no new magic block
+	if lfmb != nil && newMagicBlock.StartingRound == lfmb.StartingRound {
+		return nil
+	}
+
 	// initialize magicblock nodepools
 	c.UpdateNodesFromMagicBlock(newMagicBlock)
 
@@ -1481,6 +1486,10 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 			" magic block previous hash %v",
 			latest.MagicBlock.Hash,
 			b.MagicBlock.PreviousMagicBlockHash))
+	}
+
+	if latest != nil && latest.MagicBlock.Hash == b.MagicBlock.Hash {
+		return
 	}
 
 	logging.Logger.Warn("update lfmb",
