@@ -371,7 +371,8 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		return
 	}
 
-	if pr := mc.GetRound(rn - 1); pr == nil {
+	pr := mc.GetRound(rn - 1)
+	if pr == nil {
 		logging.Logger.Debug("start new round (previous round not found)",
 			zap.Int64("round", rn))
 		return
@@ -388,6 +389,22 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 			zap.Int("rank", rank),
 			zap.Int("timeout_count", mr.GetTimeoutCount()),
 			zap.Any("random_seed", mr.GetRandomSeed()))
+		// TODO: remove this debug
+		go func(r int64) {
+			// check if this round has got a block in 3 seconds, report if not
+			time.AfterFunc(5*time.Second, func() {
+				if bs := mc.GetRoundBlocks(r); len(bs) == 0 {
+					logging.Logger.Warn("no block for new round in 5 seconds",
+						zap.Int64("round", r))
+				}
+			})
+		}(rn)
+		return
+	}
+
+	if pr.GetHeaviestNotarizedBlock() == nil {
+		logging.Logger.Info("start new round - previous block is not notarized",
+			zap.Int64("round", rn))
 		return
 	}
 
