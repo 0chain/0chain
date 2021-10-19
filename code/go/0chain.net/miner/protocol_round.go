@@ -498,8 +498,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), txnEntityMetadata)
-	defer memorystore.Close(ctx)
+	cctx := memorystore.WithEntityConnection(common.GetRootContext(), txnEntityMetadata)
+	defer memorystore.Close(cctx)
 
 	var (
 		rn    = r.GetRoundNumber()                       //
@@ -574,7 +574,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 		b.SetStateDB(pb, mc.GetStateDB())
 
-		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
+		err := mc.GenerateBlock(cctx, b, mc, makeBlock)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
@@ -655,6 +655,32 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 // AddToRoundVerification - add a block to verify.
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+	if mr.IsVerificationComplete() {
+		logging.Logger.Debug("handle verify block - round verification completed", zap.Int64("round", mr.GetRoundNumber()))
+		return
+	}
+
+	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
+		logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
+			zap.Int64("round", mr.GetRoundNumber()),
+			zap.Int("roundToc", mr.GetTimeoutCount()),
+			zap.Int("blockToc", b.RoundTimeoutCount),
+			zap.Int64("round_rrs", mr.GetRandomSeed()),
+			zap.Int64("block_rrs", b.GetRoundRandomSeed()))
+		return
+	}
+
+	if !mc.ValidGenerator(mr.Round, b) {
+		logging.Logger.Error("handle verify block - Not a valid generator. Ignoring block",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return
+	}
+
+	logging.Logger.Info("handle verify block - added block for ticket verification",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
+		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
 
 	if mr.IsFinalizing() || mr.IsFinalized() {
 		b.SetBlockState(block.StateVerificationRejected)
@@ -692,30 +718,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	if b.Round > 1 {
-		pb, err := mc.GetBlock(ctx, b.PrevHash)
-		if err != nil || pb == nil {
-			return
-		}
-
-		err = mc.VerifyNotarization(pb, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
-		if err != nil {
-			logging.Logger.Error("add to verification (prior block verify notarization)",
-				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
-				zap.String("block", b.PrevHash),
-				zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()),
-				zap.Error(err))
-			return
-		}
-	}
-
 	if err := mc.ComputeState(ctx, b); err != nil {
 		logging.Logger.Error("AddToRoundVerification compute state failed", zap.Error(err))
-		return
-	}
-
-	mr.AddProposedBlock(b)
-	if mc.AddRoundBlock(mr, b) != b {
 		return
 	}
 
@@ -744,6 +748,11 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 				zap.Float64("chain_weight", b.ChainWeight))
 			return
 		}
+	}
+
+	mr.AddProposedBlock(b)
+	if mc.AddRoundBlock(mr, b) != b {
+		logging.Logger.Error("Add round block with different block", zap.Int64("round", b.Round))
 	}
 
 	mc.addToRoundVerification(ctx, mr, b)
@@ -1085,13 +1094,21 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 				zap.String("block", b.Hash))
 			return nil
 		}
+
+		if err := mc.VerifyTickets(ctx, b.Hash, vts, r.GetRoundNumber()); err != nil {
+			return err
+		}
+
+		mc.MergeVerificationTickets(b, vts)
+
+		mc.checkBlockNotarization(ctx, r, b)
+		return nil
+	})
+
+	if err != nil {
+		logging.Logger.Error("merge notarization error", zap.Int64("round", b.Round),
+			zap.String("block", b.Hash), zap.Error(err))
 	}
-	notarized := b.IsBlockNotarized()
-	mc.MergeVerificationTickets(b, vts)
-	if notarized {
-		return
-	}
-	mc.checkBlockNotarization(ctx, r, b)
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
