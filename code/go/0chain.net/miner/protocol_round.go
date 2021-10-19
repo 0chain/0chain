@@ -744,6 +744,57 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	mc.addToRoundVerification(ctx, mr, b)
 }
 
+func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round int64, hash string) []*block.BlockVerificationTicket {
+	bvts := make([]*block.BlockVerificationTicket, len(vts))
+	for i, vt := range vts {
+		bvts[i] = &block.BlockVerificationTicket{
+			VerificationTicket: *vt,
+			Round:              round,
+			BlockID:            hash,
+		}
+	}
+	return bvts
+}
+
+func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
+	pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
+	pr.AddVerificationTicket(pbvts)
+
+	pb, err := mc.GetBlock(ctx, b.PrevHash)
+	if err != nil || pb == nil {
+		logging.Logger.Error("update prev block notarization (prior block does not exist",
+			zap.Int64("round", b.Round),
+			zap.String("prev block", b.PrevHash))
+		return nil
+	}
+
+	// merge the tickets
+	if pb.IsBlockNotarized() {
+		logging.Logger.Debug("update prev block notarization, already notarized", zap.Int64("round", pb.Round))
+		return nil
+	}
+
+	// TODO: maybe cancel after the tickets are validated, but may have CPU performance issue.
+	pr.CancelVerification()
+
+	// TODO: do not verify the same block multiple times
+	logging.Logger.Debug("update prev block notarization, verify tickets",
+		zap.Int64("round", pb.Round))
+	err = mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pb.Round)
+	if err != nil {
+		logging.Logger.Error("update prev block notarization failed",
+			zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
+			zap.String("block", b.PrevHash),
+			zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()),
+			zap.Error(err))
+		return err
+	}
+
+	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
+	mc.AddNotarizedBlock(ctx, pr, pb)
+	return nil
+}
+
 func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	logging.Logger.Info("adding block to verify",
 		zap.Int64("round", b.Round),
@@ -876,10 +927,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		sendVerification = true
 	}
-	logging.Logger.Debug("verify block - r.delta", zap.Any("block timer", r.delta))
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			r.SetState(round.RoundStateVerificationTimedOut)
@@ -900,7 +950,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		case <-blockTimeTimer.C:
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
-			logging.Logger.Debug("verify block - get blocks to verify")
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
@@ -1024,10 +1073,12 @@ func (mc *Chain) startNextRoundNotAhead(ctx context.Context, r *Round) {
 
 // MergeNotarization - merge a notarization.
 func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
-	for _, t := range vts {
-		if err := mc.VerifyTicket(b.Hash, t, r.GetRoundNumber()); err != nil {
-			logging.Logger.Error("merge notarization", zap.Int64("round", b.Round),
-				zap.String("block", b.Hash), zap.Error(err))
+	err := mc.BlockTicketsVerifyWithLock(ctx, b.Hash, func() error {
+		if b.IsBlockNotarized() {
+			logging.Logger.Debug("merge notarization, already notarized",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			return nil
 		}
 	}
 	notarized := b.IsBlockNotarized()
