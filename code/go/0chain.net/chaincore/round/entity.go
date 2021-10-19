@@ -229,7 +229,7 @@ func (r *Round) GetRoundNumber() int64 {
 	return r.Number
 }
 
-//SetRandomSeed - set the random seed of the round
+// SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 	r.setRandomSeed(seed)
 	r.mutex.Lock()
@@ -318,17 +318,18 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)
 	}
 	b.SetBlockNotarized()
+	b.SetBlockState(block.StateNotarized)
+
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 		r.Block = b
 	}
-	// TODO: this is not a deterministic action, the append function will reallocate
-	// the slice when r.notarizedBlocks' capacity is full. Before that rnb is
-	// the same as r.notarizedBlocks.
+
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool {
 		return rnb[i].ChainWeight > rnb[j].ChainWeight
 	})
 	r.notarizedBlocks = rnb
+	logging.Logger.Debug("reached notarization", zap.Int64("round", b.Round))
 	return b, true, nil
 }
 
