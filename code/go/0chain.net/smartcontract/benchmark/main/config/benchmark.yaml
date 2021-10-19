@@ -1,7 +1,7 @@
 simulation:
-  num_clients: 100
-  num_miners: 100
-  num_active_miners: 25
+  num_clients: 1000
+  num_miners: 1000
+  num_active_miners: 100
   nun_sharders: 100
   num_active_sharders: 25
   num_allocations: 1000
@@ -17,35 +17,14 @@ simulation:
   num_free_storage_assigners: 10
   num_vesting_destinations_client: 10
   num_write_redeem_allocation: 10
-  num_challenges_blobber: 10
+  num_challenges_blobber: 100
 
 options:
   verbose: true
   test_suites:
     - "storage"
     - "storage_rest"
-    - "miner"
-    - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "interest_pool"
-    - "interest_pool_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
   omitted_tests:
-    - "miner.payFees"
-    - "storage.cancel_allocation"
-    - "storage.finalize_allocation"
-    - "storage.free_allocation_request"
-    - "storage.free_update_allocation"
-    - "storage.new_allocation_request_preferred"
-    - "storage.new_allocation_request_random"
-    - "storage.update_allocation_request"
-    - "storage_rest.allocation_min_lock"
-    - "storage_rest.getStakePoolStat"
-    - "storage_rest.getUserStakePoolStat"
-    - "storage.generate_challenges"
 
 smart_contracts:
   minersc:
@@ -92,6 +71,7 @@ smart_contracts:
     failed_challenges_to_cancel: 0
     max_total_free_allocation: 10000
     max_individual_free_allocation: 170
+    max_challenges_per_generation: 100
     readpool:
       min_lock: 0.3
       min_lock_period: 1m
@@ -134,9 +114,11 @@ internal:
   available_keys: 10
   now: 100000
   signature_scheme: bls0chain # don't change only bls0chian works
-  start_tokens: 100000000000
+  start_tokens: 100000000000000
   bad: 50ms
   worry: 10ms
   satisfactory: 1ms
   time_unit: 1ms
   colour: true
+  control_m: 250000
+  control_n: 900
