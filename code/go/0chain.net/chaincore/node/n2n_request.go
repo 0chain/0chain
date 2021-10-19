@@ -37,28 +37,49 @@ func GetFetchStrategy() int {
 
 // RequestEntity - request an entity from nodes in the pool, returns when any node has response
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
+	ts := time.Now()
 	rhandler := requestor(params, handler)
-	var nodes []*Node
-	np.mmx.Lock()
+	var nds []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes(true)
+		nds = np.shuffleNodes(true)
 	} else {
-		nodes = np.getNodesByLargeMessageTime()
+		nds = np.GetNodesByLargeMessageTime()
 	}
-	np.mmx.Unlock()
 
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-	wg := &sync.WaitGroup{}
-	doneC := make(chan struct{})
-	nodeC := make(chan *Node, len(nodes))
-	for _, nd := range nodes {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
+	maxNum := 4
+	if maxNum > len(nds) {
+		maxNum = len(nds)
+	}
+
+	// TODO: send requests to next batch of maxNum nodes if the first 4 nodes does not give response
+	nc, err := sendRequestConcurrent(ctx, nds[:maxNum], rhandler)
+	switch err {
+	case nil:
+	case context.Canceled:
+		return nil
+	default:
+		logging.Logger.Error("request entity failed",
+			zap.Any("duration", time.Since(ts)),
+			zap.Error(err))
+		return nil
+	}
+
+	select {
+	case n, ok := <-nc:
+		if ok {
+			// return the first node give response, though it is not being used
+			return n
 		}
+
+	case <-ctx.Done():
+	}
+	return nil
+}
+
+func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler) (chan *Node, error) {
+	wg := &sync.WaitGroup{}
+	nodeC := make(chan *Node, len(nds))
+	for _, nd := range nds {
 		if nd.GetStatus() == NodeStatusInactive {
 			continue
 		}
@@ -68,10 +89,9 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 
 		wg.Add(1)
 		go func(n *Node) {
-			if rhandler(ctx, n) {
+			if handler(ctx, n) {
 				select {
 				case nodeC <- n:
-					cancel()
 				default:
 				}
 			}
@@ -79,17 +99,9 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		}(nd)
 	}
 
-	go func() {
-		wg.Wait()
-		close(doneC)
-	}()
-
-	select {
-	case <-doneC:
-		return nil
-	case n := <-nodeC:
-		return n
-	}
+	wg.Wait()
+	close(nodeC)
+	return nodeC, nil
 }
 
 // RequestEntityFromAll - requests an entity from all the nodes
@@ -100,7 +112,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context,
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodesLock(true)
+		nodes = np.shuffleNodes(true)
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
@@ -208,8 +220,8 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			switch err {
 			case nil:
 			default:
-				ue := err.(*url.Error)
-				if ue.Unwrap() != context.Canceled {
+				ue, ok := err.(*url.Error)
+				if ok && ue.Unwrap() != context.Canceled {
 					// requests could be canceled when the miner has received a response
 					// from any of the remotes.
 					provider.AddSendErrors(1)
