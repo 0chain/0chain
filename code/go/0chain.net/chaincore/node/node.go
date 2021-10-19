@@ -308,8 +308,7 @@ func Read(line string) (*Node, error) {
 	}
 	node.Port = int(port)
 	node.SetID(fields[3])
-	node.PublicKey = fields[4]
-	node.Client.SetPublicKey(node.PublicKey)
+	node.Client.SetPublicKey(fields[4])
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
@@ -327,14 +326,13 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
 	node.SetID(nc["id"].(string))
-	node.PublicKey = nc["public_key"].(string)
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
 		node.Description = node.GetNodeType() + node.GetKey()[:6]
 	}
 
-	node.Client.SetPublicKey(node.PublicKey)
+	node.Client.SetPublicKey(nc["public_key"].(string))
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewErrorf("invalid_client_id",
