@@ -1179,28 +1179,33 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 				zap.Error(err))
 			return
 		}
+		select {
+		case fbc <- fb:
+		default:
+		}
 
-		err = mc.VerifyNotarization(fb, fb.GetVerificationTickets(),
-			fb.Round)
-		if err != nil {
+		return fb, nil
+	}
+
+	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	close(fbc)
+
+	for fb := range fbc {
+		if err := mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(), fb.Round); err != nil {
 			logging.Logger.Error("lfb from sharder - notarization failed",
 				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 				zap.Error(err))
-			return nil, err
+			continue
 		}
 
 		// don't use the round, just create it or make sure it's created
 		mc.getOrCreateRound(ctx, fb.Round) // can' return nil
 
-		// async safe
-		mx.Lock()
-		defer mx.Unlock()
-
 		// increase consensus
 		for i, b := range fbs {
 			if b.Hash == fb.Hash {
 				fbs[i].Consensus++
-				return fb, nil
+				continue
 			}
 		}
 
@@ -1209,18 +1214,15 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 			Block:     fb,
 			Consensus: 1,
 		})
-
-		return fb, nil
 	}
-
-	fbs = make([]*BlockConsensus, 0, len(mc.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs))
-	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 
 	// highest (the first sorting order), most popular (the second order)
 	sort.Slice(fbs, func(i int, j int) bool {
-		return fbs[i].Round >= fbs[j].Round ||
-			fbs[i].Consensus > fbs[j].Consensus
+		if fbs[i].Round == fbs[j].Round {
+			return fbs[i].Consensus > fbs[j].Consensus
+		}
 
+		return fbs[i].Round > fbs[j].Round
 	})
 
 	return
