@@ -172,25 +172,9 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 }
 
 func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
-	logging.Logger.Debug("finalizedRound - cancel round verification")
+	logging.Logger.Debug("finalizedRound - cancel round verification", zap.Int64("round", r.GetRoundNumber()))
 	mc.CancelRoundVerification(ctx, r)
 	go mc.FinalizeRound(r.Round)
-}
-
-func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) *block.Block {
-	tm := time.Now()
-	b := mc.GetHeaviestNotarizedBlock(ctx, r)
-	if b != nil {
-		if r.GetRoundNumber() >= mc.GetCurrentRound() {
-			mc.SetCurrentRound(r.GetRoundNumber())
-			mc.StartNextRound(ctx, r)
-		}
-	}
-
-	logging.Logger.Info("pull not. block for",
-		zap.Int64("round", r.GetRoundNumber()),
-		zap.Any("duration", time.Since(tm)))
-	return b
 }
 
 // StartNextRound - start the next round as a notarized
