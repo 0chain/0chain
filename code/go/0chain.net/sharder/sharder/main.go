@@ -175,6 +175,9 @@ func main() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
 
+	// TODO: put it in a better place
+	go sc.StartLFMBWorker(ctx)
+
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)

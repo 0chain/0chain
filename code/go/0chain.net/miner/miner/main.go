@@ -125,6 +125,10 @@ func main() {
 	if state.Debug() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
+
+	// TODO: put it in a better place
+	go mc.StartLFMBWorker(ctx)
+
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 	mb := mc.GetLatestMagicBlock()
