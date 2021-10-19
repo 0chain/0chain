@@ -36,6 +36,8 @@ func init() {
 type BLS0ChainScheme struct {
 	privateKey []byte
 	publicKey  []byte
+	pubKey     *bls.PublicKey
+	secKey     *bls.SecretKey
 }
 
 //NewBLS0ChainScheme - create a BLS0ChainScheme object
@@ -48,7 +50,9 @@ func (b0 *BLS0ChainScheme) GenerateKeys() error {
 	var skey bls.SecretKey
 	skey.SetByCSPRNG()
 	b0.privateKey = skey.GetLittleEndian()
+	b0.secKey = &skey
 	b0.publicKey = skey.GetPublicKey().Serialize()
+	b0.pubKey = skey.GetPublicKey()
 	return nil
 }
 
@@ -60,7 +64,10 @@ func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 		return ErrKeyRead
 	}
 	publicKey := scanner.Text()
-	b0.SetPublicKey(publicKey)
+	if err := b0.SetPublicKey(publicKey); err != nil {
+		return err
+	}
+
 	result = scanner.Scan()
 	if result == false {
 		return ErrKeyRead
@@ -70,7 +77,14 @@ func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
+
+	var sk bls.SecretKey
+	if err := sk.SetLittleEndian(privateKeyBytes); err != nil {
+		return err
+	}
+
 	b0.privateKey = privateKeyBytes
+	b0.secKey = &sk
 	return nil
 }
 
@@ -144,6 +158,11 @@ func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 		return err
 	}
 	b0.publicKey = publicKeyBytes
+	pk, err := b0.getPublicKey()
+	if err != nil {
+		return errors.New("failed to decode public key")
+	}
+	b0.pubKey = pk
 	return nil
 }
 
@@ -154,21 +173,22 @@ func (b0 *BLS0ChainScheme) GetPublicKey() string {
 
 //Sign - implement interface
 func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
-	var sk bls.SecretKey
-	sk.SetLittleEndian(b0.privateKey)
+	if b0.secKey == nil {
+		return "", errors.New("private key is nil")
+	}
+
 	rawHash, err := GetRawHash(hash)
 	if err != nil {
 		return "", err
 	}
-	sig := sk.SignHash(rawHash)
+	sig := b0.secKey.SignHash(rawHash)
 	return sig.SerializeToHexStr(), nil
 }
 
 //Verify - implement interface
 func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
-	pk, err := b0.getPublicKey()
-	if err != nil {
-		return false, err
+	if b0.pubKey == nil {
+		return false, errors.New("public key is nil")
 	}
 	sign, err := b0.GetSignature(signature)
 	if err != nil {
@@ -178,7 +198,7 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return sign.VerifyHash(pk, rawHash), nil
+	return sign.VerifyHash(b0.pubKey, rawHash), nil
 }
 
 //GetSignature - given a string return the signature object
@@ -187,10 +207,10 @@ func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
 		return nil, errors.New("empty signature")
 	}
 	var sign bls.Sign
-	err := sign.DeserializeHexStr(MiraclToHerumiSig(signature))
-	if err != nil {
+	if err := sign.DeserializeHexStr(MiraclToHerumiSig(signature)); err != nil {
 		return nil, err
 	}
+
 	return &sign, nil
 }
 
