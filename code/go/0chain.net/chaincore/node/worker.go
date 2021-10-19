@@ -82,7 +82,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 
 func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	logging.N2n.Debug("[monitor] status monitor for", zap.Int64("starting round", startRound))
-	nodes := np.shuffleNodesLock(true)
+	nodes := np.shuffleNodes(true)
 	for i, node := range nodes {
 		select {
 		case <-ctx.Done():
@@ -188,16 +188,11 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	defer resp.Body.Close()
 	dnp := NewPool(NodeTypeMiner)
 	ReadNodes(resp.Body, dnp, dnp)
-	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
 			node.SetStatus(NodeStatusActive)
 			np.AddNode(node)
-			changed = true
 		}
-	}
-	if changed {
-		np.ComputeProperties()
 	}
 	return true
 }
