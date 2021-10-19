@@ -340,19 +340,23 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 		return
 	}
 
-	configMap, err := getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
-	if err != nil {
-		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", r.GetRoundNumber()),
-			zap.Error(err),
-		)
-	} else {
-		err := mc.Config.Update(configMap)
-		logging.Logger.Error("cannot update global settings",
-			zap.Int64("start of round", r.GetRoundNumber()),
-			zap.Error(err),
-		)
-	}
+	// TODO: mc.getClientState would send request to get notarized
+	// block from remote everytime, which could cause performance
+	// issue.
+	//
+	//configMap, err := getConfigMap(mc.getClientState(ctx, r.GetRoundNumber()))
+	//if err != nil {
+	//	logging.Logger.Info("cannot get global settings",
+	//		zap.Int64("start of round", r.GetRoundNumber()),
+	//		zap.Error(err),
+	//	)
+	//} else {
+	//	err := mc.Config.Update(configMap)
+	//	logging.Logger.Error("cannot update global settings",
+	//		zap.Int64("start of round", r.GetRoundNumber()),
+	//		zap.Error(err),
+	//	)
+	//}
 
 	mc.startNewRound(ctx, r)
 }
