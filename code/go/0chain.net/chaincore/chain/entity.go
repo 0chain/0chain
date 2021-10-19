@@ -1797,18 +1797,6 @@ func (c *Chain) FilterOutValidatedTxns(hashes, sigs, pks []string) ([]string, []
 	return needValidHashes, needValidSigs, needValidPks, nil
 }
 
-// bump the ticket if necessary
-func (c *Chain) BumpLFBTicket(ctx context.Context, lfb *block.Block) {
-	if lfb == nil {
-		return
-	}
-	var tk = c.GetLatestLFBTicket(ctx) // is the worker starts
-	if tk == nil || tk.Round < lfb.Round {
-		logging.Logger.Debug("BumpLFBTicket", zap.Int64("lfb_round", lfb.Round))
-		c.AddReceivedLFBTicket(ctx, &LFBTicket{Round: lfb.Round})
-	}
-}
-
 // BlockTicketsVerifyWithLock ensures that only one goroutine is allowed
 // to verify the tickets for the same block.
 func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string, f func() error) error {
