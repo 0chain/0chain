@@ -94,7 +94,8 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	latestFinalizedMagicBlock    *block.Block `json:"-"`
+	getLFMB                      chan *block.Block `json:"-"`
+	updateLFMB                   chan *block.Block `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
 
@@ -484,7 +485,9 @@ func Provider() datastore.Entity {
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
 
-	c.getLFBTicket = make(chan *LFBTicket)              // should be unbuffered
+	c.getLFBTicket = make(chan *LFBTicket) // should be unbuffered
+	c.getLFMB = make(chan *block.Block)
+	c.updateLFMB = make(chan *block.Block, 100)
 	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
@@ -1483,19 +1486,22 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	logging.Logger.Warn("update lfmb",
 		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
-	c.latestFinalizedMagicBlock = b
+
+	c.lfmbMutex.Lock()
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
+	c.lfmbMutex.Unlock()
+
+	c.updateLatestFinalizedMagicBlock(context.Background(), b)
 }
 
 // GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
 // note: the block will be deep copied, used this carefully.
-func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	if c.latestFinalizedMagicBlock == nil {
-		return nil
+func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Block) {
+	select {
+	case lfb = <-c.getLFMB:
+	case <-ctx.Done():
 	}
-	return c.latestFinalizedMagicBlock.Clone()
+	return
 }
 
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {

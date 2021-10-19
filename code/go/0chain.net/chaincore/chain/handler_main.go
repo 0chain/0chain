@@ -15,7 +15,7 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 
 /*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
 func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	if lfmb := GetServerChain().GetLatestFinalizedMagicBlock(); lfmb != nil {
+	if lfmb := GetServerChain().GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
 		return lfmb, nil
 	}
 
@@ -25,7 +25,7 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (int
 // LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
 func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(); lfmb != nil {
+	if lfmb := c.GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
 		return lfmb.GetSummary(), nil
 	}
 

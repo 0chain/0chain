@@ -75,7 +75,9 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	return b.SaveChanges(ctx, c)
+	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	return b.SaveChanges(cctx, c)
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -135,7 +137,9 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
 		c.GetBlockSharders,
-		c.GetLatestFinalizedMagicBlock,
+		func() *block.Block {
+			return c.GetLatestFinalizedMagicBlock(context.Background())
+		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme)
 }

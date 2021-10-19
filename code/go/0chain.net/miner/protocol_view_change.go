@@ -194,7 +194,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		logging.Logger.Debug("dkg process: run phase function",
 			zap.Any("name", getFunctionName(phaseFunc)))
 
-		lfmb := mc.GetLatestFinalizedMagicBlock()
+		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
@@ -388,7 +388,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
-		n.PublicKey = v.PublicKey
+		n.SetPublicKey(v.PublicKey)
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
@@ -916,7 +916,7 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	logging.Logger.Info("setup latest and previous fmbs")
-	lfmb := mc.GetLatestFinalizedMagicBlock()
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 	if lfmb.Sharders == nil || lfmb.Miners == nil {
 		return
 	}

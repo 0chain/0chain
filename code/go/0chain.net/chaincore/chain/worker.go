@@ -35,7 +35,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 
 // StatusMonitor monitors and updates the node connection status on current magic block
 func (c *Chain) StatusMonitor(ctx context.Context) {
-	mb := c.GetLatestFinalizedMagicBlock().MagicBlock
+	mb := c.getLatestFinalizedMagicBlock(ctx)
 	newMagicBlockCheckTk := time.NewTicker(5 * time.Second)
 	var cancel func()
 	if mb != nil {
@@ -75,7 +75,7 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			mb = newMB
 			cancel = startStatusMonitor(newMB, ctx)
 		case <-newMagicBlockCheckTk.C:
-			cmb := c.GetLatestFinalizedMagicBlock().MagicBlock
+			cmb := c.getLatestFinalizedMagicBlock(ctx)
 			if cmb == mb {
 				continue
 			}
@@ -156,9 +156,7 @@ type MagicBlockBrief struct {
 // GetLatestFinalizedMagicBlockBrief returns a brief info of the MagicBlock
 // to avoid the heavy copy action of the whole block
 func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	return getMagicBlockBrief(c.latestFinalizedMagicBlock)
+	return getMagicBlockBrief(c.GetLatestFinalizedMagicBlock(context.Background()))
 }
 
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
@@ -510,7 +508,7 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
-		currentLFMB = c.GetLatestFinalizedMagicBlock()
+		currentLFMB = c.GetLatestFinalizedMagicBlock(ctx)
 		sharders    = cmb.Sharders.N2NURLs()
 		magicBlock  *block.Block
 	)
@@ -620,7 +618,10 @@ func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 		return nil
 	}
 
-	cmb := c.GetLatestFinalizedMagicBlock()
+	cmb := c.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb.Hash == cmb.Hash {
+		return nil
+	}
 
 	Logger.Info("get magic lfmb from sharders",
 		zap.Any("number", lfmb.MagicBlockNumber),

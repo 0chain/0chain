@@ -1084,7 +1084,10 @@ type BlockConsensus struct {
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
-	var mx sync.Mutex
+	mb := mc.GetLatestFinalizedMagicBlockBrief()
+	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
+	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
+
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
@@ -1867,7 +1870,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	if rcvd.MagicBlock != nil {
 
 		// update magic block or notify to do finalization
-		lfmb := mc.GetLatestFinalizedMagicBlock()
+		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		if lfmb == nil || rcvd.StartingRound > lfmb.StartingRound {
 			logging.Logger.Debug("ensure_lfb - update magic block",
 				zap.Int64("round", rcvd.Round))
@@ -1930,7 +1933,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		return
 	}
 
-	lfmb := mc.GetLatestFinalizedMagicBlock()
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 	mc.ensureDKG(ctx, lfmb)
 
 	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
