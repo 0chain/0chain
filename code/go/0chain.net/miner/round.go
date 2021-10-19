@@ -40,7 +40,10 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		zap.String("block hash", b.Hash),
 		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
 		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
-	r.blocksToVerifyChannel <- b
+	select {
+	case r.blocksToVerifyChannel <- b:
+	default:
+	}
 }
 
 /*AddVerificationTicket - add a verification ticket */
