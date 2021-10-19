@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,15 @@ func SetMaxConcurrentRequests(maxConcurrentRequests int) {
 
 /*SendAll - send to every node */
 func (np *Pool) SendAll(ctx context.Context, handler SendHandler) []*Node {
+	ts := time.Now()
+	defer func() {
+		if time.Since(ts) > time.Second*3 {
+			logging.Logger.Error("Send to all slow - more than 3 seconds",
+				zap.Any("duration", time.Since(ts)),
+				zap.Int("num", np.Size()))
+		}
+	}()
+
 	return np.SendAtleast(ctx, np.Size(), handler)
 }
 
@@ -46,7 +56,7 @@ func (np *Pool) SendTo(ctx context.Context, handler SendHandler, to string) (boo
 
 /*SendOne - send message to a single node in the pool */
 func (np *Pool) SendOne(ctx context.Context, handler SendHandler) *Node {
-	nodes := np.shuffleNodesLock(false)
+	nodes := np.shuffleNodes(false)
 	return np.sendOne(ctx, handler, nodes)
 }
 
@@ -72,7 +82,7 @@ func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, no
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
-	nodes := np.shuffleNodesLock(false)
+	nodes := np.shuffleNodes(false)
 	return np.sendTo(ctx, numNodes, nodes, handler)
 }
 
@@ -124,7 +134,7 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 		return sentTo
 	}
 	doneCount := 0
-	for true {
+	for {
 		select {
 		case node := <-validBucket:
 			sentTo = append(sentTo, node)
@@ -194,7 +204,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		}
 		return func(ctx context.Context, receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
-			url := receiver.GetN2NURLBase() + uri
+			addr := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
 			push := !toPull || shouldPush(options, receiver, uri, entity, timer)
 			if push {
@@ -202,7 +212,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			} else {
 				buffer = bytes.NewBuffer(nil)
 			}
-			req, err := http.NewRequest("POST", url, buffer)
+			req, err := http.NewRequest("POST", addr, buffer)
 			if err != nil {
 				return false
 			}
@@ -235,10 +245,15 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}()
 
 			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
-			if err != nil {
-				receiver.AddSendErrors(1)
-				receiver.AddErrorCount(1)
-				logging.N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+			switch err {
+			case nil:
+			default:
+				ue, ok := err.(*url.Error)
+				if ok && ue.Unwrap() != context.Canceled {
+					receiver.AddSendErrors(1)
+					receiver.AddErrorCount(1)
+					logging.N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				}
 				return false
 			}
 
@@ -366,9 +381,10 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 			return
 		}
-		if !validateSendRequest(sender, r) {
-			return
-		}
+		// TODO: add this back
+		//if !validateSendRequest(sender, r) {
+		//	return
+		//}
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		entityID := r.Header.Get(HeaderRequestEntityID)
 		entityMetadata := datastore.GetEntityMetadata(entityName)
