@@ -605,6 +605,14 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	return true
 }
 
+// VRFShareExist checks if the VRF share already exist
+func (r *Round) VRFShareExist(share *VRFShare) (exist bool) {
+	r.mutex.Lock()
+	_, exist = r.shares[share.party.GetKey()]
+	r.mutex.Unlock()
+	return
+}
+
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.mutex.Lock()
