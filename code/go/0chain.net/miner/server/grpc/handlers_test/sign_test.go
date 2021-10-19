@@ -2,11 +2,12 @@ package handlers_test
 
 import (
 	"context"
-	"log"
 	"testing"
+	"time"
 
 	minerproto "0chain.net/miner/proto/api/src/proto"
-	"google.golang.org/grpc"
+	"0chain.net/miner/server/grpc/handlers"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,38 +21,86 @@ func TestSignHandler(t *testing.T) {
 	}{
 		{
 			name: "bad request",
+			req: &minerproto.SignRequest{
+				PublicKey:  "",
+				PrivateKey: "",
+				Data:       "",
+				TimeStamp:  time.Now().String(),
+			},
+			resp: &minerproto.SignResponse{
+				ClientId:  "",
+				Hash:      "",
+				Signature: "",
+			},
 		},
 		{
 			name: "bad public key",
+			req: &minerproto.SignRequest{
+				PublicKey:  "",
+				PrivateKey: "",
+				Data:       "",
+				TimeStamp:  time.Now().String(),
+			},
+			resp: &minerproto.SignResponse{
+				ClientId:  "",
+				Hash:      "",
+				Signature: "",
+			},
 		},
 		{
 			name: "bad private key",
+			req: &minerproto.SignRequest{
+				PublicKey:  "",
+				PrivateKey: "",
+				Data:       "",
+				TimeStamp:  time.Now().String(),
+			},
+			resp: &minerproto.SignResponse{
+				ClientId:  "",
+				Hash:      "",
+				Signature: "",
+			},
 		},
 		{
 			name: "empty data",
+			req: &minerproto.SignRequest{
+				PublicKey:  "",
+				PrivateKey: "",
+				Data:       "",
+				TimeStamp:  time.Now().String(),
+			},
+			resp: &minerproto.SignResponse{
+				ClientId:  "",
+				Hash:      "",
+				Signature: "",
+			},
+		},
+		{
+			name: "valid request",
+			req: &minerproto.SignRequest{
+				PublicKey:  "",
+				PrivateKey: "",
+				Data:       "",
+				TimeStamp:  time.Now().String(),
+			},
+			resp: &minerproto.SignResponse{
+				ClientId:  "",
+				Hash:      "",
+				Signature: "",
+			},
 		},
 	}
 
-	// created new grpc conn with dialer()
-	conn, err := grpc.DialContext(context.Background(), "", grpc.WithInsecure(), grpc.WithContextDialer(dialer()))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
-
-	// grpc client used "bufconn"
-	client := minerproto.NewMinerServiceClient(conn)
-
 	for _, tt := range tests {
-		ctx := context.Background()
-
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := client.Sign(ctx, tt.req)
+			client := handlers.NewMinerGRPCService()
+
+			resp, err := client.UnimplementedMinerServiceServer.Sign(context.TODO(), tt.req)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if resp != tt.resp {
+			if !assert.Equal(t, tt.resp, resp) {
 				t.Fatal("not expected", err)
 			}
 		})
