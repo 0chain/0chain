@@ -772,7 +772,7 @@ func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round in
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
-	pr.AddVerificationTicket(pbvts)
+	pr.AddVerificationTickets(pbvts)
 
 	pb, err := mc.GetBlock(ctx, b.PrevHash)
 	if err != nil || pb == nil {
@@ -1964,7 +1964,7 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 		return nil
 	}
 
-	var waitingSharders = make([]string, 0, lmb.Sharders.MapSize())
+	var waitingSharders = make([]string, 0, lmb.Sharders.Size())
 	for _, nodeSharder := range lmb.Sharders.CopyNodesMap() {
 		waitingSharders = append(waitingSharders,
 			fmt.Sprintf("id: %s; n2nhost: %s ", nodeSharder.ID, nodeSharder.N2NHost))

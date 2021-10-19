@@ -46,11 +46,13 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	}
 }
 
-/*AddVerificationTicket - add a verification ticket */
-func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+// AddVerificationTickets - add verification tickets
+func (r *Round) AddVerificationTickets(bvts []*block.BlockVerificationTicket) {
 	r.muVerification.Lock()
 	defer r.muVerification.Unlock()
-	r.verificationTickets[bvt.Signature] = bvt
+	for i, bvt := range bvts {
+		r.verificationTickets[bvt.Signature] = bvts[i]
+	}
 }
 
 /*GetVerificationTickets - get verification tickets for a given block in this round */
@@ -64,6 +66,15 @@ func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTick
 		}
 	}
 	return vts
+}
+
+// IsTicketCollected checks if the ticket has already verified and collected
+func (r *Round) IsTicketCollected(ticket *block.VerificationTicket) (exist bool) {
+	r.muVerification.Lock()
+	vt, ok := r.verificationTickets[ticket.Signature]
+	exist = ok && vt.VerificationTicket == *ticket
+	r.muVerification.Unlock()
+	return
 }
 
 /*GetBlocksToVerifyChannel - a channel where all the blocks requiring verification are put into */

@@ -242,7 +242,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		logging.Logger.Debug("handle vt. msg - block does not exist, collect tickets though",
 			zap.Int64("round", bvt.Round),
 			zap.String("block", bvt.BlockID))
-		mr.AddVerificationTicket([]*block.BlockVerificationTicket{bvt})
+		mr.AddVerificationTickets([]*block.BlockVerificationTicket{bvt})
 		return
 	}
 
