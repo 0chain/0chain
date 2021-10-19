@@ -937,6 +937,15 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	b.stateMutex.Lock()
 	defer b.stateMutex.Unlock()
+	// TODO: debug logs, remove when this does not happen anymore
+	ts := time.Now()
+	defer func() {
+		du := time.Since(ts)
+		if du > 5*time.Second {
+			logging.Logger.Error("apply block state changes took too long",
+				zap.Any("duration", du))
+		}
+	}()
 
 	if b.Hash != bsc.Block {
 		return ErrBlockHashMismatch
@@ -985,10 +994,6 @@ func (b *Block) SaveChanges(ctx context.Context, c Chainer) error {
 	switch b.GetStateStatus() {
 	case StateSynched, StateSuccessful:
 		err = b.ClientState.SaveChanges(ctx, c.GetStateDB(), false)
-		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
-		if ok {
-			c.GetStateDB().(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
-		}
 	default:
 		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
 	}
