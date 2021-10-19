@@ -31,8 +31,9 @@ type Client struct {
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes []byte `json:"-" msgpack:"-"`
+	PublicKey      string                     `yaml:"public_key" json:"public_key"`
+	PublicKeyBytes []byte                     `json:"-" msgpack:"-"`
+	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
 }
 
 //NewClient - create a new client object
@@ -50,14 +51,12 @@ func (c *Client) Clone() *Client {
 		IDField:           c.IDField,
 		VersionField:      c.VersionField,
 		CreationDateField: c.CreationDateField,
-		PublicKey:         c.PublicKey,
-		PublicKeyBytes:    make([]byte, len(c.PublicKeyBytes)),
 		CollectionMemberField: datastore.CollectionMemberField{
 			CollectionScore: c.CollectionMemberField.CollectionScore,
 		},
 	}
 
-	copy(clone.PublicKeyBytes, c.PublicKeyBytes)
+	clone.SetPublicKey(c.PublicKey)
 
 	if c.EntityCollection != nil {
 		clone.EntityCollection = c.EntityCollection.Clone()
@@ -101,7 +100,7 @@ func (c *Client) Delete(ctx context.Context) error {
 
 /*Verify - given a signature and hash verify it with client's public key */
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return c.GetSignatureScheme().Verify(signature, hash)
+	return c.SigScheme.Verify(signature, hash)
 }
 
 /*GetSignatureScheme - return the signature scheme used for this client */
@@ -135,6 +134,11 @@ func (c *Client) computePublicKeyBytes() {
 func (c *Client) SetPublicKey(key string) {
 	c.PublicKey = key
 	c.computePublicKeyBytes()
+	var ss = encryption.GetSignatureScheme(clientSignatureScheme)
+	if err := ss.SetPublicKey(c.PublicKey); err != nil {
+		panic(err)
+	}
+	c.SigScheme = ss
 	c.ID = encryption.Hash(c.PublicKeyBytes)
 }
 
