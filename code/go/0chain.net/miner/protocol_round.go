@@ -1251,7 +1251,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 		mx sync.Mutex
 	)
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (
+	var handler = func(_ context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
 		var fb, ok = entity.(*block.Block)
@@ -1267,7 +1267,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		err = mc.VerifyNotarization(fb, fb.GetVerificationTickets(),
+		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
 			fb.Round)
 		if err != nil {
 			logging.Logger.Error("FB from sharder - notarization failed",
@@ -1378,7 +1378,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
-			mc.SendBlock(ctx, b)
+			go mc.SendBlock(context.Background(), b)
 		}
 	}
 
