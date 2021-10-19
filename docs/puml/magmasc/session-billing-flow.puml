@@ -1,0 +1,40 @@
+@startuml
+
+title Session Billing Flow
+
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+-> ANSC : Session stop
+Activate ANSC
+ANSC -> "State" as State : Fetch Session
+Activate State
+State <--> MPT : Read Session
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Check: active
+ANSC -> State : Fetch sponsors
+Activate State
+State <--> MPT : Read list
+ANSC <- State : List
+Deactivate State
+ANSC -> ANSC : Select rewards
+ANSC -> State : Make billing
+Activate State
+State -> State : Spend collected pools
+State <--> MPT : Add transfers
+State -> State : Complete Session
+State <--> MPT : Update Session
+ANSC <- State : Completed
+Deactivate State
+
+<- ANSC : Stopped
+Deactivate ANSC
+
+@enduml

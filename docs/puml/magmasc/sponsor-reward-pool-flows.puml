@@ -1,0 +1,47 @@
+@startuml
+
+title Sponsor Reward Pool Flows
+
+actor "Sponsor CLI" as Sponsor
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+Sponsor -> ANSC : Create
+Activate ANSC
+ANSC -> ANSC : Create Pool
+ANSC -> State : Append Pool
+Activate State
+State <--> MPT : Read list
+State -> State : Add Pool to list
+State <--> MPT : Update list
+ANSC <- State : Appended
+Deactivate State
+Sponsor <- ANSC : Created
+Deactivate ANSC
+
+Sponsor -> ANSC : Refund
+Activate ANSC
+ANSC -> State : Read Pool
+Activate State
+State <--> MPT : Read list
+State -> State : Fetch poll
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Check: expired
+ANSC -> State : Remove Pool
+Activate State
+State -> State : Delete Pool from list
+State <--> MPT : Update list
+ANSC <- State : Removed
+Deactivate State
+ANSC -> ANSC : Refund balance
+Sponsor <- ANSC : Refunded
+Deactivate ANSC
+
+@enduml

@@ -1,0 +1,88 @@
+@startuml
+
+title Provider Flows
+
+boundary Provider
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+Provider -> ANSC : Register
+Activate ANSC
+ANSC -> State : Create Provider
+Activate State
+State <--> MPT : Read list
+State -> State : Check External ID: not found
+State -> State : Check Host: not found
+State <--> MPT : Insert Provider data
+State -> State : Add Provider to list
+State <--> MPT : Update list
+ANSC <- State : Created
+Deactivate State
+Provider <- ANSC : Registered
+Deactivate ANSC
+
+Provider -> ANSC : Update
+Activate ANSC
+ANSC -> State : Fetch Provider
+Activate State
+State <--> MPT : Read Provider
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read list
+State -> State : Check Host: not found
+State <--> MPT : Update Provider data
+State -> State : Update Provider into list
+State <--> MPT : Update list
+ANSC <- State : Updated
+Deactivate State
+Provider <- ANSC : Updated
+Deactivate ANSC
+
+Provider -> ANSC : Stake
+Activate ANSC
+ANSC -> State : Fetch Provider
+Activate State
+State <--> MPT : Read Provider
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read stake
+State -> State : Check: not found
+State -> State : Create stake pool
+State <--> MPT : Insert stake data
+ANSC <- State : Staked
+Deactivate State
+Provider <- ANSC : Sessions are allowed
+Deactivate ANSC
+
+Provider -> ANSC : Unstake
+Activate ANSC
+ANSC -> State : Fetch Provider
+Activate State
+State <--> MPT : Read Provider
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read stake
+State -> State : Check: found
+State <--> MPT : Delete stake data
+ANSC <- State : Removed
+Deactivate State
+ANSC -> ANSC : Unstake pool
+Provider <- ANSC : Sessions are banned
+Deactivate ANSC
+
+@enduml

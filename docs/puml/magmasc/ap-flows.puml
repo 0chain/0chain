@@ -1,0 +1,104 @@
+@startuml
+
+title Access Point Flows
+
+boundary "Access Point" as AP
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+AP -> ANSC : Register
+Activate ANSC
+ANSC -> State : Create AP
+Activate State
+State <--> MPT : Read AP
+State -> State : Check ID: not found
+State <--> MPT : Read list of Providers
+State -> State : Select a random Provider
+State <--> MPT : Insert AP data
+ANSC <- State : Created
+Deactivate State
+AP <- ANSC : Registered
+Deactivate ANSC
+
+AP -> ANSC : Keep-Alive
+Activate ANSC
+ANSC -> State : Fetch AP
+Activate State
+State <--> MPT : Read AP
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read stake
+State -> State : Check: found
+State -> State : Reward Keep-Alive
+State <--> MPT : Add transfer
+ANSC <- State : Rewarded
+Deactivate State
+AP <- ANSC : Response
+Deactivate ANSC
+
+AP -> ANSC : Change Provider
+Activate ANSC
+ANSC -> State : Fetch AP
+Activate State
+State <--> MPT : Read AP
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read list of Providers
+State -> State : Select a random Provider
+State <--> MPT : Update AP data
+ANSC <- State : Updated
+Deactivate State
+AP <- ANSC : Changed
+Deactivate ANSC
+
+AP -> ANSC : Stake
+Activate ANSC
+ANSC -> State : Fetch AP
+Activate State
+State <--> MPT : Read AP
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read stake
+State -> State : Check: not found
+State -> State : Create stake pool
+State <--> MPT : Insert stake data
+ANSC <- State : Staked
+Deactivate State
+AP <- ANSC : Sessions are allowed
+Deactivate ANSC
+
+AP -> ANSC : Unstake
+Activate ANSC
+ANSC -> State : Fetch AP
+Activate State
+State <--> MPT : Read AP
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read stake
+State -> State : Check: found
+State <--> MPT : Delete stake data
+ANSC <- State : Removed
+Deactivate State
+ANSC -> ANSC : Unstake pool
+AP <- ANSC : Sessions are banned
+Deactivate ANSC
+
+@enduml

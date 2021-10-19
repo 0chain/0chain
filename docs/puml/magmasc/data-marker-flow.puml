@@ -1,0 +1,38 @@
+@startuml
+
+title Data Marker Flow
+
+control ANSC
+note right of State
+ State this is
+ a logical layer
+ of the smart contract
+ consisting of low-level
+ auxiliary objects
+end note
+
+-> ANSC : DataMarker
+Activate ANSC
+ANSC -> State : Fetch Session
+
+Activate State
+State <--> MPT : Read Session
+ANSC <- State : Found
+Deactivate State
+
+ANSC -> ANSC : Check: session active
+ANSC -> ANSC : Signed: check signature
+ANSC -> ANSC : Authorize txn
+ANSC -> State : Authorized
+
+Activate State
+State -> State : Validate: DataMarker
+State -> State : Accept DataMarker
+State <--> MPT : Update Session
+State -> ANSC : Updated
+Deactivate State
+
+<- ANSC : Session's data
+Deactivate ANSC
+
+@enduml
