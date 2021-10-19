@@ -341,9 +341,11 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	sender.SetStatus(NodeStatusActive)
 	sender.SetLastActiveTime(time.Unix(reqTSn, 0))
 	Self.Underlying().SetLastActiveTime(time.Now())
-	if !common.Within(reqTSn, N2NTimeTolerance) {
+	if !common.Within(reqTSn, int64(N2NTimeTolerance*time.Second)) {
 		logging.N2n.Error("message received - tolerance", zap.Int("from", sender.SetIndex),
-			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("enitty", entityName), zap.String("id", entityID), zap.Int64("ts", reqTSn), zap.Time("tstime", time.Unix(reqTSn, 0)))
+			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI),
+			zap.String("enitty", entityName), zap.String("id", entityID),
+			zap.Int64("ts", reqTSn), zap.Time("tstime", time.Unix(reqTSn, 0)))
 		return false
 	}
 
