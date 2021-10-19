@@ -222,7 +222,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 
 	if r.HasRandomSeed() {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
-		go mc.addMyVRFShare(ctx, r, er)
+		mc.addMyVRFShare(ctx, r, er)
 	} else {
 		logging.Logger.Info("StartNextRound no VRFs sent -- "+
 			"current round has no random seed",
