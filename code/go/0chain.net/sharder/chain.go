@@ -204,7 +204,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
 
 	// check is it notarized
-	err = sc.VerifyNotarization(bl.lfb, bl.lfb.GetVerificationTickets(),
+	err = sc.VerifyNotarization(ctx, bl.lfb, bl.lfb.GetVerificationTickets(),
 		bl.r.GetRoundNumber())
 	if err != nil {
 		Logger.Error("load_lfb - verify notarization failed",

@@ -54,8 +54,8 @@ type ProtocolBlock interface {
 	ValidateMagicBlock(context.Context, *round.Round, *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 
-	VerifyTicket(blockHash string, vt *block.VerificationTicket, round int64) error
-	VerifyNotarization(b *block.Block, bvt []*block.VerificationTicket, round int64) error
+	VerifyTickets(ctx context.Context, blockHash string, vts []*block.VerificationTicket, round int64) error
+	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket, round int64) error
 
 	AddVerificationTicket(b *block.Block, bvt *block.VerificationTicket) bool
 	IsBlockNotarized(b *block.Block) bool

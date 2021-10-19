@@ -422,8 +422,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			switch err {
 			case nil:
 			case context.Canceled,
-				context.DeadlineExceeded,
-				ErrVerifyTicketsTimeout:
+				context.DeadlineExceeded:
 				return nil, err
 			default:
 				continue
@@ -512,7 +511,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 			err = c.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round)
 			switch err {
 			case nil:
-			case context.Canceled, context.DeadlineExceeded, ErrVerifyTicketsTimeout:
+			case context.Canceled, context.DeadlineExceeded:
 				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
 					zap.Int64("round", b.Round), zap.String("block", hash),
 					zap.Any("duration", time.Since(ts)),

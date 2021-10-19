@@ -1741,7 +1741,6 @@ func TestRound_GetMinersByRank(t *testing.T) {
 	p := node.NewPool(node.NodeTypeMiner)
 	p.AddNode(n)
 	p.AddNode(n2)
-	p.ComputeProperties()
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -2606,7 +2605,6 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 	p := node.NewPool(node.NodeTypeMiner)
 	p.AddNode(n)
 	p.AddNode(n2)
-	p.ComputeProperties()
 
 	tc := makeTestTimeoutCounter()
 	tc.votes[n2.ID] = 4
@@ -2615,7 +2613,6 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 	p2 := node.NewPool(node.NodeTypeMiner)
 	p2.AddNode(n)
 	p2.AddNode(n3)
-	p2.ComputeProperties()
 
 	type fields struct {
 		prrs  int64

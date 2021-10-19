@@ -177,8 +177,12 @@ type Chain struct {
 
 	minersPublicKeys *cache.LRU
 
-	vldTxnsMtx         *sync.Mutex
-	validatedTxnsCache map[string]string // validated transactions, key as hash, value as signature
+	vldTxnsMtx            *sync.Mutex
+	validatedTxnsCache    map[string]string // validated transactions, key as hash, value as signature
+	ticketsVerifyRequestC chan struct{}
+
+	notarizedBlockVerifyC map[string]chan struct{}
+	nbvcMutex             *sync.Mutex
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -496,6 +500,9 @@ func Provider() datastore.Entity {
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
+	c.ticketsVerifyRequestC = make(chan struct{}, 50)
+	c.notarizedBlockVerifyC = make(map[string]chan struct{})
+	c.nbvcMutex = &sync.Mutex{}
 	return c
 }
 
@@ -925,13 +932,11 @@ func (c *Chain) ReadNodePools(configFile string) {
 	mb := c.GetCurrentMagicBlock()
 	if miners, ok := conf.([]interface{}); ok {
 		mb.Miners.AddNodes(miners)
-		mb.Miners.ComputeProperties()
 		c.InitializeMinerPool(mb)
 	}
 	conf = nodeConfig.Get("sharders")
 	if sharders, ok := conf.([]interface{}); ok {
 		mb.Sharders.AddNodes(sharders)
-		mb.Sharders.ComputeProperties()
 	}
 }
 
@@ -1079,7 +1084,7 @@ func (c *Chain) getBlocks() []*block.Block {
 // SetRoundRank - set the round rank of the block.
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
-	if miners == nil || miners.MapSize() == 0 {
+	if miners == nil || miners.Size() == 0 {
 		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
@@ -1354,14 +1359,14 @@ func (c *Chain) IsActiveInChain() bool {
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
-	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
+	if newMagicBlock.Miners == nil || newMagicBlock.Miners.Size() == 0 {
 		return common.NewError("failed to update magic block",
 			"there are no miners in the magic block")
 	}
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlock()
+		lfmb = c.GetLatestFinalizedMagicBlock(context.Background())
 	)
 
 	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
@@ -1405,9 +1410,6 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 	)
 
 	c.SetupNodes(newMagicBlock)
-
-	newMagicBlock.Sharders.ComputeProperties()
-	newMagicBlock.Miners.ComputeProperties()
 
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
@@ -1466,11 +1468,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-
-	var latest = c.latestFinalizedMagicBlock
-
+	var latest = c.GetLatestFinalizedMagicBlock(context.Background())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
 		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
@@ -1498,13 +1496,6 @@ func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
 		return nil
 	}
 	return c.latestFinalizedMagicBlock.Clone()
-}
-
-// GetLatestFinalizedBlockSummary - get the latest finalized block summary.
-func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	return c.latestFinalizedMagicBlock.GetSummary()
 }
 
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
@@ -1704,7 +1695,11 @@ type AfterFetcher interface {
 }
 
 func (c *Chain) LoadMinersPublicKeys() error {
-	mb := c.GetLatestFinalizedMagicBlock()
+	mb := c.GetLatestFinalizedMagicBlock(context.Background())
+	if mb == nil {
+		return nil
+	}
+
 	for _, nd := range mb.Miners.Nodes {
 		var pk bls.PublicKey
 		if err := pk.DeserializeHexStr(nd.PublicKey); err != nil {
@@ -1785,4 +1780,40 @@ func (c *Chain) FilterOutValidatedTxns(hashes, sigs, pks []string) ([]string, []
 	c.vldTxnsMtx.Unlock()
 
 	return needValidHashes, needValidSigs, needValidPks, nil
+}
+
+// bump the ticket if necessary
+func (c *Chain) BumpLFBTicket(ctx context.Context, lfb *block.Block) {
+	if lfb == nil {
+		return
+	}
+	var tk = c.GetLatestLFBTicket(ctx) // is the worker starts
+	if tk == nil || tk.Round < lfb.Round {
+		logging.Logger.Debug("BumpLFBTicket", zap.Int64("lfb_round", lfb.Round))
+		c.AddReceivedLFBTicket(ctx, &LFBTicket{Round: lfb.Round})
+	}
+}
+
+// BlockTicketsVerifyWithLock ensures that only one goroutine is allowed
+// to verify the tickets for the same block.
+func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string, f func() error) error {
+	c.nbvcMutex.Lock()
+	defer c.nbvcMutex.Unlock()
+	ch, ok := c.notarizedBlockVerifyC[blockHash]
+	if !ok {
+		// only one gorountine is allowed for each block notarization tickets verification
+		ch = make(chan struct{}, 1)
+		c.notarizedBlockVerifyC[blockHash] = ch
+	}
+
+	select {
+	case ch <- struct{}{}:
+		defer func() {
+			<-ch
+		}()
+
+		return f()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

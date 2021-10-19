@@ -295,7 +295,7 @@ func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.Signat
 		co.ID = t.ClientID
 		co.SetPublicKey(t.PublicKey)
 	}
-	return co.GetSignatureScheme(), nil
+	return co.SigScheme, nil
 }
 
 func (t *Transaction) GetPublicKeyStr(ctx context.Context) (string, error) {

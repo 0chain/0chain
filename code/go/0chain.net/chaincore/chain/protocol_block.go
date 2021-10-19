@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -14,23 +15,73 @@ import (
 	"go.uber.org/zap"
 )
 
-/*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(blockHash string,
-	bvt *block.VerificationTicket, round int64) error {
-
-	var sender = c.GetMiners(round).GetNode(bvt.VerifierID)
-	if sender == nil {
-		return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v", bvt.VerifierID))
+func (c *Chain) ticketsVerifier(ctx context.Context, f func() error) error {
+	select {
+	case c.ticketsVerifyRequestC <- struct{}{}:
+		defer func() {
+			<-c.ticketsVerifyRequestC
+		}()
+		return f()
+	case <-ctx.Done():
+		logging.Logger.Debug("tickets verifier is full", zap.Int("verifier chan size", len(c.ticketsVerifyRequestC)))
+		return ctx.Err()
 	}
+}
 
-	if ok, _ := sender.Verify(bvt.Signature, blockHash); !ok {
-		return common.InvalidRequest("Couldn't verify the signature")
-	}
-	return nil
+// VerifyTickets verifies tickets aggregately
+// Note: this only works for BLS scheme keys
+func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
+	return c.ticketsVerifier(ctx, func() error {
+		sigs := make([]string, len(bvts))
+		pks := make([]string, len(bvts))
+		hashes := make([]string, len(bvts))
+		for i, bvt := range bvts {
+			sigs[i] = bvt.Signature
+			pl := c.GetMiners(round)
+			var sender = pl.GetNode(bvt.VerifierID)
+			if sender == nil {
+				return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+			}
+			pks[i] = sender.PublicKey
+			hashes[i] = blockHash
+		}
+
+		doneC := make(chan struct{})
+		errC := make(chan error)
+		go func() {
+			aggSig, err := encryption.BLS0ChainAggregateSignatures(sigs)
+			if err != nil {
+				errC <- common.NewErrorf("verify_tickets", "failed to aggregate signatures: %v", err)
+				return
+			}
+
+			pubKeys, err := c.GetMinersPublicKeys(pks)
+			if err != nil {
+				errC <- common.NewErrorf("verify_tickets", "failed to decode public keys: %v", err)
+				return
+			}
+
+			if !aggSig.VerifyAggregate(pubKeys, hashes) {
+				errC <- common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
+				return
+			}
+
+			close(doneC)
+		}()
+
+		select {
+		case <-doneC:
+			return nil
+		case err := <-errC:
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
 }
 
 // VerifyNotarization - verify that the notarization is correct.
-func (c *Chain) VerifyNotarization(b *block.Block,
+func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 	bvt []*block.VerificationTicket, round int64) (err error) {
 
 	if bvt == nil {
@@ -61,14 +112,13 @@ func (c *Chain) VerifyNotarization(b *block.Block,
 			"Verification tickets not sufficient to reach notarization")
 	}
 
-	for _, vt := range bvt {
-		if err := c.VerifyTicket(b.Hash, vt, round); err != nil {
-			return err
-		}
+	if err := c.VerifyTickets(ctx, b.Hash, bvt, round); err != nil {
+		return err
 	}
 
 	b.SetBlockNotarized()
 
+	// TODO: tps, question about this
 	if b.Round > c.GetCurrentRound() {
 		c.SetCurrentRound(b.Round)
 	}
@@ -397,14 +447,17 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return lfb
 	}
 
-	// TODO: make this configurable
-	maxSyncDepth := int64(config.GetLFBTicketAhead() * 2)
+	maxSyncDepth := int64(config.GetLFBTicketAhead() + 1)
 	syncNum := maxSyncDepth
 	if lfb != nil {
 		syncNum = b.Round - lfb.Round
 		// sync lfb if its state is not computed
 		if syncNum > 0 && syncNum < maxSyncDepth && !lfb.IsStateComputed() {
 			syncNum++
+		}
+
+		if syncNum > maxSyncDepth {
+			syncNum = maxSyncDepth
 		}
 	}
 
@@ -430,25 +483,16 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return pb
 	}
 
-	// Sync at most maxSyncDepth rounds back, and
-	// send request to do sync the remaining blocks in block sync worker.
-	var remainSyncNum int64
-	if syncNum > maxSyncDepth {
-		remainSyncNum = syncNum - maxSyncDepth
-		syncNum = maxSyncDepth
-	}
-
-	// Sync at most 10 blocks back, because we should
-	// be able to get the state changes of latest finalized block from remote,
-	// we can sync up from it.
+	//Sync at most ticketAhead+1 blocks back, because we should
+	//be able to get the state changes of latest finalized block from remote,
+	//we can sync up from it.
 	blocks := c.SyncBlocks(ctx, b, syncNum, false)
 	if len(blocks) == 0 || !blocks[0].IsStateComputed() {
 		logging.Logger.Debug("get_previous_block - could not sync previous blocks",
-			zap.Int64("round", b.Round-1), zap.Int64("sync_num", syncNum))
+			zap.Int64("round", b.Round-1), zap.Int64("sync_num", 1))
 		return nil
 	}
 
-	first := blocks[0]
 	pb = blocks[len(blocks)-1]
 
 	if !pb.IsStateComputed() {
@@ -468,35 +512,12 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		zap.Int64("previous round", b.PrevBlock.Round),
 		zap.String("previous block", b.PrevHash))
 
-	go func() {
-		// do not sync blocks more than `pruned below count` of blocks
-		if remainSyncNum > int64(c.PruneStateBelowCount) {
-			remainSyncNum = int64(c.PruneStateBelowCount)
-		}
-
-		if remainSyncNum > 0 {
-			logging.Logger.Debug("get_previous_block - send async blocks request",
-				zap.Int64("start_round", first.Round-1),
-				zap.Int64("num", remainSyncNum))
-			if err := c.AsyncSyncBlocks(ctx, SyncBlockReq{
-				Hash:     first.Hash,
-				Round:    first.Round,
-				Num:      remainSyncNum,
-				SaveToDB: false,
-			}); err != nil {
-				logging.Logger.Warn("get_previous_block - send async blocks request failed",
-					zap.Int64("round", first.Round),
-					zap.Int64("num", remainSyncNum),
-					zap.Error(err))
-			}
-		}
-	}()
 	return pb
 }
 
 // SyncBlocks sync N blocks and state changes from network
 func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveToDB bool) []*block.Block {
-	logging.Logger.Debug("sync_blocks - start",
+	logging.Logger.Warn("sync_blocks - start",
 		zap.Int64("num", num),
 		zap.Int64("start round", b.Round),
 		zap.Bool("sav to DB", saveToDB))
@@ -622,6 +643,10 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 
 func (c *Chain) updateFeeStats(fb *block.Block) {
 	var totalFees int64
+	if len(fb.Txns) == 0 {
+		return
+	}
+
 	for _, txn := range fb.Txns {
 		totalFees += txn.Fee
 	}

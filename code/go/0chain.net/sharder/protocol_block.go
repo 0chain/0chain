@@ -192,7 +192,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	err = sc.VerifyNotarization(b, b.GetVerificationTickets(),
+	err = sc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
 		er.GetRoundNumber())
 	if err != nil {
 		Logger.Error("notarization verification failed",
@@ -217,7 +217,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 	sc.SetRoundRank(er, b)
-	Logger.Info("received block", zap.Int64("round", b.Round),
+	Logger.Info("received notarized block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
