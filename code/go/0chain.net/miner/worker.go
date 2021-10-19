@@ -46,7 +46,10 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			go func(bmsg *BlockMessage) {
 				ts := time.Now()
 				if bmsg.Sender != nil {
-					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+					logging.Logger.Debug("message",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("sender_index", bmsg.Sender.SetIndex),
+						zap.Any("id", bmsg.Sender.GetKey()))
 				} else {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
@@ -95,6 +98,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			if !mc.isStarted() {
 				break
 			}
+
 			if cround == mc.GetCurrentRound() {
 				r := mc.GetMinerRound(cround)
 
@@ -127,7 +131,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						}
 					}(ctx)
 				} else {
-					// set current round to latet finalized block
+					// set current round to latest finalized block
 					lfbr := mc.GetLatestFinalizedBlock().Round
 					mc.SetCurrentRound(lfbr)
 					logging.Logger.Debug("Round timeout, nil miner round, set current round to lfb round",

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -23,16 +24,24 @@ var MaxStateNodesForSync = 10000
 
 //GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) error {
+	ts := time.Now()
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
 		return common.NewError("get block state changes", err.Error())
 	}
+	logging.Logger.Debug("get_block_state_changes - get took",
+		zap.Int64("round", b.Round),
+		zap.Any("duration", time.Since(ts)))
 
+	ts = time.Now()
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
 		return common.NewError("apply block state changes", err.Error())
 	}
 
+	logging.Logger.Debug("get_block_state_changes - apply took",
+		zap.Int64("round", b.Round),
+		zap.Any("duration", time.Since(ts)))
 	return nil
 }
 

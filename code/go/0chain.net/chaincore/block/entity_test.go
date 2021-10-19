@@ -1778,7 +1778,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.AddVerificationTicket(tt.args.vt); got != tt.want {
-				t.Errorf("AddVerificationTicket() = %v, want %v", got, tt.want)
+				t.Errorf("AddVerificationTickets() = %v, want %v", got, tt.want)
 			}
 		})
 	}

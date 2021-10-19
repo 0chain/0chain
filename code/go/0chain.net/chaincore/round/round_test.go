@@ -31,7 +31,6 @@ func TestRoundStableRandomization(t *testing.T) {
 		t.Fatal(err)
 	}
 	pool.AddNode(nd)
-	pool.ComputeProperties()
 	numElements := pool.Size()
 	r.SetRandomSeed(2009, numElements)
 
