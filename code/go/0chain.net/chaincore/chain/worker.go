@@ -123,7 +123,7 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 		case r := <-c.finalizedRoundsChannel:
 			func() {
 				// TODO: make the timeout configurable
-				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				cctx, cancel := context.WithTimeout(ctx, time.Minute)
 				defer cancel()
 				doneC := make(chan struct{})
 				go func() {
@@ -137,6 +137,7 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 					Logger.Warn("FinalizeRoundWorker finalize round timeout",
 						zap.Int64("round", r.GetRoundNumber()))
 				case <-doneC:
+					Logger.Debug("finalize round done", zap.Int64("round", r.GetRoundNumber()))
 				}
 			}()
 		}
@@ -260,7 +261,8 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	if !fb.IsStateComputed() {
 		Logger.Debug("finalize block state not computed",
 			zap.Int64("round", fb.Round))
-		err := c.ComputeOrSyncState(ctx, fb)
+		ts := time.Now()
+		err := c.GetBlockStateChange(fb)
 		if err != nil {
 			Logger.Error("finalize block - save changes - save state not successful",
 				zap.Int64("round", fb.Round),
@@ -271,6 +273,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 				Logger.DPanic("finalize block - save changes - state not successful")
 			}
 		}
+		Logger.Debug("finalize block - sync states took", zap.Any("duration", time.Since(ts)))
 	} else {
 		Logger.Debug("finalize block state computed",
 			zap.Int64("round", fb.Round),
