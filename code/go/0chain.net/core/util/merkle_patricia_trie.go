@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -238,18 +239,27 @@ func (mpt *MerklePatriciaTrie) SaveChanges(ctx context.Context, ndb NodeDB, incl
 	cc := mpt.ChangeCollector
 
 	doneC := make(chan struct{})
-	errC := make(chan error)
+	errC := make(chan error, 1)
+	ts := time.Now()
 	go func() {
-		defer close(doneC)
+		defer func() {
+			close(doneC)
+			logging.Logger.Debug("MPT save changes success", zap.Any("duration", time.Since(ts)))
+		}()
 		err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
 		if err != nil {
+			logging.Logger.Error("MPT save changes failed",
+				zap.Any("version", mpt.Version),
+				zap.Error(err))
 			errC <- err
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		Logger.Debug("MPT save changes failed", zap.Error(ctx.Err()))
+		Logger.Debug("MPT save changes timeout",
+			zap.Any("duration", time.Since(ts)),
+			zap.Error(ctx.Err()))
 		return ctx.Err()
 	case err := <-errC:
 		Logger.Debug("MPT save changes failed", zap.Error(err))
