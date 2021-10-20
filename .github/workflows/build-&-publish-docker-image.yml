@@ -1,4 +1,4 @@
-name: BUILD-0CHAIN
+name: build-&-publish-docker-image
 
 on:
   workflow_dispatch:
