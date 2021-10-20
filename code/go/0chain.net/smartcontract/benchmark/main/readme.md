@@ -8,8 +8,7 @@ MPT database is enough to give a realistic benchmark.
 
 To run
 ```bash
-go build -tags bn256
-./main benchmark | column -t -s,
+go build -tags bn256 && ./main benchmark | column -t -s,
 ```
 
 To run only a subset of the test suits
