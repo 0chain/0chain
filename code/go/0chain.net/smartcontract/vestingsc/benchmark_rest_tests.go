@@ -20,11 +20,6 @@ type RestBenchTest struct {
 		cstate.StateContextI,
 	) (interface{}, error)
 	params url.Values
-	error  string
-}
-
-func (rbt RestBenchTest) Error() string {
-	return rbt.error
 }
 
 func (rbt RestBenchTest) Name() string {

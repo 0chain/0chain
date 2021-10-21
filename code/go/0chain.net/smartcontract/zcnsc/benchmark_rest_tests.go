@@ -14,11 +14,6 @@ type restBenchTest struct {
 	name     string
 	endpoint smartcontractinterface.SmartContractRestHandler
 	params   url.Values
-	error    string
-}
-
-func (bt restBenchTest) Error() string {
-	return bt.error
 }
 
 func (bt restBenchTest) Name() string {

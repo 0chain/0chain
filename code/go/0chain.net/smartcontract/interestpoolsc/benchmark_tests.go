@@ -21,11 +21,6 @@ type BenchTest struct {
 	endpoint string
 	txn      *transaction.Transaction
 	input    []byte
-	error    string
-}
-
-func (bt BenchTest) Error() string {
-	return bt.error
 }
 
 func (bt BenchTest) Name() string {
