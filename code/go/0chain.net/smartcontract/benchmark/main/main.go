@@ -10,7 +10,7 @@ func main() {
 
 	defer func() {
 		if err := recover(); err != nil {
-			_ = fmt.Errorf("error: %v", err)
+			fmt.Println("error: %w", err)
 		}
 	}()
 }

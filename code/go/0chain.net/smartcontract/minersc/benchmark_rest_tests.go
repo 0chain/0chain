@@ -20,11 +20,6 @@ type RestBenchTest struct {
 		cstate.StateContextI,
 	) (interface{}, error)
 	params url.Values
-	error  string
-}
-
-func (rbt RestBenchTest) Error() string {
-	return rbt.error
 }
 
 func (rbt RestBenchTest) Name() string {
@@ -35,11 +30,9 @@ func (rbt RestBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	_, err := rbt.endpoint(context.TODO(), rbt.params, balances)
-	if err != nil {
-		rbt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkRestTests(

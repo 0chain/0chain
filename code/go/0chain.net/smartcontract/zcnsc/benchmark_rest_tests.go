@@ -14,11 +14,6 @@ type restBenchTest struct {
 	name     string
 	endpoint smartcontractinterface.SmartContractRestHandler
 	params   url.Values
-	error    string
-}
-
-func (bt restBenchTest) Error() string {
-	return bt.error
 }
 
 func (bt restBenchTest) Name() string {
@@ -29,11 +24,9 @@ func (bt restBenchTest) Transaction() *transaction.Transaction {
 	return &transaction.Transaction{}
 }
 
-func (bt restBenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt restBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	_, err := bt.endpoint(context.TODO(), bt.params, balances)
-	if err != nil {
-		bt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkRestTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {

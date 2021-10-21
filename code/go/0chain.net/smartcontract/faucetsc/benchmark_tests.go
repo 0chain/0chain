@@ -3,14 +3,12 @@ package faucetsc
 import (
 	"testing"
 
-	sc "0chain.net/smartcontract"
-	"github.com/stretchr/testify/require"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	sc "0chain.net/smartcontract"
 	bk "0chain.net/smartcontract/benchmark"
 )
 
@@ -19,11 +17,6 @@ type BenchTest struct {
 	endpoint string
 	txn      *transaction.Transaction
 	input    []byte
-	error    string
-}
-
-func (bt BenchTest) Error() string {
-	return bt.error
 }
 
 func (bt BenchTest) Name() string {
@@ -42,29 +35,27 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	var fsc = FaucetSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
 	gn, err := fsc.getGlobalVariables(bt.txn, balances)
-	require.NoError(b, err)
+	if err != nil {
+		return err
+	}
 	switch bt.endpoint {
 	case "updateSettings":
 		_, err = fsc.updateSettings(bt.Transaction(), bt.input, balances, gn)
 	case "pour":
 		_, err = fsc.pour(bt.Transaction(), bt.input, balances, gn)
 	case "refill":
-		_, _ = fsc.refill(bt.Transaction(), balances, gn)
+		_, err = fsc.refill(bt.Transaction(), balances, gn)
 	default:
-		require.Fail(b, "unknown endpoint"+bt.endpoint)
+		b.Errorf("unknown endpoint" + bt.endpoint)
 	}
 
-	if err != nil {
-		bt.error = err.Error()
-	}
-
-	require.NoError(b, err)
+	return err
 }
 
 func BenchmarkTests(

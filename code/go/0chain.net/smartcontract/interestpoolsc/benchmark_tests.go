@@ -21,11 +21,6 @@ type BenchTest struct {
 	endpoint string
 	txn      *transaction.Transaction
 	input    []byte
-	error    string
-}
-
-func (bt BenchTest) Error() string {
-	return bt.error
 }
 
 func (bt BenchTest) Name() string {
@@ -44,7 +39,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	var isc = InterestPoolSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}
@@ -63,9 +58,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 		panic("unknown endpoint: " + bt.endpoint)
 	}
 
-	if err != nil {
-		bt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkTests(
