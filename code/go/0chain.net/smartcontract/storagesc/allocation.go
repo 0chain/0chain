@@ -1254,10 +1254,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			return "", common.NewError("alloc_cacnel_failed",
 				"removing stake pool offer for "+d.BlobberID+": "+err.Error())
 		}
-		if err = sp.save(sc.ID, d.BlobberID, balances); err != nil {
-			return "", common.NewError("fini_alloc_failed",
-				"saving stake pool of : "+err.Error())
-		}
 		sps = append(sps, sp)
 	}
 
@@ -1424,8 +1420,11 @@ func (sc *StorageSmartContract) finishAllocation(
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
-			reward = reward
-			//sps[i].Rewards.Blobber += reward
+			sps[i].Rewards.Blobber += reward
+			if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
+				return common.NewError("fini_alloc_failed",
+					"saving stake pool of "+d.BlobberID+": "+err.Error())
+			}
 			d.Spent += move
 			d.FinalReward += move
 			passPayments += move
