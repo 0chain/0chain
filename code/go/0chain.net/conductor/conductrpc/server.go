@@ -235,6 +235,15 @@ func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
 	return
 }
 
+func (s *Server) UpdateAllStates(update UpdateStateFunc) (
+	err error) {
+
+	for name := range s.nodes {
+		s.UpdateState(name, update)
+	}
+	return
+}
+
 // events handling
 
 // OnViewChange events channel. The event occurs where

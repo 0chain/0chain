@@ -16,6 +16,8 @@ type State struct {
 	IsMonitor  bool // send monitor events (round, phase, etc)
 	IsLock     bool // node locked
 	IsRevealed bool // revealed shares
+	// Failure emulation
+	GeneratorsFailureRoundNumber Round // all generators fail on start of this round
 	// Byzantine state. Below, if a value is nil, then node behaves as usual
 	// for it.
 	//

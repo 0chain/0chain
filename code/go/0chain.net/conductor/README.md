@@ -358,8 +358,9 @@ enable:
 4. **control nodes behavior / misbehavior**
 
 - `set_revealed` - reveal the list of nodes. A revealed node sends it share.
-- `unset_revealed` - hid the list of nodes. A hidden node does not sends it share.
+- `unset_revealed` - hide the list of nodes. A hidden node does not sends it share.
   - This is currently UNUSED
+- `generators_failure` - prevents generators selected at start of the specified round (as in some setups they aren't known beforehand) from generating blocks for the duration of the whole round including all restarts.
 
 5. **Byzantine blockchain**
 
