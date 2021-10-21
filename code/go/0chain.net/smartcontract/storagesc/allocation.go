@@ -1430,11 +1430,6 @@ func (sc *StorageSmartContract) finishAllocation(
 			d.FinalReward += move
 			passPayments += move
 		}
-		//sps[i].removeExpiredOffers(t.CreationDate)
-		//if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
-		//	return common.NewError("fini_alloc_failed",
-		//		"saving stake pool of "+d.BlobberID+": "+err.Error())
-		//}
 		// update the blobber
 		b.Used -= d.Size
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
