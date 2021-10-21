@@ -62,7 +62,7 @@ var (
 		SourceNames[MultiSig]:         MultiSig,
 		SourceNames[ZCNSCBridge]:      ZCNSCBridge,
 		SourceNames[ZCNSCBridgeRest]:  ZCNSCBridgeRest,
-		BenchmarkSourceNames[Control]:          Control,
+		SourceNames[Control]:          Control,
 	}
 )
 
@@ -239,8 +239,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI, *testing.B)
-	Error() string
+	Run(state.StateContextI, *testing.B) error
 }
 
 type SignatureScheme interface {

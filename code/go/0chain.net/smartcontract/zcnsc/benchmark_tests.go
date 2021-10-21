@@ -35,12 +35,10 @@ func (bt benchTest) Transaction() *transaction.Transaction {
 	return bt.txn
 }
 
-func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) {
+func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
 	b.Logf("Running test '%s' from ZCNSC Bridge", bt.name)
 	_, err := bt.endpoint(bt.Transaction(), bt.input, state)
-	if err != nil {
-		bt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) benchmark.TestSuite {

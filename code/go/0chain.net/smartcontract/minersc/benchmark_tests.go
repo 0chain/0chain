@@ -51,7 +51,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	b.StopTimer()
 	if bt.name == "miner.shareSignsOrShares" {
 		var pn = PhaseNode{
@@ -73,9 +73,7 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 	}
 	_, err = bt.endpoint(bt.Transaction(), bt.input, gn, balances)
 
-	if err != nil {
-		bt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkTests(

@@ -45,11 +45,9 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
-	if err != nil {
-		bt.error = err.Error()
-	}
+	return err
 }
 
 func BenchmarkTests(

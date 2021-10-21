@@ -125,11 +125,11 @@ func printResults(results []suiteResults) {
 			statusColor := colourGreen
 			status := "OK"
 			errMessage := ""
-			err := bkResult.test.Error()
+			err := bkResult.error
 
-			if err != "" {
+			if err != nil {
 				status = "FAILED"
-				errMessage = " - " + err
+				errMessage = " - " + err.Error()
 				statusColor = colourRed
 			}
 

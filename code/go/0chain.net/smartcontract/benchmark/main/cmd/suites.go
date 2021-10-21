@@ -13,6 +13,7 @@ import (
 type benchmarkResults struct {
 	test   benchmark.BenchTestI
 	result testing.BenchmarkResult
+	error
 }
 
 type suiteResults struct {
@@ -56,6 +57,7 @@ func runSuite(
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
 			log.Println("starting", bm.Name())
+			var err error
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()
@@ -65,7 +67,7 @@ func runSuite(
 						data,
 					)
 					b.StartTimer()
-					bm.Run(balances, b)
+					err = bm.Run(balances, b)
 				}
 			})
 			benchmarkResult = append(
@@ -73,6 +75,7 @@ func runSuite(
 				benchmarkResults{
 					test:   bm,
 					result: result,
+					error: err,
 				},
 			)
 
