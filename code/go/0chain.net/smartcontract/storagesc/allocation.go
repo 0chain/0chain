@@ -1254,6 +1254,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			return "", common.NewError("alloc_cacnel_failed",
 				"removing stake pool offer for "+d.BlobberID+": "+err.Error())
 		}
+		if err = sp.save(sc.ID, d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"saving stake pool of : "+err.Error())
+		}
 		sps = append(sps, sp)
 	}
 
@@ -1420,22 +1424,17 @@ func (sc *StorageSmartContract) finishAllocation(
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
-			sps[i].Rewards.Blobber += reward
+			reward = reward
+			//sps[i].Rewards.Blobber += reward
 			d.Spent += move
 			d.FinalReward += move
 			passPayments += move
 		}
-		var info *stakePoolUpdateInfo
-		info, err = sps[i].update(conf, sc.ID, t.CreationDate, balances)
-		if err != nil {
-			return common.NewError("fini_alloc_failed",
-				"updating stake pool of "+d.BlobberID+": "+err.Error())
-		}
-		if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
-			return common.NewError("fini_alloc_failed",
-				"saving stake pool of "+d.BlobberID+": "+err.Error())
-		}
-		conf.Minted += info.minted
+		//sps[i].removeExpiredOffers(t.CreationDate)
+		//if err = sps[i].save(sc.ID, d.BlobberID, balances); err != nil {
+		//	return common.NewError("fini_alloc_failed",
+		//		"saving stake pool of "+d.BlobberID+": "+err.Error())
+		//}
 		// update the blobber
 		b.Used -= d.Size
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
@@ -1490,13 +1489,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
 			"saving all allocations list: "+err.Error())
-	}
-
-	// save configuration (minted tokens)
-	_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
-	if err != nil {
-		return common.NewError("fini_alloc_failed",
-			"saving configurations: "+err.Error())
 	}
 
 	return nil
