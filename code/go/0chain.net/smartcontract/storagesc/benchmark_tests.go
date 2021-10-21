@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/hex"
 	"encoding/json"
+	"github.com/stretchr/testify/require"
 	"fmt"
 	"testing"
 	"time"
@@ -32,9 +33,14 @@ type BenchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
+	error string
 }
 
-func (bt BenchTest) Name() string {
+func (bt *BenchTest) Error() string {
+	return bt.error
+}
+
+func (bt *BenchTest) Name() string {
 	return bt.name
 }
 
@@ -50,11 +56,12 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
 	if err != nil {
-		panic(err)
+		bt.error = err.Error()
 	}
+	require.NoError(b, err)
 }
 
 func BenchmarkTests(
@@ -755,7 +762,7 @@ func BenchmarkTests(
 	}
 	var testsI []bk.BenchTestI
 	for _, test := range tests {
-		testsI = append(testsI, test)
+		testsI = append(testsI, &test)
 	}
 	return bk.TestSuite{
 		Source:     bk.Storage,

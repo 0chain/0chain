@@ -19,6 +19,11 @@ type BenchTest struct {
 	endpoint string
 	txn      *transaction.Transaction
 	input    []byte
+	error    string
+}
+
+func (bt BenchTest) Error() string {
+	return bt.error
 }
 
 func (bt BenchTest) Name() string {
@@ -54,6 +59,11 @@ func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) {
 	default:
 		require.Fail(b, "unknown endpoint"+bt.endpoint)
 	}
+
+	if err != nil {
+		bt.error = err.Error()
+	}
+
 	require.NoError(b, err)
 }
 

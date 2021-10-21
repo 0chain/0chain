@@ -29,11 +29,12 @@ func runSuites(
 	var results []suiteResults
 	var wg sync.WaitGroup
 	for _, suite := range suites {
+		log.Println("starting suite ==>", suite.Source)
 		wg.Add(1)
 		go func(suite benchmark.TestSuite, wg *sync.WaitGroup) {
 			defer wg.Done()
 			results = append(results, suiteResults{
-				name:    benchmark.BenchmarkSourceNames[suite.Source],
+				name:    benchmark.SourceNames[suite.Source],
 				results: runSuite(suite, mpt, root, data),
 			})
 		}(suite, &wg)
@@ -48,12 +49,13 @@ func runSuite(
 	root util.Key,
 	data benchmark.BenchData,
 ) []benchmarkResults {
-	benchmarkResult := []benchmarkResults{}
+	var benchmarkResult []benchmarkResults
 	var wg sync.WaitGroup
 	for _, bm := range suite.Benchmarks {
 		wg.Add(1)
 		go func(bm benchmark.BenchTestI, wg *sync.WaitGroup) {
 			defer wg.Done()
+			log.Println("starting", bm.Name())
 			result := testing.Benchmark(func(b *testing.B) {
 				for i := 0; i < b.N; i++ {
 					b.StopTimer()
