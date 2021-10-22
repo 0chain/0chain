@@ -593,10 +593,12 @@ func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syn
 		// block is already in syncing
 		select {
 		case pb := <-replyC:
-			logging.Logger.Info("sync_block - success, notified",
-				zap.Int64("round", pb.Round),
-				zap.String("block", pb.Hash),
-				zap.Int64("num", opt.Num))
+			if pb != nil {
+				logging.Logger.Info("sync_block - success, notified",
+					zap.Int64("round", pb.Round),
+					zap.String("block", pb.Hash),
+					zap.Int64("num", opt.Num))
+			}
 			return pb
 		case <-ctx.Done():
 			return nil
@@ -641,8 +643,8 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 		pb.SetStateDB(ppb, c.GetStateDB())
 	}
 
-	if err := c.SyncStateOrComputeLocal(ctx, pb); err != nil {
-		logging.Logger.Error("sync_block - sync state or compute local failed",
+	if err := c.GetBlockStateChange(b); err != nil {
+		logging.Logger.Error("sync_block - sync state changes failed",
 			zap.Int64("round", pb.Round),
 			zap.Int64("num", opt.Num))
 		return nil
