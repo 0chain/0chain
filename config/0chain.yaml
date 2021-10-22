@@ -126,3 +126,39 @@ min_stake: 10.0    # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake
 max_stake: 1000.0  # tokens
+
+# Start mode will delete all the data in volumepath, will initialize meta records,
+# Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
+mode: start # normal or repair or recover(metadata recovery)
+
+# All tiering, strategy,etc. configs
+storage:
+  hot_tiering: true
+  warm_tiering: true
+  cold_tiering: true
+  hot:
+    path: "/path/to/store/blocks"
+    allowed_block_numbers: 10^6
+    allowed_block_size: 1024 # In GB
+    maintain_size: 20 # In GB; This will restrict block being stored in ssd if available size is lesser than this value
+  warm:
+    strategy: "round_robin" # choices; round_robin, min_size_first, min_count_first and random
+    volumes:
+      - path: "/path/to/store/blocks"
+        maintain_size: 4 # In GB
+        allowed_block_numbers: 10^9 #should be <= 10^9; if greater number is provided then it will settle to 10^9
+        allowed_block_size: 1024 * 1024 * 1024
+      - path: "another/path/to/store/blocks"
+        maintain_size: 4 # In GB
+        allowed_block_numbers: 10^9
+        allowed_block_size: 1024 * 1024 * 1024
+  cold:
+    enabled: true
+    interval: 720 # In hour; This value determines if a block should be moved to cold storage.
+    cred_path : "/path/to/credential"
+    delete_local: true
+    credentials:
+      storage_service_url: ""
+      access_id: ""
+      secret_access_key: ""
+      bucket_name: ""
