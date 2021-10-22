@@ -88,11 +88,13 @@ func updateConfig(genTimeout, tnxWaitTime, updateURL string) ([]byte, error) {
 		viper.Set("server_chain.block.generation.retry_wait_time", newTxnWaitTime)
 	}
 
+	// parse HTML form
 	tmpl, err := template.New("html_form").Parse(formHTML)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse html form")
 	}
 
+	// data to insert in the HTML form
 	var params = struct {
 		URL, GenerateTimeout, TnxWaitTime string
 	}{
@@ -101,6 +103,7 @@ func updateConfig(genTimeout, tnxWaitTime, updateURL string) ([]byte, error) {
 		TnxWaitTime:     viper.Get("server_chain.block.generation.retry_wait_time").(string),
 	}
 
+	// execute tmpl and generate HTML form.
 	var output bytes.Buffer
 	if err := tmpl.Execute(&output, params); err != nil {
 		return nil, errors.Wrap(err, "could not execute html form")
