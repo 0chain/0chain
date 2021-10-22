@@ -46,8 +46,7 @@ func TestConfigUpdateAll(t *testing.T) {
 	//
 
 	for _, c := range cases {
-		t.Run("", func(t *testing.T) {
-			// client := handlers.NewMinerGRPCService()
+		t.Run(c.name, func(t *testing.T) {
 			client := NewMinerGRPCService()
 			output, err := client.UnimplementedMinerServiceServer.ConfigUpdate(context.TODO(), c.req)
 			if err != nil {
