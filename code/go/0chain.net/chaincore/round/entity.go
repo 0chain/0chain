@@ -230,38 +230,49 @@ func (r *Round) GetRoundNumber() int64 {
 	return r.Number
 }
 
-// SetRandomSeed - set the random seed of the round
+// SetRandomSeedForNotarizedBlock - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
-	r.setRandomSeed(seed)
+	r.setHasRandomSeed(seed)
+
 	r.mutex.Lock()
-	r.computeMinerRanks(minersNum)
+	r.minerPerm = computeMinerRanks(seed, minersNum)
 	r.mutex.Unlock()
+
+	r.setRandomSeed(seed)
 }
 
-//SetRandomSeed - set the random seed of the round
+// SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
 		return
 	}
-	r.setRandomSeed(seed)
-	r.setState(RoundVRFComplete)
+
+	r.setHasRandomSeed(seed)
 
 	r.mutex.Lock()
-	r.computeMinerRanks(minersNum)
+	r.minerPerm = computeMinerRanks(seed, minersNum)
 	r.mutex.Unlock()
+
+	r.setRandomSeed(seed)
+	r.setState(RoundVRFComplete)
 }
 
 func (r *Round) setRandomSeed(seed int64) {
+	atomic.StoreInt64(&r.RandomSeed, seed)
+
+	if seed == 0 {
+		// reset hasRandomSeed if the seed is 0
+		atomic.StoreUint32(&r.hasRandomSeed, uint32(0))
+	}
+}
+
+func (r *Round) setHasRandomSeed(seed int64) {
 	value := uint32(0)
 	if seed != 0 {
 		value = 1
 	}
 
 	atomic.StoreUint32(&r.hasRandomSeed, value)
-	atomic.StoreInt64(&r.RandomSeed, seed)
-}
-
-func (r *Round) setHasRandomSeed(b bool) {
 }
 
 // GetRandomSeed - returns the random seed of the round.
@@ -522,8 +533,8 @@ func SetupRoundSummaryDB() {
 }
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
-func (r *Round) computeMinerRanks(minersNum int) {
-	r.minerPerm = rand.New(rand.NewSource(r.GetRandomSeed())).Perm(minersNum)
+func computeMinerRanks(seed int64, minersNum int) []int {
+	return rand.New(rand.NewSource(seed)).Perm(minersNum)
 }
 
 func (r *Round) IsRanksComputed() bool {
@@ -539,7 +550,8 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
+		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
+			r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
@@ -674,7 +686,7 @@ func (r *Round) setState(state int) {
 
 //HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
-	return atomic.LoadUint32(&r.hasRandomSeed) == 1
+	return atomic.LoadInt64(&r.RandomSeed) != 0
 }
 
 func (r *Round) GetSoftTimeoutCount() int {
