@@ -28,6 +28,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 
 	var b = msg.Block
 
+	var lfb = mc.GetLatestFinalizedBlock()
+	if b.Round < lfb.Round {
+		logging.Logger.Debug("handle verify block", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
+		return
+	}
+
 	var mr, pr = mc.GetMinerRound(b.Round), mc.GetMinerRound(b.Round - 1)
 	if pr == nil {
 		logging.Logger.Error("handle verify block -- no previous round (ignore)",
