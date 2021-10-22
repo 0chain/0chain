@@ -997,6 +997,10 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
+	if b.GetRoundRandomSeed() == 0 {
+		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
+	}
+
 	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
@@ -1603,7 +1607,9 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 
 		// check out corresponding not. block
 		var xrhnb = xr.GetHeaviestNotarizedBlock()
-		if xrhnb == nil || (xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) {
+		if xrhnb == nil ||
+			(xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) ||
+			(xrhnb != nil && xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed()) {
 			logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
 				zap.Int64("round", xr.GetRoundNumber()),
 				zap.Int64("lfb_round", lfb.Round))
@@ -1714,11 +1720,9 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		zap.Int64("lfb round", lfbRound),
 		zap.Int64("lfb new round", rcvd.Round),
 		zap.Int64("sync num", 1))
-	blocks := mc.SyncBlocks(ctx, rcvd, 1, true)
-	if len(blocks) > 0 {
-		if pb := blocks[len(blocks)-1]; pb != nil {
-			rcvd.SetPreviousBlock(pb)
-		}
+	pb := mc.SyncPreviousBlocks(ctx, rcvd, 1, chain.SaveToDB(true))
+	if pb != nil {
+		rcvd.SetPreviousBlock(pb)
 	}
 
 	mc.bumpLFBTicket(ctx, rcvd)
