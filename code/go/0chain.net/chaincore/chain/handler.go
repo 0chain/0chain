@@ -68,49 +68,6 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.N2NRateLimit(common.ToJSONResponse(LFBTicketHandler)))
 }
 
-// StatusCheck stops further processing if current round
-// is far behind or beyond the lfb to save CPU time
-// for signature validation
-//
-// TODO: debug purpose, this should be able to be removed
-func (c *Chain) StatusCheck(handler common.ReqRespHandlerf) common.ReqRespHandlerf {
-	return func(w http.ResponseWriter, r *http.Request) {
-		lfb := c.GetLatestFinalizedBlock()
-		lfbtk := c.GetLatestLFBTicket(context.Background())
-		cr := c.GetCurrentRound()
-		var (
-			lfbr   int64
-			lfbtkr int64
-		)
-
-		if lfb != nil {
-			lfbr = lfb.Round
-		}
-
-		if lfbtk != nil {
-			lfbtkr = lfbtk.Round
-		}
-
-		if lfb == nil || lfb.Round+5 < cr || lfb.Round > cr+5 {
-			logging.N2n.Debug("status check - chain is not ready, lfb is behind or beyond too much",
-				zap.Int64("lfb", lfbr),
-				zap.Int64("current round", cr),
-				zap.String("url", r.URL.String()))
-			return
-		}
-
-		if lfbtk == nil || lfbtk.Round+5 < cr || lfbtk.Round > cr+5 {
-			logging.N2n.Debug("status check - chain is not ready, lfb ticket is behind or beyond too much",
-				zap.Int64("lfb ticket", lfbtkr),
-				zap.Int64("current round", cr),
-				zap.String("url", r.URL.String()))
-			return
-		}
-
-		handler(w, r)
-	}
-}
-
 func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	mb := sc.GetCurrentMagicBlock()
