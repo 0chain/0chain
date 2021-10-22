@@ -216,12 +216,6 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return nil, nil
 	}
-	var lfb = mc.GetLatestFinalizedBlock()
-	if b.Round < lfb.Round {
-		logging.Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
-		return nil, nil
-	}
-
 	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil
@@ -346,11 +340,12 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 		hash = req.FormValue("block")
 
 		mc = GetMinerChain()
+		cr = mc.GetCurrentRound()
 	)
 
 	errBlockNotAvailable := common.NewError("block_not_available",
 		fmt.Sprintf("Requested block is not available, current round: %d, request round: %s, request hash: %s",
-			mc.GetCurrentRound(), r, hash))
+			cr, r, hash))
 
 	if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
@@ -369,7 +364,7 @@ func getNotarizedBlock(ctx context.Context, req *http.Request) (*block.Block, er
 			"no block hash or round number is provided")
 	}
 
-	roundN, err := strconv.ParseInt(r, 10, 63)
+	roundN, err := strconv.ParseInt(r, 10, 64)
 	if err != nil {
 		return nil, err
 	}
