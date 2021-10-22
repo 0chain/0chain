@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+	httpbody "google.golang.org/genproto/googleapis/api/httpbody"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,6 +20,10 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerServiceClient interface {
 	GetNotarizedBlock(ctx context.Context, in *GetNotarizedBlockRequest, opts ...grpc.CallOption) (*GetNotarizedBlockResponse, error)
+	//
+	ConfigUpdate(ctx context.Context, in *ConfigUpdateRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	//
+	ConfigUpdateAll(ctx context.Context, in *ConfigUpdateRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 }
 
 type minerServiceClient struct {
@@ -38,11 +43,33 @@ func (c *minerServiceClient) GetNotarizedBlock(ctx context.Context, in *GetNotar
 	return out, nil
 }
 
+func (c *minerServiceClient) ConfigUpdate(ctx context.Context, in *ConfigUpdateRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, "/miner.MinerService/ConfigUpdate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *minerServiceClient) ConfigUpdateAll(ctx context.Context, in *ConfigUpdateRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, "/miner.MinerService/ConfigUpdateAll", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinerServiceServer is the server API for MinerService service.
 // All implementations should embed UnimplementedMinerServiceServer
 // for forward compatibility
 type MinerServiceServer interface {
 	GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error)
+	//
+	ConfigUpdate(context.Context, *ConfigUpdateRequest) (*httpbody.HttpBody, error)
+	//
+	ConfigUpdateAll(context.Context, *ConfigUpdateRequest) (*httpbody.HttpBody, error)
 }
 
 // UnimplementedMinerServiceServer should be embedded to have forward compatible implementations.
@@ -51,6 +78,12 @@ type UnimplementedMinerServiceServer struct {
 
 func (UnimplementedMinerServiceServer) GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotarizedBlock not implemented")
+}
+func (UnimplementedMinerServiceServer) ConfigUpdate(context.Context, *ConfigUpdateRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfigUpdate not implemented")
+}
+func (UnimplementedMinerServiceServer) ConfigUpdateAll(context.Context, *ConfigUpdateRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConfigUpdateAll not implemented")
 }
 
 // UnsafeMinerServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -82,6 +115,42 @@ func _MinerService_GetNotarizedBlock_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MinerService_ConfigUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServiceServer).ConfigUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.MinerService/ConfigUpdate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServiceServer).ConfigUpdate(ctx, req.(*ConfigUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MinerService_ConfigUpdateAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConfigUpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServiceServer).ConfigUpdateAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.MinerService/ConfigUpdateAll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServiceServer).ConfigUpdateAll(ctx, req.(*ConfigUpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MinerService_ServiceDesc is the grpc.ServiceDesc for MinerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -92,6 +161,14 @@ var MinerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotarizedBlock",
 			Handler:    _MinerService_GetNotarizedBlock_Handler,
+		},
+		{
+			MethodName: "ConfigUpdate",
+			Handler:    _MinerService_ConfigUpdate_Handler,
+		},
+		{
+			MethodName: "ConfigUpdateAll",
+			Handler:    _MinerService_ConfigUpdateAll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
