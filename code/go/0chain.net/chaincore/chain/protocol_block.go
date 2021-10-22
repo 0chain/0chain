@@ -538,7 +538,11 @@ func (c *Chain) registerBlockSync(blockHash string, replyC chan *block.Block) (n
 		c.bscMutex.Lock()
 		close(ch)
 		for sub := range ch {
-			sub <- b
+			select {
+			case sub <- b:
+			default:
+			}
+			close(sub)
 		}
 
 		delete(c.blockSyncC, blockHash)
@@ -592,8 +596,8 @@ func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syn
 	if ok {
 		// block is already in syncing
 		select {
-		case pb := <-replyC:
-			if pb != nil {
+		case pb, ok := <-replyC:
+			if ok && pb != nil {
 				logging.Logger.Info("sync_block - success, notified",
 					zap.Int64("round", pb.Round),
 					zap.String("block", pb.Hash),
@@ -643,7 +647,7 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 		pb.SetStateDB(ppb, c.GetStateDB())
 	}
 
-	if err := c.GetBlockStateChange(b); err != nil {
+	if err := c.GetBlockStateChange(pb); err != nil {
 		logging.Logger.Error("sync_block - sync state changes failed",
 			zap.Int64("round", pb.Round),
 			zap.Int64("num", opt.Num))
