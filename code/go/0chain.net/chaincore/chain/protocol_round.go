@@ -48,23 +48,20 @@ func init() {
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
-// ComputeFinalizedBlock - compute the block that has been finalized */
+// ComputeFinalizedBlock - compute the last block that needs to finalize
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
 	var (
-		rn = r.GetRoundNumber()
-		rd = r
+		rn        = r.GetRoundNumber()
+		lastRound = rn
+		rd        = r
 	)
 
 	if rn < lfbr {
 		return r.GetHeaviestNotarizedBlock()
 	}
 
-	hnb := rd.GetHeaviestNotarizedBlock()
-	if hnb == nil {
-	}
-
 	for rd != nil && rn > lfbr {
-		if hnb := rd.GetHeaviestNotarizedBlock(); hnb != nil {
+		if hnb := rd.GetHeaviestNotarizedBlock(); hnb != nil && rn <= lastRound-1 {
 			return hnb
 		}
 
@@ -339,74 +336,9 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 // duplicate actions here
 func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
-	var (
-		rn     = r.GetRoundNumber()
-		params = &url.Values{}
-	)
-
-	params.Add("round", fmt.Sprintf("%v", rn))
-
-	cctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
-	defer cancel()
-
-	notarizedBlockC := make(chan *block.Block, 10)
-	var handler = func(_ context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-		logging.Logger.Info("get notarized block for round in handler", zap.Int64("round", rn),
-			zap.String("block", entity.GetKey()))
-
-		// cancel further requests and return when a notarized block is acquired
-		if b := r.GetHeaviestNotarizedBlock(); b != nil {
-			select {
-			case notarizedBlockC <- b:
-			default:
-			}
-			cancel()
-			return b, nil
-		}
-
-		var nb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if nb.Round != rn {
-			return nil, common.NewError("invalid_block",
-				"Block not from the requested round")
-		}
-
-		if err = nb.Validate(cctx); err != nil {
-			logging.Logger.Error("get notarized block for round - validate",
-				zap.Int64("round", rn), zap.String("block", nb.Hash),
-				zap.Error(err))
-			return nil, err
-		}
-
-		cancel()
-		select {
-		case notarizedBlockC <- nb:
-		default:
-		}
-		return nb, nil
-	}
-
-	c.RequestEntityFromMinersOnMB(cctx, c.getLatestFinalizedMagicBlock(cctx), MinerNotarizedBlockRequestor, params, handler)
-	var nb *block.Block
-	select {
-	case nb = <-notarizedBlockC:
-	default:
-	}
-
-	if nb == nil {
-		logging.Logger.Error("get no notarized block", zap.Int64("round", rn))
-		return nil
-	}
-
-	err := c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(), rn)
+	rn := r.GetRoundNumber()
+	nb, err := c.getNotarizedBlockFromMiners(ctx, "", rn)
 	if err != nil {
-		logging.Logger.Error("get notarized block for round - validate notarization",
-			zap.Int64("round", rn), zap.String("block", nb.Hash),
-			zap.Error(err))
 		return nil
 	}
 
