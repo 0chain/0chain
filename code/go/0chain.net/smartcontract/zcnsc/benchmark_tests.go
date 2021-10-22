@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
@@ -119,10 +120,11 @@ func createBurnTransaction(clientId, publicKey string) *transaction.Transaction 
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
 		},
-		ClientID:   clientId,
-		PublicKey:  publicKey,
-		ToClientID: config.SmartContractConfig.GetString(benchmark.BurnAddress),
-		Value:      3000,
+		ClientID:     clientId,
+		PublicKey:    publicKey,
+		ToClientID:   config.SmartContractConfig.GetString(benchmark.BurnAddress),
+		Value:        3000,
+		CreationDate: common.Now(),
 	}
 }
 
@@ -131,10 +133,11 @@ func createTransaction(clientId, publicKey string) *transaction.Transaction {
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
 		},
-		ClientID:   clientId,
-		PublicKey:  publicKey,
-		ToClientID: ADDRESS,
-		Value:      3000,
+		ClientID:     clientId,
+		PublicKey:    publicKey,
+		ToClientID:   ADDRESS,
+		Value:        3000,
+		CreationDate: common.Now(),
 	}
 }
 

@@ -349,9 +349,9 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 }
 
 func (an *AuthorizerNode) Save(balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(ADDRESS + "auth_node" + an.ID, an)
+	_, err = balances.InsertTrieNode(ADDRESS+"auth_node"+an.ID, an)
 	if err != nil {
-		return common.NewError("save_auth_node_failed", "saving authorizer node: " + err.Error())
+		return common.NewError("save_auth_node_failed", "saving authorizer node: "+err.Error())
 	}
 	return nil
 }
@@ -363,7 +363,7 @@ func GetNewAuthorizer(pk string, authId string, url string) *AuthorizerNode {
 	return &AuthorizerNode{
 		ID:        authId,
 		PublicKey: pk,
-		URL: url,
+		URL:       url,
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
@@ -547,6 +547,9 @@ type TokenLock struct {
 
 func (tl TokenLock) IsLocked(entity interface{}) bool {
 	txn, ok := entity.(*transaction.Transaction)
+	if txn.CreationDate == 0 {
+		return false
+	}
 	if ok {
 		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}

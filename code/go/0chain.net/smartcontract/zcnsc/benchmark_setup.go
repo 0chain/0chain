@@ -10,7 +10,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
 	"encoding/json"
-	"time"
 )
 
 const (
@@ -93,7 +92,7 @@ func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
 		},
 		TokenLockInterface: &TokenLock{
 			StartTime: common.Now(),
-			Duration:  time.Hour * 24 * 30,
+			Duration:  0,
 			Owner:     clientId,
 		},
 	}
