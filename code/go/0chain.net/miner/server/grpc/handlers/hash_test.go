@@ -29,6 +29,7 @@ func Test_minerGRPCService_Hash(t *testing.T) {
 		want    *httpbody.HttpBody
 		wantErr bool
 	}{
+		//TOOD: Add test cases.
 		{
 			name: "Test_minerGRPCService_Hash",
 			fields: fields{
