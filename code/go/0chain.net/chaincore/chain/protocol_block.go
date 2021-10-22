@@ -447,7 +447,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return lfb
 	}
 
-	maxSyncDepth := int64(config.GetLFBTicketAhead() + 1)
+	maxSyncDepth := int64(config.GetLFBTicketAhead())
 	syncNum := maxSyncDepth
 	if lfb != nil {
 		syncNum = b.Round - lfb.Round
@@ -462,17 +462,17 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	}
 
 	// The round is equal or less than lfb, get state changes
-	// from remote directly, as it must exist.
+	// of one block previous
 	if syncNum <= 0 {
-		blocks := c.SyncBlocks(ctx, b, 1, false)
-		if len(blocks) == 0 {
-			logging.Logger.Error("get_previous_block - current round is <= lfb, could not sync block from remote",
+		//blocks := c.SyncPreviousBlocks(ctx, b, 1, false)
+		pb = c.SyncPreviousBlocks(ctx, b, 1)
+		if pb == nil {
+			logging.Logger.Error("get_previous_block - could not fetch block",
 				zap.Int64("round", b.Round-1),
 				zap.Int64("lfb_round", lfb.Round))
 			return nil
 		}
 
-		pb = blocks[0]
 		b.SetPreviousBlock(pb)
 		logging.Logger.Info("get_previous_block - sync successfully",
 			zap.Int("sync num", 1),
@@ -483,17 +483,10 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return pb
 	}
 
-	//Sync at most ticketAhead+1 blocks back, because we should
-	//be able to get the state changes of latest finalized block from remote,
-	//we can sync up from it.
-	blocks := c.SyncBlocks(ctx, b, syncNum, false)
-	if len(blocks) == 0 || !blocks[0].IsStateComputed() {
-		logging.Logger.Debug("get_previous_block - could not sync previous blocks",
-			zap.Int64("round", b.Round-1), zap.Int64("sync_num", 1))
+	pb = c.SyncPreviousBlocks(ctx, b, syncNum)
+	if pb == nil {
 		return nil
 	}
-
-	pb = blocks[len(blocks)-1]
 
 	if !pb.IsStateComputed() {
 		logging.Logger.Error("get_previous_block - could not get state computed previous block",
@@ -503,10 +496,18 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return nil
 	}
 
+	if pb.Hash != b.PrevHash {
+		logging.Logger.Error("get_previous_block - got previous block with different hash",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.String("block.PrevHash", b.PrevHash),
+			zap.String("prev hash", pb.Hash))
+		return nil
+	}
+
 	b.SetPreviousBlock(pb)
 
 	logging.Logger.Info("get_previous_block - sync successfully",
-		zap.Int("sync num", len(blocks)),
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.Int64("previous round", b.PrevBlock.Round),
@@ -515,81 +516,151 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	return pb
 }
 
-// SyncBlocks sync N blocks and state changes from network
-func (c *Chain) SyncBlocks(ctx context.Context, b *block.Block, num int64, saveToDB bool) []*block.Block {
-	logging.Logger.Warn("sync_blocks - start",
-		zap.Int64("num", num),
-		zap.Int64("start round", b.Round),
-		zap.Bool("sav to DB", saveToDB))
+func (c *Chain) registerBlockSync(blockHash string, replyC chan *block.Block) (notifyAndClean func(*block.Block), ok bool) {
+	var ch chan chan *block.Block
+	c.bscMutex.Lock()
+	ch, ok = c.blockSyncC[blockHash]
+	if !ok {
+		ch = make(chan chan *block.Block, 50)
+		c.blockSyncC[blockHash] = ch
+	}
 
-	blocks := c.pullNotarizedBlocks(ctx, b, num)
-	if len(blocks) == 0 {
-		logging.Logger.Debug("sync_blocks - pull blocks with no response")
+	select {
+	case ch <- replyC:
+		c.bscMutex.Unlock()
+	default:
+		c.bscMutex.Unlock()
+		logging.Logger.Debug("sync_block - block sync chan is full", zap.String("block", blockHash))
+		return func(*block.Block) {}, false
+	}
+
+	notifyAndClean = func(b *block.Block) {
+		c.bscMutex.Lock()
+		close(ch)
+		for sub := range ch {
+			sub <- b
+		}
+
+		delete(c.blockSyncC, blockHash)
+		c.bscMutex.Unlock()
+	}
+	return
+}
+
+type syncOption struct {
+	Num      int64
+	SaveToDB bool
+}
+
+// Option represents function signature for option that will be used by SynBlocks
+type Option func(interface{})
+
+// SaveToDB represents an option that will be used in SyncPreviousBlocks(opts ...Option)
+// set ture if the block's state changes will be saved to persistent DB.
+//
+// Use only when the blocks need to be persisted to DB, usually when finalize blocks.
+func SaveToDB(save bool) func(v interface{}) {
+	return func(v interface{}) {
+		opt, ok := v.(*syncOption)
+		if ok {
+			opt.SaveToDB = save
+		}
+	}
+}
+
+// SyncPreviousBlocks syncs N previous blocks that start from a block,
+// returns the previous block if success
+func (c *Chain) SyncPreviousBlocks(ctx context.Context, b *block.Block, num int64, opts ...Option) *block.Block {
+	so := syncOption{
+		Num: num,
+	}
+
+	for _, opt := range opts {
+		opt(&so)
+	}
+
+	return c.syncBlocksWithCache(ctx, b, so)
+}
+
+// syncBlocksWithCache checks whether the requested block is already in syncing first,
+// if yes, we will subscribe the reply channel, and wait for the responding to avoid duplicate
+// requests being sent.
+// if no, then we will send a request to get the block and state changes from remote.
+func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syncOption) *block.Block {
+	replyC := make(chan *block.Block, 1)
+	notifyAndClean, ok := c.registerBlockSync(b.PrevHash, replyC)
+	if ok {
+		// block is already in syncing
+		select {
+		case pb := <-replyC:
+			logging.Logger.Info("sync_block - success, notified",
+				zap.Int64("round", pb.Round),
+				zap.String("block", pb.Hash),
+				zap.Int64("num", opt.Num))
+			return pb
+		case <-ctx.Done():
+			return nil
+		}
+	}
+
+	pb := c.syncPreviousBlock(ctx, b, opt)
+	notifyAndClean(pb)
+	return pb
+}
+
+func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncOption) *block.Block {
+	pb, _ := c.GetBlock(ctx, b.PrevHash)
+	if pb == nil {
+		pb = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+		if pb == nil {
+			logging.Logger.Error("sync_block - could not fetch block",
+				zap.Int64("round", b.Round-1),
+				zap.String("block", b.PrevHash))
+			return nil
+		}
+	}
+
+	if pb.IsStateComputed() {
+		return pb
+	}
+
+	var ppb *block.Block
+	if opt.Num-1 > 0 {
+		ppb = c.syncBlocksWithCache(ctx, pb,
+			syncOption{
+				Num:      opt.Num - 1,
+				SaveToDB: opt.SaveToDB,
+			})
+		if ppb == nil {
+			return nil
+		}
+	}
+
+	if ppb != nil {
+		pb.SetPreviousBlock(ppb)
+		pb.SetStateDB(ppb, c.GetStateDB())
+	}
+
+	if err := c.SyncStateOrComputeLocal(ctx, pb); err != nil {
+		logging.Logger.Error("sync_block - sync state or compute local failed",
+			zap.Int64("round", pb.Round),
+			zap.Int64("num", opt.Num))
 		return nil
 	}
 
-	failedIndex := -1
-	first := blocks[0]
-	if first.PrevBlock == nil {
-		if err := c.SyncStateOrComputeLocal(ctx, first); err != nil {
-			logging.Logger.Error("sync_blocks - sync state for oldest block failed",
-				zap.Error(err),
-				zap.Int64("round", first.Round),
-				zap.String("block", first.Hash))
-		} else {
-			if saveToDB {
-				if err := first.SaveChanges(ctx, c); err != nil {
-					logging.Logger.Error("sync_blocks - save changes failed",
-						zap.Error(err), zap.Int64("round", first.Round))
-				}
-				logging.Logger.Info("sync_blocks - save state changes success",
-					zap.Int64("round", first.Round),
-					zap.String("block", first.Hash))
-			}
+	if opt.SaveToDB {
+		if err := pb.SaveChanges(ctx, c); err != nil {
+			logging.Logger.Error("sync_block - save changes failed",
+				zap.Error(err), zap.Int64("round", pb.Round))
 		}
 	}
 
-	for i := range blocks {
-		cb := blocks[i]
-		if cb.PrevBlock == nil {
-			// only the first block could have no previous block
-			if i > 0 {
-				logging.Logger.Panic("sync_blocks - block has no prev block",
-					zap.Int64("round", cb.Round),
-					zap.String("block", cb.Hash),
-					zap.Int("index", i),
-					zap.Int64("end_round", b.Round),
-					zap.Int64("num", num))
-			}
-			continue
-		}
+	logging.Logger.Info("sync_block - success",
+		zap.Int64("round", pb.Round),
+		zap.String("block", pb.Hash),
+		zap.Int64("num", opt.Num))
 
-		cb.SetStateDB(cb.PrevBlock, c.GetStateDB())
-		if err := c.SyncStateOrComputeLocal(ctx, cb); err != nil {
-			failedIndex = i
-			continue
-		}
-
-		if saveToDB {
-			if err := cb.SaveChanges(ctx, c); err != nil {
-				logging.Logger.Error("sync_blocks - save changes failed",
-					zap.Error(err), zap.Int64("round", cb.Round))
-			}
-			logging.Logger.Info("sync_blocks - save state changes success",
-				zap.Int64("round", cb.Round),
-				zap.String("block", cb.Hash))
-		}
-
-		logging.Logger.Info("sync_blocks success", zap.Int64("round", cb.Round),
-			zap.String("block", cb.Hash))
-	}
-
-	blocks = blocks[failedIndex+1:]
-	if len(blocks) > 0 {
-		c.UpdateBlocks(blocks)
-	}
-
-	return blocks
+	return pb
 }
 
 // SyncStateOrComputeLocal syncs state changes from remote first, if failed, then
