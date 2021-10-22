@@ -184,6 +184,8 @@ type Chain struct {
 
 	notarizedBlockVerifyC map[string]chan struct{}
 	nbvcMutex             *sync.Mutex
+	blockSyncC            map[string]chan chan *block.Block
+	bscMutex              *sync.Mutex
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -484,6 +486,8 @@ func Provider() datastore.Entity {
 	c.ticketsVerifyRequestC = make(chan struct{}, 50)
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
+	c.blockSyncC = make(map[string]chan chan *block.Block)
+	c.bscMutex = &sync.Mutex{}
 	return c
 }
 
@@ -497,7 +501,9 @@ func (c *Chain) Initialize() {
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
 	c.finalizedBlocksChannel = make(chan *block.Block, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
-	c.stateDB = stateDB
+	// TODO: debug purpose, add the stateDB back
+	//c.stateDB = stateDB
+	c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
