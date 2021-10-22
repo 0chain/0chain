@@ -14,4 +14,10 @@ service MinerService {
       get : "/v2/_x2m/block/notarized_block/get"
     };
   }
+  //
+  rpc Sign(SignRequest) returns (SignResponse) {
+    option (google.api.http) = {
+      get : "/_sign"
+    };
+  }
 }
