@@ -9,7 +9,9 @@ import (
 	"github.com/0chain/errors"
 )
 
-type minerGRPCService struct{}
+type minerGRPCService struct {
+	minerproto.UnimplementedMinerServiceServer
+}
 
 func NewMinerGRPCService() *minerGRPCService {
 	return &minerGRPCService{}
