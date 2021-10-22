@@ -53,7 +53,6 @@ func (m *minerGRPCService) ConfigUpdate(_ context.Context, req *minerproto.Confi
 func (m *minerGRPCService) ConfigUpdateAll(_ context.Context, req *minerproto.ConfigUpdateRequest) (*httpbody.HttpBody, error) {
 	mb := chain.GetServerChain().GetCurrentMagicBlock()
 
-	// range all miners
 	for _, miner := range mb.Miners.Nodes {
 		if node.Self.Underlying().PublicKey != miner.PublicKey {
 			go func(miner *node.Node) {
@@ -70,9 +69,16 @@ func (m *minerGRPCService) ConfigUpdateAll(_ context.Context, req *minerproto.Co
 			}(miner)
 		}
 	}
-	updateConfig(req.GenerateTimeout, req.TxnWaitTime, updateConfigAllURL)
+
+	output, err := updateConfig(req.GenerateTimeout, req.TxnWaitTime, updateConfigAllURL)
+	if err != nil {
+		return nil, err
+	}
 	//
-	return nil, nil
+	return &httpbody.HttpBody{
+		ContentType: "text/html;charset=UTF-8",
+		Data:        output,
+	}, nil
 }
 
 // updateConfig
@@ -88,7 +94,6 @@ func updateConfig(genTimeout, tnxWaitTime, updateURL string) ([]byte, error) {
 		viper.Set("server_chain.block.generation.retry_wait_time", newTxnWaitTime)
 	}
 
-	// parse HTML form
 	tmpl, err := template.New("html_form").Parse(formHTML)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not parse html form")
@@ -103,12 +108,10 @@ func updateConfig(genTimeout, tnxWaitTime, updateURL string) ([]byte, error) {
 		TnxWaitTime:     viper.Get("server_chain.block.generation.retry_wait_time").(string),
 	}
 
-	// execute tmpl and generate HTML form.
 	var output bytes.Buffer
 	if err := tmpl.Execute(&output, params); err != nil {
 		return nil, errors.Wrap(err, "could not execute html form")
 	}
 
-	// return html parsed form
 	return output.Bytes(), nil
 }
