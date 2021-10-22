@@ -45,8 +45,8 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 			{
 				name:     benchmark.Zcn + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
-				input:    createRandomAuthorizer(data.PublicKeys),
+				txn:      createTransaction(data.Clients[addingAuthorizer], data.PublicKeys[addingAuthorizer]),
+				input:    createAuthorizer(data.PublicKeys[addingAuthorizer], addingAuthorizer),
 			},
 			{
 				name:     benchmark.Zcn + DeleteAuthorizerFunc,
