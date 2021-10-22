@@ -175,7 +175,6 @@ type Chain struct {
 	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
-	syncBlocksC chan *SyncBlockReq
 
 	minersPublicKeys *cache.LRU
 
@@ -194,27 +193,6 @@ type SyncBlockReq struct {
 	Round    int64
 	Num      int64
 	SaveToDB bool
-}
-
-// GetSyncBlocksChan returns the channel for receving block
-// sync request
-func (c *Chain) GetSyncBlocksChan() chan *SyncBlockReq {
-	return c.syncBlocksC
-}
-
-// AsyncSyncBlocks send a request to sync blocks back that startinng
-// from the given block or round,
-// return error if failed to push to channel or timeout
-func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case c.syncBlocksC <- &req:
-	case <-time.After(500 * time.Millisecond):
-		return errors.New("push block sync request to channel timeout")
-	}
-
-	return nil
 }
 
 // SyncLFBStateNow notify workers to start the LFB state sync immediately.
@@ -498,7 +476,6 @@ func Provider() datastore.Entity {
 	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
-	c.syncBlocksC = make(chan *SyncBlockReq, 100)
 
 	c.minersPublicKeys = cache.NewLRUCache(1 << 16) // 65536
 
