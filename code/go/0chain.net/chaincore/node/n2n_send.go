@@ -230,23 +230,24 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetSendHeaders(req, entity, options)
-			cctx, cancel := context.WithTimeout(ctx, timeout)
-			defer cancel()
-			req = req.WithContext(cctx)
 			// Keep the number of messages to a node bounded
 			var (
-				ts       time.Time
 				selfNode *Node
 				resp     *http.Response
+				ts       = time.Now()
 			)
+
 			func() {
 				receiver.Grab()
 				defer receiver.Release()
 
-				ts = time.Now()
 				selfNode = Self.Underlying()
 				selfNode.SetLastActiveTime(ts)
 				selfNode.InduceDelay(receiver)
+
+				cctx, cancel := context.WithTimeout(ctx, timeout)
+				defer cancel()
+				req = req.WithContext(cctx)
 				//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 				resp, err = httpClient.Do(req)
 			}()
