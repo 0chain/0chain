@@ -119,3 +119,12 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// // Update config endpoint \\ \\
+// ConfigUpdateRequest
+message ConfigUpdateRequest {
+  string generate_timeout = 1;
+  string txn_wait_time = 2;
+}
+
+// ConfigUpdateResponse is returned as httpbody.HttpBody{}
