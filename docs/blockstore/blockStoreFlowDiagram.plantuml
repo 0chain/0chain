@@ -4,12 +4,24 @@
 --> [Select able HDD as per strategy] "HDD"
 note right: "Strategies: MinSize, MinFiles, RoundRobin, Random"
 
+if "Able to store?" then
+    -->[true] ===B1===
+    
+else
+    -->[false] Remove HDD and select next
+    --> "HDD"
+endif
 
 --> ===B1===
-===B1=== --> [Block Meta Record] "Store BMR"
---> ===B2===
+if "No HDD selected" then
+    -->[true] (*)
+else
+    -->===B2===
+endif
+===B2=== --> [Block Meta Record] "Store BMR"
+--> ===B3===
 
-===B1=== --> "Compress and store block in HDD"
---> ===B2===
+===B2=== --> "Compress and store block in HDD"
+--> ===B3===
 -->(*)
 @enduml
