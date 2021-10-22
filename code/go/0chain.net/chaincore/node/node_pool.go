@@ -104,14 +104,19 @@ func (np *Pool) start() {
 
 func (np *Pool) getNodesFromC() (nds []*Node) {
 	np.start()
-	select {
-	case nds = <-np.getNodesC:
-		return
-	case <-time.After(500 * time.Millisecond):
-		logging.Logger.Warn("get nodes timeout", zap.Int32("ID", np.id))
-		return
+	i := 0
+	for {
+		select {
+		case nds = <-np.getNodesC:
+			return
+		case <-time.After(500 * time.Millisecond):
+			logging.Logger.Warn("get nodes timeout",
+				zap.Int32("ID", np.id),
+				zap.Int("retry", i))
+			i++
+			continue
+		}
 	}
-
 }
 
 func (np *Pool) updateNodesToC(nds []*Node) {
