@@ -1,14 +1,16 @@
 package block
 
 import (
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
 	"context"
 	"strconv"
+
+	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 )
 
 type MagicBlockData struct {
 	datastore.IDField
+	datastore.EncodedDataCache `json:"-"`
 	*MagicBlock
 }
 

@@ -19,12 +19,13 @@ var ErrHashMismatch = errors.New("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
-	Hash      util.Key    `json:"root"`
-	Version   string      `json:"version"`
-	StartRoot util.Key    `json:"start"`
-	Nodes     []util.Node `json:"_"`
-	mndb      *util.MemoryNodeDB
-	root      util.Node
+	datastore.EncodedDataCache `json:"-"`
+	Hash                       util.Key    `json:"root"`
+	Version                    string      `json:"version"`
+	StartRoot                  util.Key    `json:"start"`
+	Nodes                      []util.Node `json:"_"`
+	mndb                       *util.MemoryNodeDB
+	root                       util.Node
 }
 
 //NewPartialState - create a new partial state object with initialization

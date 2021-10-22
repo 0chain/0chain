@@ -8,9 +8,10 @@ import (
 
 type DKGKeyShare struct {
 	datastore.IDField
-	Message string `json:"message"`
-	Share   string `json:"share"`
-	Sign    string `json:"sign"`
+	datastore.EncodedDataCache `json:"-"`
+	Message                    string `json:"message"`
+	Share                      string `json:"share"`
+	Sign                       string `json:"sign"`
 }
 
 func (dks *DKGKeyShare) Encode() []byte {

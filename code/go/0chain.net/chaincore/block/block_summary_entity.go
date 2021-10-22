@@ -16,6 +16,7 @@ type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
+	datastore.EncodedDataCache `json:"-"`
 
 	Hash                  string        `json:"hash"`
 	MinerID               datastore.Key `json:"miner_id"`

@@ -18,7 +18,8 @@ import (
 // BlockSummaries -
 type BlockSummaries struct {
 	datastore.IDField
-	BSummaryList []*block.BlockSummary `json:"block_summaries"`
+	datastore.EncodedDataCache `json:"-"`
+	BSummaryList               []*block.BlockSummary `json:"block_summaries"`
 }
 
 var blockSummariesEntityMetadata *datastore.EntityMetadataImpl

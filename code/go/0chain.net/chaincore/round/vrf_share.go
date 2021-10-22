@@ -11,10 +11,11 @@ import (
 //VRFShare - a VRF share
 type VRFShare struct {
 	datastore.NOIDField
-	Round             int64  `json:"round"`
-	Share             string `json:"share"`
-	RoundTimeoutCount int    `json:"timeoutcount"`
-	party             *node.Node
+	datastore.EncodedDataCache `json:"-"`
+	Round                      int64  `json:"round"`
+	Share                      string `json:"share"`
+	RoundTimeoutCount          int    `json:"timeoutcount"`
+	party                      *node.Node
 }
 
 var vrfsEntityMetadata *datastore.EntityMetadataImpl

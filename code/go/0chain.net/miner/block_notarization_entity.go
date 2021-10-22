@@ -9,10 +9,11 @@ import (
 that are good enough to get notarization */
 type Notarization struct {
 	datastore.NOIDField
-	VerificationTickets []*block.VerificationTicket
-	BlockID             datastore.Key `json:"block_id"`
-	Round               int64
-	Block               *block.Block `json:"-"`
+	datastore.EncodedDataCache `json:"-"`
+	VerificationTickets        []*block.VerificationTicket
+	BlockID                    datastore.Key `json:"block_id"`
+	Round                      int64
+	Block                      *block.Block `json:"-"`
 }
 
 var notarizationEntityMetadata *datastore.EntityMetadataImpl

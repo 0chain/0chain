@@ -194,7 +194,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		timeout = options.Timeout
 	}
 	return func(entity datastore.Entity) SendHandler {
-		data := getResponseData(options, entity).Bytes()
+		data := entity.GetCachedData(options.CODEC, options.Compress)
+		if len(data) == 0 {
+			data = getResponseData(options, entity).Bytes()
+			entity.SetCacheData(data, options.CODEC, options.Compress)
+		} else {
+			logging.Logger.Debug("data is cached", zap.Any("url", uri))
+		}
+
 		toPull := options.Pull
 		if len(data) > LargeMessageThreshold || toPull {
 			toPull = true

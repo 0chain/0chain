@@ -9,7 +9,8 @@ import (
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
 	datastore.HashIDField
-	Round int64 `json:"round"`
+	datastore.EncodedDataCache `json:"-"`
+	Round                      int64 `json:"round"`
 }
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl

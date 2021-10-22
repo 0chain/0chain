@@ -44,8 +44,9 @@ type DKG struct {
 
 type DKGSummary struct {
 	datastore.IDField
-	StartingRound int64             `json:"starting_round"`
-	SecretShares  map[string]string `json:"secret_shares"`
+	datastore.EncodedDataCache `json:"-"`
+	StartingRound              int64             `json:"starting_round"`
+	SecretShares               map[string]string `json:"secret_shares"`
 }
 
 // LatestMagicBlockID keeps ID of latest MB accepted and stored.
