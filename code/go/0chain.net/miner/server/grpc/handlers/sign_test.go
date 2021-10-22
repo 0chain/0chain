@@ -14,7 +14,6 @@ func TestSignHandler(t *testing.T) {
 		name  string
 		req   *minerproto.SignRequest
 		want  *minerproto.SignResponse
-		got   *minerproto.SignResponse
 		isErr bool
 	}{
 		{
