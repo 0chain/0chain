@@ -22,17 +22,17 @@ simulation:
 options:
   verbose: true
   test_suites:
-    - "storage"
-    - "storage_rest"
-    - "miner"
-    - "miner_rest"
-    - "faucet"
-    - "faucet_rest"
-    - "interest_pool"
-    - "interest_pool_rest"
-    - "vesting"
-    - "vesting_rest"
-    - "multi_sig"
+#    - "storage"
+#    - "storage_rest"
+#    - "miner"
+#    - "miner_rest"
+#    - "faucet"
+#    - "faucet_rest"
+#    - "interest_pool"
+#    - "interest_pool_rest"
+#    - "vesting"
+#    - "vesting_rest"
+#    - "multi_sig"
     - "zcnscbridge"
     - "zcnscbridge_rest"
   omitted_tests:
@@ -125,7 +125,7 @@ smart_contracts:
     min_authorizers: 1
     min_burn_amount: 1
     min_stake_amount: 0
-    burn_address: "0000000000000000000000000000000000000000000000000000000000000000"
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
 
 internal:
   t: 2
