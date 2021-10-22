@@ -170,7 +170,7 @@ func (n *Node) setupCommChannel() {
 	// because of this, we don't want the status monitoring to use this
 	// communication layer
 	if n.CommChannel == nil {
-		n.CommChannel = make(chan struct{}, 5)
+		n.CommChannel = make(chan struct{}, 15)
 	}
 }
 
@@ -713,7 +713,7 @@ func (n *Node) Clone() *Node {
 		smallMessageSendTime:      n.smallMessageSendTime,
 		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
 		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
-		CommChannel:               make(chan struct{}, 5),
+		CommChannel:               make(chan struct{}, 15),
 	}
 
 	cc := n.Client.Clone()

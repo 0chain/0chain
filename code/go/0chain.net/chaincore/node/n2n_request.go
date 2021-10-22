@@ -36,7 +36,7 @@ func GetFetchStrategy() int {
 }
 
 // RequestEntity - request an entity from nodes in the pool, returns when any node has response
-func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
+func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF, reqNum int) *Node {
 	ts := time.Now()
 	rhandler := requestor(params, handler)
 	var nds []*Node
@@ -46,13 +46,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		nds = np.GetNodesByLargeMessageTime()
 	}
 
-	maxNum := 4
-	if maxNum > len(nds) {
-		maxNum = len(nds)
-	}
-
-	// TODO: send requests to next batch of maxNum nodes if the first 4 nodes does not give response
-	nc, err := sendRequestConcurrent(ctx, nds[:maxNum], rhandler)
+	nc, err := sendRequestConcurrent(ctx, nds[:reqNum], rhandler)
 	switch err {
 	case nil:
 	case context.Canceled:
@@ -73,6 +67,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 
 	case <-ctx.Done():
 	}
+
 	return nil
 }
 
