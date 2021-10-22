@@ -2,7 +2,9 @@ package zcnsc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/smartcontract/benchmark"
@@ -20,11 +22,6 @@ type benchTest struct {
 	) (string, error)
 	txn   *transaction.Transaction
 	input []byte
-	error string
-}
-
-func (bt benchTest) Error() string {
-	return bt.error
 }
 
 func (bt benchTest) Name() string {
@@ -49,19 +46,19 @@ func BenchmarkTests(data benchmark.BenchData, _ benchmark.SignatureScheme) bench
 			{
 				name:     benchmark.Zcn + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
-				input:    createRandomAuthorizer(data.PublicKeys),
+				txn:      createTransaction(data.Clients[addingAuthorizer], data.PublicKeys[addingAuthorizer]),
+				input:    createAuthorizer(data.PublicKeys[addingAuthorizer], addingAuthorizer),
 			},
 			{
 				name:     benchmark.Zcn + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(data.Clients[commonClientId], data.PublicKeys[commonClientId]),
+				txn:      createTransaction(data.Clients[removableAuthorizer], data.PublicKeys[removableAuthorizer]),
 				input:    nil,
 			},
 			{
 				name:     benchmark.Zcn + BurnFunc,
 				endpoint: sc.Burn,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				txn:      createRandomBurnTransaction(data.Clients, data.PublicKeys),
 				input:    createBurnPayload(),
 			},
 			{
@@ -113,15 +110,34 @@ func createRandomTransaction(clients, publicKey []string) *transaction.Transacti
 	return createTransaction(clients[index], publicKey[index])
 }
 
+func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {
+	index := randomIndex(len(clients))
+	return createBurnTransaction(clients[index], publicKey[index])
+}
+
+func createBurnTransaction(clientId, publicKey string) *transaction.Transaction {
+	return &transaction.Transaction{
+		HashIDField: datastore.HashIDField{
+			Hash: encryption.Hash("mock transaction hash"),
+		},
+		ClientID:     clientId,
+		PublicKey:    publicKey,
+		ToClientID:   config.SmartContractConfig.GetString(benchmark.BurnAddress),
+		Value:        3000,
+		CreationDate: common.Now(),
+	}
+}
+
 func createTransaction(clientId, publicKey string) *transaction.Transaction {
 	return &transaction.Transaction{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("mock transaction hash"),
 		},
-		ClientID:   clientId,
-		PublicKey:  publicKey,
-		ToClientID: ADDRESS,
-		Value:      3000,
+		ClientID:     clientId,
+		PublicKey:    publicKey,
+		ToClientID:   ADDRESS,
+		Value:        3000,
+		CreationDate: common.Now(),
 	}
 }
 

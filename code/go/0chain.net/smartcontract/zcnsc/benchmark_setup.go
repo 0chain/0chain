@@ -6,12 +6,15 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/common"
 	"0chain.net/smartcontract/benchmark"
 	"encoding/json"
 )
 
 const (
-	commonClientId = 0
+	addingAuthorizer    = 0
+	removableAuthorizer = 1
 )
 
 var (
@@ -23,7 +26,7 @@ func Setup(clients []string, publicKeys []string, balances cstate.StateContextI)
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
 	addAuthorizersNode(balances)
-	addCommonAuthorizer(publicKeys, balances)
+	addCommonAuthorizer(clients, publicKeys, balances)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -50,20 +53,28 @@ func addAuthorizersNode(balances cstate.StateContextI) {
 	}
 }
 
-func addRandomAuthorizer(keys []string, balances cstate.StateContextI) {
+func addCommonAuthorizer(clients, keys []string, balances cstate.StateContextI) {
 	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
 		panic(err)
 	}
-	bytes := createRandomAuthorizer(keys)
-	authorizer := &AuthorizerNode{}
-	err = authorizer.Decode(bytes)
-	if err != nil {
-		panic(err)
-	}
-	err = ans.AddAuthorizer(authorizer)
-	if err != nil {
-		return
+
+	for i := 1; i < len(keys); i++ {
+		bytes := createAuthorizer(keys[i], i)
+		authorizer := &AuthorizerNode{}
+		authorizer.ID = clients[i]
+		err = authorizer.Decode(bytes)
+		if err != nil {
+			panic(err)
+		}
+
+		authorizer.Staking = createTokenPool(clients[i])
+
+		authorizers = append(authorizers, authorizer)
+		err = ans.AddAuthorizer(authorizer)
+		if err != nil {
+			panic(err)
+		}
 	}
 	err = ans.Save(balances)
 	if err != nil {
@@ -71,28 +82,19 @@ func addRandomAuthorizer(keys []string, balances cstate.StateContextI) {
 	}
 }
 
-func addCommonAuthorizer(keys []string, balances cstate.StateContextI) {
-	ans, err := GetAuthorizerNodes(balances)
-	if err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < len(keys); i++ {
-		bytes := createAuthorizer(keys[i], i)
-		authorizer := &AuthorizerNode{}
-		err = authorizer.Decode(bytes)
-		if err != nil {
-			panic(err)
-		}
-		authorizers = append(authorizers, authorizer)
-		err = ans.AddAuthorizer(authorizer)
-		if err != nil {
-			return
-		}
-	}
-	err = ans.Save(balances)
-	if err != nil {
-		panic(err)
+func createTokenPool(clientId string) *tokenpool.ZcnLockingPool {
+	return &tokenpool.ZcnLockingPool{
+		ZcnPool: tokenpool.ZcnPool{
+			TokenPool: tokenpool.TokenPool{
+				ID:      clientId,
+				Balance: 100 * 1e10,
+			},
+		},
+		TokenLockInterface: &TokenLock{
+			StartTime: common.Now(),
+			Duration:  0,
+			Owner:     clientId,
+		},
 	}
 }
 
