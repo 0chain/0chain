@@ -1,6 +1,7 @@
 package zcnsc
 
 import (
+	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
@@ -8,8 +9,10 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
+	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
 	"encoding/json"
+	"strconv"
 )
 
 const (
@@ -18,15 +21,28 @@ const (
 )
 
 var (
-	nonce       = int64(0)
+	burnNonce   = int64(0)
+	mintNonce   = int64(0)
 	authorizers []*AuthorizerNode
 )
 
-func Setup(clients []string, publicKeys []string, balances cstate.StateContextI) {
+func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
+	chainSetup()
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
 	addAuthorizersNode(balances)
-	addCommonAuthorizer(clients, publicKeys, balances)
+	addCommonAuthorizers(clients, publicKeys, balances)
+}
+
+func chainSetup() {
+	// settings are irrelevant here, it needs only schema
+	ch := chain.NewChainFromConfig()
+	ch.SetSignatureScheme(viper.GetString(benchmark.InternalSignatureScheme))
+	chain.SetServerChain(ch)
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	if signatureScheme == nil {
+		panic(signatureScheme)
+	}
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -53,22 +69,22 @@ func addAuthorizersNode(balances cstate.StateContextI) {
 	}
 }
 
-func addCommonAuthorizer(clients, keys []string, balances cstate.StateContextI) {
+func addCommonAuthorizers(clients, publicKeys []string, balances cstate.StateContextI) {
 	ans, err := GetAuthorizerNodes(balances)
 	if err != nil {
 		panic(err)
 	}
 
-	for i := 1; i < len(keys); i++ {
-		bytes := createAuthorizer(keys[i], i)
-		authorizer := &AuthorizerNode{}
-		authorizer.ID = clients[i]
-		err = authorizer.Decode(bytes)
-		if err != nil {
-			panic(err)
-		}
+	for i := 1; i < len(clients); i++ {
+		id := clients[i]
+		publicKey := publicKeys[i]
 
-		authorizer.Staking = createTokenPool(clients[i])
+		authorizer := &AuthorizerNode{
+			ID:        id,
+			PublicKey: publicKey,
+			URL:       "http://localhost:303" + strconv.Itoa(i),
+			Staking:   createTokenPool(id),
+		}
 
 		authorizers = append(authorizers, authorizer)
 		err = ans.AddAuthorizer(authorizer)

@@ -179,7 +179,7 @@ func (mp *MintPayload) Decode(input []byte) error {
 	id, ok = objMap["signatures"]
 	if ok {
 		if id == nil {
-			return errors.New("signatures is missing in the payload")
+			return errors.New("signatures entry is missing in payload")
 		}
 		var sigs []*json.RawMessage
 		err = json.Unmarshal(*id, &sigs)

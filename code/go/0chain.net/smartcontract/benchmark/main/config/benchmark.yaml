@@ -121,7 +121,7 @@ smart_contracts:
     max_description_length: 100
   zcn:
     min_mint_amount: 1
-    percent_authorizers: 0.7
+    percent_authorizers: 0
     min_authorizers: 1
     min_burn_amount: 1
     min_stake_amount: 0
