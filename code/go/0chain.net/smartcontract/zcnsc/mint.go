@@ -45,8 +45,9 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		err = common.NewError(
 			"failed to mint",
 			fmt.Sprintf(
-				"nonce given (%v) is more than 1 higher than current (%v) for Node.ID: '%s'",
+				"nonce given (%v) for receiving client (%s) must be greater by 1 than the current node nonce (%v) for Node.ID: '%s'",
 				payload.Nonce,
+				payload.ReceivingClientID,
 				un.Nonce,
 				un.ID,
 			),

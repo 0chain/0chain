@@ -67,11 +67,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	//err = an.Save(balances)
-	//if err != nil {
-	//	return "", err
-	//}
-
 	logging.Logger.Debug("trying to save state", zap.String("hash", tran.Hash))
 	err = ans.Save(balances)
 	if err != nil {
