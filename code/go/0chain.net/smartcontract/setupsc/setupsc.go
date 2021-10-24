@@ -14,7 +14,7 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
+	"0chain.net/smartcontract/zcnsc"
 )
 
 type SCName int
@@ -22,35 +22,35 @@ type SCName int
 const (
 	Faucet SCName = iota
 	Storage
-	Zrc20
 	Interest
 	Multisig
 	Miner
 	Vesting
 	Magma
+	Zcn
 )
 
 var (
 	SCNames = []string{
 		"faucet",
 		"storage",
-		"zrc20",
 		"interest",
 		"multisig",
 		"miner",
 		"vesting",
 		magmasc.Name,
+		"zcn",
 	}
 
 	SCCode = map[string]SCName{
 		"faucet":     Faucet,
 		"storage":    Storage,
-		"zrc20":      Zrc20,
 		"interest":   Interest,
 		"multisig":   Multisig,
 		"miner":      Miner,
 		"vesting":    Vesting,
 		magmasc.Name: Magma,
+		"zcn":        Zcn,
 	}
 )
 
@@ -78,8 +78,6 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return faucetsc.NewFaucetSmartContract()
 	case Storage:
 		return storagesc.NewStorageSmartContract()
-	case Zrc20:
-		return zrc20sc.NewZRC20SmartContract()
 	case Interest:
 		return interestpoolsc.NewInterestPoolSmartContract()
 	case Multisig:
@@ -97,7 +95,8 @@ func newSmartContract(name string) sci.SmartContractInterface {
 			return nil
 		}
 		return msc
-
+	case Zcn:
+		return zcnsc.NewZCNSmartContract()
 	default:
 		return nil
 	}

@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"0chain.net/smartcontract/zcnsc"
 	"encoding/hex"
+
+	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
 
@@ -83,7 +86,7 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 	log.Println("made empty blockchain")
-	clients, publicKeys, privateKeys := addMockkClients(pMpt)
+	clients, publicKeys, privateKeys := addMockClients(pMpt)
 	log.Println("added clients")
 	faucetsc.FundMockFaucetSmartContract(pMpt)
 	log.Println("funded faucet")
@@ -110,12 +113,14 @@ func setUpMpt(
 	log.Println("created balances")
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
-	validators := storagesc.AddMockValidators(balances)
+	validators := storagesc.AddMockValidators(publicKeys, balances)
 	log.Println("added validators")
 	blobbers := storagesc.AddMockBlobbers(balances)
 	log.Println("added blobbers")
 	stakePools := storagesc.GetMockStakePools(clients, balances)
 	log.Println("added stake pools")
+	storagesc.GetMockValidatorStakePools(clients, balances)
+	log.Println("added validator stake pools")
 	storagesc.AddMockAllocations(
 		clients, publicKeys, stakePools, blobbers, validators, balances,
 	)
@@ -149,6 +154,12 @@ func setUpMpt(
 	vestingsc.AddVestingPools(clients, balances)
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+	log.Println("added miners phase node")
+	zcnsc.Setup(clients, publicKeys, balances)
+	log.Println("added zcnsc")
+	log.Println("added phase node")
+	control.AddControlObjects(balances)
+	log.Println("added control objects")
 
 	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
 		Clients:     clients,
@@ -158,7 +169,7 @@ func setUpMpt(
 	}
 }
 
-func addMockkClients(
+func addMockClients(
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
 	blsScheme := BLS0ChainScheme{}

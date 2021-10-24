@@ -482,14 +482,30 @@ func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
 }
 
 //
-// Byzantine VC miners.
+// Misbehavior
 //
+
+func (r *Runner) ConfigureGeneratorsFailure(round Round) (
+	err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] configure generators failure for round %v", round)
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.GeneratorsFailureRoundNumber = round
+	})
+	if err != nil {
+		return fmt.Errorf("configuring generators failure for round %v: %v", round, err)
+	}
+	return
+}
 
 func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	err error) {
 
 	if r.verbose {
-		log.Printf(" [INF] set reveled of %s to %t", ss, pin)
+		log.Printf(" [INF] set revealed of %s to %t", ss, pin)
 	}
 
 	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
@@ -500,6 +516,10 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	}
 	return
 }
+
+//
+// Byzantine VC miners.
+//
 
 func (r *Runner) MPK(mpk *config.Bad) (err error) {
 	r.verbosePrintByGoodBad("MPK", mpk)

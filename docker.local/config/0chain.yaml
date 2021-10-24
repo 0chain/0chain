@@ -20,6 +20,7 @@ development:
     multisig: true
     vesting: true
     magma: true
+    zcn: true
   txn_generation:
     wallets: 50
     max_transactions: 0

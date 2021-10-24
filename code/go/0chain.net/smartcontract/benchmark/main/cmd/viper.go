@@ -23,7 +23,7 @@ func GetViper(path string) {
 	viper.AddConfigPath("..")
 	err := viper.ReadInConfig()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	config.SmartContractConfig = cviper.GetViper()
 	validateConfig()
