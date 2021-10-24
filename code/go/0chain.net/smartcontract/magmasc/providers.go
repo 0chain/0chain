@@ -204,8 +204,8 @@ func (m *Providers) write(scID string, item *zmc.Provider, db *gorocksdb.Transac
 // providersFetch extracts all providers stored in memory data store with given id.
 func providersFetch(id string, db *gorocksdb.TransactionDB) (*Providers, error) {
 	list := &Providers{}
-
 	tx := store.GetTransaction(db)
+
 	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
 		return list, errors.Wrap(zmc.ErrCodeInternal, "get providers list failed", err)

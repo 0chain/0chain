@@ -59,8 +59,8 @@ const (
 	// and SHA3-256 hex encoded hash of "all_providers" string.
 	allProvidersKey = zmc.Address + "7e306c02ea1719b598aaf9dc7516eb930cd47c5360d974e22ab01e21d66a93d8"
 
-	// providerStakeTokenPool contents a value of provider's stake token pool string type.
-	providerStakeTokenPool = "provider_stake_token_pool"
+	// providerStake contents a value of provider's stake token pool string type.
+	providerStake = "provider_stake"
 
 	// providerType contents a value of type of Provider's node.
 	providerType = "provider"
@@ -72,10 +72,10 @@ const (
 	allAccessPointsKey = zmc.Address + "b0473d07c62a69f3d03165d3afc670045b8471309102e169fc2e990bd065e74c"
 
 	// accessPointType contents a value of type of Access Point's node.
-	accessPointType = "access-point"
+	accessPointType = "access_point"
 
-	// accessPointStakeTokenPool contents a value of access point's stake token pool string type.
-	accessPointStakeTokenPool = "access_point_stake_token_pool"
+	// accessPointStake contents a value of access point's stake token pool string type.
+	accessPointStake = "access_point_stake"
 )
 
 const (

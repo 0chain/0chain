@@ -6,6 +6,7 @@ import (
 	"github.com/0chain/gosdk/core/util"
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/time"
 
 	tx "0chain.net/chaincore/transaction"
 )
@@ -13,8 +14,9 @@ import (
 type (
 	// tokenPoolReq represents lock pool request implementation.
 	tokenPoolReq struct {
-		ID       string        `json:"id"`
-		Provider *zmc.Provider `json:"provider"`
+		ID       string         `json:"id"`
+		PayeeID  string         `json:"payee_id"` // empty val means the pool for all
+		ExpireAt time.Timestamp `json:"expire_at"` // empty val means the pool has no time limits
 		txn      *tx.Transaction
 	}
 )
@@ -38,7 +40,8 @@ func (m *tokenPoolReq) Decode(blob []byte) error {
 	}
 
 	m.ID = req.ID
-	m.Provider = req.Provider
+	m.PayeeID = req.PayeeID
+	m.ExpireAt = req.ExpireAt
 
 	return nil
 }
@@ -71,7 +74,7 @@ func (m *tokenPoolReq) PoolPayerID() string {
 
 // PoolPayeeID implements PoolConfigurator interface.
 func (m *tokenPoolReq) PoolPayeeID() string {
-	return m.Provider.Id
+	return m.PayeeID
 }
 
 // Validate checks tokenPoolReq for correctness.
@@ -85,9 +88,6 @@ func (m *tokenPoolReq) Validate() (err error) {
 
 	case m.ID == "":
 		err = errors.New(zmc.ErrCodeBadRequest, "pool id is required")
-
-	case m.Provider == nil || m.Provider.ExtId == "":
-		err = errors.New(zmc.ErrCodeBadRequest, "provider external id is required")
 	}
 
 	return err

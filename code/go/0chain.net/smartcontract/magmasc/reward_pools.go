@@ -3,9 +3,9 @@ package magmasc
 import (
 	"encoding/json"
 
+	"github.com/0chain/gorocksdb"
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
-	"github.com/0chain/gosdk/zmagmacore/time"
 
 	chain "0chain.net/chaincore/chain/state"
 	store "0chain.net/core/ememorystore"
@@ -20,7 +20,7 @@ type (
 	}
 )
 
-func (m *rewardPools) add(scID string, item *tokenPool, db *store.Connection, sci chain.StateContextI) error {
+func (m *rewardPools) add(scID string, item *tokenPool, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(zmc.ErrCodeInternal, "token pool invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
@@ -45,26 +45,27 @@ func (m *rewardPools) copy() *rewardPools {
 	return &pools
 }
 
-func (m *rewardPools) del(payeeID, poolID string, db *store.Connection) (*tokenPool, error) {
+func (m *rewardPools) del(scID string, item *tokenPool, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*tokenPool, error) {
 	var pools *rewardPools
+	if _, err := sci.DeleteTrieNode(nodeUID(scID, rewardTokenPool, item.ID)); err != nil {
+		return nil, errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "delete reward pool failed", err)
+	}
 
-	pool, found := m.List[payeeID][poolID]
+	pool, found := m.List[item.PayeeID][item.ID]
 	if found {
-		if pool.ExpireAt > time.Now() {
-			return nil, errors.New(zmc.ErrCodeInternal, "token pool is not expired yet")
-		}
-
 		pools = m.copy()
-		delete(pools.List[payeeID], poolID)
+		delete(pools.List[item.PayeeID], item.ID)
 
 		blob, err := json.Marshal(pools.List)
 		if err != nil {
 			return nil, errors.Wrap(zmc.ErrCodeInternal, "encode pools list failed", err)
 		}
-		if err = db.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
+
+		tx := store.GetTransaction(db)
+		if err = tx.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
 			return nil, errors.Wrap(zmc.ErrCodeInternal, "insert pools list failed", err)
 		}
-		if err = db.Commit(); err != nil {
+		if err = tx.Commit(); err != nil {
 			return nil, errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
 		}
 	}
@@ -92,9 +93,12 @@ func (m *rewardPools) put(item *tokenPool) {
 	m.List[item.PayeeID][item.ID] = item
 }
 
-func (m *rewardPools) write(scID string, item *tokenPool, db *store.Connection, sci chain.StateContextI) error {
+func (m *rewardPools) write(scID string, item *tokenPool, db *gorocksdb.TransactionDB, sci chain.StateContextI) error {
 	if item == nil {
 		return errors.New(zmc.ErrCodeInternal, "token pool invalid value").Wrap(zmc.ErrNilPointerValue)
+	}
+	if _, err := sci.InsertTrieNode(nodeUID(scID, rewardTokenPool, item.ID), item); err != nil {
+		return errors.Wrap(zmc.ErrCodeInternal, "insert token pool failed", err)
 	}
 
 	var pools *rewardPools
@@ -106,15 +110,14 @@ func (m *rewardPools) write(scID string, item *tokenPool, db *store.Connection, 
 		if err != nil {
 			return errors.Wrap(zmc.ErrCodeInternal, "encode pools list failed", err)
 		}
-		if err = db.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
+
+		tx := store.GetTransaction(db)
+		if err = tx.Conn.Put([]byte(allRewardPoolsKey), blob); err != nil {
 			return errors.Wrap(zmc.ErrCodeInternal, "insert pools list failed", err)
 		}
-	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, rewardTokenPool, item.ID), item); err != nil {
-		return errors.Wrap(zmc.ErrCodeInternal, "insert token pool failed", err)
-	}
-	if err := db.Commit(); err != nil {
-		return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
+		if err = tx.Commit(); err != nil {
+			return errors.Wrap(zmc.ErrCodeInternal, "commit changes failed", err)
+		}
 	}
 	if pools != nil {
 		m.List = pools.List
@@ -124,10 +127,11 @@ func (m *rewardPools) write(scID string, item *tokenPool, db *store.Connection, 
 }
 
 // rewardPoolsFetch extracts all token pools stored in memory data store with given id.
-func rewardPoolsFetch(id string, db *store.Connection) (*rewardPools, error) {
+func rewardPoolsFetch(id string, db *gorocksdb.TransactionDB) (*rewardPools, error) {
 	pools := &rewardPools{List: make(map[string]map[string]*tokenPool)}
+	tx := store.GetTransaction(db)
 
-	buf, err := db.Conn.Get(db.ReadOptions, []byte(id))
+	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
 		return pools, errors.Wrap(zmc.ErrCodeInternal, "get token pools list failed", err)
 	}

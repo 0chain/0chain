@@ -194,8 +194,8 @@ func (m *Consumers) write(scID string, item *zmc.Consumer, db *gorocksdb.Transac
 // consumersFetch extracts all consumers stored in memory data store with given id.
 func consumersFetch(id string, db *gorocksdb.TransactionDB) (*Consumers, error) {
 	list := &Consumers{}
-
 	tx := store.GetTransaction(db)
+
 	buf, err := tx.Conn.Get(tx.ReadOptions, []byte(id))
 	if err != nil {
 		return list, errors.Wrap(zmc.ErrCodeInternal, "get consumers list failed", err)

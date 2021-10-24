@@ -51,7 +51,7 @@ func Test_NewMagmaSmartContract(t *testing.T) {
 	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
 	msc.RestHandlers[zmc.RewardPoolExistRP] = msc.rewardPoolExist
 	msc.RestHandlers[zmc.RewardPoolFetchRP] = msc.rewardPoolFetch
-	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
+	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.billingRatioFetch
 	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
 	msc.RestHandlers[zmc.UserFetchRP] = msc.userFetch
 

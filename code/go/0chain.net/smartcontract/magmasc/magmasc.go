@@ -41,29 +41,29 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc := MagmaSmartContract{SmartContract: sci.NewSC(zmc.Address)}
 
 	// Magma smart contract REST handlers
-	msc.RestHandlers[zmc.SessionRP] = msc.sessionAccepted
-	msc.RestHandlers[zmc.VerifySessionAcceptedRP] = msc.sessionAcceptedVerify
-	msc.RestHandlers[zmc.IsSessionExistRP] = msc.sessionExist
+	msc.RestHandlers[zmc.AccessPointFetchRP] = msc.accessPointFetch
+	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
+	msc.RestHandlers[zmc.AccessPointRegisteredRP] = msc.accessPointExist
+	msc.RestHandlers[zmc.ConsumerFetchRP] = msc.consumerFetch
+	msc.RestHandlers[zmc.ConsumerRegisteredRP] = msc.consumerExist
+	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.billingRatioFetch
 	msc.RestHandlers[zmc.GetAllConsumersRP] = msc.allConsumers
 	msc.RestHandlers[zmc.GetAllProvidersRP] = msc.allProviders
-	msc.RestHandlers[zmc.ConsumerRegisteredRP] = msc.consumerExist
-	msc.RestHandlers[zmc.ConsumerFetchRP] = msc.consumerFetch
+	msc.RestHandlers[zmc.IsSessionExistRP] = msc.sessionExist
+	msc.RestHandlers[zmc.SessionRP] = msc.sessionAccepted
+	msc.RestHandlers[zmc.VerifySessionAcceptedRP] = msc.sessionAcceptedVerify
+	msc.RestHandlers[zmc.ProviderFetchRP] = msc.providerFetch
 	msc.RestHandlers[zmc.ProviderMinStakeFetchRP] = msc.providerMinStakeFetch
 	msc.RestHandlers[zmc.ProviderRegisteredRP] = msc.providerExist
-	msc.RestHandlers[zmc.ProviderFetchRP] = msc.providerFetch
-	msc.RestHandlers[zmc.AccessPointFetchRP] = msc.accessPointFetch
-	msc.RestHandlers[zmc.AccessPointRegisteredRP] = msc.accessPointExist
-	msc.RestHandlers[zmc.AccessPointMinStakeFetchRP] = msc.accessPointMinStakeFetch
 	msc.RestHandlers[zmc.RewardPoolExistRP] = msc.rewardPoolExist
 	msc.RestHandlers[zmc.RewardPoolFetchRP] = msc.rewardPoolFetch
-	msc.RestHandlers[zmc.FetchBillingRatioRP] = msc.fetchBillingRatio
-	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
 	msc.RestHandlers[zmc.UserFetchRP] = msc.userFetch
+	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
 
 	// metrics setup section
+	msc.SmartContractExecutionStats[zmc.AccessPointRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.AccessPointRegisterFuncName, nil)
 	msc.SmartContractExecutionStats[zmc.ConsumerRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ConsumerRegisterFuncName, nil)
 	msc.SmartContractExecutionStats[zmc.ProviderRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.ProviderRegisterFuncName, nil)
-	msc.SmartContractExecutionStats[zmc.AccessPointRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.AccessPointRegisterFuncName, nil)
 
 	return &msc
 }
@@ -97,13 +97,13 @@ func (m *MagmaSmartContract) Execute(txn *tx.Transaction, call string, blob []by
 	case zmc.AccessPointRegisterFuncName:
 		return m.accessPointRegister(txn, blob, sci)
 	case zmc.AccessPointUpdateTermsFuncName:
-		return m.accessPointUpdateTerms(txn, blob, sci)
+		return m.accessPointTermsUpdate(txn, blob, sci)
 	case zmc.AccessPointStakeFuncName:
 		return m.accessPointStake(txn, blob, sci)
 	case zmc.AccessPointUnStakeFuncName:
 		return m.accessPointUnstake(txn, blob, sci)
 	case zmc.AccessPointChangeProviderFuncName:
-		return m.accessPointChangeProvider(txn, blob, sci)
+		return m.accessPointProviderChange(txn, blob, sci)
 
 	// reward token pools functions list
 	case zmc.RewardPoolLockFuncName:
