@@ -238,7 +238,9 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
 		Logger.Info("TOC_FIX VRF Timeout > round timeout",
 			zap.Int("vrfs_timeout", vrfs.GetRoundTimeoutCount()),
-			zap.Int("round_timeout", mr.GetTimeoutCount()))
+			zap.Int("round_timeout", mr.GetTimeoutCount()),
+			zap.Int64("round", mr.GetRoundNumber()),
+			zap.Int64("vrf round", vrfs.Round))
 		return false
 	}
 

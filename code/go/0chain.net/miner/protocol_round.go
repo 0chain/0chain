@@ -1607,6 +1607,11 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 
 		// check out corresponding not. block
 		var xrhnb = xr.GetHeaviestNotarizedBlock()
+		if xrhnb == nil {
+			// fetch from remote
+			xrhnb = mc.GetHeaviestNotarizedBlock(ctx, xr)
+		}
+
 		if xrhnb == nil ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed()) {
