@@ -1009,7 +1009,11 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return errors.New("mpt does not merge changes from its child")
 	}
 
-	db := mpt.db.(*LevelNodeDB)
+	db, ok := mpt.db.(*LevelNodeDB)
+	if !ok {
+		Logger.Warn("MergeMPTChanges - mpt db is not *LevelNodeDB",
+			zap.Int64("version", int64(mpt.GetVersion())))
+	}
 
 	newRoot, changes, deletes, startRoot := mpt2.GetChanges()
 	if err := mpt.mergeChanges(newRoot, changes, deletes, startRoot); err != nil {
