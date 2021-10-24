@@ -196,8 +196,8 @@ func mockMagmaSmartContract() *MagmaSmartContract {
 	dirs := strings.Split(file, sep)
 
 	file = filepath.Join(sep, filepath.Join(dirs[:len(dirs)-5]...), "config", "sc.yaml")
-	if err := config.SmartContractConfig.ReadConfigFile(file); err != nil {
-		panic(err)
+	if err = config.SmartContractConfig.ReadConfigFile(file); err != nil {
+		config.SetupSmartContractConfig()
 	}
 	msc.cfg = config.SmartContractConfig.Sub("smart_contracts." + Name)
 
