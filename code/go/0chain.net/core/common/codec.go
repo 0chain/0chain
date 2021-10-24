@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 
 	. "0chain.net/core/logging"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -42,7 +42,7 @@ func WriteMsgpack(w io.Writer, entity interface{}) error {
 func ToMsgpack(entity interface{}) *bytes.Buffer {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buffer)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if impl, ok := entity.(ReadLockable); ok {
 		impl.DoReadLock()
 		defer impl.DoReadUnlock()
@@ -99,15 +99,15 @@ func FromMsgpack(data interface{}, entity interface{}) error {
 	switch jsondata := data.(type) {
 	case []byte:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer(jsondata))
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	case string:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer([]byte(jsondata)))
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	case io.Reader:
 		decoder := msgpack.NewDecoder(jsondata)
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	default:
 		return NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))

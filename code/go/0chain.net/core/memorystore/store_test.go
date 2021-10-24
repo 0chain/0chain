@@ -16,7 +16,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
 	"github.com/stretchr/testify/require"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"reflect"
 	"testing"

@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/stretchr/testify/require"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -234,7 +234,7 @@ func TestFromMsgpack(t *testing.T) {
 	b := block.NewBlock("", 1)
 	buf := bytes.Buffer{}
 	encoder := msgpack.NewEncoder(&buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if err := encoder.Encode(b); err != nil {
 		t.Fatal(err)
 	}

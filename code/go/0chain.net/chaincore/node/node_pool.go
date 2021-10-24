@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -421,5 +422,32 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 	np.computeNodePositions()
 	np.startOnce = &sync.Once{}
 
+	return nil
+}
+
+var _ msgpack.CustomDecoder = (*Pool)(nil)
+
+// DecodeMsgpack implements custome decoder for msgpack
+// to initialize variables in the Pool
+func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
+	type Alias Pool
+	var v = struct {
+		*Alias
+	}{
+		Alias: (*Alias)(np),
+	}
+
+	if err := dec.Decode(&v); err != nil {
+		return err
+	}
+
+	np.Nodes = make([]*Node, 0, len(np.NodesMap))
+	for k := range np.NodesMap {
+		np.Nodes = append(np.Nodes, np.NodesMap[k])
+	}
+
+	np.initGetNodesC()
+	np.computeNodePositions()
+	np.startOnce = &sync.Once{}
 	return nil
 }
