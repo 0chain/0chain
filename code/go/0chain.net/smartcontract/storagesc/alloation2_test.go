@@ -1,6 +1,13 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -9,13 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 type blobberStakes []int64
@@ -412,7 +413,8 @@ func testCancelAllocation(
 		}
 		for _, created := range blobberChallenges {
 			bc.Challenges = append(bc.Challenges, &StorageChallenge{
-				Created: created,
+				AllocationID: sAllocation.ID,
+				Created:      created,
 			})
 		}
 		_, err := ctx.InsertTrieNode(bc.GetKey(ssc.ID), &bc)
@@ -576,7 +578,6 @@ func confirmFinalizeAllocation(
 		require.NoError(t, err)
 		if wSplit[0] == blobberId {
 			if !rewardTransfers[bId] {
-				//fmt.Println("transfer", transfer, "i", i, "mldt", f.blobberServiceCharge(bId), f.minLockServiceCharge(bId))
 				var fbsc = f.bStakes[bId]
 				fbsc = fbsc
 				if math.Abs(float64(f.blobberServiceCharge(bId)-int64(transfer.Amount))) <= errDelta {
@@ -584,7 +585,6 @@ func confirmFinalizeAllocation(
 					continue
 				}
 			}
-			//fmt.Println("transfer", transfer, "i", i, "mldt", f.minLockServiceCharge(bId))
 			require.False(t, minLockTransfers[bId])
 			require.InDelta(t, f.minLockServiceCharge(bId), int64(transfer.Amount), errDelta)
 			minLockTransfers[bId] = true
@@ -600,7 +600,6 @@ func confirmFinalizeAllocation(
 				continue
 			}
 		}
-		//fmt.Println("transfer", transfer, "i", i, "mldt", f.minLockDelegatePayment(bId, dId), f.blobberDelegateReward(bId, dId))
 		require.False(t, minLockdelegateTransfers[bId][dId])
 		require.InDelta(t, f.minLockDelegatePayment(bId, dId), int64(transfer.Amount), errDelta)
 		minLockdelegateTransfers[bId][dId] = true
@@ -637,7 +636,6 @@ func confirmFinalizeAllocation(
 	for i := range minLockdelegateTransfers {
 		for j, transfered := range minLockdelegateTransfers[i] {
 			if !transfered {
-				//fmt.Println("i", i, "j", j)
 				require.InDelta(t, f.minLockDelegatePayment(i, j), 0, errDelta)
 			}
 		}
