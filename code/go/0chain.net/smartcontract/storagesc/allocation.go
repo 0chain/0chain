@@ -7,14 +7,13 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
+	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
@@ -1053,16 +1052,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 
+	Logger.With(zap.String("function", "getPrefferedBlobber")).Info("received blobbersList as ", zap.Any("allBlobbers", allBlobbers))
+
 	for _, storageNode := range allBlobbers {
-		logging.Logger.Debug("getPreferredBlobbers allBlobbers param",
+		Logger.Debug("getPreferredBlobbers allBlobbers param",
 			zap.String("StorageNode BaseURL", storageNode.BaseURL),
 		)
 		blobberMap[storageNode.BaseURL] = storageNode
 	}
 
-	logging.Logger.Debug("getPreferredBlobbers param",
-		zap.String("preferredBlobbers", strings.Join(preferredBlobbers, ",")),
-	)
+	Logger.Info("received preferedBlobbersList as ", zap.Any("preferredBlobbers", preferredBlobbers))
+
 
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
