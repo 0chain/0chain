@@ -995,22 +995,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
-	if request.OwnerID == "" {
-		request.OwnerID = t.ClientID
-	}
-
-	var clist *Allocations // client allocations list
-	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get client's allocations list: "+err.Error())
-	}
-
-	if !clist.has(request.ID) {
-		return "", common.NewErrorf("allocation_updating_failed",
-			"can't find allocation in client's allocations list: %s (%d)",
-			request.ID, len(clist.List))
-	}
-
 	var alloc *StorageAllocation
 	if alloc, err = sc.getAllocation(request.ID, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
