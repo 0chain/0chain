@@ -116,8 +116,6 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		return err
 	}
 
-	b.SetBlockNotarized()
-
 	// TODO: tps, question about this
 	if b.Round > c.GetCurrentRound() {
 		c.SetCurrentRound(b.Round)

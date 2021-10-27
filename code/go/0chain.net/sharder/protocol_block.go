@@ -202,6 +202,8 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	b.SetBlockNotarized()
+
 	if err = b.Validate(ctx); err != nil {
 		Logger.Error("block validation", zap.Any("round", b.Round),
 			zap.Any("hash", b.Hash), zap.Error(err))

@@ -383,6 +383,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
+		b.SetBlockNotarized()
 		return b, nil
 	}
 
@@ -522,6 +523,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 					zap.Error(err))
 				continue
 			}
+			nb.SetBlockNotarized()
 
 			// cancel further requests
 			cancel()

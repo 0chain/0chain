@@ -805,6 +805,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	}
 
 	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
+	pb.SetBlockNotarized()
 	mc.AddNotarizedBlock(ctx, pr, pb)
 	return nil
 }
@@ -1201,6 +1202,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 				zap.Error(err))
 			continue
 		}
+		fb.SetBlockNotarized()
 
 		// don't use the round, just create it or make sure it's created
 		mc.getOrCreateRound(ctx, fb.Round) // can' return nil
@@ -1279,6 +1281,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err
 		}
+		fb.SetBlockNotarized()
 
 		mc.getOrCreateRound(ctx, fb.Round)
 

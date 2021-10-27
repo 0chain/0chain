@@ -214,6 +214,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		err = nil // not a real error
 		return    // do nothing, if not notarized
 	}
+	bl.lfb.SetBlockNotarized()
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
