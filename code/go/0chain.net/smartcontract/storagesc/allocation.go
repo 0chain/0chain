@@ -1208,6 +1208,11 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
+	if alloc.NoClosure {
+		return "", common.NewError("alloc_cancel_failed",
+			"allocation does not permit cancelling")
+	}
+
 	if alloc.Owner != t.ClientID {
 		return "", common.NewError("alloc_cancel_failed",
 			"only owner can cancel an allocation")
@@ -1294,6 +1299,11 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	alloc, err = sc.getAllocation(req.AllocationID, balances)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	if alloc.NoClosure {
+		return "", common.NewError("fini_alloc_failed",
+			"allocation does not permit finalization")
 	}
 
 	// should be owner or one of blobbers of the allocation
