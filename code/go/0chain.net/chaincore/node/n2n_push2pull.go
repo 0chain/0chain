@@ -151,8 +151,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			break
 		}
 		requestNode.requested = true
-		result := rhandler(ctx, requestNode.node)
-		if result {
+		if rhandler(ctx, requestNode.node) {
 			pcde.state = pullStateDone
 			break
 		} else {

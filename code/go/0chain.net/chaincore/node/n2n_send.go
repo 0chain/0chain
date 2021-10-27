@@ -54,21 +54,6 @@ func (np *Pool) SendTo(ctx context.Context, handler SendHandler, to string) (boo
 	return handler(ctx, recepient), nil
 }
 
-/*SendOne - send message to a single node in the pool */
-func (np *Pool) SendOne(ctx context.Context, handler SendHandler) *Node {
-	nodes := np.shuffleNodes(false)
-	return np.sendOne(ctx, handler, nodes)
-}
-
-/*SendToMultiple - send to multiple nodes */
-func (np *Pool) SendToMultiple(ctx context.Context, handler SendHandler, nodes []*Node) (bool, error) {
-	sentTo := np.sendTo(ctx, len(nodes), nodes, handler)
-	if len(sentTo) == len(nodes) {
-		return true, nil
-	}
-	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
-}
-
 /*SendToMultipleNodes - send to multiple nodes */
 func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, nodes []*Node) (result []*Node) {
 	defer func() {
@@ -110,8 +95,7 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
-				valid := handler(ctx, node)
-				if valid {
+				if handler(ctx, node) {
 					validBucket <- node
 				}
 				done <- true
@@ -161,8 +145,7 @@ func (np *Pool) sendOne(ctx context.Context, handler SendHandler, nodes []*Node)
 		if node.GetStatus() == NodeStatusInactive {
 			continue
 		}
-		valid := handler(ctx, node)
-		if valid {
+		if handler(ctx, node) {
 			return node
 		}
 	}
@@ -194,13 +177,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		timeout = options.Timeout
 	}
 	return func(entity datastore.Entity) SendHandler {
-		data := entity.GetCachedData(options.CODEC, options.Compress)
-		if len(data) == 0 {
-			data = getResponseData(options, entity).Bytes()
-			entity.SetCacheData(data, options.CODEC, options.Compress)
-		} else {
-			logging.Logger.Debug("data is cached", zap.Any("url", uri))
-		}
+		data := getResponseData(options, entity).Bytes()
 
 		toPull := options.Pull
 		if len(data) > LargeMessageThreshold || toPull {
