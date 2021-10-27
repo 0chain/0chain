@@ -225,7 +225,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&updateAllocationRequest{
 					ID:           getMockAllocationId(0),
-					OwnerID:      data.Clients[1],
+					OwnerID:      data.Clients[0],
 					Size:         10000000,
 					Expiration:   common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 					SetImmutable: true,
