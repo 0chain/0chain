@@ -51,9 +51,8 @@ func init() {
 // ComputeFinalizedBlock - compute the last block that needs to finalize
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
 	var (
-		rn        = r.GetRoundNumber()
-		lastRound = rn
-		rd        = r
+		rn = r.GetRoundNumber()
+		rd = r
 	)
 
 	if rn < lfbr {
@@ -61,7 +60,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 	}
 
 	for rd != nil && rn > lfbr {
-		if hnb := rd.GetHeaviestNotarizedBlock(); hnb != nil && rn <= lastRound-1 {
+		if hnb := rd.GetHeaviestNotarizedBlock(); hnb != nil {
 			return hnb
 		}
 

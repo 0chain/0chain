@@ -752,7 +752,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 
 	mr.AddProposedBlock(b)
 	if mc.AddRoundBlock(mr, b) != b {
-		logging.Logger.Error("Add round block with different block", zap.Int64("round", b.Round))
+		logging.Logger.Warn("Add round block with different block", zap.Int64("round", b.Round))
 	}
 
 	mc.addToRoundVerification(ctx, mr, b)
@@ -1091,8 +1091,8 @@ func (mc *Chain) startNextRoundNotAhead(ctx context.Context, r *Round) {
 }
 
 // MergeNotarization - merge a notarization.
-func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
-	err := mc.BlockTicketsVerifyWithLock(ctx, b.Hash, func() error {
+func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) error {
+	return mc.BlockTicketsVerifyWithLock(ctx, b.Hash, func() error {
 		if b.IsBlockNotarized() {
 			logging.Logger.Debug("merge notarization, already notarized",
 				zap.Int64("round", b.Round),
@@ -1109,11 +1109,6 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 		mc.checkBlockNotarization(ctx, r, b)
 		return nil
 	})
-
-	if err != nil {
-		logging.Logger.Error("merge notarization error", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash), zap.Error(err))
-	}
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
@@ -1558,7 +1553,7 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.RoundTimeoutsCount++
 
 	// get LFMB and LFB from sharders
-	var updated, _, err = mc.ensureLatestFinalizedBlocks(ctx)
+	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
 	if err != nil {
 		logging.Logger.Error("restartRound - ensure lfb", zap.Error(err))
 	}
@@ -1772,7 +1767,7 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 }
 
 func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
-	updated bool, asyncBlockFunc func(), err error) {
+	updated bool, err error) {
 
 	// So, there is worker that updates LFMB from configured 0DNS sever.
 	// This MB used to request other nodes.
@@ -1802,10 +1797,10 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	}
 
 	if err = mc.VerifyChainHistoryAndRepair(ctx, rcvd, nil); err != nil {
-		return false, asyncBlockFunc, err
+		return false, err
 	}
 	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
-		return false, asyncBlockFunc, err
+		return false, err
 	}
 	mc.ensureDKG(ctx, rcvd)
 	mc.SetLatestFinalizedMagicBlock(rcvd)
@@ -1877,15 +1872,11 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	for nr == nil {
 		select {
 		case <-time.After(4 * time.Second): // repeat after some time
-			_, asyncBlockFunc, err := mc.ensureLatestFinalizedBlocks(ctx)
+			_, err := mc.ensureLatestFinalizedBlocks(ctx)
 			if err != nil {
 				logging.Logger.Error("getting latest blocks from sharders",
 					zap.Error(err))
 				continue
-			}
-
-			if asyncBlockFunc != nil {
-				asyncBlockFunc()
 			}
 
 			lfb = mc.GetLatestFinalizedBlock()

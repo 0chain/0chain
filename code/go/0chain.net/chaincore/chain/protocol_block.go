@@ -615,11 +615,13 @@ func (c *Chain) syncBlocksWithCache(ctx context.Context, b *block.Block, opt syn
 func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncOption) *block.Block {
 	pb, _ := c.GetBlock(ctx, b.PrevHash)
 	if pb == nil {
-		pb = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-		if pb == nil {
+		var err error
+		pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+		if err != nil {
 			logging.Logger.Error("sync_block - could not fetch block",
 				zap.Int64("round", b.Round-1),
-				zap.String("block", b.PrevHash))
+				zap.String("block", b.PrevHash),
+				zap.Error(err))
 			return nil
 		}
 	}
@@ -628,8 +630,15 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 		return pb
 	}
 
+	logging.Logger.Debug("sync_block - previous block not computed",
+		zap.Int64("round", pb.Round),
+		zap.String("block", pb.Hash))
+
 	var ppb *block.Block
 	if opt.Num-1 > 0 {
+		logging.Logger.Debug("sync_block - get previous previous block",
+			zap.Int64("round", pb.Round-1),
+			zap.String("block", pb.PrevHash))
 		ppb = c.syncBlocksWithCache(ctx, pb,
 			syncOption{
 				Num:      opt.Num - 1,

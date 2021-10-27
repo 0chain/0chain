@@ -593,8 +593,7 @@ func (bf *BlockFetcher) fetch(ctx context.Context,
 }
 
 // GetNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
-	nb *block.Block) {
+func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (*block.Block, error) {
 
 	var bfr = new(blockFetchRequest)
 	bfr.hash = hash
@@ -606,10 +605,8 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	cctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
 	defer cancel()
 	if err := c.blockFetcher.fetch(cctx, bfr); err != nil {
-		logging.Logger.Error("get_notarized_block - push to block fetch failed",
-			zap.Int64("round", bfr.round),
-			zap.Error(err))
-		return
+		return nil, common.NewErrorf("get_notarized_block",
+			"push to block fetch channel failed, round: %d, err: %v", bfr.round, err)
 	}
 
 	var (
@@ -620,23 +617,20 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 
 	select {
 	case <-ctx.Done():
-		return //
+		return nil, ctx.Err()
 	case rpl = <-reply:
 	}
 
 	switch rpl.Err {
 	case nil:
 	case context.Canceled:
-		return
+		return nil, context.Canceled
 	default:
-		logging.Logger.Error("get notarized block - error",
-			zap.Int64("cround", cround), zap.Int64("round", rn),
-			zap.String("block", hash), zap.Error(rpl.Err))
-		return
+		return nil, rpl.Err
 	}
 
 	// the block validated and its notarization verified
-	nb = rpl.Block
+	nb := rpl.Block
 
 	var r = c.GetRound(nb.Round)
 	if r == nil {
@@ -660,14 +654,15 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 		logging.Logger.Error("get notarized block failed",
 			zap.Int64("cround", cround), zap.Int64("round", rn),
 			zap.String("block", hash), zap.Error(err))
-		return nil
+		return nil, err
 	}
+
 	b, _, err = r.AddNotarizedBlock(b)
 	if err != nil {
 		logging.Logger.Error("get notarized block failed",
 			zap.Int64("cround", cround), zap.Int64("round", rn),
 			zap.String("block", hash), zap.Error(err))
-		return nil
+		return nil, err
 	}
 
 	// Add the round if chain does not have it
@@ -679,7 +674,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
 	}
 
-	return b
+	return b, nil
 }
 
 type AfterBlockFetchFunc func(b *block.Block)
