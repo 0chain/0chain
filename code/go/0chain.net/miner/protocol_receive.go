@@ -2,9 +2,12 @@ package miner
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -268,9 +271,140 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 	mc.ProcessVerifiedTicket(ctx, mr, b, &bvt.VerificationTicket)
 }
 
+func (mc *Chain) processNotarization(ctx context.Context, not *Notarization) {
+	mc.nbpMutex.Lock()
+	defer mc.nbpMutex.Unlock()
+	if _, ok := mc.notarizationBlockProcessMap[not.BlockID]; ok {
+		return
+	}
+
+	mc.notarizationBlockProcessMap[not.BlockID] = struct{}{}
+	select {
+	case mc.notarizationBlockProcessC <- not:
+	case <-time.After(500 * time.Millisecond):
+		logging.Logger.Warn("process notarization slow, push to channel timeout",
+			zap.Int64("round", not.Round))
+		delete(mc.notarizationBlockProcessMap, not.BlockID)
+	case <-ctx.Done():
+	}
+}
+
+// NotarizationProcessWorker represents a worker to process notarization messages sequentially
+func (mc *Chain) NotarizationProcessWorker(ctx context.Context) {
+	for {
+		select {
+		case not := <-mc.notarizationBlockProcessC:
+			func() {
+				doneC := make(chan struct{})
+				errC := make(chan error, 1)
+				cctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				defer cancel()
+				ts := time.Now()
+				go func() {
+					if err := mc.notarizationProcess(cctx, not); err != nil {
+						errC <- err
+					}
+					close(doneC)
+				}()
+
+				select {
+				case err := <-errC:
+					logging.Logger.Error("process notarization failed",
+						zap.Int64("round", not.Round),
+						zap.String("block", not.BlockID),
+						zap.Error(err))
+				case <-doneC:
+					logging.Logger.Info("process notarization success",
+						zap.Int64("round", not.Round),
+						zap.String("block", not.BlockID),
+						zap.Any("duration", time.Since(ts)))
+				case <-cctx.Done():
+					logging.Logger.Error("process notarization timeout",
+						zap.Int64("round", not.Round),
+						zap.String("block", not.BlockID))
+				}
+			}()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) error {
+	var (
+		r    = mc.GetMinerRound(not.Round)
+		b, _ = mc.GetBlock(ctx, not.BlockID)
+	)
+
+	if b == nil {
+		// fetch from remote
+		var err error
+		b, err = mc.GetNotarizedBlock(ctx, not.BlockID, not.Round)
+		if err != nil {
+			return fmt.Errorf("fetch notarized block failed, err: %v", err)
+		}
+		r = mc.GetMinerRound(not.Round)
+	}
+
+	if !b.IsBlockNotarized() {
+		var vts = b.UnknownTickets(not.VerificationTickets)
+		if len(vts) == 0 {
+			err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round)
+			if err != nil {
+				return errors.New("no new tickets detected")
+			}
+			b.SetBlockNotarized()
+		} else {
+			logging.Logger.Debug("process notarization - merge notarization block",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			if err := mc.MergeNotarization(ctx, r, b, vts); err != nil {
+				return fmt.Errorf("merge notarization tickets failed, err: %v", err)
+			}
+
+			if !b.IsBlockNotarized() {
+				logging.Logger.Error("process notarization - not notarized after merging!",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Int("unknown tickets num", len(vts)),
+					zap.Int("block tickets", len(b.GetVerificationTickets())))
+				return fmt.Errorf("block is not notarized after merging tickets, "+
+					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))
+			}
+		}
+	}
+
+	if !b.IsStateComputed() {
+		if err := mc.ComputeState(ctx, b); err != nil {
+			return fmt.Errorf("compute state failed, err: %v", err)
+		}
+	}
+
+	if mc.GetCurrentRound() <= not.Round && !mc.isAheadOfSharders(ctx, not.Round) {
+		lfb := mc.GetLatestFinalizedBlock()
+		lfbTicket := mc.GetLatestLFBTicket(ctx)
+		lfbGaps := lfbTicket.Round - lfb.Round
+		if lfbGaps > int64(config.GetLFBTicketAhead()) {
+			lb, _ := mc.GetBlock(ctx, lfbTicket.LFBHash)
+			if lb != nil {
+				// update lfb if the chain is current far ahead of lfb
+				logging.Logger.Error("process notarization - update lfb",
+					zap.Int64("round", lb.Round),
+					zap.String("block", lb.Hash))
+				mc.SetLatestFinalizedBlock(ctx, lb)
+			}
+		}
+
+		logging.Logger.Info("process notarization - block notarized, start next round",
+			zap.Int64("new round", not.Round+1))
+
+		go mc.StartNextRound(ctx, r)
+	}
+	return nil
+}
+
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-
 	var (
 		lfb = mc.GetLatestFinalizedBlock()
 		not = msg.Notarization
@@ -284,54 +418,12 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 
-	var r = mc.GetMinerRound(not.Round)
-	if r == nil {
-		if msg.ShouldRetry() {
-			logging.Logger.Error("handle notarization message (round not started yet) retrying",
-				zap.Int64("round", not.Round),
-				zap.String("block", not.BlockID),
-				zap.Int8("retry_count", msg.RetryCount))
-
-			msg.Retry(mc.blockMessageChannel)
-		} else {
-			logging.Logger.Error("handle notarization message (round not started yet)",
-				zap.Int64("round", not.Round),
-				zap.String("block", not.BlockID),
-				zap.Int8("retry_count", msg.RetryCount))
-		}
+	b, _ := mc.GetBlock(ctx, not.BlockID)
+	if b != nil && b.IsBlockNotarized() && b.IsStateComputed() {
 		return
 	}
 
-	if mc.GetMinerRound(not.Round-1) == nil {
-		logging.Logger.Error("handle notarization message -- no previous round",
-			zap.Int64("round", not.Round),
-			zap.Int64("prev_round", not.Round-1))
-		return
-	}
-
-	msg.Round = r
-
-	var b, err = mc.GetBlock(ctx, not.BlockID)
-	if err != nil {
-		// TODO: add this back
-		logging.Logger.Debug("handle notarization message -- not exist, try to fetch notarized block",
-			zap.Int64("round", not.Round),
-			zap.String("block", not.BlockID))
-		go mc.GetNotarizedBlock(ctx, not.BlockID, not.Round)
-		return
-	}
-
-	if !b.IsBlockNotarized() {
-		var vts = b.UnknownTickets(not.VerificationTickets)
-		if len(vts) == 0 {
-			return
-		}
-
-		logging.Logger.Debug("handle notarization message -- merge notarization block",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash))
-		go mc.MergeNotarization(ctx, r, b, vts)
-	}
+	mc.processNotarization(ctx, not)
 }
 
 // HandleNotarizedBlockMessage - handles a notarized block for a previous round.
@@ -391,6 +483,8 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 			zap.Error(err))
 		return
 	}
+
+	nb.SetBlockNotarized()
 
 	if !mr.IsVRFComplete() {
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())

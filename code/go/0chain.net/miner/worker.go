@@ -28,6 +28,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 	go mc.UpdateMagicBlockWorker(ctx)
 	go mc.MinerHealthCheck(ctx)
+	go mc.NotarizationProcessWorker(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
