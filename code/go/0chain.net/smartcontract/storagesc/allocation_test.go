@@ -1204,23 +1204,24 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	)
 
 	alloc.Size = 10 * GB
+	request := updateAllocationRequest{}
 
 	// 1. zero
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 2. becomes to small
 	var sub = 9.01 * GB
 	uar.Size -= int64(sub)
 	conf.MinAllocSize = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 3. no blobbers (invalid allocation, panic check)
 	uar.Size = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 4. ok
 	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
-	assert.NoError(t, uar.validate(&conf, &alloc))
+	assert.NoError(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 }
 
 func Test_updateAllocationRequest_getBlobbersSizeDiff(t *testing.T) {

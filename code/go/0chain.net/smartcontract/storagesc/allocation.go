@@ -531,7 +531,7 @@ func (uar *updateAllocationRequest) validate(
 			return errors.New("only allocation owner can reduce an allocation's duration")
 		}
 	} else if request.Expiration > 0 {
-		if client != owner && !alloc.CanUpdatePositiveExpiry {
+		if client != alloc.Owner && !alloc.CanUpdatePositiveExpiry {
 			return errors.New("only allocation owner can extend this allocation's duration " +
 				"change update positive expiry to true")
 		}
