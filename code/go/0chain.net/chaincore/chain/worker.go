@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -259,49 +258,10 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	// finalize
 	if !fb.IsStateComputed() {
-		Logger.Debug("finalize block state not computed",
-			zap.Int64("round", fb.Round))
-		ts := time.Now()
-		err := c.GetBlockStateChange(fb)
-		if err != nil {
-			Logger.Error("finalize block - save changes - save state not successful",
-				zap.Int64("round", fb.Round),
-				zap.String("hash", fb.Hash),
-				zap.Int8("state", fb.GetBlockState()),
-				zap.Error(err))
-			if state.Debug() {
-				Logger.DPanic("finalize block - save changes - state not successful")
-			}
-		}
-		Logger.Debug("finalize block - sync states took", zap.Any("duration", time.Since(ts)))
-	} else {
-		Logger.Debug("finalize block state computed",
-			zap.Int64("round", fb.Round),
-			zap.Any("state", fb.GetStateStatus()))
-	}
-
-	switch fb.GetStateStatus() {
-	case block.StateSynched, block.StateSuccessful:
-	default:
-		Logger.Error("finalize block - state_save_without_success, state can't be saved without successful computation",
+		Logger.Debug("finalize block failed, state is not computed yet",
 			zap.Int64("round", fb.Round))
 		return
 	}
-
-	// Fetch block state changes and apply them would reduce the blocks finalize speed
-	if fb.ClientState == nil {
-		Logger.Error("finalize block - client state is null, get state changes from network",
-			zap.Int64("round", fb.Round),
-			zap.String("hash", fb.Hash))
-		if err := c.GetBlockStateChange(fb); err != nil {
-			Logger.Error("Finalize block - get block state changes failed",
-				zap.Error(err),
-				zap.Int64("round", fb.Round),
-				zap.String("block hash", fb.Hash))
-			return
-		}
-	}
-
 	c.finalizeBlock(ctx, fb, bsh)
 }
 
