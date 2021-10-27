@@ -1623,6 +1623,8 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 			mc.RedoVrfShare(ctx, xr)
 			return // the round has restarted <===================== [exit loop]
 		}
+
+		mc.finalizeRound(ctx, xr)
 	}
 }
 
