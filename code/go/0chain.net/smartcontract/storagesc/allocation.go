@@ -466,11 +466,17 @@ func (sc *StorageSmartContract) selectBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID           string           `json:"id"`              // allocation id
-	OwnerID      string           `json:"owner_id"`        // Owner of the allocation
-	Size         int64            `json:"size"`            // difference
-	Expiration   common.Timestamp `json:"expiration_date"` // difference
-	SetImmutable bool             `json:"set_immutable"`
+	ID                         string           `json:"id"`              // allocation id
+	OwnerID                    string           `json:"owner_id"`        // Owner of the allocation
+	Size                       int64            `json:"size"`            // difference
+	Expiration                 common.Timestamp `json:"expiration_date"` // difference
+	SetImmutable               bool             `json:"set_immutable"`
+	SetCanUpdatePositiveExpiry bool             `json:"set_can_update_positive_expiry"`
+	CanUpdatePositiveExpiry    bool             `json:"can_update_positive_expiry"`
+	SetNoClosure               bool             `json:"set_no_closure"`
+	NoClosure                  bool             `json:"no_expiry"`
+	SetNoExpiryReduction       bool             `json:"set_no_expiry_reduction"`
+	NoExpiryReduction          bool             `json:"no_expiry_reduction"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -480,6 +486,8 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 // validate request
 func (uar *updateAllocationRequest) validate(
 	conf *scConfig,
+	client string,
+	request updateAllocationRequest,
 	alloc *StorageAllocation,
 ) (err error) {
 	if uar.SetImmutable && alloc.IsImmutable {
@@ -487,10 +495,10 @@ func (uar *updateAllocationRequest) validate(
 	}
 
 	if uar.Size == 0 && uar.Expiration == 0 {
-		if !uar.SetImmutable {
+		if !uar.SetImmutable && !uar.SetCanUpdatePositiveExpiry &&
+			!uar.SetNoClosure && !uar.SetNoExpiryReduction {
 			return errors.New("update allocation changes nothing")
 		}
-
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
 			return fmt.Errorf("new allocation size is too small: %d < %d",
@@ -500,6 +508,37 @@ func (uar *updateAllocationRequest) validate(
 
 	if len(alloc.BlobberDetails) == 0 {
 		return errors.New("invalid allocation for updating: no blobbers")
+	}
+
+	if client != alloc.Owner {
+		if request.SetCanUpdatePositiveExpiry {
+			return errors.New("only the owner can change the can update positive expire option")
+		}
+		if request.SetNoClosure {
+			return errors.New("only the owner can change the no closure option")
+		}
+		if request.SetNoExpiryReduction {
+			return errors.New("only the owner can change the no expiry reduction option")
+		}
+	}
+
+	if request.Expiration < 0 {
+		if request.NoExpiryReduction {
+			return errors.New("allocation duration cannot be reduced, " +
+				"change no-expiry-reduction setting to false")
+		}
+		if client != alloc.Owner {
+			return errors.New("only allocation owner can reduce an allocation's duration")
+		}
+	} else if request.Expiration > 0 {
+		if client != owner && !alloc.CanUpdatePositiveExpiry {
+			return errors.New("only allocation owner can extend this allocation's duration " +
+				"change update positive expiry to true")
+		}
+	}
+
+	if request.Size != 0 && client != alloc.Owner {
+		return errors.New("only the owner can change an allocations size")
 	}
 
 	return
@@ -978,8 +1017,18 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"can't get existing allocation: "+err.Error())
 	}
 
-	if err = request.validate(conf, alloc); err != nil {
+	if err = request.validate(conf, t.ClientID, request, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
+	}
+
+	if request.SetNoExpiryReduction {
+		alloc.NoExpiryReduction = request.NoExpiryReduction
+	}
+	if request.SetNoClosure {
+		alloc.NoClosure = request.NoClosure
+	}
+	if request.SetCanUpdatePositiveExpiry {
+		alloc.CanUpdatePositiveExpiry = request.CanUpdatePositiveExpiry
 	}
 
 	// can't update expired allocation
@@ -995,7 +1044,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
-	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
 
 	// update allocation transaction hash
