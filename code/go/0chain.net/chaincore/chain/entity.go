@@ -186,6 +186,9 @@ type Chain struct {
 	nbvcMutex             *sync.Mutex
 	blockSyncC            map[string]chan chan *block.Block
 	bscMutex              *sync.Mutex
+
+	// compute state
+	computeBlockStateC chan struct{}
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -488,6 +491,8 @@ func Provider() datastore.Entity {
 	c.nbvcMutex = &sync.Mutex{}
 	c.blockSyncC = make(map[string]chan chan *block.Block)
 	c.bscMutex = &sync.Mutex{}
+
+	c.computeBlockStateC = make(chan struct{}, 1)
 	return c
 }
 
@@ -1608,71 +1613,6 @@ func (c *Chain) UpdateBlocks(bs []*block.Block) {
 	for i := range bs {
 		c.blocks[bs[i].Hash] = bs[i]
 	}
-}
-
-func (c *Chain) pullNotarizedBlocks(ctx context.Context, b *block.Block, num int64) []*block.Block {
-	blocks := make([]*block.Block, 0, num)
-	cb := b
-	// get one more blocks from network in case the last block does not have previous block in local
-	for i := int64(0); i < num+1; i++ {
-		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
-		if nb == nil {
-			logging.Logger.Error("pull_notarized_block - could not get notarized block",
-				zap.Int64("end_round", b.Round),
-				zap.Int64("round", b.Round-1-i),
-				zap.Int64("current_round", c.GetCurrentRound()),
-				zap.Int64("index", i))
-			break
-		}
-		nb = nb.Clone()
-
-		logging.Logger.Debug("pull_notarized_block - got notarized block",
-			zap.Int64("round", nb.Round),
-			zap.String("block", nb.Hash),
-			zap.Int64("index", i))
-
-		// link blocks
-		if cb != b {
-			cb.SetPreviousBlock(nb)
-		}
-
-		cb = nb
-
-		blocks = append(blocks, nb)
-
-		// check if previous block does exist locally
-		pb, _ := c.GetBlock(ctx, cb.PrevHash)
-		if pb != nil {
-			cb.SetPreviousBlock(pb)
-			if pb.IsStateComputed() {
-				break
-			}
-		}
-	}
-
-	// set the last block's previous block
-	if len(blocks) == int(num+1) {
-		blocks = blocks[:num]
-	}
-
-	if len(blocks) > 0 {
-		// reverse blocks
-		for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
-			blocks[i], blocks[j] = blocks[j], blocks[i]
-		}
-
-		if blocks[0] == nil {
-			panic(fmt.Sprintf("last is nil, len(blocks)=%d, num: %v, blocks: %v", len(blocks), num, blocks))
-		}
-
-		if blocks[0].Round > 0 && blocks[0].PrevBlock == nil {
-			logging.Logger.Warn("pull_notarized_block - last block has no previous block",
-				zap.Int64("end_round", b.Round),
-				zap.Int64("round", blocks[0].Round))
-		}
-	}
-
-	return blocks
 }
 
 // The ViewChanger represents node makes view change where a block with new

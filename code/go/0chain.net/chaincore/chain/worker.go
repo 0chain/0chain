@@ -700,3 +700,15 @@ func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
 	}
 
 }
+
+// ComputeBlockStateWithLock compute block state one by one
+func (c *Chain) ComputeBlockStateWithLock(ctx context.Context, f func() error) (err error) {
+	select {
+	case c.computeBlockStateC <- struct{}{}:
+		err = f()
+		<-c.computeBlockStateC
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
+	return
+}

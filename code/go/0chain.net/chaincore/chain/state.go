@@ -32,13 +32,15 @@ func init() {
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	return c.computeState(ctx, b)
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+	return c.ComputeBlockStateWithLock(ctx, func() error {
+		return c.computeState(ctx, b)
+	})
 }
 
 // ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.computeState(ctx, b)
+	err := c.ComputeState(ctx, b)
 	if err != nil {
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
