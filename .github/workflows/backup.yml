@@ -15,7 +15,7 @@ jobs:
       - name: Get info
         id: get_info
         run: |
-          GIT_COMMIT_DATE="$((`git log -n 1 --date-order --all | grep Date | awk '{ print $4 }'`-1))"
+          GIT_COMMIT_DATE="$((`git log -n 1 --date-order --all | grep Date | awk '{ print $4 }'`))"
           YESTERDAY_DATE="$((`date | awk '{ print $3 }'`-1))"
           echo ::set-output name=GIT_COMMIT_DATE::${GIT_COMMIT_DATE}
           echo ::set-output name=YESTERDAY_DATE::${YESTERDAY_DATE}
