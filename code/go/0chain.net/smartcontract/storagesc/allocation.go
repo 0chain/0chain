@@ -466,17 +466,13 @@ func (sc *StorageSmartContract) selectBlobbers(
 }
 
 type updateAllocationRequest struct {
-	ID                         string           `json:"id"`              // allocation id
-	OwnerID                    string           `json:"owner_id"`        // Owner of the allocation
-	Size                       int64            `json:"size"`            // difference
-	Expiration                 common.Timestamp `json:"expiration_date"` // difference
-	SetImmutable               bool             `json:"set_immutable"`
-	SetCanUpdatePositiveExpiry bool             `json:"set_can_update_positive_expiry"`
-	CanUpdatePositiveExpiry    bool             `json:"can_update_positive_expiry"`
-	SetNoClosure               bool             `json:"set_no_closure"`
-	NoClosure                  bool             `json:"no_expiry"`
-	SetNoExpiryReduction       bool             `json:"set_no_expiry_reduction"`
-	NoExpiryReduction          bool             `json:"no_expiry_reduction"`
+	ID           string           `json:"id"`              // allocation id
+	OwnerID      string           `json:"owner_id"`        // Owner of the allocation
+	Size         int64            `json:"size"`            // difference
+	Expiration   common.Timestamp `json:"expiration_date"` // difference
+	SetImmutable bool             `json:"set_immutable"`
+	SetNoClosure bool             `json:"set_no_closure"`
+	NoClosure    bool             `json:"no_expiry"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -495,8 +491,7 @@ func (uar *updateAllocationRequest) validate(
 	}
 
 	if uar.Size == 0 && uar.Expiration == 0 {
-		if !uar.SetImmutable && !uar.SetCanUpdatePositiveExpiry &&
-			!uar.SetNoClosure && !uar.SetNoExpiryReduction {
+		if !uar.SetImmutable && !uar.SetNoClosure {
 			return errors.New("update allocation changes nothing")
 		}
 	} else {
@@ -510,31 +505,12 @@ func (uar *updateAllocationRequest) validate(
 		return errors.New("invalid allocation for updating: no blobbers")
 	}
 
-	if client != alloc.Owner {
-		if request.SetCanUpdatePositiveExpiry {
-			return errors.New("only the owner can change the can update positive expire option")
-		}
-		if request.SetNoClosure {
-			return errors.New("only the owner can change the no closure option")
-		}
-		if request.SetNoExpiryReduction {
-			return errors.New("only the owner can change the no expiry reduction option")
-		}
+	if client != alloc.Owner && request.SetNoClosure {
+		return errors.New("only the owner can change the no closure option")
 	}
 
 	if request.Expiration < 0 {
-		if request.NoExpiryReduction {
-			return errors.New("allocation duration cannot be reduced, " +
-				"change no-expiry-reduction setting to false")
-		}
-		if client != alloc.Owner {
-			return errors.New("only allocation owner can reduce an allocation's duration")
-		}
-	} else if request.Expiration > 0 {
-		if client != alloc.Owner && !alloc.CanUpdatePositiveExpiry {
-			return errors.New("only allocation owner can extend this allocation's duration " +
-				"change update positive expiry to true")
-		}
+		return errors.New("an allocations expiration cannot be reduced")
 	}
 
 	if request.Size != 0 && client != alloc.Owner {
@@ -1005,14 +981,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	if request.SetNoExpiryReduction {
-		alloc.NoExpiryReduction = request.NoExpiryReduction
-	}
 	if request.SetNoClosure {
 		alloc.NoClosure = request.NoClosure
-	}
-	if request.SetCanUpdatePositiveExpiry {
-		alloc.CanUpdatePositiveExpiry = request.CanUpdatePositiveExpiry
 	}
 
 	// can't update expired allocation
