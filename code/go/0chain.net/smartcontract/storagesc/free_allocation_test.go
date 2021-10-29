@@ -653,15 +653,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			mockAllBlobbers, nil,
 		).Once()
 
-		ca := ClientAllocation{
-			ClientID:    p.marker.Recipient,
-			Allocations: &Allocations{},
-		}
-		ca.Allocations.List.add(p.allocationId)
-		balances.On("GetTrieNode", ca.GetKey(ssc.ID)).Return(
-			&ca, nil,
-		).Once()
-
 		var sa = StorageAllocation{
 			ID:           p.allocationId,
 			Owner:        p.marker.Recipient,
