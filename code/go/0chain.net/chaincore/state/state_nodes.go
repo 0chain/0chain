@@ -16,9 +16,8 @@ import (
 //Nodes - a set of nodes for synching the state
 type Nodes struct {
 	datastore.IDField
-	datastore.EncodedDataCache `json:"-"`
-	Version                    string      `json:"version"`
-	Nodes                      []util.Node `json:"-"`
+	Version string      `json:"version"`
+	Nodes   []util.Node `json:"-"`
 }
 
 //NewStateNodes - create a new partial state object with initialization

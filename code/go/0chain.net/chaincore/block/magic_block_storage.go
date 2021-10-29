@@ -10,7 +10,6 @@ import (
 
 type MagicBlockData struct {
 	datastore.IDField
-	datastore.EncodedDataCache `json:"-"`
 	*MagicBlock
 }
 

@@ -31,10 +31,9 @@ type Client struct {
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField
 	datastore.CreationDateField
-	datastore.EncodedDataCache `json:"-" msgpack:"-"`
-	PublicKey                  string                     `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes             []byte                     `json:"-" msgpack:"-"`
-	SigScheme                  encryption.SignatureScheme `json:"-" msgpack:"-"`
+	PublicKey      string                     `yaml:"public_key" json:"public_key"`
+	PublicKeyBytes []byte                     `json:"-" msgpack:"-"`
+	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
 }
 
 //NewClient - create a new client object

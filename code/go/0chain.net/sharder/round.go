@@ -12,15 +12,13 @@ import (
 // RoundSummaries -
 type RoundSummaries struct {
 	datastore.IDField
-	datastore.EncodedDataCache `json:"-"`
-	RSummaryList               []*round.Round `json:"round_summaries"`
+	RSummaryList []*round.Round `json:"round_summaries"`
 }
 
 // HealthyRound -
 type HealthyRound struct {
 	datastore.IDField
-	datastore.EncodedDataCache `json:"-"`
-	Number                     int64
+	Number int64
 }
 
 var roundSummariesEntityMetadata *datastore.EntityMetadataImpl

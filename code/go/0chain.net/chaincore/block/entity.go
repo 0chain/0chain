@@ -136,8 +136,7 @@ func (u *UnverifiedBlockBody) Clone() *UnverifiedBlockBody {
 /*Block - data structure that holds the block data */
 type Block struct {
 	UnverifiedBlockBody
-	datastore.EncodedDataCache `json:"-"`
-	VerificationTickets        []*VerificationTicket `json:"verification_tickets,omitempty"`
+	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
 	datastore.HashIDField
 	Signature string `json:"signature"`

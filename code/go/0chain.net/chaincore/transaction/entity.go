@@ -44,7 +44,6 @@ type Transaction struct {
 	datastore.HashIDField
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
-	datastore.EncodedDataCache `json:"-" msgpack:"-"`
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string        `json:"public_key,omitempty" msgpack:"puk,omitempty"`

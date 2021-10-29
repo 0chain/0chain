@@ -83,7 +83,6 @@ type Chain struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	datastore.EncodedDataCache `json:"-"`
 
 	mutexViewChangeMB sync.RWMutex
 

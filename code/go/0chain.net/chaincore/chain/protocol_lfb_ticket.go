@@ -73,13 +73,12 @@ func (lfbtem *LFBTicketEntityMetadata) GetIDColumnName() string {
 // all other nodes (including other sharders).
 // The ticket signed to protect against forgery.
 type LFBTicket struct {
-	datastore.EncodedDataCache `json:"-"`
-	Round                      int64    `json:"round"`      // LFB round
-	SharderID                  string   `json:"sharder_id"` // sender
-	LFBHash                    string   `json:"lfb_hash"`   // LFB hash
-	Sign                       string   `json:"sign"`       // ticket signature
-	Senders                    []string `json:"-"`          // internal
-	IsOwn                      bool     `json:"-"`          // is own
+	Round     int64    `json:"round"`      // LFB round
+	SharderID string   `json:"sharder_id"` // sender
+	LFBHash   string   `json:"lfb_hash"`   // LFB hash
+	Sign      string   `json:"sign"`       // ticket signature
+	Senders   []string `json:"-"`          // internal
+	IsOwn     bool     `json:"-"`          // is own
 }
 
 func (lfbt *LFBTicket) addSender(sharder string) {

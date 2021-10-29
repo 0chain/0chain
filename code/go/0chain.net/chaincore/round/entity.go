@@ -175,10 +175,9 @@ func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	datastore.EncodedDataCache `json:"-"`
-	Number                     int64 `json:"number"`
-	RandomSeed                 int64 `json:"round_random_seed"`
-	hasRandomSeed              uint32
+	Number        int64 `json:"number"`
+	RandomSeed    int64 `json:"round_random_seed"`
+	hasRandomSeed uint32
 
 	// For generator, this is the block the miner is generating till a
 	// notarization is received. For a verifier, this is the block that is

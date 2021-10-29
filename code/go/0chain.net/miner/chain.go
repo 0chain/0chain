@@ -78,8 +78,7 @@ func GetMinerChain() *Chain {
 
 type StartChain struct {
 	datastore.IDField
-	datastore.EncodedDataCache `json:"-"`
-	Start                      bool
+	Start bool
 }
 
 var startChainEntityMetadata *datastore.EntityMetadataImpl
