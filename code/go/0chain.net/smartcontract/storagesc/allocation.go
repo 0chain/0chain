@@ -176,6 +176,7 @@ type newAllocationRequest struct {
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
+	Permanent                  bool             `json:"permanent"`
 }
 
 // storageAllocation from the request
@@ -193,6 +194,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	sa.DiverseBlobbers = nar.DiversifyBlobbers
+	sa.Permanent = nar.Permanent
 	return
 }
 
