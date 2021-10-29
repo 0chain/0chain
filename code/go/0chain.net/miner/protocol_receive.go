@@ -273,18 +273,22 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 func (mc *Chain) processNotarization(ctx context.Context, not *Notarization) {
 	mc.nbpMutex.Lock()
-	defer mc.nbpMutex.Unlock()
 	if _, ok := mc.notarizationBlockProcessMap[not.BlockID]; ok {
+		mc.nbpMutex.Unlock()
 		return
 	}
 
 	mc.notarizationBlockProcessMap[not.BlockID] = struct{}{}
+	mc.nbpMutex.Unlock()
+
 	select {
 	case mc.notarizationBlockProcessC <- not:
 	case <-time.After(500 * time.Millisecond):
 		logging.Logger.Warn("process notarization slow, push to channel timeout",
 			zap.Int64("round", not.Round))
+		mc.nbpMutex.Lock()
 		delete(mc.notarizationBlockProcessMap, not.BlockID)
+		mc.nbpMutex.Unlock()
 	case <-ctx.Done():
 	}
 }
