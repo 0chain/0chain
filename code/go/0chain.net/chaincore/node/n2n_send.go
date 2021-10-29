@@ -95,9 +95,12 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
-				if handler(ctx, node) {
-					validBucket <- node
+				if node != nil {
+					if handler(ctx, node) {
+						validBucket <- node
+					}
 				}
+
 				done <- true
 			}
 		}()
@@ -111,7 +114,11 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 		}
 		sendBucket <- node
 		activeCount++
+		if activeCount == numNodes {
+			break
+		}
 	}
+
 	if activeCount == 0 {
 		//N2n.Debug("send message (no active nodes)")
 		close(sendBucket)
@@ -137,7 +144,6 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 			}
 		}
 	}
-	return sentTo
 }
 
 func (np *Pool) sendOne(ctx context.Context, handler SendHandler, nodes []*Node) *Node {

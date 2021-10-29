@@ -149,7 +149,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 
 	if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
 		b = mc.AddRoundBlock(mr, b)
-		mc.checkBlockNotarization(ctx, mr, b)
+		mc.checkBlockNotarization(ctx, mr, b, true)
 		return
 	}
 
@@ -173,7 +173,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		zap.Int("round_toc", mr.GetTimeoutCount()),
 		zap.Int("round_toc", b.RoundTimeoutCount))
 
-	mc.checkBlockNotarization(ctx, mr, b)
+	mc.checkBlockNotarization(ctx, mr, b, true)
 }
 
 func (mc *Chain) verifyTicketsWithRetry(ctx context.Context,
