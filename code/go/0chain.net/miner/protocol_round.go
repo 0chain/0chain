@@ -1049,10 +1049,10 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 
-	mc.checkBlockNotarization(ctx, r, b)
+	mc.checkBlockNotarization(ctx, r, b, true)
 }
 
-func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
+func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block, broadcast bool) bool {
 	if !b.IsBlockNotarized() {
 		logging.Logger.Info("checkBlockNotarization -- block is not Notarized. Returning",
 			zap.Int64("round", b.Round),
@@ -1070,7 +1070,9 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	}
 
 	mc.SetRandomSeed(r, seed)
-	go mc.SendNotarization(context.Background(), b)
+	if broadcast {
+		go mc.SendNotarization(context.Background(), b)
+	}
 
 	logging.Logger.Debug("check block notarization - block notarized",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
@@ -1106,7 +1108,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 
 		mc.MergeVerificationTickets(b, vts)
 
-		mc.checkBlockNotarization(ctx, r, b)
+		mc.checkBlockNotarization(ctx, r, b, false)
 		return nil
 	})
 }
