@@ -37,7 +37,6 @@ func GetFetchStrategy() int {
 
 // RequestEntity - request an entity from nodes in the pool, returns when any node has response
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF, reqNum int) *Node {
-	ts := time.Now()
 	rhandler := requestor(params, handler)
 	var nds []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
@@ -46,32 +45,36 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		nds = np.GetNodesByLargeMessageTime()
 	}
 
-	nc, err := sendRequestConcurrent(ctx, nds[:reqNum], rhandler)
-	switch err {
-	case nil:
-	case context.Canceled:
-		return nil
-	default:
-		logging.Logger.Error("request entity failed",
-			zap.Any("duration", time.Since(ts)),
-			zap.Error(err))
-		return nil
+	total := len(nds)
+	batchSize := 4
+	batchNum := total / batchSize
+	if total%batchSize > 0 {
+		batchNum++
 	}
 
-	select {
-	case n, ok := <-nc:
-		if ok {
-			// return the first node give response, though it is not being used
-			return n
+	for i := 0; i < batchNum; i++ {
+		start := i * batchSize
+		end := (i + 1) * batchSize
+		if end > total {
+			end = total
 		}
 
-	case <-ctx.Done():
+		select {
+		case <-ctx.Done():
+			logging.Logger.Error("request entity - context done", zap.Error(ctx.Err()))
+			return nil
+		default:
+			n := sendRequestConcurrent(ctx, nds[start:end], rhandler)
+			if n != nil {
+				return n
+			}
+		}
 	}
 
 	return nil
 }
 
-func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler) (chan *Node, error) {
+func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler) *Node {
 	wg := &sync.WaitGroup{}
 	nodeC := make(chan *Node, len(nds))
 	for _, nd := range nds {
@@ -96,7 +99,12 @@ func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler
 
 	wg.Wait()
 	close(nodeC)
-	return nodeC, nil
+	n, ok := <-nodeC
+	if ok {
+		return n
+	}
+
+	return nil
 }
 
 // RequestEntityFromAll - requests an entity from all the nodes
