@@ -471,8 +471,8 @@ type updateAllocationRequest struct {
 	Size         int64            `json:"size"`            // difference
 	Expiration   common.Timestamp `json:"expiration_date"` // difference
 	SetImmutable bool             `json:"set_immutable"`
-	SetNoClosure bool             `json:"set_no_closure"`
-	NoClosure    bool             `json:"no_expiry"`
+	SetPermanent bool             `json:"set_permanent"`
+	Permanent    bool             `json:"permanent"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -491,7 +491,7 @@ func (uar *updateAllocationRequest) validate(
 	}
 
 	if uar.Size == 0 && uar.Expiration == 0 {
-		if !uar.SetImmutable && !uar.SetNoClosure {
+		if !uar.SetImmutable && !uar.SetPermanent {
 			return errors.New("update allocation changes nothing")
 		}
 	} else {
@@ -505,7 +505,7 @@ func (uar *updateAllocationRequest) validate(
 		return errors.New("invalid allocation for updating: no blobbers")
 	}
 
-	if client != alloc.Owner && request.SetNoClosure {
+	if client != alloc.Owner && request.SetPermanent {
 		return errors.New("only the owner can change the no closure option")
 	}
 
@@ -981,8 +981,8 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
-	if request.SetNoClosure {
-		alloc.NoClosure = request.NoClosure
+	if request.SetPermanent {
+		alloc.Permanent = request.Permanent
 	}
 
 	// can't update expired allocation
@@ -1210,7 +1210,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed", err.Error())
 	}
 
-	if alloc.NoClosure {
+	if alloc.Permanent {
 		return "", common.NewError("alloc_cancel_failed",
 			"allocation does not permit cancelling")
 	}
@@ -1303,7 +1303,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 
-	if alloc.NoClosure {
+	if alloc.Permanent {
 		return "", common.NewError("fini_alloc_failed",
 			"allocation does not permit finalization")
 	}
