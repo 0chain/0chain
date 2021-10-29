@@ -1,4 +1,4 @@
-package blockstore
+package smartblockstore
 
 import (
 	"bytes"
@@ -25,11 +25,11 @@ const (
 	UnmovedBlockBucket = "ubb"
 	BlockUsageBucket   = "bub"
 
-	HotTier        WhichTier = iota //Hot tier only
-	WarmTier                        //Warm tier only
-	ColdTier                        //Cold tier only
-	HotAndWarmTier                  //Hot and warm tier
-	HotAndColdTier                  //Hot and cold tier
+	HotTier          WhichTier = iota //Hot tier only
+	WarmTier                          //Warm tier only
+	ColdTier                          //Cold tier only
+	CacheAndWarmTier                  //Cache and warm tier
+	CacheAndColdTier                  //Cache and cold tier
 )
 
 //Create db file and create buckets
@@ -80,9 +80,10 @@ func InitMetaRecordDB() {
 
 //It simply provides whereabouts of a block. It can be in Warm Tier, Cold Tier, Hot and Warm Tier, Hot and Cold Tier, etc.
 type BlockWhereRecord struct {
-	Hash       string `json:"-"`
-	Tiering    int    `json:"tr"`
-	VolumePath string `json:"vp,omitempty"`
+	hash      string    `json:"-"`
+	tiering   WhichTier `json:"tr"`
+	blockPath string    `json:"vp,omitempty"`
+	cachePath string    `json:"cp,omitempty"`
 }
 
 //Add or Update whereabout of a block
@@ -91,7 +92,7 @@ func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 	if err != nil {
 		return err
 	}
-	key := []byte(bwr.Hash)
+	key := []byte(bwr.hash)
 
 	err = bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(BlockWhereBucket))
@@ -124,7 +125,7 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	bwr.Hash = hash
+	bwr.hash = hash
 	return &bwr, nil
 }
 

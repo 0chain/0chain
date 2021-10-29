@@ -1,4 +1,4 @@
-package blockstore
+package smartblockstore
 
 import (
 	"bufio"
@@ -12,14 +12,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 	"golang.org/x/sys/unix"
-)
-
-const (
-	Random        = "random"
-	RoundRobin    = "round_robin"
-	MinSizeFirst  = "min_size_first"
-	MinCountFirst = "min_count_first"
 )
 
 // Expectation; 15 to 30 million blocks per year
@@ -28,12 +23,13 @@ const (
 
 // var ErrDirKiloLimit = errors.New("") //todo write specific error formatter
 const (
-	Kilo    = "K" //Contains 1000 directories that contains 1000 blocks each so 10^6 blocks
-	Mega    = "M" //Contains 1000 K directories so each M directory contains 10^9 blocks.
-	Giga    = "G" //Contains 1000 M directories so each G directory contains 10 ^12 blocks.
-	Peta    = "P" //Contains 1000 G directories so each P directory contains 10^15 blocks.
-	Exa     = "E" //Contains 1000 P directories so each E directory contains 10^18 blocks.
-	Zillion = "Z" //Contains 1000 E directories so each Z directory contains 10^21 blocks. After this we would require new integer
+	WDCL  = 1000
+	WKilo = "WK" //Contains 1000 directories that contains 1000 blocks each so 10^6 blocks; So 1000 K directories contains 10^9 blocks
+	// Mega    = "M"  //Contains 1000 K directories so each M directory contains 10^9 blocks.
+	// Giga    = "G"  //Contains 1000 M directories so each G directory contains 10 ^12 blocks.
+	// Peta    = "P"  //Contains 1000 G directories so each P directory contains 10^15 blocks.
+	// Exa     = "E"  //Contains 1000 P directories so each E directory contains 10^18 blocks.
+	// Zillion = "Z"  //Contains 1000 E directories so each Z directory contains 10^21 blocks. After this we would require new integer
 	//range. Longest path would be E0...999/P0...999/G0...999/M0...999/K0...999/0...999/{hash}.txt/.dat
 	// eg. E0/P1/G0/M999/1/{hash}.file
 	//A 100KB average block size would consume space for G directories about 10^17B > peta bytes
@@ -42,21 +38,16 @@ const (
 	// space consumed by all K directories i.e. K0...999 is 10^3* 10^6*1MB is 1PB
 )
 
-var ErrVolumeFull = func(volPath string) error {
-	return fmt.Errorf("Volume %v is full.", volPath)
+type wTier struct {
+	volumes          []warmVolume
+	volume           *warmVolume
+	prevVolInd       int
+	selectNextVolume func(volumes []warmVolume, prevVolInd int) (*warmVolume, int)
 }
 
-func countFiles(dirPath string) (count uint32, err error) {
-	var files []os.DirEntry
-	files, err = os.ReadDir(dirPath)
-	if err != nil {
-		return
-	}
-	count = uint32(len(files))
-	return
-}
+var warmTier wTier
 
-type volume struct {
+type warmVolume struct {
 	path                    string
 	sizeToMaintain          uint64
 	allowedBlockNumbers     uint64
@@ -72,20 +63,27 @@ type volume struct {
 	//This way if K0 contains 1000 such directories then inside subDir("data/blocks") K1/0 will be created and further stored
 	//When K999 is filled then further block storage in this volume is prevented.
 	//We can modify selectDir function later on if there can be more than 10^9 blocks in a volume.
-	curKInd         uint32 //K index; K0, K1, etc.
+	curWKInd        uint32 //K index; K0, K1, etc.
 	curDirInd       uint32 // Dir index; 0, 1, etc.
 	curDirBlockNums uint32
 }
 
 //Add blocks sequentially to the directories; K0/0, K0/1 ... K1/0, K1/1, ..., K999/0, K999/1, K0/0, K0/1,...
-func (v *volume) selectDir() error {
-	if v.curDirBlockNums < 999 {
+func (v *warmVolume) selectDir() error {
+	if v.curDirBlockNums < WDCL-1 {
+		blocksPath := filepath.Join(v.path, fmt.Sprintf("%v%v/%v", WKilo, v.curWKInd, v.curDirInd))
+		_, err := os.Stat(blocksPath)
+		if err != nil && errors.Is(err, os.ErrNotExist) {
+			if err := os.MkdirAll(blocksPath, 0644); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
-	if v.curDirInd < 999 {
+	if v.curDirInd < WDCL-1 {
 		dirInd := v.curDirInd + 1
-		blocksPath := filepath.Join(v.path, fmt.Sprintf("K%v/%v", v.curKInd, dirInd))
+		blocksPath := filepath.Join(v.path, fmt.Sprintf("K%v/%v", v.curWKInd, dirInd))
 		blocksCount, err := countFiles(blocksPath)
 
 		if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -100,47 +98,51 @@ func (v *volume) selectDir() error {
 			return err
 		}
 
-		if blocksCount >= 999 {
+		if blocksCount >= WDCL {
 			return ErrVolumeFull(v.path)
 		}
 
 		v.curDirInd = dirInd
-		v.curDirBlockNums = blocksCount
+		v.curDirBlockNums = uint32(blocksCount)
 		return nil
 	}
 
-	if v.curKInd < 999 {
-		kInd := v.curKInd + 1
-		dirInd := uint32(0)
-		blocksPath := filepath.Join(v.path, fmt.Sprintf("K%v/%v", kInd, dirInd))
-		blocksCount, err := countFiles(blocksPath)
-		if err != nil && errors.Is(err, os.ErrNotExist) {
-			err := os.Mkdir(blocksPath, 0644)
-			if err != nil {
-				return err
-			}
-		} else if err != nil {
+	var wkInd uint32
+	if v.curWKInd < WDCL-1 {
+		wkInd = v.curWKInd + 1
+	} else {
+		wkInd = 0
+	}
+
+	dirInd := uint32(0)
+	blocksPath := filepath.Join(v.path, fmt.Sprintf("K%v/%v", wkInd, dirInd))
+	blocksCount, err := countFiles(blocksPath)
+
+	if err != nil && errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(blocksPath, 0644)
+		if err != nil {
 			return err
 		}
-
-		if blocksCount >= 999 {
-			return ErrVolumeFull(v.path)
-		}
-
-		v.curKInd = kInd
 		v.curDirInd = dirInd
-		v.curDirBlockNums = blocksCount
+		v.curDirBlockNums = 0
+
+		return nil
+	} else if err != nil {
+		return err
 	}
+
+	if blocksCount >= WDCL {
+		return ErrVolumeFull(v.path)
+	}
+
+	v.curWKInd = wkInd
+	v.curDirInd = dirInd
+	v.curDirBlockNums = uint32(blocksCount)
 	return nil
 }
 
-func (v *volume) Write(b *block.Block, data []byte) (bPath string, err error) {
-	err = v.selectDir()
-	if err != nil {
-		return
-	}
-
-	bPath = path.Join(v.path, fmt.Sprintf("K%v/%v", v.curKInd, v.curDirInd), fmt.Sprintf("%v.%v", b.Hash, fileExt))
+func (wv *warmVolume) write(b *block.Block, data []byte) (bPath string, err error) {
+	bPath = path.Join(wv.path, fmt.Sprintf("K%v/%v", wv.curWKInd, wv.curDirInd), fmt.Sprintf("%v.%v", b.Hash, fileExt))
 	var f *os.File
 	f, err = os.Create(bPath)
 	if err != nil {
@@ -174,13 +176,36 @@ func (v *volume) Write(b *block.Block, data []byte) (bPath string, err error) {
 		os.Remove(bPath)
 		return
 	}
-	v.curDirBlockNums++
-	v.updateCount(1)
-	v.updateSize(int64(n))
+
+	wv.curDirBlockNums++
+	wv.updateCount(1)
+	wv.updateSize(int64(n))
 	return
 }
 
-func (v *volume) updateSize(n int64) {
+func (wv *warmVolume) read(hash, blockPath string) (*block.Block, error) {
+	f, err := os.Open(blockPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+
+	var b *block.Block
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func (v *warmVolume) updateSize(n int64) {
 	if n < 0 {
 		v.blocksSize -= uint64(n)
 		v.availableSize += uint64(n)
@@ -190,7 +215,7 @@ func (v *volume) updateSize(n int64) {
 	}
 }
 
-func (v *volume) updateCount(n int64) {
+func (v *warmVolume) updateCount(n int64) {
 	if n < 0 {
 		v.blocksCount -= uint64(n)
 	} else {
@@ -199,27 +224,27 @@ func (v *volume) updateCount(n int64) {
 }
 
 //*******************************************************Volume Strategy**********************************************************
-func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
+func (v *warmVolume) isAbleToStoreBlock() (ableToStore bool) {
 	//check available size; available inodes
 	var volStat unix.Statfs_t
 	err := unix.Statfs(v.path, &volStat)
 	if err != nil {
-		//log error
+		Logger.Error(err.Error())
 		return
 	}
 
 	if v.blocksSize >= v.allowedBlockSize {
-		//log status
+		Logger.Error(fmt.Sprintf("Storage limited by allowed block size. Allowed: %v, Total block size: %v", v.allowedBlockSize, v.blocksSize))
 		return
 	}
 
 	if v.blocksCount >= v.allowedBlockNumbers {
-		//log status
+		Logger.Error(fmt.Sprintf("Storage limited by allowed block numbers. Allowed: %v, Total block size: %v", v.allowedBlockNumbers, v.blocksCount))
 		return
 	}
 
 	if float64(volStat.Ffree)/float64(volStat.Bavail) < 0.1 { //return false if available inodes is lesser than 10%
-		//log status
+		Logger.Error(fmt.Sprintf("Less than 10%% available inodes for volume: %v", v.path))
 		return
 	}
 
@@ -229,180 +254,210 @@ func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
 		return
 	}
 
-	return unix.Access(v.path, unix.W_OK) == nil
+	if unix.Access(v.path, unix.W_OK) != nil {
+		return
+	}
+
+	if err := v.selectDir(); err != nil {
+		Logger.Error(ErrSelectDir(v.path, err))
+		return
+	}
+
+	return true
 }
 
-func volumeStrategy(strategy string) func(volumes *[]volume, prevInd int) (*volume, int) {
-	//It seems better to remove volume from volumes list when it is unable to store blocks further
+func warmInit(wConf map[string]interface{}) {
+	volumesI, ok := wConf["volumes"]
+	if !ok {
+		panic(errors.New("Volumes config not available"))
+	}
+	volumes := volumesI.([]map[string]interface{})
+	checkWarmVolumes(volumes)
+
+	var strategy string
+	strategyI, ok := wConf["strategy"]
+	if !ok {
+		strategy = DefaultWarmStrategy
+	} else {
+		strategy = strategyI.(string)
+	}
+
+	Logger.Info(fmt.Sprintf("Registering function for strategy: %v", strategy))
+	var f func(warmVolumes []warmVolume, prevInd int) (*warmVolume, int)
+
 	switch strategy {
+	default:
+		panic(fmt.Errorf("Strategy %v is not supported", strategy))
 	case Random:
-		return func(rVolumes *[]volume, prevInd int) (*volume, int) { //return volume path
-			volumes := *rVolumes
-			validVolumes := make([]volume, len(volumes))
-			copy(validVolumes, volumes)
-			var selectedVolume *volume
+		f = func(warmVolumes []warmVolume, prevInd int) (*warmVolume, int) {
+			var selectedVolume *warmVolume
 			var selectedIndex int
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			for len(validVolumes) > 0 {
-				ind := r.Intn(len(validVolumes))
-				selectedVolume = &validVolumes[ind]
+			for len(warmVolumes) > 0 {
+				ind := r.Intn(len(warmVolumes))
+				selectedVolume = &warmVolumes[ind]
 				if selectedVolume.isAbleToStoreBlock() {
 					selectedIndex = ind
 					break
-				} else {
-					//remove an element from slice; ordering is not important
-					//garbage collection is not an issue here
-					validVolumes[ind] = validVolumes[len(validVolumes)-1]
-					validVolumes = validVolumes[:len(validVolumes)-1]
 				}
+				warmVolumes[ind] = warmVolumes[len(warmVolumes)-1]
+				warmVolumes = warmVolumes[:len(warmVolumes)-1]
 			}
+
+			warmTier.volumes = warmVolumes
 			return selectedVolume, selectedIndex
 		}
 	case RoundRobin:
-		return func(rVolumes *[]volume, prevInd int) (*volume, int) { //return volume path
-			volumes := *rVolumes
-			var selectedVolume *volume
+		f = func(warmVolumes []warmVolume, prevInd int) (*warmVolume, int) { //return volume path
+			var selectedVolume *warmVolume
+			prevVolume := warmVolumes[prevInd]
 			var selectedIndex int
-			totalVolumes := len(volumes)
 
 			if prevInd < 0 {
 				prevInd = -1
 			}
 
 			for i := prevInd + 1; i != prevInd; i++ {
-				if i >= totalVolumes {
-					if prevInd < 0 {
-						break
-					}
-					i = totalVolumes - i
-					if i < 0 {
-						i = 0 //i can be negative when a selected volume fail to store block.
-					}
+				if len(warmVolumes) == 0 {
+					break
 				}
-				v := volumes[i]
+				if i >= len(warmVolumes) {
+					i = len(warmVolumes) - i
+				}
+				if i < 0 {
+					i = 0 //i can be negative when a selected volume fail to store block.
+				}
+
+				v := warmVolumes[i]
 				if v.isAbleToStoreBlock() {
 					selectedVolume = &v
 					selectedIndex = i
 					break
+				} else {
+					warmVolumes = append(warmVolumes[:i], warmVolumes[i+1:]...)
+					if i < prevInd {
+						prevInd--
+					}
+					i--
 				}
 			}
 			if selectedVolume == nil {
-				if volumes[prevInd].isAbleToStoreBlock() {
-					selectedVolume = &volumes[prevInd]
+				if prevVolume.isAbleToStoreBlock() {
+					selectedVolume = &prevVolume
 					selectedIndex = prevInd
 				}
 			}
+			warmTier.volumes = warmVolumes
 			return selectedVolume, selectedIndex
 		}
 	case MinCountFirst:
-		return func(rVolumes *[]volume, prevInd int) (*volume, int) {
-			volumes := *rVolumes
-			var selectedVolume *volume
+		f = func(warmVolumes []warmVolume, prevInd int) (*warmVolume, int) {
+			var selectedVolume *warmVolume
 			var selectedIndex int
-			for i := 0; i < len(volumes); i++ {
-				v := volumes[i]
+
+			count := len(warmVolumes)
+			for i := 0; i < count; i++ {
+				v := warmVolumes[i]
+
 				if !v.isAbleToStoreBlock() {
+					warmVolumes = append(warmVolumes[:i], warmVolumes[i+1:]...)
+					i--
+					count--
 					continue
 				}
+
 				if selectedVolume == nil {
 					selectedVolume = &v
 					selectedIndex = i
 					continue
 				}
+
 				if v.blocksCount < selectedVolume.blocksCount {
 					selectedVolume = &v
 					selectedIndex = i
 				}
 			}
+
+			warmTier.volumes = warmVolumes
 			return selectedVolume, selectedIndex
 		}
 	case MinSizeFirst:
-		return func(rVolumes *[]volume, prevInd int) (*volume, int) {
-			volumes := *rVolumes
-			var selectedVolume *volume
+		f = func(warmVolumes []warmVolume, prevInd int) (*warmVolume, int) {
+			var selectedVolume *warmVolume
 			var selectedIndex int
-			for i := 0; i < len(volumes); i++ {
-				v := volumes[i]
+
+			count := len(warmVolumes)
+			for i := 0; i < count; i++ {
+				v := warmVolumes[i]
+
 				if !v.isAbleToStoreBlock() {
+					warmVolumes = append(warmVolumes[:i], warmVolumes[i+1:]...)
+					i--
+					count--
 					continue
 				}
+
 				if selectedVolume == nil {
 					selectedVolume = &v
 					selectedIndex = i
 					continue
 				}
+
 				if v.availableSize > selectedVolume.availableSize {
 					selectedVolume = &v
 					selectedIndex = i
 				}
 			}
+			warmTier.volumes = warmVolumes
 			return selectedVolume, selectedIndex
 		}
-	default:
-		//
-		panic(fmt.Errorf("Stragegy %v not defined", strategy))
+
 	}
+
+	warmTier.selectNextVolume = f
 }
 
-type wTier struct {
-	volumes    []volume
-	nextVolume *volume
-	prevVolInd int
-	pickVolume func(volumes *[]volume, prevVolInd int) (*volume, int)
-}
-
-var warmTier wTier
-
-func startVolumes(volumesInfo []map[string]interface{}) (volumes []volume) {
-	// TODO also check if inodes available is enough for allowed blocks number
+func checkWarmVolumes(volumesInfo []map[string]interface{}) {
 	for _, v := range volumesInfo {
-		vPath, ok := v["path"]
+		vPathI, ok := v["path"]
 		if !ok {
 			continue
 		}
-		volumePath := vPath.(string)
+		vPath := vPathI.(string)
 
 		var volStat unix.Statfs_t
-		err := unix.Statfs(volumePath, &volStat)
+		err := unix.Statfs(vPath, &volStat)
 		if err != nil {
-			//log error
+			Logger.Error(err.Error())
 			continue
 		}
 
 		if volStat.Files/volStat.Ffree < 10 { //dont' store if inodes less than 10 percent
-			//log status
+			Logger.Error(fmt.Sprintf("Volume %v has less than 10%% available inodes", vPath))
 			continue
 		}
 		availableSize := volStat.Bfree * uint64(volStat.Bsize)
 		if availableSize/(1024*1024*1024) < 2 { //don't accept volume if it has lesser than 2GB
-			//log status
+			Logger.Error(fmt.Sprintf("Volume %v has less than 2GB available", vPath))
 			continue
 		}
 
-		dirents, err := os.ReadDir(volumePath)
+		err = os.RemoveAll(vPath)
 		if err != nil {
-			//log error
+			Logger.Error(err.Error())
 			continue
 		}
 
-		var removeErr error
-		for _, dirent := range dirents {
-			p := filepath.Join(volumePath, dirent.Name())
-			removeErr = os.RemoveAll(p)
-			if removeErr != nil {
-				break
-			}
-		}
-		if removeErr != nil {
-			//log error
+		if err := os.MkdirAll(vPath, 0644); err != nil {
+			Logger.Error(err.Error())
 			continue
 		}
 
-		curDir := fmt.Sprintf("%v%v/%v", Kilo, 0, 0)
-		path := filepath.Join(volumePath, curDir)
+		curDir := fmt.Sprintf("%v%v/%v", WKilo, 0, 0)
+		path := filepath.Join(vPath, curDir)
 		err = os.MkdirAll(path, 0644)
 		if err != nil {
-			//log error fmt.Errorf("Could not create path: %v in volume %v; Got error \"%v\"", path, v, err)
+			Logger.Error(fmt.Sprintf("Could not create path: %v in volume %v; Got error \"%v\"", path, v, err))
 			continue
 		}
 
@@ -423,8 +478,8 @@ func startVolumes(volumesInfo []map[string]interface{}) (volumes []volume) {
 		if ok {
 			sizeToMaintain = sizeToMaintainI.(uint64)
 		}
-		warmTier.volumes = append(warmTier.volumes, volume{
-			path:                volumePath,
+		warmTier.volumes = append(warmTier.volumes, warmVolume{
+			path:                vPath,
 			availableSize:       availableSize,
 			allowedBlockNumbers: allowedBlockNumbers,
 			allowedBlockSize:    allowedBlockSize,
@@ -432,13 +487,10 @@ func startVolumes(volumesInfo []map[string]interface{}) (volumes []volume) {
 		})
 	}
 
-	if len(volumes) < len(volumesInfo)/2 { //Atleast 50% volumes must be able to store blocks
+	if len(warmTier.volumes) < len(volumesInfo)/2 { //Atleast 50% volumes must be able to store blocks
 		//log status
 		panic(errors.New("Atleast 50% volumes must be able to store blocks"))
 	}
-
-	// TODO also clean meta records
-	return
 }
 
 //**********************************************Recover metadata: check volumes and cold storage*********************
@@ -489,7 +541,7 @@ func RecoverMetaData(volumesInfo []map[string]interface{}, coldConfig interface{
 			sizeToMaintain = sizeToMaintainI.(uint64)
 		}
 
-		volume := volume{
+		volume := warmVolume{
 			path:                volumePath,
 			blocksSize:          size,
 			blocksCount:         count,

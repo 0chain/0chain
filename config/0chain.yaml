@@ -127,21 +127,45 @@ min_stake: 10.0    # tokens
 # SC max_stake
 max_stake: 1000.0  # tokens
 
-# Start mode will delete all the data in volumepath, will initialize meta records,
-# Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
-mode: start # normal or repair or recover(metadata recovery)
 
 # All tiering, strategy,etc. configs
 storage:
-  hot_tiering: true
-  warm_tiering: true
-  cold_tiering: true
+  # Start mode will delete all the data in volumepath, will initialize meta records,
+  # Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
+  mode: start # normal or repair or recover(metadata recovery)
+
+  #Types:
+  # - hot_only --> Only hot tier(ssd),
+  # - warm_only --> Only warm tier(hdd),
+  # - cache_and_warm, --> Cache and warm tier(ssd + hdd),
+  # - cache_and_cold --> Cache and cold tier(ssd + cold storage),
+  # - cache_hot_and_cold --> Cache(for cold blocks), hot(ssd) and cold tier,
+  # - cache_warm_and_cold --> Cache(for both warm and cold blocks), warm(hdd) and cold tier
+
+  #Note: Cannot have mix of hot and warm; hot does not require cache since ssd is used as hot tier and cache both
+
+  storage_type: "cache_and_warm"
+  cache:
+    path: "/path/to/cache/blocks"
+    size_to_maintain: 1 # In GB
+    allowed_block_numbers: 10^4
+    allowed_block_size: 500 * 1024 * 1024
+    poll_interval: 1 # In hour
+    block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
   hot:
-    path: "/path/to/store/blocks"
-    allowed_block_numbers: 10^6
-    allowed_block_size: 1024 # In GB
-    maintain_size: 20 # In GB; This will restrict block being stored in ssd if available size is lesser than this value
+    strategy: "some hot strategy"
+    block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
+    volumes:
+      - path: "/path/to/hot/blocks"
+        size_to_maintain: 1 # In GB
+        allowed_block_numbers: 10^3
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
+      - path: "/path/to/hot/blocks"
+        size_to_maintain: 1 # In GB
+        allowed_block_numbers: 10^3
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
   warm:
+    block_moves_in: 720 # In hour
     strategy: "round_robin" # choices; round_robin, min_size_first, min_count_first and random
     volumes:
       - path: "/path/to/store/blocks"
@@ -153,12 +177,38 @@ storage:
         allowed_block_numbers: 10^9
         allowed_block_size: 1024 * 1024 * 1024
   cold:
-    enabled: true
-    interval: 720 # In hour; This value determines if a block should be moved to cold storage.
-    cred_path : "/path/to/credential"
+    #Can be either disk, minio or blobber but never combination of them.
     delete_local: true
-    credentials:
-      storage_service_url: ""
-      access_id: ""
-      secret_access_key: ""
-      bucket_name: ""
+    storage:
+      type: "minio" # one of disk, minio and blobber
+      disk: # Cold storage can also be some mounted volumes
+        strategy: "some strategy"
+        volumes:
+          - path: "/path/to/store/blocks"
+            allowed_block_numbers: 10^10 # Can be any numbers
+            allowed_block_size: 1000 # In GB
+          - path: "/path/to/store/blocks"
+            allowed_block_numbers: 10^10 # Can be any numbers
+            allowed_block_size: 1000 # In GB
+      minio:
+        strategy: "some cold strategy"
+        cloud_storages:
+          - storage_service_url: ""
+            access_id: ""
+            secret_access_key: ""
+            bucket_name: ""
+          - storage_service_url: ""
+            access_id: ""
+            secret_access_key: ""
+            bucket_name: ""
+      blobber:
+        strategy: "some blobber strategy"
+        blobbers:
+          - wallet: ""
+            allocation_id: ""
+            allowed_block_numbers: 10^10
+            allowed_block_size: 10^4 # In GB
+          - wallet: ""
+            allocation_id: ""
+            allowed_block_numbers: 10^10
+            allowed_block_size: 10^4 # In GB

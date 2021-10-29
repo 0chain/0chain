@@ -1,10 +1,12 @@
-package blockstore
+package smartblockstore
 
-import "0chain.net/chaincore/block"
+import (
+	"errors"
+
+	"0chain.net/chaincore/block"
+)
 
 type Tiering uint8
-
-const fileExt = ".dat"
 
 const (
 	H   Tiering = iota // Hot only
@@ -25,12 +27,15 @@ const (
 6. Use hot, warm and cold tier
 */
 
+var smartStore SmartStore
+
 type SmartStore struct {
-	Mode     string //start or repair
-	Tiering  Tiering
-	HotTier  interface{} // type not defined
-	WarmTier wTier
-	ColdTier interface{}
+	CacheEnabled bool
+	Cache        cache
+	Tiering      Tiering
+	HotTier      hTier
+	WarmTier     wTier
+	ColdTier     cTier
 	//fields with registered functions as per the config files
 	write  func(b *block.Block) error
 	read   func(hash string, round int64) (b *block.Block, err error)
@@ -49,11 +54,25 @@ func (sm *SmartStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
-var smartStore SmartStore
+//TODO provide only one path for one volume(partition)
 
-func InitializeSmartStore(configs map[string]interface{}) error {
-	mode := ""
+func InitializeSmartStore(sConf map[string]interface{}) error {
 	InitMetaRecordDB()
+	var mode, storageType string
+
+	storageTypeI, ok := sConf["storage_type"]
+	if !ok {
+		panic(errors.New("Storage Type is a required field"))
+	}
+	storageType = storageTypeI.(string)
+
+	modeI, ok := sConf["mode"]
+	if !ok {
+		mode = "start"
+	} else {
+		mode = modeI.(string)
+	}
+
 	switch mode {
 	case "start": // Clean volume paths and start storing blocks
 		//
@@ -63,20 +82,60 @@ func InitializeSmartStore(configs map[string]interface{}) error {
 		//
 	}
 
+	switch storageType {
+	case "hot_only":
+		hotI, ok := sConf["hot"]
+		if !ok {
+			panic(errors.New("Storage type includes hot tier but hot tier config not provided"))
+		}
+		hotMap := hotI.(map[string]interface{})
+
+		hotInit(hotMap)
+
+	// case W:
+	// 	//
+	// case HW:
+	// 	//
+	// case HC:
+	// 	//
+	// case WC:
+	// 	//
+	// case HWC:
+	//
+	default:
+		panic(errors.New("Unknown Tiering"))
+	}
+
 	return nil
 }
 
 //Each tier will have its own implementation
 
 //Hot only
+func hotOnly() {
+
+	//SetUpHotVolumes
+}
 
 //Hot and Warm
+func hotAndWarm() {
+	//SetupHotAndWarmVolumes
+}
 
 //Hot and Cold
+func hotAndCold() {
+	//Setup hot and cold tiering
+}
 
 //Warm only
+func warmOnly() {
+	//SetUp Warm volumes
+}
 
 //Hot, Warm and Cold
+func hotWarmAndCold() {
+	//Setup hot warm and cold tiering
+}
 
 //Possibly usable code
 /*
