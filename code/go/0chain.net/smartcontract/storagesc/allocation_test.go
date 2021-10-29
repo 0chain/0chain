@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -1518,7 +1519,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	//
 	// reduce
 	//
-
+	const errMsgCannotBeReduced = "allocation_updating_failed: an allocations expiration cannot be reduced"
 	cp = alloc.deepCopy(t)
 
 	uar.ID = alloc.ID
@@ -1527,28 +1528,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-	require.NoError(t, err)
-	require.NoError(t, deco.Decode([]byte(resp)))
-
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	require.EqualValues(t, alloc, &deco)
-
-	assert.Equal(t, alloc.Size, cp.Size/2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
-
-	tbs, mld = 0, 0
-	for _, detail := range alloc.BlobberDetails {
-		tbs += detail.Size
-		mld += int64(detail.MinLockDemand)
-	}
-	numb = int64(alloc.DataShards + alloc.ParityShards)
-	bsize = (alloc.Size + (numb - 1)) / numb
-	assert.Equal(t, tbs, bsize*numb)
-	// MLD can't be reduced
-	assert.Equal(t, emld /*as it was*/, mld)
-
+	require.Error(t, err)
+	require.EqualValues(t, errMsgCannotBeReduced, err.Error())
 }
 
 // - finalize allocation
