@@ -63,6 +63,7 @@ const (
 	BlobberSlash
 	MaxReadPrice
 	MaxWritePrice
+	MinWritePrice
 	FailedChallengesToCancel
 	FailedChallengesToRevokeMinLock
 	ChallengeEnabled
@@ -181,6 +182,7 @@ var (
 		"blobber_slash":                        {BlobberSlash, smartcontract.Float64},
 		"max_read_price":                       {MaxReadPrice, smartcontract.StateBalance},
 		"max_write_price":                      {MaxWritePrice, smartcontract.StateBalance},
+		"min_write_price":                      {MinWritePrice, smartcontract.StateBalance},
 		"failed_challenges_to_cancel":          {FailedChallengesToCancel, smartcontract.Int},
 		"failed_challenges_to_revoke_min_lock": {FailedChallengesToRevokeMinLock, smartcontract.Int},
 		"challenge_enabled":                    {ChallengeEnabled, smartcontract.Boolean},
@@ -255,6 +257,8 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 		conf.MaxReadPrice = change
 	case MaxWritePrice:
 		conf.MaxWritePrice = change
+	case MinWritePrice:
+		conf.MinWritePrice = change
 	case BlockRewardBlockReward:
 		if conf.BlockReward == nil {
 			conf.BlockReward = &blockReward{}
@@ -503,6 +507,8 @@ func (conf *scConfig) get(key Setting) interface{} {
 		return conf.MaxReadPrice
 	case MaxWritePrice:
 		return conf.MaxWritePrice
+	case MinWritePrice:
+		return conf.MinWritePrice
 	case FailedChallengesToCancel:
 		return conf.FailedChallengesToCancel
 	case FailedChallengesToRevokeMinLock:

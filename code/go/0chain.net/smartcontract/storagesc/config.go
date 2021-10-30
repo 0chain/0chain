@@ -118,6 +118,7 @@ type scConfig struct {
 	MaxReadPrice state.Balance `json:"max_read_price"`
 	// MaxWrtiePrice
 	MaxWritePrice state.Balance `json:"max_write_price"`
+	MinWritePrice state.Balance `json:"min_write_price"`
 
 	// allocation cancellation
 
@@ -201,6 +202,13 @@ func (sc *scConfig) validate() (err error) {
 	}
 	if sc.MaxWritePrice < 0 {
 		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
+	}
+	if sc.MinWritePrice < 0 {
+		return fmt.Errorf("negative min_write_price: %v", sc.MaxWritePrice)
+	}
+	if sc.MaxWritePrice < sc.MinWritePrice {
+		return fmt.Errorf("max wirte price %v must be more than min_write_price: %v",
+			sc.MaxWritePrice, sc.MinWritePrice)
 	}
 	if sc.StakePool.MinLock <= 1 {
 		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
@@ -382,6 +390,8 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.MaxReadPrice = state.Balance(
 		scc.GetFloat64(pfx+"max_read_price") * 1e10)
+	conf.MinWritePrice = state.Balance(
+		scc.GetFloat64(pfx+"min_write_price") * 1e10)
 	conf.MaxWritePrice = state.Balance(
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
