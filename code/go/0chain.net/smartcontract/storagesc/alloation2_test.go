@@ -22,15 +22,14 @@ import (
 type blobberStakes []int64
 
 const (
-	errValueNotPresent   = "value not present"
-	ownerId              = "owin"
-	ErrCancelFailed      = "alloc_cancel_failed"
-	ErrExpired           = "trying to cancel expired allocation"
-	ErrNotOwner          = "only owner can cancel an allocation"
-	ErrNotEnoughFailiars = "not enough failed challenges of allocation to cancel"
-	ErrNotEnoughLock     = "paying min_lock for"
-	ErrFinalizedFailed   = "fini_alloc_failed"
-	ErrFinalizedTooSoon  = "allocation is not expired yet, or waiting a challenge completion"
+	errValueNotPresent  = "value not present"
+	ownerId             = "owin"
+	ErrCancelFailed     = "alloc_cancel_failed"
+	ErrExpired          = "trying to cancel expired allocation"
+	ErrNotOwner         = "only owner can cancel an allocation"
+	ErrNotEnoughLock    = "paying min_lock for"
+	ErrFinalizedFailed  = "fini_alloc_failed"
+	ErrFinalizedTooSoon = "allocation is not expired yet, or waiting a challenge completion"
 )
 
 func TestNewAllocation(t *testing.T) {
@@ -228,17 +227,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
 		require.True(t, strings.Contains(err.Error(), ErrExpired))
-	})
-
-	t.Run(ErrNotEnoughFailiars, func(t *testing.T) {
-		var failersScYaml = scYaml
-		failersScYaml.FailedChallengesToCancel = 29
-
-		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
-			otherWritePools, challengePoolBalance, challenges, blobberOffer, thisExpires, now)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
-		require.True(t, strings.Contains(err.Error(), ErrNotEnoughFailiars))
 	})
 
 	t.Run("enough failiars", func(t *testing.T) {
@@ -586,6 +574,11 @@ func confirmFinalizeAllocation(
 				}
 			}
 			require.False(t, minLockTransfers[bId])
+			a := f.minLockServiceCharge(bId)
+			b := int64(transfer.Amount)
+			if a-b > 6 {
+				require.InDelta(t, f.minLockServiceCharge(bId), int64(transfer.Amount), errDelta)
+			}
 			require.InDelta(t, f.minLockServiceCharge(bId), int64(transfer.Amount), errDelta)
 			minLockTransfers[bId] = true
 			continue
@@ -795,19 +788,7 @@ func (f *formulaeFinalizeAllocation) _minLockTotal() int64 {
 	return total
 }
 
-func (f *formulaeFinalizeAllocation) _minLockRevoked(blobber int) bool {
-	var open = f.allocation.BlobberDetails[blobber].Stats.OpenChallenges
-	var failed = f.allocation.BlobberDetails[blobber].Stats.FailedChallenges
-	var maxFailiers = int64(f.scYaml.FailedChallengesToRevokeMinLock)
-
-	return open+failed >= maxFailiers
-}
-
 func (f *formulaeFinalizeAllocation) _minLockPayment(blobber int) int64 {
-	if f._minLockRevoked(blobber) {
-		return 0
-	}
-
 	require.True(f.t, blobber < len(f.allocation.BlobberDetails))
 	var details = f.allocation.BlobberDetails[blobber]
 	var minLock = int64(details.MinLockDemand)
