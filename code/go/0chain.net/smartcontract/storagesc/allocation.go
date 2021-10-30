@@ -1379,18 +1379,16 @@ func (sc *StorageSmartContract) finishAllocation(
 	var cpLeft = cp.Balance // tokens left in related challenge pool
 	for i, d := range alloc.BlobberDetails {
 		// min lock demand rest
-		var fctrml = conf.FailedChallengesToRevokeMinLock
-		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
-			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				if _, err := transferReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
-					return common.NewError("alloc_cancel_failed",
-						"paying min_lock for "+d.BlobberID+": "+err.Error())
-				}
-				d.Spent += lack
-				d.FinalReward += lack
-				cpLeft -= lack
+		if lack := d.MinLockDemand - d.Spent; lack > 0 {
+			if _, err := transferReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
+				return common.NewError("alloc_cancel_failed",
+					"paying min_lock for "+d.BlobberID+": "+err.Error())
 			}
+			d.Spent += lack
+			d.FinalReward += lack
+			cpLeft -= lack
 		}
+
 	}
 	var passPayments state.Balance = 0
 	for i, d := range alloc.BlobberDetails {
