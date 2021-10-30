@@ -123,6 +123,7 @@ var (
 		"blobber_slash",
 		"max_read_price",
 		"max_write_price",
+		"max_write_price",
 		"failed_challenges_to_cancel",
 		"failed_challenges_to_revoke_min_lock",
 		"challenge_enabled",
