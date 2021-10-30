@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -1204,23 +1205,24 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	)
 
 	alloc.Size = 10 * GB
+	request := updateAllocationRequest{}
 
 	// 1. zero
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 2. becomes to small
 	var sub = 9.01 * GB
 	uar.Size -= int64(sub)
 	conf.MinAllocSize = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 3. no blobbers (invalid allocation, panic check)
 	uar.Size = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc))
+	assert.Error(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 
 	// 4. ok
 	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
-	assert.NoError(t, uar.validate(&conf, &alloc))
+	assert.NoError(t, uar.validate(&conf, alloc.Owner, request, &alloc))
 }
 
 func Test_updateAllocationRequest_getBlobbersSizeDiff(t *testing.T) {
@@ -1517,7 +1519,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	//
 	// reduce
 	//
-
+	const errMsgCannotBeReduced = "allocation_updating_failed: an allocations expiration cannot be reduced"
 	cp = alloc.deepCopy(t)
 
 	uar.ID = alloc.ID
@@ -1526,28 +1528,8 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-	require.NoError(t, err)
-	require.NoError(t, deco.Decode([]byte(resp)))
-
-	alloc, err = ssc.getAllocation(allocID, balances)
-	require.NoError(t, err)
-
-	require.EqualValues(t, alloc, &deco)
-
-	assert.Equal(t, alloc.Size, cp.Size/2)
-	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
-
-	tbs, mld = 0, 0
-	for _, detail := range alloc.BlobberDetails {
-		tbs += detail.Size
-		mld += int64(detail.MinLockDemand)
-	}
-	numb = int64(alloc.DataShards + alloc.ParityShards)
-	bsize = (alloc.Size + (numb - 1)) / numb
-	assert.Equal(t, tbs, bsize*numb)
-	// MLD can't be reduced
-	assert.Equal(t, emld /*as it was*/, mld)
-
+	require.Error(t, err)
+	require.EqualValues(t, errMsgCannotBeReduced, err.Error())
 }
 
 // - finalize allocation

@@ -480,6 +480,8 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 // validate request
 func (uar *updateAllocationRequest) validate(
 	conf *scConfig,
+	client string,
+	request updateAllocationRequest,
 	alloc *StorageAllocation,
 ) (err error) {
 	if uar.SetImmutable && alloc.IsImmutable {
@@ -496,6 +498,18 @@ func (uar *updateAllocationRequest) validate(
 			return fmt.Errorf("new allocation size is too small: %d < %d",
 				ns, conf.MinAllocSize)
 		}
+	}
+
+	if request.Expiration < 0 {
+		return errors.New("an allocations expiration cannot be reduced")
+	}
+
+	if request.Size != 0 && client != alloc.Owner {
+		return errors.New("only the owner can change an allocation's size")
+	}
+
+	if request.SetImmutable && client != alloc.Owner {
+		return errors.New("only the owner can set the allocation to immutable")
 	}
 
 	if len(alloc.BlobberDetails) == 0 {
@@ -956,29 +970,13 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			"invalid request: "+err.Error())
 	}
 
-	if request.OwnerID == "" {
-		request.OwnerID = t.ClientID
-	}
-
-	var clist *Allocations // client allocations list
-	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
-		return "", common.NewError("allocation_updating_failed",
-			"can't get client's allocations list: "+err.Error())
-	}
-
-	if !clist.has(request.ID) {
-		return "", common.NewErrorf("allocation_updating_failed",
-			"can't find allocation in client's allocations list: %s (%d)",
-			request.ID, len(clist.List))
-	}
-
 	var alloc *StorageAllocation
 	if alloc, err = sc.getAllocation(request.ID, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get existing allocation: "+err.Error())
 	}
 
-	if err = request.validate(conf, alloc); err != nil {
+	if err = request.validate(conf, t.ClientID, request, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
