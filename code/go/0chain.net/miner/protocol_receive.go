@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -377,32 +376,19 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if !b.IsStateComputed() {
-		if err := mc.ComputeState(ctx, b); err != nil {
-			return fmt.Errorf("compute state failed, err: %v", err)
-		}
-	}
-
 	if mc.GetCurrentRound() <= not.Round && !mc.isAheadOfSharders(ctx, not.Round) {
-		lfb := mc.GetLatestFinalizedBlock()
-		lfbTicket := mc.GetLatestLFBTicket(ctx)
-		lfbGaps := lfbTicket.Round - lfb.Round
-		if lfbGaps > int64(config.GetLFBTicketAhead()) {
-			lb, _ := mc.GetBlock(ctx, lfbTicket.LFBHash)
-			if lb != nil {
-				// update lfb if the chain is current far ahead of lfb
-				logging.Logger.Error("process notarization - update lfb",
-					zap.Int64("round", lb.Round),
-					zap.String("block", lb.Hash))
-				mc.SetLatestFinalizedBlock(ctx, lb)
-			}
-		}
-
-		logging.Logger.Info("process notarization - block notarized, start next round",
+		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", not.Round+1))
 
 		go mc.StartNextRound(ctx, r)
 	}
+
+	if !b.IsStateComputed() {
+		if err := mc.GetBlockStateChange(b); err != nil {
+			return fmt.Errorf("process notarization - sync state changes failed, round: %d, err: %v", b.Round, err)
+		}
+	}
+
 	return nil
 }
 
