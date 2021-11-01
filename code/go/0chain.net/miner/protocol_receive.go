@@ -353,11 +353,10 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	if !b.IsBlockNotarized() {
 		var vts = b.UnknownTickets(not.VerificationTickets)
 		if len(vts) == 0 {
-			err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round)
+			err := mc.VerifyBlockNotarization(ctx, b)
 			if err != nil {
 				return errors.New("no new tickets detected")
 			}
-			b.SetBlockNotarized()
 		} else {
 			logging.Logger.Debug("process notarization - merge notarization block",
 				zap.Int64("round", b.Round),
@@ -480,15 +479,13 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		}
 	}
 
-	if err := mc.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(), mr.GetRoundNumber()); err != nil {
+	if err := mc.VerifyBlockNotarization(ctx, nb); err != nil {
 		logging.Logger.Error("not. block handler -- verify notarization failed",
 			zap.Int64("round", nb.Round),
 			zap.String("block", nb.Hash),
 			zap.Error(err))
 		return
 	}
-
-	nb.SetBlockNotarized()
 
 	if !mr.IsVRFComplete() {
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())

@@ -1193,13 +1193,12 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	close(fbc)
 
 	for fb := range fbc {
-		if err := mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(), fb.Round); err != nil {
+		if err := mc.VerifyBlockNotarization(ctx, fb); err != nil {
 			logging.Logger.Error("lfb from sharder - notarization failed",
 				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 				zap.Error(err))
 			continue
 		}
-		fb.SetBlockNotarized()
 
 		// don't use the round, just create it or make sure it's created
 		mc.getOrCreateRound(ctx, fb.Round) // can' return nil
@@ -1270,15 +1269,13 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
-			fb.Round)
+		err = mc.VerifyBlockNotarization(ctx, fb)
 		if err != nil {
 			logging.Logger.Error("FB from sharder - notarization failed",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err
 		}
-		fb.SetBlockNotarized()
 
 		mc.getOrCreateRound(ctx, fb.Round)
 

@@ -192,8 +192,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	err = sc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
-		er.GetRoundNumber())
+	err = sc.VerifyBlockNotarization(ctx, b)
 	if err != nil {
 		Logger.Error("notarization verification failed",
 			zap.Error(err),
@@ -201,8 +200,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			zap.String("block", b.Hash))
 		return
 	}
-
-	b.SetBlockNotarized()
 
 	if err = b.Validate(ctx); err != nil {
 		Logger.Error("block validation", zap.Any("round", b.Round),

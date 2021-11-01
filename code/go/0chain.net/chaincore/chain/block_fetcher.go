@@ -375,7 +375,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 			return nil, err
 		}
 
-		err = c.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round)
+		err = c.VerifyBlockNotarization(ctx, b)
 		if err != nil {
 			logging.Logger.Error("fetch_fb_from_sharders - verify notarization failed",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -508,7 +508,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 				continue
 			}
 
-			err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(), nb.Round)
+			err = c.VerifyBlockNotarization(ctx, nb)
 			switch err {
 			case nil:
 			case context.Canceled, context.DeadlineExceeded:
@@ -523,7 +523,6 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 					zap.Error(err))
 				continue
 			}
-			nb.SetBlockNotarized()
 
 			// cancel further requests
 			cancel()
@@ -657,14 +656,6 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (*
 		return nil, err
 	}
 
-	b, _, err = r.AddNotarizedBlock(b)
-	if err != nil {
-		logging.Logger.Error("get notarized block failed",
-			zap.Int64("cround", cround), zap.Int64("round", rn),
-			zap.String("block", hash), zap.Error(err))
-		return nil, err
-	}
-
 	// Add the round if chain does not have it
 	if c.GetRound(nb.Round) == nil {
 		c.AddRound(r)
@@ -743,18 +734,10 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	logging.Logger.Info("async fetch fb from sharders", zap.String("block", fb.Hash),
 		zap.Int64("round", fb.Round))
 
-	var b *block.Block
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
 	var err error
-	b, r, err = c.AddNotarizedBlockToRound(r, fb)
-	if err != nil {
-		logging.Logger.Error("async fetch fb from sharders failed",
-			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
-			zap.Error(err))
-		return
-	}
-	b, _, err = r.AddNotarizedBlock(b)
+	_, r, err = c.AddNotarizedBlockToRound(r, fb)
 	if err != nil {
 		logging.Logger.Error("async fetch fb from sharders failed",
 			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),

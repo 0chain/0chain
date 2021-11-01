@@ -80,6 +80,18 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 	})
 }
 
+func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) error {
+	if err := c.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round); err != nil {
+		return err
+	}
+
+	_, _, err := c.createRoundIfNotExist(ctx, b)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // VerifyNotarization - verify that the notarization is correct.
 func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 	bvt []*block.VerificationTicket, round int64) (err error) {
@@ -115,6 +127,12 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 	if err := c.VerifyTickets(ctx, b.Hash, bvt, round); err != nil {
 		return err
 	}
+
+	logging.Logger.Info("reached notarization - verify notarization",
+		zap.Int64("round", round),
+		zap.Int64("current_round", c.GetCurrentRound()),
+		zap.String("block", b.Hash),
+		zap.Int("tickets_num", len(bvt)))
 
 	// TODO: tps, question about this
 	if b.Round > c.GetCurrentRound() {

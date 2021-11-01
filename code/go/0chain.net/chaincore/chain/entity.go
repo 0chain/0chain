@@ -666,6 +666,13 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 	}
+
+	var err error
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return b, r, nil
 }
 
