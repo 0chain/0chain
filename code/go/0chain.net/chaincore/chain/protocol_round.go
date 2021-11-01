@@ -48,30 +48,74 @@ func init() {
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
-// ComputeFinalizedBlock - compute the last block that needs to finalize
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
+	isIn := func(blocks []*block.Block, hash string) bool {
+		for _, b := range blocks {
+			if b.Hash == hash {
+				return true
+			}
+		}
+		return false
+	}
+
 	var (
-		rn = r.GetRoundNumber()
-		rd = r
+		roundNumber     = r.GetRoundNumber()
+		rd              = r
+		notarizedBlocks []*block.Block
 	)
 
-	if rn < lfbr {
-		return r.GetHeaviestNotarizedBlock()
-	}
-
-	for rd != nil && rn > lfbr {
-		if hnb := rd.GetHeaviestNotarizedBlock(); hnb != nil {
-			return hnb
+	for {
+		if roundNumber <= lfbr {
+			break
 		}
 
-		rn--
-		rd = c.GetRound(rn)
+		notarizedBlocks = rd.GetNotarizedBlocks()
+		if len(notarizedBlocks) > 0 {
+			break
+		}
+		roundNumber--
+		rd = c.GetRound(roundNumber)
 	}
 
-	logging.Logger.Error("finalize round - compute lfb failed",
-		zap.Int64("pre round", rn),
-		zap.Int64("round", r.GetRoundNumber()))
-	return nil
+	if len(notarizedBlocks) == 0 {
+		logging.Logger.Error("compute finalize block: no notarized blocks",
+			zap.Int64("round", r.GetRoundNumber()))
+		return nil
+	}
+
+	for {
+		prevNotarizedBlocks := make([]*block.Block, 0, 1)
+		for _, b := range notarizedBlocks {
+			if b.PrevBlock == nil {
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					logging.Logger.Error("compute finalized block: null prev block",
+						zap.Int64("round", roundNumber),
+						zap.Int64("block_round", b.Round),
+						zap.String("block", b.Hash))
+					return nil
+				}
+			}
+			if isIn(prevNotarizedBlocks, b.PrevHash) {
+				continue
+			}
+			prevNotarizedBlocks = append(prevNotarizedBlocks, b.PrevBlock)
+		}
+		notarizedBlocks = prevNotarizedBlocks
+		if len(notarizedBlocks) == 1 {
+			break
+		}
+	}
+
+	if len(notarizedBlocks) != 1 {
+		return nil
+	}
+
+	fb := notarizedBlocks[0]
+	if fb.Round == r.GetRoundNumber() {
+		return nil
+	}
+	return fb
 }
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
