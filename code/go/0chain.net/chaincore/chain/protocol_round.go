@@ -156,7 +156,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	plfb := c.GetLatestFinalizedBlock()
 	logging.Logger.Info("finalize round",
 		zap.Int64("round", roundNumber),
-		zap.Int64("lf_round", plfb.Round),
+		zap.Int64("plfb_round", plfb.Round),
 		zap.Int("num_round_notarized", nbCount),
 		zap.Int("num_chain_notarized", len(c.NotarizedBlocksCounts)))
 	ts := time.Now()
@@ -223,26 +223,30 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 
 	if lfb.Round > plfb.Round {
 		frchain := make([]*block.Block, 0, 1)
-		for b := lfb; b != nil && b.Hash != plfb.Hash; b = b.PrevBlock {
+		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
-		}
-		if len(frchain) == 0 {
-			logging.Logger.Error("finalize round - could not reach to latest finalized block",
-				zap.Int64("round", roundNumber),
-				zap.Int64("lfb", plfb.Round))
-			return
+			if b.PrevBlock == nil {
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
+						zap.Int64("round", b.Round),
+						zap.Int64("prev round", b.Round-1),
+						zap.String("block", b.Hash))
+					return
+				}
+			}
+
+			b = b.PrevBlock
 		}
 
 		fb := frchain[len(frchain)-1]
-		if fb.PrevBlock == nil {
-			pb := c.GetPreviousBlock(ctx, fb)
-			if pb == nil {
-				logging.Logger.Error("finalize round (missed blocks)",
-					zap.Int64("round", roundNumber),
-					zap.Int64("from", plfb.Round+1),
-					zap.Int64("to", fb.Round-1))
-				c.MissedBlocks += fb.Round - 1 - plfb.Round
-			}
+		if fb.Round-1 > plfb.Round {
+			logging.Logger.Error("finalize round (missed blocks)",
+				zap.Int64("round", roundNumber),
+				zap.Int64("from", plfb.Round+1),
+				zap.Int64("to", fb.Round-1))
+			c.MissedBlocks += fb.Round - 1 - plfb.Round
+			return
 		}
 
 		// perform view change (or not perform)
@@ -267,11 +271,33 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				return
 			}
 
+			if !fb.IsBlockNotarized() {
+				var err error
+				fb, err = c.GetNotarizedBlock(ctx, fb.Hash, fb.Round)
+				if err != nil {
+					logging.Logger.Error("finalize round - get notarized block failed",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(err))
+					return
+				}
+			}
+
 			_, _, err := c.createRoundIfNotExist(ctx, fb)
 			if err != nil {
 				logging.Logger.Error("create round for finalize block failed",
 					zap.Int64("round", fb.Round),
 					zap.String("hash", fb.Hash))
+			}
+
+			logging.Logger.Info("finalize round",
+				zap.Int64("round", fb.Round),
+				zap.Int64("lfb round", lfb.Round),
+				zap.String("block", fb.Hash))
+
+			fbWithReply := &finalizeBlockWithReply{
+				block:   fb,
+				resultC: make(chan error, 1),
 			}
 
 			select {
@@ -280,15 +306,23 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					zap.Error(ctx.Err()),
 					zap.Int64("round", roundNumber))
 				return
-			case c.finalizedBlocksChannel <- fb:
-				logging.Logger.Info("finalize round",
+			case c.finalizedBlocksChannel <- fbWithReply:
+				err := <-fbWithReply.resultC
+				if err != nil {
+					logging.Logger.Error("finalize round - finalize block failed",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(err))
+					return
+				}
+				logging.Logger.Info("finalize round - finalize block success",
 					zap.Int64("round", fb.Round),
 					zap.String("block", fb.Hash))
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
 				logging.Logger.Error("finalize round - push fb to finalizedBlocksChannel timeout",
 					zap.Int64("round", roundNumber),
 					zap.Int64("fb_round", fb.Round))
-				continue
+				return
 			}
 		}
 		// Prune the chain from the oldest finalized block
@@ -341,8 +375,19 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	logging.Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", plfb.Round), zap.String("cf_block", plfb.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 }
 
+type finalizeBlockWithReply struct {
+	block   *block.Block
+	resultC chan error
+}
+
 func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (round.RoundI, *block.Block, error) {
 	if r := c.GetRound(b.Round); r != nil {
+		var err error
+		_, r, err = c.AddNotarizedBlockToRound(r, b)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		return r, b, nil
 	}
 
