@@ -1019,7 +1019,6 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	if err := mpt.mergeChanges(newRoot, changes, deletes, startRoot); err != nil {
 		return err
 	}
-	db.versions = append(db.versions, newLNDB.version)
 	db.version = newLNDB.version
 
 	return nil
