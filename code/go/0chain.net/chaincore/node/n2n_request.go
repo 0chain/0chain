@@ -36,7 +36,7 @@ func GetFetchStrategy() int {
 }
 
 // RequestEntity - request an entity from nodes in the pool, returns when any node has response
-func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF, reqNum int) *Node {
+func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nds []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
@@ -45,33 +45,50 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		nds = np.GetNodesByLargeMessageTime()
 	}
 
-	total := len(nds)
-	batchSize := 4
-	batchNum := total / batchSize
-	if total%batchSize > 0 {
-		batchNum++
-	}
+	var (
+		total  = len(nds)
+		minNum = 4
+		reqNum = minNum
+	)
 
-	for i := 0; i < batchNum; i++ {
-		start := i * batchSize
-		end := (i + 1) * batchSize
-		if end > total {
-			end = total
-		}
-
-		select {
-		case <-ctx.Done():
-			logging.Logger.Error("request entity - context done", zap.Error(ctx.Err()))
-			return nil
-		default:
-			n := sendRequestConcurrent(ctx, nds[start:end], rhandler)
-			if n != nil {
-				return n
-			}
+	if total < minNum {
+		reqNum = total
+	} else {
+		reqNum = (1 / 10) * total
+		if reqNum < minNum {
+			reqNum = minNum
 		}
 	}
 
-	return nil
+	return sendRequestConcurrent(ctx, nds[:reqNum], rhandler)
+
+	//reqNum := (1 / 10) * len(nds)
+	//batchSize := 4
+	//batchNum := total / batchSize
+	//if total%batchSize > 0 {
+	//	batchNum++
+	//}
+	//
+	//for i := 0; i < batchNum; i++ {
+	//	start := i * batchSize
+	//	end := (i + 1) * batchSize
+	//	if end > total {
+	//		end = total
+	//	}
+	//
+	//	select {
+	//	case <-ctx.Done():
+	//		logging.Logger.Error("request entity - context done", zap.Error(ctx.Err()))
+	//		return nil
+	//	default:
+	//		n := sendRequestConcurrent(ctx, nds[start:end], rhandler)
+	//		if n != nil {
+	//			return n
+	//		}
+	//	}
+	//}
+
+	//return nil
 }
 
 func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler) *Node {

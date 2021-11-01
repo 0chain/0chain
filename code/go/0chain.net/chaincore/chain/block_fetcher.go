@@ -554,8 +554,7 @@ func (c *Chain) RequestEntityFromMinersOnMB(ctx context.Context,
 		return
 	}
 
-	reqNum := c.GetNotarizationThresholdCount(mb.Miners.Size())
-	mb.Miners.RequestEntity(ctx, requestor, params, handler, reqNum)
+	mb.Miners.RequestEntity(ctx, requestor, params, handler)
 }
 
 // RequestEntityFromShardersOnMB requests entity from sharders on given magic block
@@ -564,7 +563,7 @@ func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
 	if mb == nil {
 		return
 	}
-	mb.Sharders.RequestEntity(ctx, requestor, params, handler, mb.Sharders.Size())
+	mb.Sharders.RequestEntity(ctx, requestor, params, handler)
 }
 
 func (c *Chain) getLatestFinalizedMagicBlock(ctx context.Context) (mb *block.MagicBlock) {
