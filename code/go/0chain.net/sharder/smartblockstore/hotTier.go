@@ -5,10 +5,13 @@ import (
 	"compress/zlib"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -32,18 +35,24 @@ type hTier struct { //Hot Tier
 	selectNextVolume func(hotVolumes []hotVolume, prevInd int) (*hotVolume, int)
 	volume           *hotVolume //volume that will be used to store blocks next
 	prevVolInd       int
+	mu               sync.Mutex
 }
 
 type hotVolume struct {
-	path                    string
-	allowedBlockNumbers     uint64
-	allowedBlockSize        uint64
-	sizeToMaintain          uint64
-	blocksSize, blocksCount uint64
-	availableSize           uint64
-	curHKInd                uint32
-	curDirInd               uint32
-	curDirBlockNums         uint32
+	path string
+
+	allowedBlockNumbers uint64
+	allowedBlockSize    uint64
+
+	sizeToMaintain   uint64
+	inodesToMaintain uint64
+	blocksSize       uint64
+	blocksCount      uint64
+
+	//used in selecting directory
+	curHKInd        uint32
+	curDirInd       uint32
+	curDirBlockNums uint32
 }
 
 func (hv *hotVolume) selectDir() error {
@@ -146,6 +155,58 @@ func (hv *hotVolume) write(b *block.Block, data []byte) (bPath string, err error
 		return
 	}
 
+	//This block doesn't belong here
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	var bwrErr, ubErr error
+	var bwr BlockWhereRecord
+	var ub UnmovedBlockRecord
+	go func() {
+		defer wg.Done()
+		bwr = BlockWhereRecord{
+			Hash:      b.Hash,
+			Tiering:   HotTier,
+			BlockPath: bPath,
+		}
+
+		bwrErr = bwr.AddOrUpdate()
+
+	}()
+
+	go func() {
+		defer wg.Done()
+		ub = UnmovedBlockRecord{
+			CreatedAt: b.ToTime(),
+			Hash:      b.Hash,
+		}
+
+		ubErr = ub.Add()
+	}()
+
+	wg.Wait()
+
+	if bwrErr != nil || ubErr != nil {
+		Logger.Error(err.Error())
+		Logger.Info(fmt.Sprintf("Removing block: %v and its meta record", bPath))
+
+		wg := sync.WaitGroup{}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			DeleteBlockWhereRecord(b.Hash)
+		}()
+
+		go func() {
+			defer wg.Done()
+			ub.Delete()
+		}()
+		wg.Wait()
+
+		os.Remove(bPath)
+		return
+	}
+	//Above block doesn't belong here
 	hv.curDirBlockNums++
 	hv.updateCount(1)
 	hv.updateSize(int64(n))
@@ -174,6 +235,7 @@ func (hv *hotVolume) read(hash, blockPath string) (*block.Block, error) {
 	return b, nil
 }
 
+//When a block is moved to cold tier delete function will be called
 func (hv *hotVolume) delete(hash, path string) error {
 	finfo, err := os.Stat(path)
 	if err != nil {
@@ -195,10 +257,8 @@ func (hv *hotVolume) delete(hash, path string) error {
 func (hv *hotVolume) updateSize(n int64) {
 	if n < 0 {
 		hv.blocksSize -= uint64(n)
-		hv.availableSize += uint64(n)
 	} else {
 		hv.blocksSize += uint64(n)
-		hv.availableSize -= uint64(n)
 	}
 }
 
@@ -228,14 +288,14 @@ func (hv *hotVolume) isAbleToStoreBlock() (ableToStore bool) {
 		return
 	}
 
-	if float64(volStat.Ffree)/float64(volStat.Bavail) < 0.1 { //return false if available inodes is lesser than 10%
-		Logger.Error(fmt.Sprintf("Less than 10%% available inodes for volume: %v", hv.path))
+	if volStat.Ffree < hv.inodesToMaintain {
+		Logger.Error(fmt.Sprintf("Available Inodes for volume %v is less than inodes to maintain(%v)", hv.path, hv.inodesToMaintain))
 		return
 	}
 
 	availableSize := volStat.Bfree * uint64(volStat.Bsize)
-	if availableSize/(1024*1024*1024) < uint64(hv.sizeToMaintain) { //don't accept volume if it has lesser than size to maintain
-		//log status
+	if availableSize/(1024*1024*1024) < uint64(hv.sizeToMaintain) {
+		Logger.Error(fmt.Sprintf("Available size for volume %v is less than size to maintain(%v)", hv.path, hv.sizeToMaintain))
 		return
 	}
 
@@ -251,14 +311,13 @@ func (hv *hotVolume) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-func hotInit(hConf map[string]interface{}) {
+func hotInit(hConf map[string]interface{}, mode string) {
 	volumesI, ok := hConf["volumes"]
 	if !ok {
 		panic(errors.New("Volumes config not available"))
 	}
 
 	volumes := volumesI.([]map[string]interface{})
-	checkHotVolumes(volumes)
 
 	var strategy string
 	strategyI, ok := hConf["strategy"]
@@ -267,6 +326,25 @@ func hotInit(hConf map[string]interface{}) {
 	} else {
 		strategy = strategyI.(string)
 	}
+
+	Logger.Info(fmt.Sprintf("Running hotInit in %v mode", mode))
+	switch mode {
+	case "start":
+		//Delete all existing data and start fresh
+		startHotVolumes(volumes) //will panic if right config setup is not provided
+	case "restart": //Nothing is lost but sharder was off for maintenance move
+		restartHotVolumes(volumes)
+		//
+	case "recover": //Metadata is lost
+		recoverHotMetaData(volumes)
+	case "repair": //Metadata is present but some disk failed
+		panic("Repair mode not implemented")
+	case "repair_and_recover": //Metadata is lost and some disk failed
+		panic("Repair and recover mode not implemented")
+	default:
+		panic(fmt.Errorf("%v mode is not supported", mode))
+	}
+	Logger.Info(fmt.Sprintf("Successfully ran hotInit in %v mode", mode))
 
 	Logger.Info(fmt.Sprintf("Registering function for strategy: %v", strategy))
 	var f func(hotVolumes []hotVolume, prevInd int) (*hotVolume, int)
@@ -353,7 +431,6 @@ func hotInit(hConf map[string]interface{}) {
 			var selectedIndex int
 
 			totalVolumes := len(hotVolumes)
-
 			for i := 0; i < totalVolumes; i++ {
 				if len(hotVolumes) == 0 {
 					break
@@ -373,7 +450,7 @@ func hotInit(hConf map[string]interface{}) {
 					continue
 				}
 
-				if v.availableSize > selectedVolume.availableSize {
+				if v.blocksSize < selectedVolume.blocksSize {
 					selectedVolume = &v
 					selectedIndex = i
 				}
@@ -420,39 +497,64 @@ func hotInit(hConf map[string]interface{}) {
 	hotTier.selectNextVolume = f
 }
 
-func checkHotVolumes(volumes []map[string]interface{}) {
+func startHotVolumes(volumes []map[string]interface{}) {
+	startVolumes(volumes, true)
+}
+
+func restartHotVolumes(volumes []map[string]interface{}) {
+	startVolumes(volumes, false)
+}
+
+func startVolumes(volumes []map[string]interface{}, shouldDelete bool) {
+	//Remove db
+	//Remove all the blocks
+
 	for _, volI := range volumes {
 		vPathI, ok := volI["path"]
 		if !ok {
 			Logger.Error("Discarding volume; Path field is required")
 			continue
 		}
+
 		vPath := vPathI.(string)
-		var volStat unix.Statfs_t
-		err := unix.Statfs(vPath, &volStat)
+
+		if shouldDelete {
+			if err := os.RemoveAll(vPath); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := os.MkdirAll(vPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+		}
+
+		availableSize, availableInodes, err := getAvailableSizeAndInodes(vPath)
+
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
 		}
-		if volStat.Ffree*10/volStat.Files < 10 { //ignore if inodes is less than 10 percent
-			Logger.Error("Less than 10% available inodes")
+
+		var sizeToMaintain uint64
+		sizeToMaintainI, ok := volI["size_to_maintain"]
+		if ok {
+			sizeToMaintain = sizeToMaintainI.(uint64)
+		}
+
+		if availableSize/(1024^3) <= sizeToMaintain {
+			Logger.Error(ErrSizeLimit(vPath, sizeToMaintain).Error())
 			continue
 		}
 
-		availableSize := volStat.Bfree * uint64(volStat.Bsize)
-		if availableSize/(1024*1024*1024) < 2 { //ignore if size is lesser than 2GB
-			Logger.Error("Less than 2GB available size")
-			continue
+		var inodesToMaintain uint64
+		inodesToMaintainI, ok := volI["inodes_to_maintain"]
+		if ok {
+			inodesToMaintain = inodesToMaintainI.(uint64)
 		}
-
-		err = os.RemoveAll(vPath)
-		if err != nil {
-			Logger.Error(err.Error())
-			continue
-		}
-
-		if err := os.MkdirAll(vPath, 0644); err != nil {
-			Logger.Error(err.Error())
+		if availableInodes <= inodesToMaintain {
+			Logger.Error(ErrInodesLimit(vPath, inodesToMaintain).Error())
 			continue
 		}
 
@@ -468,21 +570,192 @@ func checkHotVolumes(volumes []map[string]interface{}) {
 			allowedBlockSize = allowedBlockSizeI.(uint64)
 		}
 
-		var sizeToMaintain uint64
-		sizeToMaintainI, ok := volI["size_to_maintain"]
-		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
-		}
-
 		hotTier.volumes = append(hotTier.volumes, hotVolume{
 			path:                vPath,
-			availableSize:       availableSize,
 			allowedBlockNumbers: allowedBlockNumbers,
 			allowedBlockSize:    allowedBlockSize,
 			sizeToMaintain:      sizeToMaintain,
 		})
 	}
+
 	if len(volumes) < len(hotTier.volumes)/2 {
-		panic(errors.New("Atlest 50%% volumes must be able to store blocks"))
+		panic(errors.New("Atleast 50%% volumes must be able to store blocks"))
 	}
+}
+
+func repairHotVolumes() {
+
+}
+
+//This function will recover metadata
+func recoverHotMetaData(volumes []map[string]interface{}) {
+	for _, volume := range volumes {
+		volPathI, ok := volume["path"]
+		if !ok {
+			panic("Every volume path is required for recovering metadata")
+		}
+
+		volPath := volPathI.(string)
+		Logger.Info(fmt.Sprintf("Recovering metadata from volume: %v", volPath))
+
+		recoverWG := sync.WaitGroup{}
+		guideChannel := make(chan struct{}, 10)
+
+		grandCount := struct {
+			totalBlocksCount uint64
+			recoveredCount   uint64
+			totalBlocksSize  uint64
+			mu               sync.Mutex
+		}{}
+
+		for i := 0; i < HDCL; i++ {
+			hotIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", HK, i))
+			if _, err := os.Stat(hotIndexPath); err != nil {
+				Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, hotIndexPath, err))
+				continue
+			}
+
+			for j := 0; j < HDCL; j++ {
+				blockSubDirPath := filepath.Join(hotIndexPath, fmt.Sprint("%v", j))
+				if _, err := os.Stat(blockSubDirPath); err != nil {
+					Logger.Debug(err.Error())
+					continue
+				}
+
+				guideChannel <- struct{}{}
+				recoverWG.Add(1)
+
+				//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+				//for multi disks? Need some benchmark
+				go func(gPath string) { //gPath Path for goroutine
+					defer recoverWG.Done()
+					defer func() {
+						<-guideChannel
+					}()
+
+					var recoverCount, totalBlocksCount int
+
+					var f *os.File
+					f, _ = os.Open(gPath)
+					defer f.Close()
+
+					var dirEntries []os.DirEntry
+					var err error
+					for {
+						dirEntries, err = f.ReadDir(1000)
+						if errors.Is(err, io.EOF) {
+							err = nil
+							break
+						}
+						for _, dirEntry := range dirEntries {
+							var bwr BlockWhereRecord
+							var errorOccurred bool
+							var blockSize uint64
+							fileName := dirEntry.Name()
+							hash := strings.Split(fileName, ".")[0]
+							blockPath := filepath.Join(gPath, fileName)
+
+							finfo, err := dirEntry.Info()
+							if err != nil {
+								Logger.Error(fmt.Sprintf("Error: %v while getting file info for file: %v", err, blockPath))
+								errorOccurred = true
+								goto CountUpdate
+							}
+
+							blockSize = uint64(finfo.Size())
+							bwr = BlockWhereRecord{
+								Hash:      hash,
+								Tiering:   HotTier,
+								BlockPath: blockPath,
+							}
+
+							if err := bwr.AddOrUpdate(); err != nil {
+								Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
+								errorOccurred = true
+								goto CountUpdate
+							}
+
+						CountUpdate:
+							totalBlocksCount++
+							grandCount.mu.Lock()
+							grandCount.totalBlocksCount++
+							grandCount.totalBlocksSize += blockSize
+							if errorOccurred {
+								continue
+							}
+							grandCount.recoveredCount++
+							grandCount.mu.Unlock()
+							recoverCount++
+						}
+					}
+					Logger.Info(fmt.Sprintf("%v Meta records recovered of %v blocks from path: %v", recoverCount, totalBlocksCount, gPath))
+
+				}(blockSubDirPath)
+
+			}
+		}
+		recoverWG.Wait() //wait for all goroutine to complete
+
+		//Check available size and inodes and add volume to volume pool
+		availableSize, availableInodes, err := getAvailableSizeAndInodes(volPath)
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
+
+		var sizeToMaintain uint64
+		sizeToMaintainI, ok := volume["size_to_maintain"]
+		if ok {
+			sizeToMaintain = sizeToMaintainI.(uint64)
+		}
+
+		if availableSize/(1024^3) <= sizeToMaintain {
+			Logger.Error(ErrSizeLimit(volPath, sizeToMaintain).Error())
+			continue
+		}
+
+		var inodesToMaintain uint64
+		inodesToMaintainI, ok := volume["inodes_to_maintain"]
+		if ok {
+			inodesToMaintain = inodesToMaintainI.(uint64)
+		}
+		if availableInodes <= inodesToMaintain {
+			Logger.Error(ErrInodesLimit(volPath, inodesToMaintain).Error())
+			continue
+		}
+
+		var allowedBlockNumbers uint64
+		allowedBlockNumbersI, ok := volume["allowed_block_numbers"]
+		if ok {
+			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+		}
+
+		if allowedBlockNumbers != 0 && grandCount.totalBlocksCount > allowedBlockNumbers {
+			Logger.Error(ErrAllowedCountLimit(volPath, allowedBlockNumbers).Error())
+			continue
+		}
+
+		var allowedBlockSize uint64
+		allowedBlockSizeI, ok := volume["allowed_block_size"]
+		if ok {
+			allowedBlockSize = allowedBlockSizeI.(uint64)
+		}
+
+		if allowedBlockSize != 0 && grandCount.totalBlocksSize > allowedBlockSize {
+			Logger.Error(ErrAllowedSizeLimit(volPath, allowedBlockSize).Error())
+			continue
+		}
+
+		hotTier.volumes = append(hotTier.volumes, hotVolume{
+			path:                volPath,
+			allowedBlockNumbers: allowedBlockNumbers,
+			allowedBlockSize:    allowedBlockSize,
+			sizeToMaintain:      sizeToMaintain,
+			blocksCount:         uint64(grandCount.totalBlocksCount),
+		})
+	}
+}
+
+func recoverColdMetaData() {
+
 }

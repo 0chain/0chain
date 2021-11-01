@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -24,12 +26,20 @@ const (
 
 //Common errors
 var (
-	ErrInodesLimit = func(vPath string) error {
-		return fmt.Errorf("Volume %v has less than 10%% available inodes", vPath)
+	ErrInodesLimit = func(vPath string, inodesToMaintain uint64) error {
+		return fmt.Errorf("Volume %v has inodes lesser than inodes to maintain, %v", vPath, inodesToMaintain)
 	}
 
-	ErrSizeLimit = func(vPath string) error {
-		return fmt.Errorf("Volume %v has less than 2GB available space", vPath)
+	ErrSizeLimit = func(vPath string, sizeToMaintain uint64) error {
+		return fmt.Errorf("Volume %v has size lesser than size to maintain, %vGB", vPath, sizeToMaintain)
+	}
+
+	ErrAllowedSizeLimit = func(vPath string, allowedSizeLimit uint64) error {
+		return fmt.Errorf("Allowed size limit, %v, for volume %v reached.", allowedSizeLimit, vPath)
+	}
+
+	ErrAllowedCountLimit = func(vPath string, allowedCountLimit uint64) error {
+		return fmt.Errorf("Allowed block number limit, %v, for volume %v reached.", allowedCountLimit, vPath)
 	}
 
 	ErrVolumeFull = func(volPath string) error {
@@ -47,6 +57,11 @@ var (
 	ErrStorageTypeNotSupported = func(storageType string) error {
 		return fmt.Errorf("Storage type %v is not supported", storageType)
 	}
+
+	ErrCacheStorageConfNotProvided = errors.New("Storage type includes cache but cache config not provided")
+	ErrHotStorageConfNotProvided   = errors.New("Storage type includes hot tier but hot tier config not provided")
+	ErrWarmStorageConfNotProvided  = errors.New("Storage type includes warm tier but warm tier config not provided")
+	ErrColdStorageConfNotProvided  = errors.New("Storage type includes cold tier but cold tier config not provided")
 )
 
 func countFiles(dirPath string) (count int, err error) {
@@ -68,5 +83,17 @@ func countFiles(dirPath string) (count int, err error) {
 			return
 		}
 	}
+	return
+}
+
+func getAvailableSizeAndInodes(vPath string) (availableSize, availableInodes uint64, err error) {
+	var volStat unix.Statfs_t
+	err = unix.Statfs(vPath, &volStat)
+	if err != nil {
+		return
+	}
+
+	availableInodes = volStat.Ffree
+	availableSize = volStat.Bfree * uint64(volStat.Bsize)
 	return
 }
