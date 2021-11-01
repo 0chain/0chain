@@ -937,6 +937,11 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	b.stateMutex.Lock()
 	defer b.stateMutex.Unlock()
+	if b.stateStatus >= StateSuccessful {
+		// already synced and applied by another goroutine
+		return nil
+	}
+
 	// TODO: debug logs, remove when this does not happen anymore
 	ts := time.Now()
 	defer func() {
