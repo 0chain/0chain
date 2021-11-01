@@ -121,7 +121,7 @@ type Chain struct {
 	stateMutex              *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
-	finalizedBlocksChannel chan *block.Block
+	finalizedBlocksChannel chan *finalizeBlockWithReply
 
 	*Stats `json:"-"`
 
@@ -503,7 +503,7 @@ func (c *Chain) Initialize() {
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
-	c.finalizedBlocksChannel = make(chan *block.Block, 1)
+	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
 	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB

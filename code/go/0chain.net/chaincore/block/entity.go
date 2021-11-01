@@ -966,7 +966,12 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return common.NewError("state_root_error", "state root not correct")
 	}
 	if b.ClientState == nil {
-		b.CreateState(c.GetStateDB(), root.GetHashBytes())
+		pb := b.PrevBlock
+		if pb != nil && pb.IsStateComputed() {
+			b.SetStateDB(pb, c.GetStateDB())
+		} else {
+			b.CreateState(c.GetStateDB(), root.GetHashBytes())
+		}
 	}
 
 	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
