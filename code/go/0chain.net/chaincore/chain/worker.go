@@ -136,7 +136,6 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 					Logger.Warn("FinalizeRoundWorker finalize round timeout",
 						zap.Int64("round", r.GetRoundNumber()))
 				case <-doneC:
-					Logger.Debug("finalize round done", zap.Int64("round", r.GetRoundNumber()))
 				}
 			}()
 		}
@@ -200,7 +199,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 		case <-ctx.Done():
 			return
 
-		case fb := <-c.finalizedBlocksChannel:
+		case fbr := <-c.finalizedBlocksChannel:
 			func() {
 				// TODO: make the timeout configurable
 				cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -210,15 +209,17 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 				doneC := make(chan struct{})
 				go func() {
 					defer close(doneC)
-					c.finalizeBlockProcess(cctx, fb, bsh)
+					c.finalizeBlockProcess(cctx, fbr.block, bsh)
 				}()
 
 				select {
 				case <-doneC:
 					Logger.Debug("finalize block process duration", zap.Any("duration", time.Since(t)))
+					fbr.resultC <- nil
 				case <-cctx.Done():
 					Logger.Warn("finalize block process context done",
 						zap.Error(cctx.Err()))
+					fbr.resultC <- cctx.Err()
 				}
 			}()
 		}
@@ -241,7 +242,41 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 	Logger.Debug("start to finalize block",
 		zap.Int64("round", fb.Round),
-		zap.String("block", fb.Hash))
+		zap.String("block", fb.Hash),
+		zap.String("prev block", fb.PrevHash))
+
+	if !fb.IsStateComputed() {
+		if fb.PrevBlock == nil {
+			pb := c.GetLocalPreviousBlock(ctx, fb)
+			if pb != nil {
+				fb.SetPreviousBlock(pb)
+			} else {
+				Logger.Error("finalize block - no previous block",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash),
+					zap.String("prev block", fb.PrevHash),
+					zap.Int64("lfb round", lfb.Round),
+					zap.String("lfb", lfb.Hash))
+			}
+		}
+
+		Logger.Debug("finalize block - state not computed, try to fetch state changes",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
+			zap.String("prev block", fb.PrevHash))
+
+		fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
+
+		if err := c.GetBlockStateChange(fb); err != nil {
+			Logger.Error("finalize block failed, compute state failed",
+				zap.Int64("round", fb.Round),
+				zap.Error(err))
+			return
+		}
+		Logger.Debug("finalize block - sync state success",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash))
+	}
 
 	// TODO/TOTHINK: move the repair chain outside the finalized worker?
 	// make sure we have valid verified MB chain if the block contains
@@ -257,11 +292,6 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	}
 
 	// finalize
-	if !fb.IsStateComputed() {
-		Logger.Debug("finalize block failed, state is not computed yet",
-			zap.Int64("round", fb.Round))
-		return
-	}
 	c.finalizeBlock(ctx, fb, bsh)
 }
 

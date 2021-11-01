@@ -485,7 +485,7 @@ func makeSCRESTAPICall(ctx context.Context, address, relative string, sharder st
 // the mechanics here.
 //
 // Other side, for 3 sharders, two of which is behind the active one. The two
-// sharders behind will never give correct result (but give most consensus).
+// sharders behind will never give correct resultC (but give most consensus).
 // Thus we can't use most consensual response. Pew-pew.
 //
 // Probably, block requesting verifying, and syncing its state and then
@@ -548,7 +548,7 @@ func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
 // E.g. phase with highest starting round (the highness is in priority) and
 // it there is collisions, then it chooses phase with most consensus.
 //
-// The methods optimistically (non-blocking) sends the result to internal
+// The methods optimistically (non-blocking) sends the resultC to internal
 // phaseEvetns channel.
 //
 // There is no a worker uses the GetPhaseFromSharders in the chaincore/chain.

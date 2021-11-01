@@ -752,7 +752,9 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 
 	mr.AddProposedBlock(b)
 	if mc.AddRoundBlock(mr, b) != b {
-		logging.Logger.Warn("Add round block with different block", zap.Int64("round", b.Round))
+		logging.Logger.Warn("Add round block, block already exist, merge tickets", zap.Int64("round", b.Round))
+		// block already exist, means the verification collection worker already started.
+		return
 	}
 
 	mc.addToRoundVerification(ctx, mr, b)
