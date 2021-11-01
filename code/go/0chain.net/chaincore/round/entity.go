@@ -303,7 +303,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	b, _ = r.addProposedBlock(b)
+	r.addProposedBlock(b)
 	found := -1
 
 	for i, blk := range r.notarizedBlocks {
@@ -311,6 +311,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 			if blk != b {
 				blk.MergeVerificationTickets(b.GetVerificationTickets())
 			}
+			logging.Logger.Debug("add notarized block - block already exist, merge tickets",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return blk, false, nil
 		}
 		if blk.RoundRank == b.RoundRank {
