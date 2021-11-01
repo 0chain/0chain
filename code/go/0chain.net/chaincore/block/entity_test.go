@@ -3027,7 +3027,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 
 			b.SetBlockNotarized()
 			if got := b.IsBlockNotarized(); got != tt.want {
-				t.Errorf("IsBlockNotarized() = %v, want %v", got, tt.want)
+				t.Errorf("UpdateBlockNotarization() = %v, want %v", got, tt.want)
 			}
 		})
 	}

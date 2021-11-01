@@ -315,15 +315,6 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 			zap.Error(err))
 		return nil, nil, err
 	}
-	b, _, err = r.AddNotarizedBlock(b)
-	if err != nil {
-		logging.Logger.Error("createRoundIfNotExist - add notarized block failed",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int64("current_round", currentRound),
-			zap.Error(err))
-		return nil, nil, err
-	}
 
 	// Add the round if chain does not have it
 	r = c.AddRound(r)
@@ -348,8 +339,11 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 			zap.Int("round_toc", r.GetTimeoutCount()))
 	}
 
+	logging.Logger.Debug("get notarized block, add block to round",
+		zap.Int64("round", rn),
+		zap.String("block", nb.Hash))
 	// This is a notarized block. So, use this method to sync round info with the notarized block.
-	b, r, err := c.AddNotarizedBlockToRound(r, nb)
+	_, _, err = c.AddNotarizedBlockToRound(r, nb)
 	if err != nil {
 		logging.Logger.Error("get notarized block for round failed",
 			zap.Int64("round", rn),
@@ -361,18 +355,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 
 	// TODO: this may not be the best round block or the best chain weight
 	// block. Do we do that extra work?
-	logging.Logger.Debug("get notarized block, add block to round",
-		zap.Int64("round", rn),
-		zap.String("block", b.Hash))
-	b, _, err = r.AddNotarizedBlock(b)
-	if err != nil {
-		logging.Logger.Error("get notarized block for round failed",
-			zap.Int64("round", rn),
-			zap.String("block", nb.Hash),
-			zap.String("miner", nb.MinerID),
-			zap.Error(err))
-		return nil
-	}
 	return r.GetHeaviestNotarizedBlock()
 }
 

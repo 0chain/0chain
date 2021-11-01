@@ -791,7 +791,6 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	// TODO: maybe cancel after the tickets are validated, but may have CPU performance issue.
 	pr.CancelVerification()
 
-	// TODO: do not verify the same block multiple times
 	logging.Logger.Debug("update prev block notarization, verify tickets",
 		zap.Int64("round", pb.Round))
 	err = mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pb.Round)
@@ -805,7 +804,6 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	}
 
 	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
-	pb.SetBlockNotarized()
 	mc.AddNotarizedBlock(ctx, pr, pb)
 	return nil
 }
@@ -1044,6 +1042,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	}
 
 	if notarized {
+		// block was notarized before adding new tickets
 		logging.Logger.Info("Block is notarized", zap.Int64("round", r.Number),
 			zap.String("block", b.Hash))
 		return
@@ -1060,6 +1059,9 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 		return false
 	}
 	if !mc.AddNotarizedBlock(ctx, r, b) {
+		logging.Logger.Warn("checkBlockNotarization -- block already notarized before",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
 		return true
 	}
 

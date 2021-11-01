@@ -171,22 +171,24 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 	return // ok, there is
 }
 
-// IsBlockNotarized - check if the block is notarized.
-func (c *Chain) IsBlockNotarized(b *block.Block) bool {
+// UpdateBlockNotarization updates the block notarization state,
+// return true if the block reached notarization
+func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
 
 	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
 		logging.Logger.Error("is_block_notarized", zap.Error(err))
-		return false // false
+		return false
 	}
 
-	var notarized = c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets())
-	if notarized {
+	if c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets()) {
 		b.SetBlockNotarized()
+		return true
 	}
-	return notarized
+
+	return false
 }
 
 func (c *Chain) reachedNotarization(round int64, hash string,
@@ -230,15 +232,6 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		}
 	}
 
-	logging.Logger.Info("reached notarization!!!",
-		zap.Int64("round", round),
-		zap.Int64("current_round", c.GetCurrentRound()),
-		zap.String("block", hash),
-		zap.Int64("mb_sr", mb.StartingRound),
-		zap.Int("active_miners", num),
-		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", threshold))
-
 	return true
 }
 
@@ -278,11 +271,18 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 
 /*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
 func (c *Chain) AddVerificationTicket(b *block.Block, bvt *block.VerificationTicket) bool {
-	added := b.AddVerificationTicket(bvt)
-	if added {
-		c.IsBlockNotarized(b)
+	if b.AddVerificationTicket(bvt) {
+		if c.UpdateBlockNotarization(b) {
+			logging.Logger.Info("reached notarization - add tickets",
+				zap.Int64("round", b.Round),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.String("block", b.Hash),
+				zap.Int("tickets_num", len(b.GetVerificationTickets())))
+		}
+		return true
 	}
-	return added
+
+	return false
 }
 
 /*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
@@ -290,7 +290,13 @@ func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.Verificati
 	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
 	if b.VerificationTicketsSize() != vtlen {
-		c.IsBlockNotarized(b)
+		if c.UpdateBlockNotarization(b) {
+			logging.Logger.Info("reached notarization - merging tickets",
+				zap.Int64("round", b.Round),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.String("block", b.Hash),
+				zap.Int("tickets_num", len(b.GetVerificationTickets())))
+		}
 	}
 }
 
