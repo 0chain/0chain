@@ -339,8 +339,9 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	defer cancel()
 	params := &url.Values{}
 	params.Add("block", b.Hash)
+	mb := c.GetLatestFinalizedMagicBlock(cctx)
+	stateChangesC := make(chan *block.StateChange, mb.Miners.Size())
 
-	stateChangesC := make(chan *block.StateChange, 1)
 	var handler = func(_ context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
@@ -384,23 +385,18 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 
-	mb := c.GetMagicBlock(b.Round)
-	c.RequestEntityFromMinersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
+	c.RequestEntityFromMiners(cctx, BlockStateChangeRequestor, params, handler)
 	var bsc *block.StateChange
 	select {
 	case bsc = <-stateChangesC:
 	default:
 	}
 	if bsc == nil {
-		c.RequestEntityFromShardersOnMB(cctx, mb, BlockStateChangeRequestor, params, handler)
-		select {
-		case bsc = <-stateChangesC:
-		default:
-		}
-		if bsc == nil {
-			return nil, common.NewError("block_state_change_error",
-				"error getting the block state change")
-		}
+		logging.Logger.Error("get_block_state_change - could not get state changes from miners",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash))
+		return nil, common.NewError("block_state_change_error",
+			"error getting the block state change")
 	}
 
 	logging.Logger.Debug("get_block_state_change - success with root",
