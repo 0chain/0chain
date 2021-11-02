@@ -22,14 +22,15 @@ import (
 type blobberStakes []int64
 
 const (
-	errValueNotPresent  = "value not present"
-	ownerId             = "owin"
-	ErrCancelFailed     = "alloc_cancel_failed"
-	ErrExpired          = "trying to cancel expired allocation"
-	ErrNotOwner         = "only owner can cancel an allocation"
-	ErrNotEnoughLock    = "paying min_lock for"
-	ErrFinalizedFailed  = "fini_alloc_failed"
-	ErrFinalizedTooSoon = "allocation is not expired yet, or waiting a challenge completion"
+	errValueNotPresent   = "value not present"
+	ownerId              = "owin"
+	ErrCancelFailed      = "alloc_cancel_failed"
+	ErrExpired           = "trying to cancel expired allocation"
+	ErrNotOwner          = "only owner can cancel an allocation"
+	ErrNotEnoughFailiars = "not enough failed challenges of allocation to cancel"
+	ErrNotEnoughLock     = "paying min_lock for"
+	ErrFinalizedFailed   = "fini_alloc_failed"
+	ErrFinalizedTooSoon  = "allocation is not expired yet, or waiting a challenge completion"
 )
 
 func TestNewAllocation(t *testing.T) {
@@ -230,6 +231,17 @@ func TestCancelAllocationRequest(t *testing.T) {
 		require.True(t, strings.Contains(err.Error(), ErrExpired))
 	})
 
+	t.Run(ErrNotEnoughFailiars, func(t *testing.T) {
+		var failersScYaml = scYaml
+		failersScYaml.FailedChallengesToCancel = 29
+
+		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
+			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughFailiars))
+	})
+
 	t.Run("enough failiars", func(t *testing.T) {
 		var failersScYaml = scYaml
 		failersScYaml.FailedChallengesToCancel = 28
@@ -237,6 +249,16 @@ func TestCancelAllocationRequest(t *testing.T) {
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
 			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
 		require.NoError(t, err)
+	})
+
+	t.Run(ErrNotEnoughLock, func(t *testing.T) {
+		var zeroChallengePoolBalance int64 = 0
+
+		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
+			otherWritePools, zeroChallengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
 	})
 }
 
