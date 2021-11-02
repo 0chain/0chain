@@ -681,7 +681,8 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 	if err := c.GetBlockStateChange(pb); err != nil {
 		logging.Logger.Error("sync_block - sync state changes failed",
 			zap.Int64("round", pb.Round),
-			zap.Int64("num", opt.Num))
+			zap.Int64("num", opt.Num),
+			zap.Error(err))
 		return nil
 	}
 

@@ -232,11 +232,6 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		return
 	}
 
-	if mr.isVerificationComplete() {
-		logging.Logger.Error("handle vt. msg -- round verification completed", zap.Int64("round", rn))
-		return
-	}
-
 	// check if the ticket has already verified
 	if mr.IsTicketCollected(&bvt.VerificationTicket) {
 		logging.Logger.Error("handle vt. msg -- ticket already collected",
