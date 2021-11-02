@@ -238,16 +238,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
 		require.NoError(t, err)
 	})
-
-	t.Run(ErrNotEnoughLock, func(t *testing.T) {
-		var zeroChallengePoolBalance int64 = 0
-
-		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, zeroChallengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
-		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
-	})
 }
 
 func TestFinalizeAllocation(t *testing.T) {
@@ -353,16 +343,6 @@ func TestFinalizeAllocation(t *testing.T) {
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
 		require.True(t, strings.Contains(err.Error(), ErrFinalizedTooSoon))
-	})
-
-	t.Run(ErrNotEnoughLock, func(t *testing.T) {
-		var zeroChallengePoolBalance int64 = 0
-
-		err := testFinalizeAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
-			otherWritePools, zeroChallengePoolBalance, blobberOffer, wpBalance, thisExpires, now)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), ErrFinalizedFailed))
-		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
 	})
 }
 
