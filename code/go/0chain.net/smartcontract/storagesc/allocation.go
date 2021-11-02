@@ -1224,6 +1224,19 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
+	// SC configurations
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return "", common.NewError("alloc_cancel_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
+	if fctc := conf.FailedChallengesToCancel; fctc > 0 {
+		if alloc.Stats == nil || alloc.Stats.FailedChallenges < int64(fctc) {
+			return "", common.NewError("alloc_cancel_failed",
+				"not enough failed challenges of allocation to cancel")
+		}
+	}
 
 	// can cancel
 	// new values
