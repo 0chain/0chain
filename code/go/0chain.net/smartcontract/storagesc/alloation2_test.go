@@ -248,7 +248,9 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
 			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
-		require.NoError(t, err)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
+		require.True(t, strings.Contains(err.Error(), ErrNotEnoughFailiars))
 	})
 
 	t.Run(ErrNotEnoughLock, func(t *testing.T) {
@@ -256,9 +258,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, scYaml,
 			otherWritePools, zeroChallengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
-		require.True(t, strings.Contains(err.Error(), ErrNotEnoughLock))
+		require.NoError(t, err)
 	})
 }
 
