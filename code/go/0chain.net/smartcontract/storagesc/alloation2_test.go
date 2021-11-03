@@ -231,17 +231,6 @@ func TestCancelAllocationRequest(t *testing.T) {
 		require.True(t, strings.Contains(err.Error(), ErrExpired))
 	})
 
-	t.Run(ErrNotEnoughFailiars, func(t *testing.T) {
-		var failersScYaml = scYaml
-		failersScYaml.FailedChallengesToCancel = 29
-
-		err := testCancelAllocation(t, allocation, *blobbers, blobberStakePools, failersScYaml,
-			otherWritePools, challengePoolBalance, challenges, blobberOffer, wpBalance, thisExpires, now)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), ErrCancelFailed))
-		require.True(t, strings.Contains(err.Error(), ErrNotEnoughFailiars))
-	})
-
 	t.Run("enough failiars", func(t *testing.T) {
 		var failersScYaml = scYaml
 		failersScYaml.FailedChallengesToCancel = 28

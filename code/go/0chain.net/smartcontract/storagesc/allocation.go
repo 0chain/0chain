@@ -1224,19 +1224,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewError("alloc_cancel_failed",
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
-	// SC configurations
-	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
-		return "", common.NewError("alloc_cancel_failed",
-			"can't get SC configurations: "+err.Error())
-	}
-
-	if fctc := conf.FailedChallengesToCancel; fctc > 0 {
-		if alloc.Stats == nil || alloc.Stats.FailedChallenges < int64(fctc) {
-			return "", common.NewError("alloc_cancel_failed",
-				"not enough failed challenges of allocation to cancel")
-		}
-	}
 
 	// can cancel
 	// new values
@@ -1554,9 +1541,9 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
 	}
 
-	if !alloc.isCurator(txn.ClientID) && alloc.Owner != txn.ClientID {
+	if !alloc.isCurator(txn.ClientID) {
 		return "", common.NewError("curator_transfer_allocation_failed",
-			"only curators or the owner can transfer allocations; "+txn.ClientID+" is neither")
+			"only curators can transfer allocations; "+txn.ClientID+" is not a curator")
 	}
 
 	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {
