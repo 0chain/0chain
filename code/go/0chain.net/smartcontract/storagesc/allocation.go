@@ -1554,9 +1554,9 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
 	}
 
-	if !alloc.isCurator(txn.ClientID) {
+	if !alloc.isCurator(txn.ClientID) && alloc.Owner != txn.ClientID {
 		return "", common.NewError("curator_transfer_allocation_failed",
-			"only curators can transfer allocations; "+txn.ClientID+" is not a curator")
+			"only curators or the owner can transfer allocations; "+txn.ClientID+" is neither")
 	}
 
 	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {
