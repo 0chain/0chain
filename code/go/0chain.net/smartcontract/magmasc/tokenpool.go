@@ -85,99 +85,169 @@ func (m *tokenPool) create(txn *tx.Transaction, cfg zmc.PoolConfigurator, sci ch
 	return nil
 }
 
-// spend tries to spend the token pool by given amount.
-func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.StateContextI) error {
-	if amount < 0 {
-		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
+// expendWithFees tries to expend the token pool by given amount with service fees options.
+// This method returns remaining amount after expended token pool balance.
+func (m *tokenPool) expendWithFees(
+	txn *tx.Transaction,
+	amount state.Balance,
+	sci chain.StateContextI,
+	feeRate float64,
+	feeToID string,
+) (state.Balance, error) {
+	remains := amount // set remains equal to amount in the beginning of expend tokens
+	switch {
+	case amount < 0: // negative amount
+		remains = 0
+		return remains, errors.Wrap(zmc.ErrCodeTokenPoolSpend, "expend amount is negative", zmc.ErrNegativeValue)
+
+	case feeRate <= 0 || feeRate > 1: // negative amount
+		return remains, errors.New(zmc.ErrCodeTokenPoolSpend, "rate must be a percentage value")
+
+	case m.Balance == 0: // nothing to expend
+		return remains, nil
+
+	case amount > 0: // expend token pool to payee
+		poolBalance := state.Balance(m.Balance)
+		if amount > poolBalance {
+			amount = poolBalance // expend whole token pool balance to payee
+		}
+
+		fees := state.Balance(float64(amount) * feeRate)
+		if err := sci.AddTransfer(state.NewTransfer(m.HolderID, feeToID, fees)); err != nil {
+			return remains, errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer fee payment failed", err)
+		}
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:    txn.Hash,
+			FromPool:   m.ID,
+			Value:      int64(fees),
+			FromClient: m.PayerID,
+			ToClient:   feeToID,
+		})
+
+		payment := amount - fees
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, m.PayeeID, payment)); err != nil {
+			return remains, errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer payment failed", err)
+		}
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:    txn.Hash,
+			FromPool:   m.ID,
+			Value:      int64(payment),
+			FromClient: m.PayerID,
+			ToClient:   m.PayeeID,
+		})
+
+		remains -= amount
+		m.Balance -= int64(amount)
 	}
 
-	payee, poolBalance := m.PayeeID, state.Balance(m.Balance)
+	return remains, nil
+}
+
+// spend tries to spend the token pool by given amount.
+func (m *tokenPool) spend(txn *tx.Transaction, amount state.Balance, sci chain.StateContextI) error {
+	poolBalance := state.Balance(m.Balance)
 	switch {
+	case amount < 0: // negative amount
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
+
 	case amount > poolBalance: // wrong amount
 		return errors.New(zmc.ErrCodeTokenPoolSpend, "amount greater then pool balance")
 
 	case poolBalance == 0: // nothing to spend
 		return nil
 
-	case amount == 0: // refund token pool to payer
-		payee = m.PayerID
-
-	case amount < poolBalance: // spend part of token pool to payee
-		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, amount)); err != nil {
-			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
+	case amount > 0: // spend part of token pool to payee
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, m.PayeeID, amount)); err != nil {
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer payment failed", err)
 		}
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:    txn.Hash,
+			FromPool:   m.ID,
+			Value:      int64(amount),
+			FromClient: m.PayerID,
+			ToClient:   m.PayeeID,
+		})
 		poolBalance -= amount
-		payee = m.PayerID // refund remaining token pool balance to payer
 	}
-
-	// spend token pool by balance
-	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
-		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend token pool failed", err)
+	if poolBalance > 0 { // refund remaining token pool balance to payer
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, m.PayerID, poolBalance)); err != nil {
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "refund remaining tokens failed", err)
+		}
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:  txn.Hash,
+			FromPool: m.ID,
+			Value:    int64(poolBalance),
+			ToClient: m.PayerID,
+		})
 	}
-
+	// make the pool balance zeroed
 	m.Balance = 0
-	m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
-		TxnHash:    txn.Hash,
-		FromPool:   m.ID,
-		Value:      int64(amount),
-		FromClient: m.PayerID,
-		ToClient:   m.PayeeID,
-	})
 
 	return nil
 }
 
-// spend tries to spend the token pool by given amount with serviceChargeConfigurator.
-func (m *tokenPool) spendWithServiceCharge(txn *tx.Transaction, amount state.Balance, sci chain.StateContextI, serviceCharge float64, serviceID string) error {
-	if amount < 0 {
-		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
-	}
-	if !(serviceCharge >= 0 && serviceCharge < 1) {
-		return errors.New(zmc.ErrCodeTokenPoolSpend, "service charge must be in [0;1) interval")
-	}
-
-	payee, poolBalance := m.PayeeID, state.Balance(m.Balance)
+// spendWithFees tries to spend the token pool by given amount with service fees options.
+func (m *tokenPool) spendWithFees(
+	txn *tx.Transaction,
+	amount state.Balance,
+	sci chain.StateContextI,
+	feeRate float64,
+	feeToID string,
+) error {
+	poolBalance := state.Balance(m.Balance)
 	switch {
+	case amount < 0: // negative amount
+		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend amount is negative", zmc.ErrNegativeValue)
+
+	case feeRate <= 0 || feeRate > 1: // negative amount
+		return errors.New(zmc.ErrCodeTokenPoolSpend, "rate must be a percentage value")
+
 	case amount > poolBalance: // wrong amount
 		return errors.New(zmc.ErrCodeTokenPoolSpend, "amount greater then pool balance")
 
 	case poolBalance == 0: // nothing to spend
 		return nil
 
-	case amount == 0: // refund token pool to payer
-		payee = m.PayerID
-
-	case amount < poolBalance: // spend part of token pool to payee
-		// paying charge
-		charge := state.Balance(float64(amount) * serviceCharge)
-		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, serviceID, charge)); err != nil {
-			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
+	case amount > 0: // spend part of token pool to payee
+		fees := state.Balance(float64(amount) * feeRate)
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, feeToID, fees)); err != nil {
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer fee payment failed", err)
 		}
-		poolBalance -= charge
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:    txn.Hash,
+			FromPool:   m.ID,
+			Value:      int64(fees),
+			FromClient: m.PayerID,
+			ToClient:   feeToID,
+		})
 
-		// paying reward
-		servicePay := amount - charge
-		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, servicePay)); err != nil {
-			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer token pool failed", err)
+		payment := amount - fees
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, m.PayeeID, payment)); err != nil {
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "transfer payment failed", err)
 		}
-		poolBalance -= servicePay
-
-		payee = m.PayerID // refund remaining token pool balance to payer
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:    txn.Hash,
+			FromPool:   m.ID,
+			Value:      int64(payment),
+			FromClient: m.PayerID,
+			ToClient:   m.PayeeID,
+		})
+		poolBalance -= amount
 	}
-
 	// spend token pool by balance
-	if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, payee, poolBalance)); err != nil {
-		return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "spend token pool failed", err)
+	if poolBalance > 0 {
+		if err := sci.AddTransfer(state.NewTransfer(txn.ToClientID, m.PayerID, poolBalance)); err != nil {
+			return errors.Wrap(zmc.ErrCodeTokenPoolSpend, "refund remaining tokens failed", err)
+		}
+		m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
+			TxnHash:  txn.Hash,
+			FromPool: m.ID,
+			Value:    int64(poolBalance),
+			ToClient: m.PayerID,
+		})
 	}
-
+	// make the pool balance zeroed
 	m.Balance = 0
-	m.Transfers = append(m.Transfers, zmc.TokenPoolTransfer{
-		TxnHash:    txn.Hash,
-		FromPool:   m.ID,
-		Value:      int64(amount),
-		FromClient: m.PayerID,
-		ToClient:   m.PayeeID,
-	})
 
 	return nil
 }

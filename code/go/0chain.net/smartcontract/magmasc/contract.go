@@ -32,7 +32,7 @@ func (m *MagmaSmartContract) accessPointFetch(_ context.Context, vals url.Values
 }
 
 // accessPointMinStakeFetch returns configured accessPointMinStake.
-func (m *MagmaSmartContract) accessPointMinStakeFetch(_ context.Context, _ url.Values, _ chain.StateContextI) (interface{}, error) {
+func (m *MagmaSmartContract) accessPointMinStakeFetch(context.Context, url.Values, chain.StateContextI) (interface{}, error) {
 	minStake := int64(m.cfg.GetFloat64(accessPointMinStake) * zmc.Billion)
 	if minStake < 0 {
 		minStake = 0
@@ -221,33 +221,49 @@ func (m *MagmaSmartContract) allProviders(context.Context, url.Values, chain.Sta
 	return providers.Sorted, nil
 }
 
-// billingRatioFetch tries to make the session billing completed.
-func (m *MagmaSmartContract) billingComplete(sess *zmc.Session, txn *tx.Transaction, sci chain.StateContextI) error {
-	pool := newTokenPool()
-	if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
-		return errors.New(zmc.ErrCodeSessionStop, err.Error())
-	}
-
-	amount := sess.Billing.Amount
+// billingProcessing tries to make the session billing processing.
+func (m *MagmaSmartContract) billingProcessing(sess *zmc.Session, txn *tx.Transaction, sci chain.StateContextI) error {
 	if sess.Billing.DataMarker.IsQoSType() {
-		amount *= m.cfg.GetInt64(billingRatio)
+		sess.Billing.Amount *= m.cfg.GetInt64(billingRatio)
 	}
-
-	servCharge, serviceID := m.cfg.GetFloat64(serviceCharge), sess.Provider.Id
-	if err := pool.spendWithServiceCharge(txn, state.Balance(amount), sci, servCharge, serviceID); err != nil {
-		return errors.New(zmc.ErrCodeSessionStop, err.Error())
+	if sess.Billing.Amount != txn.Value {
+		return errors.New(zmc.ErrCodeBadRequest, "billing amount and transaction value are different")
 	}
-
-	sess.Billing.CompletedAt = time.Now()
-	if _, err := sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
-		return errors.Wrap(zmc.ErrCodeSessionStop, "update session failed", err)
+	if sess.Billing.Amount > 0 {
+		amount, feeRate := state.Balance(sess.Billing.Amount), m.cfg.GetFloat64(serviceCharge)
+		// tries to expend the sponsors reward pools for the session billing
+		if rewards, err := rewardPoolsFetch(allRewardPoolsKey, m.db); err == nil {
+			for _, pool := range rewards.Sorted {
+				switch {
+				case pool.PayeeID != "" && pool.PayeeID != sess.Provider.Id:
+					continue // skip the sponsor reward pool intended to another Provider
+				case pool.PayeeID != "" && pool.PayeeID != sess.AccessPoint.Id:
+					continue // skip the sponsor reward pool intended for another Access Point
+				}
+				// set the amount to remaining value after expended the reward pool
+				amount, _ = pool.expendWithFees(txn, amount, sci, feeRate, sess.Provider.Id)
+				if amount > 0 {
+					continue // continue trying to expend sponsored token pools
+				}
+			}
+		}
+		// tries to expend the consumer's token pool for the session billing
+		if amount > 0 {
+			pool := newTokenPool()
+			if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
+				return errors.New(zmc.ErrCodeSessionStop, err.Error())
+			}
+			if err := pool.spendWithFees(txn, amount, sci, feeRate, sess.Provider.Id); err != nil {
+				return errors.New(zmc.ErrCodeSessionStop, err.Error())
+			}
+		}
 	}
 
 	return nil
 }
 
 // billingRatioFetch returns configured billingRatio.
-func (m *MagmaSmartContract) billingRatioFetch(_ context.Context, _ url.Values, _ chain.StateContextI) (interface{}, error) {
+func (m *MagmaSmartContract) billingRatioFetch(context.Context, url.Values, chain.StateContextI) (interface{}, error) {
 	ratio := m.cfg.GetInt64(billingRatio)
 	if ratio < 1 {
 		ratio = 1
@@ -378,8 +394,13 @@ func (m *MagmaSmartContract) consumerSessionStop(txn *tx.Transaction, blob []byt
 		return "", errors.Wrap(zmc.ErrCodeSessionStop, "session not started yet", err)
 	}
 	if sess.Billing.CompletedAt == 0 { // must be completed
-		if err := m.billingComplete(sess, txn, sci); err != nil {
+		if err := m.billingProcessing(sess, txn, sci); err != nil {
 			return "", err
+		}
+
+		sess.Billing.CompletedAt = time.Now()
+		if _, err := sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
+			return "", errors.Wrap(zmc.ErrCodeSessionStop, "update session failed", err)
 		}
 	}
 
@@ -443,21 +464,21 @@ func (m *MagmaSmartContract) providerDataUsage(txn *tx.Transaction, blob []byte,
 		return "", errors.Wrap(zmc.ErrCodeDataUsage, "validate data usage failed", err)
 	}
 	if dataMarker.IsQoSType() {
-		verified, err := dataMarker.Verify()
+		valid, err := dataMarker.Verify()
 		if err != nil {
-			return "", errors.Wrap(zmc.ErrCodeDataUsage, "error while verifying signature", err)
+			return "", errors.Wrap(zmc.ErrCodeDataUsage, "verify signature failed", err)
 		}
-		if !verified {
-			return "", errors.New(zmc.ErrCodeDataUsage, "signature is unverified")
+		if !valid {
+			return "", errors.New(zmc.ErrCodeDataUsage, "validate signature failed")
 		}
 	}
 
 	// update billing data
 	sess.Billing.DataMarker = &dataMarker
 	sess.Billing.CalcAmount(sess.AccessPoint)
-	// TODO: make checks:
-	//  the billing amount is lower than token poll balance
-	//  the session is not expired yet
+	if sess.Billing.Amount > sess.TokenPool.Balance {
+		return "", errors.New(zmc.ErrCodeDataUsage, "billing amount greater than token pool balance")
+	}
 	if _, err = sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
 		return "", errors.Wrap(zmc.ErrCodeDataUsage, "update billing data failed", err)
 	}
@@ -674,9 +695,8 @@ func (m *MagmaSmartContract) rewardPoolUnlock(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "fetch reward pools list failed", err)
 	}
 
-	payeeID, poolID := req.PoolPayeeID(), req.PoolID()
-	pool := pools.List[payeeID][poolID]
-	if pool == nil { // not found
+	pool, found := pools.get(req.PoolID())
+	if !found { // not found
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "fetch reward pool failed", err)
 	}
 	if pool.PayerID != txn.ClientID {
