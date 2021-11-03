@@ -119,3 +119,14 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// PutClientRequest
+message PutClientRequest {
+  string client_id = 1;
+  string public_key = 2;
+}
+
+// PutClientResponse
+message PutClientResponse {
+  //
+}

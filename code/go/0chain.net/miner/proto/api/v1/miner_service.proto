@@ -6,12 +6,20 @@ option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
 import "miner_contract.proto";
 import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
 
 service MinerService {
   rpc GetNotarizedBlock(GetNotarizedBlockRequest)
       returns (GetNotarizedBlockResponse) {
     option (google.api.http) = {
       get : "/v2/_x2m/block/notarized_block/get"
+    };
+  }
+  //
+  rpc PutClient(PutClientRequest) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      post : "/v1/client/put"
+      body : "*"
     };
   }
 }
