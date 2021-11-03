@@ -582,6 +582,7 @@ func SetMockConfig(
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
+	conf.MinWritePrice = 0
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)

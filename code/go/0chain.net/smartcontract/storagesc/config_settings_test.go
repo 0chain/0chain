@@ -457,6 +457,8 @@ func getConfField(conf scConfig, field string) interface{} {
 		return conf.MaxReadPrice
 	case MaxWritePrice:
 		return conf.MaxWritePrice
+	case MinWritePrice:
+		return conf.MinWritePrice
 	case FailedChallengesToCancel:
 		return conf.FailedChallengesToCancel
 	case FailedChallengesToRevokeMinLock:
