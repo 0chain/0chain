@@ -372,7 +372,7 @@ func Test_MagmaSmartContract_accessPointUnstake(t *testing.T) {
 	if err := pool.create(txn, apStake, sci); err != nil {
 		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStake, pool.ID), pool); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStake, pool.Id), pool); err != nil {
 		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -700,7 +700,7 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	if err := pool.create(txn, sess, sci); err != nil {
 		t.Fatalf("tokenPool.createWithRatio() error: %v | want: %v", err, nil)
 	}
-	sess.TokenPool = &pool.TokenPool
+	sess.TokenPool = pool.TokenPool
 
 	consList := Consumers{}
 	if err := consList.add(msc.ID, sess.Consumer, msc.db, sci); err != nil {
@@ -722,7 +722,7 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	if err := pool.create(txn, provStake, sci); err != nil {
 		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerStake, pool.ID), pool); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, providerStake, pool.Id), pool); err != nil {
 		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -731,7 +731,7 @@ func Test_MagmaSmartContract_consumerSessionStart(t *testing.T) {
 	if err := pool.create(txn, apStake, sci); err != nil {
 		t.Fatalf("tokenPool.create() error: %v | want: %v", err, nil)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStake, pool.ID), pool); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(msc.ID, accessPointStake, pool.Id), pool); err != nil {
 		t.Fatalf("sci.InsertTrieNode() error: %v | want: %v", err, nil)
 	}
 
@@ -798,19 +798,19 @@ func Test_MagmaSmartContract_consumerSessionStop(t *testing.T) {
 	txn.ClientID = sess.Consumer.ID
 
 	pool := newTokenPool()
-	pool.PayerID = sess.Consumer.ID
-	pool.PayeeID = sess.Provider.Id
-	pool.ID = sess.SessionID
+	pool.PayerId = sess.Consumer.ID
+	pool.PayeeId = sess.Provider.Id
+	pool.Id = sess.SessionID
 	pool.Balance = 1000
-	pool.Transfers = []zmc.TokenPoolTransfer{{
+	pool.Transfers = []*pb.TokenPoolTransfer{{
 		TxnHash:    txn.Hash,
-		FromPool:   pool.ID,
-		FromClient: pool.PayerID,
-		ToClient:   pool.PayeeID,
+		FromPool:   pool.Id,
+		FromClient: pool.PayerId,
+		ToClient:   pool.PayeeId,
 	}}
 
 	sess.Billing.CompletedAt = time.Now()
-	sess.TokenPool = &pool.TokenPool
+	sess.TokenPool = pool.TokenPool
 
 	tests := [1]struct {
 		name  string
@@ -925,19 +925,19 @@ func Test_MagmaSmartContract_providerDataUsage(t *testing.T) {
 	txn.ClientID = sess.Provider.Id
 
 	pool := newTokenPool()
-	pool.PayerID = sess.Consumer.ID
-	pool.PayeeID = sess.Provider.Id
-	pool.ID = sess.SessionID
-	pool.Balance = 1000
-	pool.Transfers = []zmc.TokenPoolTransfer{{
+	pool.PayerId = sess.Consumer.ID
+	pool.PayeeId = sess.Provider.Id
+	pool.Id = sess.SessionID
+	pool.Balance = 500000000
+	pool.Transfers = []*pb.TokenPoolTransfer{{
 		TxnHash:    txn.Hash,
-		FromPool:   pool.ID,
-		FromClient: pool.PayerID,
-		ToClient:   pool.PayeeID,
+		FromPool:   pool.Id,
+		FromClient: pool.PayerId,
+		ToClient:   pool.PayeeId,
 	}}
 
 	sess.Billing.CalcAmount(sess.AccessPoint)
-	sess.TokenPool = &pool.TokenPool
+	sess.TokenPool = pool.TokenPool
 
 	tests := [1]struct {
 		name  string

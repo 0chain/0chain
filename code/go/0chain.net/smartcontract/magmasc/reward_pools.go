@@ -27,7 +27,7 @@ func (m *rewardPools) add(scID string, item *tokenPool, db *gorocksdb.Transactio
 	if item == nil {
 		return errors.New(zmc.ErrCodeInternal, "reward pool invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
-	if got, _ := sci.GetTrieNode(nodeUID(scID, rewardTokenPool, item.ID)); got != nil {
+	if got, _ := sci.GetTrieNode(nodeUID(scID, rewardTokenPool, item.Id)); got != nil {
 		return errors.New(zmc.ErrCodeInternal, "reward pool already registered")
 	}
 
@@ -45,10 +45,10 @@ func (m *rewardPools) copy() *rewardPools {
 }
 
 func (m *rewardPools) del(scID string, item *tokenPool, db *gorocksdb.TransactionDB, sci chain.StateContextI) (*tokenPool, error) {
-	if _, err := sci.DeleteTrieNode(nodeUID(scID, rewardTokenPool, item.ID)); err != nil {
+	if _, err := sci.DeleteTrieNode(nodeUID(scID, rewardTokenPool, item.Id)); err != nil {
 		return nil, errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "delete reward pool failed", err)
 	}
-	if idx, found := m.getIndex(item.ID); found {
+	if idx, found := m.getIndex(item.Id); found {
 		return m.delByIndex(idx, db)
 	}
 
@@ -83,7 +83,7 @@ func (m *rewardPools) delByIndex(idx int, db *gorocksdb.TransactionDB) (*tokenPo
 }
 
 func (m *rewardPools) hasEqual(item *tokenPool) bool {
-	if got, found := m.get(item.ID); !found || !reflect.DeepEqual(got, item) {
+	if got, found := m.get(item.Id); !found || !reflect.DeepEqual(got, item) {
 		return false // not found or not equal
 	}
 
@@ -111,7 +111,7 @@ func (m *rewardPools) getIndex(id string) (int, bool) {
 	size := len(m.Sorted)
 	if size > 0 {
 		for idx, item := range m.Sorted {
-			if item.ID == id {
+			if item.Id == id {
 				return idx, true // found
 			}
 		}
@@ -126,13 +126,13 @@ func (m *rewardPools) put(item *tokenPool) (int, bool) {
 	}
 
 	size := len(m.Sorted)
-	if size == 0 || item.ExpireAt == 0 {
+	if size == 0 || item.ExpiredAt.Seconds == 0 {
 		m.Sorted = append(m.Sorted, item)
 		return size, true // appended
 	}
 
 	idx := sort.Search(size, func(idx int) bool {
-		return m.Sorted[idx].ExpireAt >= item.ExpireAt
+		return m.Sorted[idx].ExpiredAt.Seconds >= item.ExpiredAt.Seconds
 	})
 	if idx == size { // out of bounds
 		m.Sorted = append(m.Sorted, item)
@@ -149,7 +149,7 @@ func (m *rewardPools) write(scID string, item *tokenPool, db *gorocksdb.Transact
 	if item == nil {
 		return errors.New(zmc.ErrCodeInternal, "reward pool invalid value").Wrap(zmc.ErrNilPointerValue)
 	}
-	if _, err := sci.InsertTrieNode(nodeUID(scID, rewardTokenPool, item.ID), item); err != nil {
+	if _, err := sci.InsertTrieNode(nodeUID(scID, rewardTokenPool, item.Id), item); err != nil {
 		return errors.Wrap(zmc.ErrCodeInternal, "insert reward pool failed", err)
 	}
 

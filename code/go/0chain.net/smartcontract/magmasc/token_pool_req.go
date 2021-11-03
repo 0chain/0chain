@@ -1,12 +1,9 @@
 package magmasc
 
 import (
-	"encoding/json"
-
 	"github.com/0chain/gosdk/core/util"
 	"github.com/0chain/gosdk/zmagmacore/errors"
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
-	"github.com/0chain/gosdk/zmagmacore/time"
 
 	tx "0chain.net/chaincore/transaction"
 )
@@ -14,10 +11,8 @@ import (
 type (
 	// tokenPoolReq represents lock pool request implementation.
 	tokenPoolReq struct {
-		ID       string         `json:"id"`
-		PayeeID  string         `json:"payee_id"` // empty val means the pool for all
-		ExpireAt time.Timestamp `json:"expire_at"` // empty val means the pool has no time limits
-		txn      *tx.Transaction
+		*zmc.TokenPoolReq
+		txn *tx.Transaction
 	}
 )
 
@@ -31,25 +26,19 @@ var (
 
 // Decode implements util.Serializable interface.
 func (m *tokenPoolReq) Decode(blob []byte) error {
-	req := tokenPoolReq{txn: m.txn}
-	if err := json.Unmarshal(blob, &req); err != nil {
+	req := tokenPoolReq{TokenPoolReq: zmc.NewTokenPoolReq()}
+	if err := req.TokenPoolReq.Decode(blob); err != nil {
 		return zmc.ErrDecodeData.Wrap(err)
 	}
+
+	req.txn = m.txn
 	if err := req.Validate(); err != nil {
 		return err
 	}
 
-	m.ID = req.ID
-	m.PayeeID = req.PayeeID
-	m.ExpireAt = req.ExpireAt
+	m.TokenPoolReq = req.TokenPoolReq
 
-	return nil
-}
-
-// Encode implements util.Serializable interface.
-func (m *tokenPoolReq) Encode() []byte {
-	blob, _ := json.Marshal(m)
-	return blob
+	return req.Validate()
 }
 
 // PoolBalance implements PoolConfigurator interface.
@@ -59,7 +48,7 @@ func (m *tokenPoolReq) PoolBalance() int64 {
 
 // PoolID implements PoolConfigurator interface.
 func (m *tokenPoolReq) PoolID() string {
-	return m.ID
+	return m.Id
 }
 
 // PoolHolderID implements PoolConfigurator interface.
@@ -74,7 +63,7 @@ func (m *tokenPoolReq) PoolPayerID() string {
 
 // PoolPayeeID implements PoolConfigurator interface.
 func (m *tokenPoolReq) PoolPayeeID() string {
-	return m.PayeeID
+	return m.PayeeId
 }
 
 // Validate checks tokenPoolReq for correctness.
@@ -85,9 +74,6 @@ func (m *tokenPoolReq) Validate() (err error) {
 
 	case m.txn.Value <= 0:
 		err = errors.New(zmc.ErrCodeInternal, "transaction value is required")
-
-	case m.ID == "":
-		err = errors.New(zmc.ErrCodeBadRequest, "pool id is required")
 	}
 
 	return err

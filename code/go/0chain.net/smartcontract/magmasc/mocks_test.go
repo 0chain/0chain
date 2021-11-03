@@ -385,9 +385,9 @@ func mockTokenPool() *tokenPool {
 	now := time.Now().Format(time.RFC3339Nano)
 
 	pool := newTokenPool()
-	pool.PayerID = "id:payer:" + now
-	pool.PayeeID = "id:payee:" + now
-	pool.ID = "id:session:" + now
+	pool.Id = "id:session:" + now
+	pool.PayerId = "id:payer:" + now
+	pool.PayeeId = "id:payee:" + now
 	pool.Balance = 1000
 
 	return pool

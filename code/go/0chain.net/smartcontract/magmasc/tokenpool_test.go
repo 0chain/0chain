@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	zmc "github.com/0chain/gosdk/zmagmacore/magmasc"
+	"github.com/0chain/gosdk/zmagmacore/magmasc/pb"
 	"github.com/stretchr/testify/assert"
 
 	chain "0chain.net/chaincore/chain/state"
@@ -37,7 +38,7 @@ func Test_tokenPool_Decode(t *testing.T) {
 		{
 			name:  "Decode_ERR",
 			blob:  []byte(":"), // invalid json
-			want:  &tokenPool{},
+			want:  newTokenPool(),
 			error: true,
 		},
 	}
@@ -47,7 +48,7 @@ func Test_tokenPool_Decode(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := &tokenPool{}
+			got := newTokenPool()
 			if err := got.Decode(test.blob); (err != nil) != test.error {
 				t.Errorf("Decode() error: %v | want: %v", err, test.error)
 				return
@@ -115,16 +116,16 @@ func Test_tokenPool_create(t *testing.T) {
 		sess  *zmc.Session
 		pool  *tokenPool
 		sci   chain.StateContextI
-		want  []zmc.TokenPoolTransfer
+		want  []*pb.TokenPoolTransfer
 		error bool
 	}{
 		{
 			name: "OK",
 			txn:  txn,
 			sess: sess,
-			pool: &tokenPool{},
+			pool: newTokenPool(),
 			sci:  sci,
-			want: []zmc.TokenPoolTransfer{{
+			want: []*pb.TokenPoolTransfer{{
 				TxnHash:    txn.Hash,
 				ToPool:     sess.SessionID,
 				Value:      sess.AccessPoint.TermsGetAmount(),
@@ -137,18 +138,18 @@ func Test_tokenPool_create(t *testing.T) {
 			name:  "Client_Balance_ERR",
 			txn:   txn,
 			sess:  sessClientBalanceErr,
-			pool:  &tokenPool{},
+			pool:  newTokenPool(),
 			sci:   sci,
-			want:  nil,
+			want:  newTokenPool().Transfers,
 			error: true,
 		},
 		{
 			name:  "Insufficient_Funds_ERR",
 			txn:   txn,
 			sess:  sessInsufficientFundsErr,
-			pool:  &tokenPool{},
+			pool:  newTokenPool(),
 			sci:   sci,
-			want:  nil,
+			want:  newTokenPool().Transfers,
 			error: true,
 		},
 	}
@@ -183,7 +184,7 @@ func Test_tokenPool_spend(t *testing.T) {
 		amount state.Balance
 		sci    chain.StateContextI
 		pool   *tokenPool
-		want   []zmc.TokenPoolTransfer
+		want   []*pb.TokenPoolTransfer
 		error  bool
 	}{
 		{
@@ -192,13 +193,21 @@ func Test_tokenPool_spend(t *testing.T) {
 			amount: state.Balance(poolOK1.Balance - poolOK1.Balance/2),
 			sci:    sci,
 			pool:   poolOK1,
-			want: []zmc.TokenPoolTransfer{{
-				TxnHash:    txn.Hash,
-				FromPool:   poolOK1.ID,
-				Value:      poolOK1.Balance - poolOK1.Balance/2,
-				FromClient: poolOK1.PayerID,
-				ToClient:   poolOK1.PayeeID,
-			}},
+			want: []*pb.TokenPoolTransfer{
+				{
+					TxnHash:    txn.Hash,
+					FromPool:   poolOK1.Id,
+					Value:      poolOK1.Balance - poolOK1.Balance/2,
+					FromClient: poolOK1.PayerId,
+					ToClient:   poolOK1.PayeeId,
+				},
+				{
+					TxnHash:  txn.Hash,
+					FromPool: poolOK1.Id,
+					Value:    poolOK1.Balance - poolOK1.Balance/2,
+					ToClient: poolOK1.PayerId,
+				},
+			},
 			error: false,
 		},
 		{
@@ -207,12 +216,11 @@ func Test_tokenPool_spend(t *testing.T) {
 			amount: 0,
 			sci:    sci,
 			pool:   poolOK2,
-			want: []zmc.TokenPoolTransfer{{
-				TxnHash:    txn.Hash,
-				FromPool:   poolOK2.ID,
-				Value:      0,
-				FromClient: poolOK2.PayerID,
-				ToClient:   poolOK2.PayeeID,
+			want: []*pb.TokenPoolTransfer{{
+				TxnHash:  txn.Hash,
+				FromPool: poolOK2.Id,
+				Value:    1000,
+				ToClient: poolOK2.PayerId,
 			}},
 			error: false,
 		},
@@ -222,7 +230,7 @@ func Test_tokenPool_spend(t *testing.T) {
 			amount: -1,
 			sci:    sci,
 			pool:   mockTokenPool(),
-			want:   nil,
+			want:   mockTokenPool().Transfers,
 			error:  true,
 		},
 		{
@@ -231,7 +239,7 @@ func Test_tokenPool_spend(t *testing.T) {
 			amount: 1,
 			sci:    sci,
 			pool:   mockTokenPool(),
-			want:   nil,
+			want:   mockTokenPool().Transfers,
 			error:  true,
 		},
 		{
@@ -240,6 +248,7 @@ func Test_tokenPool_spend(t *testing.T) {
 			amount: 1000,
 			sci:    sci,
 			pool:   mockTokenPool(),
+			want:   mockTokenPool().Transfers,
 			error:  true,
 		},
 	}
@@ -251,10 +260,16 @@ func Test_tokenPool_spend(t *testing.T) {
 
 			if err := test.pool.spend(test.txn, test.amount, test.sci); (err != nil) != test.error {
 				t.Errorf("spend() error: %v | want: %v", err, test.error)
+				return
 			}
 			if !reflect.DeepEqual(test.pool.Transfers, test.want) {
 				t.Errorf("create() got: %#v | want: %#v", test.pool.Transfers, test.want)
-				return
+				for _, trans := range test.pool.Transfers {
+					t.Errorf("create() got: %#v", trans)
+				}
+				for _, trans := range test.want {
+					t.Errorf("create() want: %#v", trans)
+				}
 			}
 		})
 	}
