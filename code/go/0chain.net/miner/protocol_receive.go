@@ -384,6 +384,39 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
+	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount/2) {
+		if b.Round > lfbTK.Round {
+			// try to get LFB ticket block from local
+			lfb, err := mc.GetBlock(ctx, lfbTK.LFBHash)
+			if err != nil {
+				// acquire from sharder
+				logging.Logger.Debug("process notarization - ensure LFB from sharder",
+					zap.Int64("round", b.Round),
+					zap.Int64("lfb round", lfb.Round),
+					zap.Int64("LFB ticket round", lfbTK.Round),
+					zap.String("LFB ticket block", lfbTK.LFBHash))
+				_, err := mc.ensureLatestFinalizedBlock(ctx)
+				return err
+			}
+			logging.Logger.Debug("process notarization - update LFB, round > tk round",
+				zap.Int64("round", b.Round),
+				zap.Int64("lfb round", lfb.Round),
+				zap.Int64("LFB ticket round", lfbTK.Round),
+				zap.String("LFB ticket block", lfbTK.LFBHash))
+			mc.SetLatestFinalizedBlock(ctx, lfb)
+			return nil
+		}
+
+		logging.Logger.Debug("process notarization - update LFB, round <= tk round",
+			zap.Int64("round", b.Round),
+			zap.Int64("lfb round", lfb.Round),
+			zap.Int64("LFB ticket round", lfbTK.Round),
+			zap.String("LFB ticket block", lfbTK.LFBHash))
+		mc.SetLatestFinalizedBlock(ctx, b)
+	}
+
 	return nil
 }
 
