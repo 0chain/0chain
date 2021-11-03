@@ -245,17 +245,16 @@ func (m *MagmaSmartContract) billingProcessing(sess *zmc.Session, txn *tx.Transa
 				if amount > 0 {
 					continue // continue trying to expend sponsored token pools
 				}
+				break // the entire amount has been paid
 			}
 		}
-		// tries to expend the consumer's token pool for the session billing
-		if amount > 0 {
-			pool := newTokenPool()
-			if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
-				return errors.New(zmc.ErrCodeSessionStop, err.Error())
-			}
-			if err := pool.spendWithFees(txn, amount, sci, feeRate, sess.Provider.Id); err != nil {
-				return errors.New(zmc.ErrCodeSessionStop, err.Error())
-			}
+		// tries to spend or refund the consumer's token pool for the session billing
+		pool := newTokenPool()
+		if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
+			return errors.New(zmc.ErrCodeSessionStop, err.Error())
+		}
+		if err := pool.spendWithFees(txn, amount, sci, feeRate, sess.Provider.Id); err != nil {
+			return errors.New(zmc.ErrCodeSessionStop, err.Error())
 		}
 	}
 
