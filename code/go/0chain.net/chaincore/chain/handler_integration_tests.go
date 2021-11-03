@@ -1,3 +1,4 @@
+// go:build integration_tests
 // +build integration_tests
 
 package chain
@@ -41,6 +42,19 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
 		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock()
 		lfmb.Hash = revertString(lfmb.Hash)
 		return lfmb, nil
+	}
+
+	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+}
+
+// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+
+	var state = crpc.Client().State()
+	if state.MagicBlock != nil {
+		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock()
+		lfmb.Hash = revertString(lfmb.Hash)
+		return lfmb.GetSummary(), nil
 	}
 
 	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
