@@ -60,10 +60,10 @@ func PrintEntityHandler(ctx context.Context, entity Entity) (interface{}, error)
 }
 
 /*GetEntityHandler - default get handler implementation for any Entity */
-func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata EntityMetadata, idparam string) (interface{}, error) {
-	id := r.FormValue(idparam)
+func GetEntityHandler(ctx context.Context, id string, entityMetadata EntityMetadata) (interface{}, error) {
+	// id := r.FormValue(idparam)
 	if id == "" {
-		return nil, common.InvalidRequest(fmt.Sprintf("%v is required", idparam))
+		return nil, common.InvalidRequest(fmt.Sprintf("id is required"))
 	}
 	entity := entityMetadata.Instance()
 	err := entity.Read(ctx, ToKey(id))

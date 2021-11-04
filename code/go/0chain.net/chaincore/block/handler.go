@@ -15,7 +15,7 @@ func SetupHandlers() {
 
 /*GetBlock - given an id returns the block information */
 func GetBlock(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, blockEntityMetadata, "hash")
+	return datastore.GetEntityHandler(ctx, r.FormValue("hash"), blockEntityMetadata)
 }
 
 /*BLOCK_TIME_TOLERANCE - the block creation date should be within these many seconds before/after of current time */

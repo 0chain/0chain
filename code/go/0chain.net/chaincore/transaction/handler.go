@@ -19,7 +19,7 @@ func SetupHandlers() {
 
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
+	return datastore.GetEntityHandler(ctx, r.FormValue("hash"), transactionEntityMetadata)
 }
 
 /*PutTransaction - Given a transaction data, it stores it */
@@ -40,7 +40,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		logging.Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 	}
 	cli, err := txn.GetClient(ctx)
-	if err != nil || cli == nil  || cli.PublicKey == "" {
+	if err != nil || cli == nil || cli.PublicKey == "" {
 		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
 	if datastore.DoAsync(ctx, txn) {
