@@ -558,6 +558,7 @@ type StorageAllocation struct {
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
 	IsImmutable       bool                          `json:"is_immutable"`
+	IsNft             bool                          `json:"is_nft"`
 
 	// Requested ranges.
 	ReadPriceRange             PriceRange    `json:"read_price_range"`

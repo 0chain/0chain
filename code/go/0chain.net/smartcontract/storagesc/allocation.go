@@ -176,6 +176,7 @@ type newAllocationRequest struct {
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
+	IsNft                      bool             `json:"is_nft"`
 }
 
 // storageAllocation from the request
@@ -193,6 +194,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	sa.DiverseBlobbers = nar.DiversifyBlobbers
+	sa.IsNft = nar.IsNft
 	return
 }
 
@@ -484,6 +486,10 @@ func (uar *updateAllocationRequest) validate(
 	request updateAllocationRequest,
 	alloc *StorageAllocation,
 ) (err error) {
+	if client != alloc.Owner && !alloc.IsNft {
+		return errors.New("only the owner can update non NFT allocations")
+	}
+
 	if uar.SetImmutable && alloc.IsImmutable {
 		return errors.New("allocation is already immutable")
 	}
@@ -492,7 +498,6 @@ func (uar *updateAllocationRequest) validate(
 		if !uar.SetImmutable {
 			return errors.New("update allocation changes nothing")
 		}
-
 	} else {
 		if ns := alloc.Size + uar.Size; ns < conf.MinAllocSize {
 			return fmt.Errorf("new allocation size is too small: %d < %d",
