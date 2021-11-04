@@ -105,7 +105,6 @@ message Pool {
 message Transaction {
   string hash = 1;
   string version = 2;
-
   string client_id = 3;
   string to_client_id = 4;
   string chain_id = 5;
@@ -118,4 +117,16 @@ message Transaction {
   string transaction_output = 12;
   string txn_output_hash = 13;
   int64 transaction_status = 14;
+}
+
+// PutTransactionRequest
+message PutTransactionRequest {
+  //
+  Transaction transaction = 1;
+}
+
+// PutTransactionResponse
+message PutTransactionResponse {
+  //
+  string transaction = 1;
 }
