@@ -82,7 +82,7 @@ func DiagnosticsNodesHandler(w http.ResponseWriter, r *http.Request) {
 
 /*GetChainHandler - given an id returns the chain information */
 func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
+	return datastore.GetEntityHandler(ctx, r.FormValue("id"), chainEntityMetadata)
 }
 
 func LatestBlockFeeStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {

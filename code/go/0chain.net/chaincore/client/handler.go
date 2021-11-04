@@ -25,5 +25,5 @@ func SetupHandlers() {
 
 /*GetClientHandler - given an id returns the client information */
 func GetClientHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, clientEntityMetadata, "id")
+	return datastore.GetEntityHandler(ctx, r.FormValue("id"), clientEntityMetadata)
 }

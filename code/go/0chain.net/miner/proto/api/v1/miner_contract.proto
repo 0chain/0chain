@@ -119,3 +119,12 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+message GetClientRequest {
+  // idparam is hardcoded to "id" in V1. Following the same here.
+  string id = 1;
+}
+
+message GetClientResponse {
+  // interface {}
+}

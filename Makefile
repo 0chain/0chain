@@ -118,5 +118,5 @@ go-get:
 
 run-test:
 	@echo "Start testing..."
-	@cd $(root_path)/code/go/0chain.net && go test -tags bn256 -cover ./...
+	@cd $(root_path)/code/go/0chain.net && go test -tags "bn256 development" -cover ./...
 	@echo "Tests completed."
