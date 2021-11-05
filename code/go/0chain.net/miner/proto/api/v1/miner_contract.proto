@@ -128,5 +128,5 @@ message PutTransactionRequest {
 // PutTransactionResponse
 message PutTransactionResponse {
   //
-  string transaction = 1;
+  Transaction transaction = 1;
 }

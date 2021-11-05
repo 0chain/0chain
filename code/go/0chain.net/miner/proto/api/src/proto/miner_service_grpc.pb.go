@@ -19,6 +19,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerServiceClient interface {
 	GetNotarizedBlock(ctx context.Context, in *GetNotarizedBlockRequest, opts ...grpc.CallOption) (*GetNotarizedBlockResponse, error)
+	//
+	PutTransaction(ctx context.Context, in *PutTransactionRequest, opts ...grpc.CallOption) (*PutTransactionResponse, error)
 }
 
 type minerServiceClient struct {
@@ -38,11 +40,22 @@ func (c *minerServiceClient) GetNotarizedBlock(ctx context.Context, in *GetNotar
 	return out, nil
 }
 
+func (c *minerServiceClient) PutTransaction(ctx context.Context, in *PutTransactionRequest, opts ...grpc.CallOption) (*PutTransactionResponse, error) {
+	out := new(PutTransactionResponse)
+	err := c.cc.Invoke(ctx, "/miner.MinerService/PutTransaction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinerServiceServer is the server API for MinerService service.
 // All implementations should embed UnimplementedMinerServiceServer
 // for forward compatibility
 type MinerServiceServer interface {
 	GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error)
+	//
+	PutTransaction(context.Context, *PutTransactionRequest) (*PutTransactionResponse, error)
 }
 
 // UnimplementedMinerServiceServer should be embedded to have forward compatible implementations.
@@ -51,6 +64,9 @@ type UnimplementedMinerServiceServer struct {
 
 func (UnimplementedMinerServiceServer) GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotarizedBlock not implemented")
+}
+func (UnimplementedMinerServiceServer) PutTransaction(context.Context, *PutTransactionRequest) (*PutTransactionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PutTransaction not implemented")
 }
 
 // UnsafeMinerServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -82,6 +98,24 @@ func _MinerService_GetNotarizedBlock_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MinerService_PutTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutTransactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServiceServer).PutTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.MinerService/PutTransaction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServiceServer).PutTransaction(ctx, req.(*PutTransactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MinerService_ServiceDesc is the grpc.ServiceDesc for MinerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -92,6 +126,10 @@ var MinerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotarizedBlock",
 			Handler:    _MinerService_GetNotarizedBlock_Handler,
+		},
+		{
+			MethodName: "PutTransaction",
+			Handler:    _MinerService_PutTransaction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
