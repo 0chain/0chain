@@ -14,4 +14,11 @@ service MinerService {
       get : "/v2/_x2m/block/notarized_block/get"
     };
   }
+  //
+  rpc PutTransaction(PutTransactionRequest) returns (PutTransactionResponse) {
+    option (google.api.http) = {
+      post : "/v2/_x2m/transaction/put"
+      body : "*"
+    };
+  }
 }
