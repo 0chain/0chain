@@ -40,23 +40,9 @@ func (s *minerGRPCService) PutTransaction(ctx context.Context, req *minerproto.P
 		return nil, err
 	}
 
-	//
+	// TODO (twiny): to implement
 
 	return &minerproto.PutTransactionResponse{
-		Transaction: &minerproto.Transaction{
-			ClientId:           txn.ClientID,
-			ToClientId:         txn.ToClientID,
-			ChainId:            txn.ChainID,
-			TransactionData:    txn.TransactionData,
-			TransactionValue:   txn.Value,
-			Signature:          txn.Signature,
-			CreationDate:       txn.CreationDate,
-			TransactionFee:     txn.Fee,
-			TransactionType:    minerproto.TransactionType(txn.TransactionType),
-			TransactionOutput:  txn.TransactionOutput,
-			TxnOutputHash:      txn.OutputHash,
-			TransactionStatus:  minerproto.TransactionStatus(txn.Status),
-			TransactionPayload: txn.TransactionPayload,
-		},
+		Transaction: &minerproto.Transaction{},
 	}, nil
 }
