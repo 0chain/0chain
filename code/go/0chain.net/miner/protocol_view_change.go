@@ -917,7 +917,7 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	logging.Logger.Info("setup latest and previous fmbs")
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-	if lfmb.Sharders == nil || lfmb.Miners == nil {
+	if lfmb == nil || lfmb.Sharders == nil || lfmb.Miners == nil {
 		return
 	}
 
