@@ -471,6 +471,7 @@ type updateAllocationRequest struct {
 	Size         int64            `json:"size"`            // difference
 	Expiration   common.Timestamp `json:"expiration_date"` // difference
 	SetImmutable bool             `json:"set_immutable"`
+	UpdateTerms  bool             `json:"update_terms"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -993,6 +994,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			err.Error())
+	}
+
+	if request.UpdateTerms {
+		if len(blobbers) != len(alloc.BlobberDetails) {
+			return "", common.NewError("allocation_updating_failed",
+				"error allocation blobber size mismatch")
+		}
+
+		for i, bd := range alloc.BlobberDetails {
+			bd.Terms = blobbers[i].Terms
+		}
 	}
 
 	// adjust expiration
