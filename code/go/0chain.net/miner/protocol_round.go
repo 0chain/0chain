@@ -656,7 +656,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 // AddToRoundVerification - add a block to verify.
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	if mr.IsVerificationComplete() {
-		logging.Logger.Debug("handle verify block - round verification completed", zap.Int64("round", mr.GetRoundNumber()))
+		logging.Logger.Debug("handle verify block - round verification completed",
+			zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 
@@ -757,7 +758,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	mc.addToRoundVerification(ctx, mr, b)
+	mc.addToRoundVerification(context.Background(), mr, b)
 }
 
 func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round int64, hash string) []*block.BlockVerificationTicket {
@@ -875,24 +876,35 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		minerStats := miner.ProtocolStats.(*chain.MinerStats)
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
-			b.SetBlockState(block.StateVerificationFailed)
-			minerStats.VerificationFailures++
 			switch err {
 			case context.Canceled:
+				if !r.isVerificationComplete() {
+					minerStats.VerificationFailures++
+					b.SetBlockState(block.StateVerificationFailed)
+					logging.Logger.Error("verify round block - canceled without round verification completed",
+						zap.Int64("round", b.Round))
+				}
+				return false
 			default:
+				minerStats.VerificationFailures++
+				b.SetBlockState(block.StateVerificationFailed)
 				if cerr, ok := err.(*common.Error); ok {
 					if cerr.Code == RoundMismatch {
-						logging.Logger.Debug("verify round block",
-							zap.Any("round", r.Number), zap.Any("block", b.Hash),
+						logging.Logger.Error("verify round block failed",
+							zap.Any("round", r.Number),
+							zap.Any("block", b.Hash),
 							zap.Any("current_round", mc.GetCurrentRound()))
 					} else {
-						logging.Logger.Error("verify round block",
-							zap.Any("round", r.Number), zap.Any("block", b.Hash),
+						logging.Logger.Error("verify round block failed",
+							zap.Any("round", r.Number),
+							zap.Any("block", b.Hash),
 							zap.Error(err))
 					}
 				} else {
-					logging.Logger.Error("verify round block", zap.Any("round", r.Number),
-						zap.Any("block", b.Hash), zap.Error(err))
+					logging.Logger.Error("verify round block failed",
+						zap.Any("round", r.Number),
+						zap.Any("block", b.Hash),
+						zap.Error(err))
 				}
 			}
 			return false
@@ -969,14 +981,20 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
-					logging.Logger.Debug("verify block - try to verify and send")
+					logging.Logger.Debug("verify block - try to verify and send",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash))
 					verifyAndSend(ctx, r, b)
 				} else {
-					logging.Logger.Debug("verify block - rejected")
+					logging.Logger.Debug("verify block - rejected",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash))
 					b.SetBlockState(block.StateVerificationRejected)
 				}
 			} else { // Accumulate all the blocks into this array till the BlockTime timeout
-				logging.Logger.Debug("verify block - pending")
+				logging.Logger.Debug("verify block - pending",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
 				b.SetBlockState(block.StateVerificationPending)
 				blocks = append(blocks, b)
 			}
