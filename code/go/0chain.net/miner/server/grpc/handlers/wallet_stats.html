@@ -1,0 +1,86 @@
+<html>
+
+<head>
+    <title>Wallet Stats</title>
+    <style>
+        .number {
+            text-align: right;
+        }
+        
+        .fixed-text {
+            overflow: hidden;
+            white-space: nowrap;
+            word-break: break-all;
+            word-wrap: break-word;
+            text-overflow: ellipsis;
+        }
+        
+        .menu li {
+            list-style-type: none;
+        }
+        
+        table,
+        td,
+        th {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        
+        .tname {
+            width: 70%;
+        }
+        
+        tr.header {
+            background-color: #E0E0E0;
+        }
+        
+        .inactive {
+            background-color: #F44336;
+        }
+        
+        .warning {
+            background-color: #FFEB3B;
+        }
+        
+        .optimal {
+            color: #1B5E20;
+        }
+        
+        .slow {
+            font-style: italic;
+        }
+        
+        .bold {
+            font-weight: bold;
+        }
+        
+        tr.green td {
+            background-color: light-green;
+        }
+        
+        tr.grey td {
+            background-color: light-grey;
+        }
+    </style>
+</head>
+
+<body>
+    Wallet stats as of round {{.Round}}
+    <table style='border-collapse: collapse;'>
+        <tr>
+            <td>Wallets With Tokens</td>
+            <td>{{.WalletsWithTokens}}</td>
+        </tr>
+        <tr>
+            <td>Wallets Without Tokens</td>
+            <td>{{.WalletsWithoutTokens}}</td>
+        </tr>
+        <tr>
+            <td>Total Wallets</td>
+            <td>{{.TotalWallets}}</td>
+        </tr>
+    </table>
+    <br>
+</body>
+
+</html>
