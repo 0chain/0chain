@@ -133,7 +133,6 @@ message ExplorerStats {
   int64 round_timeout = 6;
   int64 timeouts = 7;
   sint32 average_block_size = 8;
-  // typeof(time.Duration)=int64
   map<string, google.protobuf.Duration> network_time = 9;
 }
 
