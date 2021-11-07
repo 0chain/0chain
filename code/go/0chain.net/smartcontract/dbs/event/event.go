@@ -3,6 +3,9 @@ package event
 import (
 	"fmt"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
@@ -17,7 +20,12 @@ type Event struct {
 }
 
 func AddEvents(events []Event) {
-	dbs.EventDb.Get().Create(&events)
+	logging.Logger.Info("add events",
+		zap.Any("event db", dbs.EventDb),
+	)
+	if dbs.EventDb != nil {
+		dbs.EventDb.Get().Create(&events)
+	}
 }
 
 func MigrateEventDb() error {

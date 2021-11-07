@@ -848,7 +848,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	//	zap.Int64("block", b.Round),
 	//	zap.Any("b.Events", b.Events),
 	//)
-	event.AddEvents(b.Events)
+	logging.Logger.Info("piers before add events 1",
+		zap.Int("length of events", len(b.Events)),
+	)
+	if len(b.Events) > 0 {
+		event.AddEvents(b.Events)
+	}
+	logging.Logger.Info("piers after add events 1")
 	/*
 		oldEvents, err := event.GetEvents(b.Round - 4)
 		if err != nil {
@@ -937,7 +943,9 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	//	zap.Int64("block", b.Round),
 	//	zap.Any("b.Events", b.Events),
 	//)
+	logging.Logger.Info("piers before add events 2")
 	event.AddEvents(b.Events)
+	logging.Logger.Info("piers after add events 2")
 	/*
 		oldEvents, err := event.GetEvents(b.Round - 4)
 		if err != nil {

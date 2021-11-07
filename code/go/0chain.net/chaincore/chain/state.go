@@ -184,7 +184,7 @@ func (c *Chain) updateState(
 				zap.Any("txn", txn))
 			return
 		}
-		sctx.EmitEvent("Test", "test tag", "chain.updateState")
+		//sctx.EmitEvent("Test", "test tag", "chain.updateState")
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),
