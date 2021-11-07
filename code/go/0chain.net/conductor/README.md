@@ -224,7 +224,13 @@ zwalletcli/
 (cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch)
 ```
 
-10. Add `~/.zcn/config.yaml` as follows
+10. Init setup for blobbers
+
+```sh
+(cd blobber && ./docker.local/bin/blobber.init.setup.sh)
+```
+
+11. Add `~/.zcn/config.yaml` as follows
 
 ```yaml
 block_worker: http://127.0.0.1:9091
@@ -236,7 +242,7 @@ max_txn_query: 5
 query_sleep_time: 5
 ```
 
-11. Apply if on Ubuntu 18.04
+12. Apply if on Ubuntu 18.04
 
 https://github.com/docker/for-linux/issues/563#issuecomment-547962928
 
@@ -245,7 +251,7 @@ package required by docker-compose and used by docker. A docker process
 (a build, for example) can sometimes fail due to the bug. Some tests have
 internal docker builds and can fail due to this bug.
 
-12. Run blobber tests
+13. Run blobber tests
 
 ```sh
 (cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1)

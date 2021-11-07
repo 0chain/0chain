@@ -28,6 +28,7 @@ tests:
     flow:
       - command:
           name: 'build_test_blobbers'
+          timeout: '15m'
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
@@ -38,13 +39,15 @@ tests:
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
-      # wait the 0dns starts
+      #wait the 0dns starts
       - command:
           name: "sleep_20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3']
+      - wait_round:
+          round: 15 # just wait the BC starts
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          timeout: '5m'
+          timeout: '15m'
       - command:
           name: 'init_allocation'
           timeout: '35m'
