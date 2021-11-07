@@ -713,6 +713,8 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 								Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
 								errorOccurred = true
 								goto CountUpdate
+							} else {
+								continue
 							}
 
 						CountUpdate:
