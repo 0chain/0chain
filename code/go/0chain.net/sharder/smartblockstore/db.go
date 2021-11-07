@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -21,10 +22,6 @@ var (
 
 //bucket constant values
 const (
-	BlockWhereBucket   = "bwb"
-	UnmovedBlockBucket = "ubb"
-	BlockUsageBucket   = "bub"
-
 	HotTier          WhichTier = iota //Hot tier only
 	WarmTier                          //Warm tier only
 	ColdTier                          //Cold tier only
@@ -32,11 +29,21 @@ const (
 	CacheAndColdTier                  //Cache and cold tier
 )
 
+const (
+	BlockWhereBucket   = "bwb"
+	UnmovedBlockBucket = "ubb"
+	BlockUsageBucket   = "bub"
+)
+
 //Create db file and create buckets
-func InitMetaRecordDB() {
+func InitMetaRecordDB(deleteExistingDB bool) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
+	if deleteExistingDB {
+		os.Remove("path/to/db")
+		os.Remove("path/to/other/db")
+	}
 	//Open db for storing whereabout of blocks
 	go func() {
 		defer wg.Done()
@@ -80,10 +87,10 @@ func InitMetaRecordDB() {
 
 //It simply provides whereabouts of a block. It can be in Warm Tier, Cold Tier, Hot and Warm Tier, Hot and Cold Tier, etc.
 type BlockWhereRecord struct {
-	hash      string    `json:"-"`
-	tiering   WhichTier `json:"tr"`
-	blockPath string    `json:"vp,omitempty"`
-	cachePath string    `json:"cp,omitempty"`
+	Hash      string    `json:"-"`
+	Tiering   WhichTier `json:"tr"`
+	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
+	CachePath string    `json:"cp,omitempty"`
 }
 
 //Add or Update whereabout of a block
@@ -92,7 +99,7 @@ func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 	if err != nil {
 		return err
 	}
-	key := []byte(bwr.hash)
+	key := []byte(bwr.Hash)
 
 	err = bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(BlockWhereBucket))
@@ -125,8 +132,19 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	bwr.hash = hash
+	bwr.Hash = hash
 	return &bwr, nil
+}
+
+//Delete metadata
+func DeleteBlockWhereRecord(hash string) {
+	bwrDB.Update(func(t *bbolt.Tx) error {
+		bkt := t.Bucket([]byte(BlockWhereBucket))
+		if bkt == nil {
+			return nil
+		}
+		return bkt.Delete([]byte(hash))
+	})
 }
 
 //Unmoved blocks; If cold tiering is enabled then record of unmoved blocks will be kept inside UnmovedBlockRecord bucket.
