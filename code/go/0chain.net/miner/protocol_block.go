@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/storagesc"
 
 	"0chain.net/chaincore/block"
@@ -53,7 +55,14 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(ctx, b, txn); err != nil {
+	events, err := mc.UpdateState(ctx, b, txn)
+	events = append(events, event.Event{
+		BlockNumber: b.Round,
+		TxHash:      txn.Hash,
+		Data:        "mc.processTxn: " + txn.TransactionData,
+	})
+	b.Events = append(b.Events, events...)
+	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))

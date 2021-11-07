@@ -6,6 +6,7 @@ do
   mkdir -p docker.local/miner"$i"/data/redis/transactions
   mkdir -p docker.local/miner"$i"/data/rocksdb
   mkdir -p docker.local/miner"$i"/log
+  mkdir -p docker.local/miner"$i"/data/postgresql
 done
 
 for i in $(seq 1 4)

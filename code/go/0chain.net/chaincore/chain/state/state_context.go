@@ -8,6 +8,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 var (
@@ -50,6 +51,9 @@ type StateContextI interface {
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
+	EmitEvent(string, string, string)
+	EmitError(error)
+	GetEvents() []event.Event
 }
 
 //StateContext - a context object used to manipulate global state
@@ -60,6 +64,7 @@ type StateContext struct {
 	transfers                     []*state.Transfer
 	signedTransfers               []*state.SignedTransfer
 	mints                         []*state.Mint
+	events                        []event.Event
 	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
@@ -157,6 +162,51 @@ func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
 //GetMints - get all the mints and fight bad breath
 func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
+}
+
+func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
+	sc.events = append(sc.events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        eventType,
+		Tag:         tag,
+		Data:        data,
+	})
+	//logging.Logger.Info("piers EmitEvent", zap.Any("new event", event.Event{
+	//	BlockNumber: sc.block.Round,
+	//	TxHash:      sc.txn.Hash,
+	//	Type:        eventType,
+	//	Tag:         tag,
+	//	Data:        data,
+	//}))
+}
+
+func (sc *StateContext) EmitError(err error) {
+	sc.events = []event.Event{
+		{
+			BlockNumber: sc.block.Round,
+			TxHash:      sc.txn.Hash,
+			Type:        "Error",
+			Data:        err.Error(),
+		},
+	}
+	//logging.Logger.Info("piers EmitError",
+	//	zap.Any("new event", event.Event{
+	//		BlockNumber: sc.block.Round,
+	//		TxHash:      sc.txn.Hash,
+	//		Type:        "Error",
+	//		Data:        err.Error(),
+	//	}),
+	//	zap.String("stack", string(debug.Stack())),
+	//)
+}
+
+func (sc *StateContext) GetEvents() []event.Event {
+	//logging.Logger.Info("piers GetEvents",
+	//	zap.Any("events got", sc.events),
+	//	zap.String("stack", string(debug.Stack())),
+	//)
+	return sc.events
 }
 
 //Validate - implement interface

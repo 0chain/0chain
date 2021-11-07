@@ -22,6 +22,34 @@ services:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../miner${MINER}/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+      #- ../sql_script/00-create-user.sql:/docker-entrypoint-initdb.d/00-create-user.sql
+    networks:
+      default:
+  postgres-post:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../bin:/0chain/bin
+      - ../sql:/0chain/sql
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+      #- ../sql_script/00-create-user.sql:/docker-entrypoint-initdb.d/00-create-user.sql
+    links:
+      - postgres:postgres
+
   miner:
     image: "miner"
     # deploy:

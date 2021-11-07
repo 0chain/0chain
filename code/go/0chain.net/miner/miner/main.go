@@ -259,6 +259,11 @@ func main() {
 
 	initHandlers()
 
+	err = setupDb(*serverChain.Config)
+	if err != nil {
+		logging.Logger.Panic("Error starting sc stats database: " + err.Error())
+	}
+
 	go func() {
 		logging.Logger.Info("Ready to listen to the requests")
 		log.Fatal(server.ListenAndServe())

@@ -3,6 +3,8 @@ package storagesc
 import (
 	"testing"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -69,6 +71,9 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
+func (tb *testBalances) EmitEvent(string, string, string)             {}
+func (tb *testBalances) EmitError(error)                              {}
+func (tb *testBalances) GetEvents() []event.Event                     { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
 	datastore.Key, error) {

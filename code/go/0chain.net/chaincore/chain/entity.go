@@ -443,6 +443,16 @@ func NewChainFromConfig() *Chain {
 	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
 	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
 
+	chain.DbsEvents.Enabled = viper.GetBool("server_chain.dbs.events.enabled")
+	chain.DbsEvents.Name = viper.GetString("server_chain.dbs.events.name")
+	chain.DbsEvents.User = viper.GetString("server_chain.dbs.events.user")
+	chain.DbsEvents.Password = viper.GetString("server_chain.dbs.events.password")
+	chain.DbsEvents.Host = viper.GetString("server_chain.dbs.events.host")
+	chain.DbsEvents.Port = viper.GetString("server_chain.dbs.events.port")
+	chain.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
+	chain.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
+	chain.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
+
 	return chain
 }
 
