@@ -4,6 +4,9 @@ package miner;
 
 option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+
 message GetNotarizedBlockRequest {
   int64 round = 1;
   string hash = 2;
@@ -118,4 +121,17 @@ message Transaction {
   string transaction_output = 12;
   string txn_output_hash = 13;
   int64 transaction_status = 14;
+}
+
+//
+// GetChainStatsRequest
+message GetChainStatsRequest {
+  google.protobuf.Empty empty = 1;
+  //
+}
+
+// GetChainStatsResponse
+message GetChainStatsResponse {
+  google.protobuf.Struct stats = 1;
+  //
 }
