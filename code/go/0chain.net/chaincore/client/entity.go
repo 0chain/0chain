@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"time"
 
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -14,7 +16,7 @@ import (
 
 var clientSignatureScheme string
 
-//SetClientSignatureScheme - set the signature scheme to be used by the client
+// SetClientSignatureScheme - set the signature scheme to be used by the client
 func SetClientSignatureScheme(scheme string) {
 	clientSignatureScheme = scheme
 }
@@ -25,7 +27,7 @@ func init() {
 	cacher = cache.NewLFUCache(10 * 1024)
 }
 
-/*Client - data structure that holds the client data */
+// Client - data structure that holds the client data
 type Client struct {
 	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.IDField               `yaml:",inline"`
@@ -36,7 +38,7 @@ type Client struct {
 	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
 }
 
-//NewClient - create a new client object
+// NewClient - create a new client object
 func NewClient() *Client {
 	return datastore.GetEntityMetadata("client").Instance().(*Client)
 }
@@ -67,12 +69,12 @@ func (c *Client) Clone() *Client {
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
 
-/*GetEntityMetadata - implementing the interface */
+// GetEntityMetadata - implementing the interface
 func (c *Client) GetEntityMetadata() datastore.EntityMetadata {
 	return clientEntityMetadata
 }
 
-/*Validate - implementing the interface */
+// Validate - implementing the interface
 func (c *Client) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("client id is required")
@@ -83,34 +85,37 @@ func (c *Client) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - store read */
+// Read - store read
 func (c *Client) Read(ctx context.Context, key datastore.Key) error {
 	return c.GetEntityMetadata().GetStore().Read(ctx, key, c)
 }
 
-/*Write - store read */
+// Write - store read
 func (c *Client) Write(ctx context.Context) error {
 	return c.GetEntityMetadata().GetStore().Write(ctx, c)
 }
 
-/*Delete - store read */
+// Delete - store read
 func (c *Client) Delete(ctx context.Context) error {
 	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
-/*Verify - given a signature and hash verify it with client's public key */
+// Verify - given a signature and hash verify it with client's public key
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return c.SigScheme.Verify(signature, hash)
+	return c.GetSignatureScheme().Verify(signature, hash)
 }
 
-/*GetSignatureScheme - return the signature scheme used for this client */
+// GetSignatureScheme - return the signature scheme used for this client
 func (c *Client) GetSignatureScheme() encryption.SignatureScheme {
-	var ss = encryption.GetSignatureScheme(clientSignatureScheme)
-	ss.SetPublicKey(c.PublicKey)
-	return ss
+	if c.SigScheme != nil {
+		return c.SigScheme
+	}
+
+	c.SetPublicKey(c.PublicKey)
+	return c.SigScheme
 }
 
-/*Provider - entity provider for client object */
+// Provider - entity provider for client object
 func Provider() datastore.Entity {
 	c := &Client{}
 	c.Version = "1.0"
@@ -119,7 +124,7 @@ func Provider() datastore.Entity {
 	return c
 }
 
-/*ComputeProperties - implement interface */
+// ComputeProperties - implement interface
 func (c *Client) ComputeProperties() {
 	c.EntityCollection = cliEntityCollection
 	c.computePublicKeyBytes()
@@ -128,9 +133,10 @@ func (c *Client) ComputeProperties() {
 func (c *Client) computePublicKeyBytes() {
 	b, _ := hex.DecodeString(c.PublicKey)
 	c.PublicKeyBytes = b
+	c.ID = encryption.Hash(b)
 }
 
-/*SetPublicKey - set the public key */
+// SetPublicKey - set the public key
 func (c *Client) SetPublicKey(key string) {
 	c.PublicKey = key
 	c.computePublicKeyBytes()
@@ -139,10 +145,28 @@ func (c *Client) SetPublicKey(key string) {
 		panic(err)
 	}
 	c.SigScheme = ss
-	c.ID = encryption.Hash(c.PublicKeyBytes)
 }
 
-/*SetupEntity - setup the entity */
+// GetBLSPublicKey returns the *bls.PublicKey
+func (c *Client) GetBLSPublicKey() (*bls.PublicKey, error) {
+	if c.SigScheme == nil {
+		if c.PublicKey == "" {
+			return nil, errors.New("client has no public key")
+		}
+
+		// lazy decoding public key
+		c.SetPublicKey(c.PublicKey)
+	}
+
+	sig, ok := c.SigScheme.(*encryption.BLS0ChainScheme)
+	if !ok {
+		return nil, errors.New("invalid signature scheme")
+	}
+
+	return sig.GetBLSPublicKey(), nil
+}
+
+// SetupEntity - setup the entity
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
 	clientEntityMetadata.Name = "client"
@@ -166,7 +190,7 @@ func SetupEntity(store datastore.Store) {
 
 var ClientEntityChannel chan datastore.QueuedEntity
 
-/*GetClients - given a set of client ids, return the clients */
+// GetClients - given a set of client ids, return the clients
 func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 
 	var (
@@ -195,7 +219,7 @@ func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 	return
 }
 
-/*GetClient - gets client from either cache or database*/
+// GetClient - gets client from either cache or database
 func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 	if co, cerr := cacher.Get(key); cerr == nil {
 		return co.(*Client), nil
@@ -209,7 +233,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 	return co, nil
 }
 
-/*PutClient - Given a client data, it stores it */
+// PutClient - Given a client data, it stores it
 func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	co, ok := entity.(*Client)
 	if !ok {
@@ -221,6 +245,16 @@ func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error
 	}
 	cacher.Add(co.GetKey(), co)
 	return response, nil
+}
+
+// GetIDFromPublicKey computes the ID of a public key
+func GetIDFromPublicKey(pubkey string) (string, error) {
+	b, err := hex.DecodeString(pubkey)
+	if err != nil {
+		return "", err
+	}
+
+	return encryption.Hash(b), nil
 }
 
 var cliEntityCollection *datastore.EntityCollection
