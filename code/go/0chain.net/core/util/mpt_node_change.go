@@ -166,9 +166,12 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	if len(cc.Changes) == 0 && (!includeDeletes || len(cc.Deletes) == 0) {
 		return nil
 	}
-	if pndb, ok := ndb.(*PNodeDB); ok {
-		pndb.Flush()
-	}
+	// TODO: make the calling of Flush() configurable, and
+	// call it on production env.
+	//if pndb, ok := ndb.(*PNodeDB); ok {
+	//	pndb.Flush()
+	//}
+	//logging.Logger.Debug("update changes - flushed", zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 
