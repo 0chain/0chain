@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -41,7 +42,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		return
 	}
 
-	var mr, pr = mc.GetMinerRound(b.Round), mc.GetMinerRound(b.Round - 1)
+	var pr = mc.GetMinerRound(b.Round - 1)
 	if pr == nil {
 		logging.Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
@@ -55,26 +56,108 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err == nil && pb != nil && pb.IsBlockNotarized() {
 			logging.Logger.Debug("handle verify block - block already exist, ignore",
-				zap.Int64("round", b.Round))
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return
 		}
 	}
 
-	logging.Logger.Debug("verify block handler",
+	if err := mc.pushToBlockVerifyWorker(ctx, b); err != nil {
+		logging.Logger.Error("handle verify block - push to block verify worker failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
+
+}
+
+func (mc *Chain) pushToBlockVerifyWorker(ctx context.Context, b *block.Block) error {
+	select {
+	case mc.blockVerifyC <- b:
+		return nil
+	case <-time.NewTimer(500 * time.Millisecond).C:
+		return errors.New("push to channel timeout")
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// BlockVerifyWorkers starts the workers for processing 'verify block' messages
+func (mc *Chain) BlockVerifyWorkers(ctx context.Context) {
+	// TODO: make the worker number configurable
+	workerNum := 4
+	wg := sync.WaitGroup{}
+	for i := 0; i < workerNum; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case b := <-mc.blockVerifyC:
+					ts := time.Now()
+					if err := mc.processVerifyBlockWithTimeout(ctx, b, 3*time.Second); err != nil {
+						logging.Logger.Error("process verify block failed",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.Any("duration", time.Since(ts)),
+							zap.Error(err))
+						continue
+					}
+					logging.Logger.Debug("verify block processed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash))
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+
+func (mc *Chain) processVerifyBlockWithTimeout(ctx context.Context, b *block.Block, timeout time.Duration) error {
+	cctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	errC := make(chan error, 1)
+	doneC := make(chan struct{})
+	go func() {
+		err := mc.processVerifyBlock(cctx, b)
+		if err != nil {
+			errC <- err
+			return
+		}
+		close(doneC)
+	}()
+
+	select {
+	case err := <-errC:
+		return err
+	case <-doneC:
+		return nil
+	case <-cctx.Done():
+		return cctx.Err()
+	}
+}
+
+func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
+	logging.Logger.Debug("verify block",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
 
 	if err := b.Validate(ctx); err != nil {
-		logging.Logger.Debug("verify block handler -- can't validate",
+		logging.Logger.Debug("verify block - can't validate",
 			zap.Int64("round", b.Round), zap.Error(err))
-		return
+		return err
 	}
 
 	if b.Round < mc.GetCurrentRound()-1 {
-		logging.Logger.Debug("verify block (round mismatch)",
+		logging.Logger.Debug("verify block - round mismatch",
 			zap.Int64("current_round", mc.GetCurrentRound()),
 			zap.Int64("block_round", b.Round))
-		return
+		return nil
 	}
 
 	// get previous block notarization tickets, and update local prev block if exist
@@ -86,46 +169,48 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		// new round RRS generation
 		go func() {
 			// TODO: check if the block's prev notarized block reached the notarization threshold
+			pr := mc.GetMinerRound(b.Round - 1)
 			if err := mc.updatePreviousBlockNotarization(ctx, b, pr); err != nil {
 				return
 			}
 		}()
 	}
 
+	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
-		logging.Logger.Error("handle verify block -- got block proposal before starting round",
+		logging.Logger.Error("verify block - got block proposal before starting round",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
 		mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
 		if mr == nil {
-			logging.Logger.Error("handle verify block -- can't start new round",
+			logging.Logger.Error("verify block - can't start new round",
 				zap.Int64("round", b.Round))
-			return
+			return nil
 		}
 
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 
 		mc.AddToRoundVerification(ctx, mr, b)
-		return
+		return nil
 	}
 
 	if !mr.IsVRFComplete() {
-		logging.Logger.Info("handle verify block - got block proposal before VRF is complete",
+		logging.Logger.Info("verify block - got block proposal before VRF is complete",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
 		if mr.GetTimeoutCount() < b.RoundTimeoutCount {
-			logging.Logger.Info("Insync ignoring handle verify block - got block proposal before VRF is complete",
+			logging.Logger.Info("verify block - ignoring, round timout count < block round timeout count",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
 				zap.String("miner", b.MinerID),
 				zap.Int("round_toc", mr.GetTimeoutCount()),
 				zap.Int("round_toc", b.RoundTimeoutCount))
-			return
+			return nil
 		}
 
 		if b.GetRoundRandomSeed() != mr.GetRandomSeed() {
-			logging.Logger.Info("handle verify block - got block with different RRS",
+			logging.Logger.Info("verify block - got block with different RRS",
 				zap.Int64("round", b.Round),
 				zap.Int64("block RRS", b.GetRoundRandomSeed()),
 				zap.Int64("round RRS", mr.GetRandomSeed()))
@@ -136,36 +221,36 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	vts := mr.GetVerificationTickets(b.Hash)
 	if len(vts) == 0 {
 		mc.AddToRoundVerification(ctx, mr, b)
-		return
+		return nil
 	}
 
 	// TODO: mc.MergeVerificationTickets does not verify block's own tickets, might be a problem!
 	mc.MergeVerificationTickets(b, vts)
 	if !b.IsBlockNotarized() {
 		mc.AddToRoundVerification(ctx, mr, b)
-		return
+		return nil
 	}
 
 	if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
 		b = mc.AddRoundBlock(mr, b)
 		mc.checkBlockNotarization(ctx, mr, b, true)
-		return
+		return nil
 	}
 
 	/* Since this is a notarized block, we are accepting it. */
 	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
 	if err != nil {
-		logging.Logger.Error("handle verify block failed",
+		logging.Logger.Error("verify block failed",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID),
 			zap.Error(err))
-		return
+		return nil
 	}
 
 	b = b1
 	mr = r1.(*Round)
-	logging.Logger.Info("Added a notarizedBlockToRound - got notarized block with different RRS",
+	logging.Logger.Info("verify block - added a notarizedBlockToRound, got notarized block with different RRS",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("miner", b.MinerID),
@@ -173,6 +258,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		zap.Int("round_toc", b.RoundTimeoutCount))
 
 	mc.checkBlockNotarization(ctx, mr, b, true)
+	return nil
 }
 
 func (mc *Chain) verifyTicketsWithRetry(ctx context.Context,

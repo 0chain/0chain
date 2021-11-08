@@ -29,13 +29,14 @@ func SetupWorkers(ctx context.Context) {
 	go mc.UpdateMagicBlockWorker(ctx)
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)
+	go mc.BlockVerifyWorkers(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return

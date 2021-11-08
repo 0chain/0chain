@@ -69,6 +69,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.nbpMutex = &sync.Mutex{}
 	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
 	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
+	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -133,6 +134,7 @@ type Chain struct {
 	nbpMutex                             *sync.Mutex
 	notarizationBlockProcessMap          map[string]struct{}
 	notarizationBlockProcessC            chan *Notarization
+	blockVerifyC                         chan *block.Block
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
