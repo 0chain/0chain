@@ -7,8 +7,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"go.uber.org/zap"
 )
 
 var (
@@ -172,13 +174,13 @@ func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
 		Tag:         tag,
 		Data:        data,
 	})
-	//logging.Logger.Info("piers EmitEvent", zap.Any("new event", event.Event{
-	//	BlockNumber: sc.block.Round,
-	//	TxHash:      sc.txn.Hash,
-	//	Type:        eventType,
-	//	Tag:         tag,
-	//	Data:        data,
-	//}))
+	logging.Logger.Info("piers EmitEvent", zap.Any("new event", event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        eventType,
+		Tag:         tag,
+		Data:        data,
+	}))
 }
 
 func (sc *StateContext) EmitError(err error) {
@@ -190,22 +192,22 @@ func (sc *StateContext) EmitError(err error) {
 			Data:        err.Error(),
 		},
 	}
-	//logging.Logger.Info("piers EmitError",
-	//	zap.Any("new event", event.Event{
-	//		BlockNumber: sc.block.Round,
-	//		TxHash:      sc.txn.Hash,
-	//		Type:        "Error",
-	//		Data:        err.Error(),
-	//	}),
+	logging.Logger.Info("piers EmitError",
+		zap.Any("new event", event.Event{
+			BlockNumber: sc.block.Round,
+			TxHash:      sc.txn.Hash,
+			Type:        "Error",
+			Data:        err.Error(),
+		}),
 	//	zap.String("stack", string(debug.Stack())),
-	//)
+	)
 }
 
 func (sc *StateContext) GetEvents() []event.Event {
-	//logging.Logger.Info("piers GetEvents",
-	//	zap.Any("events got", sc.events),
+	logging.Logger.Info("piers GetEvents",
+		zap.Any("events got", sc.events),
 	//	zap.String("stack", string(debug.Stack())),
-	//)
+	)
 	return sc.events
 }
 

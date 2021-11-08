@@ -9,7 +9,7 @@ import (
 )
 
 func setupDb(config chain.Config) error {
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 3)
 	err := postgresql.SetupDatabase(config.DbsEvents)
 	if err != nil {
 		return err

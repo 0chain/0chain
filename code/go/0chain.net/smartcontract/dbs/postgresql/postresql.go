@@ -3,7 +3,6 @@ package postgresql
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -29,7 +28,6 @@ type PostgresStore struct {
 }
 
 func (store *PostgresStore) Open(config dbs.DbAccess) error {
-	time.Sleep(time.Second * 5)
 	if !config.Enabled {
 		return errors.New("db_open_error, db disabled")
 	}

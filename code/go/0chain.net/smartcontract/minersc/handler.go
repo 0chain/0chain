@@ -4,10 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
+	"time"
 
-	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/postgresql"
+
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -168,6 +175,70 @@ func (msc *MinerSmartContract) getGlobalsHandler(
 		}, nil
 	}
 	return globals, nil
+}
+
+func (msc *MinerSmartContract) GetEventsHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
+	//return nil, fmt.Errorf("in GetEventsHandler, params %v", params)
+
+	logging.Logger.Info("start piers GetEventsHandler",
+		zap.Any("params", params),
+	)
+	blockNumber, err := strconv.Atoi(params.Get("block_number"))
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse block number %v", err)
+	}
+
+	filter := event.Event{
+		BlockNumber: int64(blockNumber),
+		TxHash:      params.Get("tx_hash"),
+		Type:        params.Get("type"),
+		Tag:         params.Get("tag"),
+	}
+	filter = filter
+	//var events []event.Event
+	//return nil, fmt.Errorf("in GetEventsHandler, filter %v", filter)
+	dbAccess := dbs.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            "postgres",
+		Port:            "5432",
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	dbAccess = dbAccess
+	err = postgresql.SetupDatabase(dbAccess)
+	if err != nil {
+		return nil, err
+	}
+	var events []event.Event
+	events = events
+	events, err = event.FindEvents(filter)
+	if err != nil {
+		return nil, err
+	}
+	firstEvent := event.First()
+	//return nil, fmt.Errorf("in GetEventsHandler, filter %v, events %v", filter, events)
+	//logging.Logger.Info("piers GetEventsHandler",
+	//	zap.Any("search filter", filter),
+	//	zap.Any("result events", events),
+	//)
+	//sm := smartcontract.NewStringMap()
+	type Events struct {
+		Events []event.Event `json:"events"`
+	}
+	var rtv = Events{
+		Events: []event.Event{firstEvent},
+		//Events: events,
+	}
+
+	return rtv, nil
 }
 
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,

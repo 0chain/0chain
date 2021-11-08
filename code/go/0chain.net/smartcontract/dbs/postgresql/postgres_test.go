@@ -4,6 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract/dbs/event"
 
 	"github.com/stretchr/testify/require"
@@ -11,8 +14,12 @@ import (
 	"0chain.net/smartcontract/dbs"
 )
 
+func init() {
+	logging.Logger = zap.NewNop()
+}
+
 func TestSetupDatabase(t *testing.T) {
-	t.Skip()
+	//t.Skip()
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -25,6 +32,9 @@ func TestSetupDatabase(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	err := SetupDatabase(access)
+	require.NoError(t, err)
+
+	err = event.DropEventTable()
 	require.NoError(t, err)
 
 	err = event.MigrateEventDb()
@@ -58,4 +68,12 @@ func TestSetupDatabase(t *testing.T) {
 	oldEvents, err := event.GetEvents(0)
 	require.NoError(t, err)
 	require.Len(t, oldEvents, len(events))
+
+	filter := event.Event{
+		BlockNumber: 2,
+	}
+	filterEvents, err := event.FindEvents(filter)
+	require.NoError(t, err)
+	require.Len(t, filterEvents, 2)
+
 }
