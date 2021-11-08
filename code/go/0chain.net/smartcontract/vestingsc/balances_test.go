@@ -8,6 +8,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 )
 
 //
@@ -44,8 +45,10 @@ func (tb *testBalances) AddMint(*state.Mint) error                    { return n
 func (tb *testBalances) GetTransfers() []*state.Transfer              { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
-
 }
+func (tb *testBalances) EmitEvent(string, string, string)      {}
+func (tb *testBalances) EmitError(error)                       {}
+func (tb *testBalances) GetEvents() []event.Event              { return nil }
 func (tb *testBalances) SetMagicBlock(block *block.MagicBlock) {}
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
