@@ -127,9 +127,12 @@ func (t *Transaction) ComputeClientID() {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
-			co := client.NewClient()
-			co.SetPublicKey(t.PublicKey)
-			t.ClientID = co.ID
+			id, err := client.GetIDFromPublicKey(t.PublicKey)
+			if err != nil {
+				panic(err)
+			}
+
+			t.ClientID = id
 		}
 	} else {
 		if t.ClientID == "" {
