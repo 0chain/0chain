@@ -166,9 +166,14 @@ func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 	return nil
 }
 
-//GetPublicKey - implement interface
+// GetPublicKey returns the public key string
 func (b0 *BLS0ChainScheme) GetPublicKey() string {
 	return hex.EncodeToString(b0.publicKey)
+}
+
+// GetBLSPublicKey returns *bls.PublicKey
+func (b0 *BLS0ChainScheme) GetBLSPublicKey() *bls.PublicKey {
+	return b0.pubKey
 }
 
 //Sign - implement interface
@@ -280,7 +285,9 @@ func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, err
 	var aggSign bls.Sign
 	for _, signature := range signatures {
 		var sign bls.Sign
-		sign.DeserializeHexStr(MiraclToHerumiSig(signature))
+		if err := sign.DeserializeHexStr(MiraclToHerumiSig(signature)); err != nil {
+			return "", err
+		}
 		aggSign.Add(&sign)
 	}
 	return aggSign.SerializeToHexStr(), nil
@@ -296,7 +303,7 @@ func BLS0ChainAggregateSignatures(signatures []string) (*BLS0ChainSign, error) {
 	signs := make([]bls.Sign, sigNum)
 	for i, signature := range signatures {
 		var sign bls.Sign
-		if err := sign.DeserializeHexStr(signature); err != nil {
+		if err := sign.DeserializeHexStr(MiraclToHerumiSig(signature)); err != nil {
 			return nil, err
 		}
 		signs[i] = sign

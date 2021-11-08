@@ -175,7 +175,7 @@ func TestAggregateSignatures(t *testing.T) {
 		require.NoError(t, err)
 		msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
 		msgHashes[i] = Hash(msgs[i])
-		sig, err := sigSchemes[i].SignV2(msgHashes[i])
+		sig, err := sigSchemes[i].Sign(msgHashes[i])
 		if err != nil {
 			t.Fatal(err)
 		}
