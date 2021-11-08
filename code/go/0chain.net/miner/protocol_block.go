@@ -265,7 +265,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	if err = mc.ComputeState(ctx, b); err != nil {
 		if err == context.Canceled {
-			logging.Logger.Warn("verify block canceled")
+			logging.Logger.Warn("verify block - compute state canceled",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return
 		}
 
@@ -352,7 +354,8 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				pk, err := txn.GetPublicKeyStr(ctx)
 				if err != nil {
 					cancel = true
-					logging.Logger.Error("failed to get transaction public key", zap.Error(err))
+					validChannel <- false
+					logging.Logger.Error("get transaction public key failed", zap.Error(err))
 					return
 				}
 
@@ -376,16 +379,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				return
 			}
 		}
-
-		var err error
-		hashes, signs, pks, err = mc.FilterOutValidatedTxns(hashes, signs, pks)
-		if err != nil {
-			cancel = true
-			validChannel <- false
-			return
-		}
-
-		logging.Logger.Debug("validate transactions - after filter", zap.Int("num", len(hashes)))
 
 		sig, err := encryption.BLS0ChainAggregateSignatures(signs)
 		if err != nil {
@@ -411,6 +404,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		validChannel <- true
 	}
+
 	ts := time.Now()
 	for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
 		end := start + mc.ValidationBatchSize
