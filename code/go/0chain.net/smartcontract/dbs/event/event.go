@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 
 	"0chain.net/core/logging"
@@ -41,7 +42,9 @@ func DropEventTable() error {
 
 func GetEvents(block int64) ([]Event, error) {
 	var events []Event
+	if dbs.EventDb == nil {
+		return events, errors.New("event database is nil")
+	}
 	result := dbs.EventDb.Get().Find(&events)
-	//result := dbs.EventDb.Get().Where("BlockNumber > ?", block).Find(events)
 	return events, result.Error
 }

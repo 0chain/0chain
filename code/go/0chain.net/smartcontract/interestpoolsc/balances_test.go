@@ -3,6 +3,8 @@ package interestpoolsc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -68,7 +70,9 @@ func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return tb.lfmb
 }
-
+func (tb *testBalances) EmitEvent(string, string, string) {}
+func (tb *testBalances) EmitError(error)                  {}
+func (tb *testBalances) GetEvents() []event.Event         { return nil }
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
