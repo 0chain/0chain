@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
@@ -214,7 +215,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		return
 	}
 	if lfb.Hash == plfb.Hash {
-		logging.Logger.Debug("lfb round is the same as latest lfb",
+		logging.Logger.Debug("finalize round - lfb round is the same as latest lfb",
 			zap.Int64("round", roundNumber),
 			zap.Int64("lfb round", lfb.Round),
 			zap.Int64("plfb round", plfb.Round))
@@ -222,21 +223,44 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 	}
 
 	if lfb.Round > plfb.Round {
-		frchain := make([]*block.Block, 0, 1)
+
+		if roundNumber-lfb.Round >= int64(2*config.GetLFBTicketAhead()) {
+			logging.Logger.Debug("finalize round - lfb round is behind too much",
+				zap.Int64("round", roundNumber),
+				zap.Int64("lfb_round", lfb.Round),
+				zap.Int64("prev_lfb_round", plfb.Round))
+			return
+		}
+
+		// maxBackDepth is the maximum number of blocks that we will fetch
+		// back from new computed lfb to previous lfb.
+		maxBackDepth := config.GetLFBTicketAhead()
+		frchain := make([]*block.Block, 0, maxBackDepth)
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
 			if b.PrevBlock == nil {
 				pb := c.GetPreviousBlock(ctx, b)
 				if pb == nil {
+					// break to start finalizing blocks in frchain slice
+					if len(frchain) >= maxBackDepth {
+						break
+					}
+
+					// return and retry in next term
 					logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
 						zap.Int64("round", b.Round),
 						zap.Int64("prev round", b.Round-1),
+						zap.Int64("prev_lfb", plfb.Round),
 						zap.String("block", b.Hash))
 					return
 				}
 			}
 
 			b = b.PrevBlock
+
+			if len(frchain) >= maxBackDepth {
+				break
+			}
 		}
 
 		fb := frchain[len(frchain)-1]
@@ -246,7 +270,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("from", plfb.Round+1),
 				zap.Int64("to", fb.Round-1))
 			c.MissedBlocks += fb.Round - 1 - plfb.Round
-			return
 		}
 
 		// perform view change (or not perform)
