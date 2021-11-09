@@ -53,6 +53,7 @@ type StateContextI interface {
 }
 
 type ReadOnlyStateContextI interface {
+	GetBlock() *block.Block
 	GetTrieNode(key datastore.Key) (util.Serializable, error)
 }
 
