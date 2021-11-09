@@ -247,7 +247,7 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 
 // getReadPoolBytes of a client
 func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
-	balances cstate.StateContextI) (b []byte, err error) {
+	balances cstate.ReadOnlyStateContextI) (b []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
@@ -259,7 +259,7 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances cstate.StateContextI) (rp *readPool, err error) {
+	balances cstate.ReadOnlyStateContextI) (rp *readPool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
@@ -327,7 +327,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	// configs
 
 	var conf *readPoolConfig
-	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
+	if conf, err = ssc.getReadPoolConfig(balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed",
 			"can't get configs: "+err.Error())
 	}
@@ -516,7 +516,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 // statistic for an allocation/blobber (used by blobbers)
 func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
+	ctx context.Context, params url.Values, balances cstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -554,7 +554,7 @@ const cantReadPoolMsg = "can't get read pool"
 
 // statistic for all locked tokens of the read pool
 func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
+	params url.Values, balances cstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (

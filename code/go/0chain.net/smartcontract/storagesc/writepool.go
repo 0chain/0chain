@@ -142,7 +142,7 @@ func (wp *writePool) allocUntil(allocID string, until common.Timestamp) (
 
 // getWritePoolBytes of a client
 func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
+	balances chainState.ReadOnlyStateContextI) (b []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(writePoolKey(ssc.ID, clientID))
@@ -154,7 +154,7 @@ func (ssc *StorageSmartContract) getWritePoolBytes(clientID datastore.Key,
 
 // getWritePool of current client
 func (ssc *StorageSmartContract) getWritePool(clientID datastore.Key,
-	balances chainState.StateContextI) (wp *writePool, err error) {
+	balances chainState.ReadOnlyStateContextI) (wp *writePool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getWritePoolBytes(clientID, balances); err != nil {
@@ -242,7 +242,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
 	var conf *writePoolConfig
-	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
+	if conf, err = ssc.getWritePoolConfig(balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			"can't get configs: "+err.Error())
 	}
@@ -456,7 +456,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 // statistic for an allocation/blobber (used by blobbers)
 func (ssc *StorageSmartContract) getWritePoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
+	ctx context.Context, params url.Values, balances chainState.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -494,7 +494,7 @@ const cantGetWritePoolMsg = "can't get write pool"
 
 // statistic for all locked tokens of the write pool
 func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
+	params url.Values, balances chainState.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (

@@ -11,7 +11,7 @@ import (
 
 const Seperator = ":"
 
-type SmartContractRestHandler func(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error)
+type SmartContractRestHandler func(ctx context.Context, params url.Values, balances c_state.RestStateContextI) (interface{}, error)
 
 type SmartContract struct {
 	ID                          string

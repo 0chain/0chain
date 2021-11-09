@@ -21,7 +21,7 @@ import (
 var ContractMap = map[string]sci.SmartContractInterface{}
 
 //ExecuteRestAPI - executes the rest api on the smart contract
-func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, balances c_state.RestStateContextI) (interface{}, error) {
 	scI := getSmartContract(scAdress)
 	if scI != nil {
 		//add bc context here

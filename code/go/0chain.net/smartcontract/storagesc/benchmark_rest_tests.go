@@ -23,7 +23,7 @@ type RestBenchTest struct {
 	endpoint func(
 		context.Context,
 		url.Values,
-		cstate.StateContextI,
+		cstate.RestStateContextI,
 	) (interface{}, error)
 	params url.Values
 }

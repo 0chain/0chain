@@ -13,8 +13,8 @@ import (
 	c_state "0chain.net/chaincore/chain/state"
 )
 
-func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
-	gn := ip.getGlobalNode(balances, "funcName")
+func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, balances c_state.RestStateContextI) (interface{}, error) {
+	gn := ip.getGlobalNodeReadOnly(balances, "funcName")
 	const pfx = "smart_contracts.interestpoolsc."
 	return &smartcontract.StringMap{
 		Fields: map[string]string{
@@ -26,7 +26,7 @@ func (ip *InterestPoolSmartContract) getConfig(_ context.Context, _ url.Values, 
 	}, nil
 }
 
-func (ip *InterestPoolSmartContract) getPoolsStats(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (ip *InterestPoolSmartContract) getPoolsStats(_ context.Context, params url.Values, balances c_state.RestStateContextI) (interface{}, error) {
 	un := ip.getUserNode(params.Get("client_id"), balances)
 	if len(un.Pools) == 0 {
 		return nil, common.NewErrNoResource("can't find user node")
@@ -58,6 +58,6 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	return stat, nil
 }
 
-func (ip *InterestPoolSmartContract) getLockConfig(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
-	return ip.getGlobalNode(balances, "updateVariables"), nil
+func (ip *InterestPoolSmartContract) getLockConfig(_ context.Context, _ url.Values, balances c_state.RestStateContextI) (interface{}, error) {
+	return ip.getGlobalNodeReadOnly(balances, "updateVariables"), nil
 }

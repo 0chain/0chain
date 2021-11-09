@@ -1,9 +1,10 @@
 package zcnsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"net/url"
+
+	"0chain.net/smartcontract"
 
 	cState "0chain.net/chaincore/chain/state"
 )
@@ -11,7 +12,7 @@ import (
 func (zcn *ZCNSmartContract) getAuthorizerNodes(
 	_ context.Context,
 	_ url.Values,
-	balances cState.StateContextI,
+	balances cState.RestStateContextI,
 ) (interface{}, error) {
 	an, err := GetAuthorizerNodes(balances)
 	if err != nil {

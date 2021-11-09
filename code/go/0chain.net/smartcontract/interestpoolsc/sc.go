@@ -148,7 +148,7 @@ func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *User
 	return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 }
 
-func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.StateContextI) *UserNode {
+func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_state.ReadOnlyStateContextI) *UserNode {
 	un := newUserNode(id)
 	userBytes, err := balances.GetTrieNode(un.getKey(ip.ID))
 	if err == nil {
@@ -160,12 +160,12 @@ func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_st
 	return un
 }
 
-func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) *GlobalNode {
+func (ip *InterestPoolSmartContract) getGN(balances c_state.ReadOnlyStateContextI) (*GlobalNode, error) {
 	gn := newGlobalNode()
 	globalBytes, err := balances.GetTrieNode(gn.getKey())
 	if err == nil {
 		if err := gn.Decode(globalBytes.Encode()); err == nil {
-			return gn
+			return gn, nil
 		}
 	}
 	const pfx = "smart_contracts.interestpoolsc."
@@ -174,8 +174,18 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	return gn, err
+}
+
+func (ip *InterestPoolSmartContract) getGlobalNodeReadOnly(balances c_state.ReadOnlyStateContextI, funcName string) *GlobalNode {
+	gn, _ := ip.getGN(balances)
+	return gn
+}
+
+func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) *GlobalNode {
+	gn, err := ip.getGN(balances)
 	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
-		balances.InsertTrieNode(gn.getKey(), gn)
+		_, _ = balances.InsertTrieNode(gn.getKey(), gn)
 	}
 	return gn
 }

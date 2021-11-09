@@ -1,13 +1,14 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -769,7 +770,7 @@ func (stat *stakePoolStat) decode(input []byte) error {
 
 // getUserStakePoolBytes of a client
 func (ssc *StorageSmartContract) getUserStakePoolBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
+	balances chainstate.ReadOnlyStateContextI) (b []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(userStakePoolsKey(ssc.ID, clientID))
@@ -781,7 +782,7 @@ func (ssc *StorageSmartContract) getUserStakePoolBytes(clientID datastore.Key,
 
 // getUserStakePool of given client
 func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
-	balances chainstate.StateContextI) (usp *userStakePools, err error) {
+	balances chainstate.ReadOnlyStateContextI) (usp *userStakePools, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getUserStakePoolBytes(clientID, balances); err != nil {
@@ -820,7 +821,7 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 // getStakePoolBytes of a blobber
 func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
-	balances chainstate.StateContextI) (b []byte, err error) {
+	balances chainstate.ReadOnlyStateContextI) (b []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(stakePoolKey(ssc.ID, blobberID))
@@ -832,7 +833,7 @@ func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
 
 // getStakePool of given blobber
 func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
-	balances chainstate.StateContextI) (sp *stakePool, err error) {
+	balances chainstate.ReadOnlyStateContextI) (sp *stakePool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
@@ -922,7 +923,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("stake_pool_lock_failed",
 			"can't get SC configurations: %v", err)
 	}
@@ -1012,7 +1013,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 			"can't decode request: %v", err)
 	}
 
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get SC configurations: %v", err)
 	}
@@ -1092,7 +1093,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 		conf *scConfig
 	)
 
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"can't get SC configurations: "+err.Error())
 	}
@@ -1140,7 +1141,7 @@ const cantGetStakePoolMsg = "can't get related stake pool"
 
 // statistic for all locked tokens of a stake pool
 func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -1150,7 +1151,7 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 		sp        *stakePool
 	)
 
-	if conf, err = ssc.getConfig(balances, false); err != nil {
+	if conf, err = ssc.getConfigReadOnly(balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 
@@ -1171,7 +1172,7 @@ type userPoolStat struct {
 
 // user oriented statistic
 func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -1181,7 +1182,7 @@ func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context
 		usp      *userStakePools
 	)
 
-	if conf, err = ssc.getConfig(balances, false); err != nil {
+	if conf, err = ssc.getConfigReadOnly(balances); err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
 	}
 

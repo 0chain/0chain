@@ -175,7 +175,7 @@ func (vsc *VestingSmartContract) updateConfig(
 //
 
 func (vsc *VestingSmartContract) getConfigBytes(
-	balances chainstate.StateContextI,
+	balances chainstate.RestStateContextI,
 ) (b []byte, err error) {
 	var val util.Serializable
 	val, err = balances.GetTrieNode(scConfigKey(vsc.ID))
@@ -207,7 +207,7 @@ func getConfiguredConfig() (conf *config, err error) {
 }
 
 func (vsc *VestingSmartContract) getConfig(
-	balances chainstate.StateContextI,
+	balances chainstate.RestStateContextI,
 ) (conf *config, err error) {
 	var confb []byte
 	confb, err = vsc.getConfigBytes(balances)
@@ -235,7 +235,7 @@ func (vsc *VestingSmartContract) getConfig(
 func (vsc *VestingSmartContract) getConfigHandler(
 	ctx context.Context,
 	params url.Values,
-	balances chainstate.StateContextI,
+	balances chainstate.RestStateContextI,
 ) (interface{}, error) {
 	res, err := vsc.getConfig(balances)
 	if err != nil {

@@ -1,13 +1,14 @@
 package vestingsc
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"sort"
+
+	"0chain.net/core/common"
+	"0chain.net/smartcontract"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
@@ -99,7 +100,7 @@ func (cp *clientPools) save(vscKey, clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPoolsBytes(clientID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
+	balances chainstate.RestStateContextI) (_ []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(clientPoolsKey(vsc.ID, clientID))
@@ -111,7 +112,7 @@ func (vsc *VestingSmartContract) getClientPoolsBytes(clientID datastore.Key,
 }
 
 func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.RestStateContextI) (cp *clientPools, err error) {
 
 	var listb []byte
 	if listb, err = vsc.getClientPoolsBytes(clientID, balances); err != nil {
@@ -127,7 +128,7 @@ func (vsc *VestingSmartContract) getClientPools(clientID datastore.Key,
 }
 
 func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
-	balances chainstate.StateContextI) (cp *clientPools, err error) {
+	balances chainstate.RestStateContextI) (cp *clientPools, err error) {
 
 	cp, err = vsc.getClientPools(clientID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -146,7 +147,7 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPoolsHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (

@@ -1,16 +1,17 @@
 package zcnsc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -477,7 +478,7 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 	return
 }
 
-func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
+func GetAuthorizerNodes(balances cstate.RestStateContextI) (*AuthorizerNodes, error) {
 	authNodes := &AuthorizerNodes{}
 	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
 	if authNodesBytes == nil {

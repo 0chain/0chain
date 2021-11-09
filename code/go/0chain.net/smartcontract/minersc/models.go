@@ -1205,7 +1205,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 }
 
 // getMinersList returns miners list
-func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
+func getMinersList(state cstate.ReadOnlyStateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -1226,7 +1226,7 @@ func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 }
 
 // getDKGMinersList gets dkg miners list
-func getDKGMinersList(state cstate.StateContextI) (*DKGMinerNodes, error) {
+func getDKGMinersList(state cstate.ReadOnlyStateContextI) (*DKGMinerNodes, error) {
 	dkgMiners := NewDKGMinerNodes()
 	allMinersDKGBytes, err := state.GetTrieNode(DKGMinersKey)
 	if err != nil {
@@ -1251,7 +1251,7 @@ func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) e
 	return err
 }
 
-func getMinersMPKs(state cstate.StateContextI) (*block.Mpks, error) {
+func getMinersMPKs(state cstate.ReadOnlyStateContextI) (*block.Mpks, error) {
 	mpksBytes, err := state.GetTrieNode(MinersMPKKey)
 	if err != nil {
 		return nil, err
@@ -1270,7 +1270,7 @@ func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
 	return err
 }
 
-func getMagicBlock(state cstate.StateContextI) (*block.MagicBlock, error) {
+func getMagicBlock(state cstate.ReadOnlyStateContextI) (*block.MagicBlock, error) {
 	magicBlockBytes, err := state.GetTrieNode(MagicBlockKey)
 	if err != nil {
 		return nil, err
@@ -1289,7 +1289,7 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 	return err
 }
 
-func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+func getGroupShareOrSigns(state cstate.ReadOnlyStateContextI) (*block.GroupSharesOrSigns, error) {
 	var gsos = block.NewGroupSharesOrSigns()
 	groupBytes, err := state.GetTrieNode(GroupShareOrSignsKey)
 	if err != nil {
@@ -1309,7 +1309,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 }
 
 // getShardersKeepList returns the sharder list
-func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
+func getShardersKeepList(balances cstate.ReadOnlyStateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -1327,7 +1327,7 @@ func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) er
 }
 
 // getAllShardersKeepList returns the sharder list
-func getAllShardersList(balances cstate.StateContextI) (*MinerNodes, error) {
+func getAllShardersList(balances cstate.ReadOnlyStateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(balances, AllShardersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -1343,7 +1343,7 @@ func updateAllShardersList(state cstate.StateContextI, sharders *MinerNodes) err
 	return err
 }
 
-func getNodesList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
+func getNodesList(balances cstate.ReadOnlyStateContextI, key datastore.Key) (*MinerNodes, error) {
 	nodesBytes, err := balances.GetTrieNode(key)
 	if err != nil {
 		return nil, err

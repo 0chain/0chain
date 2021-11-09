@@ -142,7 +142,7 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 
 	var conf *scConfig
 	var err error
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("add_free_storage_assigner",
 			"can't get config: %v", err)
 	}
@@ -220,7 +220,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	}
 
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("free_allocation_failed",
 			"can't get config: %v", err)
 	}
@@ -312,7 +312,7 @@ func (ssc *StorageSmartContract) updateFreeStorageRequest(
 	}
 
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("update_free_storage_request",
 			"can't get config: %v", err)
 	}

@@ -1,12 +1,13 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+
+	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -167,7 +168,7 @@ type challengePoolStat struct {
 
 // getChallengePoolBytes of a client
 func (ssc *StorageSmartContract) getChallengePoolBytes(
-	allocationID datastore.Key, balances cstate.StateContextI) (b []byte,
+	allocationID datastore.Key, balances cstate.ReadOnlyStateContextI) (b []byte,
 	err error) {
 
 	var val util.Serializable
@@ -180,7 +181,7 @@ func (ssc *StorageSmartContract) getChallengePoolBytes(
 
 // getChallengePool of current client
 func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
-	balances cstate.StateContextI) (cp *challengePool, err error) {
+	balances cstate.ReadOnlyStateContextI) (cp *challengePool, err error) {
 
 	var poolb []byte
 	poolb, err = ssc.getChallengePoolBytes(allocationID, balances)
@@ -248,7 +249,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 // statistic for all locked tokens of a challenge pool
 func (ssc *StorageSmartContract) getChallengePoolStatHandler(
-	ctx context.Context, params url.Values, balances cstate.StateContextI) (
+	ctx context.Context, params url.Values, balances cstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (

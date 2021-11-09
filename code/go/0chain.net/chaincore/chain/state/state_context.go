@@ -52,6 +52,15 @@ type StateContextI interface {
 	GetSignatureScheme() encryption.SignatureScheme
 }
 
+type ReadOnlyStateContextI interface {
+	GetBlock() *block.Block
+	GetTrieNode(key datastore.Key) (util.Serializable, error)
+}
+
+type RestStateContextI interface {
+	ReadOnlyStateContextI
+}
+
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
 	block                         *block.Block
@@ -65,6 +74,10 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
+}
+
+type RestStateContext struct {
+	*StateContext
 }
 
 // NewStateContext - create a new state context
@@ -89,6 +102,25 @@ func NewStateContext(
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+	}
+}
+
+func NewRestStateContext(
+	b *block.Block,
+	s util.MerklePatriciaTrieI,
+	csd state.DeserializerI,
+	t *transaction.Transaction,
+	getSharderFunc func(*block.Block) []string,
+	getLastestFinalizedMagicBlock func() *block.Block,
+	getChainCurrentMagicBlock func() *block.MagicBlock,
+	getChainSignature func() encryption.SignatureScheme,
+) (
+	balances RestStateContextI,
+) {
+	return &RestStateContext{
+		StateContext: NewStateContext(
+			b, s, csd, t, getSharderFunc, getLastestFinalizedMagicBlock, getChainCurrentMagicBlock, getChainSignature,
+		),
 	}
 }
 

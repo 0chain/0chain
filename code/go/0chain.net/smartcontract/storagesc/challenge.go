@@ -79,7 +79,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	balances c_state.StateContextI) (err error) {
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
 
@@ -213,7 +213,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	balances c_state.StateContextI) (err error) {
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
 
@@ -560,7 +560,7 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 	// SC configurations
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return common.NewErrorf("generate_challenges",
 			"can't get SC configurations: %v", err)
 	}

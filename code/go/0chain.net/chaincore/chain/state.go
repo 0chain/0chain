@@ -140,6 +140,17 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 		c.GetSignatureScheme)
 }
 
+func (c *Chain) NewRestStateContext(b *block.Block, s util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (balances bcstate.RestStateContextI) {
+
+	return bcstate.NewRestStateContext(b, s, c.clientStateDeserializer,
+		txn,
+		c.GetBlockSharders,
+		c.GetLatestFinalizedMagicBlock,
+		c.GetCurrentMagicBlock,
+		c.GetSignatureScheme)
+}
+
 func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
 	err error) {
 

@@ -518,7 +518,7 @@ type info struct {
 //
 
 func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
-	balances chainstate.StateContextI) (_ []byte, err error) {
+	balances chainstate.RestStateContextI) (_ []byte, err error) {
 
 	var val util.Serializable
 	if val, err = balances.GetTrieNode(poolID); err != nil {
@@ -529,7 +529,7 @@ func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
 }
 
 func (vsc *VestingSmartContract) getPool(poolID datastore.Key,
-	balances chainstate.StateContextI) (vp *vestingPool, err error) {
+	balances chainstate.RestStateContextI) (vp *vestingPool, err error) {
 
 	var poolb []byte
 	if poolb, err = vsc.getPoolBytes(poolID, balances); err != nil {
@@ -833,7 +833,7 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 //
 
 func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
-	params url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (

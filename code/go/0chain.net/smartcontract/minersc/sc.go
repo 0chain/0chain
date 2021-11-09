@@ -186,7 +186,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 }
 
 func getGlobalNode(
-	balances cstate.StateContextI,
+	balances cstate.ReadOnlyStateContextI,
 ) (gn *GlobalNode, err error) {
 	gn = new(GlobalNode)
 	var p util.Serializable
@@ -208,7 +208,7 @@ func getGlobalNode(
 	return gn, nil
 }
 
-func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
+func (msc *MinerSmartContract) getUserNode(id string, balances cstate.ReadOnlyStateContextI) (*UserNode, error) {
 	un := NewUserNode()
 	un.ID = id
 	us, err := balances.GetTrieNode(un.GetKey())

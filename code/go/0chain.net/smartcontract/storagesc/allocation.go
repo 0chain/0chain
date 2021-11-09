@@ -18,7 +18,7 @@ import (
 
 // getAllocation by ID
 func (sc *StorageSmartContract) getAllocation(allocID string,
-	balances chainstate.StateContextI) (alloc *StorageAllocation, err error) {
+	balances chainstate.ReadOnlyStateContextI) (alloc *StorageAllocation, err error) {
 
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
@@ -34,7 +34,7 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 }
 
 func (sc *StorageSmartContract) getAllocationsList(clientID string,
-	balances chainstate.StateContextI) (*Allocations, error) {
+	balances chainstate.ReadOnlyStateContextI) (*Allocations, error) {
 
 	allocationList := &Allocations{}
 	var clientAlloc ClientAllocation
@@ -264,7 +264,7 @@ func sizeInGB(size int64) float64 {
 
 // exclude blobbers with not enough token in stake pool to fit the size
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
-	size int64, balances chainstate.StateContextI) (filter filterBlobberFunc) {
+	size int64, balances chainstate.ReadOnlyStateContextI) (filter filterBlobberFunc) {
 
 	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
 		var sp, err = sc.getStakePool(b.ID, balances)
@@ -288,7 +288,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 ) (string, error) {
 	var conf *scConfig
 	var err error
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("allocation_creation_failed",
 			"can't get config: %v", err)
 	}
@@ -407,11 +407,11 @@ func (sc *StorageSmartContract) selectBlobbers(
 	allBlobbersList StorageNodes,
 	sa *StorageAllocation,
 	randomSeed int64,
-	balances chainstate.StateContextI,
+	balances chainstate.ReadOnlyStateContextI,
 ) ([]*StorageNode, int64, error) {
 	var err error
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfigReadOnly(balances); err != nil {
 		return nil, 0, fmt.Errorf("can't get config: %v", err)
 	}
 
@@ -920,7 +920,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get SC configurations: "+err.Error())
 	}
@@ -1353,7 +1353,7 @@ func (sc *StorageSmartContract) finishAllocation(
 ) (err error) {
 	// SC configurations
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return common.NewError("fini_alloc_failed",
 			"can't get SC configurations: "+err.Error())
 	}

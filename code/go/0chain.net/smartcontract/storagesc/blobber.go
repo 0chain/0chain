@@ -14,7 +14,7 @@ import (
 
 const blobberHealthTime = 60 * 60 // 1 Hour
 
-func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (*StorageNodes, error) {
+func (sc *StorageSmartContract) getBlobbersList(balances cstate.ReadOnlyStateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
 	if allBlobbersBytes == nil {
@@ -28,7 +28,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances cstate.StateContextI) (
 }
 
 func (sc *StorageSmartContract) getBlobberBytes(blobberID string,
-	balances cstate.StateContextI) (b []byte, err error) {
+	balances cstate.ReadOnlyStateContextI) (b []byte, err error) {
 
 	var (
 		blobber      StorageNode
@@ -46,7 +46,7 @@ func (sc *StorageSmartContract) getBlobberBytes(blobberID string,
 }
 
 func (sc *StorageSmartContract) getBlobber(blobberID string,
-	balances cstate.StateContextI) (blobber *StorageNode, err error) {
+	balances cstate.ReadOnlyStateContextI) (blobber *StorageNode, err error) {
 
 	var b []byte
 	if b, err = sc.getBlobberBytes(blobberID, balances); err != nil {
@@ -167,7 +167,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI,
 ) (string, error) {
 	// get smart contract configuration
-	conf, err := sc.getConfig(balances, true)
+	conf, err := sc.getConfig(balances)
 	if err != nil {
 		return "", common.NewError("add_or_update_blobber_failed",
 			"can't get config: "+err.Error())
@@ -218,7 +218,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 	input []byte, balances cstate.StateContextI,
 ) (resp string, err error) {
 	// get smart contract configuration
-	conf, err := sc.getConfig(balances, true)
+	conf, err := sc.getConfig(balances)
 	if err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
 			"can't get config: "+err.Error())

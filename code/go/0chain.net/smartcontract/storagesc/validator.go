@@ -51,7 +51,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 	}
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfig(balances); err != nil {
 		return "", common.NewErrorf("add_vaidator",
 			"can't get SC configurations: %v", err)
 	}

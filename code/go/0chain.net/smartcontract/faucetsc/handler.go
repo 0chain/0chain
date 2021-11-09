@@ -22,7 +22,7 @@ const (
 	noClient        = "can't get client"
 )
 
-func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params url.Values, balances c_state.RestStateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
@@ -43,7 +43,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params u
 	return resp, nil
 }
 
-func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Values, balances c_state.RestStateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil || gn == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
@@ -60,7 +60,7 @@ func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Valu
 	return resp, nil
 }
 
-func (fc *FaucetSmartContract) pourAmount(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) pourAmount(_ context.Context, _ url.Values, balances c_state.RestStateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pour amount", noGlobalNodeMsg)
@@ -71,7 +71,7 @@ func (fc *FaucetSmartContract) pourAmount(_ context.Context, _ url.Values, balan
 func (fc *FaucetSmartContract) getConfigHandler(
 	_ context.Context,
 	_ url.Values,
-	balances c_state.StateContextI,
+	balances c_state.RestStateContextI,
 ) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil && err != util.ErrValueNotPresent {

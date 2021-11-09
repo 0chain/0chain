@@ -14,7 +14,7 @@ import (
 )
 
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
-	balances cstate.StateContextI) bool {
+	balances cstate.ReadOnlyStateContextI) bool {
 
 	mbits, err := balances.GetTrieNode(pkey)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -376,7 +376,7 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 
 }
 
-func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
+func (msc *MinerSmartContract) GetMinersList(balances cstate.ReadOnlyStateContextI) (
 	all *MinerNodes, err error) {
 
 	lockAllMiners.Lock()
@@ -385,7 +385,7 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 }
 
 // getMinerNode
-func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+func getMinerNode(id string, state cstate.ReadOnlyStateContextI) (*MinerNode, error) {
 	mn := NewMinerNode()
 	mn.ID = id
 	ms, err := state.GetTrieNode(mn.GetKey())

@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
 
@@ -19,7 +20,7 @@ const cantGetBlobberMsg = "can't get blobber"
 
 // GetBlobberHandler returns Blobber object from its individual stored value.
 func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
+	params url.Values, balances cstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var blobberID = params.Get("blobber_id")
@@ -38,7 +39,7 @@ func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
 func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	params url.Values, balances cstate.RestStateContextI) (interface{}, error) {
 
 	blobbers, err := ssc.getBlobbersList(balances)
 	if err != nil {
@@ -48,7 +49,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	params url.Values, balances cstate.RestStateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
 	allocations, err := ssc.getAllocationsList(clientID, balances)
@@ -74,7 +75,7 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 }
 
 func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	params url.Values, balances cstate.RestStateContextI) (interface{}, error) {
 
 	var err error
 	var creationDate = common.Timestamp(time.Now().Unix())
@@ -119,7 +120,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 const cantGetAllocation = "can't get allocation"
 
-func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.RestStateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
@@ -136,7 +137,7 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 }
 
 func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
+	params url.Values, balances cstate.RestStateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -169,7 +170,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 }
 
-func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.RestStateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
 	// return "404", if blobber not registered
@@ -199,7 +200,7 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	return &blobberChallengeObj, nil
 }
 
-func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
+func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.RestStateContextI) (retVal interface{}, retErr error) {
 	defer func() {
 		if retErr != nil {
 			logging.Logger.Error("/getchallenge failed with error - " + retErr.Error())

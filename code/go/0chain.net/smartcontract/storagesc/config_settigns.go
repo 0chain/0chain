@@ -594,7 +594,7 @@ func (ssc *StorageSmartContract) commitSettingChanges(
 	balances chainState.StateContextI,
 ) (resp string, err error) {
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, true); err != nil {
+	if conf, err = ssc.getConfig(balances); err != nil {
 		return "", common.NewError("update_settings",
 			"can't get config: "+err.Error())
 	}

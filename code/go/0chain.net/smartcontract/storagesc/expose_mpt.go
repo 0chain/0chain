@@ -1,20 +1,21 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
 	"context"
 	"net/url"
+
+	"0chain.net/chaincore/chain/state"
+	"0chain.net/core/common"
 )
 
 func (ssc *StorageSmartContract) GetMptKey(
 	_ context.Context,
 	params url.Values,
-	balances state.StateContextI,
+	balances state.RestStateContextI,
 ) (interface{}, error) {
 	var err error
 	var conf *scConfig
-	if conf, err = ssc.getConfig(balances, false); err != nil {
+	if conf, err = ssc.getConfigReadOnly(balances); err != nil {
 		return nil, common.NewError("get_mpt_key",
 			"can't get SC configurations: "+err.Error())
 	}

@@ -442,7 +442,7 @@ func getStringMapFromViper() map[string]string {
 	return globals
 }
 
-func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
+func getGlobalSettingsBytes(balances cstate.ReadOnlyStateContextI) ([]byte, error) {
 	val, err := balances.GetTrieNode(GLOBALS_KEY)
 	if err != nil {
 		return nil, err
@@ -450,7 +450,7 @@ func getGlobalSettingsBytes(balances cstate.StateContextI) ([]byte, error) {
 	return val.Encode(), nil
 }
 
-func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
+func getGlobalSettings(balances cstate.ReadOnlyStateContextI) (*GlobalSettings, error) {
 	var err error
 	var poolb []byte
 	if poolb, err = getGlobalSettingsBytes(balances); err != nil {

@@ -172,7 +172,7 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	return "", common.NewError("broke", "it seems you're broke and can't transfer money")
 }
 
-func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
+func (fc *FaucetSmartContract) getUserNode(id string, globalKey string, balances c_state.ReadOnlyStateContextI) (*UserNode, error) {
 	un := &UserNode{ID: id}
 	us, err := balances.GetTrieNode(un.GetKey(globalKey))
 	if err != nil {
@@ -197,7 +197,7 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 	return un
 }
 
-func (fc *FaucetSmartContract) getGlobalNode(balances c_state.StateContextI) (*GlobalNode, error) {
+func (fc *FaucetSmartContract) getGlobalNode(balances c_state.ReadOnlyStateContextI) (*GlobalNode, error) {
 	gn := &GlobalNode{ID: fc.ID}
 	gv, err := balances.GetTrieNode(gn.GetKey())
 	if err != nil {

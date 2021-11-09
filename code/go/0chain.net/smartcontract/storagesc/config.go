@@ -483,9 +483,35 @@ func (ssc *StorageSmartContract) setupConfig(
 	return
 }
 
+func (ssc *StorageSmartContract) getConfigReadOnly(
+	balances chainState.RestStateContextI,
+) (conf *scConfig, err error) {
+	var val util.Serializable
+	val, err = balances.GetTrieNode(scConfigKey(ssc.ID))
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		return getConfiguredConfig()
+	}
+	confb := val.Encode()
+	if err != nil && err != util.ErrValueNotPresent {
+		return
+	}
+	if err == util.ErrValueNotPresent {
+		return getConfiguredConfig()
+	}
+
+	conf = new(scConfig)
+	if err = conf.Decode(confb); err != nil {
+		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
+	}
+	return
+}
+
 // getConfig
 func (ssc *StorageSmartContract) getConfig(
-	balances chainState.StateContextI, setup bool) (
+	balances chainState.StateContextI) (
 	conf *scConfig, err error) {
 
 	var confb []byte
@@ -497,9 +523,6 @@ func (ssc *StorageSmartContract) getConfig(
 	conf = new(scConfig)
 
 	if err == util.ErrValueNotPresent {
-		if !setup {
-			return // value not present
-		}
 		return ssc.setupConfig(balances)
 	}
 
@@ -514,10 +537,10 @@ const cantGetConfigErrMsg = "can't get config"
 func (ssc *StorageSmartContract) getConfigHandler(
 	ctx context.Context,
 	params url.Values,
-	balances chainState.StateContextI,
+	balances chainState.RestStateContextI,
 ) (resp interface{}, err error) {
 	var conf *scConfig
-	conf, err = ssc.getConfig(balances, false)
+	conf, err = ssc.getConfigReadOnly(balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetConfigErrMsg)
@@ -536,11 +559,11 @@ func (ssc *StorageSmartContract) getConfigHandler(
 
 // getWritePoolConfig
 func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
+	balances chainState.StateContextI) (
 	conf *writePoolConfig, err error) {
 
 	var scconf *scConfig
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
+	if scconf, err = ssc.getConfig(balances); err != nil {
 		return
 	}
 	return scconf.WritePool, nil
@@ -548,11 +571,11 @@ func (ssc *StorageSmartContract) getWritePoolConfig(
 
 // getReadPoolConfig
 func (ssc *StorageSmartContract) getReadPoolConfig(
-	balances chainState.StateContextI, setup bool) (
+	balances chainState.StateContextI) (
 	conf *readPoolConfig, err error) {
 
 	var scconf *scConfig
-	if scconf, err = ssc.getConfig(balances, setup); err != nil {
+	if scconf, err = ssc.getConfig(balances); err != nil {
 		return
 	}
 	return scconf.ReadPool, nil
