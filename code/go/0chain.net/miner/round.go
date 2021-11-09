@@ -44,6 +44,7 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	}
 
 	logging.Logger.Debug("Adding block to verifyChannel",
+		zap.Int64("round", b.Round),
 		zap.String("block hash", b.Hash),
 		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
 		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))

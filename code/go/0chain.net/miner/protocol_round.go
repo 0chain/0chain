@@ -885,7 +885,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 				b.SetBlockState(block.StateVerificationFailed)
 				if cerr, ok := err.(*common.Error); ok {
 					if cerr.Code == RoundMismatch {
-						logging.Logger.Error("verify round block failed",
+						logging.Logger.Error("verify round block failed, round mismatch",
 							zap.Any("round", r.Number),
 							zap.Any("block", b.Hash),
 							zap.Any("current_round", mc.GetCurrentRound()))
@@ -978,7 +978,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 					b.SetBlockState(block.StateVerificationPending)
 					logging.Logger.Debug("verify block - try to verify and send",
 						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash))
+						zap.String("block", b.Hash),
+						zap.Bool("has verified block", r.Block != nil),
+						zap.Int("block round rank", b.RoundRank))
 					verifyAndSend(ctx, r, b)
 				} else {
 					logging.Logger.Debug("verify block - rejected",
