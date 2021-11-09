@@ -719,11 +719,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	if err := mc.ComputeState(ctx, b); err != nil {
-		logging.Logger.Error("AddToRoundVerification compute state failed", zap.Error(err))
-		return
-	}
-
 	if b.PrevBlock != nil {
 		if b.CreationDate < b.PrevBlock.CreationDate {
 			logging.Logger.Error("add to verification (creation_date out of sequence",
