@@ -99,7 +99,7 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 
 	setConfig(t, balances)
 
-	var conf, err = ssc.getConfig(balances, false)
+	var conf, err = ssc.getConfigReadOnly(balances)
 	require.NoError(t, err)
 
 	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
@@ -153,7 +153,7 @@ func TestStorageSmartContract_addBlobber_updateSettings(t *testing.T) {
 
 	var blob = newClient(0, balances)
 	blob.terms = avgTerms
-	blob.cap = 2*GB
+	blob.cap = 2 * GB
 
 	_, err = blob.callAddBlobber(t, ssc, tp, balances)
 	require.NoError(t, err)

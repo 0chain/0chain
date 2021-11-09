@@ -397,7 +397,7 @@ func testCancelAllocation(
 	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &scConfig{}
-	newScYaml, err = ssc.getConfig(ctx, false)
+	newScYaml, err = ssc.getConfigReadOnly(ctx)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
@@ -455,7 +455,7 @@ func testFinalizeAllocation(
 	require.EqualValues(t, len(allAllocationsBefore.List)-1, len(allAllocationsAfter.List))
 
 	var newScYaml = &scConfig{}
-	newScYaml, err = ssc.getConfig(ctx, false)
+	newScYaml, err = ssc.getConfigReadOnly(ctx)
 	require.NoError(t, err)
 	newAllb, err := ssc.getBlobbersList(ctx)
 	require.NoError(t, err)
