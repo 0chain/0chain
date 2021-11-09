@@ -53,12 +53,12 @@ type StateContextI interface {
 }
 
 type ReadOnlyStateContextI interface {
-	GetBlock() *block.Block
 	GetTrieNode(key datastore.Key) (util.Serializable, error)
 }
 
 type RestStateContextI interface {
 	ReadOnlyStateContextI
+	GetBlock() *block.Block
 }
 
 //StateContext - a context object used to manipulate global state
