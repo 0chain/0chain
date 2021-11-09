@@ -58,7 +58,6 @@ type ReadOnlyStateContextI interface {
 
 type RestStateContextI interface {
 	ReadOnlyStateContextI
-	GetBlock() *block.Block
 }
 
 //StateContext - a context object used to manipulate global state
