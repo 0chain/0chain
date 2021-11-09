@@ -485,28 +485,20 @@ func (ssc *StorageSmartContract) setupConfig(
 
 func (ssc *StorageSmartContract) getConfigReadOnly(
 	balances chainState.RestStateContextI,
-) (conf *scConfig, err error) {
-	var val util.Serializable
-	val, err = balances.GetTrieNode(scConfigKey(ssc.ID))
+) (*scConfig, error) {
+	val, err := balances.GetTrieNode(scConfigKey(ssc.ID))
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			return nil, err
-		}
-		return getConfiguredConfig()
+		return nil, err
 	}
 	confb := val.Encode()
-	if err != nil && err != util.ErrValueNotPresent {
-		return
+	if err != nil {
+		return nil, err
 	}
-	if err == util.ErrValueNotPresent {
-		return getConfiguredConfig()
-	}
-
-	conf = new(scConfig)
+	conf := new(scConfig)
 	if err = conf.Decode(confb); err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
-	return
+	return conf, nil
 }
 
 // getConfig

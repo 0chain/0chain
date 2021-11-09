@@ -1366,7 +1366,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name:  "Storagesc_/getStakePoolStat_No_Config_500",
+			name:  "Storagesc_/getStakePoolStat_No_Config_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
@@ -1378,10 +1378,10 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusInternalServerError,
+			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name: "Storagesc_/getStakePoolStat_No_Blobber_500",
+			name: "Storagesc_/getStakePoolStat_No_Blobber_404",
 			chain: func() *chain.Chain {
 				blob, err := json.Marshal(&scConfig{})
 				if err != nil {
@@ -1466,7 +1466,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus:     http.StatusNotFound,
 		},
 		{
-			name:  "Storagesc_/getUserStakePoolStat_No_Config_500",
+			name:  "Storagesc_/getUserStakePoolStat_No_Config_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
@@ -1478,7 +1478,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusInternalServerError,
+			wantStatus:     http.StatusNotFound,
 		},
 		{
 			name: "Storagesc_/getUserStakePoolStat_No_User_Stake_Pool_404",
