@@ -427,5 +427,5 @@ func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	//miner.SetupWorkers(ctx)
-	transaction.SetupWorkers(ctx, serverChain)
+	transaction.SetupWorkers(ctx)
 }

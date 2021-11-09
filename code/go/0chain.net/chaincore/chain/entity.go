@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -176,6 +177,7 @@ type Chain struct {
 
 	minersPublicKeys *cache.LRU
 
+	vldTxnsMtx            *sync.Mutex
 	validatedTxnsCache    map[string]string // validated transactions, key as hash, value as signature
 	ticketsVerifyRequestC chan struct{}
 
@@ -481,6 +483,8 @@ func Provider() datastore.Entity {
 
 	c.minersPublicKeys = cache.NewLRUCache(1 << 16) // 65536
 
+	c.vldTxnsMtx = &sync.Mutex{}
+	c.validatedTxnsCache = make(map[string]string)
 	c.ticketsVerifyRequestC = make(chan struct{}, 50)
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
@@ -1680,6 +1684,47 @@ func (mc *Chain) GetMinersPublicKeys(keysStr []string) ([]bls.PublicKey, error) 
 	}
 
 	return pubKeys, nil
+}
+
+func (c *Chain) AddValidatedTxns(hash, sig string) {
+	c.vldTxnsMtx.Lock()
+	c.validatedTxnsCache[hash] = sig
+	c.vldTxnsMtx.Unlock()
+}
+
+func (c *Chain) DeleteValidatedTxns(hashes []string) {
+	c.vldTxnsMtx.Lock()
+	for _, hash := range hashes {
+		delete(c.validatedTxnsCache, hash)
+	}
+	c.vldTxnsMtx.Unlock()
+}
+
+func (c *Chain) FilterOutValidatedTxns(hashes, sigs, pks []string) ([]string, []string, []string, error) {
+	if len(hashes) != len(sigs) ||
+		len(hashes) != len(pks) ||
+		len(sigs) != len(pks) {
+		return nil, nil, nil, errors.New("mismatched size of hashes, signatures and pubkeys slice")
+	}
+
+	needValidHashes := make([]string, 0, c.ValidationBatchSize)
+	needValidSigs := make([]string, 0, c.ValidationBatchSize)
+	needValidPks := make([]string, 0, c.ValidationBatchSize)
+
+	c.vldTxnsMtx.Lock()
+	for i, hash := range hashes {
+		sig, ok := c.validatedTxnsCache[hash]
+		if ok && sigs[i] == sig {
+			continue
+		}
+
+		needValidHashes = append(needValidHashes, hash)
+		needValidSigs = append(needValidSigs, sigs[i])
+		needValidPks = append(needValidPks, pks[i])
+	}
+	c.vldTxnsMtx.Unlock()
+
+	return needValidHashes, needValidSigs, needValidPks, nil
 }
 
 // BlockTicketsVerifyWithLock ensures that only one goroutine is allowed

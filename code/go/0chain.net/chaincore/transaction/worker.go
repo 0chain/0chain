@@ -12,12 +12,12 @@ import (
 )
 
 //SetupWorkers - setup workers */
-func SetupWorkers(ctx context.Context, validTxnsCache ValidatedTransactionsCache) {
-	go CleanupWorker(ctx, validTxnsCache)
+func SetupWorkers(ctx context.Context) {
+	go CleanupWorker(ctx)
 }
 
 /*CleanupWorker - a worker to delete transactiosn that are no longer valid */
-func CleanupWorker(ctx context.Context, validTxnsCache ValidatedTransactionsCache) {
+func CleanupWorker(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
@@ -69,7 +69,6 @@ func CleanupWorker(ctx context.Context, validTxnsCache ValidatedTransactionsCach
 				if err != nil {
 					logging.Logger.Error("Error in MultiDelete", zap.Error(err))
 				} else {
-					validTxnsCache.DeleteValidatedTxns(invalidTxnHashes)
 					invalidTxns = invalidTxns[:0]
 				}
 			}

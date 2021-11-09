@@ -150,7 +150,7 @@ func TransactionGenerator(c *chain.Chain) {
 						} else {
 							txn = createDataTransaction(prng)
 						}
-						_, err := transaction.PutTransactionWithoutVerifySig(ctx, txn, sc)
+						_, err := transaction.PutTransactionWithoutVerifySig(ctx, txn)
 						if err != nil {
 							logging.Logger.Info("transaction generator", zap.Any("error", err))
 						}
@@ -251,7 +251,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
 		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
-		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn, c)
+		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator", zap.Any("error", err))
 		}
@@ -260,7 +260,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS,
 			viper.GetInt64("development.faucet.refill_amount"),
 			`{"name":"refill","input":{}}`, 0)
-		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn, c)
+		_, err := transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
 			logging.Logger.Info("client generator - faucet refill", zap.Any("error", err))
 		}

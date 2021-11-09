@@ -380,6 +380,16 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			}
 		}
 
+		var err error
+		hashes, signs, pks, err = mc.FilterOutValidatedTxns(hashes, signs, pks)
+		if err != nil {
+			cancel = true
+			validChannel <- false
+			return
+		}
+
+		logging.Logger.Debug("validate transactions - after filter", zap.Int("num", len(hashes)))
+
 		sig, err := encryption.BLS0ChainAggregateSignatures(signs)
 		if err != nil {
 			logging.Logger.Error("failed to aggregate signatures", zap.Error(err))

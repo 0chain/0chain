@@ -1222,10 +1222,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 	// save validated transactions to cache for miners only
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		return transaction.PutTransaction(ctx, txn, sc)
+		return transaction.PutTransaction(ctx, txn)
 	}
 
-	return transaction.PutTransaction(ctx, txn, nil)
+	return transaction.PutTransaction(ctx, txn)
 }
 
 //RoundInfoHandler collects and writes information about current round
