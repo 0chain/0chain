@@ -1010,7 +1010,9 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	}
 
 	db, ok := mpt.db.(*LevelNodeDB)
-	if !ok {
+	if ok {
+		db.version = newLNDB.version
+	} else {
 		Logger.Warn("MergeMPTChanges - mpt db is not *LevelNodeDB",
 			zap.Int64("version", int64(mpt.GetVersion())))
 	}
@@ -1019,7 +1021,6 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	if err := mpt.mergeChanges(newRoot, changes, deletes, startRoot); err != nil {
 		return err
 	}
-	db.version = newLNDB.version
 
 	return nil
 }
