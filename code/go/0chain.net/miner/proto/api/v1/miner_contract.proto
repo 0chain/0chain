@@ -119,3 +119,18 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// DKGKeyShare
+message DKGKeyShare {
+  string id = 1;
+  string message = 2;
+  string share = 3;
+  string sign = 4;
+}
+
+message GetSignShareRequest {
+  string node_id = 1;
+  string secret_share = 2;
+}
+
+message GetSignShareResponse { DKGKeyShare dkg_key_share = 1; }
