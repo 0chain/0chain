@@ -76,7 +76,7 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 					if cTier.deleteLocal {
 						bwr.BlockPath = ""
 					}
-					bwr.CloudPath = newColdPath
+					bwr.ColdPath = newColdPath
 
 					if err := bwr.AddOrUpdate(); err != nil {
 						Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))

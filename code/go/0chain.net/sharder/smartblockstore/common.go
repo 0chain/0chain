@@ -63,6 +63,7 @@ var (
 	ErrHotStorageConfNotProvided   = errors.New("Storage type includes hot tier but hot tier config not provided")
 	ErrWarmStorageConfNotProvided  = errors.New("Storage type includes warm tier but warm tier config not provided")
 	ErrColdStorageConfNotProvided  = errors.New("Storage type includes cold tier but cold tier config not provided")
+	ErrUnableToSelectVolume        = errors.New("Unable to select any available volume")
 )
 
 func countFiles(dirPath string) (count int, err error) {
