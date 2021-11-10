@@ -177,10 +177,15 @@ func (msc *MinerSmartContract) GetEventsHandler(
 	ctx context.Context,
 	params url.Values,
 	balances cstate.StateContextI,
-) (resp interface{}, err error) {
-	blockNumber, err := strconv.Atoi(params.Get("block_number"))
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse block number %v", err)
+) (interface{}, error) {
+	var blockNumber = 0
+	var blockNumberString = params.Get("block_number")
+	if len(blockNumberString) > 0 {
+		var err error
+		blockNumber, err = strconv.Atoi(blockNumberString)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse block number %v", err)
+		}
 	}
 
 	if balances.GetEventDB() == nil {
@@ -193,41 +198,12 @@ func (msc *MinerSmartContract) GetEventsHandler(
 		Type:        params.Get("type"),
 		Tag:         params.Get("tag"),
 	}
-	//filter = filter
-	//var events []event.Event
-	//return nil, fmt.Errorf("in GetEventsHandler, filter %v", filter)
-	/*dbAccess := dbs.DbAccess{
-		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "postgres",
-		Port:            "5432",
-		MaxIdleConns:    100,
-		MaxOpenConns:    200,
-		ConnMaxLifetime: 20 * time.Second,
-	}
-	dbAccess = dbAccess
-	err = postgresql.SetupDatabase(dbAccess)
-	if err != nil {
-		return nil, err
-	}*/
-	//var events []event.Event
-	//events = events
+
 	events, err := balances.GetEventDB().FindEvents(filter)
 	if err != nil {
 		return nil, err
 	}
-	//firstEvent := event.First()
-	//return nil, fmt.Errorf("in GetEventsHandler, filter %v, events %v", filter, events)
-	//logging.Logger.Info("piers GetEventsHandler",
-	//	zap.Any("search filter", filter),
-	//	zap.Any("result events", events),
-	//)
-	//sm := smartcontract.NewStringMap()
-	//type Events struct {
-	//	Events []event.Event `json:"events"`
-	//}
+
 	return struct {
 		Events []event.Event `json:"events"`
 	}{

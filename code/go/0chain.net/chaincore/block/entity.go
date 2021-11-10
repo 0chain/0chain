@@ -859,25 +859,27 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 	//b.EventDb = c.GetEventDb()
+
 	logging.Logger.Info("piers after add events 1")
-	/*
-		oldEvents, err := c.GetEventDb().GetEvents(b.Round - 4)
+	if c.GetEventDb() != nil {
+		oldEvents, err := c.GetEventDb().GetEvents(0)
 		if err != nil {
 			logging.Logger.Error("piers events 3 previous events err",
 				zap.Error(err),
 			)
 		} else {
-			var n int
-			if len(oldEvents) > 5 {
-				n = len(oldEvents) - 5
-			}
-			logging.Logger.Info("piers events 3",
+			//var n int
+			//if len(oldEvents) > 5 {
+			//	n = len(oldEvents) - 5
+			//}
+			logging.Logger.Info("piers all events 3",
 				zap.Int64("block", b.Round),
 				zap.Any("b.Events", b.Events),
-				zap.Any("previous events", oldEvents[n:]),
+				zap.Any("previous events", oldEvents),
 			)
 		}
-	*/
+	}
+
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",

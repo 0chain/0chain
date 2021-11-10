@@ -11,11 +11,11 @@ import (
 
 type Event struct {
 	gorm.Model
-	BlockNumber int64
-	TxHash      string
-	Type        string
-	Tag         string
-	Data        string
+	BlockNumber int64  `json:"block_number"`
+	TxHash      string `json:"tx_hash"`
+	Type        string `json:"type"`
+	Tag         string `json:"tag"`
+	Data        string `json:"data"`
 }
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {

@@ -17,7 +17,7 @@ func init() {
 }
 
 func TestSetupDatabase(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -41,23 +41,36 @@ func TestSetupDatabase(t *testing.T) {
 	events := []Event{
 		{
 			BlockNumber: 1,
+			TxHash:      "a",
+			Type:        "some type",
+			Tag:         "green",
 			Data:        "one",
 		},
 		{
 			BlockNumber: 2,
-			Data:        "one",
+			TxHash:      "b",
+			Type:        "Error",
+			Data:        "two",
 		},
 		{
 			BlockNumber: 2,
-			Data:        "one",
+			TxHash:      "c",
+			Type:        "Some type",
+			Tag:         "blue",
+			Data:        "three",
 		},
 		{
 			BlockNumber: 3,
-			Data:        "one",
+			TxHash:      "d",
+			Type:        "some other type",
+			Tag:         "yellow",
+			Data:        "four",
 		},
 		{
 			BlockNumber: 4,
-			Data:        "one",
+			TxHash:      "f",
+			Type:        "Error",
+			Data:        "five",
 		},
 	}
 
@@ -74,4 +87,64 @@ func TestSetupDatabase(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, filterEvents, 2)
 
+	filter = Event{
+		TxHash: "d",
+	}
+	filterEvents, err = eventDb.FindEvents(filter)
+	require.NoError(t, err)
+	require.Len(t, filterEvents, 1)
+
+	filter = Event{
+		Type: "Error",
+	}
+	filterEvents, err = eventDb.FindEvents(filter)
+	require.NoError(t, err)
+	require.Len(t, filterEvents, 2)
+
+	filter = Event{
+		BlockNumber: 2,
+		Type:        "Error",
+	}
+	filterEvents, err = eventDb.FindEvents(filter)
+	require.NoError(t, err)
+	require.Len(t, filterEvents, 1)
 }
+
+/*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ */
