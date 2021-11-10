@@ -119,3 +119,16 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// PartialState
+message PartialState {
+  bytes hash = 1;
+  string version = 2;
+  bytes start_root = 3;
+}
+
+// GetPartialStateRequest
+message GetPartialStateRequest { string node = 1; }
+
+// GetPartialStateResponse
+message GetPartialStateResponse { PartialState partial_state = 1; }
