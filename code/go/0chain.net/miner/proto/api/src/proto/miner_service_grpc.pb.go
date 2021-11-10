@@ -19,6 +19,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MinerServiceClient interface {
 	GetNotarizedBlock(ctx context.Context, in *GetNotarizedBlockRequest, opts ...grpc.CallOption) (*GetNotarizedBlockResponse, error)
+	//
+	GetBlockStateChange(ctx context.Context, in *GetBlockStateChangeRequest, opts ...grpc.CallOption) (*GetBlockStateChangeResponse, error)
 }
 
 type minerServiceClient struct {
@@ -38,11 +40,22 @@ func (c *minerServiceClient) GetNotarizedBlock(ctx context.Context, in *GetNotar
 	return out, nil
 }
 
+func (c *minerServiceClient) GetBlockStateChange(ctx context.Context, in *GetBlockStateChangeRequest, opts ...grpc.CallOption) (*GetBlockStateChangeResponse, error) {
+	out := new(GetBlockStateChangeResponse)
+	err := c.cc.Invoke(ctx, "/miner.MinerService/GetBlockStateChange", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MinerServiceServer is the server API for MinerService service.
 // All implementations should embed UnimplementedMinerServiceServer
 // for forward compatibility
 type MinerServiceServer interface {
 	GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error)
+	//
+	GetBlockStateChange(context.Context, *GetBlockStateChangeRequest) (*GetBlockStateChangeResponse, error)
 }
 
 // UnimplementedMinerServiceServer should be embedded to have forward compatible implementations.
@@ -51,6 +64,9 @@ type UnimplementedMinerServiceServer struct {
 
 func (UnimplementedMinerServiceServer) GetNotarizedBlock(context.Context, *GetNotarizedBlockRequest) (*GetNotarizedBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotarizedBlock not implemented")
+}
+func (UnimplementedMinerServiceServer) GetBlockStateChange(context.Context, *GetBlockStateChangeRequest) (*GetBlockStateChangeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlockStateChange not implemented")
 }
 
 // UnsafeMinerServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -82,6 +98,24 @@ func _MinerService_GetNotarizedBlock_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MinerService_GetBlockStateChange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBlockStateChangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MinerServiceServer).GetBlockStateChange(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/miner.MinerService/GetBlockStateChange",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MinerServiceServer).GetBlockStateChange(ctx, req.(*GetBlockStateChangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MinerService_ServiceDesc is the grpc.ServiceDesc for MinerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -92,6 +126,10 @@ var MinerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetNotarizedBlock",
 			Handler:    _MinerService_GetNotarizedBlock_Handler,
+		},
+		{
+			MethodName: "GetBlockStateChange",
+			Handler:    _MinerService_GetBlockStateChange_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
