@@ -176,7 +176,6 @@ func (c *Chain) updateState(
 		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
 		if err != nil {
 			sctx.EmitError(err)
-			sctx.EmitEvent("ERROR", "test error tag", "chain.updateState")
 			logging.Logger.Error("Error executing the SC",
 				zap.Error(err),
 				zap.String("block", b.Hash),
@@ -185,11 +184,6 @@ func (c *Chain) updateState(
 				zap.Any("txn", txn))
 			return
 		}
-		//logging.Logger.Info("piers txn updateState",
-		//	zap.Any("txn hash", txn.Hash),
-		//	zap.Any("sctx txhash", sctx),
-		//)
-		//sctx.EmitEvent("Test", "test tag", "chain.updateState")
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),

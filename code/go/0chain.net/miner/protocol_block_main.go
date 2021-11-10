@@ -88,7 +88,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			}
 			return false
 		}
-		_, err := mc.UpdateState(ctx, b, txn)
+		events, err := mc.UpdateState(ctx, b, txn)
+		b.Events = append(b.Events, events...)
 		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state",
