@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package sharder;
+
+option go_package = "code/go/0chain.net/sharder/proto/api/src/proto";
+
+import "google/api/httpbody.proto";
+import "google/protobuf/empty.proto";
+
+// GetChainStatsRequest
+message GetChainStatsRequest {
+  google.protobuf.Empty empty = 1;
+}
+
+// GetChainStatsResponse
+message GetChainStatsResponse {
+  google.api.HttpBody body = 1;
+} 
