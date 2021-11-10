@@ -1,4 +1,4 @@
-package postgresql
+package event
 
 import (
 	"testing"
@@ -6,8 +6,6 @@ import (
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
-
-	"0chain.net/smartcontract/dbs/event"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,7 +17,7 @@ func init() {
 }
 
 func TestSetupDatabase(t *testing.T) {
-	//t.Skip()
+	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -31,16 +29,16 @@ func TestSetupDatabase(t *testing.T) {
 		MaxOpenConns:    200,
 		ConnMaxLifetime: 20 * time.Second,
 	}
-	err := SetupDatabase(access)
+	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
 
-	err = event.DropEventTable()
+	err = eventDb.drop()
 	require.NoError(t, err)
 
-	err = event.MigrateEventDb()
+	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	events := []event.Event{
+	events := []Event{
 		{
 			BlockNumber: 1,
 			Data:        "one",
@@ -63,16 +61,16 @@ func TestSetupDatabase(t *testing.T) {
 		},
 	}
 
-	event.AddEvents(events)
+	eventDb.AddEvents(events)
 
-	oldEvents, err := event.GetEvents(0)
+	oldEvents, err := eventDb.GetEvents(0)
 	require.NoError(t, err)
 	require.Len(t, oldEvents, len(events))
 
-	filter := event.Event{
+	filter := Event{
 		BlockNumber: 2,
 	}
-	filterEvents, err := event.FindEvents(filter)
+	filterEvents, err := eventDb.FindEvents(filter)
 	require.NoError(t, err)
 	require.Len(t, filterEvents, 2)
 

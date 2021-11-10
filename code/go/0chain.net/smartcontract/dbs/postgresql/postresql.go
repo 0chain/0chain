@@ -10,17 +10,16 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupDatabase(config dbs.DbAccess) error {
-	fmt.Println("piers show config", config)
-	if dbs.EventDb != nil {
-		dbs.EventDb.Close()
-	}
+func GetPostgresSqlDb(config dbs.DbAccess) (dbs.Store, error) {
 	if !config.Enabled {
-		dbs.EventDb = nil
-		return nil
+		return nil, nil
 	}
-	dbs.EventDb = &PostgresStore{}
-	return dbs.EventDb.Open(config)
+	db := &PostgresStore{}
+	err := db.Open(config)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 type PostgresStore struct {
@@ -58,6 +57,11 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 
 	store.db = db
 	fmt.Println("piers made sql database ok")
+	return nil
+}
+
+func (store *PostgresStore) AutoMigrate() error {
+	panic("should not be called")
 	return nil
 }
 

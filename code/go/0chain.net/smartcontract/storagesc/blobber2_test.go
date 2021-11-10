@@ -1,6 +1,12 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -10,12 +16,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
-	"strconv"
-	"strings"
-	"testing"
-	"time"
 )
 
 const (
@@ -248,6 +249,7 @@ func testCommitBlobberRead(
 			&util.MerklePatriciaTrie{},
 			&state.Deserializer{},
 			txn,
+			nil,
 			nil,
 			nil,
 			nil,

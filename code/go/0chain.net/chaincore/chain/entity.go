@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -160,6 +162,8 @@ type Chain struct {
 
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
+	EventDb *event.EventDb
+
 	// LFB tickets channels
 	getLFBTicket          chan *LFBTicket          // check out (any time)
 	updateLFBTicket       chan *LFBTicket          // receive
@@ -202,6 +206,32 @@ func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
 	}
 
 	return nil
+}
+
+func (c *Chain) SetupEventDatabase() error {
+	if c.EventDb != nil {
+		c.EventDb.Close()
+		c.EventDb = nil
+	}
+	if !c.DbsEvents.Enabled {
+		return nil
+	}
+
+	time.Sleep(time.Second * 2)
+
+	var err error
+	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents)
+	if err != nil {
+		return err
+	}
+	if err := c.EventDb.AutoMigrate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chain) GetEventDb() *event.EventDb {
+	return c.EventDb
 }
 
 // SyncLFBStateNow notify workers to start the LFB state sync immediately.

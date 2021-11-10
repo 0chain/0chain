@@ -6,8 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-var EventDb Store
-
 type DbAccess struct {
 	Enabled  bool   `json:"enabled"`
 	Name     string `json:"name"`
@@ -24,5 +22,6 @@ type DbAccess struct {
 type Store interface {
 	Get() *gorm.DB
 	Open(config DbAccess) error
+	AutoMigrate() error
 	Close()
 }

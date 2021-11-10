@@ -61,6 +61,7 @@ func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
 func (tb *testBalances) AddSignedTransfer(_ *state.SignedTransfer) {
 }
+func (tb *testBalances) GetEventDB() *event.EventDb { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }

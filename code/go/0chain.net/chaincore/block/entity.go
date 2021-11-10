@@ -747,6 +747,7 @@ type Chainer interface {
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
 	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) ([]event.Event, error)
+	GetEventDb() *event.EventDb
 }
 
 // ComputeState computes block client state
@@ -851,12 +852,13 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	logging.Logger.Info("piers before add events 1",
 		zap.Int("length of events", len(b.Events)),
 	)
-	if len(b.Events) > 0 {
-		event.AddEvents(b.Events)
+	if len(b.Events) > 0 && c.GetEventDb() != nil {
+		c.GetEventDb().AddEvents(b.Events)
+		b.Events = nil
 	}
 	logging.Logger.Info("piers after add events 1")
 	/*
-		oldEvents, err := event.GetEvents(b.Round - 4)
+		oldEvents, err := c.GetEventDb().GetEvents(b.Round - 4)
 		if err != nil {
 			logging.Logger.Error("piers events 3 previous events err",
 				zap.Error(err),
@@ -944,7 +946,11 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	//	zap.Any("b.Events", b.Events),
 	//)
 	logging.Logger.Info("piers before add events 2")
-	event.AddEvents(b.Events)
+	if len(b.Events) > 0 && c.GetEventDb() != nil {
+		c.GetEventDb().AddEvents(b.Events)
+		b.Events = nil
+	}
+
 	logging.Logger.Info("piers after add events 2")
 	/*
 		oldEvents, err := event.GetEvents(b.Round - 4)

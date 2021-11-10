@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 
-	"0chain.net/smartcontract/dbs/postgresql"
-
-	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
@@ -198,10 +194,10 @@ func (msc *MinerSmartContract) GetEventsHandler(
 		Type:        params.Get("type"),
 		Tag:         params.Get("tag"),
 	}
-	filter = filter
+	//filter = filter
 	//var events []event.Event
 	//return nil, fmt.Errorf("in GetEventsHandler, filter %v", filter)
-	dbAccess := dbs.DbAccess{
+	/*dbAccess := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
 		User:            "zchain_user",
@@ -216,29 +212,28 @@ func (msc *MinerSmartContract) GetEventsHandler(
 	err = postgresql.SetupDatabase(dbAccess)
 	if err != nil {
 		return nil, err
-	}
-	var events []event.Event
-	events = events
-	events, err = event.FindEvents(filter)
+	}*/
+	//var events []event.Event
+	//events = events
+	events, err := balances.GetEventDB().FindEvents(filter)
 	if err != nil {
 		return nil, err
 	}
-	firstEvent := event.First()
+	//firstEvent := event.First()
 	//return nil, fmt.Errorf("in GetEventsHandler, filter %v, events %v", filter, events)
 	//logging.Logger.Info("piers GetEventsHandler",
 	//	zap.Any("search filter", filter),
 	//	zap.Any("result events", events),
 	//)
 	//sm := smartcontract.NewStringMap()
-	type Events struct {
+	//type Events struct {
+	//	Events []event.Event `json:"events"`
+	//}
+	return struct {
 		Events []event.Event `json:"events"`
-	}
-	var rtv = Events{
-		Events: []event.Event{firstEvent},
-		//Events: events,
-	}
-
-	return rtv, nil
+	}{
+		Events: events,
+	}, nil
 }
 
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,

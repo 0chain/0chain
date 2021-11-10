@@ -65,6 +65,10 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
+	if err := serverChain.SetupEventDatabase(); err != nil {
+		logging.Logger.Panic("Error setting up events database")
+	}
+
 	signatureScheme := serverChain.GetSignatureScheme()
 
 	logging.Logger.Info("Owner keys file", zap.String("filename", *keysFile))
@@ -258,11 +262,6 @@ func main() {
 	}
 
 	initHandlers()
-
-	err = setupDb(*serverChain.Config)
-	if err != nil {
-		logging.Logger.Panic("Error starting sc stats database: " + err.Error())
-	}
 
 	go func() {
 		logging.Logger.Info("Ready to listen to the requests")

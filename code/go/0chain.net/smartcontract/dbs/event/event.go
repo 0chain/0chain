@@ -2,10 +2,8 @@ package event
 
 import (
 	"errors"
-	"fmt"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
+	"0chain.net/smartcontract/dbs/postgresql"
 
 	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
@@ -20,8 +18,26 @@ type Event struct {
 	Data        string
 }
 
-func FindEvents(search Event) ([]Event, error) {
-	if dbs.EventDb == nil {
+func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
+	db, err := postgresql.GetPostgresSqlDb(config)
+	if err != nil {
+		return nil, err
+	}
+	return &EventDb{
+		Store: db,
+	}, nil
+}
+
+type EventDb struct {
+	dbs.Store
+}
+
+func (edb *EventDb) AutoMigrate() error {
+	return edb.Store.Get().AutoMigrate(&Event{})
+}
+
+func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
+	if edb.Store == nil {
 		return nil, errors.New("cannot find event database")
 	}
 
@@ -31,7 +47,7 @@ func FindEvents(search Event) ([]Event, error) {
 	}
 
 	var eventTable = new(Event)
-	var db = dbs.EventDb.Get()
+	var db = edb.Store.Get()
 	if search.BlockNumber != 0 {
 		db = db.Where("block_number = ?", search.BlockNumber).Find(eventTable)
 	}
@@ -50,37 +66,27 @@ func FindEvents(search Event) ([]Event, error) {
 	return events, nil
 }
 
-func AddEvents(events []Event) {
-	logging.Logger.Info("add events",
-		zap.Any("event db", dbs.EventDb),
-	)
-	if dbs.EventDb != nil && len(events) > 0 {
-		dbs.EventDb.Get().Create(&events)
+func (edb *EventDb) AddEvents(events []Event) {
+	if edb.Store != nil && len(events) > 0 {
+		edb.Store.Get().Create(&events)
 	}
 }
 
-func MigrateEventDb() error {
-	fmt.Println("piers about to Migrate")
-	err := dbs.EventDb.Get().AutoMigrate(&Event{})
-	fmt.Println("piers err Migrate EvertDb", err)
-	return err
-}
-
-func DropEventTable() error {
-	return dbs.EventDb.Get().Migrator().DropTable(&Event{})
-}
-
-func First() Event {
-	event := &Event{}
-	_ = dbs.EventDb.Get().First(event)
-	return *event
-}
-
-func GetEvents(block int64) ([]Event, error) {
+func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
 	var events []Event
-	if dbs.EventDb == nil {
+	if edb.Store == nil {
 		return events, errors.New("event database is nil")
 	}
-	result := dbs.EventDb.Get().Find(&events)
+	result := edb.Store.Get().Find(&events)
 	return events, result.Error
+}
+
+func (edb *EventDb) drop() error {
+	return edb.Store.Get().Migrator().DropTable(&Event{})
+}
+
+func (edb *EventDb) first() Event {
+	event := &Event{}
+	_ = edb.Store.Get().First(event)
+	return *event
 }

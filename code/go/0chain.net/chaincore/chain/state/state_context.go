@@ -7,10 +7,8 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"go.uber.org/zap"
 )
 
 var (
@@ -32,30 +30,32 @@ var (
  */
 
 //StateContextI - a state context interface. These interface are available for the smart contract
+// todo this needs to be split up into different interfaces depending on location
 type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
-	GetBlock() *block.Block
-	SetMagicBlock(block *block.MagicBlock)
-	GetState() util.MerklePatriciaTrieI
-	GetTransaction() *transaction.Transaction
+	GetBlock() *block.Block                   // Can use in REST endpoints
+	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
+	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
+	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
-	SetStateContext(st *state.State) error
-	GetTrieNode(key datastore.Key) (util.Serializable, error)
+	SetStateContext(st *state.State) error                    // cannot use in smart contracts or REST endpoints
+	GetTrieNode(key datastore.Key) (util.Serializable, error) // Can use in REST endpoints
 	InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
 	AddSignedTransfer(st *state.SignedTransfer)
 	AddMint(m *state.Mint) error
-	GetTransfers() []*state.Transfer
+	GetTransfers() []*state.Transfer // cannot use in smart contracts or REST endpoints
 	GetSignedTransfers() []*state.SignedTransfer
-	GetMints() []*state.Mint
+	GetMints() []*state.Mint // cannot use in smart contracts or REST endpoints
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
 	EmitEvent(string, string, string)
 	EmitError(error)
-	GetEvents() []event.Event
+	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
+	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 }
 
 //StateContext - a context object used to manipulate global state
@@ -72,6 +72,7 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
+	eventDb                       *event.EventDb
 }
 
 // NewStateContext - create a new state context
@@ -84,6 +85,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
+	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
 ) {
@@ -96,6 +98,7 @@ func NewStateContext(
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+		eventDb:                       eventDb,
 	}
 }
 
@@ -174,13 +177,6 @@ func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
 		Tag:         tag,
 		Data:        data,
 	})
-	logging.Logger.Info("piers EmitEvent", zap.Any("new event", event.Event{
-		BlockNumber: sc.block.Round,
-		TxHash:      sc.txn.Hash,
-		Type:        eventType,
-		Tag:         tag,
-		Data:        data,
-	}))
 }
 
 func (sc *StateContext) EmitError(err error) {
@@ -192,23 +188,14 @@ func (sc *StateContext) EmitError(err error) {
 			Data:        err.Error(),
 		},
 	}
-	logging.Logger.Info("piers EmitError",
-		zap.Any("new event", event.Event{
-			BlockNumber: sc.block.Round,
-			TxHash:      sc.txn.Hash,
-			Type:        "Error",
-			Data:        err.Error(),
-		}),
-	//	zap.String("stack", string(debug.Stack())),
-	)
 }
 
 func (sc *StateContext) GetEvents() []event.Event {
-	logging.Logger.Info("piers GetEvents",
-		zap.Any("events got", sc.events),
-	//	zap.String("stack", string(debug.Stack())),
-	)
 	return sc.events
+}
+
+func (sc *StateContext) GetEventDB() *event.EventDb {
+	return sc.eventDb
 }
 
 //Validate - implement interface

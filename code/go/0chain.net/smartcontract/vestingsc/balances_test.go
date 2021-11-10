@@ -44,12 +44,12 @@ func (tb *testBalances) SetStateContext(*state.State) error           { return n
 func (tb *testBalances) AddMint(*state.Mint) error                    { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer              { return nil }
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
-}
-func (tb *testBalances) EmitEvent(string, string, string)      {}
-func (tb *testBalances) EmitError(error)                       {}
-func (tb *testBalances) GetEvents() []event.Event              { return nil }
-func (tb *testBalances) SetMagicBlock(block *block.MagicBlock) {}
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)   {}
+func (tb *testBalances) GetEventDB() *event.EventDb                   { return nil }
+func (tb *testBalances) EmitEvent(string, string, string)             {}
+func (tb *testBalances) EmitError(error)                              {}
+func (tb *testBalances) GetEvents() []event.Event                     { return nil }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)        {}
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
