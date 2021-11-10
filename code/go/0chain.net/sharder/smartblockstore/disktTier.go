@@ -35,15 +35,38 @@ const (
 	WDCL = 1000
 )
 
+type selectedDiskVolume struct {
+	volume  *volume
+	prevInd int
+	err     error
+}
+
 type diskTier struct { //Hot Tier
 	Volumes          []*volume //List of hot volumes
-	SelectNextVolume func(hotVolumes []*volume, prevInd int) (*volume, int)
-	Volume           *volume //volume that will be used to store blocks next
+	SelectNextVolume func(hotVolumes []*volume, prevInd int)
+	SelectedVolumeCh <-chan *selectedDiskVolume //volume that will be used to store blocks next
 	PrevVolInd       int
 	Mu               sync.Mutex
 	//Directory content limit
 	DCL       int
 	DirPrefix string
+}
+
+func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err error) {
+	sdv := <-d.SelectedVolumeCh
+	if sdv.err != nil {
+		return "", sdv.err
+	}
+
+	d.PrevVolInd = sdv.prevInd
+
+	if blockPath, err = sdv.volume.write(b, data); err != nil {
+		return
+	}
+
+	go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
+
+	return
 }
 
 type volume struct {
@@ -387,13 +410,14 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 	Logger.Info(fmt.Sprintf("Successfully ran volumeInit in %v mode", mode))
 
 	Logger.Info(fmt.Sprintf("Registering function for strategy: %v", strategy))
-	var f func(volumes []*volume, prevInd int) (*volume, int)
+	var f func(volumes []*volume, prevInd int)
+	diskVolumeSelectChan := make(chan *selectedDiskVolume, 1)
 
 	switch strategy {
 	default:
 		panic(fmt.Errorf("Strategy %v is not supported", strategy))
 	case "random":
-		f = func(volumes []*volume, prevInd int) (*volume, int) {
+		f = func(volumes []*volume, prevInd int) {
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -401,10 +425,11 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 
 			for len(volumes) > 0 {
 				ind := r.Intn(len(volumes))
-				selectedVolume = volumes[ind]
+				sv := volumes[ind]
 
-				if selectedVolume.isAbleToStoreBlock() {
+				if sv.isAbleToStoreBlock() {
 					selectedIndex = ind
+					selectedVolume = sv
 					break
 				}
 
@@ -413,10 +438,20 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 			}
 
 			dTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+
+			if selectedVolume == nil {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	case "round_robin":
-		f = func(volumes []*volume, prevInd int) (*volume, int) {
+		f = func(volumes []*volume, prevInd int) {
 			var selectedVolume *volume
 			prevVolume := volumes[prevInd]
 			var selectedIndex int
@@ -463,10 +498,20 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 			}
 
 			dTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+
+			if selectedVolume == nil {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	case "min_size_first":
-		f = func(volumes []*volume, prevInd int) (*volume, int) {
+		f = func(volumes []*volume, prevInd int) {
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -497,10 +542,20 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 			}
 
 			dTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+
+			if selectedVolume == nil {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	case "min_count_first":
-		f = func(volumes []*volume, prevInd int) (*volume, int) {
+		f = func(volumes []*volume, prevInd int) {
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -530,10 +585,22 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 			}
 
 			dTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+
+			if selectedVolume == nil {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				diskVolumeSelectChan <- &selectedDiskVolume{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
+
 		}
 	}
 
+	dTier.SelectedVolumeCh = diskVolumeSelectChan
 	dTier.SelectNextVolume = f
 }
 

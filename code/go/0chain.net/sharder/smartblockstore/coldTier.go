@@ -2,6 +2,7 @@ package smartblockstore
 
 import (
 	"bufio"
+	"bytes"
 	"compress/zlib"
 	"context"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/block"
 	. "0chain.net/core/logging"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -23,17 +25,60 @@ import (
 var cTier coldTier
 var coldStoragesMap map[string]*minioClient
 
+type selectedColdStorage struct {
+	coldStorage coldStorageProvider
+	prevInd     int
+	err         error
+}
+
 type coldTier struct { //Cold tier
-	strategy          string
-	storageType       string //disk, minio and blobber
-	coldStorages      []coldStorageProvider
-	selectedStorage   chan coldStorageProvider
-	selectNextStorage func(coldStorageProviders []coldStorageProvider, prevInd int) (coldStorageProvider, int)
-	prevInd           int
-	deleteLocal       bool
+	strategy            string
+	storageType         string //disk, minio and blobber
+	coldStorages        []coldStorageProvider
+	selectedStorageChan <-chan selectedColdStorage
+	selectNextStorage   func(coldStorageProviders []coldStorageProvider, prevInd int)
+	prevInd             int
+	deleteLocal         bool
 
 	mu           sync.Mutex
 	pollInterval int //in hour
+}
+
+func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err error) {
+	sc := <-ct.selectedStorageChan
+	if sc.err != nil {
+		return "", sc.err
+	}
+	ct.prevInd = sc.prevInd
+
+	if coldPath, err = sc.coldStorage.writeBlock(b, data); err != nil {
+		return
+	}
+
+	go ct.selectNextStorage(ct.coldStorages, ct.prevInd)
+
+	return
+}
+
+func (ct *coldTier) read(coldPath, hash string) (io.Reader, error) {
+	switch ct.storageType {
+	case "minio":
+		mc, ok := coldStoragesMap[coldPath]
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
+		}
+
+		data, err := mc.getBlock(hash)
+		if err != nil {
+			return nil, err
+		}
+		return bytes.NewReader(data), nil
+
+	case "disk":
+		return os.Open(coldPath)
+	}
+
+	return nil, nil
 }
 
 func (ct *coldTier) removeColdStorage(i int) {
@@ -41,14 +86,25 @@ func (ct *coldTier) removeColdStorage(i int) {
 	ct.prevInd--
 }
 
-func (ct *coldTier) moveBlock(hash, blockPath string) (string, error) {
-	var cStorage coldStorageProvider
-	cStorage, ct.prevInd = ct.selectNextStorage(cTier.coldStorages, cTier.prevInd)
+func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err error) {
+	sc := <-ct.selectedStorageChan
+	if sc.err != nil {
+		return "", err
+	}
 
-	return cStorage.moveBlock(hash, blockPath, ct.deleteLocal)
+	ct.prevInd = sc.prevInd
+
+	if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath, ct.deleteLocal); err != nil {
+		return
+	}
+
+	go ct.selectNextStorage(ct.coldStorages, ct.prevInd)
+
+	return
 }
 
 type coldStorageProvider interface {
+	writeBlock(b *block.Block, data []byte) (string, error)
 	moveBlock(hash, blockPath string, deleteLocal bool) (string, error)
 	getBlock(hash string) ([]byte, error)
 	getBlocks(cfo *coldFilterOptions) ([][]byte, error)
@@ -75,10 +131,10 @@ type minioClient struct {
 	blocksSize          uint64
 }
 
-func (ct *minioClient) initialize() (err error) {
-	ct.Client, err = minio.New(ct.storageServiceURL, &minio.Options{
-		Creds:  credentials.NewStaticV4(ct.accessId, ct.secretAccessKey, ""),
-		Secure: ct.useSSL,
+func (mc *minioClient) initialize() (err error) {
+	mc.Client, err = minio.New(mc.storageServiceURL, &minio.Options{
+		Creds:  credentials.NewStaticV4(mc.accessId, mc.secretAccessKey, ""),
+		Secure: mc.useSSL,
 	})
 
 	if err != nil {
@@ -88,9 +144,20 @@ func (ct *minioClient) initialize() (err error) {
 	return
 }
 
-func (ct *minioClient) moveBlock(hash, blockPath string, deleteLocal bool) (string, error) {
+func (mc *minioClient) writeBlock(b *block.Block, data []byte) (coldPath string, err error) {
 	ctx := context.Background()
-	_, err := ct.Client.FPutObject(ctx, ct.bucketName, hash, blockPath, minio.PutObjectOptions{})
+	buf := bytes.NewReader(data)
+
+	_, err = mc.Client.PutObject(ctx, mc.bucketName, b.Hash, buf, int64(len(data)), minio.PutObjectOptions{})
+
+	coldPath = fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName)
+
+	return
+}
+
+func (mc *minioClient) moveBlock(hash, blockPath string, deleteLocal bool) (string, error) {
+	ctx := context.Background()
+	_, err := mc.Client.FPutObject(ctx, mc.bucketName, hash, blockPath, minio.PutObjectOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -99,17 +166,18 @@ func (ct *minioClient) moveBlock(hash, blockPath string, deleteLocal bool) (stri
 		Logger.Info(fmt.Sprintf("Removing block file: %v", blockPath))
 		return "", os.Remove(blockPath)
 	}
-	return fmt.Sprintf("%v:%v", ct.storageServiceURL, ct.bucketName), nil
+
+	return fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), nil
 }
 
-func (ct *minioClient) getBlock(hash string) ([]byte, error) {
+func (mc *minioClient) getBlock(hash string) ([]byte, error) {
 	ctx := context.Background()
-	objInfo, err := ct.Client.StatObject(ctx, ct.bucketName, hash, minio.StatObjectOptions{})
+	objInfo, err := mc.Client.StatObject(ctx, mc.bucketName, hash, minio.StatObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	obj, err := ct.Client.GetObject(ctx, ct.bucketName, hash, minio.GetObjectOptions{})
+	obj, err := mc.Client.GetObject(ctx, mc.bucketName, hash, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +196,7 @@ func (ct *minioClient) getBlock(hash string) ([]byte, error) {
 	return buffer, nil
 }
 
-func (ct *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
+func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
 	return nil, nil
 }
 
@@ -182,6 +250,10 @@ type coldDisk struct {
 
 	SizeToMaintain   uint64
 	InodesToMaintain uint64
+}
+
+func (d *coldDisk) writeBlock(b *block.Block, data []byte) (blockPath string, err error) {
+	return
 }
 
 func (d *coldDisk) moveBlock(hash, oldBlockPath string, deleteLocal bool) (newBlockPath string, err error) {
@@ -391,7 +463,8 @@ func coldInit(cConf map[string]interface{}, mode string) {
 
 	coldStorage := coldStorageI.(map[string]interface{})
 
-	var f func(coldVolumes []coldStorageProvider, prevInd int) (coldStorageProvider, int)
+	selectedColdStorageChan := make(chan *selectedColdStorage, 1)
+	var f func(coldVolumes []coldStorageProvider, prevInd int)
 
 	switch storageType {
 	default:
@@ -437,7 +510,7 @@ func coldInit(cConf map[string]interface{}, mode string) {
 		default:
 			panic(ErrStorageTypeNotSupported(strategy))
 		case RoundRobin:
-			f = func(coldStorageProviders []coldStorageProvider, prevInd int) (coldStorageProvider, int) {
+			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
 				cTier.mu.Lock()
 				defer cTier.mu.Unlock()
 				var selectedVolume *coldDisk
@@ -486,7 +559,18 @@ func coldInit(cConf map[string]interface{}, mode string) {
 				}
 
 				cTier.coldStorages = coldStorageProviders
-				return selectedVolume, selectedIndex
+
+				if selectedVolume == nil {
+					selectedColdStorageChan <- &selectedColdStorage{
+						err: ErrUnableToSelectVolume,
+					}
+				} else {
+					selectedColdStorageChan <- &selectedColdStorage{
+						coldStorage: selectedVolume,
+						prevInd:     selectedIndex,
+					}
+				}
+
 			}
 		}
 
@@ -529,7 +613,7 @@ func coldInit(cConf map[string]interface{}, mode string) {
 		default:
 			panic(ErrStrategyNotSupported(strategy))
 		case RoundRobin:
-			f = func(coldStorageProviders []coldStorageProvider, prevInd int) (coldStorageProvider, int) {
+			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
 				cTier.mu.Lock()
 
 				defer cTier.mu.Unlock()
@@ -557,7 +641,10 @@ func coldInit(cConf map[string]interface{}, mode string) {
 					prevInd = i
 				}
 
-				return selectedCloudStorage, selectedIndex
+				selectedColdStorageChan <- &selectedColdStorage{
+					coldStorage: selectedCloudStorage,
+					prevInd:     selectedIndex,
+				}
 			}
 		}
 	}
