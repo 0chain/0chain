@@ -221,6 +221,18 @@ func (m *MagmaSmartContract) allProviders(context.Context, url.Values, chain.Sta
 	return providers.Sorted, nil
 }
 
+// allRewardPools represents MagmaSmartContract handler.
+// Returns all created Reward Pools stores in
+// provided state.StateContextI with allRewardPoolsKey.
+func (m *MagmaSmartContract) allRewardPools(_ context.Context, _ url.Values, sci chain.StateContextI) (interface{}, error) {
+	rewPools, err := rewardPoolsFetch(sci)
+	if err != nil {
+		return nil, errors.Wrap(zmc.ErrCodeFetchData, "fetch reward pools list failed", err)
+	}
+
+	return rewPools.Sorted, nil
+}
+
 // billingProcessing tries to make the session billing processing.
 func (m *MagmaSmartContract) billingProcessing(sess *zmc.Session, txn *tx.Transaction, sci chain.StateContextI) error {
 	if sess.Billing.DataMarker.IsQoSType() {
@@ -230,30 +242,61 @@ func (m *MagmaSmartContract) billingProcessing(sess *zmc.Session, txn *tx.Transa
 		return errors.New(zmc.ErrCodeBadRequest, "billing amount and transaction value are different")
 	}
 	if sess.Billing.Amount > 0 {
-		amount, feeRate := state.Balance(sess.Billing.Amount), m.cfg.GetFloat64(serviceCharge)
+		feeRate := m.cfg.GetFloat64(serviceCharge)
+		if feeRate <= 0 || feeRate > 1 {
+			return errors.New(zmc.ErrCodeTokenPoolSpend, "rate must be a percentage value")
+		}
+
+		fees := state.Balance(float64(sess.Billing.Amount) * feeRate)
+		amount := state.Balance(sess.Billing.Amount) - fees
 		// tries to expend the sponsors reward pools for the session billing
-		if rewards, err := rewardPoolsFetch(allRewardPoolsKey, m.db); err == nil {
+		if rewards, err := rewardPoolsFetch(sci); err == nil {
+			idsToDel := make([]string, 0)
 			for _, pool := range rewards.Sorted {
 				switch {
-				case pool.PayeeId != "" && pool.PayeeId != sess.Provider.Id:
-					continue // skip the sponsor reward pool intended to another Provider
-				case pool.PayeeId != "" && pool.PayeeId != sess.AccessPoint.Id:
-					continue // skip the sponsor reward pool intended for another Access Point
+				case pool.PayeeId == "":
+					// continue with sponsor pool intended for all session's
+				case pool.PayeeId == sess.Provider.Id:
+					// continue with sponsor pool intended for session's Provider
+				case pool.PayeeId == sess.AccessPoint.Id:
+					// continue with sponsor pool intended for session's Access Point
+				default:
+					continue // skip reward pool
+				}
+				if fees > 0 {
+					if fees, err = pool.expendToID(txn, fees, sci, sess.Provider.Id); err != nil {
+						return errors.Wrap(zmc.ErrCodeSessionStop, "expend reward pool with fees failed", err)
+					}
 				}
 				// set the amount to remaining value after expended the reward pool
-				amount, _ = pool.expendWithFees(txn, amount, sci, feeRate, sess.Provider.Id)
+				if amount, err = pool.expendToID(txn, amount, sci, sess.AccessPoint.Id); err != nil {
+					return errors.Wrap(zmc.ErrCodeSessionStop, "expend reward pool with reward failed", err)
+				}
+				if _, err := sci.InsertTrieNode(nodeUID(m.ID, rewardTokenPool, pool.Id), pool); err != nil {
+					return errors.Wrap(zmc.ErrCodeSessionStop, "update reward pool failed", err)
+				}
+				if pool.Balance == 0 {
+					idsToDel = append(idsToDel, pool.Id)
+				}
 				if amount > 0 {
 					continue // continue trying to expend sponsored token pools
 				}
 				break // the entire amount has been paid
 			}
+			for _, id := range idsToDel {
+				if idx, found := rewards.getIndex(id); found {
+					if _, err := rewards.delByIndex(idx); err != nil {
+						return errors.Wrap(zmc.ErrCodeSessionStop, "delete reward pool from the list failed", err)
+					}
+				}
+			}
+			if _, err := sci.InsertTrieNode(allRewardPoolsKey, rewards); err != nil {
+				return errors.Wrap(zmc.ErrCodeSessionStop, "update reward pools failed", err)
+			}
 		}
 		// tries to spend or refund the consumer's token pool for the session billing
-		pool := newTokenPool()
-		if err := pool.Decode(sess.TokenPool.Encode()); err != nil {
-			return errors.New(zmc.ErrCodeSessionStop, err.Error())
-		}
-		if err := pool.spendWithFees(txn, amount, sci, feeRate, sess.Provider.Id); err != nil {
+		pool := &tokenPool{TokenPool: sess.TokenPool}
+		if err := pool.spendWithFees(txn, sci, amount, fees, sess.Provider.Id); err != nil {
 			return errors.New(zmc.ErrCodeSessionStop, err.Error())
 		}
 	}
@@ -353,19 +396,10 @@ func (m *MagmaSmartContract) consumerSessionStart(txn *tx.Transaction, blob []by
 		return "", errors.Wrap(zmc.ErrCodeSessionStart, "provider did not make the stake", err)
 	}
 
-	pools, err := rewardPoolsFetch(allRewardPoolsKey, m.db)
-	if err != nil {
-		return "", errors.Wrap(zmc.ErrCodeSessionStart, "fetch token pools list failed", err)
-	}
-
 	pool := newTokenPool()
 	if err = pool.create(txn, sess, sci); err != nil {
 		return "", errors.Wrap(zmc.ErrCodeSessionStart, "create token pool failed", err)
 	}
-	if err = pools.add(m.ID, pool, m.db, sci); err != nil {
-		return "", errors.Wrap(zmc.ErrCodeSessionStart, "add lock pool to list failed", err)
-	}
-
 	sess.TokenPool = pool.TokenPool
 	if _, err = sci.InsertTrieNode(nodeUID(m.ID, session, sess.SessionID), sess); err != nil {
 		return "", errors.Wrap(zmc.ErrCodeSessionStart, "insert session failed", err)
@@ -659,24 +693,34 @@ func (m *MagmaSmartContract) rewardPoolLock(txn *tx.Transaction, blob []byte, sc
 	if err != nil {
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "decode lock request failed", err)
 	}
-	if req.ExpiredAt.Seconds > 0 && req.ExpiredAt.AsTime().Before(time.NowTime()) {
+	switch { // validating request
+	case req.txn.Value <= 0:
+		return "", errors.New(zmc.ErrCodeInternal, "transaction value is required")
+
+	case req.GetExpiredAt().GetSeconds() > 0 && req.ExpiredAt.AsTime().Before(time.NowTime()):
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "reward pool should expire in the future", err)
 	}
 
-	pools, err := rewardPoolsFetch(allRewardPoolsKey, m.db)
-	if err != nil {
-		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "fetch token pools list failed", err)
-	}
-
 	pool := newTokenPool()
-	if req.ExpiredAt.Seconds > 0 {
+	if req.GetExpiredAt().GetSeconds() > 0 {
 		pool.ExpiredAt = req.ExpiredAt
 	}
 	if err = pool.create(txn, req, sci); err != nil {
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "create lock pool failed", err)
 	}
-	if err = pools.add(m.ID, pool, m.db, sci); err != nil {
-		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "add lock pool to list failed", err)
+	if _, err := sci.InsertTrieNode(nodeUID(m.ID, rewardTokenPool, pool.Id), pool); err != nil {
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "inserting reward pool failed", err)
+	}
+
+	pools, err := rewardPoolsFetch(sci)
+	if err != nil {
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "fetch token pools list failed", err)
+	}
+	if _, success := pools.put(pool); !success {
+		return "", errors.New(zmc.ErrCodeRewardPoolLock, "can't update reward pools")
+	}
+	if _, err := sci.InsertTrieNode(allRewardPoolsKey, pools); err != nil {
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolLock, "inserting reward pools failed", err)
 	}
 
 	return string(pool.Encode()), nil
@@ -692,26 +736,43 @@ func (m *MagmaSmartContract) rewardPoolUnlock(txn *tx.Transaction, blob []byte, 
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "decode unlock request failed", err)
 	}
 
-	pools, err := rewardPoolsFetch(allRewardPoolsKey, m.db)
+	poolByt, err := sci.GetTrieNode(nodeUID(m.ID, rewardTokenPool, req.Id))
 	if err != nil {
-		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "fetch reward pools list failed", err)
-	}
-
-	pool, found := pools.get(req.PoolID())
-	if !found { // not found
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "fetch reward pool failed", err)
 	}
-	if pool.PayerId != txn.ClientID {
-		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "check owner id failed", err)
+	pool := newTokenPool()
+	if err := pool.Decode(poolByt.Encode()); err != nil {
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "decode reward pool failed", err)
 	}
-	if pool.ExpiredAt.AsTime().After(time.NowTime()) {
+	switch { // validating pool's preconditions
+	case pool.Balance == 0:
+		return "", errors.New(zmc.ErrCodeRewardPoolUnlock, "reward pool balance empty")
+
+	case pool.GetPayerId() != txn.ClientID:
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "check owner id failed", err)
+
+	case pool.GetExpiredAt().AsTime().After(time.NowTime()):
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "reward pool has not expired yet", err)
 	}
 	if err = pool.spend(txn, 0, sci); err != nil {
 		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "refund reward pool failed", err)
 	}
-	if _, err = pools.del(m.ID, pool, m.db, sci); err != nil {
-		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "delete reward pool failed", err)
+	if _, err := sci.InsertTrieNode(nodeUID(m.ID, rewardTokenPool, pool.Id), pool); err != nil {
+		return "", errors.Wrap(zmc.ErrCodeSessionStart, "updating reward pool failed", err)
+	}
+
+	// deleting reward pool from the list if needed
+	pools, err := rewardPoolsFetch(sci)
+	if err != nil {
+		return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "fetch reward pools list failed", err)
+	}
+	if _, found := pools.get(req.PoolID()); found { // not found
+		if _, err = pools.del(pool); err != nil {
+			return "", errors.Wrap(zmc.ErrCodeRewardPoolUnlock, "delete reward pool failed", err)
+		}
+		if _, err := sci.InsertTrieNode(allRewardPoolsKey, pools); err != nil {
+			return "", errors.Wrap(zmc.ErrCodeSessionStart, "updating reward pools failed", err)
+		}
 	}
 
 	return string(pool.Encode()), nil

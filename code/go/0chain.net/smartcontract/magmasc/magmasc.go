@@ -59,6 +59,7 @@ func NewMagmaSmartContract() *MagmaSmartContract {
 	msc.RestHandlers[zmc.RewardPoolFetchRP] = msc.rewardPoolFetch
 	msc.RestHandlers[zmc.UserFetchRP] = msc.userFetch
 	msc.RestHandlers[zmc.UserRegisteredRP] = msc.userExist
+	msc.RestHandlers["/allRewardPools"] = msc.allRewardPools
 
 	// metrics setup section
 	msc.SmartContractExecutionStats[zmc.AccessPointRegisterFuncName] = metrics.GetOrRegisterCounter("sc:"+msc.ID+":func:"+zmc.AccessPointRegisterFuncName, nil)

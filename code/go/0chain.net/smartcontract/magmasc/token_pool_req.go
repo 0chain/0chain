@@ -38,7 +38,7 @@ func (m *tokenPoolReq) Decode(blob []byte) error {
 
 	m.TokenPoolReq = req.TokenPoolReq
 
-	return req.Validate()
+	return nil
 }
 
 // PoolBalance implements PoolConfigurator interface.
@@ -71,9 +71,6 @@ func (m *tokenPoolReq) Validate() (err error) {
 	switch { // is invalid
 	case m.txn == nil:
 		err = errors.New(zmc.ErrCodeInternal, "transaction data is required")
-
-	case m.txn.Value <= 0:
-		err = errors.New(zmc.ErrCodeInternal, "transaction value is required")
 	}
 
 	return err

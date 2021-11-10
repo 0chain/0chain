@@ -174,10 +174,10 @@ func Test_tokenPool_spend(t *testing.T) {
 
 	sci := mockStateContextI()
 	txn := sci.GetTransaction()
-	txnInvalid := txn.Clone()
-	txnInvalid.ToClientID = "not_present_id"
 
 	poolOK1, poolOK2 := mockTokenPool(), mockTokenPool()
+	poolInvalid := mockTokenPool()
+	poolInvalid.HolderId = "not_present_id"
 	tests := [5]struct {
 		name   string
 		txn    *tx.Transaction
@@ -235,20 +235,20 @@ func Test_tokenPool_spend(t *testing.T) {
 		},
 		{
 			name:   "Transfer_Token_Pool_ERR",
-			txn:    txnInvalid,
+			txn:    txn,
 			amount: 1,
 			sci:    sci,
-			pool:   mockTokenPool(),
-			want:   mockTokenPool().Transfers,
+			pool:   poolInvalid,
+			want:   poolInvalid.Transfers,
 			error:  true,
 		},
 		{
 			name:   "Spend_Token_Pool_ERR",
-			txn:    txnInvalid,
+			txn:    txn,
 			amount: 1000,
 			sci:    sci,
-			pool:   mockTokenPool(),
-			want:   mockTokenPool().Transfers,
+			pool:   poolInvalid,
+			want:   poolInvalid.Transfers,
 			error:  true,
 		},
 	}

@@ -370,6 +370,9 @@ func mockStateContextI() *mockStateContext {
 	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.User")).
 		Return(funcInsertID, errFuncInsertID)
 
+	stateContext.On("InsertTrieNode", argStr, mock.AnythingOfType("*magmasc.rewardPools")).
+		Return(funcInsertID, errFuncInsertID)
+
 	stateContext.On("DeleteTrieNode", argStr).
 		Return(funcDeleteID, errFuncDeleteID)
 
