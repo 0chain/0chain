@@ -58,6 +58,7 @@ var (
 		return fmt.Errorf("Storage type %v is not supported", storageType)
 	}
 
+	ErrFiftyPercent                = errors.New("At least 50%% volumes must be able to store blocks")
 	ErrCacheStorageConfNotProvided = errors.New("Storage type includes cache but cache config not provided")
 	ErrHotStorageConfNotProvided   = errors.New("Storage type includes hot tier but hot tier config not provided")
 	ErrWarmStorageConfNotProvided  = errors.New("Storage type includes warm tier but warm tier config not provided")
