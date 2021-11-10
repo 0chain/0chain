@@ -20,15 +20,26 @@ var (
 	qDB   *bbolt.DB //query db
 )
 
-//bucket constant values
+/*
+Cache = 1
+Warm  = 2
+Hot   = 4
+Cold  = 8
+*/
 const (
-	HotTier          WhichTier = iota //Hot tier only
-	WarmTier                          //Warm tier only
-	ColdTier                          //Cold tier only
-	CacheAndWarmTier                  //Cache and warm tier
-	CacheAndColdTier                  //Cache and cold tier
+	WarmTier             WhichTier = 2 //Warm tier only
+	HotTier              WhichTier = 4 //Hot tier only
+	ColdTier             WhichTier = 8 //Cold tier only
+	CacheAndHotTier      WhichTier = 5
+	HotAndColdTier       WhichTier = 12
+	CacheHotAndColdTier  WhichTier = 13
+	WarmAndColdTier      WhichTier = 10
+	CacheWarmAndColdTier WhichTier = 11
+	CacheAndWarmTier     WhichTier = 3
+	CacheAndColdTier     WhichTier = 9
 )
 
+//bucket constant values
 const (
 	BlockWhereBucket   = "bwb"
 	UnmovedBlockBucket = "ubb"
@@ -90,12 +101,14 @@ type BlockWhereRecord struct {
 	Hash      string    `json:"-"`
 	Tiering   WhichTier `json:"tr"`
 	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
-	CachePath string    `json:"cp,omitempty"`
+	CachePath string    `json:"chp,omitempty"`
+	CloudPath string    `json:"cp,omitempty"`
 }
 
 //Add or Update whereabout of a block
 func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 	value, err := json.Marshal(bwr)
+
 	if err != nil {
 		return err
 	}
@@ -105,6 +118,7 @@ func (bwr *BlockWhereRecord) AddOrUpdate() (err error) {
 		bkt := t.Bucket([]byte(BlockWhereBucket))
 		return bkt.Put(key, value)
 	})
+
 	return
 }
 
@@ -113,12 +127,15 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 	var data []byte
 	var bwr BlockWhereRecord
 	key := []byte(hash)
+
 	err := bwrDB.View(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(BlockWhereBucket))
 		bwrData := bkt.Get(key)
+
 		if bwrData == nil {
 			return fmt.Errorf("Block meta record for %v not found.", hash)
 		}
+
 		data = make([]byte, len(bwrData))
 		copy(data, bwrData)
 		return nil
@@ -132,6 +149,7 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	bwr.Hash = hash
 	return &bwr, nil
 }
@@ -143,6 +161,7 @@ func DeleteBlockWhereRecord(hash string) {
 		if bkt == nil {
 			return nil
 		}
+
 		return bkt.Delete([]byte(hash))
 	})
 }
@@ -155,38 +174,38 @@ type UnmovedBlockRecord struct {
 }
 
 func (ubr *UnmovedBlockRecord) Add() (err error) {
-	unixTime := ubr.CreatedAt.UnixNano()
-	key := []byte(strconv.FormatInt(unixTime, 10))
+	key := []byte(ubr.CreatedAt.Format(time.RFC3339))
 	value := []byte(ubr.Hash)
+
 	err = bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(UnmovedBlockBucket))
 		return bkt.Put(key, value)
 	})
+
 	return
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {
 	unixTime := ubr.CreatedAt.UnixNano()
 	key := []byte(strconv.FormatInt(unixTime, 10))
+
 	return bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(UnmovedBlockBucket))
 		return bkt.Delete(key)
 	})
 }
 
-func GetUnmovedBlocks(prevKey, minPrefix, maxPrefix string) (ubr *UnmovedBlockRecord, err error) {
-	prev := []byte(prevKey)
-	min := []byte(minPrefix)
-	max := []byte(maxPrefix)
-
-	var hashByte, timeByte []byte
-	err = qDB.View(func(t *bbolt.Tx) error {
+func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []byte, err error) {
+	var hashByte []byte
+	err = bwrDB.View(func(t *bbolt.Tx) error {
 		cursor := t.Bucket([]byte(UnmovedBlockBucket)).Cursor()
-		k, v := cursor.Seek(min)
-		if bytes.Compare(k, prev) == 0 {
+		k, v := cursor.Seek(prevKey)
+
+		if bytes.Compare(k, prevKey) == 0 {
 			k, v = cursor.Next()
 		}
-		if bytes.Compare(max, k) <= 0 {
+
+		if k == nil || bytes.Compare(k, upto) > 0 {
 			return nil
 		} else {
 			timeByte = make([]byte, len(k))
@@ -194,17 +213,20 @@ func GetUnmovedBlocks(prevKey, minPrefix, maxPrefix string) (ubr *UnmovedBlockRe
 			copy(timeByte, k)
 			copy(hashByte, v)
 		}
+
 		return nil
 	})
 
 	if err != nil || timeByte == nil {
 		return
 	}
-	i, _ := strconv.ParseInt(string(timeByte), 10, 64)
-	createdAt := time.Unix(0, i)
+
+	createdAt, _ := time.Parse(time.RFC3339, string(timeByte))
+
 	ubr = &UnmovedBlockRecord{
 		CreatedAt: createdAt,
 		Hash:      string(hashByte),
 	}
+
 	return
 }
