@@ -28,15 +28,39 @@ var chTier cacheTier
 
 type cacheTier struct {
 	CacheWrite        string //writethrough, writeback
-	SelectedVolume    *cacheVolume
+	SelectedVolumeCh  <-chan *volumeSelected
 	Volumes           []*cacheVolume
-	SelectNextStorage func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int)
+	SelectNextStorage func(volumes []*cacheVolume, prevInd int)
 	CacheBlock        func(hash string, data []byte) error
 	RemoveBlock       func()
 	prevVolInd        int
 	DirPrefix         string
 	DCL               int
 	Mu                sync.Mutex
+}
+
+type volumeSelected struct {
+	volume  *cacheVolume
+	prevInd int
+	err     error
+}
+
+func (ct *cacheTier) write(hash string, data []byte) (cachePath string, err error) {
+	sv := <-ct.SelectedVolumeCh
+	chTier.prevVolInd = sv.prevInd
+
+	if sv.err != nil {
+		Logger.Error(sv.err.Error())
+		return "", sv.err
+	}
+
+	if cachePath, err = sv.volume.write(hash, data); err != nil {
+		return
+	}
+
+	//TODO /sif cache is full error; prune cache
+	go ct.SelectNextStorage(ct.Volumes, ct.prevVolInd)
+	return
 }
 
 type cacheVolume struct {
@@ -62,12 +86,7 @@ func (v *cacheVolume) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-func getFromCache() (*block.Block, error) {
-	//
-	return nil, nil
-}
-
-func writeToCache() (err error) {
+func (v *cacheVolume) write(hash string, data []byte) (cachePath string, err error) {
 	if err != nil {
 		//log error
 	}
@@ -81,6 +100,11 @@ func deleteFromCache() {
 //Check for old blocks and clean cache
 func pollCache() {
 	//
+}
+
+func getFromCache() (*block.Block, error) {
+	//
+	return nil, nil
 }
 
 func cacheInit(cConf map[string]interface{}) {
@@ -121,13 +145,15 @@ func cacheInit(cConf map[string]interface{}) {
 	}
 
 	Logger.Info(fmt.Sprintf("Registering function for volume strategy: %v", volumeStrategy))
-	var vf func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int)
+	var vf func(volumes []*cacheVolume, prevInd int)
+
+	selectedVolumeChan := make(chan *volumeSelected, 1)
 
 	switch volumeStrategy {
 	default:
 		panic(ErrStrategyNotSupported(volumeStrategy))
 	case Random:
-		vf = func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int) {
+		vf = func(volumes []*cacheVolume, prevInd int) {
 			var selectedVolume *cacheVolume
 			var selectedIndex int
 
@@ -135,9 +161,10 @@ func cacheInit(cConf map[string]interface{}) {
 
 			for len(volumes) > 0 {
 				ind := r.Intn(len(volumes))
-				selectedVolume = volumes[ind]
+				sv := volumes[ind]
 
-				if selectedVolume.isAbleToStoreBlock() {
+				if sv.isAbleToStoreBlock() {
+					selectedVolume = sv
 					selectedIndex = ind
 					break
 				}
@@ -147,10 +174,23 @@ func cacheInit(cConf map[string]interface{}) {
 			}
 
 			chTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+
+			if selectedVolume == nil {
+				selectedVolumeChan <- &volumeSelected{
+					err: ErrUnableToSelectVolume,
+				}
+
+			} else {
+
+				selectedVolumeChan <- &volumeSelected{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
+
 		}
 	case RoundRobin:
-		vf = func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int) {
+		vf = func(volumes []*cacheVolume, prevInd int) {
 			var selectedVolume *cacheVolume
 			prevVolume := volumes[prevInd]
 			var selectedIndex int
@@ -197,10 +237,19 @@ func cacheInit(cConf map[string]interface{}) {
 			}
 
 			chTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+			if selectedVolume == nil {
+				selectedVolumeChan <- &volumeSelected{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				selectedVolumeChan <- &volumeSelected{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	case MinSizeFirst:
-		vf = func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int) {
+		vf = func(volumes []*cacheVolume, prevInd int) {
 			var selectedVolume *cacheVolume
 			var selectedIndex int
 
@@ -231,10 +280,19 @@ func cacheInit(cConf map[string]interface{}) {
 			}
 
 			chTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+			if selectedVolume == nil {
+				selectedVolumeChan <- &volumeSelected{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				selectedVolumeChan <- &volumeSelected{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	case MinCountFirst:
-		vf = func(volumes []*cacheVolume, prevInd int) (*cacheVolume, int) {
+		vf = func(volumes []*cacheVolume, prevInd int) {
 			var selectedVolume *cacheVolume
 			var selectedIndex int
 
@@ -264,7 +322,16 @@ func cacheInit(cConf map[string]interface{}) {
 			}
 
 			chTier.Volumes = volumes
-			return selectedVolume, selectedIndex
+			if selectedVolume == nil {
+				selectedVolumeChan <- &volumeSelected{
+					err: ErrUnableToSelectVolume,
+				}
+			} else {
+				selectedVolumeChan <- &volumeSelected{
+					volume:  selectedVolume,
+					prevInd: selectedIndex,
+				}
+			}
 		}
 	}
 
@@ -286,6 +353,7 @@ func cacheInit(cConf map[string]interface{}) {
 
 	startCacheVolumes(volumes)
 
+	chTier.SelectedVolumeCh = selectedVolumeChan
 	chTier.SelectNextStorage = vf
 	chTier.DCL = ChDCL
 	chTier.DirPrefix = ChK
