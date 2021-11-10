@@ -41,6 +41,7 @@ func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock       
 func (sc *mockStateContext) EmitEvent(string, string, string)                        {}
 func (sc *mockStateContext) EmitError(error)                                         {}
 func (sc *mockStateContext) GetEvents() []event.Event                                { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb                              { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }

@@ -2,32 +2,34 @@ package mocket
 
 import (
 	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
 	mocket "github.com/selvatico/go-mocket"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-var mocketInstance *Mocket
-
-// UseMocket use mocket to mock sql driver
-func UseMocketEventDb(logging bool) {
-	if mocketInstance == nil {
-		mocketInstance = &Mocket{}
-		mocketInstance.logging = logging
-		err := mocketInstance.Open(dbs.DbAccess{})
-		if err != nil {
-			panic("UseMocket: " + err.Error())
-		}
+// use mocket to mock sql driver
+func NewEventDb(logging bool) (*event.EventDb, error) {
+	mocketInstance := &Mocket{}
+	mocketInstance.logging = logging
+	if err := mocketInstance.Open(dbs.DbAccess{}); err != nil {
+		return nil, err
 	}
 
-	dbs.EventDb = mocketInstance
+	return &event.EventDb{
+		Store: mocketInstance,
+	}, nil
 }
 
 // Mocket mock sql driver in data-dog/sqlmock
 type Mocket struct {
 	logging bool
 	db      *gorm.DB
+}
+
+func (store *Mocket) AutoMigrate() error {
+	return store.Get().AutoMigrate(&event.Event{})
 }
 
 func (store *Mocket) Open(config dbs.DbAccess) error {
