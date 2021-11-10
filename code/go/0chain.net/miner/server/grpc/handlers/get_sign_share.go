@@ -8,6 +8,7 @@ import (
 
 // GetSignShare -
 func (m *minerGRPCService) GetSignShare(ctx context.Context, req *minerproto.GetSignShareRequest) (*minerproto.GetSignShareResponse, error) {
+	// TODO (twiny): Implement.
 
 	return &minerproto.GetSignShareResponse{
 		DkgKeyShare: &minerproto.DKGKeyShare{
