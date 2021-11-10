@@ -119,3 +119,15 @@ message Transaction {
   string txn_output_hash = 13;
   int64 transaction_status = 14;
 }
+
+// StartChainRequest
+message StartChainRequest {
+  string node_id = 1;
+  int64 round = 2;
+}
+
+// StartChainResponse
+message StartChainResponse {
+  string id = 1;
+  bool start = 2;
+}
