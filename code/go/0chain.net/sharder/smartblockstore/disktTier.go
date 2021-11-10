@@ -619,7 +619,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 	}
 
 	if len(dTier.Volumes) < len(mVolumes)/2 {
-		panic(errors.New("Atleast 50%% volumes must be able to store blocks"))
+		panic(ErrFiftyPercent)
 	}
 }
 
@@ -798,6 +798,6 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 	}
 
 	if len(dTier.Volumes) < len(mVolumes)/2 {
-		panic(errors.New("Atleast 50%% volumes must be able to store blocks"))
+		panic(ErrFiftyPercent)
 	}
 }
