@@ -130,24 +130,23 @@ func (c *Chain) UpdateState(
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	events, err := c.updateState(ctx, b, txn)
-	//logging.Logger.Info("piers updateState",
-	//	zap.Any("events", events),
-	//)
 	return events, err
-	//return c.updateState(ctx, b, txn)
 }
 
 // NewStateContext creation helper.
-func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (balances *bcstate.StateContext) {
-
+func (c *Chain) NewStateContext(
+	b *block.Block,
+	s util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	eventDb *event.EventDb,
+) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
 		c.GetBlockSharders,
 		c.GetLatestFinalizedMagicBlock,
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
-		c.EventDb,
+		eventDb,
 	)
 }
 
@@ -166,7 +165,7 @@ func (c *Chain) updateState(
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		startRoot   = clientState.GetRoot()
-		sctx        = c.NewStateContext(b, clientState, txn)
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
 	defer func() { events = sctx.GetEvents() }()
 

@@ -231,6 +231,15 @@ func (c *Chain) SetupEventDatabase() error {
 }
 
 func (c *Chain) GetEventDb() *event.EventDb {
+	//if c.EventDb == nil && c.DbsEvents.Enabled {
+	//	logging.Logger.Info("piers GetEventDb, event db nil")
+	//	var err error
+	//	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents)
+	//	if err != nil {
+	//		c.EventDb = nil
+	//		logging.Logger.Error("cannot load event database")
+	//	}
+	//}
 	return c.EventDb
 }
 

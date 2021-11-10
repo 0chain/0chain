@@ -13,7 +13,7 @@ do
   rm -rf docker.local/miner"$i"/data/rocksdb/config*
   rm -rf docker.local/miner"$i"/data/rocksdb/mb*
   rm -rf docker.local/miner"$i"/data/rocksdb/state*
-  rm -rf docker.local/miner"$i"/data/postgresql/*
+  #rm -rf docker.local/miner"$i"/data/postgresql/*
 done
 
 for i in $(seq 1 4)
@@ -24,6 +24,7 @@ do
   rm -rf docker.local/sharder"$i"/data/cassandra/*
   echo "deleting sharder$i rocksdb db"
   rm -rf docker.local/sharder"$i"/data/rocksdb/*
+    rm -rf docker.local/sharder"$i"/data/postgresql/*
 done
 
 for i in $(seq 1 4)

@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
@@ -178,14 +178,13 @@ func (msc *MinerSmartContract) GetEventsHandler(
 	params url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
-	//return nil, fmt.Errorf("in GetEventsHandler, params %v", params)
-
-	logging.Logger.Info("start piers GetEventsHandler",
-		zap.Any("params", params),
-	)
 	blockNumber, err := strconv.Atoi(params.Get("block_number"))
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse block number %v", err)
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
 	}
 
 	filter := event.Event{

@@ -148,6 +148,7 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 	Events      []event.Event
+	//EventDb     *event.EventDb
 
 	TxnsMap   map[string]bool `json:"-"`
 	mutexTxns sync.RWMutex
@@ -854,9 +855,10 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		zap.Int("length of events", len(b.Events)),
 	)
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		c.GetEventDb().AddEvents(b.Events)
+		go c.GetEventDb().AddEvents(b.Events)
 		b.Events = nil
 	}
+	//b.EventDb = c.GetEventDb()
 	logging.Logger.Info("piers after add events 1")
 	/*
 		oldEvents, err := c.GetEventDb().GetEvents(b.Round - 4)
@@ -948,10 +950,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	//)
 	logging.Logger.Info("piers before add events 2")
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		c.GetEventDb().AddEvents(b.Events)
+		go c.GetEventDb().AddEvents(b.Events)
 		b.Events = nil
 	}
-
+	//	b.EventDb = c.GetEventDb()
 	logging.Logger.Info("piers after add events 2")
 	/*
 		oldEvents, err := event.GetEvents(b.Round - 4)

@@ -21,6 +21,7 @@ import (
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
+	fmt.Println("piers SetupStateHandlers event db", c.EventDb)
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
@@ -47,6 +48,7 @@ func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface{}, error) {
+	fmt.Println("piers GetSCRestOutput event db", c.EventDb)
 	scRestRE := regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 3 {
@@ -63,7 +65,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{})
+	sctx := c.NewStateContext(lfb, clientState, &transaction.Transaction{}, c.GetEventDb())
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {

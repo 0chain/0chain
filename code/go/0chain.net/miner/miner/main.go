@@ -65,9 +65,9 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
-	if err := serverChain.SetupEventDatabase(); err != nil {
-		logging.Logger.Panic("Error setting up events database")
-	}
+	//if err := serverChain.SetupEventDatabase(); err != nil {
+	//	logging.Logger.Panic("Error setting up events database")
+	//}
 
 	signatureScheme := serverChain.GetSignatureScheme()
 
