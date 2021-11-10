@@ -9,10 +9,14 @@ import (
 	"github.com/0chain/errors"
 )
 
-type minerGRPCService struct{}
+type minerGRPCService struct {
+	*minerproto.UnimplementedMinerServiceServer
+}
 
 func NewMinerGRPCService() *minerGRPCService {
-	return &minerGRPCService{}
+	return &minerGRPCService{
+		UnimplementedMinerServiceServer: &minerproto.UnimplementedMinerServiceServer{},
+	}
 }
 
 func (m *minerGRPCService) GetNotarizedBlock(ctx context.Context, req *minerproto.GetNotarizedBlockRequest) (*minerproto.GetNotarizedBlockResponse, error) {
