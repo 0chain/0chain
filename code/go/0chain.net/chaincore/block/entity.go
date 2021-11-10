@@ -850,6 +850,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	//	zap.Any("b.Events", b.Events),
 	//)
 	logging.Logger.Info("piers before add events 1",
+		zap.Int64("block number", b.Round),
 		zap.Int("length of events", len(b.Events)),
 	)
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
