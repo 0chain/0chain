@@ -1,14 +1,15 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"testing"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/mocks"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
-	"encoding/json"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAddCurator(t *testing.T) {
@@ -96,7 +97,7 @@ func TestAddCurator(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.addCurator(args.txn, args.input, args.balances)
+			_, err := args.ssc.addCurator(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
@@ -219,7 +220,7 @@ func TestRemoveCurator(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.name, test.parameters, test.want)
 
-			err := args.ssc.removeCurator(args.txn, args.input, args.balances)
+			_, err := args.ssc.removeCurator(args.txn, args.input, args.balances)
 
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {

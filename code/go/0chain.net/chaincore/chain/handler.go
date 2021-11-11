@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -57,7 +58,11 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
+	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(
+		datastore.ToJSONEntityReqResponse(
+			datastore.DoAsyncEntityJSONHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
 
 	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
 
@@ -133,11 +138,6 @@ func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error
 		}
 	}
 	return data, nil
-}
-
-/*LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetServerChain().GetLatestFinalizedMagicBlockSummary(), nil
 }
 
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */
@@ -1641,4 +1641,14 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(writer, "END }\n")
 	}()
 	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
+}
+
+// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	c := GetServerChain()
+	if lfmb := c.GetLatestFinalizedMagicBlock(); lfmb != nil {
+		return lfmb.GetSummary(), nil
+	}
+
+	return nil, errors.New("could not find latest finalized magic block")
 }

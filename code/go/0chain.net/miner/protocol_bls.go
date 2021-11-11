@@ -174,7 +174,8 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	Logger.Info("BLS sign VRF share calculated for ",
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int("round_timeout", r.GetTimeoutCount()),
-		zap.String("prev. round random seed", prrs),
+		zap.Int64("prev_rseed", pr.GetRandomSeed()),
+		zap.String("prev round vrf random seed", prrs),
 		zap.Any("bls_msg", blsMsg))
 
 	return blsMsg, nil

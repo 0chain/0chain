@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"0chain.net/conductor/conductrpc"
@@ -38,7 +39,7 @@ func (r *Runner) doStart(name NodeName, lock, errIfAlreadyStarted bool) (err err
 		r.server.AddNode(name, lock)   // expected server interaction
 		r.waitNodes[name] = struct{}{} // wait list
 	}
-	if err := n.Start(r.conf.Logs); err != nil {
+	if err := n.Start(r.conf.Logs, r.conf.Env); err != nil {
 		return fmt.Errorf("starting %s: %v", n.Name, err)
 	}
 	return nil
@@ -70,6 +71,21 @@ func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 		log.Printf("Cleanup_BC: do cleanup result %v", err)
 	}
 	return err
+}
+
+// set additional environment variables
+func (r *Runner) SetEnv(env map[string]string) (err error) {
+	if r.verbose {
+		keys := make([]string, len(env))
+		i := 0
+		for k := range env {
+			keys[i] = k
+			i++
+		}
+		log.Printf(" [INF] setting test-specific environment variables: %s", strings.Join(keys, ","))
+	}
+	r.conf.Env = env
+	return nil
 }
 
 //
@@ -482,14 +498,30 @@ func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
 }
 
 //
-// Byzantine VC miners.
+// Misbehavior
 //
+
+func (r *Runner) ConfigureGeneratorsFailure(round Round) (
+	err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] configure generators failure for round %v", round)
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.GeneratorsFailureRoundNumber = round
+	})
+	if err != nil {
+		return fmt.Errorf("configuring generators failure for round %v: %v", round, err)
+	}
+	return
+}
 
 func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	err error) {
 
 	if r.verbose {
-		log.Printf(" [INF] set reveled of %s to %t", ss, pin)
+		log.Printf(" [INF] set revealed of %s to %t", ss, pin)
 	}
 
 	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
@@ -500,6 +532,10 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	}
 	return
 }
+
+//
+// Byzantine VC miners.
+//
 
 func (r *Runner) MPK(mpk *config.Bad) (err error) {
 	r.verbosePrintByGoodBad("MPK", mpk)

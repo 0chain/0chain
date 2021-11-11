@@ -173,7 +173,12 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	var mn *MinerNode
 	mn, err = getMinerNode(deleteMiner.ID, balances)
-	if err != nil {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		mn = NewMinerNode()
+		mn.ID = deleteMiner.ID
+	default:
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
@@ -318,7 +323,12 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 	var mn *MinerNode
 	mn, err = getMinerNode(update.ID, balances)
-	if err != nil {
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		mn = NewMinerNode()
+		mn.ID = update.ID
+	default:
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
@@ -376,60 +386,16 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 
 // getMinerNode
 func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
-	getFromNodeFunc := func() (*MinerNode, error) {
-		mn := NewMinerNode()
-		mn.ID = id
-
-		ms, err := state.GetTrieNode(mn.GetKey())
-		if err != nil {
-			return nil, err
-		}
-
-		if err := mn.Decode(ms.Encode()); err != nil {
-			return nil, err
-		}
-
-		return mn, nil
+	mn := NewMinerNode()
+	mn.ID = id
+	ms, err := state.GetTrieNode(mn.GetKey())
+	if err != nil {
+		return nil, err
 	}
 
-	getFromMinersList := func() (*MinerNode, error) {
-		allMiners, err := getMinersList(state)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, node := range allMiners.Nodes {
-			if node.ID == id {
-				return node, nil
-			}
-		}
-
-		return nil, util.ErrValueNotPresent
+	if err := mn.Decode(ms.Encode()); err != nil {
+		return nil, err
 	}
 
-	getFuncs := []func() (*MinerNode, error){
-		getFromNodeFunc,
-		getFromMinersList,
-	}
-
-	var err error
-	var mn *MinerNode
-	for _, fn := range getFuncs {
-		var node *MinerNode
-		node, err = fn()
-		if err == nil {
-			return node, nil
-		}
-
-		switch err {
-		case util.ErrNodeNotFound, util.ErrValueNotPresent:
-			mn = NewMinerNode()
-			mn.ID = id
-			continue
-		default:
-			return nil, err
-		}
-	}
-
-	return mn, err
+	return mn, nil
 }

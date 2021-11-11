@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zcnsc"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,7 +35,6 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 )
 
 func init() {
@@ -43,7 +44,7 @@ func init() {
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.vesting", true)
-	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.zcn", true)
 	viper.Set("development.smart_contract.multisig", true)
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
@@ -237,12 +238,12 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name:  "Faucet_/globalPerodicLimit_Empty_Global_Node_404",
+			name:  "Faucet_/globalPeriodicLimit_Empty_Global_Node_404",
 			chain: serverChain,
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -251,7 +252,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name: "Faucet_/globalPerodicLimit_Decoding_Global_Node_Err_500",
+			name: "Faucet_/globalPeriodicLimit_Decoding_Global_Node_Err_500",
 			chain: func() *chain.Chain {
 				v := util.SecureSerializableValue{Buffer: []byte("}{")}
 				k := encryption.Hash(faucetsc.ADDRESS + faucetsc.ADDRESS)
@@ -270,7 +271,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			args: args{
 				w: httptest.NewRecorder(),
 				r: func() *http.Request {
-					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPerodicLimit")
+					tar := fmt.Sprintf("%v%v%v", "/v1/screst/", faucetsc.ADDRESS, "/globalPeriodicLimit")
 					req := httptest.NewRequest(http.MethodGet, tar, nil)
 
 					return req
@@ -1783,8 +1784,8 @@ func TestGetSCRestOutput(t *testing.T) {
 			address: vestingsc.ADDRESS,
 		},
 		{
-			name:    "zrc20sc",
-			address: zrc20sc.ADDRESS,
+			name:    "zcn",
+			address: zcnsc.ADDRESS,
 		},
 		{
 			name:    "invalid",

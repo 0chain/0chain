@@ -205,6 +205,14 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
+	if b.IsStateComputed() {
+		if err := mc.SaveChanges(ctx, b); err != nil {
+			logging.Logger.Error("set lfb save changes failed",
+				zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+		}
+	}
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
@@ -299,7 +307,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
 
-	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 
 	// set DKG if this node is miner of new MB (it have to have the DKG)
@@ -311,6 +319,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	// this must be ok, if not -- return error
 	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+		logging.Logger.Error("view_change - set DKG failed",
+			zap.Int64("mb_starting_round", mb.StartingRound),
+			zap.Error(err))
 		return
 	}
 

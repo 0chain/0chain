@@ -22,7 +22,7 @@ services:
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: bash /0chain/bin/cassandra-init.sh
+    command: ./0chain/bin/cassandra-init.sh
     links:
       - cassandra:cassandra
     restart: on-failure
@@ -54,7 +54,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
-    command: ./bin/sharder --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt --minio_file config/minio_config.txt
+    command: ./bin/sharder --deployment_mode 0 --keys_file config${CONFIG_SUBPATH}/b0snode${SHARDER}_keys.txt --minio_file config/minio_config.txt ${CLI_ARGS}
 
 networks:
   default:

@@ -332,6 +332,25 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	return b, true, nil
 }
 
+// UpdateNotarizedBlock updates the notarized block in the round
+func (r *Round) UpdateNotarizedBlock(b *block.Block) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	// update proposed blocks
+	for i, pb := range r.proposedBlocks {
+		if pb.Hash == b.Hash {
+			r.proposedBlocks[i] = b
+		}
+	}
+
+	// update notarized block
+	for i, nb := range r.notarizedBlocks {
+		if nb.Hash == b.Hash {
+			r.notarizedBlocks[i] = nb
+		}
+	}
+}
+
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
 func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
@@ -520,9 +539,6 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
-	logging.Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
-		zap.Any("miner", miner), zap.Any("round", r.Number),
-		zap.Any("miner_set_index", miner.SetIndex))
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
 			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),

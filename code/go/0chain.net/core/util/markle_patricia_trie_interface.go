@@ -59,6 +59,7 @@ type MerklePatriciaTrieI interface {
 
 	MergeMPTChanges(mpt2 MerklePatriciaTrieI) error
 	MergeChanges(newRoot Key, changes []*NodeChange, deletes []Node, startRoot Key) error
+	MergeDB(ndb NodeDB, root Key) error
 }
 
 //ContextKey - a type for context key

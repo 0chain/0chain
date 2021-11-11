@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -305,16 +304,10 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if err != nil || nnode == nil {
 			if err != nil {
 				Logger.Error("full node get node failed",
-					zap.Any("version", mpt.Version),
-					//zap.Int("path len", len(path)),
-					//zap.String("path", string(path)),
+					zap.Any("node version", nodeImpl.GetVersion()),
+					zap.Any("mpt version", mpt.Version),
 					zap.String("key", ToHex(ckey)),
-					//zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
-					//zap.String("node hash", node.GetHash()),
-					//zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
-					zap.Error(err),
-					zap.String("stack", string(debug.Stack())),
-				)
+					zap.Error(err))
 			}
 			return nil, ErrNodeNotFound
 		}
@@ -722,7 +715,6 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.String("key", ToHex(key)), zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}
@@ -791,6 +783,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
 	}
 
+	newNode.SetOrigin(mpt.Version)
 	ckey := newNode.GetHashBytes()
 	if err := mpt.db.PutNode(ckey, newNode); err != nil {
 		return nil, nil, err
@@ -1050,4 +1043,16 @@ func (mpt *MerklePatriciaTrie) mergeChanges(newRoot Key, changes []*NodeChange, 
 
 	mpt.setRoot(newRoot)
 	return nil
+}
+
+// MergeDB - merges the state changes from the node db directly
+func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+	handler := func(ctx context.Context, key Key, node Node) error {
+		_, _, err := mpt.insertNode(nil, node)
+		return err
+	}
+	mpt.root = root
+	return ndb.Iterate(context.TODO(), handler)
 }

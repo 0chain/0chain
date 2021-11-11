@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
+
 	"0chain.net/chaincore/state"
 
 	"0chain.net/smartcontract"
@@ -27,7 +29,161 @@ func TestSettings(t *testing.T) {
 	}
 }
 
-func TestUpdateConfig(t *testing.T) {
+func TestUpdateSettings(t *testing.T) {
+	type args struct {
+		ssc      *StorageSmartContract
+		txn      *transaction.Transaction
+		input    []byte
+		balances chainstate.StateContextI
+	}
+
+	type parameters struct {
+		client                string
+		previousMap, inputMap map[string]string
+		TargetConfig          scConfig
+	}
+
+	setExpectations := func(t *testing.T, p parameters) args {
+		var balances = &mocks.StateContextI{}
+		var ssc = &StorageSmartContract{
+			SmartContract: sci.NewSC(ADDRESS),
+		}
+		var txn = &transaction.Transaction{
+			ClientID: p.client,
+		}
+
+		var oldChanges smartcontract.StringMap
+		oldChanges.Fields = p.previousMap
+		balances.On("GetTrieNode", settingChangesKey).Return(&oldChanges, nil).Once()
+
+		for key, value := range p.inputMap {
+			oldChanges.Fields[key] = value
+		}
+
+		var expected = smartcontract.NewStringMap()
+		for key, value := range p.previousMap {
+			expected.Fields[key] = value
+		}
+		for key, value := range p.inputMap {
+			expected.Fields[key] = value
+		}
+
+		balances.On(
+			"InsertTrieNode",
+			settingChangesKey,
+			mock.MatchedBy(func(actual *smartcontract.StringMap) bool {
+				if len(expected.Fields) != len(actual.Fields) {
+					return false
+				}
+				for key, value := range expected.Fields {
+					if value != actual.Fields[key] {
+						return false
+					}
+				}
+				return true
+			}),
+		).Return("", nil).Once()
+
+		return args{
+			ssc:      ssc,
+			txn:      txn,
+			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
+			balances: balances,
+		}
+	}
+
+	type want struct {
+		error bool
+		msg   string
+	}
+
+	testCases := []struct {
+		title      string
+		parameters parameters
+		want       want
+	}{
+		{
+			title: "all_settigns",
+			parameters: parameters{
+				client:      owner,
+				previousMap: map[string]string{},
+				inputMap: map[string]string{
+					"max_mint":                      "1500000.02",
+					"time_unit":                     "720h",
+					"min_alloc_size":                "1024",
+					"min_alloc_duration":            "5m",
+					"max_challenge_completion_time": "30m",
+					"min_offer_duration":            "10h",
+					"min_blobber_capacity":          "1024",
+
+					"readpool.min_lock":        "10",
+					"readpool.min_lock_period": "1h",
+					"readpool.max_lock_period": "8760h",
+
+					"writepool.min_lock":        "10",
+					"writepool.min_lock_period": "2m",
+					"writepool.max_lock_period": "8760h",
+
+					"stakepool.min_lock":          "10",
+					"stakepool.interest_rate":     "0.0",
+					"stakepool.interest_interval": "1m",
+
+					"max_total_free_allocation":      "10000",
+					"max_individual_free_allocation": "100",
+
+					"free_allocation_settings.data_shards":                   "10",
+					"free_allocation_settings.parity_shards":                 "5",
+					"free_allocation_settings.size":                          "10000000000",
+					"free_allocation_settings.duration":                      "5000h",
+					"free_allocation_settings.read_price_range.min":          "0.0",
+					"free_allocation_settings.read_price_range.max":          "0.04",
+					"free_allocation_settings.write_price_range.min":         "0.0",
+					"free_allocation_settings.write_price_range.max":         "0.1",
+					"free_allocation_settings.max_challenge_completion_time": "1m",
+					"free_allocation_settings.read_pool_fraction":            "0.2",
+
+					"validator_reward":                     "0.025",
+					"blobber_slash":                        "0.1",
+					"max_read_price":                       "100",
+					"max_write_price":                      "100",
+					"failed_challenges_to_cancel":          "20",
+					"failed_challenges_to_revoke_min_lock": "0",
+					"challenge_enabled":                    "true",
+					"challenge_rate_per_mb_min":            "1.0",
+					"max_challenges_per_generation":        "100",
+					"max_delegates":                        "100",
+
+					"block_reward.block_reward":           "1000",
+					"block_reward.qualifying_stake":       "1",
+					"block_reward.sharder_ratio":          "80.0",
+					"block_reward.miner_ratio":            "20.0",
+					"block_reward.blobber_capacity_ratio": "20.0",
+					"block_reward.blobber_usage_ratio":    "80.0",
+
+					"expose_mpt": "false",
+				},
+			},
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.title, func(t *testing.T) {
+			test := test
+			t.Parallel()
+			args := setExpectations(t, test.parameters)
+
+			_, err := args.ssc.updateSettings(args.txn, args.input, args.balances)
+			require.EqualValues(t, test.want.error, err != nil)
+			if err != nil {
+				require.EqualValues(t, test.want.msg, err.Error())
+				return
+			}
+			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
+		})
+	}
+}
+
+func TestCommitSettingChanges(t *testing.T) {
+	const mockMinerId = "mock miner id"
 	type args struct {
 		ssc      *StorageSmartContract
 		txn      *transaction.Transaction
@@ -49,8 +205,14 @@ func TestUpdateConfig(t *testing.T) {
 		var txn = &transaction.Transaction{
 			ClientID: p.client,
 		}
+		var thisBlock = block.Block{}
+		thisBlock.MinerID = mockMinerId
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(&scConfig{}, nil).Once()
+		balances.On("GetTrieNode", settingChangesKey).Return(&smartcontract.StringMap{
+			Fields: p.inputMap,
+		}, nil).Once()
+
 		balances.On(
 			"InsertTrieNode",
 			scConfigKey(ssc.ID),
@@ -147,7 +309,7 @@ func TestUpdateConfig(t *testing.T) {
 		{
 			title: "all_settigns",
 			parameters: parameters{
-				client: owner,
+				client: mockMinerId,
 				inputMap: map[string]string{
 					"max_mint":                      "1500000.02",
 					"time_unit":                     "720h",
@@ -212,7 +374,7 @@ func TestUpdateConfig(t *testing.T) {
 			t.Parallel()
 			args := setExpectations(t, test.parameters)
 
-			_, err := args.ssc.updateSettings(args.txn, args.input, args.balances)
+			_, err := args.ssc.commitSettingChanges(args.txn, args.input, args.balances)
 			require.EqualValues(t, test.want.error, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.msg, err.Error())
@@ -295,6 +457,8 @@ func getConfField(conf scConfig, field string) interface{} {
 		return conf.MaxReadPrice
 	case MaxWritePrice:
 		return conf.MaxWritePrice
+	case MinWritePrice:
+		return conf.MinWritePrice
 	case FailedChallengesToCancel:
 		return conf.FailedChallengesToCancel
 	case FailedChallengesToRevokeMinLock:

@@ -294,26 +294,20 @@ func verifyShardersKeepState(balances cstate.StateContextI, msg string) {
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,
-	balances cstate.StateContextI) (sn *MinerNode, err error) {
+	balances cstate.StateContextI) (*MinerNode, error) {
 
-	var ss util.Serializable
-	ss, err = balances.GetTrieNode(GetSharderKey(sid))
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
-	}
-
-	sn = NewMinerNode()
+	sn := NewMinerNode()
 	sn.ID = sid
-
-	if err == util.ErrValueNotPresent {
-		return // with error ErrValueNotPresent (that's very stupid)
+	ss, err := balances.GetTrieNode(sn.GetKey())
+	if err != nil {
+		return nil, err
 	}
 
 	if err = sn.Decode(ss.Encode()); err != nil {
 		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
 	}
 
-	return // got it!
+	return sn, nil
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
@@ -352,7 +346,10 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),
 		zap.String("pkey", newSharder.PublicKey),
-		zap.Any("mscID", msc.ID))
+		zap.Any("mscID", msc.ID),
+		zap.Int64("pn_start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		logging.Logger.Error("public key or ID is empty")

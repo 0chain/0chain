@@ -14,6 +14,7 @@ type Executor interface {
 
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
+	SetEnv(map[string]string) (err error)
 
 	// common control
 
@@ -25,8 +26,9 @@ type Executor interface {
 
 	ExpectActiveSet(emb ExpectMagicBlock) (err error)
 
-	// VC misbehavior
+	// misbehavior
 
+	ConfigureGeneratorsFailure(round Round) (err error)
 	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
 
 	// waiting
@@ -89,6 +91,16 @@ func setMonitor(ex Executor, val interface{}, tm time.Duration) (
 		return ex.SetMonitor(ss[0])
 	}
 	return fmt.Errorf("invalid 'set_monitor' argument type: %T", val)
+}
+
+func env(ex Executor, val interface{}) (
+	err error) {
+
+	var values map[string]string
+	if err = mapstructure.Decode(val, &values); err != nil {
+		return fmt.Errorf("decoding 'env': %v", err)
+	}
+	return ex.SetEnv(values)
 }
 
 //
@@ -221,8 +233,15 @@ func waitSharderKeep(ex Executor, val interface{},
 }
 
 //
-// control nodes behavior / misbehavior (view change)
+// control nodes behavior / misbehavior
 //
+
+func configureGeneratorsFailure(name string, ex Executor, val interface{}) (err error) {
+	if round, ok := val.(int); ok {
+		return ex.ConfigureGeneratorsFailure(Round(round))
+	}
+	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
 
 func setRevealed(name string, ex Executor, val interface{}, pin bool,
 	tm time.Duration) (err error) {

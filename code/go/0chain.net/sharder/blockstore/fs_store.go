@@ -46,6 +46,12 @@ func NewFSBlockStore(rootDir string, minio MinioClient) *FSBlockStore {
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
+	defer func() {
+		if err := recover(); err != nil {
+			Logger.Error("Failed to get file", zap.Any("recover", err), zap.Int64("round", round))
+		}
+	}()
+
 	var file strings.Builder
 	var dirRoundRange = chain.GetServerChain().RoundRange
 
@@ -53,13 +59,27 @@ func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) strin
 	file.WriteString(string(os.PathSeparator))
 	file.WriteString(strconv.Itoa(int(round / dirRoundRange)))
 
+	if len(hash) == 0 {
+		Logger.Warn("Hash is empty. returning only header", zap.Int64("round", round))
+		return file.String()
+	}
+
 	for i := 0; i < 3; i++ {
 		file.WriteString(string(os.PathSeparator))
+		if len(hash[3*i:]) < 3 {
+			file.WriteString(hash[3*i:])
+			break
+		}
 		file.WriteString(hash[3*i : 3*i+3]) // FIXME panics if hash size < 9
+		// i=0 => hash[0:3]
+		// i=1 => hash[3:6]
+		// i=3 => hash[6:9]
 	}
 
 	file.WriteString(string(os.PathSeparator))
-	file.WriteString(hash[9:])
+	if len(hash) > 9 {
+		file.WriteString(hash[9:])
+	}
 
 	return file.String()
 }

@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -693,6 +694,20 @@ func TestTransferAllocation(t *testing.T) {
 			},
 		},
 		{
+			name: "ok_owner",
+			parameters: parameters{
+				curator: mockOldOwner,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     0,
+				existingWPForAllocation: false,
+			},
+		},
+		{
 			name: "Err_not_curator",
 			parameters: parameters{
 				curator: mockCuratorId,
@@ -705,7 +720,7 @@ func TestTransferAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
 			},
 		},
 	}
@@ -1616,8 +1631,7 @@ func Test_finalize_allocation(t *testing.T) {
 	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	var resp string
-	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-		balances)
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
 	require.NoError(t, err)
 	require.NotZero(t, resp)
 

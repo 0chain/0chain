@@ -110,7 +110,7 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 
 			getLockConfig := ipsc.RestHandlers["/getLockConfig"]
 			if reflect.ValueOf(getLockConfig).Pointer() != reflect.ValueOf(ipsc.getLockConfig).Pointer() {
-				t.Error("SetSC() globalPerodicLimit wrong set result")
+				t.Error("SetSC() globalPeriodicLimit wrong set result")
 			}
 
 			lockMetric := metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lock"), nil)

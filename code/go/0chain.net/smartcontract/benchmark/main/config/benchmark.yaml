@@ -1,0 +1,142 @@
+simulation:
+  num_clients: 1000
+  num_miners: 1000
+  num_active_miners: 100
+  nun_sharders: 100
+  num_active_sharders: 25
+  num_allocations: 1000
+  num_blobbers: 100
+  num_validators: 100
+  num_allocation_payers: 2 # number of clients contributing pools to an allocation
+  num_allocation_payers_pools: 2  # number of allocation pools each contributor has
+  num_blobbers_per_Allocation: 40 # ideally make this even
+  num_blobber_delegates: 10
+  num_miner_delegates: 10
+  num_sharder_delegates: 10
+  num_curators: 3
+  num_free_storage_assigners: 10
+  num_vesting_destinations_client: 10
+  num_write_redeem_allocation: 10
+  num_challenges_blobber: 100
+
+options:
+  verbose: true
+  test_suites:
+    - "storage"
+    - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
+  omitted_tests:
+
+smart_contracts:
+  minersc:
+    min_delegates: 0
+    max_delegates: 200
+    min_stakke: 0.0
+    max_stake: 170.0
+    max_n: 7 # 100
+    min_n: 3 # 3
+    max_s: 2 # 30
+    min_s: 1 # 1
+    t_percent: .66
+    k_percent: .75
+    x_percent: 0.70
+    reward_round_frequency: 250
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
+    interest_rate: 0.0 # [0; 1)
+    reward_rate: 1.0 # [0; 1)
+    share_ratio: 0.8 # [0; 1)
+    block_reward: 0.21 # tokens
+    max_charge: 0.5 # %
+    epoch: 15000000 # rounds
+    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    max_mint: 1500000.0 # tokens
+
+  storagesc:
+    min_alloc_size: 1024
+    min_alloc_duration: 5m
+    max_read_price: 100.0
+    max_write_price: 100.0
+    max_challenge_completion_time: 30m
+    min_offer_duration: 10h
+    min_blobber_capacity: 1024
+    max_charge: 0.2
+    min_stake: 0.0
+    max_stake: 100.0
+    max_delegates: 200
+    diverse_blobbers: false
+    failed_challenges_to_cancel: 0
+    max_total_free_allocation: 10000
+    max_individual_free_allocation: 170
+    max_challenges_per_generation: 100
+    readpool:
+      min_lock: 0.3
+      min_lock_period: 1m
+      max_lock_period: 8760h
+    writepool:
+      min_lock: 0.1
+      min_lock_period: 2m
+      max_lock_period: 8760h
+    stakepool:
+      min_lock: 0.1
+    free_allocation_settings:
+      data_shards: 4
+      parity_shards: 4
+      size: 10000
+      duration: 50h
+      read_price_range:
+        min: 0.0
+        max: 0.1
+      write_price_range:
+        min: 0.0
+        max: 0.1
+      max_challenge_completion_time: 30m
+      read_pool_fraction: 0.2
+    max_mint: 1500000.0
+    challenge_enabled: true
+  interestpoolsc:
+    min_lock: 10
+    apr: 0.1
+    min_lock_period: 1m
+    max_mint: 1500000.0
+  vestingsc:
+    min_lock: 0.01
+    min_duration: 1m
+    max_duration: 1000h
+    max_destinations: 10
+    max_description_length: 100
+  zcn:
+    min_mint_amount: 1
+    percent_authorizers: 0
+    min_authorizers: 1
+    min_burn_amount: 1
+    min_stake_amount: 0
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
+
+internal:
+  t: 2
+  available_keys: 10
+  now: 100000
+  signature_scheme: bls0chain # don't change only bls0chian works
+  start_tokens: 100000000000000
+  bad: 50ms
+  worry: 10ms
+  satisfactory: 1ms
+  time_unit: 1ms
+  colour: true
+  control_m: 250000
+  control_n: 900
