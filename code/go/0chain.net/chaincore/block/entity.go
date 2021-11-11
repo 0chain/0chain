@@ -846,10 +846,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	//logging.Logger.Info("piers events 2",
-	//	zap.Int64("block", b.Round),
-	//	zap.Any("b.Events", b.Events),
-	//)
 	logging.Logger.Info("piers before add events 1",
 		zap.Int64("block number", b.Round),
 		zap.Int("length of events", len(b.Events)),
@@ -858,7 +854,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		go c.GetEventDb().AddEvents(b.Events)
 		b.Events = nil
 	}
-	//b.EventDb = c.GetEventDb()
 
 	logging.Logger.Info("piers after add events 1")
 	if c.GetEventDb() != nil {

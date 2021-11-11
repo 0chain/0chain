@@ -56,7 +56,7 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 	sqldb.SetConnMaxLifetime(config.ConnMaxLifetime)
 
 	store.db = db
-	fmt.Println("piers made sql database ok")
+	fmt.Println("made event sql database ok")
 	return nil
 }
 
