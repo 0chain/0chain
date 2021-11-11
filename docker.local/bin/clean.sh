@@ -13,7 +13,6 @@ do
   rm -rf docker.local/miner"$i"/data/rocksdb/config*
   rm -rf docker.local/miner"$i"/data/rocksdb/mb*
   rm -rf docker.local/miner"$i"/data/rocksdb/state*
-  #rm -rf docker.local/miner"$i"/data/postgresql/*
 done
 
 for i in $(seq 1 4)

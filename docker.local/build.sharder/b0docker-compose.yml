@@ -37,7 +37,6 @@ services:
     volumes:
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
-      #- ../sql_script/00-create-user.sql:/docker-entrypoint-initdb.d/00-create-user.sql
     networks:
       default:
   postgres-post:
@@ -51,7 +50,6 @@ services:
       - ../bin:/0chain/bin
       - ../sql:/0chain/sql
       - ../sql_script/:/docker-entrypoint-initdb.d/
-      #- ../sql_script/00-create-user.sql:/docker-entrypoint-initdb.d/00-create-user.sql
     links:
       - postgres:postgres
 

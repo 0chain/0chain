@@ -846,10 +846,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 	}
 
-	logging.Logger.Info("piers before add events 1",
-		zap.Int64("block number", b.Round),
-		zap.Int("length of events", len(b.Events)),
-	)
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
 		go c.GetEventDb().AddEvents(b.Events)
 		b.Events = nil
@@ -863,14 +859,14 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				zap.Error(err),
 			)
 		} else {
-			//var n int
-			//if len(oldEvents) > 5 {
-			//	n = len(oldEvents) - 5
-			//}
+			var n int
+			if len(oldEvents) > 2 {
+				n = len(oldEvents) - 2
+			}
 			logging.Logger.Info("piers all events 3",
 				zap.Int64("block", b.Round),
 				zap.Any("b.Events", b.Events),
-				zap.Any("previous events", oldEvents),
+				zap.Any("previous events", oldEvents[n:]),
 			)
 		}
 	}
@@ -940,36 +936,12 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			return common.NewError("state_update_error", err.Error())
 		}
 	}
-
-	//logging.Logger.Info("piers events",
-	//	zap.Int64("block", b.Round),
-	//	zap.Any("b.Events", b.Events),
-	//)
 	logging.Logger.Info("piers before add events 2")
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
 		go c.GetEventDb().AddEvents(b.Events)
 		b.Events = nil
 	}
-	//	b.EventDb = c.GetEventDb()
-	logging.Logger.Info("piers after add events 2")
-	/*
-		oldEvents, err := event.GetEvents(b.Round - 4)
-		if err != nil {
-			logging.Logger.Error("piers events 2 previous events 2 err",
-				zap.Error(err),
-			)
-		} else {
-			var n int
-			if len(oldEvents) > 5 {
-				n = len(oldEvents) - 5
-			}
-			logging.Logger.Info("piers events 2",
-				zap.Int64("block", b.Round),
-				zap.Any("b.Events", b.Events),
-				zap.Any("previous events", oldEvents[n:]),
-			)
-		}
-	*/
+
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
