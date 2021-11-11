@@ -24,7 +24,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/minio/minio-go/v7 v7.0.15
 	github.com/mitchellh/mapstructure v1.3.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.4.0 // indirect
@@ -41,9 +41,8 @@ require (
 	go.etcd.io/bbolt v1.3.2
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b // indirect
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.3.0
 )
