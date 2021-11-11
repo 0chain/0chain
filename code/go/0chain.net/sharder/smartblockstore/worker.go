@@ -18,7 +18,7 @@ Todo
 */
 
 func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
-	pollInterval := time.Hour * time.Duration(cTier.pollInterval)
+	pollInterval := time.Hour * time.Duration(smartStore.ColdTier.pollInterval)
 	t := time.NewTicker(pollInterval)
 	errCh := make(chan error, 1)
 	for {
@@ -39,7 +39,7 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 			var ubr *UnmovedBlockRecord
 			var prevKey []byte
 			var err error
-			for ubr, prevKey, err = GetUnmovedBlock(prevKey, minPrefix); ubr == nil || err != nil; {
+			for ubr, prevKey, err = GetUnmovedBlock(prevKey, minPrefix); err == nil && ubr != nil; {
 				guideChannel <- struct{}{}
 				wg.Add(1)
 
@@ -55,7 +55,7 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 						return
 					}
 
-					newColdPath, err = cTier.moveBlock(bwr.Hash, bwr.BlockPath)
+					newColdPath, err = smartStore.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
 					if err != nil {
 						Logger.Error(err.Error())
 						return
@@ -64,16 +64,16 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 					Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
 					switch bwr.Tiering {
 					case HotTier:
-						bwr.Tiering = newTiering(HotTier, HotTier, cTier.deleteLocal)
+						bwr.Tiering = newTiering(HotTier, HotTier, smartStore.ColdTier.deleteLocal)
 					case WarmTier:
-						bwr.Tiering = newTiering(WarmTier, WarmTier, cTier.deleteLocal)
+						bwr.Tiering = newTiering(WarmTier, WarmTier, smartStore.ColdTier.deleteLocal)
 					case CacheAndWarmTier:
-						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, cTier.deleteLocal)
+						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, smartStore.ColdTier.deleteLocal)
 					case CacheAndHotTier:
-						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, cTier.deleteLocal)
+						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, smartStore.ColdTier.deleteLocal)
 					}
 
-					if cTier.deleteLocal {
+					if smartStore.ColdTier.deleteLocal {
 						bwr.BlockPath = ""
 					}
 					bwr.ColdPath = newColdPath
