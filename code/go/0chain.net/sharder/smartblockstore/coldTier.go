@@ -22,7 +22,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var cTier coldTier
+// var cTier coldTier
 var coldStoragesMap map[string]*minioClient
 
 type selectedColdStorage struct {
@@ -164,7 +164,7 @@ func (mc *minioClient) moveBlock(hash, blockPath string, deleteLocal bool) (stri
 
 	if deleteLocal {
 		Logger.Info(fmt.Sprintf("Removing block file: %v", blockPath))
-		return "", os.Remove(blockPath)
+		os.Remove(blockPath)
 	}
 
 	return fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), nil
@@ -443,7 +443,7 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 
 // //*****************************Strategy*************************************
 
-func coldInit(cConf map[string]interface{}, mode string) {
+func coldInit(cConf map[string]interface{}, mode string) *coldTier {
 	storageI, ok := cConf["storage"]
 	if !ok {
 		panic(errors.New("Cold storage config not available"))
@@ -462,6 +462,8 @@ func coldInit(cConf map[string]interface{}, mode string) {
 	}
 
 	coldStorage := coldStorageI.(map[string]interface{})
+
+	cTier := new(coldTier)
 
 	selectedColdStorageChan := make(chan *selectedColdStorage, 1)
 	var f func(coldVolumes []coldStorageProvider, prevInd int)
@@ -490,11 +492,11 @@ func coldInit(cConf map[string]interface{}, mode string) {
 		default:
 			panic(fmt.Errorf("%v mode is not supported", mode))
 		case "start":
-			startColdVolumes(volumes)
+			startColdVolumes(volumes, cTier)
 		case "restart":
-			restartColdVolumes(volumes)
+			restartColdVolumes(volumes, cTier)
 		case "recover":
-			recoverColdVolumeMetaData(volumes)
+			recoverColdVolumeMetaData(volumes, cTier)
 		case "repair": //Metadata is present but some disk failed
 			panic("Repair mode not implemented")
 		case "repair_and_recover": //Metadata is lost and some disk failed
@@ -594,11 +596,11 @@ func coldInit(cConf map[string]interface{}, mode string) {
 		default:
 			panic(fmt.Errorf("%v mode is not supported", mode))
 		case "start":
-			startCloudStorages(cloudStorages)
+			startCloudStorages(cloudStorages, cTier)
 		case "restart":
-			restartCloudStorages(cloudStorages)
+			restartCloudStorages(cloudStorages, cTier)
 		case "recover":
-			recoverCloudMetaData(cloudStorages)
+			recoverCloudMetaData(cloudStorages, cTier)
 		case "repair":
 			panic(errors.New("Repair mode not implemented"))
 		case "repair_and_recover":
@@ -650,9 +652,10 @@ func coldInit(cConf map[string]interface{}, mode string) {
 	}
 
 	cTier.selectNextStorage = f
+	return cTier
 }
 
-func startcoldVolumes(mVolumes []map[string]interface{}, shouldDelete bool) {
+func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, shouldDelete bool) {
 	for _, volI := range mVolumes {
 		vPathI, ok := volI["path"]
 		if !ok {
@@ -727,15 +730,15 @@ func startcoldVolumes(mVolumes []map[string]interface{}, shouldDelete bool) {
 	}
 }
 
-func startColdVolumes(volumes []map[string]interface{}) {
-	startcoldVolumes(volumes, true)
+func startColdVolumes(volumes []map[string]interface{}, cTier *coldTier) {
+	startcoldVolumes(volumes, cTier, true)
 }
 
-func restartColdVolumes(volumes []map[string]interface{}) {
-	startcoldVolumes(volumes, false)
+func restartColdVolumes(volumes []map[string]interface{}, cTier *coldTier) {
+	startcoldVolumes(volumes, cTier, false)
 }
 
-func recoverColdVolumeMetaData(mVolumes []map[string]interface{}) {
+func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTier) {
 	for _, mVolume := range mVolumes {
 		volPathI, ok := mVolume["path"]
 		if !ok {
@@ -909,7 +912,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}) {
 	}
 }
 
-func startcloudstorages(cloudStorages []map[string]interface{}, shouldDelete bool) {
+func startcloudstorages(cloudStorages []map[string]interface{}, cTier *coldTier, shouldDelete bool) {
 	coldStoragesMap = make(map[string]*minioClient)
 	for _, cloudStorageI := range cloudStorages {
 		servUrlI, ok := cloudStorageI["storage_service_url"]
@@ -991,15 +994,15 @@ func startcloudstorages(cloudStorages []map[string]interface{}, shouldDelete boo
 	}
 }
 
-func startCloudStorages(cloudStorages []map[string]interface{}) {
-	startcloudstorages(cloudStorages, true)
+func startCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTier) {
+	startcloudstorages(cloudStorages, cTier, true)
 }
 
-func restartCloudStorages(cloudStorages []map[string]interface{}) {
-	startcloudstorages(cloudStorages, false)
+func restartCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTier) {
+	startcloudstorages(cloudStorages, cTier, false)
 }
 
-func recoverCloudMetaData(cloudStorages []map[string]interface{}) { //Can run upto 100 goroutines
+func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTier) { //Can run upto 100 goroutines
 	guideChannel := make(chan struct{}, 10)
 	wg := sync.WaitGroup{}
 	for _, cloudStorageI := range cloudStorages {
@@ -1073,7 +1076,7 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}) { //Can run up
 				<-guideChannel
 				wg.Done()
 			}()
-			recoverMetaDataFromCloudStorage(m)
+			recoverMetaDataFromCloudStorage(m, cTier)
 		}(mc)
 
 	}
@@ -1081,7 +1084,7 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}) { //Can run up
 	wg.Wait()
 }
 
-func recoverMetaDataFromCloudStorage(mc *minioClient) {
+func recoverMetaDataFromCloudStorage(mc *minioClient, cTier *coldTier) {
 	opts := minio.ListObjectsOptions{
 		Recursive: true,
 	}

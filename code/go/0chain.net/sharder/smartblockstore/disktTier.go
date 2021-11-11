@@ -20,7 +20,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var dTier diskTier
+// var dTier diskTier
 
 const (
 	//Contains 2000 directories that contains 2000 blocks each, so one twoKilo directory contains 4*10^6blocks.
@@ -92,7 +92,7 @@ type volume struct {
 	Mu sync.Mutex
 }
 
-func (v *volume) selectDir() error {
+func (v *volume) selectDir(dTier *diskTier) error {
 	if v.CurDirBlockNums < v.DCL-1 {
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", v.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
@@ -320,7 +320,7 @@ func (v *volume) updateCount(n int64) {
 	}
 }
 
-func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
+func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 	var volStat unix.Statfs_t
 	err := unix.Statfs(v.Path, &volStat)
 	if err != nil {
@@ -353,7 +353,7 @@ func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
 		return
 	}
 
-	if err := v.selectDir(); err != nil {
+	if err := v.selectDir(dTier); err != nil {
 		Logger.Error(ErrSelectDir(v.Path, err))
 		return
 	}
@@ -361,7 +361,7 @@ func (v *volume) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
+func volumeInit(tierType string, dConf map[string]interface{}, mode string) *diskTier {
 	volumesI, ok := dConf["volumes"]
 	if !ok {
 		panic(errors.New("Volumes config not available"))
@@ -377,6 +377,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 		strategy = strategyI.(string)
 	}
 
+	var dTier diskTier
 	if tierType == "hot" {
 		dTier = diskTier{
 			DCL:       HDCL,
@@ -427,7 +428,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 				ind := r.Intn(len(volumes))
 				sv := volumes[ind]
 
-				if sv.isAbleToStoreBlock() {
+				if sv.isAbleToStoreBlock(&dTier) {
 					selectedIndex = ind
 					selectedVolume = sv
 					break
@@ -473,7 +474,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 				}
 
 				v := volumes[i]
-				if v.isAbleToStoreBlock() {
+				if v.isAbleToStoreBlock(&dTier) {
 					selectedVolume = v
 					selectedIndex = i
 
@@ -491,7 +492,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 			}
 
 			if selectedVolume == nil {
-				if prevVolume.isAbleToStoreBlock() {
+				if prevVolume.isAbleToStoreBlock(&dTier) {
 					selectedVolume = prevVolume
 					selectedIndex = 0
 				}
@@ -522,7 +523,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 				}
 
 				v := volumes[i]
-				if !v.isAbleToStoreBlock() {
+				if !v.isAbleToStoreBlock(&dTier) {
 					volumes = append(volumes[:i], volumes[i+1:]...)
 					i--
 					totalVolumes--
@@ -566,7 +567,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 				}
 
 				v := volumes[i]
-				if !v.isAbleToStoreBlock() {
+				if !v.isAbleToStoreBlock(&dTier) {
 					volumes = append(volumes[:i], volumes[i+1:]...)
 					i--
 					totalVolumes--
@@ -602,6 +603,8 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) {
 
 	dTier.SelectedVolumeCh = diskVolumeSelectChan
 	dTier.SelectNextVolume = f
+
+	return &dTier
 }
 
 func startVolumes(volumes []map[string]interface{}, dTier *diskTier) {

@@ -13,6 +13,13 @@ import (
 	. "0chain.net/core/logging"
 )
 
+/*
+TODOs:
+1. proper mutex locking
+2. proper volume initialization when recovering or restarting
+3. Fill config properly
+
+*/
 type Tiering uint8
 
 const (
@@ -80,7 +87,7 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB(true)
+		InitMetaRecordDB(true) //Removes existing metadata and creates new db
 	default:
 		InitMetaRecordDB(false)
 	}
@@ -96,9 +103,7 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		}
 		hotMap := hotI.(map[string]interface{})
 
-		volumeInit(HOT, hotMap, mode) //Will panic if wrong setup is provided
-
-		smartStore.HotTier = &dTier
+		smartStore.HotTier = volumeInit(HOT, hotMap, mode) //Will panic if wrong setup is provided
 
 		smartStore.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -135,9 +140,7 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 
 		warmMap := warmI.(map[string]interface{})
 
-		volumeInit(WARM, warmMap, mode) //will panic if wrong setup is provided
-
-		smartStore.WarmTier = &dTier
+		smartStore.WarmTier = volumeInit(WARM, warmMap, mode) //will panic if wrong setup is provided
 
 		smartStore.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -179,8 +182,7 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		}
 
 		warmMap := warmI.(map[string]interface{})
-		volumeInit(WARM, warmMap, mode)
-		smartStore.WarmTier = &dTier
+		smartStore.WarmTier = volumeInit(WARM, warmMap, mode)
 
 		cacheMap := cacheI.(map[string]interface{})
 		cacheInit(cacheMap)
@@ -286,8 +288,7 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		}
 
 		coldMap := coldI.(map[string]interface{})
-		coldInit(coldMap, mode)
-		smartStore.ColdTier = &cTier
+		smartStore.ColdTier = coldInit(coldMap, mode)
 
 		cacheMap := cacheI.(map[string]interface{})
 		cacheInit(cacheMap)
@@ -392,12 +393,10 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		}
 
 		hotMap := hotI.(map[string]interface{})
-		volumeInit(HOT, hotMap, mode)
-		smartStore.HotTier = &dTier
+		smartStore.HotTier = volumeInit(HOT, hotMap, mode)
 
 		coldMap := coldI.(map[string]interface{})
-		coldInit(coldMap, mode)
-		smartStore.ColdTier = &cTier
+		smartStore.ColdTier = coldInit(coldMap, mode)
 
 		smartStore.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -449,12 +448,10 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		}
 
 		warmMap := warmI.(map[string]interface{})
-		volumeInit(WARM, warmMap, mode)
-		smartStore.WarmTier = &dTier
+		smartStore.WarmTier = volumeInit(WARM, warmMap, mode)
 
 		coldMap := coldI.(map[string]interface{})
-		coldInit(coldMap, mode)
-		smartStore.ColdTier = &cTier
+		smartStore.ColdTier = coldInit(coldMap, mode)
 
 		smartStore.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -513,12 +510,10 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		cacheInit(cacheMap)
 
 		hotMap := hotI.(map[string]interface{})
-		volumeInit(HOT, hotMap, mode)
-		smartStore.HotTier = &dTier
+		smartStore.HotTier = volumeInit(HOT, hotMap, mode)
 
 		coldMap := coldI.(map[string]interface{})
-		coldInit(coldMap, mode)
-		smartStore.ColdTier = &cTier
+		smartStore.ColdTier = coldInit(coldMap, mode)
 
 		var writeFunc func(b *block.Block) error
 
@@ -648,12 +643,10 @@ func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) err
 		cacheInit(cacheMap)
 
 		warmMap := warmI.(map[string]interface{})
-		volumeInit(WARM, warmMap, mode)
-		smartStore.WarmTier = &dTier
+		smartStore.WarmTier = volumeInit(WARM, warmMap, mode)
 
 		coldMap := coldI.(map[string]interface{})
-		coldInit(coldMap, mode)
-		smartStore.ColdTier = &cTier
+		smartStore.ColdTier = coldInit(coldMap, mode)
 
 		var writeFunc func(b *block.Block) error
 
@@ -825,14 +818,7 @@ func readFromCacheTier(bwr *BlockWhereRecord) (b *block.Block, err error) {
 	}
 	defer f.Close()
 
-	r, err := zlib.NewReader(f)
-	if err != nil {
-		Logger.Error(err.Error())
-		return nil, err
-	}
-	defer r.Close()
-
-	err = datastore.ReadJSON(r, b)
+	err = datastore.ReadJSON(f, b)
 	if err != nil {
 		Logger.Error(err.Error())
 		return nil, err
