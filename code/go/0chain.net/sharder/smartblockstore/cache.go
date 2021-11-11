@@ -133,7 +133,7 @@ func cacheInit(cConf map[string]interface{}) {
 	}
 
 	var cacheWrite string
-	cacheWriteI, ok := cConf["cache_write"]
+	cacheWriteI, ok := cConf["write_policy"]
 	if !ok {
 		cacheWrite = WriteBack
 	} else {
