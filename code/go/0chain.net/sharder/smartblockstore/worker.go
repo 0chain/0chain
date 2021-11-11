@@ -18,7 +18,7 @@ Todo
 */
 
 func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
-	pollInterval := time.Hour * time.Duration(smartStore.ColdTier.pollInterval)
+	pollInterval := time.Hour * time.Duration(smartStore.ColdTier.PollInterval)
 	t := time.NewTicker(pollInterval)
 	errCh := make(chan error, 1)
 	for {
@@ -64,16 +64,16 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 					Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
 					switch bwr.Tiering {
 					case HotTier:
-						bwr.Tiering = newTiering(HotTier, HotTier, smartStore.ColdTier.deleteLocal)
+						bwr.Tiering = newTiering(HotTier, HotTier, smartStore.ColdTier.DeleteLocal)
 					case WarmTier:
-						bwr.Tiering = newTiering(WarmTier, WarmTier, smartStore.ColdTier.deleteLocal)
+						bwr.Tiering = newTiering(WarmTier, WarmTier, smartStore.ColdTier.DeleteLocal)
 					case CacheAndWarmTier:
-						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, smartStore.ColdTier.deleteLocal)
+						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, smartStore.ColdTier.DeleteLocal)
 					case CacheAndHotTier:
-						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, smartStore.ColdTier.deleteLocal)
+						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, smartStore.ColdTier.DeleteLocal)
 					}
 
-					if smartStore.ColdTier.deleteLocal {
+					if smartStore.ColdTier.DeleteLocal {
 						bwr.BlockPath = ""
 					}
 					bwr.ColdPath = newColdPath

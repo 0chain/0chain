@@ -32,36 +32,36 @@ type selectedColdStorage struct {
 }
 
 type coldTier struct { //Cold tier
-	strategy            string
-	storageType         string //disk, minio and blobber
-	coldStorages        []coldStorageProvider
-	selectedStorageChan <-chan selectedColdStorage
-	selectNextStorage   func(coldStorageProviders []coldStorageProvider, prevInd int)
-	prevInd             int
-	deleteLocal         bool
+	Strategy            string
+	StorageType         string //disk, minio and blobber
+	ColdStorages        []coldStorageProvider
+	SelectedStorageChan <-chan selectedColdStorage
+	SelectNextStorage   func(coldStorageProviders []coldStorageProvider, prevInd int)
+	PrevInd             int
+	DeleteLocal         bool
 
-	mu           sync.Mutex
-	pollInterval int //in hour
+	Mu           sync.Mutex
+	PollInterval int //in hour
 }
 
 func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err error) {
-	sc := <-ct.selectedStorageChan
+	sc := <-ct.SelectedStorageChan
 	if sc.err != nil {
 		return "", sc.err
 	}
-	ct.prevInd = sc.prevInd
+	ct.PrevInd = sc.prevInd
 
 	if coldPath, err = sc.coldStorage.writeBlock(b, data); err != nil {
 		return
 	}
 
-	go ct.selectNextStorage(ct.coldStorages, ct.prevInd)
+	go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
 
 	return
 }
 
 func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
-	switch ct.storageType {
+	switch ct.StorageType {
 	case "minio":
 		mc, ok := coldStoragesMap[coldPath]
 		if !ok {
@@ -82,23 +82,23 @@ func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
 }
 
 func (ct *coldTier) removeColdStorage(i int) {
-	ct.coldStorages = append(ct.coldStorages[:i], ct.coldStorages[i+1:]...)
-	ct.prevInd--
+	ct.ColdStorages = append(ct.ColdStorages[:i], ct.ColdStorages[i+1:]...)
+	ct.PrevInd--
 }
 
 func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err error) {
-	sc := <-ct.selectedStorageChan
+	sc := <-ct.SelectedStorageChan
 	if sc.err != nil {
 		return "", err
 	}
 
-	ct.prevInd = sc.prevInd
+	ct.PrevInd = sc.prevInd
 
-	if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath, ct.deleteLocal); err != nil {
+	if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath, ct.DeleteLocal); err != nil {
 		return
 	}
 
-	go ct.selectNextStorage(ct.coldStorages, ct.prevInd)
+	go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
 
 	return
 }
@@ -513,8 +513,8 @@ func coldInit(cConf map[string]interface{}, mode string) *coldTier {
 			panic(ErrStorageTypeNotSupported(strategy))
 		case RoundRobin:
 			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
-				cTier.mu.Lock()
-				defer cTier.mu.Unlock()
+				cTier.Mu.Lock()
+				defer cTier.Mu.Unlock()
 				var selectedVolume *coldDisk
 				prevVolume := coldStorageProviders[prevInd].(*coldDisk)
 				var selectedIndex int
@@ -560,7 +560,7 @@ func coldInit(cConf map[string]interface{}, mode string) *coldTier {
 					}
 				}
 
-				cTier.coldStorages = coldStorageProviders
+				cTier.ColdStorages = coldStorageProviders
 
 				if selectedVolume == nil {
 					selectedColdStorageChan <- &selectedColdStorage{
@@ -616,9 +616,9 @@ func coldInit(cConf map[string]interface{}, mode string) *coldTier {
 			panic(ErrStrategyNotSupported(strategy))
 		case RoundRobin:
 			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
-				cTier.mu.Lock()
+				cTier.Mu.Lock()
 
-				defer cTier.mu.Unlock()
+				defer cTier.Mu.Unlock()
 
 				var selectedCloudStorage *minioClient
 				var selectedIndex int
@@ -651,7 +651,7 @@ func coldInit(cConf map[string]interface{}, mode string) *coldTier {
 		}
 	}
 
-	cTier.selectNextStorage = f
+	cTier.SelectNextStorage = f
 	return cTier
 }
 
@@ -717,7 +717,7 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 			allowedBlockSize = allowedBlockSizeI.(uint64)
 		}
 
-		cTier.coldStorages = append(cTier.coldStorages, &coldDisk{
+		cTier.ColdStorages = append(cTier.ColdStorages, &coldDisk{
 			Path:                vPath,
 			AllowedBlockNumbers: allowedBlockNumbers,
 			AllowedBlockSize:    allowedBlockSize,
@@ -725,7 +725,7 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 		})
 	}
 
-	if len(cTier.coldStorages) < len(mVolumes)/2 {
+	if len(cTier.ColdStorages) < len(mVolumes)/2 {
 		panic(errors.New("Atleast 50%% volumes must be able to store blocks"))
 	}
 }
@@ -898,7 +898,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			continue
 		}
 
-		cTier.coldStorages = append(cTier.coldStorages, &coldDisk{
+		cTier.ColdStorages = append(cTier.ColdStorages, &coldDisk{
 			Path:                volPath,
 			AllowedBlockNumbers: allowedBlockNumbers,
 			AllowedBlockSize:    allowedBlockSize,
@@ -907,7 +907,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		})
 	}
 
-	if len(cTier.coldStorages) < len(mVolumes)/2 {
+	if len(cTier.ColdStorages) < len(mVolumes)/2 {
 		panic(errors.New("Atleast 50%% volumes must be able to store blocks"))
 	}
 }
@@ -986,10 +986,10 @@ func startcloudstorages(cloudStorages []map[string]interface{}, cTier *coldTier,
 
 		coldStoragesMap[fmt.Sprintf("%v:%v", servUrl, bucketName)] = mc
 
-		cTier.coldStorages = append(cTier.coldStorages, mc)
+		cTier.ColdStorages = append(cTier.ColdStorages, mc)
 	}
 
-	if len(cTier.coldStorages)/2 < len(cloudStorages) {
+	if len(cTier.ColdStorages)/2 < len(cloudStorages) {
 		panic("At least 50%% cloud storages must be able to store blocks")
 	}
 }
@@ -1134,5 +1134,5 @@ func recoverMetaDataFromCloudStorage(mc *minioClient, cTier *coldTier) {
 
 	Logger.Debug(fmt.Sprintf("Recovered %v blocks out of %v blocks from cloud: %v, bucket: %v", recoveredCount.count, mc.blocksCount, mc.storageServiceURL, mc.bucketName))
 
-	cTier.coldStorages = append(cTier.coldStorages, mc)
+	cTier.ColdStorages = append(cTier.ColdStorages, mc)
 }
