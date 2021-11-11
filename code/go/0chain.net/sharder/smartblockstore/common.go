@@ -18,10 +18,9 @@ const (
 	MinCountFirst = "min_count_first"
 
 	//DefaultStrategies
-	DefaultHotStrategy   = "random"
-	DefaultWarmStrategy  = "random"
-	DefaultColdStrategy  = "random"
-	DefaultCacheStrategy = "random"
+	DefaultVolumeStrategy = "random"
+	DefaultColdStrategy   = "random"
+	DefaultCacheStrategy  = "random"
 )
 
 //Common errors

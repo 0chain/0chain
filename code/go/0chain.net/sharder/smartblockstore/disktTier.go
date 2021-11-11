@@ -43,10 +43,10 @@ type selectedDiskVolume struct {
 
 type diskTier struct { //Hot Tier
 	Volumes          []*volume //List of hot volumes
-	SelectNextVolume func(hotVolumes []*volume, prevInd int)
+	SelectNextVolume func(volumes []*volume, prevInd int)
 	SelectedVolumeCh <-chan *selectedDiskVolume //volume that will be used to store blocks next
 	PrevVolInd       int
-	Mu               sync.Mutex
+	// Mu               sync.Mutex
 	//Directory content limit
 	DCL       int
 	DirPrefix string
@@ -372,7 +372,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) *dis
 	var strategy string
 	strategyI, ok := dConf["strategy"]
 	if !ok {
-		strategy = DefaultHotStrategy
+		strategy = DefaultVolumeStrategy
 	} else {
 		strategy = strategyI.(string)
 	}
@@ -390,7 +390,7 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) *dis
 		}
 	}
 
-	Logger.Info(fmt.Sprintf("Running hotInit in %v mode", mode))
+	Logger.Info(fmt.Sprintf("Initializing volumes in %v mode", mode))
 	switch mode {
 	case "start":
 		//Delete all existing data and start fresh
@@ -693,10 +693,6 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 	}
 }
 
-func repairHotVolumes() {
-
-}
-
 //This function will recover metadata
 func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 	for _, mVolume := range mVolumes {
@@ -719,14 +715,14 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 		}{}
 
 		for i := 0; i < dTier.DCL; i++ {
-			hotIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", HK, i))
-			if _, err := os.Stat(hotIndexPath); err != nil {
-				Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, hotIndexPath, err))
+			volIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", dTier.DirPrefix, i))
+			if _, err := os.Stat(volIndexPath); err != nil {
+				Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, volIndexPath, err))
 				continue
 			}
 
 			for j := 0; j < dTier.DCL; j++ {
-				blockSubDirPath := filepath.Join(hotIndexPath, fmt.Sprintf("%v", j))
+				blockSubDirPath := filepath.Join(volIndexPath, fmt.Sprintf("%v", j))
 				if _, err := os.Stat(blockSubDirPath); err != nil {
 					Logger.Debug(err.Error())
 					continue
@@ -780,7 +776,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 							}
 
 							if err := bwr.AddOrUpdate(); err != nil {
-								Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
+								Logger.Error(fmt.Sprintf("Error: %v, while adding metadata for file: %v", err, blockPath))
 								errorOccurred = true
 								goto CountUpdate
 							} else {
@@ -792,10 +788,9 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 							grandCount.mu.Lock()
 							grandCount.totalBlocksCount++
 							grandCount.totalBlocksSize += blockSize
-							if errorOccurred {
-								continue
+							if !errorOccurred {
+								grandCount.recoveredCount++
 							}
-							grandCount.recoveredCount++
 							grandCount.mu.Unlock()
 							recoverCount++
 						}
