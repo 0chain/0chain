@@ -152,6 +152,7 @@ storage:
   cache:
     storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
     cache_strategy: ""
+    write_policy: "write_through" # write_through, write_back
     poll_interval: 1 # In hour
     block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
     volumes:
