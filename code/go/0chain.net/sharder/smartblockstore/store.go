@@ -1,41 +1,48 @@
 package smartblockstore
 
 import (
+	"compress/zlib"
+	"context"
+	"encoding/json"
 	"errors"
+	"io"
+	"os"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 )
 
 type Tiering uint8
 
 const (
-	H   Tiering = iota // Hot only
-	W                  // Warm only
-	HW                 // Hot and Warm
-	C                  // Cold only but only cold tiering is not used.
-	HC                 // Hot and cold
-	WC                 // Warm and Cold
-	HWC                // Hot, Warm and Cold
+	//Cache = 1, Warm = 2, Hot = 4 and Cold = 8
+	WarmOnly         Tiering = 2
+	HotOnly          Tiering = 4
+	CacheAndWarm     Tiering = 3
+	CacheAndCold     Tiering = 9
+	HotAndCold       Tiering = 12
+	WarmAndCold      Tiering = 10
+	CacheHotAndCold  Tiering = 13
+	CacheWarmAndCold Tiering = 11
 )
 
-/*
-1. Use only hot tier
-2. Use only warm tier
-3. Use hot and cold tier
-4. Use hot and warm tier
-5. Use warm and cold tier
-6. Use hot, warm and cold tier
-*/
+const (
+	HOT   = "Hot"
+	WARM  = "Warm"
+	CACHE = "Cache"
+	COLD  = "Cold"
+)
 
 var smartStore SmartStore
+var workerMap map[string]interface{}
 
 type SmartStore struct {
-	CacheEnabled bool
-	Cache        cache
-	Tiering      Tiering
-	HotTier      hTier
-	WarmTier     wTier
-	ColdTier     cTier
+	Tiering  Tiering
+	Cache    *cacheTier
+	HotTier  *diskTier
+	WarmTier *diskTier
+	ColdTier *coldTier
 	//fields with registered functions as per the config files
 	write  func(b *block.Block) error
 	read   func(hash string, round int64) (b *block.Block, err error)
@@ -54,17 +61,15 @@ func (sm *SmartStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
-//TODO provide only one path for one volume(partition)
-
-func InitializeSmartStore(sConf map[string]interface{}) error {
-	InitMetaRecordDB()
-	var mode, storageType string
+func InitializeSmartStore(sConf map[string]interface{}, ctx context.Context) error {
+	var mode string
+	var storageType int
 
 	storageTypeI, ok := sConf["storage_type"]
 	if !ok {
 		panic(errors.New("Storage Type is a required field"))
 	}
-	storageType = storageTypeI.(string)
+	storageType = storageTypeI.(int)
 
 	modeI, ok := sConf["mode"]
 	if !ok {
@@ -74,107 +79,793 @@ func InitializeSmartStore(sConf map[string]interface{}) error {
 	}
 
 	switch mode {
-	case "start": // Clean volume paths and start storing blocks
-		//
-	case "repair": // Get and store missing blocks and start storing blocks
-		//
-	case "recover": // Recover metadata and start storing blocks
-		//
+	case "start", "recover":
+		InitMetaRecordDB(true)
+	default:
+		InitMetaRecordDB(false)
 	}
 
-	switch storageType {
-	case "hot_only":
+	switch Tiering(storageType) {
+	default:
+		panic(errors.New("Unknown Tiering"))
+
+	case HotOnly:
 		hotI, ok := sConf["hot"]
 		if !ok {
-			panic(errors.New("Storage type includes hot tier but hot tier config not provided"))
+			panic(ErrHotStorageConfNotProvided)
 		}
 		hotMap := hotI.(map[string]interface{})
 
-		hotInit(hotMap)
+		volumeInit(HOT, hotMap, mode) //Will panic if wrong setup is provided
 
-	// case W:
-	// 	//
-	// case HW:
-	// 	//
-	// case HC:
-	// 	//
-	// case WC:
-	// 	//
-	// case HWC:
-	//
-	default:
-		panic(errors.New("Unknown Tiering"))
+		smartStore.HotTier = &dTier
+
+		smartStore.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				Logger.Error(err.Error())
+				return err
+			}
+
+			smartStore.HotTier.write(b, data)
+			return nil
+		}
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				Logger.Error(err.Error())
+				return
+			}
+
+			b, err = readFromDiskTier(bwr, false)
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+
+	case WarmOnly:
+		warmI, ok := sConf["warm"]
+		if !ok {
+			panic(ErrWarmStorageConfNotProvided)
+		}
+
+		warmMap := warmI.(map[string]interface{})
+
+		volumeInit(WARM, warmMap, mode) //will panic if wrong setup is provided
+
+		smartStore.WarmTier = &dTier
+
+		smartStore.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				Logger.Error(err.Error())
+				return err
+			}
+
+			smartStore.WarmTier.write(b, data)
+			return nil
+		}
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				Logger.Error(err.Error())
+				return nil, err
+			}
+
+			b, err = readFromDiskTier(bwr, false)
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+
+	case CacheAndWarm:
+		warmI, ok := sConf["warm"]
+		if !ok {
+			panic(ErrWarmStorageConfNotProvided)
+		}
+
+		cacheI, ok := sConf["cache"]
+		if !ok {
+			panic(ErrCacheStorageConfNotProvided)
+		}
+
+		warmMap := warmI.(map[string]interface{})
+		volumeInit(WARM, warmMap, mode)
+		smartStore.WarmTier = &dTier
+
+		cacheMap := cacheI.(map[string]interface{})
+		cacheInit(cacheMap)
+
+		var writeFunc func(b *block.Block) error
+
+		switch smartStore.Cache.CacheWrite {
+		case WriteThrough:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.WarmTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				go cacheWrite(bwr, data)
+
+				return nil
+			}
+		case WriteBack:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.WarmTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				return nil
+			}
+		}
+		smartStore.write = writeFunc
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				Logger.Error(err.Error())
+				return
+			}
+
+			switch bwr.Tiering {
+
+			case CacheAndWarmTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+
+				b, err = readFromDiskTier(bwr, true)
+			case WarmTier:
+				b, err = readFromDiskTier(bwr, true)
+			}
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+
+	case CacheAndCold:
+		coldI, ok := sConf["cold"]
+		if !ok {
+			panic(ErrColdStorageConfNotProvided)
+		}
+
+		cacheI, ok := sConf["cache"]
+		if !ok {
+			panic(ErrCacheStorageConfNotProvided)
+		}
+
+		coldMap := coldI.(map[string]interface{})
+		coldInit(coldMap, mode)
+		smartStore.ColdTier = &cTier
+
+		cacheMap := cacheI.(map[string]interface{})
+		cacheInit(cacheMap)
+
+		var writeFunc func(b *block.Block) error
+
+		switch smartStore.Cache.CacheWrite {
+		case WriteThrough:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.ColdTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				go cacheWrite(bwr, data)
+
+				return nil
+			}
+		case WriteBack:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.ColdTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				return nil
+			}
+		}
+
+		smartStore.write = writeFunc
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				return
+			}
+
+			switch bwr.Tiering {
+			case CacheAndColdTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+
+				b, err = readFromColdTier(bwr, true)
+			case ColdTier:
+				b, err = readFromColdTier(bwr, true)
+			}
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+
+	case HotAndCold:
+		hotI, ok := sConf["hot"]
+		if !ok {
+			panic(ErrHotStorageConfNotProvided)
+		}
+
+		coldI, ok := sConf["cold"]
+		if !ok {
+			panic(ErrColdStorageConfNotProvided)
+		}
+
+		hotMap := hotI.(map[string]interface{})
+		volumeInit(HOT, hotMap, mode)
+		smartStore.HotTier = &dTier
+
+		coldMap := coldI.(map[string]interface{})
+		coldInit(coldMap, mode)
+		smartStore.ColdTier = &cTier
+
+		smartStore.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				Logger.Error(err.Error())
+				return err
+			}
+
+			smartStore.HotTier.write(b, data)
+			return nil
+		}
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				return
+			}
+
+			switch bwr.Tiering {
+			case HotTier:
+				b, err = readFromDiskTier(bwr, false)
+			case ColdTier:
+				b, err = readFromColdTier(bwr, false)
+			case HotAndColdTier:
+				b, err = readFromDiskTier(bwr, false)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, false)
+			}
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+	case WarmAndCold:
+		warmI, ok := sConf["warm"]
+		if !ok {
+			panic(ErrWarmStorageConfNotProvided)
+		}
+
+		coldI, ok := sConf["cold"]
+		if !ok {
+			panic(ErrColdStorageConfNotProvided)
+		}
+
+		warmMap := warmI.(map[string]interface{})
+		volumeInit(WARM, warmMap, mode)
+		smartStore.WarmTier = &dTier
+
+		coldMap := coldI.(map[string]interface{})
+		coldInit(coldMap, mode)
+		smartStore.ColdTier = &cTier
+
+		smartStore.write = func(b *block.Block) error {
+			data, err := getBlockData(b)
+			if err != nil {
+				Logger.Error(err.Error())
+				return err
+			}
+
+			smartStore.WarmTier.write(b, data)
+			return nil
+		}
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				return
+			}
+
+			switch bwr.Tiering {
+			case WarmTier:
+				b, err = readFromDiskTier(bwr, false)
+			case ColdTier:
+				b, err = readFromColdTier(bwr, false)
+			case WarmAndColdTier:
+				b, err = readFromDiskTier(bwr, false)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, false)
+			}
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+	case CacheHotAndCold:
+		cacheI, ok := sConf["cache"]
+		if !ok {
+			panic(ErrCacheStorageConfNotProvided)
+		}
+		hotI, ok := sConf["hot"]
+		if !ok {
+			panic(ErrHotStorageConfNotProvided)
+		}
+
+		coldI, ok := sConf["cold"]
+		if !ok {
+			panic(ErrColdStorageConfNotProvided)
+		}
+
+		cacheMap := cacheI.(map[string]interface{})
+		cacheInit(cacheMap)
+
+		hotMap := hotI.(map[string]interface{})
+		volumeInit(HOT, hotMap, mode)
+		smartStore.HotTier = &dTier
+
+		coldMap := coldI.(map[string]interface{})
+		coldInit(coldMap, mode)
+		smartStore.ColdTier = &cTier
+
+		var writeFunc func(b *block.Block) error
+
+		switch smartStore.Cache.CacheWrite {
+		case WriteThrough:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.HotTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				go cacheWrite(bwr, data)
+				return nil
+			}
+		case WriteBack:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.HotTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				return nil
+			}
+		}
+
+		smartStore.write = writeFunc
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				Logger.Error(err.Error())
+				return
+			}
+
+			switch bwr.Tiering {
+			case HotTier:
+				b, err = readFromDiskTier(bwr, false)
+			case ColdTier:
+				b, err = readFromColdTier(bwr, true)
+			case HotAndColdTier:
+				b, err = readFromDiskTier(bwr, false)
+				if b != nil {
+					break
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+			case CacheAndColdTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					break
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+			default:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromDiskTier(bwr, false)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+
+			}
+
+			if err != nil {
+				Logger.Error(err.Error())
+			}
+
+			return
+		}
+
+	case CacheWarmAndCold: //
+		cacheI, ok := sConf["cache"]
+		if !ok {
+			panic(ErrCacheStorageConfNotProvided)
+		}
+		warmI, ok := sConf["warm"]
+		if !ok {
+			panic(ErrWarmStorageConfNotProvided)
+		}
+
+		coldI, ok := sConf["cold"]
+		if !ok {
+			panic(ErrColdStorageConfNotProvided)
+		}
+
+		cacheMap := cacheI.(map[string]interface{})
+		cacheInit(cacheMap)
+
+		warmMap := warmI.(map[string]interface{})
+		volumeInit(WARM, warmMap, mode)
+		smartStore.WarmTier = &dTier
+
+		coldMap := coldI.(map[string]interface{})
+		coldInit(coldMap, mode)
+		smartStore.ColdTier = &cTier
+
+		var writeFunc func(b *block.Block) error
+
+		switch smartStore.Cache.CacheWrite {
+		case WriteThrough:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.WarmTier.write(b, data)
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					return err
+				}
+
+				go cacheWrite(bwr, data)
+
+				return nil
+			}
+		case WriteBack:
+			writeFunc = func(b *block.Block) error {
+				data, err := getBlockData(b)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				blockPath, err := smartStore.WarmTier.write(b, data)
+				if err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+
+				bwr := &BlockWhereRecord{
+					Hash:      b.Hash,
+					Tiering:   HotTier,
+					BlockPath: blockPath,
+				}
+
+				if err := bwr.AddOrUpdate(); err != nil {
+					Logger.Error(err.Error())
+					return err
+				}
+				return nil
+			}
+		}
+
+		smartStore.write = writeFunc
+
+		smartStore.read = func(hash string, round int64) (b *block.Block, err error) {
+			var bwr *BlockWhereRecord
+			bwr, err = GetBlockWhereRecord(hash)
+			if err != nil {
+				return
+			}
+
+			switch bwr.Tiering {
+			case WarmTier:
+				b, err = readFromDiskTier(bwr, true)
+			case ColdTier:
+				b, err = readFromColdTier(bwr, true)
+			case WarmAndColdTier:
+				b, err = readFromDiskTier(bwr, true)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+			case CacheAndWarmTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromDiskTier(bwr, true)
+			case CacheAndColdTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+			case CacheWarmAndColdTier:
+				b, err = readFromCacheTier(bwr)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromDiskTier(bwr, true)
+				if b != nil {
+					return
+				}
+				Logger.Error(err.Error())
+				b, err = readFromColdTier(bwr, true)
+			}
+			return
+		}
 	}
 
 	return nil
 }
 
-//Each tier will have its own implementation
+func cacheWrite(bwr *BlockWhereRecord, data []byte) {
+	cachePath, err := smartStore.Cache.write(bwr.Hash, data)
+	if err != nil {
+		Logger.Error(err.Error())
+		return
+	}
 
-//Hot only
-func hotOnly() {
-
-	//SetUpHotVolumes
-}
-
-//Hot and Warm
-func hotAndWarm() {
-	//SetupHotAndWarmVolumes
-}
-
-//Hot and Cold
-func hotAndCold() {
-	//Setup hot and cold tiering
-}
-
-//Warm only
-func warmOnly() {
-	//SetUp Warm volumes
-}
-
-//Hot, Warm and Cold
-func hotWarmAndCold() {
-	//Setup hot warm and cold tiering
-}
-
-//Possibly usable code
-/*
-func (fs *FSStore) furtherTiering(b *block.Block, bmr *BlockMetaRecord, blockData []byte, subDir, cachePath string) {
-	if len(fs.Volumes) > 0 {
-		ableVolumes := make([]Volume, len(fs.Volumes))
-		copy(ableVolumes, fs.Volumes)
-		for {
-			if len(ableVolumes) == 0 {
-				//log error
-				//stop sharder, panic
-			}
-			v, prevInd := fs.pickVolume(&ableVolumes, fs.prevVolInd)
-			if v == nil {
-				//Log error
-				//stop sharder, panic
-			}
-			fs.prevVolInd = prevInd
-			bPath, err := v.Write(b, blockData)
-			if err == nil {
-				bmr.Tiering = int(HotAndWarmTier)
-				bmr.VolumePath = bPath
-				bmr.AddOrUpdate()
-				break
-			} else {
-				ableVolumes[prevInd] = ableVolumes[len(ableVolumes)-1]
-				ableVolumes = ableVolumes[:len(ableVolumes)-1]
-				fs.prevVolInd--
-			}
-
-		}
-	} else if fs.minioEnabled {
-		// Add to minio if warm tiering is not available else minio can be used for cold tiering
-		_, err := fs.Minio.FPutObject(fs.Minio.BucketName(), b.Hash, cachePath, minio.PutObjectOptions{})
-		if err == nil {
-			bmr.Tiering = int(HotAndColdTier)
-			bmr.AddOrUpdate()
-		}
+	bwr.CachePath = cachePath
+	bwr.Tiering = CacheAndHotTier
+	if err := bwr.AddOrUpdate(); err != nil {
+		Logger.Error(err.Error())
 	}
 }
 
-*/
+func getBlockData(b *block.Block) ([]byte, error) {
+	return json.Marshal(b)
+}
+
+func readFromDiskTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, err error) {
+	f, err := os.Open(bwr.BlockPath)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+	defer r.Close()
+
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+
+	return
+}
+
+func readFromCacheTier(bwr *BlockWhereRecord) (b *block.Block, err error) {
+	bwr, err = GetBlockWhereRecord(bwr.Hash)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+
+	f, err := os.Open(bwr.CachePath)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+	defer f.Close()
+
+	r, err := zlib.NewReader(f)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+	defer r.Close()
+
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+
+	return
+}
+
+func readFromColdTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, err error) {
+	bwr, err = GetBlockWhereRecord(bwr.ColdPath)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+
+	var blockReader io.ReadCloser
+	if blockReader, err = smartStore.ColdTier.read(bwr.ColdPath, bwr.Hash); err != nil {
+		return
+	}
+	defer blockReader.Close()
+
+	r, err := zlib.NewReader(blockReader)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+	defer r.Close()
+
+	err = datastore.ReadJSON(r, b)
+	if err != nil {
+		Logger.Error(err.Error())
+		return nil, err
+	}
+
+	return
+}
