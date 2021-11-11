@@ -60,7 +60,7 @@ func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err err
 	return
 }
 
-func (ct *coldTier) read(coldPath, hash string) (io.Reader, error) {
+func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
 	switch ct.storageType {
 	case "minio":
 		mc, ok := coldStoragesMap[coldPath]
@@ -72,7 +72,7 @@ func (ct *coldTier) read(coldPath, hash string) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytes.NewReader(data), nil
+		return ioutil.NopCloser(bytes.NewReader(data)), nil
 
 	case "disk":
 		return os.Open(coldPath)

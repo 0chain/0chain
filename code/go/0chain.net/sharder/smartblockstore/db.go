@@ -102,7 +102,7 @@ type BlockWhereRecord struct {
 	Tiering   WhichTier `json:"tr"`
 	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
 	CachePath string    `json:"chp,omitempty"`
-	CloudPath string    `json:"cp,omitempty"`
+	ColdPath  string    `json:"cp,omitempty"`
 }
 
 //Add or Update whereabout of a block
