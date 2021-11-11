@@ -14,6 +14,7 @@ type Executor interface {
 
 	SetMonitor(name NodeName) (err error)
 	CleanupBC(timeout time.Duration) (err error)
+	SetEnv(map[string]string) (err error)
 
 	// common control
 
@@ -90,6 +91,16 @@ func setMonitor(ex Executor, val interface{}, tm time.Duration) (
 		return ex.SetMonitor(ss[0])
 	}
 	return fmt.Errorf("invalid 'set_monitor' argument type: %T", val)
+}
+
+func env(ex Executor, val interface{}) (
+	err error) {
+
+	var values map[string]string
+	if err = mapstructure.Decode(val, &values); err != nil {
+		return fmt.Errorf("decoding 'env': %v", err)
+	}
+	return ex.SetEnv(values)
 }
 
 //
