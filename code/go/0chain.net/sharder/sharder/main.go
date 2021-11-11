@@ -131,7 +131,8 @@ func main() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
 
-	smartblockstore.InitializeSmartStore(viper.GetStringMap("storage"))
+	smartblockstore.InitializeSmartStore(viper.GetStringMap("storage"), ctx)
+
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
@@ -392,37 +393,4 @@ func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	sharder.SetupWorkers(ctx)
-}
-
-func setupBlockStorageProvider(sConf map[string]interface{}) {
-	var mode string
-	modeI, ok := sConf["mode"]
-	if !ok {
-		mode = "start"
-	} else {
-		mode = modeI.(string)
-	}
-
-	switch mode {
-	case "start":
-		//
-	case "recover":
-		//
-	case "repair":
-		//
-	}
-
-	storageTypeI, ok := sConf["storage_type"]
-	if !ok {
-		panic(errors.New("Storage type is required"))
-	}
-	storageType := storageTypeI.(string)
-
-	switch storageType {
-	default:
-		panic(fmt.Errorf("Storage Type %v is not supported", storageType))
-	case "hot_only":
-
-	}
-
 }
