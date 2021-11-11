@@ -4,11 +4,11 @@ package sharder;
 
 option go_package = "code/go/0chain.net/sharder/proto/api/src/proto";
 
-import "sharder_contract.proto";
+import "sharderproto/api/v1/sharder_contract.proto";
 import "google/api/annotations.proto";
 import "google/api/httpbody.proto";
 
-service sharderService {
+service SharderService {
 
   rpc GetChainStats(GetChainStatsRequest) returns (GetChainStatsResponse) {
     option (google.api.http) = {

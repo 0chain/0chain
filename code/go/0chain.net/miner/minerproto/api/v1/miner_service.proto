@@ -4,7 +4,7 @@ package miner;
 
 option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
-import "miner_contract.proto";
+import "minerproto/api/v1/miner_contract.proto";
 import "google/api/annotations.proto";
 
 service MinerService {

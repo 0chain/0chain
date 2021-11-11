@@ -31,7 +31,7 @@ func NewSharderServiceClient(cc grpc.ClientConnInterface) SharderServiceClient {
 
 func (c *sharderServiceClient) GetChainStats(ctx context.Context, in *GetChainStatsRequest, opts ...grpc.CallOption) (*GetChainStatsResponse, error) {
 	out := new(GetChainStatsResponse)
-	err := c.cc.Invoke(ctx, "/sharder.sharderService/GetChainStats", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/sharder.SharderService/GetChainStats", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func _SharderService_GetChainStats_Handler(srv interface{}, ctx context.Context,
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/sharder.sharderService/GetChainStats",
+		FullMethod: "/sharder.SharderService/GetChainStats",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SharderServiceServer).GetChainStats(ctx, req.(*GetChainStatsRequest))
@@ -86,7 +86,7 @@ func _SharderService_GetChainStats_Handler(srv interface{}, ctx context.Context,
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var SharderService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "sharder.sharderService",
+	ServiceName: "sharder.SharderService",
 	HandlerType: (*SharderServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -95,5 +95,5 @@ var SharderService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "sharder_service.proto",
+	Metadata: "sharderproto/api/v1/sharder_service.proto",
 }

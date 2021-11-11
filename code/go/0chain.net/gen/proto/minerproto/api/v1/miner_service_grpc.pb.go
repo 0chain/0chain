@@ -95,5 +95,5 @@ var MinerService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "miner_service.proto",
+	Metadata: "minerproto/api/v1/miner_service.proto",
 }
