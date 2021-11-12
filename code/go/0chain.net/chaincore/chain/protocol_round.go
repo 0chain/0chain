@@ -295,8 +295,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			}
 
 			if !fb.IsBlockNotarized() {
-				var err error
-				fb, err = c.GetNotarizedBlock(ctx, fb.Hash, fb.Round)
+				nfb, err := c.GetNotarizedBlock(ctx, fb.Hash, fb.Round)
 				if err != nil {
 					logging.Logger.Error("finalize round - get notarized block failed",
 						zap.Int64("round", fb.Round),
@@ -304,6 +303,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 						zap.Error(err))
 					return
 				}
+				fb = nfb
+				frchain[len(frchain)-1-idx] = fb
 			}
 
 			_, _, err := c.createRoundIfNotExist(ctx, fb)
