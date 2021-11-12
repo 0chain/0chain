@@ -157,11 +157,13 @@ storage:
     block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
     volumes:
       - path: "/path/to/cache/blocks"
+        recovery: false # Defaults to false
         size_to_maintain: 10 # In GB
         inodes_to_maintain: 10 # In percent
         allowed_block_numbers: 10^4
         allowed_block_size: 500 * 1024 * 1024
       - path: "/path/to/another/cache/blocks"
+        recovery: false
         size_to_maintain: 2 # In GB
         inodes_to_maintain: 10 # In percent
         allowed_block_numbers: 10^5
@@ -171,11 +173,13 @@ storage:
     block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
     volumes:
       - path: "/path/to/hot/blocks"
+        recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3
         allowed_block_size: 500 * 1024 * 1024 # 500GB
       - path: "/path/to/hot/blocks"
+        recovery: false
         size_to_maintain: 1 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^3
@@ -185,11 +189,13 @@ storage:
     strategy: "round_robin" # choices; round_robin, min_size_first, min_count_first and random
     volumes:
       - path: "/path/to/store/blocks"
+        recovery: false
         size_to_maintain: 4 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^9 #should be <= 10^9; if greater number is provided then it will settle to 10^9
         allowed_block_size: 1024 * 1024 * 1024
       - path: "another/path/to/store/blocks"
+        recovery: false
         size_to_maintain: 4 # In GB
         inodes_to_maintain: 5 # In percent
         allowed_block_numbers: 10^9
@@ -203,11 +209,13 @@ storage:
         strategy: "some strategy"
         volumes:
           - path: "/path/to/store/blocks"
+            recovery: false
             size_to_maintain: 10 # In GB
             inodes_to_maintain: 10 # In percent
             allowed_block_numbers: 10^10 # Can be any numbers
             allowed_block_size: 1000 # In GB
           - path: "/path/to/store/blocks"
+            recovery: false
             size_to_maintain: 10 # In GB
             inodes_to_maintain: 10 # In percent
             allowed_block_numbers: 10^10 # Can be any numbers
