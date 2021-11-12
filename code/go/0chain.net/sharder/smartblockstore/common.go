@@ -1,10 +1,12 @@
 package smartblockstore
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	"golang.org/x/sys/unix"
 )
@@ -97,4 +99,54 @@ func getAvailableSizeAndInodes(vPath string) (availableSize, availableInodes uin
 	availableInodes = volStat.Ffree
 	availableSize = volStat.Bfree * uint64(volStat.Bsize)
 	return
+}
+
+func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err error) {
+	var f *os.File
+	if f, err = os.Open(fPath); err != nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(f)
+	curKIndStr := scanner.Text()
+	more := scanner.Scan()
+	if more == false {
+		err = errors.New("Current Directory Index missing")
+		return
+	}
+	curDirIndStr := scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		err = errors.New("Current Directory Block numbers missing")
+		return
+	}
+	curBlockNumsStr := scanner.Text()
+
+	curKInd, err = strconv.Atoi(curKIndStr)
+	if err != nil {
+		return
+	}
+
+	curDirInd, err = strconv.Atoi(curDirIndStr)
+	if err != nil {
+		return
+	}
+
+	curBlockNums, err = strconv.Atoi(curBlockNumsStr)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func updateCurIndexes(fPath string, curKInd, curDirInd, curBlockNums int) error {
+	f, err := os.Create(fPath)
+	if err != nil {
+		return nil
+	}
+
+	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v\n%v", curDirInd, curDirInd, curBlockNums)))
+
+	return err
 }
