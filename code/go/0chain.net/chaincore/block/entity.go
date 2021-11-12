@@ -148,7 +148,6 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 	Events      []event.Event
-	//EventDb     *event.EventDb
 
 	TxnsMap   map[string]bool `json:"-"`
 	mutexTxns sync.RWMutex
