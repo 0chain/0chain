@@ -363,7 +363,8 @@ func (d *coldDisk) selectDir() error {
 
 		d.CurDirInd = dirInd
 		d.CurDirBlockNums = blocksCount
-		return nil
+
+		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
 	}
 
 	var kInd int
@@ -385,7 +386,7 @@ func (d *coldDisk) selectDir() error {
 		d.CurDirInd = dirInd
 		d.CurDirBlockNums = 0
 
-		return nil
+		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
 	} else if err != nil {
 		return err
 	}
@@ -397,7 +398,8 @@ func (d *coldDisk) selectDir() error {
 	d.CurKInd = kInd
 	d.CurDirInd = dirInd
 	d.CurDirBlockNums = blocksCount
-	return nil
+
+	return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
 }
 
 func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
@@ -665,13 +667,29 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 
 		vPath := vPathI.(string)
 
+		var curKInd, curDirInd, curDirBlockNums int
+		var err error
+
+		var totalBlocksCount, totalBlocksSize uint64
 		if shouldDelete {
-			if err := os.RemoveAll(vPath); err != nil {
+			if err = os.RemoveAll(vPath); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
 
-			if err := os.MkdirAll(vPath, 0644); err != nil {
+			if err = os.MkdirAll(vPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+		} else {
+			curKInd, curDirInd, curDirBlockNums, err = getCurIndexes(filepath.Join(vPath, IndexStateFileName))
+			if err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, CK, CDCL)
+			if err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
@@ -722,6 +740,11 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 			AllowedBlockNumbers: allowedBlockNumbers,
 			AllowedBlockSize:    allowedBlockSize,
 			SizeToMaintain:      sizeToMaintain,
+			BlocksSize:          totalBlocksSize,
+			BlocksCount:         totalBlocksCount,
+			CurKInd:             curKInd,
+			CurDirInd:           curDirInd,
+			CurDirBlockNums:     curDirBlockNums,
 		})
 	}
 
@@ -758,96 +781,125 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			mu               sync.Mutex
 		}{}
 
-		for i := 0; i < CDCL; i++ {
-			hotIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", CK, i))
-			if _, err := os.Stat(hotIndexPath); err != nil {
-				Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, hotIndexPath, err))
-				continue
-			}
+		var shouldRecover bool
+		shouldRecoverI, ok := mVolume["recovery"]
+		if ok {
+			shouldRecover = shouldRecoverI.(bool)
+		}
 
-			for j := 0; j < CDCL; j++ {
-				blockSubDirPath := filepath.Join(hotIndexPath, fmt.Sprintf("%v", j))
-				if _, err := os.Stat(blockSubDirPath); err != nil {
-					Logger.Debug(err.Error())
+		if shouldRecover {
+			for i := 0; i < CDCL; i++ {
+				hotIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", CK, i))
+				if _, err := os.Stat(hotIndexPath); err != nil {
+					Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, hotIndexPath, err))
 					continue
 				}
 
-				guideChannel <- struct{}{}
-				recoverWG.Add(1)
-
-				//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
-				//for multi disks? Need some benchmark
-				go func(gPath string) { //gPath Path for goroutine
-					defer recoverWG.Done()
-					defer func() {
-						<-guideChannel
-					}()
-
-					var recoverCount, totalBlocksCount int
-
-					var f *os.File
-					f, _ = os.Open(gPath)
-					defer f.Close()
-
-					var dirEntries []os.DirEntry
-					var err error
-					for {
-						dirEntries, err = f.ReadDir(1000)
-						if errors.Is(err, io.EOF) {
-							err = nil
-							break
-						}
-						for _, dirEntry := range dirEntries {
-							var bwr BlockWhereRecord
-							var errorOccurred bool
-							var blockSize uint64
-							fileName := dirEntry.Name()
-							hash := strings.Split(fileName, ".")[0]
-							blockPath := filepath.Join(gPath, fileName)
-
-							finfo, err := dirEntry.Info()
-							if err != nil {
-								Logger.Error(fmt.Sprintf("Error: %v while getting file info for file: %v", err, blockPath))
-								errorOccurred = true
-								goto CountUpdate
-							}
-
-							blockSize = uint64(finfo.Size())
-							bwr = BlockWhereRecord{
-								Hash:      hash,
-								Tiering:   HotTier,
-								BlockPath: blockPath,
-							}
-
-							if err := bwr.AddOrUpdate(); err != nil {
-								Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
-								errorOccurred = true
-								goto CountUpdate
-							} else {
-								continue
-							}
-
-						CountUpdate:
-							totalBlocksCount++
-							grandCount.mu.Lock()
-							grandCount.totalBlocksCount++
-							grandCount.totalBlocksSize += blockSize
-							if errorOccurred {
-								continue
-							}
-							grandCount.recoveredCount++
-							grandCount.mu.Unlock()
-							recoverCount++
-						}
+				for j := 0; j < CDCL; j++ {
+					blockSubDirPath := filepath.Join(hotIndexPath, fmt.Sprintf("%v", j))
+					if _, err := os.Stat(blockSubDirPath); err != nil {
+						Logger.Debug(err.Error())
+						continue
 					}
-					Logger.Info(fmt.Sprintf("%v Meta records recovered of %v blocks from path: %v", recoverCount, totalBlocksCount, gPath))
 
-				}(blockSubDirPath)
+					guideChannel <- struct{}{}
+					recoverWG.Add(1)
 
+					//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+					//for multi disks? Need some benchmark
+					go func(gPath string) { //gPath Path for goroutine
+						defer recoverWG.Done()
+						defer func() {
+							<-guideChannel
+						}()
+
+						var recoverCount, totalBlocksCount int
+
+						var f *os.File
+						f, _ = os.Open(gPath)
+						defer f.Close()
+
+						var dirEntries []os.DirEntry
+						var err error
+						for {
+							dirEntries, err = f.ReadDir(1000)
+							if errors.Is(err, io.EOF) {
+								err = nil
+								break
+							}
+							for _, dirEntry := range dirEntries {
+								var bwr BlockWhereRecord
+								var errorOccurred bool
+								var blockSize uint64
+								fileName := dirEntry.Name()
+								hash := strings.Split(fileName, ".")[0]
+								blockPath := filepath.Join(gPath, fileName)
+
+								finfo, err := dirEntry.Info()
+								if err != nil {
+									Logger.Error(fmt.Sprintf("Error: %v while getting file info for file: %v", err, blockPath))
+									errorOccurred = true
+									goto CountUpdate
+								}
+
+								blockSize = uint64(finfo.Size())
+								bwr = BlockWhereRecord{
+									Hash:      hash,
+									Tiering:   HotTier,
+									BlockPath: blockPath,
+								}
+
+								if err := bwr.AddOrUpdate(); err != nil {
+									Logger.Error(fmt.Sprintf("Error: %v, while reading file: %v", err, blockPath))
+									errorOccurred = true
+									goto CountUpdate
+								} else {
+									continue
+								}
+
+							CountUpdate:
+								totalBlocksCount++
+								grandCount.mu.Lock()
+								grandCount.totalBlocksCount++
+								grandCount.totalBlocksSize += blockSize
+								if !errorOccurred {
+									grandCount.recoveredCount++
+								}
+								grandCount.mu.Unlock()
+								recoverCount++
+							}
+						}
+						Logger.Info(fmt.Sprintf("%v Meta records recovered of %v blocks from path: %v", recoverCount, totalBlocksCount, gPath))
+
+					}(blockSubDirPath)
+
+				}
+			}
+			recoverWG.Wait() //wait for all goroutine to complete
+			Logger.Info("Completed meta data recovery")
+		} else {
+			if err := os.RemoveAll(volPath); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := os.MkdirAll(volPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0, 0); err != nil {
+				Logger.Error(err.Error())
+				continue
 			}
 		}
-		recoverWG.Wait() //wait for all goroutine to complete
-		Logger.Info("Completed meta data recovery")
+
+		curKInd, curDirInd, curBlockNums, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
+
 		//Check available size and inodes and add volume to volume pool
 		availableSize, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
@@ -904,6 +956,9 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			AllowedBlockSize:    allowedBlockSize,
 			SizeToMaintain:      sizeToMaintain,
 			BlocksCount:         uint64(grandCount.totalBlocksCount),
+			CurKInd:             curKInd,
+			CurDirInd:           curDirInd,
+			CurDirBlockNums:     curBlockNums,
 		})
 	}
 
