@@ -1,4 +1,4 @@
-package smartblockstore
+package blockstore
 
 import (
 	"bufio"

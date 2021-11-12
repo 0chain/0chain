@@ -1,4 +1,4 @@
-package smartblockstore
+package blockstore
 
 import (
 	"context"
@@ -17,8 +17,8 @@ Todo Think more about caching
 Todo
 */
 
-func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
-	pollInterval := time.Hour * time.Duration(smartStore.ColdTier.PollInterval)
+func moveToColdTier(store *BlockStore, ctx context.Context) {
+	pollInterval := time.Hour * time.Duration(store.ColdTier.PollInterval)
 	t := time.NewTicker(pollInterval)
 	errCh := make(chan error, 1)
 	for {
@@ -55,7 +55,7 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 						return
 					}
 
-					newColdPath, err = smartStore.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
+					newColdPath, err = store.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
 					if err != nil {
 						Logger.Error(err.Error())
 						return
@@ -64,16 +64,16 @@ func moveToColdTier(smartStore *SmartStore, ctx context.Context) {
 					Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
 					switch bwr.Tiering {
 					case HotTier:
-						bwr.Tiering = newTiering(HotTier, HotTier, smartStore.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(HotTier, HotTier, store.ColdTier.DeleteLocal)
 					case WarmTier:
-						bwr.Tiering = newTiering(WarmTier, WarmTier, smartStore.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(WarmTier, WarmTier, store.ColdTier.DeleteLocal)
 					case CacheAndWarmTier:
-						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, smartStore.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, store.ColdTier.DeleteLocal)
 					case CacheAndHotTier:
-						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, smartStore.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, store.ColdTier.DeleteLocal)
 					}
 
-					if smartStore.ColdTier.DeleteLocal {
+					if store.ColdTier.DeleteLocal {
 						bwr.BlockPath = ""
 					}
 					bwr.ColdPath = newColdPath

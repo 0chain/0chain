@@ -35,7 +35,7 @@ import (
 	"0chain.net/core/persistencestore"
 	"0chain.net/core/viper"
 	"0chain.net/sharder"
-	"0chain.net/sharder/smartblockstore"
+	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
 )
 
@@ -131,7 +131,7 @@ func main() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
 
-	smartblockstore.InitializeSmartStore(viper.GetStringMap("storage"), ctx)
+	blockstore.InitializeStore(viper.GetStringMap("storage"), ctx)
 
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)

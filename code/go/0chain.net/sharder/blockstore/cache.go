@@ -1,5 +1,5 @@
 //cache
-package smartblockstore
+package blockstore
 
 import (
 	"fmt"
