@@ -33,8 +33,6 @@ const (
 	WK = "WK"
 	//Warm directory content limit
 	WDCL = 1000
-
-	IndexStateFileName = "index.state"
 )
 
 type selectedDiskVolume struct {
@@ -632,6 +630,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 		vPath := vPathI.(string)
 
 		var curDirInd, curKInd, curDirBlockNums int
+		var totalBlocksCount, totalBlocksSize uint64
 		var err error
 		if shouldDelete {
 			if err := os.RemoveAll(vPath); err != nil {
@@ -649,6 +648,8 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 				Logger.Error(err.Error())
 				continue
 			}
+
+			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, dTier.DirPrefix, dTier.DCL)
 		}
 
 		availableSize, availableInodes, err := getAvailableSizeAndInodes(vPath)
@@ -697,6 +698,8 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			Path:                vPath,
 			AllowedBlockNumbers: allowedBlockNumbers,
 			AllowedBlockSize:    allowedBlockSize,
+			BlocksSize:          totalBlocksSize,
+			BlocksCount:         totalBlocksCount,
 			SizeToMaintain:      sizeToMaintain,
 			CurKInd:             curKInd,
 			CurDirInd:           curDirInd,

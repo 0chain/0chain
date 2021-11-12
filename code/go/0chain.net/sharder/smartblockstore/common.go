@@ -5,14 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strconv"
+	"sync"
 
 	"golang.org/x/sys/unix"
 )
 
 const (
-	fileExt = ".dat"
+	fileExt            = ".dat"
+	IndexStateFileName = "index.state"
+
 	//strategies
 	Random        = "random"
 	RoundRobin    = "round_robin"
@@ -149,4 +154,72 @@ func updateCurIndexes(fPath string, curKInd, curDirInd, curBlockNums int) error 
 	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v\n%v", curDirInd, curDirInd, curBlockNums)))
 
 	return err
+}
+
+func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
+	grandCount := &struct {
+		totalBlocksSize uint64
+		mu              sync.Mutex
+	}{}
+
+	var totalBlocksCount uint64
+	guideChannel := make(chan struct{}, 50)
+	wg := sync.WaitGroup{}
+
+	for i := 0; i < dcl; i++ {
+		subDirPath := filepath.Join(vPath, fmt.Sprintf("%v%v", dirPrefix, i))
+		_, err := os.Stat(subDirPath)
+		if err != nil {
+			continue
+		}
+
+		for j := 0; j < dcl; j++ {
+			blocksPath := filepath.Join(subDirPath, fmt.Sprint(j))
+			_, err = os.Stat(subDirPath)
+			if err != nil {
+				continue
+			}
+
+			f, err := os.Open(blocksPath)
+			if err != nil {
+				continue
+			}
+
+			for {
+				dirEntries, err := f.ReadDir(1000)
+				if errors.Is(err, io.EOF) {
+					err = nil
+					break
+				}
+
+				totalBlocksCount += uint64(len(dirEntries))
+
+				for _, dirEntry := range dirEntries {
+					guideChannel <- struct{}{}
+					wg.Add(1)
+
+					go func(dE fs.DirEntry) {
+						defer func() {
+							<-guideChannel
+							wg.Done()
+						}()
+
+						finfo, err := dE.Info()
+						if err != nil {
+							return
+						}
+						grandCount.mu.Lock()
+						defer grandCount.mu.Unlock()
+
+						grandCount.totalBlocksSize += uint64(finfo.Size())
+					}(dirEntry)
+
+				}
+			}
+		}
+	}
+
+	wg.Wait()
+
+	return grandCount.totalBlocksSize, totalBlocksCount
 }
