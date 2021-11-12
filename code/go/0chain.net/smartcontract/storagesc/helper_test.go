@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -26,17 +25,12 @@ import (
 
 // test helpers
 
-const x10 = 10 * 1000 * 1000 * 1000
-
 func toks(val state.Balance) string {
 	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
 }
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
 	logging.Logger = zap.NewNop()
 }
@@ -348,6 +342,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
+	conf.MinWritePrice = 0      // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
 	conf.MaxCharge = 0.50   // 50%

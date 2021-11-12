@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -535,103 +536,6 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	assert.Equal(t, alloc.Encode(), got.Encode())
 }
 
-func TestAddCurator(t *testing.T) {
-	t.Parallel()
-	const (
-		mockClientId     = "mock client id"
-		mockCuratorId    = "mock curator id"
-		mockAllocationId = "mock allocation id"
-	)
-	type args struct {
-		ssc      *StorageSmartContract
-		txn      *transaction.Transaction
-		input    []byte
-		balances chainState.StateContextI
-	}
-	type parameters struct {
-		clientId         string
-		info             addCuratorInput
-		existingCurators []string
-	}
-	type want struct {
-		err    bool
-		errMsg string
-	}
-	var setExpectations = func(t *testing.T, name string, p parameters, want want) args {
-		var balances = &mocks.StateContextI{}
-		var txn = &transaction.Transaction{
-			ClientID: p.clientId,
-		}
-		var ssc = &StorageSmartContract{
-			SmartContract: sci.NewSC(ADDRESS),
-		}
-		input, err := json.Marshal(p.info)
-		require.NoError(t, err)
-
-		var sa = StorageAllocation{
-			ID:    p.info.AllocationId,
-			Owner: p.clientId,
-		}
-		for _, curator := range p.existingCurators {
-			sa.Curators = append(sa.Curators, curator)
-		}
-		balances.On("GetTrieNode", sa.GetKey(ssc.ID)).Return(&sa, nil).Once()
-
-		balances.On(
-			"InsertTrieNode",
-			sa.GetKey(ssc.ID),
-			mock.MatchedBy(func(sa *StorageAllocation) bool {
-				if len(sa.Curators) < 1 {
-					return false
-				}
-				for i, curator := range p.existingCurators {
-					if curator != sa.Curators[i] {
-						return false
-					}
-				}
-				if p.info.CuratorId != sa.Curators[len(sa.Curators)-1] {
-					return false
-				}
-				return sa.ID == p.info.AllocationId && sa.Owner == p.clientId
-			})).Return("", nil).Once()
-
-		return args{ssc, txn, input, balances}
-	}
-
-	testCases := []struct {
-		name       string
-		parameters parameters
-		want       want
-	}{
-		{
-			name: "ok",
-			parameters: parameters{
-				clientId: mockClientId,
-				info: addCuratorInput{
-					CuratorId:    mockCuratorId,
-					AllocationId: mockAllocationId,
-				},
-			},
-		},
-	}
-	for _, test := range testCases {
-		test := test
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			args := setExpectations(t, test.name, test.parameters, test.want)
-
-			err := args.ssc.addCurator(args.txn, args.input, args.balances)
-
-			require.EqualValues(t, test.want.err, err != nil)
-			if err != nil {
-				require.EqualValues(t, test.want.errMsg, err.Error())
-				return
-			}
-			require.True(t, mock.AssertExpectationsForObjects(t, args.balances))
-		})
-	}
-}
-
 func TestTransferAllocation(t *testing.T) {
 	t.Parallel()
 	const (
@@ -790,6 +694,20 @@ func TestTransferAllocation(t *testing.T) {
 			},
 		},
 		{
+			name: "ok_owner",
+			parameters: parameters{
+				curator: mockOldOwner,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     0,
+				existingWPForAllocation: false,
+			},
+		},
+		{
 			name: "Err_not_curator",
 			parameters: parameters{
 				curator: mockCuratorId,
@@ -802,7 +720,7 @@ func TestTransferAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
 			},
 		},
 	}
@@ -1713,8 +1631,7 @@ func Test_finalize_allocation(t *testing.T) {
 	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
 	balances.setTransaction(t, tx)
 	var resp string
-	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-		balances)
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc), balances)
 	require.NoError(t, err)
 	require.NotZero(t, resp)
 

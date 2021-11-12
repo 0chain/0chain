@@ -1399,7 +1399,7 @@ func TestBlock_SetStateDB_Debug_False(t *testing.T) {
 
 	b := NewBlock("", 1)
 	prevB := NewBlock("", 0)
-	cs := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), util.Sequence(b.Round))
+	cs := util.NewMerklePatriciaTrie(util.NewMemoryNodeDB(), util.Sequence(b.Round), nil)
 
 	type fields struct {
 		UnverifiedBlockBody   UnverifiedBlockBody

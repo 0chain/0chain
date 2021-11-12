@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"sync"
@@ -54,6 +55,13 @@ func TransactionGenerator(c *chain.Chain) {
 	if blockSize <= 0 {
 		return
 	}
+
+	// validate the maxFee and minFee, maxFee must > minFee, otherwise, will panic
+	if maxFee-minFee <= 0 {
+		logging.Logger.Panic(fmt.Sprintf("development.txn_generation.max_txn_fee must be greater than "+
+			"development.txn_generation.min_txn_fee, max_fee: %v, min_fee: %v", maxFee, minFee))
+	}
+
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1

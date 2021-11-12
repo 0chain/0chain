@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 GIT_COMMIT=$(git rev-list -1 HEAD)
@@ -10,17 +10,6 @@ DOCKER_FILE="$DOCKER_DIR/Dockerfile"
 DOCKERCOMPOSE="$DOCKER_DIR/docker-compose.yml"
 
 cmd="build"
-
-for arg in "$@"
-do
-    case $arg in
-        -m1|--m1|m1)
-        echo "The build will be performed for Apple M1 chip"
-        cmd="buildx build --platform linux/amd64"
-        shift
-        ;;
-    esac
-done
 
 if [[ "$*" == *"--dev"* ]]
 then

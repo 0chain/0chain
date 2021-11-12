@@ -1,10 +1,15 @@
 package faucetsc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"time"
+
+	"0chain.net/core/common"
+	"0chain.net/core/util"
+
+	"0chain.net/smartcontract"
+
 	// "encoding/json"
 	"net/url"
 
@@ -17,7 +22,7 @@ const (
 	noClient        = "can't get client"
 )
 
-func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) personalPeriodicLimit(_ context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
@@ -38,7 +43,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params
 	return resp, nil
 }
 
-func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) globalPeriodicLimit(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil || gn == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, noLimitsMsg, noGlobalNodeMsg)
@@ -55,10 +60,39 @@ func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params ur
 	return resp, nil
 }
 
-func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+func (fc *FaucetSmartContract) pourAmount(_ context.Context, _ url.Values, balances c_state.StateContextI) (interface{}, error) {
 	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get pour amount", noGlobalNodeMsg)
 	}
 	return fmt.Sprintf("Pour amount per request: %v", gn.PourAmount), nil
+}
+
+func (fc *FaucetSmartContract) getConfigHandler(
+	_ context.Context,
+	_ url.Values,
+	balances c_state.StateContextI,
+) (interface{}, error) {
+	gn, err := fc.getGlobalNode(balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, common.NewError("get config handler", err.Error())
+	}
+
+	var faucetConfig *FaucetConfig
+	if gn == nil || gn.FaucetConfig == nil {
+		faucetConfig = getConfig()
+	} else {
+		faucetConfig = gn.FaucetConfig
+	}
+
+	return smartcontract.StringMap{
+		Fields: map[string]string{
+			Settings[PourAmount]:      fmt.Sprintf("%v", float64(faucetConfig.PourAmount)/1e10),
+			Settings[MaxPourAmount]:   fmt.Sprintf("%v", float64(faucetConfig.MaxPourAmount)/1e10),
+			Settings[PeriodicLimit]:   fmt.Sprintf("%v", float64(faucetConfig.PeriodicLimit)/1e10),
+			Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
+			Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
+			Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
+		},
+	}, nil
 }

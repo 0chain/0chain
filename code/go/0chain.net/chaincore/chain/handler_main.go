@@ -4,6 +4,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"net/http"
 )
 
@@ -14,5 +15,10 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 
 /*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
 func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+	if lfmb := GetServerChain().GetLatestFinalizedMagicBlock(); lfmb != nil {
+		return lfmb, nil
+	}
+
+	return nil, errors.New("could not find latest finalized magic block")
 }
+
