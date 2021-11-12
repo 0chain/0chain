@@ -21,8 +21,8 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/sharder"
-	"0chain.net/sharder/blockstore"
-	bsmocks "0chain.net/sharder/blockstore/mocks"
+	// "0chain.net/sharder/blockstore"
+	// bsmocks "0chain.net/sharder/blockstore/mocks"
 )
 
 func init() {
@@ -31,7 +31,7 @@ func init() {
 	block.SetupBlockSummaryEntity(store)
 	block.SetupEntity(store)
 	block.SetupMagicBlockMapEntity(store)
-	blockstore.SetupStore(bsmocks.NewBlockStoreMock())
+	// blockstore.SetupStore(bsmocks.NewBlockStoreMock())
 	round.SetupEntity(store)
 	common.SetupRootContext(context.TODO())
 }
