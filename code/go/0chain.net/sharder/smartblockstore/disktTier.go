@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,6 +34,8 @@ const (
 	WK = "WK"
 	//Warm directory content limit
 	WDCL = 1000
+
+	IndexStateFileName = "index.state"
 )
 
 type selectedDiskVolume struct {
@@ -41,7 +44,7 @@ type selectedDiskVolume struct {
 	err     error
 }
 
-type diskTier struct { //Hot Tier
+type diskTier struct {
 	Volumes          []*volume //List of hot volumes
 	SelectNextVolume func(volumes []*volume, prevInd int)
 	SelectedVolumeCh <-chan *selectedDiskVolume //volume that will be used to store blocks next
@@ -126,7 +129,8 @@ func (v *volume) selectDir(dTier *diskTier) error {
 
 		v.CurDirInd = dirInd
 		v.CurDirBlockNums = blocksCount
-		return nil
+
+		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
 	}
 
 	var kInd int
@@ -148,7 +152,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		v.CurDirInd = dirInd
 		v.CurDirBlockNums = 0
 
-		return nil
+		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
 	} else if err != nil {
 		return err
 	}
@@ -160,7 +164,8 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	v.CurKInd = kInd
 	v.CurDirInd = dirInd
 	v.CurDirBlockNums = blocksCount
-	return nil
+
+	return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
 }
 
 func (v *volume) write(b *block.Block, data []byte) (bPath string, err error) {
@@ -397,7 +402,6 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) *dis
 		startVolumes(volumes, &dTier) //will panic if right config setup is not provided
 	case "restart": //Nothing is lost but sharder was off for maintenance mode
 		restartVolumes(volumes, &dTier)
-		//
 	case "recover": //Metadata is lost
 		recoverVolumeMetaData(volumes, &dTier)
 	case "repair": //Metadata is present but some disk failed
@@ -628,6 +632,8 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 
 		vPath := vPathI.(string)
 
+		var curDirInd, curKInd, curDirBlockNums int
+		var err error
 		if shouldDelete {
 			if err := os.RemoveAll(vPath); err != nil {
 				Logger.Error(err.Error())
@@ -635,6 +641,12 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			}
 
 			if err := os.MkdirAll(vPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+		} else {
+			curKInd, curDirInd, curDirBlockNums, err = getCurIndexes(filepath.Join(vPath, "index.state"))
+			if err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
@@ -680,11 +692,16 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			allowedBlockSize = allowedBlockSizeI.(uint64)
 		}
 
+		//Create index state which stores curDirBlockNums, curDir index and curKIndex
+
 		dTier.Volumes = append(dTier.Volumes, &volume{
 			Path:                vPath,
 			AllowedBlockNumbers: allowedBlockNumbers,
 			AllowedBlockSize:    allowedBlockSize,
 			SizeToMaintain:      sizeToMaintain,
+			CurKInd:             curKInd,
+			CurDirInd:           curDirInd,
+			CurDirBlockNums:     curDirBlockNums,
 		})
 	}
 
@@ -714,97 +731,147 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			mu               sync.Mutex
 		}{}
 
-		for i := 0; i < dTier.DCL; i++ {
-			volIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", dTier.DirPrefix, i))
-			if _, err := os.Stat(volIndexPath); err != nil {
-				Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, volIndexPath, err))
-				continue
-			}
+		var shouldRecover bool
+		recoveryI, ok := mVolume["recovery"]
+		if ok {
+			shouldRecover = recoveryI.(bool)
+		}
 
-			for j := 0; j < dTier.DCL; j++ {
-				blockSubDirPath := filepath.Join(volIndexPath, fmt.Sprintf("%v", j))
-				if _, err := os.Stat(blockSubDirPath); err != nil {
-					Logger.Debug(err.Error())
+		if shouldRecover {
+
+			for i := 0; i < dTier.DCL; i++ {
+				volIndexPath := filepath.Join(volPath, fmt.Sprintf("%v%v", dTier.DirPrefix, i))
+				if _, err := os.Stat(volIndexPath); err != nil {
+					Logger.Debug(fmt.Sprintf("Error while recovering metadata for index %v; Full path: %v; err: %v", i, volIndexPath, err))
 					continue
 				}
 
-				guideChannel <- struct{}{}
-				recoverWG.Add(1)
-
-				//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
-				//for multi disks? Need some benchmark
-				go func(gPath string) { //gPath Path for goroutine
-					defer recoverWG.Done()
-					defer func() {
-						<-guideChannel
-					}()
-
-					var recoverCount, totalBlocksCount int
-
-					var f *os.File
-					f, _ = os.Open(gPath)
-					defer f.Close()
-
-					var dirEntries []os.DirEntry
-					var err error
-					for {
-						dirEntries, err = f.ReadDir(1000)
-						if errors.Is(err, io.EOF) {
-							err = nil
-							break
-						}
-						for _, dirEntry := range dirEntries {
-							var bwr BlockWhereRecord
-							var errorOccurred bool
-							var blockSize uint64
-							fileName := dirEntry.Name()
-							hash := strings.Split(fileName, ".")[0]
-							blockPath := filepath.Join(gPath, fileName)
-
-							finfo, err := dirEntry.Info()
-							if err != nil {
-								Logger.Error(fmt.Sprintf("Error: %v while getting file info for file: %v", err, blockPath))
-								errorOccurred = true
-								goto CountUpdate
-							}
-
-							blockSize = uint64(finfo.Size())
-							bwr = BlockWhereRecord{
-								Hash:      hash,
-								Tiering:   HotTier,
-								BlockPath: blockPath,
-							}
-
-							if err := bwr.AddOrUpdate(); err != nil {
-								Logger.Error(fmt.Sprintf("Error: %v, while adding metadata for file: %v", err, blockPath))
-								errorOccurred = true
-								goto CountUpdate
-							} else {
-								continue
-							}
-
-						CountUpdate:
-							totalBlocksCount++
-							grandCount.mu.Lock()
-							grandCount.totalBlocksCount++
-							grandCount.totalBlocksSize += blockSize
-							if !errorOccurred {
-								grandCount.recoveredCount++
-							}
-							grandCount.mu.Unlock()
-							recoverCount++
-						}
+				for j := 0; j < dTier.DCL; j++ {
+					blockSubDirPath := filepath.Join(volIndexPath, fmt.Sprintf("%v", j))
+					if _, err := os.Stat(blockSubDirPath); err != nil {
+						Logger.Debug(err.Error())
+						continue
 					}
-					Logger.Info(fmt.Sprintf("%v Meta records recovered of %v blocks from path: %v", recoverCount, totalBlocksCount, gPath))
 
-				}(blockSubDirPath)
+					guideChannel <- struct{}{}
+					recoverWG.Add(1)
 
+					//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+					//for multi disks? Need some benchmark
+					go func(gPath string) { //gPath Path for goroutine
+						defer recoverWG.Done()
+						defer func() {
+							<-guideChannel
+						}()
+
+						var recoverCount, totalBlocksCount int
+
+						var f *os.File
+						f, _ = os.Open(gPath)
+						defer f.Close()
+
+						var dirEntries []os.DirEntry
+						var err error
+						for {
+							dirEntries, err = f.ReadDir(1000)
+							if errors.Is(err, io.EOF) {
+								err = nil
+								break
+							}
+							for _, dirEntry := range dirEntries {
+								var bwr BlockWhereRecord
+								var ubr UnmovedBlockRecord
+								var errorOccurred bool
+								var blockSize uint64
+								fileName := dirEntry.Name()
+								hash := strings.Split(fileName, ".")[0]
+								blockPath := filepath.Join(gPath, fileName)
+
+								finfo, err := dirEntry.Info()
+								if err != nil {
+									Logger.Error(fmt.Sprintf("Error: %v while getting file info for file: %v", err, blockPath))
+									errorOccurred = true
+									goto CountUpdate
+								}
+
+								blockSize = uint64(finfo.Size())
+								bwr = BlockWhereRecord{
+									Hash:      hash,
+									Tiering:   HotTier,
+									BlockPath: blockPath,
+								}
+
+								ubr = UnmovedBlockRecord{
+									Hash:      hash,
+									CreatedAt: finfo.ModTime(),
+								}
+
+								if err, uErr := bwr.AddOrUpdate(), ubr.Add(); !(err == nil && uErr == nil) {
+									Logger.Error(fmt.Sprintf("BwrError: %v, UbrError: %v, while adding metadata for file: %v", err, uErr, blockPath))
+									errorOccurred = true
+									goto CountUpdate
+								} else {
+									continue
+								}
+
+							CountUpdate:
+								totalBlocksCount++
+								grandCount.mu.Lock()
+								grandCount.totalBlocksCount++
+								grandCount.totalBlocksSize += blockSize
+								if !errorOccurred {
+									grandCount.recoveredCount++
+								}
+								grandCount.mu.Unlock()
+								recoverCount++
+							}
+						}
+						Logger.Info(fmt.Sprintf("%v Meta records recovered of %v blocks from path: %v", recoverCount, totalBlocksCount, gPath))
+
+					}(blockSubDirPath)
+
+				}
+			}
+			recoverWG.Wait() //wait for all goroutine to complete
+			Logger.Info("Completed meta data recovery")
+
+		} else {
+			if err := os.RemoveAll(volPath); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := os.MkdirAll(volPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0, 0); err != nil {
+				Logger.Error(err.Error())
+				continue
 			}
 		}
-		recoverWG.Wait() //wait for all goroutine to complete
-		Logger.Info("Completed meta data recovery")
 		//Check available size and inodes and add volume to volume pool
 		availableSize, availableInodes, err := getAvailableSizeAndInodes(volPath)
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
+
+		/*
+			curKInd, curDirInd and curBlockNums are important parameters while selecting Directory to write new blocks.
+			The new block path is always; fmt.Sprintf("%v%v/%v", "WK", curKInd, curDirInd) when next volume is selected.
+			If curBlockNums exceeds some number then the directory is skipped and jumped to next directory and if that next directory is full then volume raises error; ErrVolumeFull
+
+			So above parameters are like the state of volume.
+			Also since the blocks is regularly moved if cold Tiering is enabled it will be difficult to know the indexes so each time a volume is selected its state is written into
+			"index.state" file inside volumePath.
+
+			If index file is lost then one can put blocks in any order and update the index file but the directory should be of above format and limit should be maintained.
+
+			For recovered metadata unmoved blocks creation time will be the file creation time(As for linux; last modidification time).
+		*/
+		curKInd, curDirInd, curBlockNums, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
@@ -859,10 +926,63 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			AllowedBlockSize:    allowedBlockSize,
 			SizeToMaintain:      sizeToMaintain,
 			BlocksCount:         uint64(grandCount.totalBlocksCount),
+			CurKInd:             curKInd,
+			CurDirInd:           curDirInd,
+			CurDirBlockNums:     curBlockNums,
 		})
 	}
 
 	if len(dTier.Volumes) < len(mVolumes)/2 {
 		panic(ErrFiftyPercent)
 	}
+}
+
+func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err error) {
+	var f *os.File
+	if f, err = os.Open(fPath); err != nil {
+		return
+	}
+
+	scanner := bufio.NewScanner(f)
+	curKIndStr := scanner.Text()
+	more := scanner.Scan()
+	if more == false {
+		err = errors.New("Current Directory Index missing")
+		return
+	}
+	curDirIndStr := scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		err = errors.New("Current Directory Block numbers missing")
+		return
+	}
+	curBlockNumsStr := scanner.Text()
+
+	curKInd, err = strconv.Atoi(curKIndStr)
+	if err != nil {
+		return
+	}
+
+	curDirInd, err = strconv.Atoi(curDirIndStr)
+	if err != nil {
+		return
+	}
+
+	curBlockNums, err = strconv.Atoi(curBlockNumsStr)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func updateCurIndexes(fPath string, curKInd, curDirInd, curBlockNums int) error {
+	f, err := os.Create(fPath)
+	if err != nil {
+		return nil
+	}
+
+	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v\n%v", curDirInd, curDirInd, curBlockNums)))
+
+	return err
 }
