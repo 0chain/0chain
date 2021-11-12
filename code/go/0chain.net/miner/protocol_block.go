@@ -53,7 +53,8 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(ctx, b, txn); err != nil {
+	rset, wset, err := mc.UpdateState(ctx, b, txn)
+	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))
@@ -61,6 +62,8 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	}
 	b.Txns = append(b.Txns, txn)
 	b.AddTransaction(txn)
+	b.AccessMap[txn.GetKey()] = block.NewAccessList(rset, wset)
+
 	return nil
 }
 

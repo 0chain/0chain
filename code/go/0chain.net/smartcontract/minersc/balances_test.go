@@ -175,3 +175,38 @@ func (tb *testBalances) AddMint(mint *state.Mint) error {
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
 	return nil
 }
+func (tb *testBalances) GetClientState(clientID string) (*state.State, error) {
+	//node, err := sc.GetClientTrieNode(clientID)
+	//
+	//if err != nil {
+	//	if err != util.ErrValueNotPresent {
+	//		return nil, err
+	//	}
+	//	return nil, err
+	//}
+	//s = sc.clientStateDeserializer.Deserialize(node).(*state.State)
+	return &state.State{}, nil
+}
+
+func (tb *testBalances) GetClientTrieNode(key datastore.Key) (util.Serializable, error) {
+	return tb.GetTrieNode(key)
+}
+
+func (tb *testBalances) InsertClientTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error) {
+	return tb.InsertTrieNode(key, node)
+}
+
+func (tb *testBalances) DeleteClientTrieNode(key datastore.Key) (datastore.Key, error) {
+	return tb.DeleteTrieNode(key)
+}
+
+func (tb *testBalances) GetRWSets() (rset map[string]bool, wset map[string]bool) {
+	return map[string]bool{}, map[string]bool{}
+}
+
+func (tb *testBalances) GetVersion() util.Sequence {
+	return util.Sequence(0)
+}
+
+func (tb *testBalances) PrintStates() {
+}

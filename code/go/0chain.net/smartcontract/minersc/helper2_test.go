@@ -77,6 +77,43 @@ func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
 }
 
+func (sc *mockStateContext) GetClientState(clientID string) (*state.State, error) {
+	//node, err := sc.GetClientTrieNode(clientID)
+	//
+	//if err != nil {
+	//	if err != util.ErrValueNotPresent {
+	//		return nil, err
+	//	}
+	//	return nil, err
+	//}
+	//s = sc.clientStateDeserializer.Deserialize(node).(*state.State)
+	return &state.State{}, nil
+}
+
+func (sc *mockStateContext) GetClientTrieNode(clientId datastore.Key) (util.Serializable, error) {
+	return sc.GetTrieNode(clientId)
+
+}
+
+func (sc *mockStateContext) InsertClientTrieNode(clientId datastore.Key, node util.Serializable) (datastore.Key, error) {
+	return sc.InsertTrieNode(clientId, node)
+}
+
+func (sc *mockStateContext) DeleteClientTrieNode(clientId datastore.Key) (datastore.Key, error) {
+	return sc.DeleteTrieNode(clientId)
+}
+
+func (sc *mockStateContext) GetRWSets() (rset map[string]bool, wset map[string]bool) {
+	return map[string]bool{}, map[string]bool{}
+}
+
+func (sc *mockStateContext) GetVersion() util.Sequence {
+	return sc.ctx.GetVersion()
+}
+
+func (sc *mockStateContext) PrintStates() {
+}
+
 func zcnToBalance(token float64) state.Balance {
 	return state.Balance(token * float64(x10))
 }

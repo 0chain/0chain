@@ -161,7 +161,7 @@ func setUpMpt(
 	control.AddControlObjects(balances)
 	log.Println("added control objects")
 
-	return pMpt, balances.GetState().GetRoot(), benchmark.BenchData{
+	return pMpt, pMpt.GetRoot(), benchmark.BenchData{
 		Clients:     clients,
 		PublicKeys:  publicKeys,
 		PrivateKeys: privateKeys,

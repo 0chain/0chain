@@ -122,7 +122,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) error {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (rset, wset map[datastore.Key]bool, err error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, txn)
@@ -140,13 +140,12 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 		c.GetSignatureScheme)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
-	err error) {
+func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (rset map[datastore.Key]bool, wset map[datastore.Key]bool, err error) {
 
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {
-		return common.NewErrorf("update_state_failed",
+		return nil, nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
 	}
@@ -192,7 +191,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+		return nil, nil, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -272,7 +271,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	}
 
 	txn.Status = transaction.TxnSuccess
-	return
+	rset, wset = sctx.GetRWSets()
+	return rset, wset, nil
 }
 
 /*
@@ -288,9 +288,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		return common.InvalidRequest("from and to client should be different for balance transfer")
 	}
 	b := sctx.GetBlock()
-	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	fs, err := c.getState(clientState, fromClient)
+	fs, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -301,7 +300,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
 			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", fromClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
+			sctx.PrintStates()
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", fromClient, err))
 		}
 		return err
@@ -309,7 +308,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if fs.Balance < amount {
 		return ErrInsufficientBalance
 	}
-	ts, err := c.getState(clientState, toClient)
+	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -320,7 +319,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
 			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
+			sctx.PrintStates()
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
 		return err
@@ -329,9 +328,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		logging.Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
-		_, err = clientState.Delete(util.Path(fromClient))
+		_, err = sctx.DeleteClientTrieNode(fromClient)
 	} else {
-		_, err = clientState.Insert(util.Path(fromClient), fs)
+		_, err = sctx.InsertClientTrieNode(fromClient, fs)
 	}
 	if err != nil {
 		if state.DebugTxn() {
@@ -346,7 +345,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	_, err = sctx.InsertClientTrieNode(toClient, ts)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
@@ -366,9 +365,8 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		return nil
 	}
 	b := sctx.GetBlock()
-	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	ts, err := c.getState(clientState, toClient)
+	ts, err := sctx.GetClientState(toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -379,7 +377,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 				fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
 			fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-			block.PrintStates(clientState, b.ClientState)
+			sctx.PrintStates()
 			logging.Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
 		if state.Debug() {
@@ -389,7 +387,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	}
 	sctx.SetStateContext(ts)
 	ts.Balance += amount
-	_, err = clientState.Insert(util.Path(toClient), ts)
+	_, err = sctx.InsertClientTrieNode(toClient, ts)
 	if err != nil {
 		if state.DebugTxn() {
 			if config.DevConfiguration.State {
@@ -401,7 +399,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 					fmt.Fprintf(block.StateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 				}
 				fmt.Fprintf(block.StateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
-				block.PrintStates(clientState, b.ClientState)
+				sctx.PrintStates()
 				logging.Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 		}
