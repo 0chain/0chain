@@ -1,6 +1,8 @@
 package main
 
 import (
+	"0chain.net/chaincore/client"
+	"0chain.net/core/logging"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +16,10 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
+)
+
+var (
+	rootPath = "/0chain/go/0chain.net/docker.local/config"
 )
 
 type cmdMagicBlock struct {
@@ -34,7 +40,7 @@ func new() *cmdMagicBlock {
 // setupYaml method initalizes a configuration file based on yaml
 func (cmd *cmdMagicBlock) setupYaml(config string) error {
 	cmd.yml = newYaml()
-	fPath := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/%v.yaml", config)
+	fPath := fmt.Sprintf("%v/%v.yaml", rootPath, config)
 	if err := cmd.yml.readYaml(fPath); err != nil {
 		return err
 	}
@@ -142,7 +148,7 @@ func (cmd *cmdMagicBlock) saveBlock() error {
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf("/0chain/go/0chain.net/docker.local/config/%v.json", cmd.yml.MagicBlockFilename)
+	path := fmt.Sprintf("%v/%v.json", rootPath, cmd.yml.MagicBlockFilename)
 	if err := ioutil.WriteFile(path, file, 0644); err != nil {
 		return err
 	}
@@ -160,7 +166,7 @@ func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 		if cmd.yml.DKGSummaryFilename != "" {
 			filename = fmt.Sprintf("b0mnode%v_%v_dkg.json", n.SetIndex+1, cmd.yml.DKGSummaryFilename)
 		}
-		path := "/0chain/go/0chain.net/docker.local/config/" + filename
+		path := fmt.Sprintf("%v/%v", rootPath, filename)
 		if err := ioutil.WriteFile(path, file, 0644); err != nil {
 			return err
 		}
@@ -170,6 +176,8 @@ func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 
 func main() {
 	magicBlockConfig := flag.String("config_file", "", "config_file")
+	logging.InitLogging("development")
+
 	flag.Parse()
 
 	cmd := new()
@@ -177,7 +185,7 @@ func main() {
 		log.Printf("Failed to read configuration file (%v) for magicBlock. Error: %v\n", *magicBlockConfig, err)
 		return
 	}
-
+	client.SetClientSignatureScheme("bls0chain")
 	cmd.setupBlock()
 	cmd.setupNodes()
 	cmd.setupMPKS()

@@ -226,12 +226,14 @@ func TestMagicBlock_Decode(t *testing.T) {
 }
 
 func TestMagicBlock_GetHash(t *testing.T) {
+	client.SetClientSignatureScheme("ed25519")
+	pbK, _, err := encryption.GenerateKeys()
 	mb := NewMagicBlock()
 	mb.MagicBlockNumber = 10
 	mb.PreviousMagicBlockHash = encryption.Hash("prev mb")
 	mb.StartingRound = 1
 	mb.Miners = node.NewPool(1)
-	n, err := makeTestNode("")
+	n, err := makeTestNode(pbK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +452,7 @@ func TestMagicBlock_VerifyMinersSignatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	client.SetClientSignatureScheme("ed25519")
 	mb := NewMagicBlock()
 	mb.Miners = node.NewPool(1)
 	n, err := makeTestNode(pbK)
@@ -458,8 +460,6 @@ func TestMagicBlock_VerifyMinersSignatures(t *testing.T) {
 		t.Fatal(err)
 	}
 	mb.Miners.AddNode(n)
-
-	client.SetClientSignatureScheme("ed25519")
 
 	type fields struct {
 		HashIDField            datastore.HashIDField
