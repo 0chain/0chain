@@ -53,6 +53,10 @@ func (sm *SmartStore) Write(b *block.Block) error {
 	return sm.write(b)
 }
 
+func (sm *SmartStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
+	return sm.read(bs.Hash, bs.Round)
+}
+
 func (sm *SmartStore) Read(hash string, round int64) (b *block.Block, err error) {
 	return sm.read(hash, round)
 }
@@ -847,4 +851,8 @@ func readFromColdTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, 
 	}
 
 	return
+}
+
+func GetStore() *SmartStore {
+	return &smartStore
 }
