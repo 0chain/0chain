@@ -13,13 +13,6 @@ import (
 	. "0chain.net/core/logging"
 )
 
-/*
-TODOs:
-1. proper mutex locking
-2. proper volume initialization when recovering or restarting
-3. Fill config properly
-
-*/
 type Tiering uint8
 
 const (
