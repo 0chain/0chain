@@ -325,8 +325,9 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		return
 	}
 
-	err := mc.verifyTicketsWithRetry(ctx, rn, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, 3)
-	if err != nil {
+	cctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	if err := mc.VerifyTickets(cctx, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, rn); err != nil {
 		logging.Logger.Error("handle vt. msg - verification ticket failed", zap.Error(err))
 		return
 	}
