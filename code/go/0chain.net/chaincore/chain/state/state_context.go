@@ -30,7 +30,7 @@ var (
  */
 
 //StateContextI - a state context interface. These interface are available for the smart contract
-// todo this needs to be split up into different interfaces depending on location
+// todo this needs to be split up into different interfaces
 type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
