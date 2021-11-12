@@ -15,23 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func (c *Chain) ticketsVerifier(ctx context.Context, f func() error) error {
-	select {
-	case c.ticketsVerifyRequestC <- struct{}{}:
-		defer func() {
-			<-c.ticketsVerifyRequestC
-		}()
-		return f()
-	case <-ctx.Done():
-		logging.Logger.Debug("tickets verifier is full", zap.Int("verifier chan size", len(c.ticketsVerifyRequestC)))
-		return ctx.Err()
-	}
-}
-
 // VerifyTickets verifies tickets aggregately
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
-	return c.ticketsVerifier(ctx, func() error {
+	return c.verifyTicketsWithContext.Run(ctx, func() error {
 		sigs := make([]string, len(bvts))
 		pks := make([]string, len(bvts))
 		hashes := make([]string, len(bvts))

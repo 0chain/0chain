@@ -177,9 +177,9 @@ type Chain struct {
 
 	minersPublicKeys *cache.LRU
 
-	vldTxnsMtx            *sync.Mutex
-	validatedTxnsCache    map[string]string // validated transactions, key as hash, value as signature
-	ticketsVerifyRequestC chan struct{}
+	vldTxnsMtx               *sync.Mutex
+	validatedTxnsCache       map[string]string // validated transactions, key as hash, value as signature
+	verifyTicketsWithContext *common.WithContextFunc
 
 	notarizedBlockVerifyC map[string]chan struct{}
 	nbvcMutex             *sync.Mutex
@@ -485,7 +485,7 @@ func Provider() datastore.Entity {
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
-	c.ticketsVerifyRequestC = make(chan struct{}, 50)
+	c.verifyTicketsWithContext = common.NewWithContextFunc(4)
 	c.notarizedBlockVerifyC = make(map[string]chan struct{})
 	c.nbvcMutex = &sync.Mutex{}
 	c.blockSyncC = make(map[string]chan chan *block.Block)
