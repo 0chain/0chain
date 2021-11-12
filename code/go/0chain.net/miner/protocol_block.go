@@ -302,34 +302,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	return
 }
 
-// WithCancelFunc provides the capacity for canceling a function
-type WithCancelFunc struct {
-	c chan struct{}
-}
-
-// NewWithCancelFunc returns a WithCancelFunc instance
-func NewWithCancelFunc(size int) *WithCancelFunc {
-	return &WithCancelFunc{
-		c: make(chan struct{}, size),
-	}
-}
-
-// Run tries to acquire a slot from a buffered channel and run the function
-func (wcf *WithCancelFunc) Run(ctx context.Context, f func() error) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case wcf.c <- struct{}{}:
-		defer func() {
-			<-wcf.c
-		}()
-		return f()
-	}
-}
-
 // ValidateTransactions validates the transactions in the block
 func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
-	return mc.validTxnsWithCancel.Run(ctx, func() error {
+	return mc.validateTxnsWithContext.Run(ctx, func() error {
 		var roundMismatch bool
 		var cancel bool
 		numWorkers := len(b.Txns) / mc.ValidationBatchSize
