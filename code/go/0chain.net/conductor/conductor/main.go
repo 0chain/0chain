@@ -838,6 +838,7 @@ func (r *Runner) Run() (err error, success bool) {
 
 	cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			r.conf.CleanupEnv()
 			var report reportTestCase
 			report.name = testCase.Name
 			report.s = time.Now()

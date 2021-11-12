@@ -694,6 +694,20 @@ func TestTransferAllocation(t *testing.T) {
 			},
 		},
 		{
+			name: "ok_owner",
+			parameters: parameters{
+				curator: mockOldOwner,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     0,
+				existingWPForAllocation: false,
+			},
+		},
+		{
 			name: "Err_not_curator",
 			parameters: parameters{
 				curator: mockCuratorId,
@@ -706,7 +720,7 @@ func TestTransferAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
 			},
 		},
 	}

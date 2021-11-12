@@ -265,9 +265,13 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater than max_read_price allowed")
 	}
+	if t.WritePrice < conf.MinWritePrice {
+		return errors.New("write_price is greater than max_write_price allowed")
+	}
 	if t.WritePrice > conf.MaxWritePrice {
 		return errors.New("write_price is greater than max_write_price allowed")
 	}
+
 	return // nil
 }
 

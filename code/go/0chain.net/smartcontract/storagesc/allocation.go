@@ -473,6 +473,7 @@ type updateAllocationRequest struct {
 	Size         int64            `json:"size"`            // difference
 	Expiration   common.Timestamp `json:"expiration_date"` // difference
 	SetImmutable bool             `json:"set_immutable"`
+	UpdateTerms  bool             `json:"update_terms"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -998,6 +999,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			err.Error())
 	}
 
+	if request.UpdateTerms {
+		if len(blobbers) != len(alloc.BlobberDetails) {
+			return "", common.NewError("allocation_updating_failed",
+				"error allocation blobber size mismatch")
+		}
+
+		for i, bd := range alloc.BlobberDetails {
+			bd.Terms = blobbers[i].Terms
+		}
+	}
+
 	// adjust expiration
 	var newExpiration = alloc.Expiration + request.Expiration
 
@@ -1228,20 +1240,6 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			"calculating rest challenges success/fail rates: "+err.Error())
 	}
 
-	// SC configurations
-	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
-		return "", common.NewError("alloc_cancel_failed",
-			"can't get SC configurations: "+err.Error())
-	}
-
-	if fctc := conf.FailedChallengesToCancel; fctc > 0 {
-		if alloc.Stats == nil || alloc.Stats.FailedChallenges < int64(fctc) {
-			return "", common.NewError("alloc_cancel_failed",
-				"not enough failed challenges of allocation to cancel")
-		}
-	}
-
 	// can cancel
 	// new values
 	alloc.Expiration, alloc.ChallengeCompletionTime = t.CreationDate, 0
@@ -1363,21 +1361,54 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get SC configurations: "+err.Error())
 	}
 
-	// write pool
-	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+	wps, err := alloc.getAllocationPools(sc, balances)
+	if err != nil {
+		return common.NewErrorf("allocation_extending_failed", "%v", err)
+	}
+	aps := wps.activeAllocationPools(alloc.ID, t.CreationDate)
+	if len(aps) == 0 {
 		return common.NewError("fini_alloc_failed",
-			"can't get user's write pools: "+err.Error())
+			"no allocation pools to pay min lock demand")
+	}
+	apIndex := 0
+	// we can use the i for the blobbers list above because of algorithm
+	// of the getAllocationBlobbers method; also, we can use the i in the
+	// passRates list above because of algorithm of the adjustChallenges
+	for i, d := range alloc.BlobberDetails {
+		// min lock demand rest
+		var paid state.Balance = 0
+		if lack := d.MinLockDemand - d.Spent; lack > 0 {
+			for apIndex < len(aps) && lack > 0 {
+				pay := lack
+				if pay > aps[apIndex].Balance {
+					pay = aps[apIndex].Balance
+				}
+				_, err := transferReward(sc.ID, aps[apIndex].ZcnPool, sps[i], pay, balances)
+				if err != nil {
+					return fmt.Errorf("alloc_cancel_failed, paying min_lock lack %v for blobber "+
+						"%v from alocation poosl %v, minlock demand %v spent %v error %v",
+						lack, d.BlobberID, aps, d.MinLockDemand, d.Spent, err.Error())
+				}
+				if aps[apIndex].Balance == 0 {
+					apIndex++
+				}
+
+				paid += pay
+				lack -= pay
+			}
+			if lack > 0 {
+				return fmt.Errorf("alloc_cancel_failed, paying min_lock for blobber %v"+
+					"ammount was short by %v", d.BlobberID, lack)
+			}
+		}
+		d.Spent += paid
+		d.FinalReward += paid
+	}
+	if err := wps.saveWritePools(sc.ID, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"saving allocation write pools: "+err.Error())
 	}
 
-	// challenge pool
-	var cp *challengePool
-	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get related challenge pool: "+err.Error())
-	}
-
-	// blobbers
 	var blobbers []*StorageNode
 	if blobbers, err = sc.getAllocationBlobbers(alloc, balances); err != nil {
 		return common.NewError("fini_alloc_failed",
@@ -1390,32 +1421,19 @@ func (sc *StorageSmartContract) finishAllocation(
 			"can't get all blobbers list: "+err.Error())
 	}
 
-	// we can use the i for the blobbers list above because of algorithm
-	// of the getAllocationBlobbers method; also, we can use the i in the
-	// passRates list above because of algorithm of the adjustChallenges
-	var cpLeft = cp.Balance // tokens left in related challenge pool
-	for i, d := range alloc.BlobberDetails {
-		// min lock demand rest
-		var fctrml = conf.FailedChallengesToRevokeMinLock
-		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
-			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				if _, err := transferReward(sc.ID, *cp.ZcnPool, sps[i], lack, balances); err != nil {
-					return common.NewError("alloc_cancel_failed",
-						"paying min_lock for "+d.BlobberID+": "+err.Error())
-				}
-				d.Spent += lack
-				d.FinalReward += lack
-				cpLeft -= lack
-			}
-		}
+	var cp *challengePool
+	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"can't get related challenge pool: "+err.Error())
 	}
+
 	var passPayments state.Balance = 0
 	for i, d := range alloc.BlobberDetails {
 		var b = blobbers[i] // related blobber
-		if alloc.UsedSize > 0 && cpLeft > 0 && passRates[i] > 0 && d.Stats != nil {
+		if alloc.UsedSize > 0 && cp.Balance > 0 && passRates[i] > 0 && d.Stats != nil {
 			var (
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
-				move  = state.Balance(float64(cpLeft) * ratio * passRates[i])
+				move  = state.Balance(float64(cp.Balance) * ratio * passRates[i])
 			)
 			var reward state.Balance
 			if reward, err = transferReward(sc.ID, *cp.ZcnPool, sps[i], move, balances); err != nil {
@@ -1448,9 +1466,16 @@ func (sc *StorageSmartContract) finishAllocation(
 		// update the blobber in all (replace with existing one)
 		allb.Nodes.update(b)
 	}
-	cp.Balance = cpLeft - passPayments
+	cp.Balance -= passPayments
 	// move challenge pool rest to write pool
 	alloc.MovedBack += cp.Balance
+
+	// write pool
+	var wp *writePool
+	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"can't get user's write pools: "+err.Error())
+	}
 	err = cp.moveToWritePool(alloc, "", alloc.Until(), wp, cp.Balance)
 	if err != nil {
 		return common.NewError("fini_alloc_failed",
@@ -1531,9 +1556,9 @@ func (sc *StorageSmartContract) curatorTransferAllocation(
 		return "", common.NewError("curator_transfer_allocation_failed", err.Error())
 	}
 
-	if !alloc.isCurator(txn.ClientID) {
+	if !alloc.isCurator(txn.ClientID) && alloc.Owner != txn.ClientID {
 		return "", common.NewError("curator_transfer_allocation_failed",
-			"only curators can transfer allocations; "+txn.ClientID+" is not a curator")
+			"only curators or the owner can transfer allocations; "+txn.ClientID+" is neither")
 	}
 
 	if err := sc.removeUserAllocation(alloc.Owner, alloc, balances); err != nil {

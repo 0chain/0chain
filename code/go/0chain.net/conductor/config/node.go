@@ -29,7 +29,7 @@ type Node struct {
 }
 
 // Start the Node.
-func (n *Node) Start(logsDir string) (err error) {
+func (n *Node) Start(logsDir string, env map[string]string) (err error) {
 	if n.WorkDir == "" {
 		n.WorkDir = "."
 	}
@@ -45,6 +45,11 @@ func (n *Node) Start(logsDir string) (err error) {
 	cmd.Dir = n.WorkDir
 	if n.Env != "" {
 		cmd.Env = append(os.Environ(), n.Env)
+	}
+
+	for key, value := range env {
+		pair := key + "=" + value
+		cmd.Env = append(cmd.Env, pair)
 	}
 
 	logsDir = filepath.Join(logsDir, string(n.Name))
