@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,7 +22,10 @@ import (
 var ErrSendingToSelf = common.NewError("sending_to_self", "Message can't be sent to oneself")
 
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
-var MaxConcurrentRequests = 2
+var (
+	MaxConcurrentRequests        = 2
+	n2nVerifyRequestsWithContext = common.NewWithContextFunc(4)
+)
 
 /*SetMaxConcurrentRequests - set the max number of concurrent requests */
 func SetMaxConcurrentRequests(maxConcurrentRequests int) {
@@ -374,10 +378,22 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 			return
 		}
-		// TODO: add this back
-		//if !validateSendRequest(sender, r) {
-		//	return
-		//}
+
+		vctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		if err := n2nVerifyRequestsWithContext.Run(vctx, func() error {
+			if !validateSendRequest(sender, r) {
+				return errors.New("failed to validate request")
+			}
+			return nil
+		}); err != nil {
+			logging.N2n.Error("message received - failed to validate request",
+				zap.String("from", nodeID),
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.Error(err))
+			return
+		}
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		entityID := r.Header.Get(HeaderRequestEntityID)
 		entityMetadata := datastore.GetEntityMetadata(entityName)
