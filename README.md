@@ -28,6 +28,7 @@ In the git/0chain run the following command
 
 ```
 ./docker.local/bin/init.setup.sh
+
 ```
 
 ### Setup Network
