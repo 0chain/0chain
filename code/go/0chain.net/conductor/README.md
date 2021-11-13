@@ -265,6 +265,7 @@ enable:
 
 - `set_monitor` - initiate the node from where blockchain events will be accepted
 - `cleanup_bc` - stop all nodes, reset rounds, and clean up data using `cleanup_command` defined on `conductor.config.yaml`
+- `env` - set environment variables that might affect commands to start/stop nodes. e.g. `CLI_ARGS` will effectively add arguments to command in `b0docker-compose.yml`
 
 2. **common nodes control**
 

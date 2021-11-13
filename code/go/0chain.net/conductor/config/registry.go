@@ -28,6 +28,10 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return ex.CleanupBC(tm)
 	})
+	register("env", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return env(ex, val)
+	})
 
 	// common nodes control (start / stop, lock / unlock)
 
