@@ -19,6 +19,7 @@ development:
     miner: true
     multisig: true
     vesting: true
+    magma: true
     zcn: true
   txn_generation:
     wallets: 50

@@ -1,0 +1,27 @@
+@startuml
+
+title User Flows
+
+boundary User
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+User -> ANSC : Register
+Activate ANSC
+ANSC -> State : Create User
+Activate State
+State <--> MPT : Read User
+State -> State : Check ID: not found
+State <--> MPT : Insert User data
+ANSC <- State : Created
+Deactivate State
+User <- ANSC : Registered
+Deactivate ANSC
+
+@enduml

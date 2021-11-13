@@ -4,13 +4,13 @@ smart_contracts:
     max_pour_amount: 10
     periodic_limit: 1000
     global_limit: 100000
-    individual_reset: 3h
-    global_reset: 48h
+    individual_reset: 3h # in hours
+    global_reset: 48h # in hours
   interestpoolsc:
     min_lock: 10
-    apr: 0.1
-    min_lock_period: 1m
-    max_mint: 1500000.0
+    apr: 0.0
+    min_lock_period: 2190h # max units hours
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
   magma:
     provider:
       min_stake: 0.000000001 # tokens, min stake amount
@@ -20,81 +20,34 @@ smart_contracts:
     billing:
       ratio: 5
   minersc:
-    # miners
-    max_n: 7 # 100
-    min_n: 3 # 3
-    # sharders
-    max_s: 2 # 30
-    min_s: 1 # 1
-    # max delegates allowed by SC
-    max_delegates: 200 #
-    # DKG
-    t_percent: .66 # of active
-    k_percent: .75 # of registered
-    x_percent: 0.70 # percentage of prev mb miners required to be part of next mb
-    # etc
-    min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
-    start_rounds: 50
-    contribute_rounds: 50
-    share_rounds: 50
-    publish_rounds: 50
-    wait_rounds: 50
-    # stake interests, will be declined every epoch
-    interest_rate: 0.0 # [0; 1)
-    # reward rate for generators, will be declined every epoch
-    reward_rate: 1.0 # [0; 1)
-    # share ratio is miner/block sharders rewards ratio, for example 0.1
-    # gives 10% for miner and rest for block sharders
-    share_ratio: 0.8 # [0; 1)
-    # reward for a block
-    block_reward: 0.21 # tokens
-    # max service charge can be set by a generator
-    max_charge: 0.5 # %
-    # epoch is number of rounds before rewards and interest are decreased
-    epoch: 15000000 # rounds
-    # decline rewards every new epoch by this value (the block_reward)
-    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
-    # decline interests every new epoch by this value (the interest_rate)
-    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
-    # no mints after miner SC total mints reaches this boundary
-    max_mint: 1500000.0 # tokens
-    # if view change is false then reward round frequency is used to send rewards and interests
-    reward_round_frequency: 250
-
+    max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
   storagesc:
-    # the time_unit is a duration used as divider for a write price; a write
-    # price measured in tok / GB / time_unit, where the time_unit is this
-    # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
-    time_unit: "720h"
-    min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
-    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
     max_mint: 1500000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC
-    min_alloc_duration: "5m"
+    min_alloc_duration: '5m'
     # max challenge completion time of a blobber allowed by the SC
-    max_challenge_completion_time: "30m"
+    max_challenge_completion_time: '30m'
     # min blobber's offer duration allowed by the SC
-    min_offer_duration: "10h"
+    min_offer_duration: '10h'
     # min blobber capacity allowed by the SC
     min_blobber_capacity: 1024
     # users' read pool related configurations
     readpool:
-      min_lock: 0.1 # toekns
-      min_lock_period: 1m
+      min_lock: 10
+      min_lock_period: 1h
       max_lock_period: 8760h
     # users' write pool related configurations
     writepool:
-      min_lock: 0.1 # tokens
+      min_lock: 10
       min_lock_period: 2m
       max_lock_period: 8760h
     # stake pool configurations
     stakepool:
       # minimal lock for a delegate pool
-      min_lock: 0.1 # tokens
+      min_lock: 10
       # interest_rate is tokens earned by a blobber for its stake
       interest_rate: 0.0
       # interest_interval is interval to pay interests for a stake
@@ -116,7 +69,7 @@ smart_contracts:
       data_shards: 10
       parity_shards: 5
       size: 10000000000
-      duration: 50h
+      duration: 5000h
       read_price_range:
         min: 0.0
         max: 0.04
@@ -132,7 +85,6 @@ smart_contracts:
     # max prices for blobbers (tokens per GB)
     max_read_price: 100.0
     max_write_price: 100.0
-    min_write_price: 0.1
     #
     # allocation cancellation
     #
@@ -152,31 +104,20 @@ smart_contracts:
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
     max_challenges_per_generation: 100
-    # max delegates per stake pool allowed by SC
-    max_delegates: 200
-    # max_charge allowed for blobbers; the charge is part of blobber rewards
-    # goes to blobber's delegate wallets, other part goes to related stake
-    # holders
-    max_charge: 0.50
     # reward paid out every block
     block_reward:
-      block_reward: 1
+      block_reward: 1000
       qualifying_stake: 1
       sharder_ratio: 10
       miner_ratio: 40
       blobber_capacity_ratio: 10
       blobber_usage_ratio: 40
+    expose_mpt: true
   vestingsc:
     min_lock: 0.01
-    min_duration: "2m"
-    max_duration: "2h"
+    min_duration: '2m'
+    max_duration: '2h'
+    # max amount of destinations
     max_destinations: 3
+    # max length of pool description provided by client
     max_description_length: 20
-
-  zcn:
-    min_mint_amount: 1
-    percent_authorizers: 0.7
-    min_authorizers: 1
-    min_burn_amount: 1
-    min_stake_amount: 0
-    burn_address: "0000000000000000000000000000000000000000000000000000000000000000"

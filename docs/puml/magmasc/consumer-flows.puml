@@ -1,0 +1,50 @@
+@startuml
+
+title Consumer Flows
+
+boundary Consumer
+control ANSC
+note right of State
+    State this is
+    a logical layer
+    of the smart contract
+    consisting of low-level
+    auxiliary objects
+end note
+
+Consumer -> ANSC : Register
+Activate ANSC
+ANSC -> State : Create Consumer
+Activate State
+State <--> MPT : Read list
+State -> State : Check External ID: not found
+State -> State : Check Host: not found
+State <--> MPT : Insert Consumer data
+State -> State : Add Consumer to list
+State <--> MPT : Update list
+ANSC <- State : Created
+Deactivate State
+Consumer <- ANSC : Registered
+Deactivate ANSC
+
+Consumer -> ANSC : Update
+Activate ANSC
+ANSC -> State : Fetch Consumer
+Activate State
+State <--> MPT : Read Consumer
+ANSC <- State : Found
+Deactivate State
+ANSC -> ANSC : Authorise Txn
+ANSC -> State : Authorised
+Activate State
+State <--> MPT : Read list
+State -> State : Check Host: not found
+State <--> MPT : Update Consumer data
+State -> State : Update Consumer into list
+State <--> MPT : Update list
+ANSC <- State : Updated
+Deactivate State
+Consumer <- ANSC : Updated
+Deactivate ANSC
+
+@enduml

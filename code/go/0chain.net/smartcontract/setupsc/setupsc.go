@@ -1,13 +1,15 @@
 package setupsc
 
 import (
-	"fmt"
+	"log"
 
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/magmasc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
@@ -24,6 +26,7 @@ const (
 	Multisig
 	Miner
 	Vesting
+	Magma
 	Zcn
 )
 
@@ -35,26 +38,31 @@ var (
 		"multisig",
 		"miner",
 		"vesting",
+		magmasc.Name,
 		"zcn",
 	}
 
 	SCCode = map[string]SCName{
-		"faucet":   Faucet,
-		"storage":  Storage,
-		"interest": Interest,
-		"multisig": Multisig,
-		"miner":    Miner,
-		"vesting":  Vesting,
-		"zcn":      Zcn,
+		"faucet":     Faucet,
+		"storage":    Storage,
+		"interest":   Interest,
+		"multisig":   Multisig,
+		"miner":      Miner,
+		"vesting":    Vesting,
+		magmasc.Name: Magma,
+		"zcn":        Zcn,
 	}
 )
 
-//SetupSmartContracts initializes smart contract addresses
+// SetupSmartContracts initialize smart contract addresses.
 func SetupSmartContracts() {
 	for _, name := range SCNames {
-		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
-			var contract = newSmartContract(name)
-			smartcontract.ContractMap[contract.GetAddress()] = contract
+		if viper.GetBool("development.smart_contract." + name) {
+			sc := newSmartContract(name)
+			if sc == nil {
+				log.Panic("setup smart contracts failed")
+			}
+			smartcontract.ContractMap[sc.GetAddress()] = sc
 		}
 	}
 }
@@ -64,6 +72,7 @@ func newSmartContract(name string) sci.SmartContractInterface {
 	if !ok {
 		return nil
 	}
+
 	switch code {
 	case Faucet:
 		return faucetsc.NewFaucetSmartContract()
@@ -77,6 +86,15 @@ func newSmartContract(name string) sci.SmartContractInterface {
 		return minersc.NewMinerSmartContract()
 	case Vesting:
 		return vestingsc.NewVestingSmartContract()
+	case Magma:
+		config.SetupSmartContractConfig()
+		msc := magmasc.NewMagmaSmartContract()
+		cfg := config.SmartContractConfig.Sub("smart_contracts." + magmasc.Name)
+		if err := msc.Setup(cfg); err != nil {
+			log.Println(err)
+			return nil
+		}
+		return msc
 	case Zcn:
 		return zcnsc.NewZCNSmartContract()
 	default:
