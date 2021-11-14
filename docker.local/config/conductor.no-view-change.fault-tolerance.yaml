@@ -22,6 +22,7 @@ sets:
       - "Less than consensus miners go down and come up"
       - "More than consensus miners go down and come up"
       - "All miners go down and come up"
+      - "Miner goes down for 3 minutes simultaneously with coming up of the previous one"
 
   - name: "SHARDERS GO DOWN"
     tests:
@@ -131,6 +132,32 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3", "miner-4"]
       - wait_round:
           shift: 100
+
+  - name: "Miner goes down for 3 minutes simultaneously with coming up of the previous one"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ["sharder-1"]
+          miners: ["miner-1", "miner-2", "miner-3", "miner-4"]
+          start: true
+      - wait_round:
+          shift: 20
+      - stop: ["miner-4"]
+      - wait_round:
+          shift: 10
+      - command:
+          name: "sleep_3m"
+      - stop: ["miner-3"]
+      - start: ["miner-4"]
+      - wait_round:
+          shift: 10
+      - command:
+          name: "sleep_3m"
+      - stop: ["miner-2"]
+      - start: ["miner-3"]
+      - wait_round:
+          shift: 10
 
   # SHARDERS GO DOWN
   - name: "All sharders go down"
