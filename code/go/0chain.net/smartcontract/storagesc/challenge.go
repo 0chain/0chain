@@ -637,7 +637,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	var alloc *StorageAllocation
 
 	for i := int64(0); i < numChallenges; i++ {
-
 		// looking for allocation with NumWrites > 0
 
 		alloc, err = selectAlloc(r.Intn(len(all.List)))

@@ -33,7 +33,17 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	return edb.Store.Get().AutoMigrate(&Event{})
+	err := edb.Store.Get().AutoMigrate(&Event{})
+	if err != nil {
+		return nil
+	}
+
+	err = edb.migrateChallengeTable()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
@@ -66,7 +76,7 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	return events, nil
 }
 
-func (edb *EventDb) AddEvents(events []Event) {
+func (edb *EventDb) addEvent(events []Event) {
 	if edb.Store != nil && len(events) > 0 {
 		edb.Store.Get().Create(&events)
 	}
