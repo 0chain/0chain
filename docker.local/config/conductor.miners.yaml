@@ -17,6 +17,7 @@ sets:
   - name: "VRF"
     tests:
       - "Send bad VRFS to everyone"
+      - "Spam VRFS to everyone"
       - "Send VRFS only to group"
       - "Send only the group the correct VRFS (bad VRFS for everyone else)"
       - "Send no VRFS"
@@ -72,6 +73,20 @@ tests:
           shift: 10
           timeout: "1m"
           must_fail: true
+  - name: "Spam VRFS to everyone"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start: ["sharder-1"]
+      - start: ["miner-1", "miner-2", "miner-3"]
+      - env:
+          CLI_ARGS: "--adversarial vrfs_spam"
+      - wait_add:
+          miners: ["miner-4"]
+          start: true
+      - wait_round:
+          shift: 50
+          timeout: "3m"
   - name: "Send VRFS only to group"
     flow:
       - magic_block: config/b0magicBlock_4_miners_2_sharders.json

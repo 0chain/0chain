@@ -16,6 +16,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
@@ -48,6 +51,14 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 
 	// not possible to send bad VRFS and bad round timeout at the same time
 	switch {
+	case VRFSSpamFlag && globalSetupVRFSspam == nil:
+		// first run, set up VRFS Spam mode
+		setup := &vrfsspam{}
+		mb := mc.GetMagicBlock(vrfs.Round)
+		setup.Miners = mb.Miners
+		globalSetupVRFSspam = setup
+		SendVRFSSpam(ctx, vrfs)
+		return
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
 		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
@@ -104,6 +115,36 @@ func getMinersByRatio(mb *block.MagicBlock, ratio float64) []*node.Node {
 	}
 
 	return res
+}
+
+var globalSetupVRFSspam *vrfsspam
+var VRFSSpamFlag bool
+
+type vrfsspam struct {
+	Vrfs   *round.VRFShare
+	Miners *node.Pool
+}
+
+func SendVRFSSpam(ctx context.Context, vrfs *round.VRFShare) {
+	// todo: mutex?
+	setup := globalSetupVRFSspam
+	if setup == nil || setup.Miners == nil {
+		return // not requested or not initialized via SendVRFShare() yet
+	}
+	if vrfs != nil {
+		logging.Logger.Info("sendVRFSSpam() invoked by actual SendVRFShare()")
+		if setup.Vrfs != nil {
+			logging.Logger.Info("sendVRFSSpam() nothing to do")
+			return
+		}
+		// first send
+		setup.Vrfs = vrfs
+		logging.Logger.Info("sendVRFSSpam() first send ", zap.Int64("Round", setup.Vrfs.Round))
+		setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
+	}
+	setup.Vrfs.Round++
+	logging.Logger.Info("sendVRFSSpam() subsequent send ", zap.Int64("Round", setup.Vrfs.Round))
+	setup.Miners.SendToMultipleNodes(ctx, RoundVRFSender(setup.Vrfs), setup.Miners.CopyNodes()) // todo: excluding myself?
 }
 
 func getBadBVTHash(ctx context.Context, b *block.Block) (

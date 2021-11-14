@@ -59,6 +59,8 @@ func main() {
 	flag.StringVar(&redisTxnsHost, "redis_txns_host", "", "TransactionDB redis host")
 	flag.IntVar(&redisTxnsPort, "redis_txns_port", 0, "TransactionDB redis port")
 
+	configureIntegrationsTestsFlags()
+
 	flag.Parse()
 	config.Configuration().DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -477,7 +479,9 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
-	miner.SetupX2MResponders()
+	if applyAdversarialMode() != "vrfs_spam" {
+		miner.SetupX2MResponders()
+	}
 	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
