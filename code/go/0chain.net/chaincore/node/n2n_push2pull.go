@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"sort"
 	"sync"
 	"time"
 
@@ -67,9 +66,8 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 	pcde, err := pushDataCache.Get(key)
 	if err != nil {
 		logging.N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
-		return nil, common.NewError("request_data_not_found", "Requested data is not found")
+		return nil, common.NewErrorf("request_data_not_found", "Requested data is not found, key: %v", key)
 	}
-	//N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil
 }
 
@@ -101,63 +99,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params.Add("id", datastore.ToString(entityID))
 	rhandler := pullDataRequestor(params, phandler)
 
-	addRequestNode := func(key string, requestNode *nodeRequest) *pullDataCacheEntry {
-		pullLock.Lock()
-		defer pullLock.Unlock()
-		var pcde *pullDataCacheEntry
-		cval, err := pullDataCache.Get(key)
-		if err != nil {
-			pcde = &pullDataCacheEntry{sentBy: []*nodeRequest{requestNode}}
-			pullDataCache.Add(key, pcde)
-		} else {
-			pcde = cval.(*pullDataCacheEntry)
-			pcde.sentBy = append(pcde.sentBy, requestNode)
-		}
-		if pcde.state == pullStateDone || pcde.state == pullStatePulling {
-			return nil
-		}
-		pcde.state = pullStatePulling
-		return pcde
-	}
-	getNextNodeToRequest := func(pcde *pullDataCacheEntry) *nodeRequest {
-		pullLock.Lock()
-		defer pullLock.Unlock()
-		sort.SliceStable(pcde.sentBy, func(i, j int) bool {
-			if pcde.sentBy[i].requested == pcde.sentBy[j].requested {
-				if pcde.sentBy[i].requested {
-					return true
-				}
-				return pcde.sentBy[i].node.getTime(pullURL) < pcde.sentBy[j].node.getTime(pullURL)
-			}
-			return !pcde.sentBy[i].requested
-		})
-		requestNode := pcde.sentBy[0]
-		if requestNode.requested {
-			pcde.state = pullStateFailed
-			return nil
-		}
-		return requestNode
-	}
-
-	key := p2pKey(uri, entityID)
-	var requestNode = &nodeRequest{node: nd}
-	var pcde = addRequestNode(key, requestNode)
-	if pcde == nil {
-		return
-	}
-	for true {
-		requestNode = getNextNodeToRequest(pcde)
-		if requestNode == nil {
-			break
-		}
-		requestNode.requested = true
-		if rhandler(ctx, requestNode.node) {
-			pcde.state = pullStateDone
-			break
-		} else {
-			//N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
-		}
-	}
+	rhandler(ctx, nd)
 }
 
 func isPullRequest(r *http.Request) bool {
