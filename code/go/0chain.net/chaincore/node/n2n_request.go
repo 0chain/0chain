@@ -209,36 +209,71 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
-			eName := ""
-			if entityMetadata != nil {
-				eName = entityMetadata.GetName()
-			}
-			SetRequestHeaders(req, options, entityMetadata)
-			cctx, cancel := context.WithTimeout(ctx, timeout)
-			defer cancel()
-			req = req.WithContext(cctx)
-			// Keep the number of messages to a node bounded
 
 			var (
 				ts       time.Time
-				selfNode *Node
+				selfNode = Self.Underlying()
 				resp     *http.Response
+				cancel   func()
+				eName    string
 			)
 
+			if entityMeta != nil {
+				eName = entityMeta.GetName()
+			}
+
+			SetRequestHeaders(req, options, entityMeta)
+			// Keep the number of messages to a node bounded
+
+			var (
+				tm       *time.Timer
+				closeTmC = make(chan struct{})
+			)
 			func() {
 				provider.Grab()
 				defer provider.Release()
-
 				ts = time.Now()
-				selfNode = Self.Underlying()
+
 				selfNode.SetLastActiveTime(ts)
 				selfNode.InduceDelay(provider)
+
+				var cctx context.Context
+				tm = time.NewTimer(timeout)
+				cctx, cancel = context.WithCancel(ctx)
+				go func() {
+					select {
+					case <-tm.C:
+						cancel()
+					case <-closeTmC:
+					}
+				}()
+				req = req.WithContext(cctx)
 				resp, err = httpClient.Do(req)
 			}()
+			defer cancel()
 
 			duration := time.Since(ts)
+			var buf bytes.Buffer
 			switch err {
 			case nil:
+				if tm != nil {
+					tm.Stop()
+					close(closeTmC)
+				}
+				defer resp.Body.Close()
+				// reset context timeout so that the
+				// following data reading would not be canceled due to timeout
+				_, err := buf.ReadFrom(resp.Body)
+				if err != nil {
+					logging.N2n.Error("requesting - read response failed",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
+						zap.Any("params", params), zap.Error(err))
+					return false
+				}
 			default:
 				ue, ok := err.(*url.Error)
 				if ok && ue.Unwrap() != context.Canceled {
@@ -258,7 +293,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.SetErrorCount(provider.GetSendErrors())
 
 			if resp.StatusCode != http.StatusOK {
-				data := string(getDataAndClose(resp.Body))
+				data := string(buf.Bytes())
 				logging.N2n.Error("requesting",
 					zap.Int("from", selfNode.SetIndex),
 					zap.Int("to", provider.SetIndex),
@@ -270,21 +305,33 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					zap.String("response", data))
 				return false
 			}
-			if entityMetadata == nil {
+			if entityMeta == nil {
 				eName = resp.Header.Get(HeaderRequestEntityName)
 				if eName == "" {
 					logging.N2n.Error("requesting - no entity name in header", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri))
 				}
-				entityMetadata = datastore.GetEntityMetadata(eName)
-				if entityMetadata == nil {
-					data := string(getDataAndClose(resp.Body))
-					logging.N2n.Error("requesting - unknown entity", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName),
+				logging.N2n.Debug("requesting entityMetadata nil, get from response header",
+					zap.Int("from", selfNode.SetIndex),
+					zap.Int("to", provider.SetIndex),
+					zap.Duration("duration", duration),
+					zap.String("handler", uri),
+					zap.Any("params", params),
+					zap.String("entity", eName))
+				entityMeta = datastore.GetEntityMetadata(eName)
+				if entityMeta == nil {
+					data := string(buf.Bytes())
+					logging.N2n.Error("requesting - unknown entity",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
 						zap.String("response", data))
 					return false
 				}
 			}
 
-			size, entity, err := getResponseEntity(resp, entityMetadata)
+			size, entity, err := getResponseEntity(resp, &buf, entityMeta)
 			if err != nil {
 				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
@@ -293,10 +340,18 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			timer.UpdateSince(ts)
 			sizer := provider.GetSizeMetric(uri)
 			sizer.Update(int64(size))
-			logging.N2n.Info("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-			_, err = handler(cctx, entity)
+			logging.N2n.Info("requesting",
+				zap.Int("from", selfNode.SetIndex),
+				zap.Int("to", provider.SetIndex),
+				zap.Duration("duration", duration),
+				zap.String("handler", uri),
+				zap.String("entity", eName),
+				zap.Any("id", entity.GetKey()),
+				zap.Any("params", params),
+				zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
+			_, err = handler(ctx, entity)
 			if err != nil {
-				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
+				logging.N2n.Error("requesting", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMeta.GetName()), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			return true
@@ -363,6 +418,9 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set(HeaderRequestEntityName, v.EntityName)
 			buffer = bytes.NewBuffer(v.Data)
 			uri = r.FormValue("_puri")
+			logging.Logger.Debug("push pull",
+				zap.String("uri", uri),
+				zap.String("entity name", v.EntityName))
 		}
 		if options.Compress {
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
