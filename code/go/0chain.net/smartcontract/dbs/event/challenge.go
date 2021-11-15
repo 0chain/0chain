@@ -59,9 +59,9 @@ type Challenge struct {
 	gorm.Model
 	BlobberID                string             `json:"blobber_id"`
 	Created                  common.Timestamp   `json:"created"`
-	ChallengeID              string             `json:"challenge_id"`
+	ChallengeID              string             `json:"challenge_id" gorm:"primary_key"`
 	PrevID                   string             `json:"prev_id"`
-	Validators               []*ValidationNode  `json:"validators" gorm:"ForeignKey:storage_challenge_id"`
+	Validators               []ValidationNode   `json:"validators" gorm:"ForeignKey:storage_challenge_id"`
 	RandomNumber             int64              `json:"seed"`
 	AllocationID             string             `json:"allocation_id"`
 	AllocationRoot           string             `json:"allocation_root"`
@@ -87,21 +87,21 @@ func (ch *Challenge) add(edb *EventDb, data []byte) error {
 
 type ChallengeResponse struct {
 	gorm.Model
-	StorageChallengeId int                 `json:"storage_challenge_id" gorm:"storage_challenge_id"`
-	ID                 string              `json:"challenge_id"`
-	ValidationTickets  []*ValidationTicket `json:"validation_tickets" gorm:"ForeignKey:challenge_response_id"`
+	ChallengeID       string             `json:"storage_challenge_id" gorm:"storage_challenge_id"`
+	ResponseID        string             `json:"challenge_id"`
+	ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"ForeignKey:challenge_response_id"`
 }
 
 type ValidationNode struct {
 	gorm.Model
-	StorageChallengeId int    `json:"storage_challenge_id" gorm:"storage_challenge_id"`
-	ID                 string `json:"id"`
-	BaseURL            string `json:"url"`
+	ChallengeID string `json:"storage_challenge_id" gorm:"storage_challenge_id"`
+	ValidatorID string `json:"id"`
+	BaseURL     string `json:"url"`
 }
 
 type ValidationTicket struct {
 	gorm.Model
-	ChallengeResponseId int              `json:"challenge_response_id" gorm:"challenge_response_id"`
+	ChallengeResponseId string           `json:"challenge_response_id" gorm:"challenge_response_id"`
 	ChallengeID         string           `json:"challenge_id"`
 	BlobberID           string           `json:"blobber_id"`
 	ValidatorID         string           `json:"validator_id"`

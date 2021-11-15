@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -733,8 +735,26 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	storageChallenge.Blobber = selectedBlobberObj
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = alloc.ID
-
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
+
+	var challenge event.Challenge
+	challenge.ChallengeID = challengeID
+	for _, validator := range selectedValidators {
+		challenge.Validators = append(challenge.Validators, event.ValidationNode{
+			ChallengeID: challengeID,
+			ValidatorID: validator.ID,
+			BaseURL:     validator.BaseURL,
+		})
+	}
+	challenge.BlobberID = selectedBlobberObj.ID
+	challenge.RandomNumber = challengeSeed
+	challenge.AllocationID = alloc.ID
+	challenge.AllocationRoot = blobberAllocation.AllocationID
+	data, err := json.Marshal(&challenge)
+	if err != nil {
+		return "", fmt.Errorf("Error marshalling challenge %v: %v", challenge, err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagNewChallenge, string(data))
 
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID

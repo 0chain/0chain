@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	EventTypeError = "error"
-	EventTypeStats = "stats"
+	TypeError = "error"
+	TypeStats = "stats"
 )
 
 const (
@@ -22,7 +22,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 	for _, event := range events {
 		var err error = nil
 		switch event.Type {
-		case EventTypeStats:
+		case TypeStats:
 			err = edb.addStat(event)
 		default:
 		}
