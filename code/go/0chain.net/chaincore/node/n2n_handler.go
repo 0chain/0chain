@@ -170,9 +170,8 @@ func getDataAndClose(reader io.ReadCloser) []byte {
 	return buf.Bytes()
 }
 
-func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
+func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	var buffer io.Reader = reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
@@ -190,13 +189,12 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
-	defer resp.Body.Close()
-	var buffer io.Reader = resp.Body
+func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
+	buffer := reader
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(resp.Body)
+		cbuffer.ReadFrom(reader)
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {

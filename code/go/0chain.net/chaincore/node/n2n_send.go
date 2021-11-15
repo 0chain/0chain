@@ -37,7 +37,7 @@ func (np *Pool) SendAll(ctx context.Context, handler SendHandler) []*Node {
 	ts := time.Now()
 	defer func() {
 		if time.Since(ts) > time.Second*3 {
-			logging.Logger.Error("Send to all slow - more than 3 seconds",
+			logging.Logger.Warn("Send to all slow - more than 3 seconds",
 				zap.Any("duration", time.Since(ts)),
 				zap.Int("num", np.Size()))
 		}
@@ -378,8 +378,11 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 			return
 		}
+		buf := bytes.Buffer{}
+		buf.ReadFrom(r.Body)
+		defer r.Body.Close()
 
-		vctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		vctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
 		if err := n2nVerifyRequestsWithContext.Run(vctx, func() error {
 			if !validateSendRequest(sender, r) {
@@ -394,12 +397,12 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				zap.Error(err))
 			return
 		}
+
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		entityID := r.Header.Get(HeaderRequestEntityID)
 		entityMetadata := datastore.GetEntityMetadata(entityName)
 		if options != nil && options.MessageFilter != nil {
 			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
-				readAndClose(r.Body)
 				return
 			}
 		}
@@ -414,7 +417,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		} else {
 			ctx = WithNode(ctx, sender)
 		}
-		entity, err := getRequestEntity(r, entityMetadata)
+		entity, err := getRequestEntity(r, &buf, entityMetadata)
 		if err != nil {
 			if err == NoDataErr {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
@@ -425,7 +428,12 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			return
 		}
 		if entity.GetKey() != entityID {
-			logging.N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
+			logging.N2n.Error("message received - entity id doesn't match with signed id",
+				zap.Int("from", sender.SetIndex),
+				zap.Int("to", Self.SetIndex),
+				zap.String("handler", r.RequestURI),
+				zap.String("entity_id", entityID),
+				zap.String("entity.id", entity.GetKey()))
 			return
 		}
 		start := time.Now()

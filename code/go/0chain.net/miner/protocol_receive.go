@@ -320,7 +320,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	// check if the ticket has already verified
 	if mr.IsTicketCollected(&bvt.VerificationTicket) {
-		logging.Logger.Error("handle vt. msg -- ticket already collected",
+		logging.Logger.Debug("handle vt. msg -- ticket already collected",
 			zap.Int64("round", rn), zap.String("block", bvt.BlockID))
 		return
 	}
