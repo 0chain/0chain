@@ -563,12 +563,12 @@ func TestBlock_Validate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	client.SetClientSignatureScheme("ed25519")
 
 	n, err := makeTestNode(pbK)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client.SetClientSignatureScheme("ed25519")
 	node.RegisterNode(n)
 
 	type fields struct {
@@ -2701,10 +2701,16 @@ func TestBlock_GetBlockState(t *testing.T) {
 
 func TestBlock_GetClients(t *testing.T) {
 	b := NewBlock("", 1)
+	pbK1, _, err := encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetClientSignatureScheme("ed25519")
+
 	b.Txns = []*transaction.Transaction{
 		{},
-		{PublicKey: "public key"},
-		{PublicKey: "public key"},
+		{PublicKey: pbK1},
+		{PublicKey: pbK1},
 	}
 
 	type fields struct {
