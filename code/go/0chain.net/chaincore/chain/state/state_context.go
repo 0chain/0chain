@@ -1,6 +1,8 @@
 package state
 
 import (
+	"sync"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -73,6 +75,7 @@ type StateContext struct {
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
+	mutex                         *sync.Mutex
 }
 
 // NewStateContext - create a new state context
@@ -99,6 +102,7 @@ func NewStateContext(
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		eventDb:                       eventDb,
+		mutex:                         new(sync.Mutex),
 	}
 }
 
@@ -123,6 +127,8 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 
 //AddTransfer - add the transfer
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
@@ -138,6 +144,8 @@ func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	if !sc.isApprovedMinter(m) {
 		return state.ErrInvalidMint
 	}
@@ -170,6 +178,8 @@ func (sc *StateContext) GetMints() []*state.Mint {
 }
 
 func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
