@@ -191,6 +191,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler {
 		return func(ctx context.Context, provider *Node) bool {
+			entityMeta := entityMetadata
 			timer := provider.GetTimer(uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
