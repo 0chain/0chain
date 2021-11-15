@@ -392,11 +392,18 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	default:
 	}
 	if bsc == nil {
-		logging.Logger.Error("get_block_state_change - could not get state changes from miners",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash))
-		return nil, common.NewError("block_state_change_error",
-			"error getting the block state change")
+		c.RequestEntityFromSharders(cctx, BlockStateChangeRequestor, params, handler)
+		select {
+		case bsc = <-stateChangesC:
+		default:
+		}
+		if bsc == nil {
+			logging.Logger.Error("get_block_state_change - could not get state changes from miners",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
+			return nil, common.NewError("block_state_change_error",
+				"error getting the block state change")
+		}
 	}
 
 	logging.Logger.Debug("get_block_state_change - success with root",

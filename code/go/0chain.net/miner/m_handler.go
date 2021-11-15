@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
@@ -76,7 +75,6 @@ func SetupM2MReceivers() {
 /*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
-	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 
 	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
 	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
@@ -282,39 +280,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 // NotarizedBlockSendHandler - handles a request for a notarized block.
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return getNotarizedBlock(ctx, r)
-}
-
-// BlockStateChangeHandler - provide the state changes associated with a block.
-func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-
-	var b, err = getNotarizedBlock(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-
-	if b.GetStateStatus() != block.StateSuccessful {
-		return nil, common.NewError("state_not_verified",
-			"state is not computed and validated locally")
-	}
-
-	var bsc = block.NewBlockStateChange(b)
-	if state.Debug() {
-		logging.Logger.Info("block state change handler", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int("state_changes", b.ClientState.GetChangeCount()),
-			zap.Int("sc_nodes", len(bsc.Nodes)))
-	}
-
-	//if len(bsc.Nodes) == 0 {
-	//	logging.Logger.Debug("get state changes - no changes", zap.Int64("round", b.Round))
-	if bsc.GetRoot() == nil {
-		cr := GetMinerChain().GetCurrentRound()
-		logging.Logger.Debug("get state changes - state nil root",
-			zap.Int64("round", b.Round),
-			zap.Int64("current_round", cr))
-	}
-
-	return bsc, nil
 }
 
 // PartialStateHandler - return the partial state from a given root.
