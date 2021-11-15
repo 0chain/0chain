@@ -9,7 +9,9 @@ import (
 	. "0chain.net/core/logging"
 )
 
-func SetupWorkers(ctx context.Context)
+func SetupWorkers(ctx context.Context) {
+	//
+}
 
 /*
 Todo assign correct index for selectDir function; restartVolumes, recoverMetadata

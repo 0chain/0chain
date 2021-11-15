@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 type Tiering uint8
@@ -65,28 +67,43 @@ func (sm *BlockStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
-func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
+func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 	var mode string
 	var storageType int
 
-	storageTypeI, ok := sConf["storage_type"]
-	if !ok {
+	fmt.Println(*sViper)
+	storageType = sViper.GetInt("storage_type")
+
+	if storageType == 0 {
 		panic(errors.New("Storage Type is a required field"))
 	}
-	storageType = storageTypeI.(int)
 
-	modeI, ok := sConf["mode"]
-	if !ok {
+	mode = sViper.GetString("mode")
+	if mode == "" {
 		mode = "start"
+	}
+
+	var bmrPath, qmrPath string = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
+	boltConfigMap := sViper.GetStringMapString("bolt")
+	if boltConfigMap == nil {
+		bmrPath = DefaultBlockMetaRecordDB
+		qmrPath = DefaultQueryMetaRecordDB
 	} else {
-		mode = modeI.(string)
+
+		if boltConfigMap["block_meta_record_path"] == "" {
+			bmrPath = DefaultBlockMetaRecordDB
+		}
+
+		if boltConfigMap["query_meta_record_path"] == "" {
+			qmrPath = DefaultQueryMetaRecordDB
+		}
 	}
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB(true) //Removes existing metadata and creates new db
+		InitMetaRecordDB(bmrPath, qmrPath, true) //Removes existing metadata and creates new db
 	default:
-		InitMetaRecordDB(false)
+		InitMetaRecordDB(bmrPath, qmrPath, false)
 	}
 
 	switch Tiering(storageType) {
@@ -94,13 +111,12 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		panic(errors.New("Unknown Tiering"))
 
 	case HotOnly:
-		hotI, ok := sConf["hot"]
-		if !ok {
+		hViper := sViper.Sub("hot")
+		if hViper == nil {
 			panic(ErrHotStorageConfNotProvided)
 		}
-		hotMap := hotI.(map[string]interface{})
 
-		Store.HotTier = volumeInit(HOT, hotMap, mode) //Will panic if wrong setup is provided
+		Store.HotTier = volumeInit(HOT, hViper, mode) //Will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -130,14 +146,12 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		}
 
 	case WarmOnly:
-		warmI, ok := sConf["warm"]
-		if !ok {
+		wViper := sViper.Sub("warm")
+		if wViper == nil {
 			panic(ErrWarmStorageConfNotProvided)
 		}
 
-		warmMap := warmI.(map[string]interface{})
-
-		Store.WarmTier = volumeInit(WARM, warmMap, mode) //will panic if wrong setup is provided
+		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -168,21 +182,21 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		}
 
 	case CacheAndWarm:
-		warmI, ok := sConf["warm"]
-		if !ok {
+		wViper := sViper.Sub("warm")
+		if wViper == nil {
+
 			panic(ErrWarmStorageConfNotProvided)
 		}
 
-		cacheI, ok := sConf["cache"]
-		if !ok {
+		cViper := sViper.Sub("cache")
+
+		if cViper == nil {
 			panic(ErrCacheStorageConfNotProvided)
 		}
 
-		warmMap := warmI.(map[string]interface{})
-		Store.WarmTier = volumeInit(WARM, warmMap, mode)
+		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
 
-		cacheMap := cacheI.(map[string]interface{})
-		cacheInit(cacheMap)
+		cacheInit(cViper)
 
 		var writeFunc func(b *block.Block) error
 
@@ -274,21 +288,18 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		}
 
 	case CacheAndCold:
-		coldI, ok := sConf["cold"]
-		if !ok {
+		coViper := sViper.Sub("cold")
+		if coViper == nil {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
-		cacheI, ok := sConf["cache"]
-		if !ok {
+		cViper := sViper.Sub("cache")
+		if cViper == nil {
 			panic(ErrCacheStorageConfNotProvided)
 		}
 
-		coldMap := coldI.(map[string]interface{})
-		Store.ColdTier = coldInit(coldMap, mode)
-
-		cacheMap := cacheI.(map[string]interface{})
-		cacheInit(cacheMap)
+		Store.ColdTier = coldInit(coViper, mode)
+		Store.Cache = cacheInit(cViper)
 
 		var writeFunc func(b *block.Block) error
 
@@ -379,21 +390,19 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		}
 
 	case HotAndCold:
-		hotI, ok := sConf["hot"]
-		if !ok {
+		hViper := sViper.Sub("hot")
+		if hViper == nil {
 			panic(ErrHotStorageConfNotProvided)
 		}
 
-		coldI, ok := sConf["cold"]
-		if !ok {
+		cViper := sViper.Sub("cold")
+		if cViper == nil {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
-		hotMap := hotI.(map[string]interface{})
-		Store.HotTier = volumeInit(HOT, hotMap, mode)
+		Store.HotTier = volumeInit(HOT, hViper, mode)
 
-		coldMap := coldI.(map[string]interface{})
-		Store.ColdTier = coldInit(coldMap, mode)
+		Store.ColdTier = coldInit(cViper, mode)
 
 		Store.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -434,21 +443,20 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 			return
 		}
 	case WarmAndCold:
-		warmI, ok := sConf["warm"]
-		if !ok {
+		wViper := sViper.Sub("warm")
+		if wViper == nil {
+
 			panic(ErrWarmStorageConfNotProvided)
 		}
 
-		coldI, ok := sConf["cold"]
-		if !ok {
+		cViper := sViper.Sub("cold")
+		if cViper == nil {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
-		warmMap := warmI.(map[string]interface{})
-		Store.WarmTier = volumeInit(WARM, warmMap, mode)
+		Store.WarmTier = volumeInit(WARM, wViper, mode)
 
-		coldMap := coldI.(map[string]interface{})
-		Store.ColdTier = coldInit(coldMap, mode)
+		Store.ColdTier = coldInit(cViper, mode)
 
 		Store.write = func(b *block.Block) error {
 			data, err := getBlockData(b)
@@ -489,28 +497,24 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 			return
 		}
 	case CacheHotAndCold:
-		cacheI, ok := sConf["cache"]
-		if !ok {
+		cViper := sViper.Sub("cache")
+		if cViper == nil {
 			panic(ErrCacheStorageConfNotProvided)
 		}
-		hotI, ok := sConf["hot"]
-		if !ok {
+
+		hViper := sViper.Sub("hot")
+		if hViper == nil {
 			panic(ErrHotStorageConfNotProvided)
 		}
 
-		coldI, ok := sConf["cold"]
-		if !ok {
+		coViper := sViper.Sub("cold")
+		if coViper == nil {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
-		cacheMap := cacheI.(map[string]interface{})
-		cacheInit(cacheMap)
-
-		hotMap := hotI.(map[string]interface{})
-		Store.HotTier = volumeInit(HOT, hotMap, mode)
-
-		coldMap := coldI.(map[string]interface{})
-		Store.ColdTier = coldInit(coldMap, mode)
+		Store.Cache = cacheInit(cViper)
+		Store.HotTier = volumeInit(HOT, hViper, mode)
+		Store.ColdTier = coldInit(coViper, mode)
 
 		var writeFunc func(b *block.Block) error
 
@@ -622,28 +626,25 @@ func InitializeStore(sConf map[string]interface{}, ctx context.Context) error {
 		}
 
 	case CacheWarmAndCold: //
-		cacheI, ok := sConf["cache"]
-		if !ok {
+		cViper := sViper.Sub("cache")
+		if cViper == nil {
 			panic(ErrCacheStorageConfNotProvided)
 		}
-		warmI, ok := sConf["warm"]
-		if !ok {
+
+		wViper := sViper.Sub("warm")
+		if wViper == nil {
+
 			panic(ErrWarmStorageConfNotProvided)
 		}
 
-		coldI, ok := sConf["cold"]
-		if !ok {
+		coViper := sViper.Sub("cold")
+		if coViper == nil {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
-		cacheMap := cacheI.(map[string]interface{})
-		cacheInit(cacheMap)
-
-		warmMap := warmI.(map[string]interface{})
-		Store.WarmTier = volumeInit(WARM, warmMap, mode)
-
-		coldMap := coldI.(map[string]interface{})
-		Store.ColdTier = coldInit(coldMap, mode)
+		Store.Cache = cacheInit(cViper)
+		Store.WarmTier = volumeInit(WARM, wViper, mode)
+		Store.ColdTier = coldInit(coViper, mode)
 
 		var writeFunc func(b *block.Block) error
 

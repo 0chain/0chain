@@ -145,10 +145,13 @@ storage:
   #Note: Cannot have mix of hot and warm; hot does not require cache since ssd is used as hot tier and cache both
 
   #
-	#Cache = 1, Warm = 2, Hot = 4, Cold = 8. And their combination is sum of these numbers
+  #Cache = 1, Warm = 2, Hot = 4, Cold = 8. And their combination is sum of these numbers
   #If storage type is Cache and Warm then 1 + 2 = 3
-	
+  
   storage_type: 3
+  bolt:
+    block_meta_record_path: "/meta/bmr.db"
+    query_meta_record_path: "/meta/qmr.db"
   cache:
     storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
     cache_strategy: ""

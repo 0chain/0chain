@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -41,25 +42,32 @@ const (
 
 //bucket constant values
 const (
-	BlockWhereBucket   = "bwb"
-	UnmovedBlockBucket = "ubb"
-	BlockUsageBucket   = "bub"
+	DefaultBlockMetaRecordDB = "/meta/bmr.db"
+	DefaultQueryMetaRecordDB = "/meta/qmr.db"
+	BlockWhereBucket         = "bwb"
+	UnmovedBlockBucket       = "ubb"
+	BlockUsageBucket         = "bub"
 )
 
 //Create db file and create buckets
-func InitMetaRecordDB(deleteExistingDB bool) {
+func InitMetaRecordDB(bmrDB, qmrDB string, deleteExistingDB bool) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
 	if deleteExistingDB {
-		os.Remove("path/to/db")
-		os.Remove("path/to/other/db")
+		os.Remove(bmrDB)
+		os.Remove(qmrDB)
 	}
 	//Open db for storing whereabout of blocks
 	go func() {
 		defer wg.Done()
 		var err error
-		bwrDB, err = bbolt.Open("path/to/db", 0644, bbolt.DefaultOptions)
+		parentDir, _ := filepath.Split(bmrDB)
+		if err := os.MkdirAll(parentDir, 0644); err != nil {
+			panic(err)
+		}
+
+		bwrDB, err = bbolt.Open(bmrDB, 0644, bbolt.DefaultOptions) // fix me
 		if err != nil {
 			panic(err)
 		}
@@ -82,7 +90,12 @@ func InitMetaRecordDB(deleteExistingDB bool) {
 	go func() {
 		defer wg.Done()
 		var err error
-		qDB, err = bbolt.Open("path/to/db", 0644, bbolt.DefaultOptions)
+		parentDir, _ := filepath.Split(qmrDB)
+		if err := os.MkdirAll(parentDir, 0644); err != nil {
+			panic(err)
+		}
+
+		qDB, err = bbolt.Open(qmrDB, 0644, bbolt.DefaultOptions) // fix me
 		if err != nil {
 			panic(err)
 		}

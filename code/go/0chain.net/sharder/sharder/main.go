@@ -131,7 +131,11 @@ func main() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
 
-	blockstore.InitializeStore(viper.GetStringMap("storage"), ctx)
+	sViper := viper.Sub("storage")
+	if sViper == nil {
+		panic("Storage config is required")
+	}
+	blockstore.InitializeStore(sViper, ctx)
 
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)

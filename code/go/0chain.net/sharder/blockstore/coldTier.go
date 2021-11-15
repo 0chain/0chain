@@ -17,6 +17,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/sys/unix"
@@ -445,26 +446,18 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 
 // //*****************************Strategy*************************************
 
-func coldInit(cConf map[string]interface{}, mode string) *coldTier {
-	storageI, ok := cConf["storage"]
-	if !ok {
-		panic(errors.New("Cold storage config not available"))
+func coldInit(cViper *viper.Viper, mode string) *coldTier {
+	storageType := cViper.GetString("storage.type")
+	if storageType == "" {
+		panic("Cold storage type is required")
 	}
 
-	storage := storageI.(map[string]interface{})
-	storageTypeI, ok := storage["type"]
-	if !ok {
-		panic(errors.New("Cold storage type is required"))
-	}
-	storageType := storageTypeI.(string)
-
-	coldStorageI, ok := storage[storageType]
-	if !ok {
+	coldStorageI := cViper.Get(fmt.Sprintf("storage.%v", storageType))
+	if coldStorageI == nil {
 		panic(fmt.Errorf("Storage type is %v but it config is not available", storageType))
 	}
 
 	coldStorage := coldStorageI.(map[string]interface{})
-
 	cTier := new(coldTier)
 
 	selectedColdStorageChan := make(chan *selectedColdStorage, 1)
@@ -695,7 +688,7 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 			}
 		}
 
-		availableSize, availableInodes, err := getAvailableSizeAndInodes(vPath)
+		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(vPath)
 
 		if err != nil {
 			Logger.Error(err.Error())
@@ -705,7 +698,10 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 		var sizeToMaintain uint64
 		sizeToMaintainI, ok := volI["size_to_maintain"]
 		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
+			sizeToMaintain, err = getUint64ValueFromYamlConfig(sizeToMaintainI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if availableSize/(1024^3) <= sizeToMaintain {
@@ -716,9 +712,12 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 		var inodesToMaintain uint64
 		inodesToMaintainI, ok := volI["inodes_to_maintain"]
 		if ok {
-			inodesToMaintain = inodesToMaintainI.(uint64)
+			inodesToMaintain, err = getUint64ValueFromYamlConfig(inodesToMaintainI)
+			if err != nil {
+				panic(err)
+			}
 		}
-		if availableInodes <= inodesToMaintain {
+		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(vPath, inodesToMaintain).Error())
 			continue
 		}
@@ -726,13 +725,19 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := volI["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := volI["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		cTier.ColdStorages = append(cTier.ColdStorages, &coldDisk{
@@ -901,7 +906,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		}
 
 		//Check available size and inodes and add volume to volume pool
-		availableSize, availableInodes, err := getAvailableSizeAndInodes(volPath)
+		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
@@ -923,7 +928,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		if ok {
 			inodesToMaintain = inodesToMaintainI.(uint64)
 		}
-		if availableInodes <= inodesToMaintain {
+		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(volPath, inodesToMaintain).Error())
 			continue
 		}

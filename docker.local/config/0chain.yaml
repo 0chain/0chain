@@ -148,13 +148,133 @@ min_stake: 0.0 # tokens
 # SC max_stake
 max_stake: 100.0 # tokens
 
-minio:
-  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
-  worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
-  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
-  use_ssl: false # Use SSL for connection or not
-  old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
-  delete_local_copy: true # Delete local copy of block once it's moved to cloud
+# minio:
+#   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
+#   worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+#   num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
+#   use_ssl: false # Use SSL for connection or not
+#   old_block_round_range: 250000 # How old the block should be to be considered for moving to cloud, Should be greater than proximity scan window
+#   delete_local_copy: true # Delete local copy of block once it's moved to cloud
+
+# All tiering, strategy,etc. configs
+storage:
+  # Start mode will delete all the data in volumepath, will initialize meta records,
+  # Repair mode will recreate meta records and restore missing blocks(should also check if block is in cold storage).
+  mode: start # normal or repair or recover(metadata recovery)
+
+  #Types:
+  # - hot_only --> Only hot tier(ssd),
+  # - warm_only --> Only warm tier(hdd),
+  # - cache_and_warm, --> Cache and warm tier(ssd + hdd),
+  # - cache_and_cold --> Cache and cold tier(ssd + cold storage),
+  # - cache_hot_and_cold --> Cache(for cold blocks), hot(ssd) and cold tier,
+  # - cache_warm_and_cold --> Cache(for both warm and cold blocks), warm(hdd) and cold tier
+
+  #Note: Cannot have mix of hot and warm; hot does not require cache since ssd is used as hot tier and cache both
+
+  #
+  #Cache = 1, Warm = 2, Hot = 4, Cold = 8. And their combination is sum of these numbers
+  #If storage type is Cache and Warm then 1 + 2 = 3
+
+  storage_type: 4
+  cache:
+    storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
+    cache_strategy: ""
+    write_policy: "write_through" # write_through, write_back
+    poll_interval: 1 # In hour
+    block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
+    volumes:
+      - path: "/path/to/cache/blocks"
+        recovery: false # Defaults to false
+        size_to_maintain: 10 # In GB
+        inodes_to_maintain: 10 # In percent
+        allowed_block_numbers: 10000
+        allowed_block_size: 1 # In GB
+      - path: "/path/to/another/cache/blocks"
+        recovery: false
+        size_to_maintain: 2 # In GB
+        inodes_to_maintain: 10 # In percent
+        allowed_block_numbers: 100000
+        allowed_block_size: 1 # In GB
+  hot:
+    strategy: "random"
+    block_moves_in: 720 # In hour; Blocks older than 720 hours will be moved to cold storage is cold storage is enabled
+    volumes:
+      - path: "/path/to/hot/blocks"
+        recovery: false
+        size_to_maintain: 1 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 1000
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
+      - path: "/another/path/to/hot/blocks"
+        recovery: false
+        size_to_maintain: 1 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 1000
+        allowed_block_size: 500 * 1024 * 1024 # 500GB
+  warm:
+    block_moves_in: 720 # In hour
+    strategy: "round_robin" # choices; round_robin, min_size_first, min_count_first and random
+    volumes:
+      - path: "/path/to/store/blocks"
+        recovery: false
+        size_to_maintain: 4 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 10^9 #should be <= 10^9; if greater number is provided then it will settle to 10^9
+        allowed_block_size: 1024 * 1024 * 1024
+      - path: "/another/path/to/store/blocks"
+        recovery: false
+        size_to_maintain: 4 # In GB
+        inodes_to_maintain: 5 # In percent
+        allowed_block_numbers: 10^9
+        allowed_block_size: 1024 * 1024 * 1024
+  cold:
+    #Can be either disk, minio or blobber but never combination of them.
+    delete_local: true
+    storage:
+      type: "minio" # one of disk, minio and blobber
+      disk: # Cold storage can also be some mounted volumes
+        strategy: "some strategy"
+        volumes:
+          - path: "/path/to/store/blocks"
+            recovery: false
+            size_to_maintain: 10 # In GB
+            inodes_to_maintain: 10 # In percent
+            allowed_block_numbers: 10^10 # Can be any numbers
+            allowed_block_size: 1000 # In GB
+          - path: "/path/to/store/blocks"
+            recovery: false
+            size_to_maintain: 10 # In GB
+            inodes_to_maintain: 10 # In percent
+            allowed_block_numbers: 10^10 # Can be any numbers
+            allowed_block_size: 1000 # In GB
+      minio:
+        strategy: "some cold strategy"
+        cloud_storages:
+          - storage_service_url: ""
+            access_id: ""
+            secret_access_key: ""
+            bucket_name: ""
+            allowed_bock_numbers: 10^15 # Can be any numbers
+            allowed_block_size: 10^10 # In GB
+          - storage_service_url: ""
+            access_id: ""
+            secret_access_key: ""
+            bucket_name: ""
+            allowed_bock_numbers: 10^15 # Can be any numbers
+            allowed_block_size: 10^10 # In GB
+      blobber:
+        strategy: "some blobber strategy"
+        blobbers:
+          - wallet: ""
+            allocation_id: ""
+            allowed_block_numbers: 10^10
+            allowed_block_size: 10^4 # In GB
+          - wallet: ""
+            allocation_id: ""
+            allowed_block_numbers: 10^10
+            allowed_block_size: 10^4 # In GB
+
 
 cassandra:
   connection:

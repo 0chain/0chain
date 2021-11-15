@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"golang.org/x/sys/unix"
@@ -94,7 +95,7 @@ func countFiles(dirPath string) (count int, err error) {
 	return
 }
 
-func getAvailableSizeAndInodes(vPath string) (availableSize, availableInodes uint64, err error) {
+func getAvailableSizeAndInodes(vPath string) (availableSize, totalInodes, availableInodes uint64, err error) {
 	var volStat unix.Statfs_t
 	err = unix.Statfs(vPath, &volStat)
 	if err != nil {
@@ -102,6 +103,7 @@ func getAvailableSizeAndInodes(vPath string) (availableSize, availableInodes uin
 	}
 
 	availableInodes = volStat.Ffree
+	totalInodes = volStat.Files
 	availableSize = volStat.Bfree * uint64(volStat.Bsize)
 	return
 }
@@ -222,4 +224,44 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	wg.Wait()
 
 	return grandCount.totalBlocksSize, totalBlocksCount
+}
+
+func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
+	switch v.(type) {
+	case int:
+		return uint64(v.(int)), nil
+	case string:
+		vStr := v.(string)
+		vStr = strings.ReplaceAll(vStr, " ", "")
+		if strings.Contains(vStr, "^") {
+			res := strings.Split(vStr, "^")
+			r1, err := strconv.Atoi(res[0])
+			if err != nil {
+				return 0, err
+			}
+
+			r2, err := strconv.Atoi(res[1])
+			if err != nil {
+				return 0, err
+			}
+
+			return uint64(r1 ^ r2), nil
+		} else if strings.Contains(vStr, "*") {
+			var value = uint64(1)
+			res := strings.Split(vStr, "*")
+			for _, r := range res {
+				i, err := strconv.Atoi(r)
+				if err != nil {
+					return 0, err
+				}
+
+				value *= uint64(i)
+			}
+			return value, nil
+
+		}
+
+	}
+
+	return 0, errors.New(fmt.Sprintf("Type unsupported: %T", v))
 }

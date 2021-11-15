@@ -10,11 +10,12 @@ import (
 
 	"0chain.net/chaincore/block"
 	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 const (
-	Mfu      = "mfu"   //most frequently used
-	Ra       = "ra"    //recently added
+	LFU      = "lfu"   //Least frequently used blocks will be replaced
+	LRU      = "lru"   //Least recently added
 	RaAndMfu = "ramfu" //recently added and most frequently used
 
 	ChK   = "ChK"
@@ -24,7 +25,7 @@ const (
 	WriteBack    = "writeback"
 )
 
-var chTier cacheTier
+// var chTier cacheTier
 
 type cacheTier struct {
 	CacheWrite        string //writethrough, writeback
@@ -47,7 +48,7 @@ type volumeSelected struct {
 
 func (ct *cacheTier) write(hash string, data []byte) (cachePath string, err error) {
 	sv := <-ct.SelectedVolumeCh
-	chTier.prevVolInd = sv.prevInd
+	ct.prevVolInd = sv.prevInd
 
 	if sv.err != nil {
 		Logger.Error(sv.err.Error())
@@ -107,40 +108,42 @@ func getFromCache() (*block.Block, error) {
 	return nil, nil
 }
 
-func cacheInit(cConf map[string]interface{}) {
+func cacheInit(cViper *viper.Viper) *cacheTier {
 	Logger.Info("Initializing cache")
-	volumesI, ok := cConf["cache"]
-	if !ok {
+
+	volumesI := cViper.Get("volumes")
+	if volumesI == nil {
 		panic("volume config not available")
 	}
 
-	volumes := volumesI.([]map[string]interface{})
+	volumesMapI := volumesI.([]interface{})
+	volumesMap := make([]map[string]interface{}, len(volumesMapI))
+	for _, vI := range volumesMapI {
+		m := make(map[string]interface{})
+		volIMap := vI.(map[interface{}]interface{})
+		for k, v := range volIMap {
+			sK := k.(string)
+			m[sK] = v
+		}
+		volumesMap = append(volumesMap, m)
+	}
 
-	var volumeStrategy string
-	volumeStrategyI, ok := cConf["volume_strategy"]
-	if !ok {
+	volumeStrategy := cViper.GetString("volume_strategy")
+	if volumeStrategy == "" {
 		volumeStrategy = DefaultCacheStrategy
-	} else {
-		volumeStrategy = volumeStrategyI.(string)
 	}
 
-	var cacheStrategy string
-	cacheStrategyI, ok := cConf["cache_strategy"]
-	if !ok {
-		cacheStrategy = Ra
-	} else {
-		cacheStrategy = cacheStrategyI.(string)
+	cacheStrategy := cViper.GetString("cache_strategy")
+	if cacheStrategy == "" {
+		cacheStrategy = LRU
 	}
 
-	var cacheWrite string
-	cacheWriteI, ok := cConf["write_policy"]
-	if !ok {
+	cacheWrite := cViper.GetString("write_policy")
+	if cacheWrite == "" {
 		cacheWrite = WriteBack
-	} else {
-		cacheWrite = cacheWriteI.(string)
 	}
 
-	if cacheWrite != WriteBack && cacheWrite != WriteThrough {
+	if !(cacheWrite == WriteBack || cacheWrite == WriteThrough) {
 		panic(fmt.Errorf("Cache write policy %v is not supported", cacheWrite))
 	}
 
@@ -148,7 +151,7 @@ func cacheInit(cConf map[string]interface{}) {
 	var vf func(volumes []*cacheVolume, prevInd int)
 
 	selectedVolumeChan := make(chan *volumeSelected, 1)
-
+	chTier := new(cacheTier)
 	switch volumeStrategy {
 	default:
 		panic(ErrStrategyNotSupported(volumeStrategy))
@@ -342,24 +345,24 @@ func cacheInit(cConf map[string]interface{}) {
 	switch cacheStrategy {
 	default:
 		panic(ErrStrategyNotSupported(cacheStrategy))
-	case Mfu:
+	case LFU:
 		_ = cf
 		//
-	case Ra:
-		//
-	case RaAndMfu:
+	case LRU:
 		//
 	}
 
-	startCacheVolumes(volumes)
+	startCacheVolumes(volumesMap, chTier)
 
 	chTier.SelectedVolumeCh = selectedVolumeChan
 	chTier.SelectNextStorage = vf
 	chTier.DCL = ChDCL
 	chTier.DirPrefix = ChK
+
+	return chTier
 }
 
-func startCacheVolumes(mVolumes []map[string]interface{}) {
+func startCacheVolumes(mVolumes []map[string]interface{}, chTier *cacheTier) {
 	for _, volI := range mVolumes {
 		vPathI, ok := volI["path"]
 		if !ok {
@@ -379,7 +382,7 @@ func startCacheVolumes(mVolumes []map[string]interface{}) {
 			continue
 		}
 
-		availableSize, availableInodes, err := getAvailableSizeAndInodes(vPath)
+		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(vPath)
 
 		if err != nil {
 			Logger.Error(err.Error())
@@ -402,7 +405,7 @@ func startCacheVolumes(mVolumes []map[string]interface{}) {
 		if ok {
 			inodesToMaintain = inodesToMaintainI.(uint64)
 		}
-		if availableInodes <= inodesToMaintain {
+		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(vPath, inodesToMaintain).Error())
 			continue
 		}
@@ -410,13 +413,19 @@ func startCacheVolumes(mVolumes []map[string]interface{}) {
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := volI["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := volI["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		chTier.Volumes = append(chTier.Volumes, &cacheVolume{
@@ -432,14 +441,3 @@ func startCacheVolumes(mVolumes []map[string]interface{}) {
 	}
 
 }
-
-/*
-
-
-CreatedTime = hash
-LastAccessTime = hash
-FrequentAccessCount = hash
-CreatedTime:AccessCount = hash
-
-
-*/

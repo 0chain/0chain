@@ -17,6 +17,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/viper"
 	"golang.org/x/sys/unix"
 )
 
@@ -363,20 +364,29 @@ func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 	return true
 }
 
-func volumeInit(tierType string, dConf map[string]interface{}, mode string) *diskTier {
-	volumesI, ok := dConf["volumes"]
-	if !ok {
-		panic(errors.New("Volumes config not available"))
+func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
+	strategy := vViper.GetString("strategy")
+	if strategy == "" {
+		strategy = DefaultVolumeStrategy
 	}
 
-	volumes := volumesI.([]map[string]interface{})
+	volumesI := vViper.Get("volumes")
+	if volumesI == nil {
+		panic(errors.New("Volumes config not available"))
 
-	var strategy string
-	strategyI, ok := dConf["strategy"]
-	if !ok {
-		strategy = DefaultVolumeStrategy
-	} else {
-		strategy = strategyI.(string)
+	}
+
+	volumesMapI := volumesI.([]interface{})
+	var volumesMap []map[string]interface{}
+	for _, volumeI := range volumesMapI {
+		m := make(map[string]interface{})
+		volIMap := volumeI.(map[interface{}]interface{})
+		for k, v := range volIMap {
+			sK := k.(string)
+			m[sK] = v
+		}
+
+		volumesMap = append(volumesMap, m)
 	}
 
 	var dTier diskTier
@@ -396,11 +406,11 @@ func volumeInit(tierType string, dConf map[string]interface{}, mode string) *dis
 	switch mode {
 	case "start":
 		//Delete all existing data and start fresh
-		startVolumes(volumes, &dTier) //will panic if right config setup is not provided
+		startVolumes(volumesMap, &dTier) //will panic if right config setup is not provided
 	case "restart": //Nothing is lost but sharder was off for maintenance mode
-		restartVolumes(volumes, &dTier)
+		restartVolumes(volumesMap, &dTier)
 	case "recover": //Metadata is lost
-		recoverVolumeMetaData(volumes, &dTier)
+		recoverVolumeMetaData(volumesMap, &dTier)
 	case "repair": //Metadata is present but some disk failed
 		panic("Repair mode not implemented")
 	case "repair_and_recover": //Metadata is lost and some disk failed
@@ -652,7 +662,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, dTier.DirPrefix, dTier.DCL)
 		}
 
-		availableSize, availableInodes, err := getAvailableSizeAndInodes(vPath)
+		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(vPath)
 
 		if err != nil {
 			Logger.Error(err.Error())
@@ -662,7 +672,10 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 		var sizeToMaintain uint64
 		sizeToMaintainI, ok := volI["size_to_maintain"]
 		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
+			sizeToMaintain, err = getUint64ValueFromYamlConfig(sizeToMaintainI) // try to convert it to uint64 directly from yaml parser(viper)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if availableSize/(1024^3) <= sizeToMaintain {
@@ -673,9 +686,12 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 		var inodesToMaintain uint64
 		inodesToMaintainI, ok := volI["inodes_to_maintain"]
 		if ok {
-			inodesToMaintain = inodesToMaintainI.(uint64)
+			inodesToMaintain, err = getUint64ValueFromYamlConfig(inodesToMaintainI) // try to convert it to uint64 directly from yaml parser(viper)
+			if err != nil {
+				panic(err)
+			}
 		}
-		if availableInodes <= inodesToMaintain {
+		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(vPath, inodesToMaintain).Error())
 			continue
 		}
@@ -683,13 +699,19 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := volI["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI) // try to convert it to uint64 directly from yaml parser(viper)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := volI["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI) // try to convert it to uint64 directly from yaml parser(viper)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		//Create index state which stores curDirBlockNums, curDir index and curKIndex
@@ -854,7 +876,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			}
 		}
 		//Check available size and inodes and add volume to volume pool
-		availableSize, availableInodes, err := getAvailableSizeAndInodes(volPath)
+		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
@@ -882,7 +904,10 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 		var sizeToMaintain uint64
 		sizeToMaintainI, ok := mVolume["size_to_maintain"]
 		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
+			sizeToMaintain, err = getUint64ValueFromYamlConfig(sizeToMaintainI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if availableSize/(1024^3) <= sizeToMaintain {
@@ -893,9 +918,12 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 		var inodesToMaintain uint64
 		inodesToMaintainI, ok := mVolume["inodes_to_maintain"]
 		if ok {
-			inodesToMaintain = inodesToMaintainI.(uint64)
+			inodesToMaintain, err = getUint64ValueFromYamlConfig(inodesToMaintainI)
+			if err != nil {
+				panic(err)
+			}
 		}
-		if availableInodes <= inodesToMaintain {
+		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(volPath, inodesToMaintain).Error())
 			continue
 		}
@@ -903,7 +931,10 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := mVolume["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if allowedBlockNumbers != 0 && grandCount.totalBlocksCount > allowedBlockNumbers {
@@ -914,7 +945,10 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := mVolume["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if allowedBlockSize != 0 && grandCount.totalBlocksSize > allowedBlockSize {
