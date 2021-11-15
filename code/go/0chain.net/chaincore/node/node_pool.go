@@ -104,9 +104,9 @@ func (np *Pool) start() {
 }
 
 func (np *Pool) getNodesFromC() (nds []*Node) {
-	np.start()
 	i := 0
 	for {
+		np.start()
 		select {
 		case nds = <-np.getNodesC:
 			return
