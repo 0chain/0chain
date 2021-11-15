@@ -180,6 +180,36 @@ func shouldPush(options *SendOptions, receiver *Node, uri string, entity datasto
 	return true
 }
 
+type senderSignInfo struct {
+	Ts        common.Timestamp
+	TsStr     string
+	Hash      string
+	Signature string
+}
+
+// prepareSenderSign prepare N signature in N seconds
+func prepareSenderSign(entity datastore.Entity, num int) ([]*senderSignInfo, error) {
+	ts := time.Now()
+	ssis := make([]*senderSignInfo, num)
+	for i := 0; i < num; i++ {
+		t := common.Timestamp(ts.Add(time.Duration(i) * time.Second).Unix())
+		hashdata := getHashData(Self.Underlying().GetKey(), t, entity.GetKey())
+		hash := encryption.Hash(hashdata)
+		signature, err := Self.Sign(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		ssis[i] = &senderSignInfo{
+			Ts:        t,
+			TsStr:     strconv.FormatInt(int64(t), 10),
+			Hash:      hash,
+			Signature: signature,
+		}
+	}
+	return ssis, nil
+}
+
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	timeout := 500 * time.Millisecond
@@ -196,6 +226,34 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
 			pushDataCache.Add(key, pdce)
 		}
+
+		preparedSignatures, err := prepareSenderSign(entity, 5)
+		if err != nil {
+			logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
+		}
+
+		setSignHeader := func(r *http.Request) {
+			for _, ssi := range preparedSignatures {
+				if common.Within(int64(ssi.Ts), int64(time.Second)) {
+					r.Header.Set(HeaderRequestTimeStamp, ssi.TsStr)
+					r.Header.Set(HeaderRequestHash, ssi.Hash)
+					r.Header.Set(HeaderNodeRequestSignature, ssi.Signature)
+					return
+				}
+			}
+
+			// there's no prepared signature within valid time range.
+			// generate a new one
+			ssis, err := prepareSenderSign(entity, 1)
+			if err != nil {
+				logging.N2n.Panic("failed to prepare sender signature", zap.Error(err))
+			}
+
+			r.Header.Set(HeaderRequestTimeStamp, ssis[0].TsStr)
+			r.Header.Set(HeaderRequestHash, ssis[0].Hash)
+			r.Header.Set(HeaderNodeRequestSignature, ssis[0].Signature)
+		}
+
 		return func(ctx context.Context, receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
 			addr := receiver.GetN2NURLBase() + uri
@@ -217,6 +275,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetSendHeaders(req, entity, options)
+			setSignHeader(req)
 			// Keep the number of messages to a node bounded
 			var (
 				selfNode *Node
@@ -279,16 +338,6 @@ func SetSendHeaders(req *http.Request, entity datastore.Entity, options *SendOpt
 	}
 	req.Header.Set(HeaderRequestEntityName, entity.GetEntityMetadata().GetName())
 	req.Header.Set(HeaderRequestEntityID, datastore.ToString(entity.GetKey()))
-	ts := common.Now()
-	hashdata := getHashData(Self.Underlying().GetKey(), ts, entity.GetKey())
-	hash := encryption.Hash(hashdata)
-	signature, err := Self.Sign(hash)
-	if err != nil {
-		return false
-	}
-	req.Header.Set(HeaderRequestTimeStamp, strconv.FormatInt(int64(ts), 10))
-	req.Header.Set(HeaderRequestHash, hash)
-	req.Header.Set(HeaderNodeRequestSignature, signature)
 
 	if options.CODEC == 0 {
 		req.Header.Set(HeaderRequestCODEC, CodecJSON)
