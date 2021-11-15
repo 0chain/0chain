@@ -2,6 +2,10 @@ package event
 
 import (
 	"errors"
+	"sort"
+	"strconv"
+
+	"0chain.net/core/encryption"
 
 	"0chain.net/smartcontract/dbs/postgresql"
 
@@ -16,6 +20,28 @@ type Event struct {
 	Type        string `json:"type"`
 	Tag         string `json:"tag"`
 	Data        string `json:"data"`
+}
+
+func (ev *Event) hashData() string {
+	return strconv.Itoa(int(ev.BlockNumber)) + ":" +
+		ev.TxHash + ":" + ev.Type + ":" + ev.Tag
+}
+
+func (ev *Event) Hash() string {
+	return encryption.Hash(ev.hashData())
+}
+
+func HashEvents(events []Event) string {
+	var hashes []string
+	for _, event := range events {
+		hashes = append(hashes, event.Hash())
+	}
+	sort.Strings(hashes)
+	var hashStr string
+	for _, subHash := range hashes {
+		hashStr += subHash
+	}
+	return encryption.Hash(hashStr)
 }
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
