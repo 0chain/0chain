@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package shardergrpc;
+
+option go_package = "code/go/0chain.net/gen/proto/sharderproto/api/v1;shardergrpc";
+
+import "sharderproto/api/v1/sharder_contract.proto";
+import "google/api/annotations.proto";
+import "google/api/httpbody.proto";
+
+service SharderService {
+
+  rpc GetChainStats(GetChainStatsRequest) returns (GetChainStatsResponse) {
+    option (google.api.http) = {
+      get : "/v2/_chain_stats"
+    };
+  };
+
+}

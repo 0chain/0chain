@@ -1,10 +1,7 @@
-version: v1beta1
+version: v1
 name: buf.build/0chain/miner
 deps:
   - buf.build/beta/googleapis
-build:
-  roots:
-    - code/go/0chain.net/miner/proto/api/v1
 lint:
   use:
     - DEFAULT
@@ -16,8 +13,6 @@ lint:
   ignore:
     - google/api
   except:
-    - PACKAGE_AFFINITY
-    - FILE_LAYOUT
     - PACKAGE_VERSION_SUFFIX
 breaking:
   use:
