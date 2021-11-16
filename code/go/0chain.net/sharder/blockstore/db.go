@@ -73,7 +73,7 @@ func InitMetaRecordDB(bmrDB, qmrDB string, deleteExistingDB bool) {
 		}
 
 		err = bwrDB.Update(func(t *bbolt.Tx) error {
-			_, err := t.CreateBucketIfNotExists([]byte(BlockUsageBucket))
+			_, err := t.CreateBucketIfNotExists([]byte(BlockWhereBucket))
 			if err != nil {
 				return err
 			}
