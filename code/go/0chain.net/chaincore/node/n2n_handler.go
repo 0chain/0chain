@@ -65,6 +65,7 @@ var (
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
 	HeaderRequestCODEC          = "X-Chain-CODEC"
+	HeaderRequestToPull         = "X-Request-To-Pull"
 
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
@@ -171,10 +172,10 @@ func getDataAndClose(reader io.ReadCloser) []byte {
 }
 
 func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	var buffer io.Reader = reader
+	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		cbuffer.ReadFrom(buffer)
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr

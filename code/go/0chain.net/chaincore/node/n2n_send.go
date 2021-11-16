@@ -273,8 +273,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
+
+			if toPull {
+				req.Header.Set(HeaderRequestToPull, "true")
+			}
+
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetSendHeaders(req, entity, options)
+
 			setSignHeader(req)
 			// Keep the number of messages to a node bounded
 			var (
@@ -466,13 +472,15 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		} else {
 			ctx = WithNode(ctx, sender)
 		}
+
+		if r.Header.Get(HeaderRequestToPull) == "true" {
+			go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
+			sender.AddReceived(1)
+			return
+		}
+
 		entity, err := getRequestEntity(r, &buf, entityMetadata)
 		if err != nil {
-			if err == NoDataErr {
-				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
-				sender.AddReceived(1)
-				return
-			}
 			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
 			return
 		}
