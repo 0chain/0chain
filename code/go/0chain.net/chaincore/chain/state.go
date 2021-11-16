@@ -197,7 +197,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return errors.New("invalid transaction type" + string(txn.TransactionType))
+		return errors.New("invalid transaction type" + fmt.Sprint(txn.TransactionType))
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
