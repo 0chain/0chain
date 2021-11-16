@@ -45,7 +45,7 @@ type selectedDiskVolume struct {
 type diskTier struct {
 	Volumes          []*volume //List of hot volumes
 	SelectNextVolume func(volumes []*volume, prevInd int)
-	SelectedVolumeCh <-chan *selectedDiskVolume //volume that will be used to store blocks next
+	SelectedVolumeCh <-chan selectedDiskVolume //volume that will be used to store blocks next
 	PrevVolInd       int
 	// Mu               sync.Mutex
 	//Directory content limit
@@ -54,6 +54,7 @@ type diskTier struct {
 }
 
 func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err error) {
+	Logger.Info("Waiting channel for selected volume")
 	sdv := <-d.SelectedVolumeCh
 	if sdv.err != nil {
 		return "", sdv.err
@@ -61,7 +62,7 @@ func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err err
 
 	d.PrevVolInd = sdv.prevInd
 
-	if blockPath, err = sdv.volume.write(b, data); err != nil {
+	if blockPath, err = sdv.volume.write(b, data, d); err != nil {
 		return
 	}
 
@@ -85,17 +86,13 @@ type volume struct {
 	CurKInd         int
 	CurDirInd       int
 	CurDirBlockNums int
-
-	//Directory content limit
-	DCL       int
-	DirPrefix string
 	//Lock required when updadign blocks size, count.
 	Mu sync.Mutex
 }
 
 func (v *volume) selectDir(dTier *diskTier) error {
-	if v.CurDirBlockNums < v.DCL-1 {
-		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", v.DirPrefix, v.CurKInd, v.CurDirInd))
+	if v.CurDirBlockNums < dTier.DCL-1 {
+		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
 			if err := os.MkdirAll(blocksPath, 0644); err != nil {
@@ -105,9 +102,9 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		return nil
 	}
 
-	if v.CurDirInd < v.DCL-1 {
+	if v.CurDirInd < dTier.DCL-1 {
 		dirInd := v.CurDirInd + 1
-		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", v.DirPrefix, v.CurKInd, dirInd))
+		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, dirInd))
 		blocksCount, err := countFiles(blocksPath)
 
 		if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -121,7 +118,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 			return err
 		}
 
-		if blocksCount >= v.DCL {
+		if blocksCount >= dTier.DCL {
 			return ErrVolumeFull(v.Path)
 		}
 
@@ -139,7 +136,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	}
 
 	dirInd := 0
-	blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", v.DirPrefix, kInd, dirInd))
+	blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, kInd, dirInd))
 	blocksCount, err := countFiles(blocksPath)
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -155,7 +152,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		return err
 	}
 
-	if blocksCount >= v.DCL {
+	if blocksCount >= dTier.DCL {
 		return ErrVolumeFull(v.Path)
 	}
 
@@ -166,8 +163,8 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
 }
 
-func (v *volume) write(b *block.Block, data []byte) (bPath string, err error) {
-	bPath = path.Join(v.Path, fmt.Sprintf("K%v/%v", v.CurKInd, v.CurDirInd), fmt.Sprintf("%v.%v", b.Hash, fileExt))
+func (v *volume) write(b *block.Block, data []byte, dTier *diskTier) (bPath string, err error) {
+	bPath = path.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd), fmt.Sprintf("%v.%v", b.Hash, fileExt))
 
 	var f *os.File
 	f, err = os.Create(bPath)
@@ -204,58 +201,6 @@ func (v *volume) write(b *block.Block, data []byte) (bPath string, err error) {
 		return
 	}
 
-	//This block doesn't belong here
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	var bwrErr, ubErr error
-	var bwr BlockWhereRecord
-	var ub UnmovedBlockRecord
-	go func() {
-		defer wg.Done()
-		bwr = BlockWhereRecord{
-			Hash:      b.Hash,
-			Tiering:   HotTier,
-			BlockPath: bPath,
-		}
-
-		bwrErr = bwr.AddOrUpdate()
-
-	}()
-
-	go func() {
-		defer wg.Done()
-		ub = UnmovedBlockRecord{
-			CreatedAt: b.ToTime(),
-			Hash:      b.Hash,
-		}
-
-		ubErr = ub.Add()
-	}()
-
-	wg.Wait()
-
-	if bwrErr != nil || ubErr != nil {
-		Logger.Error(err.Error())
-		Logger.Info(fmt.Sprintf("Removing block: %v and its meta record", bPath))
-
-		wg := sync.WaitGroup{}
-		wg.Add(2)
-		go func() {
-			defer wg.Done()
-			DeleteBlockWhereRecord(b.Hash)
-		}()
-
-		go func() {
-			defer wg.Done()
-			ub.Delete()
-		}()
-		wg.Wait()
-
-		os.Remove(bPath)
-		return
-	}
-	//Above block doesn't belong here
 	v.CurDirBlockNums++
 	v.updateCount(1)
 	v.updateSize(int64(n))
@@ -423,7 +368,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 	Logger.Info(fmt.Sprintf("Registering function for strategy: %v", strategy))
 	var f func(volumes []*volume, prevInd int)
-	diskVolumeSelectChan := make(chan *selectedDiskVolume, 1)
+	diskVolumeSelectChan := make(chan selectedDiskVolume, 1)
 
 	switch strategy {
 	default:
@@ -452,11 +397,11 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 			dTier.Volumes = volumes
 
 			if selectedVolume == nil {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					err: ErrUnableToSelectVolume,
 				}
 			} else {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					volume:  selectedVolume,
 					prevInd: selectedIndex,
 				}
@@ -512,11 +457,11 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 			dTier.Volumes = volumes
 
 			if selectedVolume == nil {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					err: ErrUnableToSelectVolume,
 				}
 			} else {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					volume:  selectedVolume,
 					prevInd: selectedIndex,
 				}
@@ -556,11 +501,11 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 			dTier.Volumes = volumes
 
 			if selectedVolume == nil {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					err: ErrUnableToSelectVolume,
 				}
 			} else {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					volume:  selectedVolume,
 					prevInd: selectedIndex,
 				}
@@ -599,11 +544,11 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 			dTier.Volumes = volumes
 
 			if selectedVolume == nil {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					err: ErrUnableToSelectVolume,
 				}
 			} else {
-				diskVolumeSelectChan <- &selectedDiskVolume{
+				diskVolumeSelectChan <- selectedDiskVolume{
 					volume:  selectedVolume,
 					prevInd: selectedIndex,
 				}
@@ -614,6 +559,8 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 	dTier.SelectedVolumeCh = diskVolumeSelectChan
 	dTier.SelectNextVolume = f
+
+	go dTier.SelectNextVolume(dTier.Volumes, dTier.PrevVolInd)
 
 	return &dTier
 }
@@ -649,6 +596,11 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			}
 
 			if err := os.MkdirAll(vPath, 0644); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			if err := updateCurIndexes(filepath.Join(vPath, IndexStateFileName), 0, 0, 0); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}

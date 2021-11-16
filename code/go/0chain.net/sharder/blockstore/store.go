@@ -30,10 +30,10 @@ const (
 )
 
 const (
-	HOT   = "Hot"
-	WARM  = "Warm"
-	CACHE = "Cache"
-	COLD  = "Cold"
+	HOT   = "hot"
+	WARM  = "warm"
+	CACHE = "cache"
+	COLD  = "cold"
 )
 
 var Store BlockStore
@@ -46,13 +46,30 @@ type BlockStore struct {
 	WarmTier *diskTier
 	ColdTier *coldTier
 	//fields with registered functions as per the config files
-	write  func(b *block.Block) error
+	write  func(b *block.Block) (string, error)
 	read   func(hash string, round int64) (b *block.Block, err error)
 	delete func(hash string) error
 }
 
 func (sm *BlockStore) Write(b *block.Block) error {
-	return sm.write(b)
+	Logger.Info("Writing block: " + b.Hash)
+	blockPath, err := sm.write(b)
+	if err != nil {
+		Logger.Error(err.Error())
+		return err
+	}
+
+	Logger.Info(fmt.Sprintf("Block %v written to %v successfully", b.Hash, blockPath))
+
+	ub := UnmovedBlockRecord{
+		CreatedAt: b.ToTime(),
+		Hash:      b.Hash,
+	}
+	if err := ub.Add(); err != nil {
+		//do something
+	}
+
+	return err
 }
 
 func (sm *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
@@ -60,6 +77,7 @@ func (sm *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block
 }
 
 func (sm *BlockStore) Read(hash string, round int64) (b *block.Block, err error) {
+	Logger.Info("Reading block: " + b.Hash)
 	return sm.read(hash, round)
 }
 
@@ -68,10 +86,10 @@ func (sm *BlockStore) Delete(hash string) error {
 }
 
 func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
+	Logger.Info("Initializing storages")
 	var mode string
 	var storageType int
 
-	fmt.Println(*sViper)
 	storageType = sViper.GetInt("storage_type")
 
 	if storageType == 0 {
@@ -118,15 +136,27 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		Store.HotTier = volumeInit(HOT, hViper, mode) //Will panic if wrong setup is provided
 
-		Store.write = func(b *block.Block) error {
+		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
 			if err != nil {
-				Logger.Error(err.Error())
-				return err
+				return "", err
 			}
 
-			Store.HotTier.write(b, data)
-			return nil
+			blockPath, err := Store.HotTier.write(b, data)
+			if err != nil {
+				return "", err
+			}
+
+			bwr := &BlockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   HotTier,
+				BlockPath: blockPath,
+			}
+			if err := bwr.AddOrUpdate(); err != nil {
+				return "", err
+			}
+
+			return blockPath, nil
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
@@ -153,15 +183,27 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
 
-		Store.write = func(b *block.Block) error {
+		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
 			if err != nil {
-				Logger.Error(err.Error())
-				return err
+				return "", err
 			}
 
-			Store.WarmTier.write(b, data)
-			return nil
+			blockPath, err := Store.WarmTier.write(b, data)
+			if err != nil {
+				return "", err
+			}
+
+			bwr := BlockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   WarmTier,
+				BlockPath: blockPath,
+			}
+			if err := bwr.AddOrUpdate(); err != nil {
+				return "", err
+			}
+
+			return blockPath, nil
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
@@ -198,62 +240,57 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		cacheInit(cViper)
 
-		var writeFunc func(b *block.Block) error
+		var writeFunc func(b *block.Block) (string, error)
 
 		switch Store.Cache.CacheWrite {
 		case WriteThrough:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.WarmTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   WarmTier,
 					BlockPath: blockPath,
 				}
 
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
 				go cacheWrite(bwr, data)
 
-				return nil
+				return blockPath, nil
 			}
 		case WriteBack:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.WarmTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   WarmTier,
 					BlockPath: blockPath,
 				}
-
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
-				return nil
+				return blockPath, nil
 			}
 		}
 		Store.write = writeFunc
@@ -301,62 +338,57 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		Store.ColdTier = coldInit(coViper, mode)
 		Store.Cache = cacheInit(cViper)
 
-		var writeFunc func(b *block.Block) error
+		var writeFunc func(b *block.Block) (string, error)
 
 		switch Store.Cache.CacheWrite {
 		case WriteThrough:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.ColdTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   ColdTier,
 					BlockPath: blockPath,
 				}
 
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
 				go cacheWrite(bwr, data)
 
-				return nil
+				return blockPath, nil
 			}
 		case WriteBack:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.ColdTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   ColdTier,
 					BlockPath: blockPath,
 				}
-
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
-				return nil
+				return blockPath, nil
 			}
 		}
 
@@ -404,15 +436,27 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		Store.ColdTier = coldInit(cViper, mode)
 
-		Store.write = func(b *block.Block) error {
+		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
 			if err != nil {
-				Logger.Error(err.Error())
-				return err
+				return "", err
 			}
 
-			Store.HotTier.write(b, data)
-			return nil
+			blockPath, err := Store.HotTier.write(b, data)
+			if err != nil {
+				return "", err
+			}
+
+			bwr := &BlockWhereRecord{
+				Hash:      b.Hash,
+				Tiering:   HotTier,
+				BlockPath: blockPath,
+			}
+			if err := bwr.AddOrUpdate(); err != nil {
+				return "", err
+			}
+
+			return blockPath, nil
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
@@ -458,15 +502,27 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		Store.ColdTier = coldInit(cViper, mode)
 
-		Store.write = func(b *block.Block) error {
+		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
 			if err != nil {
-				Logger.Error(err.Error())
-				return err
+				return "", err
 			}
 
-			Store.WarmTier.write(b, data)
-			return nil
+			blockPath, err := Store.WarmTier.write(b, data)
+			if err != nil {
+				return "", err
+			}
+
+			bwr := BlockWhereRecord{
+				Hash:      b.Hash,
+				BlockPath: blockPath,
+				Tiering:   WarmTier,
+			}
+			if err := bwr.AddOrUpdate(); err != nil {
+				return "", err
+			}
+
+			return blockPath, nil
 		}
 
 		Store.read = func(hash string, round int64) (b *block.Block, err error) {
@@ -516,61 +572,56 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		Store.HotTier = volumeInit(HOT, hViper, mode)
 		Store.ColdTier = coldInit(coViper, mode)
 
-		var writeFunc func(b *block.Block) error
+		var writeFunc func(b *block.Block) (string, error)
 
 		switch Store.Cache.CacheWrite {
 		case WriteThrough:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.HotTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
 					Tiering:   HotTier,
 					BlockPath: blockPath,
 				}
-
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
 				go cacheWrite(bwr, data)
-				return nil
+
+				return blockPath, nil
 			}
 		case WriteBack:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.HotTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
 					Tiering:   HotTier,
 					BlockPath: blockPath,
 				}
-
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
-				return nil
+				return blockPath, err
 			}
 		}
 
@@ -646,62 +697,54 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		Store.WarmTier = volumeInit(WARM, wViper, mode)
 		Store.ColdTier = coldInit(coViper, mode)
 
-		var writeFunc func(b *block.Block) error
+		var writeFunc func(b *block.Block) (string, error)
 
 		switch Store.Cache.CacheWrite {
 		case WriteThrough:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.WarmTier.write(b, data)
+				if err != nil {
+					return "", err
+				}
+
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   WarmTier,
 					BlockPath: blockPath,
 				}
-
-				if err != nil {
-					Logger.Error(err.Error())
-					return err
-				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					return err
+					return "", err
 				}
 
 				go cacheWrite(bwr, data)
 
-				return nil
+				return blockPath, nil
 			}
 		case WriteBack:
-			writeFunc = func(b *block.Block) error {
+			writeFunc = func(b *block.Block) (string, error) {
 				data, err := getBlockData(b)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
 
 				blockPath, err := Store.WarmTier.write(b, data)
 				if err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
-
 				bwr := &BlockWhereRecord{
 					Hash:      b.Hash,
-					Tiering:   HotTier,
+					Tiering:   WarmTier,
 					BlockPath: blockPath,
 				}
-
 				if err := bwr.AddOrUpdate(); err != nil {
-					Logger.Error(err.Error())
-					return err
+					return "", err
 				}
-				return nil
+				return blockPath, nil
 			}
 		}
 
@@ -768,7 +811,16 @@ func cacheWrite(bwr *BlockWhereRecord, data []byte) {
 	}
 
 	bwr.CachePath = cachePath
-	bwr.Tiering = CacheAndHotTier
+	switch bwr.Tiering {
+	case HotTier:
+		bwr.Tiering = CacheAndHotTier
+	case WarmTier:
+		bwr.Tiering = CacheAndWarmTier
+	case ColdTier:
+		bwr.Tiering = CacheAndColdTier
+
+	}
+
 	if err := bwr.AddOrUpdate(); err != nil {
 		Logger.Error(err.Error())
 	}
