@@ -11,10 +11,7 @@ import (
 type BlobberChallenge struct {
 	gorm.Model
 	BlobberID  string      `gorm:"primary_key"`
-	Challenges []Challenge `gorm:"foreignKey:BlobberID;references:BlobberID"`
-	//ChallengeIds             []string              `json:"challenge_ids" gorm:"-"`
-	//ChallengeMap             map[string]*Challenge `json:"-" gorm:"-"`
-	//LatestCompletedChallenge *Challenge            `json:"latest_completed_challenge" gorm:"-"`
+	Challenges []Challenge `gorm:"foreignKey:blobber_id;references:blobber_id"`
 }
 
 func (bc *BlobberChallenge) add(edb *EventDb) error {
@@ -28,13 +25,13 @@ type BlobberChallengeId struct {
 }
 
 func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error {
+	var count int64
 	result := edb.Store.Get().
 		Model(&BlobberChallenge{}).
-		Find(&BlobberChallengeId{}).
 		Where("blobber_id", blobberId).
-		First(&bci)
+		Count(&count)
 
-	if result.RowsAffected == 0 {
+	if count == 0 {
 		bc := BlobberChallenge{
 			BlobberID: blobberId,
 		}
@@ -42,31 +39,32 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 		if err != nil {
 			return err
 		}
-		result := edb.Store.Get().
-			Model(&BlobberChallenge{}).
-			Find(&BlobberChallengeId{}).
-			Where("blobber_id", blobberId).
-			First(&bci)
-		if result.RowsAffected == 0 {
-			return fmt.Errorf("cannot create blobber challenge %v, db error %v",
-				blobberId, result.Error)
-		}
 	}
+	result = edb.Store.Get().
+		Model(&BlobberChallenge{}).
+		Find(&BlobberChallengeId{}).
+		Where("blobber_id", blobberId).
+		First(&bci)
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("cannot create blobber challenge %v, db error %v",
+			blobberId, result.Error)
+	}
+
 	return nil
 }
 
 type Challenge struct {
 	gorm.Model
-	BlobberID                string             `json:"blobber_id"`
-	Created                  common.Timestamp   `json:"created"`
-	ChallengeID              string             `json:"challenge_id" gorm:"primary_key"`
-	PrevID                   string             `json:"prev_id"`
-	Validators               []ValidationNode   `json:"validators" gorm:"ForeignKey:storage_challenge_id"`
-	RandomNumber             int64              `json:"seed"`
-	AllocationID             string             `json:"allocation_id"`
-	AllocationRoot           string             `json:"allocation_root"`
-	Response                 *ChallengeResponse `json:"challenge_response,omitempty" gorm:"ForeignKey:storage_challenge_id"`
-	LatestCompletedChallenge bool               `json:"-"`
+	BlobberID   string           `json:"blobber_id"`
+	Created     common.Timestamp `json:"created"`
+	ChallengeID string           `json:"challenge_id" gorm:"primary_key"`
+	PrevID      string           `json:"prev_id"`
+	//Validators               []ValidationNode `json:"validators" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
+	RandomNumber   int64  `json:"seed"`
+	AllocationID   string `json:"allocation_id"`
+	AllocationRoot string `json:"allocation_root"`
+	//Response                 Response         `json:"challenge_response,omitempty" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
+	LatestCompletedChallenge bool `json:"-"`
 }
 
 func (ch *Challenge) add(edb *EventDb, data []byte) error {
@@ -80,49 +78,50 @@ func (ch *Challenge) add(edb *EventDb, data []byte) error {
 		return err
 	}
 
-	edb.Store.Get().Create(ch)
-
+	result := edb.Store.Get().Create(ch)
+	if result.Error != nil {
+		return result.Error
+	}
 	return nil
 }
 
-type ChallengeResponse struct {
+type Response struct {
 	gorm.Model
-	ChallengeID       string             `json:"storage_challenge_id" gorm:"storage_challenge_id"`
-	ResponseID        string             `json:"challenge_id"`
-	ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"ForeignKey:challenge_response_id"`
+	ChallengeID       string             `json:"challenge_id"`
+	ResponseID        string             `json:"response_id" gorm:"primary_key"`
+	ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"foreignKey:ResponseID;references:ResponseID"`
 }
 
 type ValidationNode struct {
 	gorm.Model
-	ChallengeID string `json:"storage_challenge_id" gorm:"storage_challenge_id"`
-	ValidatorID string `json:"id"`
+	ChallengeID string `json:"challenge_id" gorm:"challenge_id"`
+	ValidatorID string `json:"id" gorm:"primary_key"`
 	BaseURL     string `json:"url"`
 }
 
 type ValidationTicket struct {
 	gorm.Model
-	ChallengeResponseId string           `json:"challenge_response_id" gorm:"challenge_response_id"`
-	ChallengeID         string           `json:"challenge_id"`
-	BlobberID           string           `json:"blobber_id"`
-	ValidatorID         string           `json:"validator_id"`
-	ValidatorKey        string           `json:"validator_key"`
-	Result              bool             `json:"success"`
-	Message             string           `json:"message"`
-	MessageCode         string           `json:"message_code"`
-	Timestamp           common.Timestamp `json:"timestamp"`
-	Signature           string           `json:"signature"`
+	ResponseID   string           `json:"response_id"`
+	ValidatorID  string           `json:"validator_id"`
+	ValidatorKey string           `json:"validator_key"`
+	Result       bool             `json:"success"`
+	Message      string           `json:"message"`
+	MessageCode  string           `json:"message_code"`
+	Timestamp    common.Timestamp `json:"timestamp"`
+	Signature    string           `json:"signature"`
 }
 
 func (edb *EventDb) migrateChallengeTable() error {
-	err := edb.Store.Get().AutoMigrate(&ValidationTicket{})
+	var err error
+	//err := edb.Store.Get().AutoMigrate(&ValidationTicket{})
 	if err != nil {
 		return err
 	}
-	err = edb.Store.Get().AutoMigrate(&ChallengeResponse{})
+	//err = edb.Store.Get().AutoMigrate(&Response{})
 	if err != nil {
 		return err
 	}
-	err = edb.Store.Get().AutoMigrate(&ValidationNode{})
+	//	err = edb.Store.Get().AutoMigrate(&ValidationNode{})
 	if err != nil {
 		return err
 	}
@@ -142,7 +141,7 @@ func (edb *EventDb) dropChallengeTable() error {
 	if err != nil {
 		return err
 	}
-	err = edb.Store.Get().Migrator().DropTable(&ChallengeResponse{})
+	err = edb.Store.Get().Migrator().DropTable(&Response{})
 	if err != nil {
 		return err
 	}

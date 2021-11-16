@@ -424,6 +424,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				"First challenge on the list is not same as the one"+
 					" attempted to redeem")
 		}
+		balances.EmitEvent(
+			event.TypeStats,
+			event.TagRemoveChallenge,
+			challResp.ID,
+		)
 		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
 		alloc.Stats.SuccessChallenges++
 		alloc.Stats.OpenChallenges--
@@ -471,6 +476,11 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 				"First challenge on the list is not same as the one"+
 					" attempted to redeem")
 		}
+		balances.EmitEvent(
+			event.TypeStats,
+			event.TagRemoveChallenge,
+			challResp.ID,
+		)
 		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
 		alloc.Stats.FailedChallenges++
 		alloc.Stats.OpenChallenges--

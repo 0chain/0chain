@@ -5,18 +5,17 @@ import (
 	"time"
 
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	"github.com/stretchr/testify/require"
-
 	"0chain.net/smartcontract/dbs"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func init() {
 	logging.Logger = zap.NewNop()
 }
 
-func TestSetupDatabase(t *testing.T) {
+/*
+func TestChallenges(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
@@ -31,6 +30,68 @@ func TestSetupDatabase(t *testing.T) {
 	}
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
+	defer eventDb.Close()
+	err = eventDb.drop()
+	require.NoError(t, err)
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+
+	challenge1 := Challenge{
+		BlobberID:   "one",
+		ChallengeID: "first",
+		Validators: []ValidationNode{
+			{ValidatorID: "val one"}, {ValidatorID: "val two"},
+		},
+		Response: Response{
+			ResponseID: "alpha response",
+			ValidationTickets: []ValidationTicket{
+				{Message: "message one"}, {Message: "message two"},
+			},
+		},
+	}
+	challenge2 := Challenge{
+		BlobberID:   "two",
+		ChallengeID: "second",
+		Validators: []ValidationNode{
+			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
+		},
+		Response: Response{
+			ResponseID: "bets response",
+			//ValidationTickets: []ValidationTicket{
+			//	{Message: "message two one"}, {Message: "message two two"},
+			//},
+		},
+	}
+	data, err := json.Marshal(&challenge1)
+	require.NoError(t, err)
+	err = (&Challenge{}).add(eventDb, data)
+	require.NoError(t, err)
+
+	data2, err := json.Marshal(&challenge2)
+	require.NoError(t, err)
+	err = (&Challenge{}).add(eventDb, data2)
+	require.NoError(t, err)
+
+	//err = eventDb.removeChallenge("first")
+	//require.NoError(t, err)
+}
+*/
+func TestSetupDatabase(t *testing.T) {
+	//t.Skip("only for local debugging, requires local postgresql")
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            "localhost",
+		Port:            "5432",
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	require.NoError(t, err)
+	defer eventDb.Close()
 
 	err = eventDb.drop()
 	require.NoError(t, err)
