@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package miner;
+package minergrpc;
 
-option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
+option go_package = "code/go/0chain.net/gen/proto/minerproto/api/v1;minergrpc";
 
 message GetNotarizedBlockRequest {
   int64 round = 1;

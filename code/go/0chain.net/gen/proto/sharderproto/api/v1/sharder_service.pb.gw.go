@@ -2,11 +2,11 @@
 // source: sharderproto/api/v1/sharder_service.proto
 
 /*
-Package proto is a reverse proxy.
+Package shardergrpc is a reverse proxy.
 
 It translates gRPC into RESTful JSON APIs.
 */
-package proto
+package shardergrpc
 
 import (
 	"context"
@@ -79,7 +79,7 @@ func RegisterSharderServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/sharder.SharderService/GetChainStats", runtime.WithHTTPPathPattern("/v2/_chain_stats"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/shardergrpc.SharderService/GetChainStats", runtime.WithHTTPPathPattern("/v2/_chain_stats"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -141,7 +141,7 @@ func RegisterSharderServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/sharder.SharderService/GetChainStats", runtime.WithHTTPPathPattern("/v2/_chain_stats"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/shardergrpc.SharderService/GetChainStats", runtime.WithHTTPPathPattern("/v2/_chain_stats"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package sharder;
+package shardergrpc;
 
-option go_package = "code/go/0chain.net/sharder/proto/api/src/proto";
+option go_package = "code/go/0chain.net/gen/proto/sharderproto/api/v1;shardergrpc";
 
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
