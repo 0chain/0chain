@@ -150,7 +150,7 @@ func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err erro
 func updateCurIndexes(fPath string, curKInd, curDirInd, curBlockNums int) error {
 	f, err := os.Create(fPath)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v\n%v", curDirInd, curDirInd, curBlockNums)))
