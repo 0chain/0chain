@@ -8,10 +8,21 @@ import (
 	"gorm.io/gorm"
 )
 
+type User struct {
+	gorm.Model
+	CreditCards []CreditCard
+}
+
+type CreditCard struct {
+	gorm.Model
+	Number string
+	UserID uint
+}
+
 type BlobberChallenge struct {
 	gorm.Model
-	BlobberID  string      `gorm:"primary_key"`
-	Challenges []Challenge `gorm:"foreignKey:blobber_id;references:blobber_id"`
+	BlobberID  string      //`gorm:"primary_key"`
+	Challenges []Challenge //`gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
 func (bc *BlobberChallenge) add(edb *EventDb) error {
@@ -55,16 +66,19 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 
 type Challenge struct {
 	gorm.Model
-	BlobberID   string           `json:"blobber_id"`
-	Created     common.Timestamp `json:"created"`
-	ChallengeID string           `json:"challenge_id" gorm:"primary_key"`
-	PrevID      string           `json:"prev_id"`
-	//Validators               []ValidationNode `json:"validators" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
-	RandomNumber   int64  `json:"seed"`
-	AllocationID   string `json:"allocation_id"`
-	AllocationRoot string `json:"allocation_root"`
-	//Response                 Response         `json:"challenge_response,omitempty" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
-	LatestCompletedChallenge bool `json:"-"`
+	BlobberChallengeID uint
+	BlobberID          string           `json:"blobber_id"`
+	Created            common.Timestamp `json:"created"`
+	ChallengeID        string           `json:"challenge_id"`
+	PrevID             string           `json:"prev_id"`
+	//Validators         []ValidationNode `json:"validators" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
+	Validators     []ValidationNode `json:"validators"`
+	RandomNumber   int64            `json:"seed"`
+	AllocationID   string           `json:"allocation_id"`
+	AllocationRoot string           `json:"allocation_root"`
+	//Response           Response         `json:"challenge_response,omitempty" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
+	Response Response `json:"challenge_response,omitempty"`
+	//LatestCompletedChallenge bool             `json:"-"`
 }
 
 func (ch *Challenge) add(edb *EventDb, data []byte) error {
@@ -87,21 +101,22 @@ func (ch *Challenge) add(edb *EventDb, data []byte) error {
 
 type Response struct {
 	gorm.Model
-	ChallengeID       string             `json:"challenge_id"`
-	ResponseID        string             `json:"response_id" gorm:"primary_key"`
-	ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"foreignKey:ResponseID;references:ResponseID"`
+	ChallengeId uint
+	ResponseID  string `json:"response_id"`
+	//ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"foreignKey:ResponseID;references:ResponseID"`
+	ValidationTickets []ValidationTicket `json:"validation_tickets"`
 }
 
 type ValidationNode struct {
 	gorm.Model
-	ChallengeID string `json:"challenge_id" gorm:"challenge_id"`
+	ChallengeId uint
 	ValidatorID string `json:"id" gorm:"primary_key"`
 	BaseURL     string `json:"url"`
 }
 
 type ValidationTicket struct {
 	gorm.Model
-	ResponseID   string           `json:"response_id"`
+	ResponseId   uint
 	ValidatorID  string           `json:"validator_id"`
 	ValidatorKey string           `json:"validator_key"`
 	Result       bool             `json:"success"`
@@ -118,18 +133,51 @@ func (edb *EventDb) migrateChallengeTable() error {
 		return err
 	}
 	//err = edb.Store.Get().AutoMigrate(&Response{})
+	err = edb.Store.Get().Migrator().DropTable(&CreditCard{})
 	if err != nil {
 		return err
 	}
+	err = edb.Store.Get().Migrator().DropTable(&User{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().AutoMigrate(&User{}, &CreditCard{})
+	if err != nil {
+		return err
+	}
+	err = edb.Store.Get().Migrator().CreateConstraint(&User{}, "CreditCards")
+	if err != nil {
+		return err
+	}
+	err = edb.Store.Get().Migrator().CreateConstraint(&User{}, "fk_users_credit_cards")
+	if err != nil {
+		return err
+	}
+	err = edb.Store.Get().AutoMigrate(&User{}, &CreditCard{})
+	if err != nil {
+		return err
+	}
+
 	//	err = edb.Store.Get().AutoMigrate(&ValidationNode{})
+
+	//err = edb.Store.Get().AutoMigrate(&Challenge{}, &BlobberChallenge{})
 	if err != nil {
 		return err
 	}
-	err = edb.Store.Get().AutoMigrate(&Challenge{})
+
+	err = edb.Store.Get().Migrator().CreateConstraint(&BlobberChallenge{}, "Challenges")
 	if err != nil {
 		return err
 	}
-	err = edb.Store.Get().AutoMigrate(&BlobberChallenge{})
+	err = edb.Store.Get().Migrator().
+		//CreateConstraint(&BlobberChallenge{}, "fk_blobber_challenge_challenges;ref_blobber_id")
+		CreateConstraint(&BlobberChallenge{}, "fk_blobber_challenges_challenges")
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().AutoMigrate(&Challenge{}, &BlobberChallenge{})
 	if err != nil {
 		return err
 	}

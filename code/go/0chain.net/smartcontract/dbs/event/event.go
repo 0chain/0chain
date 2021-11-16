@@ -32,18 +32,28 @@ type EventDb struct {
 	dbs.Store
 }
 
-func (edb *EventDb) AutoMigrate() error {
-	err := edb.Store.Get().AutoMigrate(&Event{})
-	if err != nil {
-		return nil
-	}
+func (edb *EventDb) CreateEventTable() error {
+	result := edb.Store.Get().Create(&Event{})
+	return result.Error
+}
 
-	err = edb.migrateChallengeTable()
+func (edb *EventDb) AutoMigrate() error {
+	err := edb.drop()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	err = edb.Store.Get().AutoMigrate(&Event{})
+	if err != nil {
+		return nil
+	}
+
+	//err = edb.migrateChallengeTable()
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
@@ -96,7 +106,11 @@ func (edb *EventDb) drop() error {
 	if err != nil {
 		return err
 	}
-	return edb.Store.Get().Migrator().DropTable(&Event{})
+	//err = edb.Store.Get().Migrator().DropTable(&Event{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (edb *EventDb) first() Event {

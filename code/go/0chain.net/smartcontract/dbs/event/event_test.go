@@ -1,8 +1,11 @@
 package event
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
+
+	"gorm.io/gorm"
 
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
@@ -14,9 +17,8 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
-/*
 func TestChallenges(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -36,6 +38,29 @@ func TestChallenges(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
+	//err = eventDb.Store.Get().Migrator().DropTable(&CreditCard{})
+	require.NoError(t, err)
+	//err = eventDb.Store.Get().Migrator().DropTable(&User{})
+	require.NoError(t, err)
+	//err = eventDb.Store.Get().Migrator().CreateTable(&User{}, &CreditCard{})
+	require.NoError(t, err)
+
+	user := User{
+		Model: gorm.Model{ID: 1},
+		CreditCards: []CreditCard{
+			{
+				Number: "my number",
+				//UserID: 1,
+			},
+		},
+	}
+	users := []User{user}
+	users = users
+	//result := eventDb.Store.Get().Create(&users)
+	//require.NoError(t, result.Error)
+	//result = eventDb.Store.Get().Create(&user)
+	//require.NoError(t, result.Error)
+
 	challenge1 := Challenge{
 		BlobberID:   "one",
 		ChallengeID: "first",
@@ -49,6 +74,7 @@ func TestChallenges(t *testing.T) {
 			},
 		},
 	}
+
 	challenge2 := Challenge{
 		BlobberID:   "two",
 		ChallengeID: "second",
@@ -62,6 +88,20 @@ func TestChallenges(t *testing.T) {
 			//},
 		},
 	}
+	//bc := BlobberChallenge{
+	//	BlobberID:  "one",
+	//	Challenges: []Challenge{challenge1},
+	//}
+	err = eventDb.Store.Get().Migrator().CreateTable(
+		&BlobberChallenge{},
+		&Challenge{},
+		&Response{},
+		&ValidationNode{},
+		&ValidationTicket{},
+	)
+	require.NoError(t, err)
+	//result := eventDb.Store.Get().Create(&bc)
+	//require.NoError(t, result.Error)
 	data, err := json.Marshal(&challenge1)
 	require.NoError(t, err)
 	err = (&Challenge{}).add(eventDb, data)
@@ -75,9 +115,9 @@ func TestChallenges(t *testing.T) {
 	//err = eventDb.removeChallenge("first")
 	//require.NoError(t, err)
 }
-*/
+
 func TestSetupDatabase(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
