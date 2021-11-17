@@ -143,21 +143,25 @@ tests:
           start: true
       - wait_round:
           shift: 20
+          timeout: "1m"
       - stop: ["miner-4"]
       - wait_round:
           shift: 10
+          timeout: "1m"
       - command:
           name: "sleep_3m"
       - stop: ["miner-3"]
       - start: ["miner-4"]
       - wait_round:
           shift: 10
+          timeout: "1m"
       - command:
           name: "sleep_3m"
       - stop: ["miner-2"]
       - start: ["miner-3"]
       - wait_round:
           shift: 10
+          timeout: "1m"
 
   # SHARDERS GO DOWN
   - name: "All sharders go down"
