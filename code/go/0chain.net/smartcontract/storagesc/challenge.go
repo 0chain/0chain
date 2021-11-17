@@ -751,7 +751,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	challenge.ChallengeID = challengeID
 	for _, validator := range selectedValidators {
 		challenge.Validators = append(challenge.Validators, event.ValidationNode{
-			ChallengeID: challengeID,
 			ValidatorID: validator.ID,
 			BaseURL:     validator.BaseURL,
 		})

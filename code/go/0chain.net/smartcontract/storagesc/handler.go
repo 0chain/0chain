@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
 
@@ -166,7 +167,26 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	return commitRead.ReadMarker, nil // ok
+}
 
+type blobberChallengeResponse struct {
+	BlobberID  string              `json:"blobber_id"`
+	Challenges []challengeResponse `json:"challenges"`
+	ExpectedBC BlobberChallenge    `json:"expected_bc"`
+}
+
+type challengeResponse struct {
+	ID             string         `json:"id"`
+	Validators     []nodeResponse `json:"validators"`
+	RandomNumber   int64          `json:"seed"`
+	AllocationID   string         `json:"allocation_id"`
+	Blobber        nodeResponse   `json:"blobber"`
+	AllocationRoot string         `json:"allocation_root"`
+}
+
+type nodeResponse struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
 }
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -188,15 +208,41 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		}
 	}
 
-	// for k, v := range blobberChallengeObj.ChallengeMap {
-	// 	if v.Response != nil {
-	// 		delete(blobberChallengeObj.ChallengeMap, k)
-	// 	}
-	// }
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("no event database found")
+	}
+
+	bc, err := balances.GetEventDB().GetBlobberChallenges(blobberID)
+	if err != nil {
+		return nil, common.NewErrInternal("getting blobber challenges", err.Error())
+	}
+
+	var response = blobberChallengeResponse{
+		BlobberID:  blobberID,
+		ExpectedBC: *blobberChallengeObj,
+	}
+	for _, ch := range bc.Challenges {
+		var chr = challengeResponse{
+			ID:             ch.ChallengeID,
+			RandomNumber:   ch.RandomNumber,
+			AllocationID:   ch.AllocationID,
+			AllocationRoot: ch.AllocationRoot,
+			Blobber: nodeResponse{
+				ID: blobberID,
+			},
+		}
+		for _, v := range ch.Validators {
+			chr.Validators = append(chr.Validators, nodeResponse{
+				ID:  v.ValidatorID,
+				URL: v.BaseURL,
+			})
+		}
+		response.Challenges = append(response.Challenges, chr)
+	}
 
 	// return populate or empty list of challenges
 	// don't return error, if no challenges (expected by blobbers)
-	return &blobberChallengeObj, nil
+	return &response, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {

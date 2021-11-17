@@ -49,12 +49,12 @@ func TestChallenges(t *testing.T) {
 		Validators: []ValidationNode{
 			{ValidatorID: "val one"}, {ValidatorID: "val two"},
 		},
-		Response: Response{
-			ResponseID: "alpha response",
-			ValidationTickets: []ValidationTicket{
-				{Message: "message one"}, {Message: "message two"},
-			},
-		},
+		//Response: Response{
+		//	ResponseID: "alpha response",
+		//	ValidationTickets: []ValidationTicket{
+		//		{Message: "message one"}, {Message: "message two"},
+		//	},
+		//},
 	}
 
 	challenge2 := Challenge{
@@ -63,12 +63,12 @@ func TestChallenges(t *testing.T) {
 		Validators: []ValidationNode{
 			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
 		},
-		Response: Response{
-			ResponseID: "bets response",
-			ValidationTickets: []ValidationTicket{
-				{Message: "message two one"}, {Message: "message two two"},
-			},
-		},
+		//Response: Response{
+		//	ResponseID: "bets response",
+		//	ValidationTickets: []ValidationTicket{
+		//		{Message: "message two one"}, {Message: "message two two"},
+		//	},
+		//},
 	}
 	require.NoError(t, err)
 	data, err := json.Marshal(&challenge1)
@@ -80,6 +80,16 @@ func TestChallenges(t *testing.T) {
 	require.NoError(t, err)
 	err = (&Challenge{}).add(eventDb, data2)
 	require.NoError(t, err)
+
+	ch, err := eventDb.GetChallenge("first")
+	require.NoError(t, err)
+	require.EqualValues(t, len(challenge1.Validators), len(ch.Validators))
+	ch = ch
+
+	bc, err := eventDb.GetBlobberChallenges("one")
+	require.NoError(t, err)
+	require.EqualValues(t, len(bc.Challenges), 1)
+	require.EqualValues(t, len(bc.Challenges[0].Validators), 2)
 
 	err = eventDb.removeChallenge("first")
 	require.NoError(t, err)

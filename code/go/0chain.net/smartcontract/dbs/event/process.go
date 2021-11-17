@@ -40,8 +40,12 @@ func (edb *EventDb) addStat(event Event) error {
 	switch event.Tag {
 	case TagNewChallenge:
 		var challenge Challenge
+		logging.Logger.Info("piers event db adding",
+			zap.Any("challenge", event.Data))
 		return challenge.add(edb, []byte(event.Data))
 	case TagRemoveChallenge:
+		logging.Logger.Info("piers event db removing",
+			zap.Any("challenge", event.Data))
 		return edb.removeChallenge(event.Data)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
