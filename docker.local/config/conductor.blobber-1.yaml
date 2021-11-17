@@ -27,30 +27,36 @@ tests:
   - name: "One blobber down"
     flow:
       - command:
+          name: 'build_base'
+          timeout: '10m'
+      - command:
+          name: 'build_sharder'
+          timeout: '5m'
+      - command:
+          name: 'build_miner'
+          timeout: '5m'
+      - command:
           name: 'build_test_blobbers'
-          timeout: '15m'
+          timeout: '1m'
       - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - command:
-          name: "cleanup_blobbers"
-      - command:
-          name: "cleanup_0dns"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
-      - wait_round:
-          round: 15 # just wait the BC starts
+      # - wait_round:
+      #     round: 150 # just wait the BC starts
       - start: ['0dns']
       #wait the 0dns starts
       - command:
           name: "sleep_20s"
       - start: ['blobber-1', 'blobber-2', 'blobber-3']
-      - wait_round:
-          round: 15 # just wait the BC starts
+      # - wait_round:
+      #     round: 250 # just wait the BC starts
       - wait_add:
+          sharders: ['sharder-1', 'sharder-2']
+          miners: ['miner-1', 'miner-2']
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          timeout: '15m'
+          timeout: '10m'
       - command:
           name: 'init_allocation'
-          timeout: '35m'
+          timeout: '10m'
       - stop: ['blobber-3']
       - command:
           name: 'sleep_20s'
@@ -62,6 +68,11 @@ tests:
           name: 'delete'
       - command:
           name: 'upload'
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_0dns"
 
   ## DISABLED: Test does not match description
 #  - name: "Sharder sends wrong transaction verification"

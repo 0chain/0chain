@@ -40,8 +40,9 @@ BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 # create random file
 head -c 5M < /dev/urandom > random.bin
 
+# TODO: uncomment this when signature verify is fixed.
 # upload initial file
-./zboxcli/zbox --wallet testing.json upload \
-    --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --localpath=random.bin \
-    --remotepath=/remote/random.bin
+# ./zboxcli/zbox --wallet testing.json upload \
+#     --allocation "$(cat ~/.zcn/allocation.txt)" \
+#     --localpath=random.bin \
+#     --remotepath=/remote/random.bin
