@@ -33,6 +33,7 @@ sets:
     tests:
       # - "Some sharders go down and come up"
       - "All sharders go down and come up"
+      - "Sharder goes down for 3 minutes simultaneously with coming up of the previous one"
 
   - name: "NODES GO DOWN AND COME UP"
     tests:
@@ -197,6 +198,36 @@ tests:
       - wait_round:
           shift: 50
           allow_beyond: true
+
+  - name: "Sharder goes down for 3 minutes simultaneously with coming up of the previous one"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: {}
+      - wait_add:
+          sharders: ["sharder-1", "sharder-2"]
+          miners: ["miner-1", "miner-2", "miner-3"]
+          start: true
+      - wait_round:
+          shift: 20
+          timeout: "1m"
+      - stop: ["sharder-2"]
+      - wait_round:
+          shift: 10
+          timeout: "1m"
+      - command:
+          name: "sleep_3m"
+      - stop: ["sharder-1"]
+      - start: ["sharder-2"]
+      - wait_round:
+          shift: 10
+          timeout: "1m"
+      - command:
+          name: "sleep_3m"
+      - stop: ["sharder-2"]
+      - start: ["sharder-1"]
+      - wait_round:
+          shift: 10
+          timeout: "1m"
 
   # NODES GO DOWN AND COME UP
   - name: "All nodes go down and come up"
