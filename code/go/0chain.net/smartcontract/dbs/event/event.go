@@ -48,7 +48,8 @@ func (edb *EventDb) AutoMigrate() error {
 		return nil
 	}
 
-	err = edb.migrateChallengeTable()
+	err = edb.createChallengeTable()
+	//err = edb.migrateChallengeTable()
 	if err != nil {
 		return err
 	}

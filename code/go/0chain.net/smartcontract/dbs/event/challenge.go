@@ -60,13 +60,11 @@ type Challenge struct {
 	Created            common.Timestamp `json:"created"`
 	ChallengeID        string           `json:"challenge_id"`
 	PrevID             string           `json:"prev_id"`
-	//Validators         []ValidationNode `json:"validators" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
-	Validators     []ValidationNode `json:"validators"`
-	RandomNumber   int64            `json:"seed"`
-	AllocationID   string           `json:"allocation_id"`
-	AllocationRoot string           `json:"allocation_root"`
-	//Response           Response         `json:"challenge_response,omitempty" gorm:"foreignKey:ChallengeID;references:ChallengeID"`
-	Response Response `json:"challenge_response,omitempty"`
+	Validators         []ValidationNode `json:"validators"`
+	RandomNumber       int64            `json:"seed"`
+	AllocationID       string           `json:"allocation_id"`
+	AllocationRoot     string           `json:"allocation_root"`
+	Response           Response         `json:"challenge_response,omitempty"`
 	//LatestCompletedChallenge bool             `json:"-"`
 }
 
@@ -90,9 +88,8 @@ func (ch *Challenge) add(edb *EventDb, data []byte) error {
 
 type Response struct {
 	gorm.Model
-	ChallengeId uint
-	ResponseID  string `json:"response_id"`
-	//ValidationTickets []ValidationTicket `json:"validation_tickets" gorm:"foreignKey:ResponseID;references:ResponseID"`
+	ChallengeId       uint
+	ResponseID        string             `json:"response_id"`
 	ValidationTickets []ValidationTicket `json:"validation_tickets"`
 }
 
@@ -115,16 +112,18 @@ type ValidationTicket struct {
 	Signature    string           `json:"signature"`
 }
 
-func (edb *EventDb) migrateChallengeTable() error {
-	var err error
-	err = edb.Store.Get().Migrator().CreateTable(
+func (edb *EventDb) createChallengeTable() error {
+	return edb.Store.Get().Migrator().CreateTable(
 		&BlobberChallenge{},
 		&Challenge{},
 		&Response{},
 		&ValidationNode{},
 		&ValidationTicket{},
 	)
-	return err
+}
+
+func (edb *EventDb) migrateChallengeTable() error {
+	var err error
 
 	//err := edb.Store.Get().AutoMigrate(&ValidationTicket{})
 	if err != nil {
@@ -144,12 +143,10 @@ func (edb *EventDb) migrateChallengeTable() error {
 		return err
 	}
 	err = edb.Store.Get().Migrator().
-		//CreateConstraint(&BlobberChallenge{}, "fk_blobber_challenge_challenges;ref_blobber_id")
 		CreateConstraint(&BlobberChallenge{}, "fk_blobber_challenges_challenges")
 	if err != nil {
 		return err
 	}
-
 	err = edb.Store.Get().AutoMigrate(&Challenge{}, &BlobberChallenge{})
 	if err != nil {
 		return err
