@@ -5,8 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"gorm.io/gorm"
-
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"github.com/stretchr/testify/require"
@@ -45,22 +43,6 @@ func TestChallenges(t *testing.T) {
 	//err = eventDb.Store.Get().Migrator().CreateTable(&User{}, &CreditCard{})
 	require.NoError(t, err)
 
-	user := User{
-		Model: gorm.Model{ID: 1},
-		CreditCards: []CreditCard{
-			{
-				Number: "my number",
-				//UserID: 1,
-			},
-		},
-	}
-	users := []User{user}
-	users = users
-	//result := eventDb.Store.Get().Create(&users)
-	//require.NoError(t, result.Error)
-	//result = eventDb.Store.Get().Create(&user)
-	//require.NoError(t, result.Error)
-
 	challenge1 := Challenge{
 		BlobberID:   "one",
 		ChallengeID: "first",
@@ -83,25 +65,12 @@ func TestChallenges(t *testing.T) {
 		},
 		Response: Response{
 			ResponseID: "bets response",
-			//ValidationTickets: []ValidationTicket{
-			//	{Message: "message two one"}, {Message: "message two two"},
-			//},
+			ValidationTickets: []ValidationTicket{
+				{Message: "message two one"}, {Message: "message two two"},
+			},
 		},
 	}
-	//bc := BlobberChallenge{
-	//	BlobberID:  "one",
-	//	Challenges: []Challenge{challenge1},
-	//}
-	err = eventDb.Store.Get().Migrator().CreateTable(
-		&BlobberChallenge{},
-		&Challenge{},
-		&Response{},
-		&ValidationNode{},
-		&ValidationTicket{},
-	)
 	require.NoError(t, err)
-	//result := eventDb.Store.Get().Create(&bc)
-	//require.NoError(t, result.Error)
 	data, err := json.Marshal(&challenge1)
 	require.NoError(t, err)
 	err = (&Challenge{}).add(eventDb, data)

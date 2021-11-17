@@ -8,17 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	gorm.Model
-	CreditCards []CreditCard
-}
-
-type CreditCard struct {
-	gorm.Model
-	Number string
-	UserID uint
-}
-
 type BlobberChallenge struct {
 	gorm.Model
 	BlobberID  string      //`gorm:"primary_key"`
@@ -31,7 +20,7 @@ func (bc *BlobberChallenge) add(edb *EventDb) error {
 }
 
 type BlobberChallengeId struct {
-	ID        int
+	ID        uint
 	BlobberID string
 }
 
@@ -87,11 +76,11 @@ func (ch *Challenge) add(edb *EventDb, data []byte) error {
 		return err
 	}
 
-	bc := BlobberChallengeId{}
-	if err := bc.getOrCreate(edb, ch.BlobberID); err != nil {
+	bci := BlobberChallengeId{}
+	if err := bci.getOrCreate(edb, ch.BlobberID); err != nil {
 		return err
 	}
-
+	ch.BlobberChallengeID = bci.ID
 	result := edb.Store.Get().Create(ch)
 	if result.Error != nil {
 		return result.Error
@@ -128,36 +117,20 @@ type ValidationTicket struct {
 
 func (edb *EventDb) migrateChallengeTable() error {
 	var err error
+	err = edb.Store.Get().Migrator().CreateTable(
+		&BlobberChallenge{},
+		&Challenge{},
+		&Response{},
+		&ValidationNode{},
+		&ValidationTicket{},
+	)
+	return err
+
 	//err := edb.Store.Get().AutoMigrate(&ValidationTicket{})
 	if err != nil {
 		return err
 	}
 	//err = edb.Store.Get().AutoMigrate(&Response{})
-	err = edb.Store.Get().Migrator().DropTable(&CreditCard{})
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().DropTable(&User{})
-	if err != nil {
-		return err
-	}
-
-	err = edb.Store.Get().AutoMigrate(&User{}, &CreditCard{})
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().CreateConstraint(&User{}, "CreditCards")
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().CreateConstraint(&User{}, "fk_users_credit_cards")
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().AutoMigrate(&User{}, &CreditCard{})
-	if err != nil {
-		return err
-	}
 
 	//	err = edb.Store.Get().AutoMigrate(&ValidationNode{})
 
