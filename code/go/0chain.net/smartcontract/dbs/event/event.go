@@ -48,10 +48,11 @@ func (edb *EventDb) AutoMigrate() error {
 		return nil
 	}
 
-	err = edb.createChallengeTable()
-	//err = edb.migrateChallengeTable()
-	if err != nil {
-		return err
+	if !edb.Store.Get().Migrator().HasTable(&BlobberChallenge{}) {
+		err = edb.createChallengeTable()
+		if err != nil {
+			return err
+		}
 	}
 
 	return err

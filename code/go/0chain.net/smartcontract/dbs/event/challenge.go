@@ -55,17 +55,17 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 
 type Challenge struct {
 	gorm.Model
-	BlobberChallengeID uint
-	BlobberID          string           `json:"blobber_id"`
-	Created            common.Timestamp `json:"created"`
-	ChallengeID        string           `json:"challenge_id"`
-	PrevID             string           `json:"prev_id"`
-	Validators         []ValidationNode `json:"validators"`
-	RandomNumber       int64            `json:"seed"`
-	AllocationID       string           `json:"allocation_id"`
-	AllocationRoot     string           `json:"allocation_root"`
-	Response           Response         `json:"challenge_response,omitempty"`
-	//LatestCompletedChallenge bool             `json:"-"`
+	BlobberChallengeID       uint
+	BlobberID                string           `json:"blobber_id"`
+	Created                  common.Timestamp `json:"created"`
+	ChallengeID              string           `json:"challenge_id"`
+	PrevID                   string           `json:"prev_id"`
+	Validators               []ValidationNode `json:"validators"`
+	RandomNumber             int64            `json:"seed"`
+	AllocationID             string           `json:"allocation_id"`
+	AllocationRoot           string           `json:"allocation_root"`
+	Response                 Response         `json:"challenge_response,omitempty"`
+	LatestCompletedChallenge bool             `json:"-"`
 }
 
 func (ch *Challenge) add(edb *EventDb, data []byte) error {

@@ -81,8 +81,8 @@ func TestChallenges(t *testing.T) {
 	err = (&Challenge{}).add(eventDb, data2)
 	require.NoError(t, err)
 
-	//err = eventDb.removeChallenge("first")
-	//require.NoError(t, err)
+	err = eventDb.removeChallenge("first")
+	require.NoError(t, err)
 }
 
 func TestSetupDatabase(t *testing.T) {
