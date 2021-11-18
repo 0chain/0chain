@@ -28,16 +28,16 @@ tests:
     flow:
       - command:
           name: 'build_base'
-          timeout: '10m'
+          timeout: '15m'
       - command:
           name: 'build_sharder'
-          timeout: '5m'
+          timeout: '15m'
       - command:
           name: 'build_miner'
-          timeout: '5m'
+          timeout: '15m'
       - command:
           name: 'build_test_blobbers'
-          timeout: '1m'
+          timeout: '10m'
       - set_monitor: "sharder-1"
       - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       # - wait_round:
@@ -53,7 +53,7 @@ tests:
           sharders: ['sharder-1', 'sharder-2']
           miners: ['miner-1', 'miner-2']
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          timeout: '10m'
+          timeout: '20m'
       - command:
           name: 'init_allocation'
           timeout: '10m'
