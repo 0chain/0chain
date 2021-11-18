@@ -49,11 +49,9 @@ tests:
       - start: ['blobber-1', 'blobber-2', 'blobber-3']
       # - wait_round:
       #     round: 250 # just wait the BC starts
-      - wait_add:
-          sharders: ['sharder-1', 'sharder-2']
-          miners: ['miner-1', 'miner-2']
-          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          timeout: '20m'
+      # - wait_add:
+      #     blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+      #     timeout: '1m'
       - command:
           name: 'init_allocation'
           timeout: '10m'
