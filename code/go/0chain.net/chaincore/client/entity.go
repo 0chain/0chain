@@ -219,17 +219,36 @@ func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 	return
 }
 
-// GetClient - gets client from either cache or database
-func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
-	if co, cerr := cacher.Get(key); cerr == nil {
-		return co.(*Client), nil
-	}
-	co := NewClient()
-	err := co.Read(ctx, key)
+// GetClientFromCache - gets client from either cache
+func GetClientFromCache(key datastore.Key) (*Client, error) {
+	co, err := cacher.Get(key)
 	if err != nil {
 		return nil, err
 	}
-	cacher.Add(key, co)
+	return co.(*Client), nil
+}
+
+// PutClientCache saves client to cache
+func PutClientCache(co *Client) error {
+	return cacher.Add(co.GetKey(), co)
+}
+
+// GetClient - gets client from either cache or database
+func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
+	coi, err := cacher.Get(key)
+	if err == nil {
+		return coi.(*Client), nil
+	}
+
+	co := NewClient()
+	if err = co.Read(ctx, key); err != nil {
+		return nil, err
+	}
+
+	if err := cacher.Add(key, co); err != nil {
+		return nil, err
+	}
+
 	return co, nil
 }
 

@@ -19,36 +19,37 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return c.verifyTicketsWithContext.Run(ctx, func() error {
-		sigs := make([]string, len(bvts))
-		pks := make([]string, len(bvts))
-		hashes := make([]string, len(bvts))
-		for i, bvt := range bvts {
-			sigs[i] = bvt.Signature
-			pl := c.GetMiners(round)
-			var sender = pl.GetNode(bvt.VerifierID)
-			if sender == nil {
-				return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
-			}
-			pks[i] = sender.PublicKey
-			hashes[i] = blockHash
+		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme,
+			len(bvts), len(bvts))
+		if aggScheme == nil {
+			// TODO: do ticket verification one by one when aggregate signature
+			// does not exist
+			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme))
 		}
 
 		doneC := make(chan struct{})
 		errC := make(chan error)
 		go func() {
-			aggSig, err := encryption.BLS0ChainAggregateSignatures(sigs)
-			if err != nil {
-				errC <- common.NewErrorf("verify_tickets", "failed to aggregate signatures: %v", err)
-				return
+			for i, bvt := range bvts {
+				pl := c.GetMiners(round)
+				verifier := pl.GetNode(bvt.VerifierID)
+				if verifier == nil {
+					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+					return
+				}
+
+				if verifier.SigScheme == nil {
+					errC <- common.NewErrorf("verify_tickets", "node has no signature scheme")
+					return
+				}
+
+				if err := aggScheme.Aggregate(verifier.SigScheme, i, bvt.Signature, blockHash); err != nil {
+					errC <- common.NewError("verify_tickets", err.Error())
+					return
+				}
 			}
 
-			pubKeys, err := c.GetMinersPublicKeys(pks)
-			if err != nil {
-				errC <- common.NewErrorf("verify_tickets", "failed to decode public keys: %v", err)
-				return
-			}
-
-			if !aggSig.VerifyAggregate(pubKeys, hashes) {
+			if _, err := aggScheme.Verify(); err != nil {
 				errC <- common.NewErrorf("verify_tickets", "failed to verify aggregate signatures: %v", err)
 				return
 			}

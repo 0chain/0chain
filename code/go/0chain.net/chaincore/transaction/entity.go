@@ -287,17 +287,27 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
 	var err error
-	var co *client.Client
-	if t.PublicKey == "" {
-		co, err = t.GetClient(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+	co, err := client.GetClientFromCache(t.ClientID)
+	if err != nil {
 		co = client.NewClient()
 		co.ID = t.ClientID
 		co.SetPublicKey(t.PublicKey)
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
 	}
+
+	if co.SigScheme == nil {
+		if t.PublicKey == "" {
+			return nil, errors.New("get signature scheme failed, empty public key in transaction")
+		}
+		co.ID = t.ClientID
+		co.SetPublicKey(t.PublicKey)
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
+	}
+
 	return co.SigScheme, nil
 }
 

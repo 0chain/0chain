@@ -415,7 +415,11 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 
 	np.Nodes = make([]*Node, 0, len(np.NodesMap))
 	for k := range np.NodesMap {
-		np.Nodes = append(np.Nodes, np.NodesMap[k])
+		n := np.NodesMap[k]
+		if n.SigScheme == nil {
+			n.SetPublicKey(n.PublicKey)
+		}
+		np.Nodes = append(np.Nodes, n)
 	}
 
 	np.initGetNodesC()
@@ -443,7 +447,11 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 
 	np.Nodes = make([]*Node, 0, len(np.NodesMap))
 	for k := range np.NodesMap {
-		np.Nodes = append(np.Nodes, np.NodesMap[k])
+		n := np.NodesMap[k]
+		if n.SigScheme == nil {
+			n.SetPublicKey(n.PublicKey)
+		}
+		np.Nodes = append(np.Nodes, n)
 	}
 
 	np.initGetNodesC()

@@ -3,7 +3,6 @@ package chain
 import (
 	"container/ring"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -20,7 +19,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
@@ -174,8 +172,6 @@ type Chain struct {
 	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
-
-	minersPublicKeys *cache.LRU
 
 	vldTxnsMtx               *sync.Mutex
 	validatedTxnsCache       map[string]string // validated transactions, key as hash, value as signature
@@ -480,8 +476,6 @@ func Provider() datastore.Entity {
 	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
-
-	c.minersPublicKeys = cache.NewLRUCache(1 << 16) // 65536
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
@@ -1650,40 +1644,9 @@ func (c *Chain) LoadMinersPublicKeys() error {
 		if err := pk.DeserializeHexStr(nd.PublicKey); err != nil {
 			return err
 		}
-		c.minersPublicKeys.Add(nd.ID, &pk)
 	}
 
 	return nil
-}
-
-func (mc *Chain) GetMinersPublicKeys(keysStr []string) ([]bls.PublicKey, error) {
-	pubKeys := make([]bls.PublicKey, len(keysStr))
-	missingKeys := make([]int, 0, len(keysStr))
-	for i, k := range keysStr {
-		pk, err := mc.minersPublicKeys.Get(k)
-		if err != nil {
-			missingKeys = append(missingKeys, i)
-			continue
-		}
-		pubKeys[i] = *(pk.(*bls.PublicKey))
-	}
-
-	if len(missingKeys) > 0 {
-		for _, idx := range missingKeys {
-			var pk bls.PublicKey
-			if err := pk.DeserializeHexStr(keysStr[idx]); err != nil {
-				return nil, fmt.Errorf("decode publick key failed, key: %v", keysStr[idx])
-			}
-			pubKeys[idx] = pk
-		}
-
-		//mc.minersKeysMutex.Lock()
-		for _, idx := range missingKeys {
-			mc.minersPublicKeys.Add(keysStr[idx], &pubKeys[idx])
-		}
-	}
-
-	return pubKeys, nil
 }
 
 func (c *Chain) AddValidatedTxns(hash, sig string) {
@@ -1700,31 +1663,21 @@ func (c *Chain) DeleteValidatedTxns(hashes []string) {
 	c.vldTxnsMtx.Unlock()
 }
 
-func (c *Chain) FilterOutValidatedTxns(hashes, sigs, pks []string) ([]string, []string, []string, error) {
-	if len(hashes) != len(sigs) ||
-		len(hashes) != len(pks) ||
-		len(sigs) != len(pks) {
-		return nil, nil, nil, errors.New("mismatched size of hashes, signatures and pubkeys slice")
-	}
-
-	needValidHashes := make([]string, 0, c.ValidationBatchSize)
-	needValidSigs := make([]string, 0, c.ValidationBatchSize)
-	needValidPks := make([]string, 0, c.ValidationBatchSize)
-
+// FilterOutValidatedTxns filters out validated transactions
+func (c *Chain) FilterOutValidatedTxns(txns []*transaction.Transaction) []*transaction.Transaction {
+	needValidTxns := make([]*transaction.Transaction, 0, len(txns))
 	c.vldTxnsMtx.Lock()
-	for i, hash := range hashes {
-		sig, ok := c.validatedTxnsCache[hash]
-		if ok && sigs[i] == sig {
+	for i, txn := range txns {
+		sig, ok := c.validatedTxnsCache[txn.Hash]
+		if ok && txn.Signature == sig {
 			continue
 		}
 
-		needValidHashes = append(needValidHashes, hash)
-		needValidSigs = append(needValidSigs, sigs[i])
-		needValidPks = append(needValidPks, pks[i])
+		needValidTxns = append(needValidTxns, txns[i])
 	}
 	c.vldTxnsMtx.Unlock()
 
-	return needValidHashes, needValidSigs, needValidPks, nil
+	return needValidTxns
 }
 
 // BlockTicketsVerifyWithLock ensures that only one goroutine is allowed

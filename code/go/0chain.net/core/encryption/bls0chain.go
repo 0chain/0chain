@@ -38,6 +38,7 @@ type BLS0ChainScheme struct {
 	publicKey  []byte
 	pubKey     *bls.PublicKey
 	secKey     *bls.SecretKey
+	g2         *bls.G2
 }
 
 //NewBLS0ChainScheme - create a BLS0ChainScheme object
@@ -163,6 +164,7 @@ func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 		return errors.New("failed to decode public key")
 	}
 	b0.pubKey = pk
+	b0.g2 = bls.CastFromPublicKey(pk)
 	return nil
 }
 
@@ -186,7 +188,7 @@ func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sig := b0.secKey.SignHash(rawHash)
+	sig := b0.secKey.Sign(string(rawHash))
 	return sig.SerializeToHexStr(), nil
 }
 
@@ -203,7 +205,7 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return sign.VerifyHash(b0.pubKey, rawHash), nil
+	return sign.Verify(b0.pubKey, string(rawHash)), nil
 }
 
 //GetSignature - given a string return the signature object
@@ -230,11 +232,7 @@ func (b0 *BLS0ChainScheme) getPublicKey() (*bls.PublicKey, error) {
 
 //PairMessageHash - Pair a given message hash
 func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
-	g2 := &bls.G2{}
-	err := g2.Deserialize(b0.publicKey)
-	if err != nil {
-		return nil, err
-	}
+	g2 := bls.CastFromPublicKey(b0.pubKey)
 	var g1 = &bls.G1{}
 	rawHash, err := hex.DecodeString(hash)
 	if err != nil {
@@ -291,38 +289,4 @@ func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, err
 		aggSign.Add(&sign)
 	}
 	return aggSign.SerializeToHexStr(), nil
-}
-
-type BLS0ChainSign struct {
-	sig *bls.Sign
-}
-
-func BLS0ChainAggregateSignatures(signatures []string) (*BLS0ChainSign, error) {
-	var aggSign bls.Sign
-	sigNum := len(signatures)
-	signs := make([]bls.Sign, sigNum)
-	for i, signature := range signatures {
-		var sign bls.Sign
-		if err := sign.DeserializeHexStr(MiraclToHerumiSig(signature)); err != nil {
-			return nil, err
-		}
-		signs[i] = sign
-	}
-
-	aggSign.Aggregate(signs)
-	return &BLS0ChainSign{sig: &aggSign}, nil
-}
-
-func (sig *BLS0ChainSign) VerifyAggregate(pubKeys []bls.PublicKey, hashes []string) bool {
-	hashBytes := make([][]byte, len(hashes))
-	for i := range hashes {
-		hb, err := GetRawHash(hashes[i])
-		if err != nil {
-			panic(err)
-		}
-
-		hashBytes[i] = hb
-	}
-
-	return sig.sig.VerifyAggregateHashes(pubKeys, hashBytes)
 }

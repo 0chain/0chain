@@ -538,8 +538,12 @@ func (b *Block) GetClients() []*client.Client {
 		if _, ok := cmap[t.PublicKey]; ok {
 			continue
 		}
-		c := client.NewClient()
-		c.SetPublicKey(t.PublicKey)
+		c, err := client.GetClientFromCache(t.ClientID)
+		if err != nil {
+			c = client.NewClient()
+			c.SetPublicKey(t.PublicKey)
+		}
+
 		cmap[t.PublicKey] = c
 	}
 	clients := make([]*client.Client, len(cmap))

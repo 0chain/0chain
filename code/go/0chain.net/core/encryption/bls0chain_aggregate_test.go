@@ -120,46 +120,6 @@ func TestAAAA(t *testing.T) {
 //gPubkeys := make([]bls.PublicKey, 1000)
 //}
 
-func TestAggregateSignaturesV2(t *testing.T) {
-	total := 1000
-	msgs := make([]string, total)
-	msgHashes := make([]string, total)
-	msgSignatures := make([]string, total)
-	pubkeys := make([]bls.PublicKey, total)
-	for i := 0; i < total; i++ {
-		clientSignatureScheme := "bls0chain"
-		sigScheme := GetSignatureScheme(clientSignatureScheme)
-		err := sigScheme.GenerateKeys()
-		require.NoError(t, err)
-		var pk bls.PublicKey
-		err = pk.DeserializeHexStr(sigScheme.GetPublicKey())
-		require.NoError(t, err)
-		pubkeys[i] = pk
-		msgs[i] = fmt.Sprintf("testing aggregate messages : %v", i)
-		msgHashes[i] = Hash(msgs[i])
-		sig, err := sigScheme.Sign(Hash(msgs[i]))
-		if err != nil {
-			t.Fatal(err)
-		}
-		msgSignatures[i] = sig
-	}
-
-	wg := sync.WaitGroup{}
-	batchSize := 250
-	round := total / batchSize
-	for j := 0; j < round; j++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			start := i * batchSize
-			aggSig, err := BLS0ChainAggregateSignatures(msgSignatures[start : start+batchSize])
-			require.NoError(t, err)
-			require.True(t, aggSig.VerifyAggregate(pubkeys[start:start+batchSize], msgHashes[start:start+batchSize]))
-		}(j)
-	}
-	wg.Wait()
-}
-
 func TestAggregateSignatures(t *testing.T) {
 	total := 1000
 	batchSize := 250
