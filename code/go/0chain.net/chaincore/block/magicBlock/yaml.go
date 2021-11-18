@@ -15,16 +15,16 @@ type yamlNode struct {
 
 // yaml config file structure
 type configYaml struct {
-	Miners             []*yamlNode `yaml:"miners"`
-	MinersMap          map[string]*yamlNode
-	Sharders           []*yamlNode `yaml:"sharders"`
-	ShardersMap        map[string]*yamlNode
-	MagicBlockNumber   int64  `yaml:"magic_block_number"`
-	StartingRound      int64  `yaml:"starting_round"`
-	TPercent           int    `yaml:"t_percent"`
-	KPercent           int    `yaml:"k_percent"`
-	MagicBlockFilename string `yaml:"magic_block_filename"`
-	DKGSummaryFilename string `yaml:"dkg_summary_filename"`
+	Miners             []*yamlNode          `yaml:"miners"`
+	MinersMap          map[string]*yamlNode `yaml:"-"`
+	Sharders           []*yamlNode          `yaml:"sharders"`
+	ShardersMap        map[string]*yamlNode `yaml:"-"`
+	MagicBlockNumber   int64                `yaml:"magic_block_number"`
+	StartingRound      int64                `yaml:"starting_round"`
+	TPercent           int                  `yaml:"t_percent"`
+	KPercent           int                  `yaml:"k_percent"`
+	MagicBlockFilename string               `yaml:"magic_block_filename"`
+	DKGSummaryFilename string               `yaml:"dkg_summary_filename"`
 }
 
 func newYaml() *configYaml {

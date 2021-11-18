@@ -29,13 +29,13 @@ func init() {
 
 // Client - data structure that holds the client data
 type Client struct {
-	datastore.CollectionMemberField `json:"-" msgpack:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-" yaml:"-"`
 	datastore.IDField               `yaml:",inline"`
-	datastore.VersionField
-	datastore.CreationDateField
-	PublicKey      string                     `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes []byte                     `json:"-" msgpack:"-"`
-	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
+	datastore.VersionField          `yaml:"-"`
+	datastore.CreationDateField     `yaml:"-"`
+	PublicKey                       string                     `yaml:"public_key" json:"public_key"`
+	PublicKeyBytes                  []byte                     `json:"-" msgpack:"-" yaml:"-"`
+	SigScheme                       encryption.SignatureScheme `json:"-" msgpack:"-" yaml:"-"`
 }
 
 // NewClient - create a new client object
