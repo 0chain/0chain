@@ -39,10 +39,10 @@ type cmdMagicBlock struct {
 }
 
 var (
-	//rootPath = "/config"
-	rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
-	output   = fmt.Sprintf("%v/output", rootPath)
-	input    = fmt.Sprintf("%v/input", rootPath)
+	rootPath = "/config"
+	//rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
+	output = fmt.Sprintf("%v/output", rootPath)
+	input  = fmt.Sprintf("%v/input", rootPath)
 )
 
 func new() *cmdMagicBlock {
@@ -277,13 +277,6 @@ func main() {
 
 	if *mainnet {
 		log.Println("Preparing files...")
-
-		err := verifySummaries("/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config/input_1/magicBlock.json",
-			"/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config/input_1/b0mnode01_dkg.json",
-			datastore.Key("63103c072798f1aa1a531aa40b9d9f59585be6b77767233f8b9da4c4e69821e8"))
-		if err != nil {
-			log.Fatal(err)
-		}
 
 		passes := loadPasswords()
 		configs := readConfigs(magicBlockConfig, passes)
