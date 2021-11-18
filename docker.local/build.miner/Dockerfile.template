@@ -2,21 +2,28 @@
 FROM zchain_build_base as miner_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
+ENV GOPROXY=http://10.10.10.100:3080
 
 # Download the dependencies:
 # Will be cached if we don't change mod/sum files
+COPY ./code/go/0chain.net/go.mod $SRC_DIR/go/0chain.net/
+COPY ./code/go/0chain.net/go.sum $SRC_DIR/go/0chain.net/
+
+RUN cd $SRC_DIR/go/0chain.net && go mod download -x
+
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
-RUN cd $SRC_DIR/go/0chain.net && \
-    go mod download
+# Set workdir
+WORKDIR $SRC_DIR/go/0chain.net
+
+RUN go mod vendor -v
+
+RUN rm -r ./vendor/github.com/valyala/gozstd
+
+RUN cp -r /gozstd ./vendor/github.com/valyala/gozstd
+
 WORKDIR $SRC_DIR/go/0chain.net/miner/miner
 
-# Build libzstd:
-# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
-# FIXME: Also, is there a way we can move this to zchain_build_base?
-RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
-    chmod -R +w . && \
-    make clean libzstd.a
 
 # Build it:
 ARG GIT_COMMIT

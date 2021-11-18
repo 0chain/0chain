@@ -23,3 +23,18 @@ RUN apk add gmp gmp-dev openssl-dev && \
     make MCL_DIR=../mcl -C bls -j $(nproc) install && \
     rm -R /tmp/mcl && \
     rm -R /tmp/bls
+
+# Build libzstd:
+# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+COPY ./code/go/0chain.net/go.mod /0chain/go/0chain.net/
+COPY ./code/go/0chain.net/go.sum /0chain/go/0chain.net/
+
+WORKDIR /0chain/go/0chain.net
+RUN go mod download -x github.com/valyala/gozstd
+
+RUN cp -r $GOPATH/pkg/mod/github.com/valyala/gozstd* /gozstd 
+
+WORKDIR /gozstd
+
+RUN chmod -R +w . 
+RUN make clean libzstd.a
