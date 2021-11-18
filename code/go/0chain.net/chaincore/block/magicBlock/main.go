@@ -1,25 +1,30 @@
 package main
 
 import (
-	"0chain.net/chaincore/client"
-	"0chain.net/core/logging"
-	"encoding/json"
-	"flag"
-	"fmt"
-	"io/ioutil"
-	"log"
-	"math"
-	"strconv"
-
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-)
-
-var (
-	rootPath = "/0chain/go/0chain.net/docker.local/config"
+	"0chain.net/core/logging"
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"log"
+	"math"
+	"os"
+	"os/exec"
+	"strconv"
+	"time"
 )
 
 type cmdMagicBlock struct {
@@ -33,6 +38,13 @@ type cmdMagicBlock struct {
 	summaries map[int]*bls.DKGSummary
 }
 
+var (
+	//rootPath = "/config"
+	rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
+	output   = fmt.Sprintf("%v/output", rootPath)
+	input    = fmt.Sprintf("%v/input", rootPath)
+)
+
 func new() *cmdMagicBlock {
 	return &cmdMagicBlock{dkgs: map[string]*bls.DKG{}, summaries: map[int]*bls.DKGSummary{}}
 }
@@ -40,7 +52,7 @@ func new() *cmdMagicBlock {
 // setupYaml method initalizes a configuration file based on yaml
 func (cmd *cmdMagicBlock) setupYaml(config string) error {
 	cmd.yml = newYaml()
-	fPath := fmt.Sprintf("%v/%v.yaml", rootPath, config)
+	fPath := fmt.Sprintf("%v.yaml", config)
 	if err := cmd.yml.readYaml(fPath); err != nil {
 		return err
 	}
@@ -119,6 +131,82 @@ func (cmd *cmdMagicBlock) createShareOrSigns() {
 	}
 }
 
+func verifyKeys(hexSecKey, hexPubKey, hexId string) error {
+	var privateKey bls.Key
+	if len(hexSecKey) > 0 {
+		privateKeyBytes, _ := hex.DecodeString(hexSecKey)
+		if err := privateKey.SetLittleEndian(privateKeyBytes); err != nil {
+			fmt.Println(err.Error())
+			return errors.New("sec key is not valid")
+		}
+		pubRaw := privateKey.GetPublicKey()
+		pub := pubRaw.SerializeToHexStr()
+
+		if pub != hexPubKey {
+			return errors.New("pub keys is not valid")
+		}
+	}
+
+	decodeString, _ := hex.DecodeString(hexPubKey)
+	id := encryption.Hash(decodeString)
+	if id != hexId {
+		return errors.New("id is not valid")
+	}
+	return nil
+}
+
+func verifySummaries(mbPath, summaryPath string, key datastore.Key) error {
+	mb, err2 := readMagicBlock(mbPath)
+	if err2 != nil {
+		return err2
+	}
+
+	dkgs, err := readDKGShares(summaryPath)
+	if err != nil {
+		return err
+	}
+
+	dkgs.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
+
+	if err = dkgs.Verify(bls.ComputeIDdkg(key), mb.Mpks.GetMpkMap()); err != nil {
+		if config.DevConfiguration.ViewChange {
+			logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
+		} else {
+			logging.Logger.Panic(fmt.Sprintf("Failed to verify genesis dkg: ERROR: %v", err.Error()))
+		}
+
+	}
+
+	return nil
+}
+
+func readDKGShares(summaryPath string) (*bls.DKGSummary, error) {
+	var b []byte
+	var err error
+	if b, err = ioutil.ReadFile(summaryPath); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
+	}
+
+	dkgs := &bls.DKGSummary{SecretShares: make(map[string]string)}
+	if err = dkgs.Decode(b); err != nil {
+		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
+	}
+	return dkgs, err
+}
+
+func readMagicBlock(mbPath string) (*block.MagicBlock, error) {
+	var b []byte
+	b, err := ioutil.ReadFile(mbPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading magic block file: %v", err)
+	}
+	mb := block.NewMagicBlock()
+	if err = mb.Decode(b); err != nil {
+		return nil, fmt.Errorf("decoding magic block file: %v", err)
+	}
+	return mb, nil
+}
+
 // setupDKGSummaries initializes the dkg summaries
 func (cmd *cmdMagicBlock) setupDKGSummaries() {
 	cmd.block.ShareOrSigns = block.NewGroupSharesOrSigns()
@@ -148,11 +236,16 @@ func (cmd *cmdMagicBlock) saveBlock() error {
 	if err != nil {
 		return err
 	}
-	path := fmt.Sprintf("%v/%v.json", rootPath, cmd.yml.MagicBlockFilename)
+	name := getMagicBlockFileName(cmd.yml.MagicBlockFilename)
+	path := fmt.Sprintf("%v/%v", output, name)
 	if err := ioutil.WriteFile(path, file, 0644); err != nil {
 		return err
 	}
 	return nil
+}
+
+func getMagicBlockFileName(name string) string {
+	return fmt.Sprintf("%v.json", name)
 }
 
 // saveDKGSummaries method saves the dkg summaries on file storage
@@ -162,11 +255,8 @@ func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 		if err != nil {
 			return err
 		}
-		filename := fmt.Sprintf("b0mnode%v_dkg.json", n.SetIndex+1)
-		if cmd.yml.DKGSummaryFilename != "" {
-			filename = fmt.Sprintf("b0mnode%v_%v_dkg.json", n.SetIndex+1, cmd.yml.DKGSummaryFilename)
-		}
-		path := fmt.Sprintf("%v/%v", rootPath, filename)
+		name := getSummariesName(n.SetIndex)
+		path := fmt.Sprintf("%v/%v", output, name)
 		if err := ioutil.WriteFile(path, file, 0644); err != nil {
 			return err
 		}
@@ -174,12 +264,84 @@ func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 	return nil
 }
 
+func getSummariesName(index int) string {
+	return fmt.Sprintf("b0mnode%v_dkg.json", index+1)
+}
+
 func main() {
 	magicBlockConfig := flag.String("config_file", "", "config_file")
+	mainnet := flag.Bool("mainnet", false, "mainnet")
 	logging.InitLogging("development")
 
 	flag.Parse()
 
+	if *mainnet {
+		log.Println("Preparing files...")
+
+		err := verifySummaries("/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config/input_1/magicBlock.json",
+			"/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config/input_1/b0mnode01_dkg.json",
+			datastore.Key("63103c072798f1aa1a531aa40b9d9f59585be6b77767233f8b9da4c4e69821e8"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		passes := loadPasswords()
+		configs := readConfigs(magicBlockConfig, passes)
+		merged := mergeConfigs(configs)
+		mbfile := fmt.Sprintf("%v/%v", output, *magicBlockConfig)
+		writeMergedYAml(&mbfile, merged)
+		generateArtifacts(&mbfile)
+		zipArtifacts(passes, merged)
+	} else {
+		mbfile := fmt.Sprintf("%v/%v", rootPath, *magicBlockConfig)
+		output = rootPath
+		generateArtifacts(&mbfile)
+	}
+
+	log.Printf("Now sleeping for 60 sec")
+	time.Sleep(60 * time.Second)
+
+}
+
+func zipArtifacts(passes map[string]string, merged *configYaml) {
+	log.Println("Preparing archives...")
+	mbPath := fmt.Sprintf("%v/%v", output, getMagicBlockFileName(merged.MagicBlockFilename))
+
+	for email, pass := range passes {
+		var summaries []string
+		for _, miner := range merged.Miners {
+			if miner.Description == email {
+				name := getSummariesName(miner.SetIndex)
+				summaries = append(summaries, name)
+
+				summaryPath := fmt.Sprintf("%v/%v", output, name)
+				if err := verifySummaries(mbPath, summaryPath, miner.ID); err != nil {
+					log.Panic(err)
+				}
+			}
+		}
+
+		log.Printf("collected %v dkg summaries for %v", len(summaries), email)
+
+		file := fmt.Sprintf("%v.zip", email)
+		args := []string{"-e", file, getMagicBlockFileName(merged.MagicBlockFilename)}
+		args = append(args, summaries...)
+		args = append(args, "--password", pass)
+
+		c := exec.Command("zip", args...)
+		c.Dir = output
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		fmt.Printf("Creating %v\n", file)
+
+		err := c.Run()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+}
+
+func generateArtifacts(magicBlockConfig *string) {
 	cmd := new()
 	if err := cmd.setupYaml(*magicBlockConfig); err != nil {
 		log.Printf("Failed to read configuration file (%v) for magicBlock. Error: %v\n", *magicBlockConfig, err)
@@ -203,4 +365,128 @@ func main() {
 		return
 	}
 	log.Printf("Success: DKG summaries created")
+}
+
+func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYaml {
+	var configs []*configYaml
+	fmt.Println("unzipping archives")
+
+	nodesYaml := fmt.Sprintf("%v/%v.yaml", input, *magicBlockConfig)
+	for email, pass := range passes {
+		file := fmt.Sprintf("%v.zip", email)
+		fmt.Printf("unzipping %v\n", file)
+
+		cmd := exec.Command("unzip", "-P", pass, file)
+		cmd.Dir = input
+		cmd.Stdin = bytes.NewReader([]byte("y"))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Start()
+		if err != nil {
+			log.Panic(err)
+		}
+		err = cmd.Wait()
+		if err != nil {
+			log.Panic(err)
+		}
+
+		config := newYaml()
+		err = config.readYaml(nodesYaml)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		for _, m := range config.Miners {
+			if err := verifyKeys(m.PrivateKey, m.PublicKey, m.ID); err != nil {
+				fmt.Printf("bad miner %v\n", m.ID)
+				log.Panic(err)
+			}
+		}
+		for _, s := range config.Sharders {
+			if err := verifyKeys(s.PrivateKey, s.PublicKey, s.ID); err != nil {
+				fmt.Printf("bad sharder with %v\n", s.ID)
+				log.Panic(err)
+			}
+		}
+		configs = append(configs, config)
+
+		e := os.Remove(nodesYaml)
+		if e != nil {
+			log.Panic(err)
+		}
+	}
+	fmt.Printf("parsed %v nodes.yaml files\n", len(configs))
+	return configs
+}
+
+func writeMergedYAml(magicBlockConfig *string, merged *configYaml) {
+	fmt.Println("writing yaml file")
+	mergedYaml := fmt.Sprintf("%v.yaml", *magicBlockConfig)
+	marshal, err := yaml.Marshal(merged)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	_, err = os.Stat(output)
+	if err != nil && os.IsNotExist(err) {
+		if err := os.Mkdir(output, 0755); err != nil {
+			log.Panic(err)
+		}
+	}
+
+	if err := ioutil.WriteFile(mergedYaml, marshal, 0755); err != nil {
+		log.Panic(err)
+	}
+}
+
+func mergeConfigs(configs []*configYaml) *configYaml {
+	fmt.Println("merging yaml file")
+	merged := newYaml()
+	merged.MagicBlockNumber = 1
+	merged.StartingRound = 0
+	merged.StartingRound = 0
+	merged.TPercent = 75
+	merged.KPercent = 81
+	merged.MagicBlockFilename = "b0magicBlock"
+	merged.DKGSummaryFilename = "dkg_summary"
+
+	index := 0
+	for _, conf := range configs {
+		for _, miner := range conf.Miners {
+			merged.Miners = append(merged.Miners, miner)
+			merged.MinersMap[miner.ID] = miner
+			miner.SetIndex = index
+			index++
+		}
+
+		for _, sharder := range conf.Sharders {
+			merged.Sharders = append(merged.Sharders, sharder)
+			merged.ShardersMap[sharder.ID] = sharder
+		}
+	}
+
+	return merged
+}
+
+func loadPasswords() map[string]string {
+	fmt.Println("Loading passwords from password.txt")
+
+	passPath := fmt.Sprintf("%v/input/%v", rootPath, "password.yaml")
+	passFile, err := ioutil.ReadFile(passPath)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	data := make(map[interface{}]interface{})
+	err2 := yaml.Unmarshal(passFile, &data)
+	if err2 != nil {
+		log.Panic(err2)
+	}
+
+	res := make(map[string]string)
+
+	for k, v := range data {
+		res[fmt.Sprintf("%v", k)] = fmt.Sprintf("%v", v)
+	}
+	return res
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -29,14 +30,14 @@ func init() {
 
 // Client - data structure that holds the client data
 type Client struct {
-	datastore.CollectionMemberField `json:"-" msgpack:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-" yaml:"-"`
 	datastore.IDField               `yaml:",inline"`
-	datastore.VersionField
-	datastore.CreationDateField
+	datastore.VersionField `yaml:"-"`
+	datastore.CreationDateField `yaml:"-"`
 	PublicKey      string `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes []byte `json:"-" msgpack:"-"`
-	sigSchemeType  string
-	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
+	PublicKeyBytes []byte `json:"-" msgpack:"-" yaml:"-"`
+	sigSchemeType  string `yaml:"-"`
+	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-" yaml:"-"`
 }
 
 // NewClient - create a new client object

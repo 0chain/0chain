@@ -113,35 +113,35 @@ type Node struct {
 	Host           string        `json:"host" yaml:"public_ip"`
 	Port           int           `json:"port" yaml:"port"`
 	Path           string        `json:"path" yaml:"path"`
-	Type           int8          `json:"type"`
+	Type           int8          `json:"type" yaml:"-"`
 	Description    string        `json:"description" yaml:"description"`
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
-	Status         int           `json:"status"`
-	InPrevMB       bool          `json:"in_prev_mb"`
-	LastActiveTime time.Time     `json:"-" msgpack:"-"`
-	ErrorCount     int64         `json:"-" msgpack:"-"`
-	CommChannel    chan struct{} `json:"-" msgpack:"-"`
+	Status         int           `json:"status" yaml:"-"`
+	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
+	LastActiveTime time.Time     `json:"-" yaml:"-"`
+	ErrorCount     int64         `json:"-" yaml:"-"`
+	CommChannel    chan struct{} `json:"-" yaml:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-" msgpack:"-"` // messages sent to this node
-	sendErrors int64 `json:"-" msgpack:"-"` // failed message sent to this node
-	received   int64 `json:"-" msgpack:"-"` // messages received from this node
+	sent       int64 `json:"-" yaml:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" yaml:"-"` // failed message sent to this node
+	received   int64 `json:"-" yaml:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" yaml:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" yaml:"-"`
 
-	largeMessageSendTime uint64
-	smallMessageSendTime uint64
+	largeMessageSendTime uint64 `yaml:"-"`
+	smallMessageSendTime uint64 `yaml:"-"`
 
-	LargeMessagePullServeTime float64 `json:"-" msgpack:"-"`
-	SmallMessagePullServeTime float64 `json:"-" msgpack:"-"`
+	LargeMessagePullServeTime float64 `json:"-"  yaml:"-"`
+	SmallMessagePullServeTime float64 `json:"-"  yaml:"-"`
 
-	mutex sync.RWMutex `json:"-" msgpack:"-"`
+	mutex sync.RWMutex `yaml:"-"`
 
-	ProtocolStats interface{} `json:"-" msgpack:"-"`
+	ProtocolStats interface{} `json:"-"  yaml:"-"`
 
-	idBytes []byte
+	idBytes []byte `yaml:"-"`
 
-	Info Info `json:"info"`
+	Info Info `json:"info"  yaml:"-"`
 }
 
 /*Provider - create a node object */
