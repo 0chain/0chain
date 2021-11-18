@@ -2,7 +2,6 @@
 FROM zchain_build_base as sharder_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
-ENV GOPROXY=http://10.10.10.100:3080
 
 # Add the source code:
 COPY ./code/go/0chain.net/go.mod $SRC_DIR/go/0chain.net/
