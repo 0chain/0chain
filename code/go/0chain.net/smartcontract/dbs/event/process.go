@@ -22,7 +22,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 	logging.Logger.Info("piers processing events",
 		zap.Any("events", newEvents))
 
-	edb.addEvent(newEvents)
+	edb.addEvents(newEvents)
 	for _, event := range newEvents {
 		var err error = nil
 		switch event.Type {
@@ -46,7 +46,7 @@ func (edb *EventDb) addStat(event Event) error {
 		var challenge Challenge
 		logging.Logger.Info("piers event db adding",
 			zap.Any("challenge", event.Data))
-		return challenge.add(edb, []byte(event.Data))
+		return challenge.Add(edb, []byte(event.Data))
 	case TagRemoveChallenge:
 		logging.Logger.Info("piers event db removing",
 			zap.Any("challenge", event.Data))

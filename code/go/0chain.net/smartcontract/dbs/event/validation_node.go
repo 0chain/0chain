@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 type ValidationNode struct {
 	gorm.Model
 	ChallengeId uint
-	ValidatorID string `json:"id" gorm:"uniqueIndex"`
+	ValidatorID string `json:"id"`
 	BaseURL     string `json:"url"`
 }
 

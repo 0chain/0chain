@@ -19,32 +19,9 @@ type Challenge struct {
 	RandomNumber       int64            `json:"seed"`
 	AllocationID       string           `json:"allocation_id"`
 	AllocationRoot     string           `json:"allocation_root"`
-	//Response           Response         `json:"challenge_response,omitempty"`
 }
 
-/*
-type Response struct {
-	gorm.Model
-	ChallengeId       uint
-	ResponseID        string             `json:"response_id"`
-	ValidationTickets []ValidationTicket `json:"validation_tickets"`
-}
-
-
-type ValidationTicket struct {
-	gorm.Model
-	ResponseId   uint
-	ValidatorID  string           `json:"validator_id"`
-	ValidatorKey string           `json:"validator_key"`
-	Result       bool             `json:"success"`
-	Message      string           `json:"message"`
-	MessageCode  string           `json:"message_code"`
-	Timestamp    common.Timestamp `json:"timestamp"`
-	Signature    string           `json:"signature"`
-}
-*/
-
-func (ch *Challenge) add(edb *EventDb, data []byte) error {
+func (ch *Challenge) Add(edb *EventDb, data []byte) error {
 	err := json.Unmarshal(data, ch)
 	if err != nil {
 		return err

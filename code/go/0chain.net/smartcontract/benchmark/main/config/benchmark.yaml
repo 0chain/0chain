@@ -1,15 +1,15 @@
 simulation:
-  num_clients: 1000
-  num_miners: 1000
-  num_active_miners: 100
-  nun_sharders: 100
-  num_active_sharders: 25
-  num_allocations: 1000
-  num_blobbers: 100
-  num_validators: 100
+  num_clients: 100
+  num_miners: 100
+  num_active_miners: 10
+  nun_sharders: 10
+  num_active_sharders: 10
+  num_allocations: 100
+  num_blobbers: 50
+  num_validators: 50
   num_allocation_payers: 2 # number of clients contributing pools to an allocation
   num_allocation_payers_pools: 2  # number of allocation pools each contributor has
-  num_blobbers_per_Allocation: 40 # ideally make this even
+  num_blobbers_per_Allocation: 10 # ideally make this even
   num_blobber_delegates: 10
   num_miner_delegates: 10
   num_sharder_delegates: 10
@@ -17,7 +17,7 @@ simulation:
   num_free_storage_assigners: 10
   num_vesting_destinations_client: 10
   num_write_redeem_allocation: 10
-  num_challenges_blobber: 100
+  num_challenges_blobber: 10
 
 options:
   verbose: true
@@ -36,6 +36,18 @@ options:
     - "zcnscbridge"
     - "zcnscbridge_rest"
   omitted_tests:
+
+dbs:
+  events:
+    enabled: true
+    name: events_db
+    user: zchain_user
+    password: zchian
+    host: localhost
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
 
 smart_contracts:
   minersc:

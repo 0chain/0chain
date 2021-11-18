@@ -16,7 +16,7 @@ func init() {
 }
 
 func TestChallenges(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -55,12 +55,12 @@ func TestChallenges(t *testing.T) {
 	require.NoError(t, err)
 	data, err := json.Marshal(&challenge1)
 	require.NoError(t, err)
-	err = (&Challenge{}).add(eventDb, data)
+	err = (&Challenge{}).Add(eventDb, data)
 	require.NoError(t, err)
 
 	data2, err := json.Marshal(&challenge2)
 	require.NoError(t, err)
-	err = (&Challenge{}).add(eventDb, data2)
+	err = (&Challenge{}).Add(eventDb, data2)
 	require.NoError(t, err)
 
 	ch, err := eventDb.GetChallenge("first")
@@ -159,7 +159,7 @@ func TestProcessEvents(t *testing.T) {
 }
 
 func TestSetupDatabase(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",

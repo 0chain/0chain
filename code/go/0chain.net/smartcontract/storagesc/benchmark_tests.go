@@ -638,7 +638,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				var validationTickets []*ValidationTicket
 				vt := &ValidationTicket{
-					ChallengeID:  getMockChallengeId(0, 0),
+					ChallengeID:  getMockChallengeId(0, 0, 0),
 					BlobberID:    getMockBlobberId(0),
 					ValidatorID:  getMockValidatorId(0),
 					ValidatorKey: data.PublicKeys[0],
@@ -655,7 +655,7 @@ func BenchmarkTests(
 				sigScheme.SetPrivateKey(data.PrivateKeys[0])
 				vt.Signature, _ = sigScheme.Sign(hash)
 				bytes, _ := json.Marshal(&ChallengeResponse{
-					ID:                getMockChallengeId(0, 0),
+					ID:                getMockChallengeId(0, 0, 0),
 					ValidationTickets: validationTickets,
 				})
 				return bytes

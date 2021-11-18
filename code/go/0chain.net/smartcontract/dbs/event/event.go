@@ -101,7 +101,7 @@ func (edb *EventDb) removeDuplicate(events []Event) []Event {
 	return events
 }
 
-func (edb *EventDb) addEvent(events []Event) {
+func (edb *EventDb) addEvents(events []Event) {
 	if edb.Store != nil && len(events) > 0 {
 		edb.Store.Get().Create(&events)
 	}

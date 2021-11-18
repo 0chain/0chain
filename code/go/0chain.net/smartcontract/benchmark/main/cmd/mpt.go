@@ -3,6 +3,10 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/dbs"
+
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
@@ -69,7 +73,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
-		nil,
+		data.EventDb,
 	)
 }
 
@@ -113,6 +117,25 @@ func setUpMpt(
 		nil,
 	)
 
+	eventDb, err := event.NewEventDb(dbs.DbAccess{
+		Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+		Name:            viper.GetString(benchmark.EventDbName),
+		User:            viper.GetString(benchmark.EventDbUser),
+		Password:        viper.GetString(benchmark.EventDbPassword),
+		Host:            viper.GetString(benchmark.EventDbHost),
+		Port:            viper.GetString(benchmark.EventDbPort),
+		MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+		MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+		ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+	})
+	if err != nil {
+		panic(err)
+	}
+	if err := eventDb.AutoMigrate(); err != nil {
+		panic(err)
+	}
+	log.Println("created event database")
+
 	log.Println("created balances")
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
@@ -125,7 +148,7 @@ func setUpMpt(
 	storagesc.GetMockValidatorStakePools(clients, balances)
 	log.Println("added validator stake pools")
 	storagesc.AddMockAllocations(
-		clients, publicKeys, stakePools, blobbers, validators, balances,
+		clients, publicKeys, stakePools, blobbers, validators, eventDb, balances,
 	)
 	log.Println("added allocations")
 	storagesc.SaveMockStakePools(stakePools, balances)
@@ -169,6 +192,7 @@ func setUpMpt(
 		PublicKeys:  publicKeys,
 		PrivateKeys: privateKeys,
 		Sharders:    sharders,
+		EventDb:     eventDb,
 	}
 }
 

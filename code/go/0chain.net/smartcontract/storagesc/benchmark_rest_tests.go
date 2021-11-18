@@ -128,7 +128,7 @@ func BenchmarkRestTests(
 			params: func() url.Values {
 				var values url.Values = make(map[string][]string)
 				values.Set("blobber", getMockBlobberId(0))
-				values.Set("challenge", getMockChallengeId(0, 0))
+				values.Set("challenge", getMockChallengeId(0, 0, 0))
 				return values
 			}(),
 		},
