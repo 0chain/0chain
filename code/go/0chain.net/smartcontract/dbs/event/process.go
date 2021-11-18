@@ -13,13 +13,17 @@ const (
 )
 
 const (
-	TagNewChallenge    = "new challenge"
-	TagRemoveChallenge = "remove challenge"
+	TagNewChallenge    = "new_challenge"
+	TagRemoveChallenge = "remove_challenge"
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
-	edb.addEvent(events)
-	for _, event := range events {
+	newEvents := edb.removeDuplicate(events)
+	logging.Logger.Info("piers processing events",
+		zap.Any("events", newEvents))
+
+	edb.addEvent(newEvents)
+	for _, event := range newEvents {
 		var err error = nil
 		switch event.Type {
 		case TypeStats:

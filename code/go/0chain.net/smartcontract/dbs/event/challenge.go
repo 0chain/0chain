@@ -13,7 +13,7 @@ type Challenge struct {
 	BlobberChallengeID uint
 	BlobberID          string           `json:"blobber_id"`
 	Created            common.Timestamp `json:"created"`
-	ChallengeID        string           `json:"id"`
+	ChallengeID        string           `json:"id" gorm:"uniqueIndex"`
 	PrevID             string           `json:"prev_id"`
 	Validators         []ValidationNode `json:"validators"`
 	RandomNumber       int64            `json:"seed"`

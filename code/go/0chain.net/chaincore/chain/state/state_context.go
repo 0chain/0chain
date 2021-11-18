@@ -7,8 +7,10 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"go.uber.org/zap"
 )
 
 var (
@@ -73,6 +75,7 @@ type StateContext struct {
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
+	eventIndex                    int
 }
 
 // NewStateContext - create a new state context
@@ -170,13 +173,24 @@ func (sc *StateContext) GetMints() []*state.Mint {
 }
 
 func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
+	logging.Logger.Info("piers emitting event,",
+		zap.Any("event", event.Event{
+			BlockNumber: sc.block.Round,
+			TxHash:      sc.txn.Hash,
+			Type:        eventType,
+			Tag:         tag,
+			Index:       sc.eventIndex,
+			Data:        data,
+		}))
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
 		Type:        eventType,
 		Tag:         tag,
+		Index:       sc.eventIndex,
 		Data:        data,
 	})
+	sc.eventIndex++
 }
 
 func (sc *StateContext) EmitError(err error) {
@@ -185,9 +199,11 @@ func (sc *StateContext) EmitError(err error) {
 			BlockNumber: sc.block.Round,
 			TxHash:      sc.txn.Hash,
 			Type:        "Error",
+			Index:       0,
 			Data:        err.Error(),
 		},
 	}
+	sc.eventIndex = 1
 }
 
 func (sc *StateContext) GetEvents() []event.Event {

@@ -764,6 +764,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		return "", fmt.Errorf("Error marshalling challenge %v: %v", challenge, err)
 	}
 	balances.EmitEvent(event.TypeStats, event.TagNewChallenge, string(data))
+	Logger.Info("piers emit challenge", zap.Any("challenge", challenge))
 
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID

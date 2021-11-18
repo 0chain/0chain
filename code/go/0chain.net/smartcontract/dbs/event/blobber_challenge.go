@@ -8,7 +8,7 @@ import (
 
 type BlobberChallenge struct {
 	gorm.Model
-	BlobberID  string      `json:"blobber_id"`
+	BlobberID  string      `json:"blobber_id" gorm:"uniqueIndex"`
 	Challenges []Challenge `json:"challenges"`
 }
 

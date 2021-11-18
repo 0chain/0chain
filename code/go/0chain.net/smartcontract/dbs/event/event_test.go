@@ -16,7 +16,7 @@ func init() {
 }
 
 func TestChallenges(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -36,25 +36,12 @@ func TestChallenges(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	//err = eventDb.Store.Get().Migrator().DropTable(&CreditCard{})
-	require.NoError(t, err)
-	//err = eventDb.Store.Get().Migrator().DropTable(&User{})
-	require.NoError(t, err)
-	//err = eventDb.Store.Get().Migrator().CreateTable(&User{}, &CreditCard{})
-	require.NoError(t, err)
-
 	challenge1 := Challenge{
 		BlobberID:   "one",
 		ChallengeID: "first",
 		Validators: []ValidationNode{
 			{ValidatorID: "val one"}, {ValidatorID: "val two"},
 		},
-		//Response: Response{
-		//	ResponseID: "alpha response",
-		//	ValidationTickets: []ValidationTicket{
-		//		{Message: "message one"}, {Message: "message two"},
-		//	},
-		//},
 	}
 
 	challenge2 := Challenge{
@@ -63,13 +50,8 @@ func TestChallenges(t *testing.T) {
 		Validators: []ValidationNode{
 			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
 		},
-		//Response: Response{
-		//	ResponseID: "bets response",
-		//	ValidationTickets: []ValidationTicket{
-		//		{Message: "message two one"}, {Message: "message two two"},
-		//	},
-		//},
 	}
+
 	require.NoError(t, err)
 	data, err := json.Marshal(&challenge1)
 	require.NoError(t, err)
@@ -95,8 +77,89 @@ func TestChallenges(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestSetupDatabase(t *testing.T) {
+func TestProcessEvents(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            "zchain_user",
+		Password:        "zchian",
+		Host:            "localhost",
+		Port:            "5432",
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	require.NoError(t, err)
+	defer eventDb.Close()
+	err = eventDb.drop()
+	require.NoError(t, err)
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+
+	challenge1 := Challenge{
+		BlobberID:   "one",
+		ChallengeID: "first",
+		Validators: []ValidationNode{
+			{ValidatorID: "val one"}, {ValidatorID: "val two"},
+		},
+	}
+	data1, err := json.Marshal(&challenge1)
+	require.NoError(t, err)
+
+	challenge2 := Challenge{
+		BlobberID:   "two",
+		ChallengeID: "second",
+		Validators: []ValidationNode{
+			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
+		},
+	}
+
+	data2, err := json.Marshal(&challenge2)
+	require.NoError(t, err)
+	challenge3 := Challenge{
+		BlobberID:   "two",
+		ChallengeID: "second",
+		Validators: []ValidationNode{
+			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
+		},
+	}
+	data3, err := json.Marshal(&challenge3)
+	require.NoError(t, err)
+
+	events := []Event{
+		Event{
+			BlockNumber: 3,
+			TxHash:      "tx-hash",
+			Type:        TypeStats,
+			Tag:         TagNewChallenge,
+			Index:       1,
+			Data:        string(data1),
+		},
+		Event{
+			BlockNumber: 3,
+			TxHash:      "tx-hash",
+			Type:        TypeStats,
+			Tag:         TagNewChallenge,
+			Index:       2,
+			Data:        string(data2),
+		},
+		Event{
+			BlockNumber: 3,
+			TxHash:      "tx-hash",
+			Type:        TypeStats,
+			Tag:         TagNewChallenge,
+			Index:       3,
+			Data:        string(data3),
+		},
+	}
+	eventDb.AddEvents(events)
+	eventDb.AddEvents(events)
+}
+
+func TestSetupDatabase(t *testing.T) {
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -154,6 +217,7 @@ func TestSetupDatabase(t *testing.T) {
 		},
 	}
 
+	eventDb.AddEvents(events)
 	eventDb.AddEvents(events)
 
 	oldEvents, err := eventDb.GetEvents(0)

@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
@@ -240,6 +242,9 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		response.Challenges = append(response.Challenges, chr)
 	}
 
+	logging.Logger.Error("piers OpenChallengeHandler",
+		zap.Any("challenge list", response))
+
 	// return populate or empty list of challenges
 	// don't return error, if no challenges (expected by blobbers)
 	return &response, nil
@@ -269,5 +274,32 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 
-	return blobberChallengeObj.ChallengeMap[challengeID], nil
+	if balances.GetEventDB() == nil {
+		return nil, common.NewErrInternal("no event database found")
+	}
+
+	ch, err := balances.GetEventDB().GetChallenge(challengeID)
+	if err != nil {
+		return nil, common.NewErrInternal("getting blobber challenges", err.Error())
+	}
+
+	var response = challengeResponse{
+		ID:             ch.ChallengeID,
+		RandomNumber:   ch.RandomNumber,
+		AllocationID:   ch.AllocationID,
+		AllocationRoot: ch.AllocationRoot,
+		Blobber: nodeResponse{
+			ID: blobberID,
+		},
+	}
+	for _, v := range ch.Validators {
+		response.Validators = append(response.Validators, nodeResponse{
+			ID:  v.ValidatorID,
+			URL: v.BaseURL,
+		})
+	}
+	logging.Logger.Error("piers GetChallengeHandler",
+		zap.Any("challenge list", response))
+	return response, nil
+	//return blobberChallengeObj.ChallengeMap[challengeID], nil
 }
