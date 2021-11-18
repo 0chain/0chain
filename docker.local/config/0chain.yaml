@@ -117,6 +117,17 @@ server_chain:
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
     max_simultaneous_from_sharders: 30
+  dbs:
+    events:
+      enabled: true
+      name: events_db
+      user: zchain_user
+      password: zchian
+      host: postgres #localhost
+      port: 5432
+      max_idle_conns: 100
+      max_open_conns: 200
+      conn_max_lifetime: 20s
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_2_sharders.json

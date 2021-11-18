@@ -2,12 +2,15 @@ package minersc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
+	"strconv"
 
-	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 	"0chain.net/smartcontract"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -168,6 +171,44 @@ func (msc *MinerSmartContract) getGlobalsHandler(
 		}, nil
 	}
 	return globals, nil
+}
+
+func (msc *MinerSmartContract) GetEventsHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var blockNumber = 0
+	var blockNumberString = params.Get("block_number")
+	if len(blockNumberString) > 0 {
+		var err error
+		blockNumber, err = strconv.Atoi(blockNumberString)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse block number %v", err)
+		}
+	}
+
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+
+	filter := event.Event{
+		BlockNumber: int64(blockNumber),
+		TxHash:      params.Get("tx_hash"),
+		Type:        params.Get("type"),
+		Tag:         params.Get("tag"),
+	}
+
+	events, err := balances.GetEventDB().FindEvents(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return struct {
+		Events []event.Event `json:"events"`
+	}{
+		Events: events,
+	}, nil
 }
 
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
