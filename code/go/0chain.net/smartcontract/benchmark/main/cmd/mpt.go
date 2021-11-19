@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"0chain.net/smartcontract/zcnsc"
 	"encoding/hex"
+
+	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
@@ -68,6 +69,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
+		nil,
 	)
 }
 
@@ -108,6 +110,7 @@ func setUpMpt(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
+		nil,
 	)
 
 	log.Println("created balances")

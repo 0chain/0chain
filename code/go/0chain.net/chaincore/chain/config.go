@@ -3,6 +3,8 @@ package chain
 import (
 	"time"
 
+	"0chain.net/smartcontract/dbs"
+
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/datastore"
@@ -86,6 +88,8 @@ type Config struct {
 	RoundTimeoutSofttoMin  int `json:"softto_min"`         // minimum time for softtimeout to kick in milliseconds
 	RoundTimeoutSofttoMult int `json:"softto_mult"`        // multiplier of mean network time for soft timeout
 	RoundRestartMult       int `json:"round_restart_mult"` // multiplier of soft timeouts to restart a round
+
+	DbsEvents dbs.DbAccess `json:"dbs_event"`
 }
 
 func (conf *Config) Update(cf *minersc.GlobalSettings) error {
@@ -196,6 +200,42 @@ func (conf *Config) Update(cf *minersc.GlobalSettings) error {
 		conf.SmartContractTimeout = DefaultSmartContractTimeout
 	}
 	conf.SmartContractSettingUpdatePeriod, err = cf.GetInt64(minersc.SmartContractSettingUpdatePeriod)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.Enabled, err = cf.GetBool(minersc.DbsEventsEnabled)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.Name, err = cf.GetString(minersc.DbsEventsName)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.User, err = cf.GetString(minersc.DbsEventsUser)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.Password, err = cf.GetString(minersc.DbsEventsPassword)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.Host, err = cf.GetString(minersc.DbsEventsHost)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.Port, err = cf.GetString(minersc.DbsEventsPort)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.MaxIdleConns, err = cf.GetInt(minersc.DbsEventsMaxIdleConns)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.MaxOpenConns, err = cf.GetInt(minersc.DbsEventsMaxOpenConns)
+	if err != nil {
+		return err
+	}
+	conf.DbsEvents.ConnMaxLifetime, err = cf.GetDuration(minersc.DbsEventsConnMaxLifetime)
 	if err != nil {
 		return err
 	}

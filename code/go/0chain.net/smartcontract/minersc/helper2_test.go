@@ -1,6 +1,12 @@
 package minersc
 
 import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+	"testing"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -10,12 +16,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"fmt"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
-	"math"
-	"strconv"
-	"strings"
-	"testing"
 )
 
 type mockStateContext struct {
@@ -36,7 +38,10 @@ func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)          
 func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)   { return "", nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) { return 0, nil }
 func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock            { return nil }
-
+func (sc *mockStateContext) EmitEvent(string, string, string)                        {}
+func (sc *mockStateContext) EmitError(error)                                         {}
+func (sc *mockStateContext) GetEvents() []event.Event                                { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb                              { return nil }
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }

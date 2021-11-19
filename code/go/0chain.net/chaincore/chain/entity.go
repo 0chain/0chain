@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -160,6 +162,8 @@ type Chain struct {
 
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
+	EventDb *event.EventDb
+
 	// LFB tickets channels
 	getLFBTicket          chan *LFBTicket          // check out (any time)
 	updateLFBTicket       chan *LFBTicket          // receive
@@ -202,6 +206,32 @@ func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
 	}
 
 	return nil
+}
+
+func (c *Chain) SetupEventDatabase() error {
+	if c.EventDb != nil {
+		c.EventDb.Close()
+		c.EventDb = nil
+	}
+	if !c.DbsEvents.Enabled {
+		return nil
+	}
+
+	time.Sleep(time.Second * 2)
+
+	var err error
+	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents)
+	if err != nil {
+		return err
+	}
+	if err := c.EventDb.AutoMigrate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chain) GetEventDb() *event.EventDb {
+	return c.EventDb
 }
 
 // SyncLFBStateNow notify workers to start the LFB state sync immediately.
@@ -442,6 +472,16 @@ func NewChainFromConfig() *Chain {
 	chain.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
 	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
 	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
+
+	chain.DbsEvents.Enabled = viper.GetBool("server_chain.dbs.events.enabled")
+	chain.DbsEvents.Name = viper.GetString("server_chain.dbs.events.name")
+	chain.DbsEvents.User = viper.GetString("server_chain.dbs.events.user")
+	chain.DbsEvents.Password = viper.GetString("server_chain.dbs.events.password")
+	chain.DbsEvents.Host = viper.GetString("server_chain.dbs.events.host")
+	chain.DbsEvents.Port = viper.GetString("server_chain.dbs.events.port")
+	chain.DbsEvents.MaxIdleConns = viper.GetInt("server_chain.dbs.events.max_idle_conns")
+	chain.DbsEvents.MaxOpenConns = viper.GetInt("server_chain.dbs.events.max_open_conns")
+	chain.DbsEvents.ConnMaxLifetime = viper.GetDuration("server_chain.dbs.events.conn_max_lifetime")
 
 	return chain
 }
