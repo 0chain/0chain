@@ -193,8 +193,6 @@ tests:
           shift: 20
       - stop: ["sharder-1"]
       - start: ["sharder-1"]
-      # - nop:
-      #     timeout: "10s"
       - wait_round:
           shift: 50
           allow_beyond: true
@@ -220,14 +218,14 @@ tests:
       - start: ["sharder-2"]
       - wait_round:
           shift: 10
-          timeout: "1m"
+          timeout: "10m"
       - command:
           name: "sleep_3m"
       - stop: ["sharder-2"]
       - start: ["sharder-1"]
       - wait_round:
           shift: 10
-          timeout: "1m"
+          timeout: "10m"
 
   # NODES GO DOWN AND COME UP
   - name: "All nodes go down and come up"
