@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -455,6 +454,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		buf := bytes.Buffer{}
 		buf.ReadFrom(r.Body)
 		defer r.Body.Close()
+		go common.Respond(w, r, nil, nil)
 
 		vctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
@@ -500,7 +500,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 		entity, err := getRequestEntity(r, &buf, entityMetadata)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
 			return
 		}
 		if entity.GetKey() != entityID {
@@ -513,9 +512,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			return
 		}
 		start := time.Now()
-		data, err := handler(ctx, entity)
+		_, err = handler(ctx, entity)
 		duration := time.Since(start)
-		common.Respond(w, r, data, err)
 		if err != nil {
 			logging.N2n.Error("message received", zap.Int("from", sender.SetIndex),
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
