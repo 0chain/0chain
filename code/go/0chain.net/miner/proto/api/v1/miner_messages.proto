@@ -4,13 +4,7 @@ package miner;
 
 option go_package = "code/go/0chain.net/miner/proto/api/src/proto";
 
-message GetNotarizedBlockRequest {
-  int64 round = 1;
-  string hash = 2;
-}
-
-message GetNotarizedBlockResponse { Block block = 1; }
-
+// Block
 message Block {
   repeated VerificationTicket verification_tickets = 1;
 
@@ -36,11 +30,13 @@ message Block {
   repeated Transaction transactions = 19;
 }
 
+// VerificationTicket
 message VerificationTicket {
   string verifier_id = 1;
   string signature = 2;
 }
 
+// MagicBlock
 message MagicBlock {
   message ShareOrSigns {
     message DKGKeyShare {
@@ -71,6 +67,7 @@ message MagicBlock {
   int64 n = 11;
 }
 
+// Pool
 message Pool {
   message Node {
     message Info {
@@ -102,6 +99,7 @@ message Pool {
   map<string, Node> nodes = 2;
 }
 
+// Transaction
 message Transaction {
   string hash = 1;
   string version = 2;
