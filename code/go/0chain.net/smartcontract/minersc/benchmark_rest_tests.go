@@ -39,6 +39,7 @@ func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
 	var msc = MinerSmartContract{
+		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})

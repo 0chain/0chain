@@ -129,9 +129,8 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("add_free_storage_assigner",
-			"unauthorized access - only the owner can update the variables")
+	if err := ssc.Authorize(t.ClientID, "add_free_storage_assigner"); err != nil {
+		return "", err
 	}
 
 	var assignerInfo newFreeStorageAssignerInfo

@@ -31,9 +31,8 @@ func (ip *InterestPoolSmartContract) updateVariables(
 	inputData []byte,
 	balances c_state.StateContextI,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("failed to update variables",
-			"unauthorized access - only the owner can update the variables")
+	if err := ip.Authorize(t.ClientID, "update_variables"); err != nil {
+		return "", err
 	}
 
 	changes := &smartcontract.StringMap{}

@@ -58,6 +58,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
@@ -143,7 +144,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			},
 			want: want{
 				true,
-				"add_free_storage_assigner: unauthorized access - only the owner can update the variables",
+				"add_free_storage_assigner: unauthorized access - only the owner can access",
 			},
 		},
 	}
@@ -258,6 +259,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
@@ -616,6 +618,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 

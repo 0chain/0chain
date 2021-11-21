@@ -38,6 +38,7 @@ func TestDeleteMiner(t *testing.T) {
 	) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		mn := NewMinerNode()

@@ -40,6 +40,7 @@ func TestAddCurator(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
@@ -139,6 +140,7 @@ func TestRemoveCurator(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)

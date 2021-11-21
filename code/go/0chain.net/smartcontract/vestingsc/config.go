@@ -142,9 +142,8 @@ func (vsc *VestingSmartContract) updateConfig(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
+	if err := vsc.Authorize(txn.ClientID, "update_config"); err != nil {
+		return "", err
 	}
 
 	var conf *config

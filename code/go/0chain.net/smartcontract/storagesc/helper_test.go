@@ -402,6 +402,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 
 func newTestStorageSC() (ssc *StorageSmartContract) {
 	ssc = new(StorageSmartContract)
+	ssc.Authorizer = smartcontractinterface.NewOwned(owner)
 	ssc.SmartContract = new(smartcontractinterface.SmartContract)
 	ssc.ID = ADDRESS
 	return

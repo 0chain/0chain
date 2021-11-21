@@ -78,6 +78,7 @@ func TestSelectBlobbers(t *testing.T) {
 	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
@@ -290,6 +291,7 @@ func TestExtendAllocation(t *testing.T) {
 	) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = transaction.Transaction{
@@ -569,6 +571,7 @@ func TestTransferAllocation(t *testing.T) {
 			ClientID: p.curator,
 		}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)

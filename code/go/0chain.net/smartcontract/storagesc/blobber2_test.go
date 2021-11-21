@@ -267,6 +267,7 @@ func testCommitBlobberRead(
 	client.id = encryption.Hash(client.pk)
 
 	var ssc = &StorageSmartContract{
+		sci.NewOwned(owner),
 		&sci.SmartContract{
 			ID: storageScId,
 		},

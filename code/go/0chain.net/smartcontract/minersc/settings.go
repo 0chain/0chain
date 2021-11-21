@@ -209,9 +209,8 @@ func (msc *MinerSmartContract) updateSettings(
 	balances cstate.StateContextI,
 ) (resp string, err error) {
 
-	if t.ClientID != owner {
-		return "", common.NewError("update_settings",
-			"unauthorized access - only the owner can update the variables")
+	if err := msc.Authorize(t.ClientID, "update_settings"); err != nil {
+		return "", err
 	}
 
 	var changes smartcontract.StringMap

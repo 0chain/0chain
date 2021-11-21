@@ -85,6 +85,7 @@ func TestPayBlobberBlockRewards(t *testing.T) {
 			Nodes: []*StorageNode{},
 		}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 

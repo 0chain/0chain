@@ -46,6 +46,7 @@ func TestUpdateSettings(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -200,6 +201,7 @@ func TestCommitSettingChanges(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{

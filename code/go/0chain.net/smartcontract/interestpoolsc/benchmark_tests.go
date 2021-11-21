@@ -41,6 +41,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 
 func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	var isc = InterestPoolSmartContract{
+		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})

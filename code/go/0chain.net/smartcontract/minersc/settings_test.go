@@ -23,6 +23,8 @@ import (
 
 const x10 float64 = 10 * 1000 * 1000 * 1000
 
+const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+
 func TestSettings(t *testing.T) {
 	require.Len(t, SettingName, int(NumberOfSettings))
 	require.Len(t, Settings, int(NumberOfSettings))
@@ -49,6 +51,7 @@ func TestUpdateSettings(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -157,7 +160,7 @@ func TestUpdateSettings(t *testing.T) {
 		{
 			title: "all_settigns",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"min_stake":              "0.0",
 					"max_stake":              "100",

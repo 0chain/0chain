@@ -115,6 +115,7 @@ func TestUpdateConfig(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var vsc = &VestingSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -188,7 +189,7 @@ func TestUpdateConfig(t *testing.T) {
 			},
 			want: want{
 				error: true,
-				msg:   "update_config: unauthorized access - only the owner can update the variables",
+				msg:   "update_config: unauthorized access - only the owner can access",
 			},
 		},
 		{

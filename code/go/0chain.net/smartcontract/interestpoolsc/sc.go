@@ -22,19 +22,20 @@ import (
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
 	name      = "interest"
 	YEAR      = time.Duration(time.Hour * 8784)
 )
 
 type InterestPoolSmartContract struct {
+	smartcontractinterface.Authorizer
 	*smartcontractinterface.SmartContract
 }
 
 func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
 	var ipscCopy = &InterestPoolSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
+		Authorizer:    smartcontractinterface.NewOwned(config.SmartContractConfig.GetString("smart_contracts.interestpoolsc.ownerId")),
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
 	return ipscCopy

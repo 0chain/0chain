@@ -1,6 +1,7 @@
 package faucetsc
 
 import (
+	"0chain.net/chaincore/config"
 	"context"
 	"fmt"
 	"net/url"
@@ -21,18 +22,19 @@ import (
 )
 
 const (
-	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
 	name    = "faucet"
 )
 
 type FaucetSmartContract struct {
+	smartcontractinterface.Authorizer
 	*smartcontractinterface.SmartContract
 }
 
 func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
 	var fcCopy = &FaucetSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
+		Authorizer:    smartcontractinterface.NewOwned(config.SmartContractConfig.GetString("smart_contracts.faucetsc.ownerId")),
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
 	return fcCopy
@@ -98,8 +100,8 @@ func (fc *FaucetSmartContract) updateSettings(
 	balances c_state.StateContextI,
 	gn *GlobalNode,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("update_settings", "only the owner can update the limits")
+	if err := fc.Authorize(t.ClientID, "update_settings"); err != nil {
+		return "", err
 	}
 
 	var input sc.StringMap

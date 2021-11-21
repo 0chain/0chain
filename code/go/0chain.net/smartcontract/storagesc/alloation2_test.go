@@ -649,6 +649,7 @@ func setupMocksFinishAllocation(
 		store:         make(map[datastore.Key]util.Serializable),
 	}
 	var ssc = &StorageSmartContract{
+		sci.NewOwned(owner),
 		&sci.SmartContract{
 			ID: storageScId,
 		},
@@ -952,6 +953,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 		store:         make(map[datastore.Key]util.Serializable),
 	}
 	var ssc = &StorageSmartContract{
+		sci.NewOwned(owner),
 		&sci.SmartContract{
 			ID: storageScId,
 		},

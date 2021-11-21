@@ -249,6 +249,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 	var input = lockInput(t, duration)
 	var userNode = newUserNode(clientId)
 	var isc = &InterestPoolSmartContract{
+		Authorizer: smartcontractinterface.NewOwned(owner),
 		SmartContract: &smartcontractinterface.SmartContract{
 			ID: storageScId,
 		},
@@ -305,6 +306,7 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 	input, err := json.Marshal(poolStats)
 	require.NoError(t, err)
 	var isc = &InterestPoolSmartContract{
+		Authorizer: smartcontractinterface.NewOwned(owner),
 		SmartContract: &smartcontractinterface.SmartContract{
 			ID: storageScId,
 		},

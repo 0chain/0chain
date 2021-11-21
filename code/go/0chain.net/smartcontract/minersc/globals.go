@@ -500,9 +500,8 @@ func (msc *MinerSmartContract) updateGlobals(
 	_ *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_globals",
-			"unauthorized access - only the owner can update the variables")
+	if err := msc.Authorize(txn.ClientID, "update_globals"); err != nil {
+		return "", err
 	}
 
 	var changes smartcontract.StringMap

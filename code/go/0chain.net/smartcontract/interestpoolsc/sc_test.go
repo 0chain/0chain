@@ -36,6 +36,7 @@ func TestInterestPoolSmartContract_GetName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ipsc := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			if got := ipsc.GetName(); got != tt.want {
@@ -62,6 +63,7 @@ func TestInterestPoolSmartContract_GetAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ipsc := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			if got := ipsc.GetAddress(); got != tt.want {
@@ -98,6 +100,7 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ipsc := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 
@@ -267,7 +270,9 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ip := &InterestPoolSmartContract{}
+			ip := &InterestPoolSmartContract{
+				Authorizer: smartcontractinterface.NewOwned(owner),
+			}
 			addr := tt.addr
 			if tt.addr == "" {
 				addr = clientID1
@@ -407,6 +412,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			sc := &smartcontractinterface.SmartContract{
@@ -497,6 +503,7 @@ func TestInterestPoolSmartContract_updateVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			got, err := ip.updateVariables(tt.args.t, tt.args.gn, tt.args.inputData, tt.args.balances)
@@ -552,6 +559,7 @@ func TestInterestPoolSmartContract_getUserNode(t *testing.T) {
 				tt.args.balances = blnc
 			}
 			ip := &InterestPoolSmartContract{
+				Authorizer: smartcontractinterface.NewOwned(owner),
 				SmartContract: &smartcontractinterface.SmartContract{
 					ID:                          "new_test_pool_state",
 					RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
@@ -615,6 +623,7 @@ func TestInterestPoolSmartContract_getGlobalNode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			if got := ip.getGlobalNode(tt.args.balances, tt.args.funcName); !reflect.DeepEqual(got, tt.want) {
@@ -764,6 +773,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ip := &InterestPoolSmartContract{
+				Authorizer:    smartcontractinterface.NewOwned(owner),
 				SmartContract: tt.fields.SmartContract,
 			}
 			got, err := ip.Execute(tt.args.t, tt.args.funcName, tt.args.inputData, tt.args.balances)

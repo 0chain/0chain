@@ -57,6 +57,7 @@ func TestUpdateGlobals(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -100,7 +101,7 @@ func TestUpdateGlobals(t *testing.T) {
 		{
 			title: "bad_key",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					mockNotASetting: mockNotASetting,
 				},
@@ -113,7 +114,7 @@ func TestUpdateGlobals(t *testing.T) {
 		{
 			title: "all_settings",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"server_chain.block.min_block_size":                  "1",
 					"server_chain.block.max_block_size":                  "10",
@@ -141,7 +142,7 @@ func TestUpdateGlobals(t *testing.T) {
 		{
 			title: "immutable_key",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"server_chain.health_check.deep_scan.enabled": "true",
 				},

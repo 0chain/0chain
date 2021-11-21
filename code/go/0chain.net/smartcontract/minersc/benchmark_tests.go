@@ -18,6 +18,10 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 )
 
+var (
+	owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+)
+
 type BenchTest struct {
 	name     string
 	endpoint func(
@@ -75,6 +79,7 @@ func BenchmarkTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
 	var msc = MinerSmartContract{
+		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	msc.setSC(msc.SmartContract, &smartcontract.BCContext{})

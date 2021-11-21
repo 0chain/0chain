@@ -12,6 +12,8 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 )
 
+const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+
 type BenchTest struct {
 	name     string
 	endpoint string
@@ -37,6 +39,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 
 func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	var fsc = FaucetSmartContract{
+		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})

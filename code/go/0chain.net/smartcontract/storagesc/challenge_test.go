@@ -153,6 +153,7 @@ func TestAddChallenge(t *testing.T) {
 			t.Parallel()
 			args := parametersToArgs(tt.parameters)
 			var ssc = &StorageSmartContract{
+				Authorizer:    sci.NewOwned(owner),
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 
@@ -494,6 +495,7 @@ func setupChallengeMocks(
 		store:         make(map[datastore.Key]util.Serializable),
 	}
 	var ssc = &StorageSmartContract{
+		sci.NewOwned(owner),
 		&sci.SmartContract{
 			ID: storageScId,
 		},

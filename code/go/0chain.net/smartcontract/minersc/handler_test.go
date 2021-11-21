@@ -37,6 +37,7 @@ func TestConfigHandler(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
+			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		balances.On("GetTrieNode", GlobalNodeKey).Return(

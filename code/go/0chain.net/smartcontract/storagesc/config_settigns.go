@@ -557,9 +557,8 @@ func (ssc *StorageSmartContract) updateSettings(
 	input []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	if t.ClientID != owner {
-		return "", common.NewError("update_settings",
-			"unauthorized access - only the owner can update the variables")
+	if err := ssc.Authorize(t.ClientID, "update_settings"); err != nil {
+		return "", err
 	}
 
 	var newChanges smartcontract.StringMap
