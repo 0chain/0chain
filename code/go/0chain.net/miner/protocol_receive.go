@@ -589,11 +589,16 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		}
 	}
 
-	if err := mc.VerifyBlockNotarization(ctx, nb); err != nil {
-		logging.Logger.Error("not. block handler -- verify notarization failed",
+	cctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	if err := mc.verifyBlockNotarizationWorker.Run(cctx, func() error {
+		return mc.VerifyBlockNotarization(ctx, nb)
+	}); err != nil {
+		logging.Logger.Error("handle notarized block",
+			zap.Error(err),
 			zap.Int64("round", nb.Round),
-			zap.String("block", nb.Hash),
-			zap.Error(err))
+			zap.Int64("lfb_round", lfb.Round))
 		return
 	}
 
@@ -607,8 +612,10 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	}
 
 	if mc.isAheadOfSharders(ctx, nb.Round+1) {
-		logging.Logger.Error("handle not. block -- ahead of sharders",
-			zap.Int64("round", nb.Round+1))
+		logging.Logger.Error("handle notarized block",
+			zap.Error(errors.New("next round ahead of sharders")),
+			zap.Int64("round", nb.Round),
+			zap.Int64("lfb_round", lfb.Round))
 		return
 	}
 
