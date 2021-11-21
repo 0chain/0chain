@@ -22,10 +22,36 @@ services:
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: bash /0chain/bin/cassandra-init.sh
+    command: ./0chain/bin/cassandra-init.sh
     links:
       - cassandra:cassandra
     restart: on-failure
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    networks:
+      default:
+  postgres-post:
+    image: postgres:14
+    environment:
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ../bin:/0chain/bin
+      - ../sql:/0chain/sql
+      - ../sql_script/:/docker-entrypoint-initdb.d/
+    links:
+      - postgres:postgres
 
   sharder:
     image: "sharder"

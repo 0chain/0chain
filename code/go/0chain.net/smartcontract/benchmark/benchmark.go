@@ -1,6 +1,7 @@
 package benchmark
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -9,10 +10,10 @@ import (
 	"0chain.net/core/encryption"
 )
 
-type BenchmarkSource int
+type Source int
 
 const (
-	Storage BenchmarkSource = iota
+	Storage = Source(iota)
 	StorageRest
 	Miner
 	MinerRest
@@ -23,11 +24,14 @@ const (
 	Vesting
 	VestingRest
 	MultiSig
+	ZCNSCBridge
+	ZCNSCBridgeRest
+	Control
 	NumberOdfBenchmarkSources
 )
 
 var (
-	BenchmarkSourceNames = []string{
+	SourceNames = []string{
 		"storage",
 		"storage_rest",
 		"miner",
@@ -39,20 +43,26 @@ var (
 		"vesting",
 		"vesting_rest",
 		"multi_sig",
+		"zcnscbridge",
+		"zcnscbridge_rest",
+		"control",
 	}
 
-	BenchmarkSourceCode = map[string]BenchmarkSource{
-		BenchmarkSourceNames[Storage]:          Storage,
-		BenchmarkSourceNames[StorageRest]:      StorageRest,
-		BenchmarkSourceNames[Miner]:            Miner,
-		BenchmarkSourceNames[MinerRest]:        MinerRest,
-		BenchmarkSourceNames[Faucet]:           Faucet,
-		BenchmarkSourceNames[FaucetRest]:       FaucetRest,
-		BenchmarkSourceNames[InterestPool]:     InterestPool,
-		BenchmarkSourceNames[InterestPoolRest]: InterestPoolRest,
-		BenchmarkSourceNames[Vesting]:          Vesting,
-		BenchmarkSourceNames[VestingRest]:      VestingRest,
-		BenchmarkSourceNames[MultiSig]:         MultiSig,
+	SourceCode = map[string]Source{
+		SourceNames[Storage]:          Storage,
+		SourceNames[StorageRest]:      StorageRest,
+		SourceNames[Miner]:            Miner,
+		SourceNames[MinerRest]:        MinerRest,
+		SourceNames[Faucet]:           Faucet,
+		SourceNames[FaucetRest]:       FaucetRest,
+		SourceNames[InterestPool]:     InterestPool,
+		SourceNames[InterestPoolRest]: InterestPoolRest,
+		SourceNames[Vesting]:          Vesting,
+		SourceNames[VestingRest]:      VestingRest,
+		SourceNames[MultiSig]:         MultiSig,
+		SourceNames[ZCNSCBridge]:      ZCNSCBridge,
+		SourceNames[ZCNSCBridgeRest]:  ZCNSCBridgeRest,
+		SourceNames[Control]:          Control,
 	}
 )
 
@@ -91,6 +101,7 @@ const (
 	FaucetSc       = "faucetsc."
 	InterestPoolSC = "interestpoolsc."
 	VestingSc      = "vestingsc."
+	Zcn            = "zcn."
 
 	Fas = "free_allocation_settings."
 
@@ -104,6 +115,8 @@ const (
 	Satisfactory            = Internal + "satisfactory"
 	TimeUnit                = Internal + "time_unit"
 	Colour                  = Internal + "colour"
+	ControlM                = Internal + "control_m"
+	ControlN                = Internal + "control_n"
 
 	OptionVerbose      = Options + "verbose"
 	OptionTestSuites   = Options + "test_suites"
@@ -158,7 +171,24 @@ const (
 	VestingMaxDestinations = SmartContract + VestingSc + "max_destinations"
 	VestingMinDuration     = SmartContract + VestingSc + "min_duration"
 	VestingMaxDuration     = SmartContract + VestingSc + "max_duration"
+
+	MinMintAmount      = SmartContract + Zcn + "min_mint_amount"
+	PercentAuthorizers = SmartContract + Zcn + "percent_authorizers"
+	MinAuthorizers     = SmartContract + Zcn + "min_authorizers"
+	MinBurnAmount      = SmartContract + Zcn + "min_burn_amount"
+	MinStakeAmount     = SmartContract + Zcn + "min_stake_amount"
+	BurnAddress        = SmartContract + Zcn + "burn_address"
 )
+
+func (s Source) String() string {
+	i := int(s)
+	switch {
+	case i <= int(NumberOdfBenchmarkSources):
+		return SourceNames[i]
+	default:
+		return strconv.Itoa(i)
+	}
+}
 
 func (w SimulatorParameter) String() string {
 	return [...]string{
@@ -209,7 +239,7 @@ var (
 type BenchTestI interface {
 	Name() string
 	Transaction() *transaction.Transaction
-	Run(state.StateContextI, *testing.B)
+	Run(state.StateContextI, *testing.B) error
 }
 
 type SignatureScheme interface {
@@ -219,7 +249,7 @@ type SignatureScheme interface {
 }
 
 type TestSuite struct {
-	Source     BenchmarkSource
+	Source     Source
 	Benchmarks []BenchTestI
 }
 

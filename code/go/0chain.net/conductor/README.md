@@ -265,6 +265,7 @@ enable:
 
 - `set_monitor` - initiate the node from where blockchain events will be accepted
 - `cleanup_bc` - stop all nodes, reset rounds, and clean up data using `cleanup_command` defined on `conductor.config.yaml`
+- `env` - set environment variables that might affect commands to start/stop nodes. e.g. `CLI_ARGS` will effectively add arguments to command in `b0docker-compose.yml`
 
 2. **common nodes control**
 
@@ -358,8 +359,9 @@ enable:
 4. **control nodes behavior / misbehavior**
 
 - `set_revealed` - reveal the list of nodes. A revealed node sends it share.
-- `unset_revealed` - hid the list of nodes. A hidden node does not sends it share.
+- `unset_revealed` - hide the list of nodes. A hidden node does not sends it share.
   - This is currently UNUSED
+- `generators_failure` - prevents generators selected at start of the specified round (as in some setups they aren't known beforehand) from generating blocks for the duration of the whole round including all restarts.
 
 5. **Byzantine blockchain**
 

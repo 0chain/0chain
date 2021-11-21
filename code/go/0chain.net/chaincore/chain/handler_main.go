@@ -21,13 +21,3 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (int
 
 	return nil, errors.New("could not find latest finalized magic block")
 }
-
-// LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
-func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
-		return lfmb.GetSummary(), nil
-	}
-
-	return nil, errors.New("could not find latest finalized magic block")
-}

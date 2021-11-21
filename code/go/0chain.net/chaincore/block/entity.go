@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -145,6 +147,7 @@ type Block struct {
 	ChainWeight float64       `json:"chain_weight"`
 	RoundRank   int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-" msgpack:"-"`
+	Events      []event.Event
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
@@ -747,7 +750,8 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) error
+	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) ([]event.Event, error)
+	GetEventDb() *event.EventDb
 }
 
 // ComputeState computes block client state
@@ -830,7 +834,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		if err := c.UpdateState(ctx, b, txn); err != nil {
+		events, err := c.UpdateState(ctx, b, txn)
+		b.Events = append(b.Events, events...)
+		if err != nil {
 			b.SetStateStatus(StateFailed)
 			logging.Logger.Error("compute state - update state failed",
 				zap.Int64("round", b.Round),
@@ -841,6 +847,11 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				zap.Error(err))
 			return common.NewError("state_update_error", err.Error())
 		}
+	}
+
+	if len(b.Events) > 0 && c.GetEventDb() != nil {
+		go c.GetEventDb().AddEvents(b.Events)
+		b.Events = nil
 	}
 
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
@@ -894,7 +905,9 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		if err := c.UpdateState(ctx, b, txn); err != nil {
+		events, err := c.UpdateState(ctx, b, txn)
+		b.Events = append(b.Events, events...)
+		if err != nil {
 			b.SetStateStatus(StateFailed)
 			logging.Logger.Error("compute state local - update state failed",
 				zap.Int64("round", b.Round),
@@ -905,6 +918,11 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				zap.Error(err))
 			return common.NewError("state_update_error", err.Error())
 		}
+	}
+
+	if len(b.Events) > 0 && c.GetEventDb() != nil {
+		go c.GetEventDb().AddEvents(b.Events)
+		b.Events = nil
 	}
 
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {

@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
-      # 1-7 miners
+      # 1-8 miners
       - ../miner1/:/miner1
       - ../miner2/:/miner2
       - ../miner3/:/miner3
@@ -13,6 +13,7 @@ services:
       - ../miner5/:/miner5
       - ../miner6/:/miner6
       - ../miner7/:/miner7
+      - ../miner8/:/miner8
       # 1-4 sharders
       - ../sharder1/:/sharder1
       - ../sharder2/:/sharder2

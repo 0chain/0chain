@@ -62,3 +62,5 @@ docker.local/log_dumps
 **/mocks/*
 !**/mocks/mocks.go
 !**/mocks/.gitkeep
+
+burn_error.txt

@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -49,11 +50,9 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	_, err := bt.endpoint(bt.Transaction(), bt.input, balances)
-	if err != nil {
-		panic(err)
-	}
+	return err
 }
 
 func BenchmarkTests(
@@ -221,13 +220,13 @@ func BenchmarkTests(
 					Hash: encryption.Hash("mock transaction hash"),
 				},
 				ClientID: data.Clients[0],
-				Value:    100 * viper.GetInt64(bk.StorageMinAllocSize),
+				Value:    viper.GetInt64(bk.StorageMinAllocSize) * 1e10,
 			},
 			input: func() []byte {
 				bytes, _ := json.Marshal(&updateAllocationRequest{
 					ID:           getMockAllocationId(0),
 					OwnerID:      data.Clients[0],
-					Size:         100 * viper.GetInt64(bk.StorageMinAllocSize),
+					Size:         10000000,
 					Expiration:   common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()),
 					SetImmutable: true,
 				})
@@ -346,7 +345,7 @@ func BenchmarkTests(
 				ClientID:     data.Clients[1],
 				ToClientID:   ADDRESS,
 				CreationDate: common.Timestamp(viper.GetInt64(bk.Now)),
-				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
+				Value:        int64(viper.GetFloat64(bk.StorageMaxIndividualFreeAllocation) * 1e10),
 			},
 			input: func() []byte {
 				var request = struct {
@@ -598,7 +597,7 @@ func BenchmarkTests(
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: getMockBlobberId(0),
 					//PoolID:    getMockStakePoolId(0, 0, data.Clients),
-					PoolID: getMockStakePoolId(0, 0),
+					PoolID: getMockBlobberStakePoolId(0, 0),
 				})
 				return bytes
 			}(),
@@ -613,7 +612,7 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: getMockBlobberId(0),
-					PoolID:    getMockStakePoolId(0, 0),
+					PoolID:    getMockBlobberStakePoolId(0, 0),
 				})
 				return bytes
 			}(),
@@ -625,11 +624,44 @@ func BenchmarkTests(
 			input: func() []byte {
 				bytes, _ := json.Marshal(&stakePoolRequest{
 					BlobberID: getMockBlobberId(0),
-					PoolID:    getMockStakePoolId(0, 0),
+					PoolID:    getMockBlobberStakePoolId(0, 0),
 				})
 				return bytes
 			}(),
 		},
+		{
+			name:     "storage.challenge_response",
+			endpoint: ssc.verifyChallenge,
+			txn: &transaction.Transaction{
+				ClientID: getMockBlobberId(0),
+			},
+			input: func() []byte {
+				var validationTickets []*ValidationTicket
+				vt := &ValidationTicket{
+					ChallengeID:  getMockChallengeId(0, 0),
+					BlobberID:    getMockBlobberId(0),
+					ValidatorID:  getMockValidatorId(0),
+					ValidatorKey: data.PublicKeys[0],
+					Result:       true,
+					Message:      "mock message",
+					MessageCode:  "mock message code",
+					Timestamp:    now,
+					Signature:    "",
+				}
+				validationTickets = append(validationTickets, vt)
+				hash := encryption.Hash(fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
+					vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp))
+				_ = sigScheme.SetPublicKey(data.PublicKeys[0])
+				sigScheme.SetPrivateKey(data.PrivateKeys[0])
+				vt.Signature, _ = sigScheme.Sign(hash)
+				bytes, _ := json.Marshal(&ChallengeResponse{
+					ID:                getMockChallengeId(0, 0),
+					ValidationTickets: validationTickets,
+				})
+				return bytes
+			}(),
+		},
+
 		{
 			name:     "storage.update_settings",
 			endpoint: ssc.updateSettings,

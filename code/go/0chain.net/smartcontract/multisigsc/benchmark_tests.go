@@ -38,7 +38,7 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 	}
 }
 
-func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
+func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) error {
 	var msc = MultiSigSmartContract{
 		SmartContract: sci.NewSC(Address),
 	}
@@ -62,9 +62,8 @@ func (bt BenchTest) Run(balances cstate.StateContextI, _ *testing.B) {
 	default:
 		panic("unknown endpoint: " + bt.endpoint)
 	}
-	if err != nil {
-		panic(err)
-	}
+
+	return err
 }
 
 func BenchmarkTests(

@@ -133,6 +133,10 @@ func main() {
 	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
 
+	if err := serverChain.SetupEventDatabase(); err != nil {
+		logging.Logger.Panic("Error setting up events database")
+	}
+
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB()

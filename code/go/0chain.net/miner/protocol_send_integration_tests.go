@@ -50,10 +50,10 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	}
 
 	if len(good) > 0 {
-		mb.Miners.SendToMultipleNodes(RoundVRFSender(vrfs), good)
+		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(vrfs), good)
 	}
 	if len(bad) > 0 {
-		mb.Miners.SendToMultipleNodes(RoundVRFSender(badVRFS), bad)
+		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(badVRFS), bad)
 	}
 }
 
@@ -110,22 +110,22 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 		case state.WrongVerificationTicketHash != nil:
 			// (wrong hash)
 			if state.WrongVerificationTicketHash.IsGood(state, b.MinerID) {
-				mb.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
+				mb.Miners.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID)
 			} else if state.WrongVerificationTicketHash.IsBad(state, b.MinerID) {
 				var badvt = getBadBVTHash(ctx, b)
-				mb.Miners.SendTo(VerificationTicketSender(badvt), b.MinerID)
+				mb.Miners.SendTo(ctx, VerificationTicketSender(badvt), b.MinerID)
 			}
 		case state.WrongVerificationTicketKey != nil:
 			// (wrong secret key)
 			if state.WrongVerificationTicketKey.IsGood(state, b.MinerID) {
-				mb.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
+				mb.Miners.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID)
 			} else if state.WrongVerificationTicketKey.IsBad(state, b.MinerID) {
 				var badvt = getBadBVTKey(ctx, b)
-				mb.Miners.SendTo(VerificationTicketSender(badvt), b.MinerID)
+				mb.Miners.SendTo(ctx, VerificationTicketSender(badvt), b.MinerID)
 			}
 		default:
 			// (usual sending)
-			mb.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
+			mb.Miners.SendTo(ctx, VerificationTicketSender(bvt), b.MinerID)
 		}
 		return
 	}
@@ -147,14 +147,14 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	}
 
 	if badvt == nil {
-		mb.Miners.SendAll(VerificationTicketSender(bvt)) // (usual sending)
+		mb.Miners.SendAll(ctx, VerificationTicketSender(bvt)) // (usual sending)
 		return
 	}
 
 	if len(good) > 0 {
-		mb.Miners.SendToMultipleNodes(VerificationTicketSender(bvt), good)
+		mb.Miners.SendToMultipleNodes(ctx, VerificationTicketSender(bvt), good)
 	}
 	if len(bad) > 0 {
-		mb.Miners.SendToMultipleNodes(VerificationTicketSender(badvt), bad)
+		mb.Miners.SendToMultipleNodes(ctx, VerificationTicketSender(badvt), bad)
 	}
 }

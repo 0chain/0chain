@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/zcnsc"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,7 +35,6 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
-	"0chain.net/smartcontract/zrc20sc"
 )
 
 func init() {
@@ -43,7 +44,7 @@ func init() {
 	viper.Set("development.smart_contract.miner", true)
 	viper.Set("development.smart_contract.storage", true)
 	viper.Set("development.smart_contract.vesting", true)
-	viper.Set("development.smart_contract.zrc20", true)
+	viper.Set("development.smart_contract.zcn", true)
 	viper.Set("development.smart_contract.multisig", true)
 	config.SmartContractConfig = viper.New()
 	setupsc.SetupSmartContracts()
@@ -1783,8 +1784,8 @@ func TestGetSCRestOutput(t *testing.T) {
 			address: vestingsc.ADDRESS,
 		},
 		{
-			name:    "zrc20sc",
-			address: zrc20sc.ADDRESS,
+			name:    "zcn",
+			address: zcnsc.ADDRESS,
 		},
 		{
 			name:    "invalid",

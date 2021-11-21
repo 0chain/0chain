@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"errors"
 
 	"0chain.net/chaincore/block"
@@ -126,16 +128,21 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) error {
+func (c *Chain) UpdateState(
+	ctx context.Context, b *block.Block, txn *transaction.Transaction,
+) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, txn)
 }
 
 // NewStateContext creation helper.
-func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (balances *bcstate.StateContext) {
-
+func (c *Chain) NewStateContext(
+	b *block.Block,
+	s util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	eventDb *event.EventDb,
+) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
 		c.GetBlockSharders,
@@ -143,16 +150,19 @@ func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 			return c.GetLatestFinalizedMagicBlock(context.Background())
 		},
 		c.GetCurrentMagicBlock,
-		c.GetSignatureScheme)
+		c.GetSignatureScheme,
+		eventDb,
+	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
-	err error) {
+func (c *Chain) updateState(
+	ctx context.Context, b *block.Block, txn *transaction.Transaction,
+) (events []event.Event, err error) {
 
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {
-		return common.NewErrorf("update_state_failed",
+		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
 	}
@@ -160,15 +170,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		startRoot   = clientState.GetRoot()
-		sctx        = c.NewStateContext(b, clientState, txn)
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
+	defer func() { events = sctx.GetEvents() }()
 
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
 		var output string
 		t := time.Now()
-		if output, err = c.ExecuteSmartContract(ctx, txn, sctx); err != nil {
+		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
+		if err != nil {
+			sctx.EmitError(err)
 			logging.Logger.Error("Error executing the SC",
 				zap.Error(err),
 				zap.String("block", b.Hash),
@@ -189,17 +202,27 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
 			state.Balance(txn.Value)))
 		if err != nil {
+			logging.Logger.Error("Failed to add transfer",
+				zap.Any("txn type", txn.TransactionType),
+				zap.Any("transaction_ClientID", txn.ClientID),
+				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+		return nil, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
 		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS,
 			state.Balance(txn.Fee)))
 		if err != nil {
+			logging.Logger.Error("Failed to add transfer",
+				zap.Any("txn type", txn.TransactionType),
+				zap.Any("transaction_ClientID", txn.ClientID),
+				zap.Any("minersc_address", minersc.ADDRESS),
+				zap.Any("state_Balance", state.Balance(txn.Fee)))
 			return
 		}
 	}
@@ -211,6 +234,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	for _, transfer := range sctx.GetTransfers() {
 		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, transfer.Amount)
 		if err != nil {
+			logging.Logger.Error("Failed to transfer amount",
+				zap.Any("transfer_ClientID", transfer.ClientID),
+				zap.Any("to_ClientID", transfer.ToClientID),
+				zap.Any("amount", transfer.Amount))
 			return
 		}
 	}
@@ -219,6 +246,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		err = c.transferAmount(sctx, signedTransfer.ClientID,
 			signedTransfer.ToClientID, signedTransfer.Amount)
 		if err != nil {
+			logging.Logger.Error("Failed to process signed transfer",
+				zap.Any("signedTransfer_ClientID", signedTransfer.ClientID),
+				zap.Any("signedTransfer_to_ClientID", signedTransfer.ToClientID),
+				zap.Any("signedTransfer_amount", signedTransfer.Amount))
 			return
 		}
 	}
