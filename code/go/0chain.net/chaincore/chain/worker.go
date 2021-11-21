@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -115,29 +117,74 @@ func startStatusMonitor(mb *block.MagicBlock, ctx context.Context) func() {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
+	var (
+		finalizingRound    int64
+		cancel             func()
+		finalizingC        = make(chan round.RoundI, 2*config.GetLFBTicketAhead()+1)
+		getFinalizingRound = func() int64 {
+			return atomic.LoadInt64(&finalizingRound)
+		}
+		setFinalizingRound = func(r int64) {
+			atomic.StoreInt64(&finalizingRound, r)
+		}
+	)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case r := <-finalizingC:
+				func() {
+					setFinalizingRound(r.GetRoundNumber())
+					// TODO: make the timeout configurable
+					var cctx context.Context
+					cctx, cancel = context.WithTimeout(ctx, time.Minute)
+					defer cancel()
+					doneC := make(chan struct{})
+					go func() {
+						defer close(doneC)
+						c.finalizeRound(cctx, r)
+						c.UpdateRoundInfo(r)
+					}()
+
+					select {
+					case <-cctx.Done():
+						Logger.Warn("FinalizeRoundWorker finalize round timeout",
+							zap.Int64("round", r.GetRoundNumber()))
+					case <-doneC:
+					}
+				}()
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case r := <-c.finalizedRoundsChannel:
-			func() {
-				// TODO: make the timeout configurable
-				cctx, cancel := context.WithTimeout(ctx, time.Minute)
-				defer cancel()
-				doneC := make(chan struct{})
-				go func() {
-					defer close(doneC)
-					c.finalizeRound(cctx, r)
-					c.UpdateRoundInfo(r)
-				}()
-
-				select {
-				case <-cctx.Done():
-					Logger.Warn("FinalizeRoundWorker finalize round timeout",
-						zap.Int64("round", r.GetRoundNumber()))
-				case <-doneC:
+			rn := r.GetRoundNumber()
+			fr := getFinalizingRound()
+			if fr > 0 && rn-fr > int64(2*config.GetLFBTicketAhead()) {
+				// drain out finalizing round channel
+				lc := len(finalizingC)
+				for i := 0; i < lc; i++ {
+					<-finalizingC
 				}
-			}()
+
+				// cancel and force move the finalizing round to current round
+				if cancel != nil {
+					cancel()
+				}
+
+				Logger.Debug("FinalizeRoundWorker - finalizing round slow, do fast moving",
+					zap.Int64("to round", rn),
+					zap.Int64("finalizing round", fr))
+			}
+
+			finalizingC <- r
+			continue
 		}
 	}
 }
