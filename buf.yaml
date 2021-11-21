@@ -1,4 +1,4 @@
-version: v1beta1
+version: v1
 name: buf.build/0chain/miner
 deps:
   - buf.build/googleapis/googleapis
