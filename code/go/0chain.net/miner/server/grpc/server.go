@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// NewGRPCServerWithMiddlewares
 func NewGRPCServerWithMiddlewares() *grpc.Server {
 	srv := grpc.NewServer(
 		grpc.ChainStreamInterceptor(
