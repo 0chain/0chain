@@ -68,7 +68,6 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 		}
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func getContext(r *http.Request) (context.Context, error) {
