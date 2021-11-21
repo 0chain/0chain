@@ -2,9 +2,9 @@
 version: v1
 deps:
   - remote: buf.build
-    owner: beta
+    owner: googleapis
     repository: googleapis
     branch: main
-    commit: ac0d624de3f746c3b8ef55c74b6f5244
-    digest: b1-GubXb4hZ56wTohZYDL-Muute9Jxx8J4TtIYucS30TBM=
-    create_time: 2021-08-12T19:53:55.128813Z
+    commit: c1206671ae11467e8b26f11138bfc73d
+    digest: b1-bWCfTmtSxVXbEiNJH1Z_m87Z9DbXofk9-7g3N3Eg97w=
+    create_time: 2021-11-20T15:06:30.904604Z
