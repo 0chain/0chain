@@ -170,7 +170,9 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		go func() {
 			// TODO: check if the block's prev notarized block reached the notarization threshold
 			pr := mc.GetMinerRound(b.Round - 1)
-			if err := mc.updatePreviousBlockNotarization(ctx, b, pr); err != nil {
+			cctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			if err := mc.updatePreviousBlockNotarization(cctx, b, pr); err != nil {
 				return
 			}
 		}()
@@ -328,7 +330,10 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 	if err := mc.VerifyTickets(cctx, bvt.BlockID, []*block.VerificationTicket{&bvt.VerificationTicket}, rn); err != nil {
-		logging.Logger.Error("handle vt. msg - verification ticket failed", zap.Error(err))
+		logging.Logger.Error("handle vt. msg - verification ticket failed",
+			zap.Error(err),
+			zap.Int64("round", bvt.Round),
+			zap.String("block", bvt.BlockID))
 		return
 	}
 

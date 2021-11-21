@@ -71,6 +71,9 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
 	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
 	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
+	minerChain.notarizingBlocksMap = make(map[string]struct{})
+	minerChain.nbmMutex = &sync.Mutex{}
+	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -137,6 +140,9 @@ type Chain struct {
 	notarizationBlockProcessC            chan *Notarization
 	blockVerifyC                         chan *block.Block
 	validateTxnsWithContext              *common.WithContextFunc
+	notarizingBlocksMap                  map[string]struct{}
+	nbmMutex                             *sync.Mutex
+	verifyBlockNotarizationWorker        *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {

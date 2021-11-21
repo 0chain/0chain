@@ -768,10 +768,28 @@ func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round in
 	return bvts
 }
 
-func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
-	pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
-	pr.AddVerificationTickets(pbvts)
+func (mc *Chain) getOrSetBlockNotarizing(hash string) (isNotarizing bool, clean func()) {
+	clean = func() {}
 
+	mc.nbmMutex.Lock()
+	_, isNotarizing = mc.notarizingBlocksMap[hash]
+	if isNotarizing {
+		mc.nbmMutex.Unlock()
+		return
+	}
+
+	mc.notarizingBlocksMap[hash] = struct{}{}
+	mc.nbmMutex.Unlock()
+
+	clean = func() {
+		mc.nbmMutex.Lock()
+		delete(mc.notarizingBlocksMap, hash)
+		mc.nbmMutex.Unlock()
+	}
+	return
+}
+
+func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	pb, err := mc.GetBlock(ctx, b.PrevHash)
 	if err != nil || pb == nil {
 		logging.Logger.Error("update prev block notarization (prior block does not exist",
@@ -782,28 +800,41 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 	// merge the tickets
 	if pb.IsBlockNotarized() {
-		logging.Logger.Debug("update prev block notarization, already notarized", zap.Int64("round", pb.Round))
+		logging.Logger.Debug("update prev block notarization, already notarized",
+			zap.Int64("round", pb.Round),
+			zap.String("block", pb.Hash))
 		return nil
 	}
 
-	// TODO: maybe cancel after the tickets are validated, but may have CPU performance issue.
-	pr.CancelVerification()
-
-	logging.Logger.Debug("update prev block notarization, verify tickets",
-		zap.Int64("round", pb.Round))
-	err = mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pb.Round)
-	if err != nil {
-		logging.Logger.Error("update prev block notarization failed",
-			zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
-			zap.String("block", b.PrevHash),
-			zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()),
-			zap.Error(err))
-		return err
+	isNotarizing, clean := mc.getOrSetBlockNotarizing(b.PrevHash)
+	defer clean()
+	if isNotarizing {
+		return nil
 	}
 
-	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
-	mc.AddNotarizedBlock(ctx, pr, pb)
-	return nil
+	return mc.verifyBlockNotarizationWorker.Run(ctx, func() error {
+		pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
+		pr.AddVerificationTickets(pbvts)
+
+		logging.Logger.Debug("update prev block notarization, verify tickets",
+			zap.Int64("round", pb.Round), zap.String("block", pb.Hash))
+
+		// reset ctx so the timeout of parent ctx would not stop the ticket verification here
+		ctx = context.Background()
+		if err := mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pb.Round); err != nil {
+			logging.Logger.Error("update prev block notarization failed",
+				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
+				zap.String("block", b.PrevHash),
+				zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()),
+				zap.Error(err))
+			return err
+		}
+
+		pr.CancelVerification()
+		pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
+		mc.AddNotarizedBlock(ctx, pr, pb)
+		return nil
+	})
 }
 
 func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
@@ -872,35 +903,29 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			switch err {
-			case context.Canceled:
+			case context.Canceled, context.DeadlineExceeded:
 				if !r.isVerificationComplete() {
-					minerStats.VerificationFailures++
 					b.SetBlockState(block.StateVerificationFailed)
-					logging.Logger.Error("verify round block - canceled without round verification completed",
-						zap.Int64("round", b.Round))
+					logging.Logger.Error("verify round block - canceled or deadline exceed without round verification completed",
+						zap.Int64("round", b.Round), zap.Error(err))
+				}
+				return false
+			case ErrRoundMismatch:
+				if !r.isVerificationComplete() {
+					b.SetBlockState(block.StateVerificationFailed)
+					logging.Logger.Warn("verify round block failed, round mismatch",
+						zap.Any("round", r.Number),
+						zap.Any("block", b.Hash),
+						zap.Any("current_round", mc.GetCurrentRound()))
 				}
 				return false
 			default:
-				minerStats.VerificationFailures++
 				b.SetBlockState(block.StateVerificationFailed)
-				if cerr, ok := err.(*common.Error); ok {
-					if cerr.Code == RoundMismatch {
-						logging.Logger.Error("verify round block failed, round mismatch",
-							zap.Any("round", r.Number),
-							zap.Any("block", b.Hash),
-							zap.Any("current_round", mc.GetCurrentRound()))
-					} else {
-						logging.Logger.Error("verify round block failed",
-							zap.Any("round", r.Number),
-							zap.Any("block", b.Hash),
-							zap.Error(err))
-					}
-				} else {
-					logging.Logger.Error("verify round block failed",
-						zap.Any("round", r.Number),
-						zap.Any("block", b.Hash),
-						zap.Error(err))
-				}
+				minerStats.VerificationFailures++
+				logging.Logger.Error("verify round block failed",
+					zap.Any("round", r.Number),
+					zap.Any("block", b.Hash),
+					zap.Error(err))
 			}
 			return false
 		}
@@ -1211,17 +1236,9 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 	close(fbc)
 
+	cctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	for fb := range fbc {
-		if err := mc.VerifyBlockNotarization(ctx, fb); err != nil {
-			logging.Logger.Error("lfb from sharder - notarization failed",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			continue
-		}
-
-		// don't use the round, just create it or make sure it's created
-		mc.getOrCreateRound(ctx, fb.Round) // can' return nil
-
 		// increase consensus
 		for i, b := range fbs {
 			if b.Hash == fb.Hash {
@@ -1229,6 +1246,16 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 				continue
 			}
 		}
+
+		if err := mc.VerifyBlockNotarization(cctx, fb); err != nil {
+			logging.Logger.Error("lfb from sharder - notarization failed",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Error(err))
+			continue
+		}
+
+		// don't use the round, just create it or make sure it's created
+		mc.getOrCreateRound(cctx, fb.Round) // can' return nil
 
 		// add new block
 		fbs = append(fbs, &BlockConsensus{
