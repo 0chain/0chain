@@ -15,7 +15,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-
 	"go.uber.org/zap"
 )
 
@@ -64,12 +63,23 @@ func SetupM2MSenders() {
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
-func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/round/vrf_share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/verify", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarization", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarized_block", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil)))
+func SetupM2MReceivers(c node.Chainer) {
+	http.HandleFunc("/v1/_m2m/round/vrf_share",
+		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
+	http.HandleFunc("/v1/_m2m/block/verification_ticket",
+		common.N2NRateLimit(
+			node.StopOnBlockSyncingHandler(c,
+				node.ToN2NReceiveEntityHandler(
+					VerificationTicketReceiptHandler, nil))))
+	http.HandleFunc("/v1/_m2m/block/verify",
+		common.N2NRateLimit(
+			node.ToN2NReceiveEntityHandler(
+				memorystore.WithConnectionEntityJSONHandler(
+					VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
+	http.HandleFunc("/v1/_m2m/block/notarization",
+		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
+	http.HandleFunc("/v1/_m2m/block/notarized_block",
+		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil)))
 }
 
 /*SetupX2MResponders - setup responders */

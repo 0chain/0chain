@@ -417,6 +417,25 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	return true
 }
 
+// Chainer represents an interface that provides chain functions
+type Chainer interface {
+	// IsBlockSyncing checks if the miner is struggling on syncing
+	// previous blocks
+	IsBlockSyncing() bool
+}
+
+// StopOnBlockSyncingHandler check if the miner is struggling on syncing blocks,
+// which means the CPU usage may be high. In this case, all the requests passed
+// in will be ignored.
+func StopOnBlockSyncingHandler(c Chainer, handler common.ReqRespHandlerf) common.ReqRespHandlerf {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if c.IsBlockSyncing() {
+			return
+		}
+		handler(writer, request)
+	}
+}
+
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {

@@ -74,10 +74,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 	}
 
 	_, _, err := c.createRoundIfNotExist(ctx, b)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // VerifyNotarization - verify that the notarization is correct.

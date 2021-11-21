@@ -415,3 +415,21 @@ func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block
 		logging.Logger.Debug("update LFMB missed")
 	}
 }
+
+// IsBlockSyncing checks if the miner is syncing blocks
+func (c *Chain) IsBlockSyncing() bool {
+	var (
+		lfb          = c.GetLatestFinalizedBlock()
+		lfbTkt       = c.GetLatestLFBTicket(context.Background())
+		aheadN       = int64(3)
+		currentRound = c.GetCurrentRound()
+	)
+
+	if currentRound < lfbTkt.Round ||
+		lfb.Round+aheadN < lfbTkt.Round ||
+		lfb.Round+int64(config.GetLFBTicketAhead()) < currentRound {
+		return true
+	}
+
+	return false
+}

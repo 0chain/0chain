@@ -160,16 +160,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		zap.Int64("plfb_round", plfb.Round),
 		zap.Int("num_round_notarized", nbCount),
 		zap.Int("num_chain_notarized", len(c.NotarizedBlocksCounts)))
-	ts := time.Now()
-	defer func() {
-		du := time.Since(ts)
-		if du > 3*time.Second {
-			logging.Logger.Debug("finalize round slow",
-				zap.Int64("round", roundNumber),
-				zap.Any("duration", time.Since(ts)))
-		}
-	}()
-
 	if nbCount == 0 {
 		c.ZeroNotarizedBlocksCount++
 	} else if nbCount > 1 {
@@ -324,6 +314,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				resultC: make(chan error, 1),
 			}
 
+			ts := time.Now()
 			select {
 			case <-ctx.Done():
 				logging.Logger.Info("finalize round - context done",
@@ -342,6 +333,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				logging.Logger.Info("finalize round - finalize block success",
 					zap.Int64("round", fb.Round),
 					zap.String("block", fb.Hash))
+
+				du := time.Since(ts)
+				if du > 3*time.Second {
+					logging.Logger.Debug("finalize round slow",
+						zap.Int64("round", roundNumber),
+						zap.Any("duration", time.Since(ts)))
+				}
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
 				logging.Logger.Error("finalize round - push fb to finalizedBlocksChannel timeout",
 					zap.Int64("round", roundNumber),
