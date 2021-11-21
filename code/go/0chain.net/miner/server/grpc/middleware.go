@@ -11,6 +11,7 @@ const (
 	TimeoutSeconds = 10 // to set deadline for requests
 )
 
+// unaryTimeoutInterceptor
 func unaryTimeoutInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		deadline := time.Now().Add(TimeoutSeconds * time.Second)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 )
 
+// Run
 func Run(dialAddr string) error {
 	log := grpclog.NewLoggerV2(os.Stdout, ioutil.Discard, ioutil.Discard)
 	grpclog.SetLoggerV2(log)
@@ -29,8 +31,7 @@ func Run(dialAddr string) error {
 	}
 
 	gwmux := runtime.NewServeMux()
-	err = minerproto.RegisterMinerServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
+	if err := minerproto.RegisterMinerServiceHandler(context.Background(), gwmux, conn); err != nil {
 		return fmt.Errorf("failed to register gateway: %w", err)
 	}
 
@@ -38,7 +39,9 @@ func Run(dialAddr string) error {
 	if port == "" {
 		port = "11000"
 	}
-	gatewayAddr := "0.0.0.0:" + port
+
+	gatewayAddr := net.JoinHostPort("0.0.0.0", port)
+
 	gwServer := &http.Server{
 		Addr: gatewayAddr,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
