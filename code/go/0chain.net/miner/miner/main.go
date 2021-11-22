@@ -65,6 +65,7 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
+
 	signatureScheme := serverChain.GetSignatureScheme()
 
 	logging.Logger.Info("Owner keys file", zap.String("filename", *keysFile))
