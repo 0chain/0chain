@@ -21,7 +21,8 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// var dTier diskTier
+var volumesMap map[string]*volume
+var unableVolumes map[string]*volume
 
 const (
 	//Contains 2000 directories that contains 2000 blocks each, so one twoKilo directory contains 4*10^6blocks.
@@ -47,28 +48,42 @@ type diskTier struct {
 	SelectNextVolume func(volumes []*volume, prevInd int)
 	SelectedVolumeCh <-chan selectedDiskVolume //volume that will be used to store blocks next
 	PrevVolInd       int
-	// Mu               sync.Mutex
+	Mu               sync.Mutex
 	//Directory content limit
 	DCL       int
 	DirPrefix string
 }
 
+func (d *diskTier) removeSelectedVolume() {
+	selectedVolume := d.Volumes[d.PrevVolInd]
+	unableVolumes[selectedVolume.Path] = selectedVolume
+	d.Volumes = append(d.Volumes[:d.PrevVolInd], d.Volumes[d.PrevVolInd+1:]...)
+	d.PrevVolInd-- //It is inaccurate for strategy other than round_robin but other strategy does not require this value so its fine
+
+}
+
 func (d *diskTier) write(b *block.Block, data []byte) (blockPath string, err error) {
-	Logger.Info("Waiting channel for selected volume")
-	sdv := <-d.SelectedVolumeCh
-	if sdv.err != nil {
-		return "", sdv.err
-	}
+	defer func() {
+		Logger.Info("Selecting next volume")
+		go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
+	}()
 
-	d.PrevVolInd = sdv.prevInd
+	for {
+		Logger.Info(fmt.Sprintf("Waiting channel for selected volume to write block %v", b.Hash))
+		sdv := <-d.SelectedVolumeCh
+		if sdv.err != nil {
+			return "", sdv.err
+		}
 
-	if blockPath, err = sdv.volume.write(b, data, d); err != nil {
+		if blockPath, err = sdv.volume.write(b, data, d); err != nil {
+			Logger.Error(err.Error())
+			d.removeSelectedVolume()
+			go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
+			continue
+		}
+
 		return
 	}
-
-	go d.SelectNextVolume(d.Volumes, d.PrevVolInd)
-
-	return
 }
 
 type volume struct {
@@ -79,19 +94,23 @@ type volume struct {
 
 	SizeToMaintain   uint64
 	InodesToMaintain uint64
-	BlocksSize       uint64
-	BlocksCount      uint64
+
+	CountMu     sync.Mutex //Count Mutex to update blockssize and blockscount
+	BlocksSize  uint64
+	BlocksCount uint64
 
 	//used in selecting directory
+	IndMu           sync.Mutex // Index mutex to update indexes and current directory blocks count
 	CurKInd         int
 	CurDirInd       int
 	CurDirBlockNums int
-	//Lock required when updadign blocks size, count.
-	Mu sync.Mutex
 }
 
 func (v *volume) selectDir(dTier *diskTier) error {
-	if v.CurDirBlockNums < dTier.DCL-1 {
+	v.IndMu.Lock()
+	defer v.IndMu.Unlock()
+
+	if v.CurDirBlockNums < dTier.DCL {
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -125,7 +144,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		v.CurDirInd = dirInd
 		v.CurDirBlockNums = blocksCount
 
-		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
+		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd)
 	}
 
 	var kInd int
@@ -144,10 +163,12 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		if err != nil {
 			return err
 		}
+
+		v.CurKInd = kInd
 		v.CurDirInd = dirInd
 		v.CurDirBlockNums = 0
 
-		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
+		return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd)
 	} else if err != nil {
 		return err
 	}
@@ -160,11 +181,11 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	v.CurDirInd = dirInd
 	v.CurDirBlockNums = blocksCount
 
-	return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd, v.CurDirBlockNums)
+	return updateCurIndexes(filepath.Join(v.Path, IndexStateFileName), v.CurKInd, v.CurDirInd)
 }
 
 func (v *volume) write(b *block.Block, data []byte, dTier *diskTier) (bPath string, err error) {
-	bPath = path.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd), fmt.Sprintf("%v.%v", b.Hash, fileExt))
+	bPath = path.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd), fmt.Sprintf("%v%v", b.Hash, fileExt))
 
 	var f *os.File
 	f, err = os.Create(bPath)
@@ -201,9 +222,13 @@ func (v *volume) write(b *block.Block, data []byte, dTier *diskTier) (bPath stri
 		return
 	}
 
+	v.CountMu.Lock()
+	defer v.CountMu.Unlock()
+
 	v.CurDirBlockNums++
 	v.updateCount(1)
 	v.updateSize(int64(n))
+
 	return
 }
 
@@ -243,14 +268,15 @@ func (v *volume) delete(hash, path string) error {
 		return err
 	}
 
+	v.CountMu.Lock()
+	defer v.CountMu.Unlock()
+
 	v.updateCount(-1)
 	v.updateSize(-size)
 	return nil
 }
 
 func (v *volume) updateSize(n int64) {
-	v.Mu.Lock()
-	defer v.Mu.Unlock()
 	if n < 0 {
 		v.BlocksSize -= uint64(n)
 	} else {
@@ -259,8 +285,6 @@ func (v *volume) updateSize(n int64) {
 }
 
 func (v *volume) updateCount(n int64) {
-	v.Mu.Lock()
-	defer v.Mu.Unlock()
 	if n < 0 {
 		v.BlocksCount -= uint64(n)
 	} else {
@@ -282,7 +306,7 @@ func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 	}
 
 	if v.AllowedBlockNumbers != 0 && v.BlocksCount >= v.AllowedBlockNumbers {
-		Logger.Error(fmt.Sprintf("Storage limited by allowed block numbers. Allowed: %v, Total block size: %v", v.AllowedBlockNumbers, v.BlocksCount))
+		Logger.Error(fmt.Sprintf("Storage limited by allowed block numbers. Allowed: %v, Total blocks count: %v", v.AllowedBlockNumbers, v.BlocksCount))
 		return
 	}
 
@@ -292,7 +316,7 @@ func (v *volume) isAbleToStoreBlock(dTier *diskTier) (ableToStore bool) {
 	}
 
 	availableSize := volStat.Bfree * uint64(volStat.Bsize)
-	if v.SizeToMaintain != 0 && availableSize/(1024*1024*1024) < uint64(v.SizeToMaintain) {
+	if v.SizeToMaintain != 0 && availableSize < uint64(v.SizeToMaintain) {
 		Logger.Error(fmt.Sprintf("Available size for volume %v is less than size to maintain(%v)", v.Path, v.SizeToMaintain))
 		return
 	}
@@ -322,7 +346,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 	}
 
 	volumesMapI := volumesI.([]interface{})
-	var volumesMap []map[string]interface{}
+	var volsMap []map[string]interface{}
 	for _, volumeI := range volumesMapI {
 		m := make(map[string]interface{})
 		volIMap := volumeI.(map[interface{}]interface{})
@@ -331,7 +355,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 			m[sK] = v
 		}
 
-		volumesMap = append(volumesMap, m)
+		volsMap = append(volsMap, m)
 	}
 
 	var dTier diskTier
@@ -351,11 +375,11 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 	switch mode {
 	case "start":
 		//Delete all existing data and start fresh
-		startVolumes(volumesMap, &dTier) //will panic if right config setup is not provided
+		startVolumes(volsMap, &dTier) //will panic if right config setup is not provided
 	case "restart": //Nothing is lost but sharder was off for maintenance mode
-		restartVolumes(volumesMap, &dTier)
+		restartVolumes(volsMap, &dTier)
 	case "recover": //Metadata is lost
-		recoverVolumeMetaData(volumesMap, &dTier)
+		recoverVolumeMetaData(volsMap, &dTier)
 	case "repair": //Metadata is present but some disk failed
 		panic("Repair mode not implemented")
 	case "repair_and_recover": //Metadata is lost and some disk failed
@@ -375,6 +399,9 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 		panic(fmt.Errorf("Strategy %v is not supported", strategy))
 	case "random":
 		f = func(volumes []*volume, prevInd int) {
+			dTier.Mu.Lock()
+			defer dTier.Mu.Unlock()
+
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -390,6 +417,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 					break
 				}
 
+				unableVolumes[sv.Path] = sv
 				volumes[ind] = volumes[len(volumes)-1]
 				volumes = volumes[:len(volumes)-1]
 			}
@@ -409,6 +437,9 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 		}
 	case "round_robin":
 		f = func(volumes []*volume, prevInd int) {
+			dTier.Mu.Lock()
+			defer dTier.Mu.Unlock()
+
 			var selectedVolume *volume
 			prevVolume := volumes[prevInd]
 			var selectedIndex int
@@ -436,6 +467,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 					break
 				} else {
+					unableVolumes[v.Path] = v
 					volumes = append(volumes[:i], volumes[i+1:]...)
 
 					if i < prevInd {
@@ -443,6 +475,7 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 					}
 
 					i--
+
 				}
 
 			}
@@ -469,6 +502,9 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 		}
 	case "min_size_first":
 		f = func(volumes []*volume, prevInd int) {
+			dTier.Mu.Lock()
+			defer dTier.Mu.Unlock()
+
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -480,6 +516,8 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 				v := volumes[i]
 				if !v.isAbleToStoreBlock(&dTier) {
+					unableVolumes[v.Path] = v
+
 					volumes = append(volumes[:i], volumes[i+1:]...)
 					i--
 					totalVolumes--
@@ -513,6 +551,9 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 		}
 	case "min_count_first":
 		f = func(volumes []*volume, prevInd int) {
+			dTier.Mu.Lock()
+			defer dTier.Mu.Unlock()
+
 			var selectedVolume *volume
 			var selectedIndex int
 
@@ -524,6 +565,8 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 				v := volumes[i]
 				if !v.isAbleToStoreBlock(&dTier) {
+					unableVolumes[v.Path] = v
+
 					volumes = append(volumes[:i], volumes[i+1:]...)
 					i--
 					totalVolumes--
@@ -559,6 +602,13 @@ func volumeInit(tierType string, vViper *viper.Viper, mode string) *diskTier {
 
 	dTier.SelectedVolumeCh = diskVolumeSelectChan
 	dTier.SelectNextVolume = f
+
+	volumesMap = make(map[string]*volume, len(dTier.Volumes))
+	unableVolumes = make(map[string]*volume)
+
+	for _, vol := range dTier.Volumes {
+		volumesMap[vol.Path] = vol
+	}
 
 	go dTier.SelectNextVolume(dTier.Volumes, dTier.PrevVolInd)
 
@@ -600,17 +650,22 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 				continue
 			}
 
-			if err := updateCurIndexes(filepath.Join(vPath, IndexStateFileName), 0, 0, 0); err != nil {
+			if err := updateCurIndexes(filepath.Join(vPath, IndexStateFileName), 0, 0); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
 		} else {
-			curKInd, curDirInd, curDirBlockNums, err = getCurIndexes(filepath.Join(vPath, "index.state"))
+			curKInd, curDirInd, err = getCurIndexes(filepath.Join(vPath, IndexStateFileName))
 			if err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
-
+			bDir := filepath.Join(vPath, fmt.Sprintf("%v%v", dTier.DirPrefix, curKInd), fmt.Sprint(curDirInd))
+			curDirBlockNums, err = getCurrentDirBlockNums(bDir)
+			if err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
 			totalBlocksCount, totalBlocksSize = countBlocksInVolumes(vPath, dTier.DirPrefix, dTier.DCL)
 		}
 
@@ -628,9 +683,11 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			if err != nil {
 				panic(err)
 			}
+
+			sizeToMaintain *= GB
 		}
 
-		if availableSize/(1024^3) <= sizeToMaintain {
+		if availableSize <= sizeToMaintain {
 			Logger.Error(ErrSizeLimit(vPath, sizeToMaintain).Error())
 			continue
 		}
@@ -664,6 +721,8 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 			if err != nil {
 				panic(err)
 			}
+
+			allowedBlockSize *= GB
 		}
 
 		//Create index state which stores curDirBlockNums, curDir index and curKIndex
@@ -822,7 +881,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 				continue
 			}
 
-			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0, 0); err != nil {
+			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
@@ -847,7 +906,13 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 
 			For recovered metadata unmoved blocks creation time will be the file creation time(As for linux; last modidification time).
 		*/
-		curKInd, curDirInd, curBlockNums, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
+		curKInd, curDirInd, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
+		bDir := filepath.Join(volPath, fmt.Sprintf("%v%v", dTier.DirPrefix, curKInd), fmt.Sprint(curDirInd))
+		curDirBlockNums, err := getCurrentDirBlockNums(bDir)
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
@@ -860,9 +925,11 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			if err != nil {
 				panic(err)
 			}
+
+			sizeToMaintain *= GB
 		}
 
-		if availableSize/(1024^3) <= sizeToMaintain {
+		if availableSize <= sizeToMaintain {
 			Logger.Error(ErrSizeLimit(volPath, sizeToMaintain).Error())
 			continue
 		}
@@ -901,6 +968,8 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			if err != nil {
 				panic(err)
 			}
+
+			allowedBlockSize *= GB
 		}
 
 		if allowedBlockSize != 0 && grandCount.totalBlocksSize > allowedBlockSize {
@@ -916,7 +985,7 @@ func recoverVolumeMetaData(mVolumes []map[string]interface{}, dTier *diskTier) {
 			BlocksCount:         uint64(grandCount.totalBlocksCount),
 			CurKInd:             curKInd,
 			CurDirInd:           curDirInd,
-			CurDirBlockNums:     curBlockNums,
+			CurDirBlockNums:     curDirBlockNums,
 		})
 	}
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -199,18 +198,16 @@ func (ubr *UnmovedBlockRecord) Add() (err error) {
 }
 
 func (ubr *UnmovedBlockRecord) Delete() (err error) {
-	unixTime := ubr.CreatedAt.UnixNano()
-	key := []byte(strconv.FormatInt(unixTime, 10))
-
+	key := []byte(ubr.CreatedAt.Format(time.RFC3339))
 	return bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(UnmovedBlockBucket))
 		return bkt.Delete(key)
 	})
 }
 
-func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []byte, err error) {
+func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []byte) {
 	var hashByte []byte
-	err = bwrDB.View(func(t *bbolt.Tx) error {
+	bwrDB.View(func(t *bbolt.Tx) error {
 		cursor := t.Bucket([]byte(UnmovedBlockBucket)).Cursor()
 		k, v := cursor.Seek(prevKey)
 
@@ -220,17 +217,17 @@ func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []
 
 		if k == nil || bytes.Compare(k, upto) > 0 {
 			return nil
-		} else {
-			timeByte = make([]byte, len(k))
-			hashByte = make([]byte, len(v))
-			copy(timeByte, k)
-			copy(hashByte, v)
 		}
+
+		timeByte = make([]byte, len(k))
+		hashByte = make([]byte, len(v))
+		copy(timeByte, k)
+		copy(hashByte, v)
 
 		return nil
 	})
 
-	if err != nil || timeByte == nil {
+	if timeByte == nil {
 		return
 	}
 

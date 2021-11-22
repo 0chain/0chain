@@ -56,7 +56,7 @@ func (sm *BlockStore) Write(b *block.Block) error {
 	blockPath, err := sm.write(b)
 	if err != nil {
 		Logger.Error(err.Error())
-		return err
+		panic(err)
 	}
 
 	Logger.Info(fmt.Sprintf("Block %v written to %v successfully", b.Hash, blockPath))
@@ -133,7 +133,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		if hViper == nil {
 			panic(ErrHotStorageConfNotProvided)
 		}
-
+		Store.Tiering = HotOnly
 		Store.HotTier = volumeInit(HOT, hViper, mode) //Will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) (string, error) {
@@ -181,6 +181,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrWarmStorageConfNotProvided)
 		}
 
+		Store.Tiering = WarmOnly
 		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) (string, error) {
@@ -236,6 +237,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrCacheStorageConfNotProvided)
 		}
 
+		Store.Tiering = CacheAndWarm
 		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
 
 		cacheInit(cViper)
@@ -335,6 +337,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrCacheStorageConfNotProvided)
 		}
 
+		Store.Tiering = CacheAndCold
 		Store.ColdTier = coldInit(coViper, mode)
 		Store.Cache = cacheInit(cViper)
 
@@ -432,6 +435,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
+		Store.Tiering = HotAndCold
 		Store.HotTier = volumeInit(HOT, hViper, mode)
 
 		Store.ColdTier = coldInit(cViper, mode)
@@ -498,6 +502,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
+		Store.Tiering = WarmAndCold
 		Store.WarmTier = volumeInit(WARM, wViper, mode)
 
 		Store.ColdTier = coldInit(cViper, mode)
@@ -568,6 +573,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
+		Store.Tiering = CacheHotAndCold
 		Store.Cache = cacheInit(cViper)
 		Store.HotTier = volumeInit(HOT, hViper, mode)
 		Store.ColdTier = coldInit(coViper, mode)
@@ -693,6 +699,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrColdStorageConfNotProvided)
 		}
 
+		Store.Tiering = CacheWarmAndCold
 		Store.Cache = cacheInit(cViper)
 		Store.WarmTier = volumeInit(WARM, wViper, mode)
 		Store.ColdTier = coldInit(coViper, mode)
@@ -800,6 +807,11 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 	}
 
+	switch Store.Tiering {
+	case HotAndCold, WarmAndCold, CacheWarmAndCold, CacheHotAndCold:
+		go setupColdWorker(ctx)
+		go setupVolumeRevivingWorker(ctx)
+	}
 	return nil
 }
 
@@ -831,6 +843,7 @@ func getBlockData(b *block.Block) ([]byte, error) {
 }
 
 func readFromDiskTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, err error) {
+	b = new(block.Block)
 	f, err := os.Open(bwr.BlockPath)
 	if err != nil {
 		Logger.Error(err.Error())

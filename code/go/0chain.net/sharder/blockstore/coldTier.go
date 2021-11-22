@@ -23,6 +23,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+	Timeout             = 5
+	DefaultPollInterval = 720 //Hours
+)
+
 // var cTier coldTier
 var coldStoragesMap map[string]*minioClient
 
@@ -46,19 +51,30 @@ type coldTier struct { //Cold tier
 }
 
 func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err error) {
-	sc := <-ct.SelectedStorageChan
-	if sc.err != nil {
-		return "", sc.err
-	}
-	ct.PrevInd = sc.prevInd
+	defer func() {
+		Logger.Info("Selecting next cold storage")
+		go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+	}()
 
-	if coldPath, err = sc.coldStorage.writeBlock(b, data); err != nil {
+	for {
+		Logger.Info("Waiting channel for selected cold storage")
+		sc := <-ct.SelectedStorageChan
+		if sc.err != nil {
+			return "", sc.err
+		}
+
+		ct.PrevInd = sc.prevInd
+
+		if coldPath, err = sc.coldStorage.writeBlock(b, data); err != nil {
+			Logger.Error(err.Error())
+			ct.removeSelectedColdStorage()
+			go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+			continue
+		}
+
 		return
+
 	}
-
-	go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
-
-	return
 }
 
 func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
@@ -82,31 +98,47 @@ func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
 	return nil, nil
 }
 
-func (ct *coldTier) removeColdStorage(i int) {
-	ct.ColdStorages = append(ct.ColdStorages[:i], ct.ColdStorages[i+1:]...)
+func (ct *coldTier) removeSelectedColdStorage() {
+	ct.ColdStorages = append(ct.ColdStorages[:ct.PrevInd], ct.ColdStorages[ct.PrevInd+1:]...)
 	ct.PrevInd--
 }
 
 func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err error) {
-	sc := <-ct.SelectedStorageChan
-	if sc.err != nil {
-		return "", err
-	}
+	defer func() {
+		Logger.Info("Selecting next cold storage")
+		go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+	}()
 
-	ct.PrevInd = sc.prevInd
+	for {
+		Logger.Info("Waiting for channel to get selected cold storage")
+		sc := <-ct.SelectedStorageChan
+		if sc.err != nil {
+			return "", sc.err
+		}
 
-	if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath, ct.DeleteLocal); err != nil {
+		ct.PrevInd = sc.prevInd
+
+		if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath); err != nil {
+			Logger.Error(err.Error())
+			ct.removeSelectedColdStorage()
+			go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
+			continue
+		}
+
+		if ct.DeleteLocal {
+			volume := volumesMap[getVolumePathFromBlockPath(blockPath)]
+			if err := volume.delete(hash, blockPath); err != nil {
+				Logger.Error(fmt.Sprintf("Error occurred while deleting %v; Error: %v", blockPath, err))
+				return movedPath, nil
+			}
+		}
 		return
 	}
-
-	go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
-
-	return
 }
 
 type coldStorageProvider interface {
 	writeBlock(b *block.Block, data []byte) (string, error)
-	moveBlock(hash, blockPath string, deleteLocal bool) (string, error)
+	moveBlock(hash, blockPath string) (string, error)
 	getBlock(hash string) ([]byte, error)
 	getBlocks(cfo *coldFilterOptions) ([][]byte, error)
 }
@@ -146,39 +178,47 @@ func (mc *minioClient) initialize() (err error) {
 }
 
 func (mc *minioClient) writeBlock(b *block.Block, data []byte) (coldPath string, err error) {
-	ctx := context.Background()
+	ctx, ctxCncl := context.WithTimeout(context.Background(), Timeout)
+	defer ctxCncl()
+
 	buf := bytes.NewReader(data)
 
 	_, err = mc.Client.PutObject(ctx, mc.bucketName, b.Hash, buf, int64(len(data)), minio.PutObjectOptions{})
+	if err != nil {
+		return
+	}
 
 	coldPath = fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName)
 
 	return
 }
 
-func (mc *minioClient) moveBlock(hash, blockPath string, deleteLocal bool) (string, error) {
+func (mc *minioClient) moveBlock(hash, blockPath string) (string, error) {
 	ctx := context.Background()
 	_, err := mc.Client.FPutObject(ctx, mc.bucketName, hash, blockPath, minio.PutObjectOptions{})
 	if err != nil {
 		return "", err
 	}
 
-	if deleteLocal {
-		Logger.Info(fmt.Sprintf("Removing block file: %v", blockPath))
-		os.Remove(blockPath)
-	}
-
 	return fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), nil
 }
 
 func (mc *minioClient) getBlock(hash string) ([]byte, error) {
-	ctx := context.Background()
-	objInfo, err := mc.Client.StatObject(ctx, mc.bucketName, hash, minio.StatObjectOptions{})
+	var ctx context.Context
+
+	ctx = context.Background()
+	statCtx, statCtxCncl := context.WithTimeout(ctx, Timeout)
+	defer statCtxCncl()
+
+	objInfo, err := mc.Client.StatObject(statCtx, mc.bucketName, hash, minio.StatObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
 
-	obj, err := mc.Client.GetObject(ctx, mc.bucketName, hash, minio.GetObjectOptions{})
+	getCtx, getCtxCncl := context.WithTimeout(ctx, Timeout)
+	defer getCtxCncl()
+
+	obj, err := mc.Client.GetObject(getCtx, mc.bucketName, hash, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -234,17 +274,20 @@ func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
 const (
 	CDCL        = 10000
 	CK          = "CK"
-	ColdFileExt = "dat"
+	ColdFileExt = ".dat"
 )
 
 type coldDisk struct {
 	Path string
 
 	AllowedBlockSize    uint64
-	BlocksSize          uint64
 	AllowedBlockNumbers uint64
-	BlocksCount         uint64
 
+	CountMu     sync.Mutex
+	BlocksSize  uint64
+	BlocksCount uint64
+
+	IndMu           sync.Mutex
 	CurKInd         int
 	CurDirInd       int
 	CurDirBlockNums int
@@ -257,7 +300,7 @@ func (d *coldDisk) writeBlock(b *block.Block, data []byte) (blockPath string, er
 	return
 }
 
-func (d *coldDisk) moveBlock(hash, oldBlockPath string, deleteLocal bool) (newBlockPath string, err error) {
+func (d *coldDisk) moveBlock(hash, oldBlockPath string) (newBlockPath string, err error) {
 	r, err := os.Open(oldBlockPath)
 	if err != nil {
 		return
@@ -275,7 +318,7 @@ func (d *coldDisk) moveBlock(hash, oldBlockPath string, deleteLocal bool) (newBl
 	}
 
 	blockPathDir := filepath.Join(d.Path, fmt.Sprintf("%v%v/%v", CK, d.CurKInd, d.CurDirInd))
-	blockPath := filepath.Join(blockPathDir, fmt.Sprintf("%v.%v", hash, ColdFileExt))
+	blockPath := filepath.Join(blockPathDir, fmt.Sprintf("%v%v", hash, ColdFileExt))
 	f, err := os.Create(blockPath)
 	if err != nil {
 		return
@@ -295,15 +338,18 @@ func (d *coldDisk) moveBlock(hash, oldBlockPath string, deleteLocal bool) (newBl
 	if err != nil {
 		return
 	}
+
 	if n != rStat.Size() {
 		os.Remove(blockPath)
 		return "", fmt.Errorf("Could not write all data. Data length: %v, write length: %v", rStat.Size(), n)
 	}
 
-	if deleteLocal {
-		Logger.Info(fmt.Sprintf("Removing block file: %v", oldBlockPath))
-		return "", os.Remove(oldBlockPath)
-	}
+	d.CountMu.Lock()
+	defer d.CountMu.Unlock()
+
+	d.CurDirBlockNums++
+	d.updateBlocksCount(1)
+	d.updateBlocksSize(n)
 
 	return blockPath, nil
 }
@@ -324,6 +370,22 @@ func (d *coldDisk) getBlock(blockPath string) ([]byte, error) {
 	defer r.Close()
 
 	return ioutil.ReadAll(r)
+}
+
+func (d *coldDisk) updateBlocksCount(i int64) {
+	if i < 0 {
+		d.BlocksCount -= uint64(i)
+	} else {
+		d.BlocksCount += uint64(i)
+	}
+}
+
+func (d *coldDisk) updateBlocksSize(s int64) {
+	if s < 0 {
+		d.BlocksSize -= uint64(s)
+	} else {
+		d.BlocksSize += uint64(s)
+	}
 }
 
 func (d *coldDisk) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
@@ -365,7 +427,7 @@ func (d *coldDisk) selectDir() error {
 		d.CurDirInd = dirInd
 		d.CurDirBlockNums = blocksCount
 
-		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
+		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd)
 	}
 
 	var kInd int
@@ -387,7 +449,7 @@ func (d *coldDisk) selectDir() error {
 		d.CurDirInd = dirInd
 		d.CurDirBlockNums = 0
 
-		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
+		return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd)
 	} else if err != nil {
 		return err
 	}
@@ -400,7 +462,7 @@ func (d *coldDisk) selectDir() error {
 	d.CurDirInd = dirInd
 	d.CurDirBlockNums = blocksCount
 
-	return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd, d.CurDirBlockNums)
+	return updateCurIndexes(filepath.Join(d.Path, IndexStateFileName), d.CurKInd, d.CurDirInd)
 }
 
 func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
@@ -411,25 +473,27 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 		return
 	}
 
-	if d.BlocksSize >= d.AllowedBlockSize {
+	if d.AllowedBlockSize != 0 && d.BlocksSize >= d.AllowedBlockSize {
 		Logger.Error(fmt.Sprintf("Storage limited by allowed block size. Allowed: %v, Total block size: %v", d.AllowedBlockSize, d.BlocksSize))
 		return
 	}
 
-	if d.BlocksCount >= d.AllowedBlockNumbers {
+	if d.AllowedBlockNumbers != 0 && d.BlocksCount >= d.AllowedBlockNumbers {
 		Logger.Error(fmt.Sprintf("Storage limited by allowed block numbers. Allowed: %v, Total block size: %v", d.AllowedBlockNumbers, d.BlocksCount))
 		return
 	}
 
-	if volStat.Ffree < d.InodesToMaintain {
+	if d.InodesToMaintain != 0 && volStat.Ffree < d.InodesToMaintain {
 		Logger.Error(fmt.Sprintf("Available Inodes for volume %v is less than inodes to maintain(%v)", d.Path, d.InodesToMaintain))
 		return
 	}
 
-	availableSize := volStat.Bfree * uint64(volStat.Bsize)
-	if availableSize/(1024*1024*1024) < uint64(d.SizeToMaintain) {
-		Logger.Error(fmt.Sprintf("Available size for volume %v is less than size to maintain(%v)", d.Path, d.SizeToMaintain))
-		return
+	if d.SizeToMaintain != 0 {
+		availableSize := volStat.Bfree * uint64(volStat.Bsize)
+		if availableSize < uint64(d.SizeToMaintain) {
+			Logger.Error(fmt.Sprintf("Available size for volume %v is less than size to maintain(%v)", d.Path, d.SizeToMaintain))
+			return
+		}
 	}
 
 	if unix.Access(d.Path, unix.W_OK) != nil {
@@ -444,7 +508,7 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-// //*****************************Strategy*************************************
+//*****************************Strategy*************************************
 
 func coldInit(cViper *viper.Viper, mode string) *coldTier {
 	storageType := cViper.GetString("storage.type")
@@ -452,46 +516,58 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 		panic("Cold storage type is required")
 	}
 
-	coldStorageI := cViper.Get(fmt.Sprintf("storage.%v", storageType))
+	storageTypeDiskOrMinio := fmt.Sprintf("storage.%v", storageType)
+
+	coldStorageI := cViper.Get(storageTypeDiskOrMinio)
 	if coldStorageI == nil {
-		panic(fmt.Errorf("Storage type is %v but it config is not available", storageType))
+		panic(fmt.Errorf("Storage type is %v but its config is not available", storageType))
 	}
 
-	coldStorage := coldStorageI.(map[string]interface{})
+	storageMapViper := cViper.Sub(storageTypeDiskOrMinio)
+
 	cTier := new(coldTier)
 
-	selectedColdStorageChan := make(chan *selectedColdStorage, 1)
+	selectedColdStorageChan := make(chan selectedColdStorage, 1)
 	var f func(coldVolumes []coldStorageProvider, prevInd int)
 
 	switch storageType {
 	default:
 		panic(fmt.Errorf("Unknown storageType %v", storageType))
 	case "disk":
-		volumesI, ok := coldStorage["volumes"]
-		if !ok {
+		volumesI := storageMapViper.Get("volumes")
+		if volumesI == nil {
 			panic(errors.New("Volumes Config is not available"))
 		}
 
-		var strategy string
-		strategyI, ok := coldStorage["strategy"]
-		if !ok {
-			strategy = DefaultColdStrategy
-		} else {
-			strategy = strategyI.(string)
+		volumesMapI := volumesI.([]interface{})
+		var volumesMap []map[string]interface{}
+
+		for _, volI := range volumesMapI {
+			m := make(map[string]interface{})
+			volIMap := volI.(map[interface{}]interface{})
+			for k, v := range volIMap {
+				sK := k.(string)
+				m[sK] = v
+			}
+
+			volumesMap = append(volumesMap, m)
 		}
 
-		volumes := volumesI.([]map[string]interface{})
+		strategy := storageMapViper.GetString("strategy")
+		if strategy == "" {
+			strategy = DefaultColdStrategy
+		}
 
 		Logger.Info(fmt.Sprintf("Running coldInit in %v mode", mode))
 		switch mode {
 		default:
 			panic(fmt.Errorf("%v mode is not supported", mode))
 		case "start":
-			startColdVolumes(volumes, cTier)
+			startColdVolumes(volumesMap, cTier)
 		case "restart":
-			restartColdVolumes(volumes, cTier)
+			restartColdVolumes(volumesMap, cTier)
 		case "recover":
-			recoverColdVolumeMetaData(volumes, cTier)
+			recoverColdVolumeMetaData(volumesMap, cTier)
 		case "repair": //Metadata is present but some disk failed
 			panic("Repair mode not implemented")
 		case "repair_and_recover": //Metadata is lost and some disk failed
@@ -511,6 +587,13 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 				cTier.Mu.Lock()
 				defer cTier.Mu.Unlock()
 				var selectedVolume *coldDisk
+				if len(coldStorageProviders) == 0 {
+					selectedColdStorageChan <- selectedColdStorage{
+						err: ErrUnableToSelectColdStorage,
+					}
+					return
+				}
+
 				prevVolume := coldStorageProviders[prevInd].(*coldDisk)
 				var selectedIndex int
 
@@ -558,11 +641,11 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 				cTier.ColdStorages = coldStorageProviders
 
 				if selectedVolume == nil {
-					selectedColdStorageChan <- &selectedColdStorage{
-						err: ErrUnableToSelectVolume,
+					selectedColdStorageChan <- selectedColdStorage{
+						err: ErrUnableToSelectColdStorage,
 					}
 				} else {
-					selectedColdStorageChan <- &selectedColdStorage{
+					selectedColdStorageChan <- selectedColdStorage{
 						coldStorage: selectedVolume,
 						prevInd:     selectedIndex,
 					}
@@ -572,30 +655,39 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 		}
 
 	case "minio":
-		cloudStoragesI, ok := coldStorage["cloud_storages"]
-		if !ok {
+		cloudStoragesI := storageMapViper.Get("minio")
+		if cloudStoragesI == nil {
 			panic(errors.New("Cloud storages config is not available"))
 		}
 
-		var strategy string
-		strategyI, ok := coldStorage["strategy"]
-		if !ok {
-			strategy = DefaultColdStrategy
-		} else {
-			strategy = strategyI.(string)
+		cloudStoragesMapI := cloudStoragesI.([]interface{})
+		var cloudStoragesMap []map[string]interface{}
+		for _, cloudI := range cloudStoragesMapI {
+			m := make(map[string]interface{})
+			cloudIMap := cloudI.(map[interface{}]interface{})
+			for k, v := range cloudIMap {
+				sK := k.(string)
+				m[sK] = v
+			}
+
+			cloudStoragesMap = append(cloudStoragesMap, m)
 		}
 
-		cloudStorages := cloudStoragesI.([]map[string]interface{})
+		strategy := storageMapViper.GetString("strategy")
+		if strategy == "" {
+			strategy = DefaultColdStrategy
+		}
+
 		Logger.Info(fmt.Sprintf("Running coldInit in %v mode", mode))
 		switch mode {
 		default:
 			panic(fmt.Errorf("%v mode is not supported", mode))
 		case "start":
-			startCloudStorages(cloudStorages, cTier)
+			startCloudStorages(cloudStoragesMap, cTier)
 		case "restart":
-			restartCloudStorages(cloudStorages, cTier)
+			restartCloudStorages(cloudStoragesMap, cTier)
 		case "recover":
-			recoverCloudMetaData(cloudStorages, cTier)
+			recoverCloudMetaData(cloudStoragesMap, cTier)
 		case "repair":
 			panic(errors.New("Repair mode not implemented"))
 		case "repair_and_recover":
@@ -638,15 +730,33 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 					prevInd = i
 				}
 
-				selectedColdStorageChan <- &selectedColdStorage{
-					coldStorage: selectedCloudStorage,
-					prevInd:     selectedIndex,
+				if selectedCloudStorage == nil {
+					selectedColdStorageChan <- selectedColdStorage{
+						err: ErrUnableToSelectColdStorage,
+					}
+				} else {
+					selectedColdStorageChan <- selectedColdStorage{
+						coldStorage: selectedCloudStorage,
+						prevInd:     selectedIndex,
+					}
 				}
 			}
 		}
 	}
 
+	pollInterval := cViper.GetInt("poll_interval")
+	if pollInterval == 0 {
+		pollInterval = DefaultPollInterval
+	}
+
+	cTier.DeleteLocal = cViper.GetBool("delete_local")
+	cTier.PollInterval = pollInterval
 	cTier.SelectNextStorage = f
+	cTier.SelectedStorageChan = selectedColdStorageChan
+
+	Logger.Info("Selecting first cold storage")
+	go cTier.SelectNextStorage(cTier.ColdStorages, cTier.PrevInd)
+
 	return cTier
 }
 
@@ -674,8 +784,20 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 				Logger.Error(err.Error())
 				continue
 			}
+
+			if err = updateCurIndexes(filepath.Join(vPath, IndexStateFileName), 0, 0); err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
 		} else {
-			curKInd, curDirInd, curDirBlockNums, err = getCurIndexes(filepath.Join(vPath, IndexStateFileName))
+			curKInd, curDirInd, err = getCurIndexes(filepath.Join(vPath, IndexStateFileName))
+			if err != nil {
+				Logger.Error(err.Error())
+				continue
+			}
+
+			bDir := filepath.Join(vPath, fmt.Sprintf("%v%v", CK, curKInd), fmt.Sprint(curDirInd))
+			curDirBlockNums, err = getCurrentDirBlockNums(bDir)
 			if err != nil {
 				Logger.Error(err.Error())
 				continue
@@ -702,9 +824,11 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 			if err != nil {
 				panic(err)
 			}
+
+			sizeToMaintain *= GB
 		}
 
-		if availableSize/(1024^3) <= sizeToMaintain {
+		if availableSize <= sizeToMaintain {
 			Logger.Error(ErrSizeLimit(vPath, sizeToMaintain).Error())
 			continue
 		}
@@ -738,6 +862,7 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 			if err != nil {
 				panic(err)
 			}
+			allowedBlockSize *= GB
 		}
 
 		cTier.ColdStorages = append(cTier.ColdStorages, &coldDisk{
@@ -893,18 +1018,23 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 				continue
 			}
 
-			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0, 0); err != nil {
+			if err := updateCurIndexes(filepath.Join(volPath, IndexStateFileName), 0, 0); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}
 		}
 
-		curKInd, curDirInd, curBlockNums, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
+		curKInd, curDirInd, err := getCurIndexes(filepath.Join(volPath, IndexStateFileName))
 		if err != nil {
 			Logger.Error(err.Error())
 			continue
 		}
-
+		bDir := filepath.Join(volPath, fmt.Sprintf("%v%v", CK, curKInd), fmt.Sprint(curDirInd))
+		curDirBlockNums, err := getCurrentDirBlockNums(bDir)
+		if err != nil {
+			Logger.Error(err.Error())
+			continue
+		}
 		//Check available size and inodes and add volume to volume pool
 		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
@@ -915,10 +1045,15 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		var sizeToMaintain uint64
 		sizeToMaintainI, ok := mVolume["size_to_maintain"]
 		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
+			sizeToMaintain, err = getUint64ValueFromYamlConfig(sizeToMaintainI)
+			if err != nil {
+				panic(err)
+			}
+
+			sizeToMaintain *= GB
 		}
 
-		if availableSize/(1024^3) <= sizeToMaintain {
+		if availableSize <= sizeToMaintain {
 			Logger.Error(ErrSizeLimit(volPath, sizeToMaintain).Error())
 			continue
 		}
@@ -926,7 +1061,10 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		var inodesToMaintain uint64
 		inodesToMaintainI, ok := mVolume["inodes_to_maintain"]
 		if ok {
-			inodesToMaintain = inodesToMaintainI.(uint64)
+			inodesToMaintain, err = getUint64ValueFromYamlConfig(inodesToMaintainI)
+			if err != nil {
+				panic(err)
+			}
 		}
 		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
 			Logger.Error(ErrInodesLimit(volPath, inodesToMaintain).Error())
@@ -936,7 +1074,10 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := mVolume["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if allowedBlockNumbers != 0 && grandCount.totalBlocksCount > allowedBlockNumbers {
@@ -947,7 +1088,12 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := mVolume["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
+
+			allowedBlockSize *= GB
 		}
 
 		if allowedBlockSize != 0 && grandCount.totalBlocksSize > allowedBlockSize {
@@ -963,7 +1109,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			BlocksCount:         uint64(grandCount.totalBlocksCount),
 			CurKInd:             curKInd,
 			CurDirInd:           curDirInd,
-			CurDirBlockNums:     curBlockNums,
+			CurDirBlockNums:     curDirBlockNums,
 		})
 	}
 
@@ -1004,16 +1150,25 @@ func startcloudstorages(cloudStorages []map[string]interface{}, cTier *coldTier,
 		secretKey := secretKeyI.(string)
 		bucketName := bucketNameI.(string)
 
+		var err error
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := cloudStorageI["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := cloudStorageI["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
+
+			allowedBlockSize *= GB
 		}
 
 		var useSSL bool
@@ -1095,16 +1250,25 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTie
 		secretKey := secretKeyI.(string)
 		bucketName := bucketNameI.(string)
 
+		var err error
 		var allowedBlockNumbers uint64
 		allowedBlockNumbersI, ok := cloudStorageI["allowed_block_numbers"]
 		if ok {
-			allowedBlockNumbers = allowedBlockNumbersI.(uint64)
+			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		var allowedBlockSize uint64
 		allowedBlockSizeI, ok := cloudStorageI["allowed_block_size"]
 		if ok {
-			allowedBlockSize = allowedBlockSizeI.(uint64)
+			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+			if err != nil {
+				panic(err)
+			}
+
+			allowedBlockSize *= GB
 		}
 
 		var useSSL bool

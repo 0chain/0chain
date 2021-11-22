@@ -9,20 +9,12 @@ import (
 	. "0chain.net/core/logging"
 )
 
-func SetupWorkers(ctx context.Context) {
-	//
-}
-
-/*
-Todo assign correct index for selectDir function; restartVolumes, recoverMetadata
-Todo Think more about caching
-Todo
-*/
-
-func moveToColdTier(store *BlockStore, ctx context.Context) {
-	pollInterval := time.Hour * time.Duration(store.ColdTier.PollInterval)
+func setupColdWorker(ctx context.Context) {
+	pollInterval := time.Hour * time.Duration(Store.ColdTier.PollInterval)
+	// pollInterval := time.Minute
 	t := time.NewTicker(pollInterval)
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 10)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -32,20 +24,23 @@ func moveToColdTier(store *BlockStore, ctx context.Context) {
 			break
 		case <-t.C:
 			Logger.Info("Moving blocks to cold tier")
-			minPrefix := []byte(time.Now().Add(-pollInterval).Format(time.RFC3339))
+			maxPrefix := []byte(time.Now().Add(-pollInterval).Format(time.RFC3339))
 			var newColdPath string
 
 			guideChannel := make(chan struct{}, 10)
 			wg := sync.WaitGroup{}
 
-			var ubr *UnmovedBlockRecord
-			var prevKey []byte
-			var err error
-			for ubr, prevKey, err = GetUnmovedBlock(prevKey, minPrefix); err == nil && ubr != nil; {
+			var errorOccurred bool
+			for ubr, prevKey := GetUnmovedBlock([]byte{}, maxPrefix); ubr != nil; ubr, prevKey = GetUnmovedBlock(prevKey, maxPrefix) {
+				if errorOccurred {
+					break
+				}
+
 				guideChannel <- struct{}{}
 				wg.Add(1)
 
-				go func() {
+				Logger.Info(fmt.Sprintf("Moving block %v to cold tier", ubr.Hash))
+				go func(ubr *UnmovedBlockRecord) {
 					defer func() {
 						<-guideChannel
 						wg.Done()
@@ -53,41 +48,89 @@ func moveToColdTier(store *BlockStore, ctx context.Context) {
 
 					bwr, err := GetBlockWhereRecord(ubr.Hash)
 					if err != nil {
+						errorOccurred = true
 						Logger.Error(fmt.Sprintf("Unexpected error; Error: %v", err))
+						errCh <- err
 						return
 					}
 
-					newColdPath, err = store.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
+					newColdPath, err = Store.ColdTier.moveBlock(bwr.Hash, bwr.BlockPath)
 					if err != nil {
+						errorOccurred = true
 						Logger.Error(err.Error())
+						errCh <- err
 						return
 					}
 
 					Logger.Info(fmt.Sprintf("Block %v is moved to %v", bwr.Hash, newColdPath))
 					switch bwr.Tiering {
 					case HotTier:
-						bwr.Tiering = newTiering(HotTier, HotTier, store.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(HotTier, HotTier, Store.ColdTier.DeleteLocal)
 					case WarmTier:
-						bwr.Tiering = newTiering(WarmTier, WarmTier, store.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(WarmTier, WarmTier, Store.ColdTier.DeleteLocal)
 					case CacheAndWarmTier:
-						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, store.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, Store.ColdTier.DeleteLocal)
 					case CacheAndHotTier:
-						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, store.ColdTier.DeleteLocal)
+						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, Store.ColdTier.DeleteLocal)
 					}
 
-					if store.ColdTier.DeleteLocal {
+					if Store.ColdTier.DeleteLocal {
 						bwr.BlockPath = ""
 					}
 					bwr.ColdPath = newColdPath
 
+					if err := ubr.Delete(); err != nil {
+						errorOccurred = true
+						Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not delete meta record from unmoved block bucket. Error: %v", bwr.Hash, newColdPath, err))
+						errCh <- err
+						return
+					}
+					Logger.Info(fmt.Sprintf("Block meta data for %v from unmoved bucket is removed", ubr.Hash))
+
 					if err := bwr.AddOrUpdate(); err != nil {
+						errorOccurred = true
 						Logger.Error(fmt.Sprintf("Block %v is moved to %v but could not update meta record. Error: %v", bwr.Hash, newColdPath, err))
 						errCh <- err
 					}
-				}()
+					Logger.Info(fmt.Sprintf("Block meta data for bmr for block %v is updated successfully", bwr.Hash))
+				}(ubr)
 			}
 
 			wg.Wait()
+		}
+	}
+
+}
+
+func setupVolumeRevivingWorker(ctx context.Context) {
+	interval := 2 * time.Hour * time.Duration(Store.ColdTier.PollInterval)
+	// interval := 2 * time.Minute
+	t := time.NewTicker(interval)
+
+	var dTier *diskTier
+
+	if Store.HotTier != nil {
+		dTier = Store.HotTier
+	} else if Store.WarmTier != nil {
+		dTier = Store.WarmTier
+	} else {
+		Logger.Debug("Volume reviving worker not set up")
+		return
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case <-t.C:
+			Logger.Info("Checking if volume is able to store blocks")
+			for vPath, volume := range unableVolumes {
+				if volume.isAbleToStoreBlock(dTier) {
+					dTier.Mu.Lock()
+					dTier.Volumes = append(dTier.Volumes, volume)
+					delete(unableVolumes, vPath)
+					dTier.Mu.Unlock()
+				}
+			}
 		}
 	}
 }

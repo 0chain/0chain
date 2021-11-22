@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -29,6 +30,10 @@ const (
 	DefaultVolumeStrategy = "random"
 	DefaultColdStrategy   = "random"
 	DefaultCacheStrategy  = "random"
+
+	//BlockLimit Limit the number of blocks to store in any tier
+	BlockLimitNumber = 1000000000 // 10 powered 9
+	GB               = 1024 * 1024 * 1024
 )
 
 //Common errors
@@ -71,6 +76,7 @@ var (
 	ErrWarmStorageConfNotProvided  = errors.New("Storage type includes warm tier but warm tier config not provided")
 	ErrColdStorageConfNotProvided  = errors.New("Storage type includes cold tier but cold tier config not provided")
 	ErrUnableToSelectVolume        = errors.New("Unable to select any available volume")
+	ErrUnableToSelectColdStorage   = errors.New("Unable to select any available cold storage")
 )
 
 func countFiles(dirPath string) (count int, err error) {
@@ -108,7 +114,7 @@ func getAvailableSizeAndInodes(vPath string) (availableSize, totalInodes, availa
 	return
 }
 
-func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err error) {
+func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
 	var f *os.File
 	if f, err = os.Open(fPath); err != nil {
 		return
@@ -122,12 +128,6 @@ func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err erro
 		return
 	}
 	curDirIndStr := scanner.Text()
-	more = scanner.Scan()
-	if more == false {
-		err = errors.New("Current Directory Block numbers missing")
-		return
-	}
-	curBlockNumsStr := scanner.Text()
 
 	curKInd, err = strconv.Atoi(curKIndStr)
 	if err != nil {
@@ -139,21 +139,24 @@ func getCurIndexes(fPath string) (curKInd, curDirInd, curBlockNums int, err erro
 		return
 	}
 
-	curBlockNums, err = strconv.Atoi(curBlockNumsStr)
-	if err != nil {
-		return
-	}
-
 	return
 }
 
-func updateCurIndexes(fPath string, curKInd, curDirInd, curBlockNums int) error {
+func getCurrentDirBlockNums(dir string) (int, error) {
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, err
+	}
+	return len(dirEntries), nil
+}
+
+func updateCurIndexes(fPath string, curKInd, curDirInd int) error {
 	f, err := os.Create(fPath)
 	if err != nil {
 		return err
 	}
 
-	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v\n%v", curDirInd, curDirInd, curBlockNums)))
+	_, err = f.Write([]byte(fmt.Sprintf("%v\n%v", curKInd, curDirInd)))
 
 	return err
 }
@@ -226,6 +229,7 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	return grandCount.totalBlocksSize, totalBlocksCount
 }
 
+//Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
 func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 	switch v.(type) {
 	case int:
@@ -245,7 +249,9 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 				return 0, err
 			}
 
-			return uint64(r1 ^ r2), nil
+			n := math.Pow(float64(r1), float64(r2))
+			return uint64(n), nil
+
 		} else if strings.Contains(vStr, "*") {
 			var value = uint64(1)
 			res := strings.Split(vStr, "*")
@@ -258,10 +264,20 @@ func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 				value *= uint64(i)
 			}
 			return value, nil
-
 		}
-
 	}
-
 	return 0, errors.New(fmt.Sprintf("Type unsupported: %T", v))
+}
+
+func getVolumePathFromBlockPath(bPath string) string {
+	bPath = filepath.Clean(bPath)
+	splittedPaths := strings.Split(bPath, "/")
+
+	/*
+		Example bPath = /path/to/blocks/HK0/199/blockname.dat
+		path returned --> /path/to/blocks
+		bPath = /another/path/to/blocks/HK0/199/blockname.dat
+		path returned --> /another/path/to/blocks
+	*/
+	return strings.Join(splittedPaths[:len(splittedPaths)-3], "/")
 }
