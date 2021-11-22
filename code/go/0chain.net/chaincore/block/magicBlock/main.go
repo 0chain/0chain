@@ -5,6 +5,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -35,12 +36,16 @@ type cmdMagicBlock struct {
 	// dkgs collection
 	dkgs map[string]*bls.DKG
 	// summaries collection
-	summaries map[int]*bls.DKGSummary
+	summaries       map[int]*bls.DKGSummary
+	states          *state.InitStates
+	originalIndices map[string]int
 }
 
 var (
-	rootPath = "/config"
-	//rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
+	defaultTokenSize int64 = 10000000000
+	//rootPath               = "/config"
+	rootPath = "/Users/dabasov/Projects/0chain_others/magic-block/docker.local/config"
+
 	output = fmt.Sprintf("%v/output", rootPath)
 	input  = fmt.Sprintf("%v/input", rootPath)
 )
@@ -155,20 +160,12 @@ func verifyKeys(hexSecKey, hexPubKey, hexId string) error {
 	return nil
 }
 
-func verifySummaries(mbPath, summaryPath string, key datastore.Key) error {
-	mb, err2 := readMagicBlock(mbPath)
-	if err2 != nil {
-		return err2
-	}
+func verifySummaries(cmd *cmdMagicBlock, key datastore.Key, index int) error {
 
-	dkgs, err := readDKGShares(summaryPath)
-	if err != nil {
-		return err
-	}
+	dkgs := cmd.summaries[index]
+	dkgs.ID = strconv.FormatInt(cmd.block.MagicBlockNumber, 10)
 
-	dkgs.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
-
-	if err = dkgs.Verify(bls.ComputeIDdkg(key), mb.Mpks.GetMpkMap()); err != nil {
+	if err := dkgs.Verify(bls.ComputeIDdkg(key), cmd.block.Mpks.GetMpkMap()); err != nil {
 		if config.DevConfiguration.ViewChange {
 			logging.Logger.Error("Failed to verify genesis dkg", zap.Any("error", err))
 		} else {
@@ -178,33 +175,6 @@ func verifySummaries(mbPath, summaryPath string, key datastore.Key) error {
 	}
 
 	return nil
-}
-
-func readDKGShares(summaryPath string) (*bls.DKGSummary, error) {
-	var b []byte
-	var err error
-	if b, err = ioutil.ReadFile(summaryPath); err != nil {
-		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("reading dkg summary file: %v", err))
-	}
-
-	dkgs := &bls.DKGSummary{SecretShares: make(map[string]string)}
-	if err = dkgs.Decode(b); err != nil {
-		return nil, common.NewError("Error reading dkg file", fmt.Sprintf("decoding dkg summary file: %v", err))
-	}
-	return dkgs, err
-}
-
-func readMagicBlock(mbPath string) (*block.MagicBlock, error) {
-	var b []byte
-	b, err := ioutil.ReadFile(mbPath)
-	if err != nil {
-		return nil, fmt.Errorf("reading magic block file: %v", err)
-	}
-	mb := block.NewMagicBlock()
-	if err = mb.Decode(b); err != nil {
-		return nil, fmt.Errorf("decoding magic block file: %v", err)
-	}
-	return mb, nil
 }
 
 // setupDKGSummaries initializes the dkg summaries
@@ -251,17 +221,29 @@ func getMagicBlockFileName(name string) string {
 // saveDKGSummaries method saves the dkg summaries on file storage
 func (cmd *cmdMagicBlock) saveDKGSummaries() error {
 	for _, n := range cmd.block.Miners.NodesMap {
-		file, err := json.MarshalIndent(cmd.summaries[n.SetIndex], "", " ")
-		if err != nil {
-			return err
-		}
 		name := getSummariesName(n.SetIndex)
-		path := fmt.Sprintf("%v/%v", output, name)
-		if err := ioutil.WriteFile(path, file, 0644); err != nil {
+		if _, err := cmd.saveDKGSummary(n.SetIndex, name); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (cmd *cmdMagicBlock) saveDKGSummary(index int, name string) (string, error) {
+	file, err := json.MarshalIndent(cmd.summaries[index], "", " ")
+	if err != nil {
+		return "", err
+	}
+	path := fmt.Sprintf("%v/%v", output, name)
+	if err := ioutil.WriteFile(path, file, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (cmd *cmdMagicBlock) removeDKGSummary(name string) error {
+	path := fmt.Sprintf("%v/%v", output, name)
+	return os.Remove(path)
 }
 
 func getSummariesName(index int) string {
@@ -275,50 +257,114 @@ func main() {
 
 	flag.Parse()
 
+	var emails []string
 	if *mainnet {
 		log.Println("Preparing files...")
 
 		passes := loadPasswords()
+		for e := range passes {
+			emails = append(emails, e)
+		}
 		configs := readConfigs(magicBlockConfig, passes)
-		merged := mergeConfigs(configs)
+		merged, origInd := mergeConfigs(configs)
 		mbfile := fmt.Sprintf("%v/%v", output, *magicBlockConfig)
 		writeMergedYAml(&mbfile, merged)
-		generateArtifacts(&mbfile)
-		zipArtifacts(passes, merged)
+		artifacts, err := generateArtifacts(&mbfile, emails)
+		if err != nil {
+			log.Panic(err)
+		}
+		artifacts.originalIndices = origInd
+		generateStates(artifacts)
+		zipArtifacts(passes, artifacts)
 	} else {
 		mbfile := fmt.Sprintf("%v/%v", rootPath, *magicBlockConfig)
 		output = rootPath
-		generateArtifacts(&mbfile)
+		if _, err := generateArtifacts(&mbfile, emails); err != nil {
+			log.Panic(err)
+		}
 	}
 
 	log.Printf("Now sleeping for 60 sec")
 	time.Sleep(60 * time.Second)
+}
+
+func generateStates(artifacts *cmdMagicBlock) {
+	fmt.Println("Generating initial states")
+	path := fmt.Sprintf("%v/%v", input, getStatesFileName())
+
+	file, err := os.ReadFile(path)
+	states := &state.InitStates{}
+	if err == nil {
+		err = yaml.Unmarshal(file, states)
+		if err != nil {
+			log.Panic(err)
+		}
+	} else if !os.IsNotExist(err) {
+		log.Panic(err)
+	}
+
+	for _, miner := range artifacts.block.Miners.Nodes {
+		s := state.InitState{
+			ID:     miner.ID,
+			Tokens: state.Balance(defaultTokenSize),
+		}
+
+		states.States = append(states.States, s)
+	}
+
+	marshal, err := yaml.Marshal(states)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	outPath := fmt.Sprintf("%v/%v", output, getStatesFileName())
+	if err := os.WriteFile(outPath, marshal, 0755); err != nil {
+		log.Panic(err)
+	}
 
 }
 
-func zipArtifacts(passes map[string]string, merged *configYaml) {
-	log.Println("Preparing archives...")
-	mbPath := fmt.Sprintf("%v/%v", output, getMagicBlockFileName(merged.MagicBlockFilename))
+func getStatesFileName() string {
+	return "initial-states.yaml"
+}
 
+func zipArtifacts(passes map[string]string, cmd *cmdMagicBlock) {
+	log.Println("Preparing archives...")
+	//rename summaries for test purpose use
+	for _, miner := range cmd.block.Miners.Nodes {
+		name := getSummariesName(miner.SetIndex)
+		path := fmt.Sprintf("%v/%v", output, name)
+		newPath := fmt.Sprintf("%v/%v_%v", output, miner.ID[:8], name)
+		if err := os.Rename(path, newPath); err != nil {
+			return
+		}
+	}
 	for email, pass := range passes {
 		var summaries []string
-		for _, miner := range merged.Miners {
-			if miner.Description == email {
-				name := getSummariesName(miner.SetIndex)
-				summaries = append(summaries, name)
+		mappedNames := make(map[string]string)
 
-				summaryPath := fmt.Sprintf("%v/%v", output, name)
-				if err := verifySummaries(mbPath, summaryPath, miner.ID); err != nil {
+		for _, miner := range cmd.block.Miners.Nodes {
+			if miner.Description == email {
+				index := cmd.originalIndices[miner.ID]
+				name := getSummariesName(index)
+				_, err := cmd.saveDKGSummary(miner.SetIndex, name)
+				if err != nil {
 					log.Panic(err)
 				}
+				summaries = append(summaries, name)
+				mappedNames[name] = miner.ID
 			}
 		}
 
 		log.Printf("collected %v dkg summaries for %v", len(summaries), email)
 
+		writeNames(mappedNames)
+
 		file := fmt.Sprintf("%v.zip", email)
-		args := []string{"-e", file, getMagicBlockFileName(merged.MagicBlockFilename)}
+		args := []string{"-e", file, getMagicBlockFileName(cmd.yml.MagicBlockFilename)}
 		args = append(args, summaries...)
+		args = append(args, getStatesFileName())
+		args = append(args, getNamesFileName())
 		args = append(args, "--password", pass)
 
 		c := exec.Command("zip", args...)
@@ -329,16 +375,53 @@ func zipArtifacts(passes map[string]string, merged *configYaml) {
 
 		err := c.Run()
 		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+			log.Panic(err)
+		}
+
+		renameNames(email)
+		for _, name := range summaries {
+			if err := cmd.removeDKGSummary(name); err != nil {
+				log.Panic(err)
+			}
 		}
 	}
 }
 
-func generateArtifacts(magicBlockConfig *string) {
+func renameNames(email string) {
+	pathNames := fmt.Sprintf("%v/%v", output, "names.yaml")
+	pathNamesNew := fmt.Sprintf("%v/%v", output, getNamesEmailFileName(email))
+	err := os.Rename(pathNames, pathNamesNew)
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func writeNames(names map[string]string) string {
+	path := fmt.Sprintf("%v/%v", output, "names.yaml")
+	y := yamlNames{Names: names}
+	marshal, err := yaml.Marshal(y)
+	if err != nil {
+		log.Panic(err)
+	}
+	if err := ioutil.WriteFile(path, marshal, 0755); err != nil {
+		log.Panic(err)
+	}
+	return path
+}
+
+func getNamesFileName() string {
+	return fmt.Sprintf("names.yaml")
+}
+
+func getNamesEmailFileName(email string) string {
+	return fmt.Sprintf("%v_names.yaml", email)
+}
+
+func generateArtifacts(magicBlockConfig *string, emails []string) (*cmdMagicBlock, error) {
 	cmd := new()
 	if err := cmd.setupYaml(*magicBlockConfig); err != nil {
 		log.Printf("Failed to read configuration file (%v) for magicBlock. Error: %v\n", *magicBlockConfig, err)
-		return
+		return nil, err
 	}
 	client.SetClientSignatureScheme("bls0chain")
 	cmd.setupBlock()
@@ -350,14 +433,15 @@ func generateArtifacts(magicBlockConfig *string) {
 
 	if err := cmd.saveBlock(); err != nil {
 		log.Printf("Error writing json file: %v\n", err.Error())
-		return
+		return nil, err
 	}
 	log.Printf("Success: Magic block created")
 	if err := cmd.saveDKGSummaries(); err != nil {
 		log.Printf("Error writing json file: %v\n", err.Error())
-		return
+		return nil, err
 	}
 	log.Printf("Success: DKG summaries created")
+	return cmd, nil
 }
 
 func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYaml {
@@ -383,25 +467,25 @@ func readConfigs(magicBlockConfig *string, passes map[string]string) []*configYa
 			log.Panic(err)
 		}
 
-		config := newYaml()
-		err = config.readYaml(nodesYaml)
+		conf := newYaml()
+		err = conf.readYaml(nodesYaml)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		for _, m := range config.Miners {
+		for _, m := range conf.Miners {
 			if err := verifyKeys(m.PrivateKey, m.PublicKey, m.ID); err != nil {
 				fmt.Printf("bad miner %v\n", m.ID)
 				log.Panic(err)
 			}
 		}
-		for _, s := range config.Sharders {
+		for _, s := range conf.Sharders {
 			if err := verifyKeys(s.PrivateKey, s.PublicKey, s.ID); err != nil {
 				fmt.Printf("bad sharder with %v\n", s.ID)
 				log.Panic(err)
 			}
 		}
-		configs = append(configs, config)
+		configs = append(configs, conf)
 
 		e := os.Remove(nodesYaml)
 		if e != nil {
@@ -432,8 +516,9 @@ func writeMergedYAml(magicBlockConfig *string, merged *configYaml) {
 	}
 }
 
-func mergeConfigs(configs []*configYaml) *configYaml {
+func mergeConfigs(configs []*configYaml) (*configYaml, map[string]int) {
 	fmt.Println("merging yaml file")
+	origInd := make(map[string]int)
 	merged := newYaml()
 	merged.MagicBlockNumber = 1
 	merged.StartingRound = 0
@@ -448,6 +533,7 @@ func mergeConfigs(configs []*configYaml) *configYaml {
 		for _, miner := range conf.Miners {
 			merged.Miners = append(merged.Miners, miner)
 			merged.MinersMap[miner.ID] = miner
+			origInd[miner.ID] = miner.SetIndex
 			miner.SetIndex = index
 			index++
 		}
@@ -458,7 +544,7 @@ func mergeConfigs(configs []*configYaml) *configYaml {
 		}
 	}
 
-	return merged
+	return merged, origInd
 }
 
 func loadPasswords() map[string]string {

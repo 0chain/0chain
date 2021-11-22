@@ -13,6 +13,10 @@ type yamlNode struct {
 	PrivateKey string `yaml:"private_key"`
 }
 
+type yamlNames struct {
+	Names map[string]string `yaml:"names"`
+}
+
 // yaml config file structure
 type configYaml struct {
 	Miners             []*yamlNode          `yaml:"miners"`
