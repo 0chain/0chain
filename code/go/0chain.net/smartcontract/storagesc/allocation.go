@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
-	"strconv"
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -171,11 +170,11 @@ type newAllocationRequest struct {
 	Expiration                 common.Timestamp `json:"expiration_date"`
 	Owner                      string           `json:"owner_id"`
 	OwnerPublicKey             string           `json:"owner_public_key"`
-	PreferredBlobbers          []string         `json:"preferred_blobbers"`
 	ReadPriceRange             PriceRange       `json:"read_price_range"`
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
+	Blobbers				   []string			`json:"blobbers"`
 }
 
 // storageAllocation from the request
@@ -188,7 +187,6 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.Owner = nar.Owner
 	sa.OwnerPublicKey = nar.OwnerPublicKey
 	sa.WritePoolOwners = append(sa.WritePoolOwners, nar.Owner)
-	sa.PreferredBlobbers = nar.PreferredBlobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
 	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
@@ -289,14 +287,9 @@ func (sc *StorageSmartContract) newAllocationRequest(
 	input []byte,
 	balances chainstate.StateContextI,
 ) (string, error) {
-	var conf *scConfig
 	var err error
-	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"can't get config: %v", err)
-	}
 
-	resp, err := sc.newAllocationRequestInternal(t, input, conf, false, balances)
+	resp, err := sc.newAllocationRequestInternal(t, input,false, balances)
 	if err != nil {
 		return "", err
 	}
@@ -308,7 +301,6 @@ func (sc *StorageSmartContract) newAllocationRequest(
 func (sc *StorageSmartContract) newAllocationRequestInternal(
 	t *transaction.Transaction,
 	input []byte,
-	conf *scConfig,
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
@@ -336,14 +328,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
 
-	var seed int64
-	if seed, err = strconv.ParseInt(t.Hash[0:8], 16, 64); err != nil {
-		return "", common.NewError("allocation_creation_failed",
-			"Failed to create seed for randomizeNodes")
-	}
-
 	blobberNodes, bSize, err := sc.selectBlobbers(
-		t.CreationDate, *allBlobbersList, sa, seed, balances)
+		t.CreationDate, *allBlobbersList, sa, balances, request.Blobbers)
+
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
 	}
@@ -409,8 +396,8 @@ func (sc *StorageSmartContract) selectBlobbers(
 	creationDate common.Timestamp,
 	allBlobbersList StorageNodes,
 	sa *StorageAllocation,
-	randomSeed int64,
 	balances chainstate.StateContextI,
+	blobbers []string,
 ) ([]*StorageNode, int64, error) {
 	var err error
 	var conf *scConfig
@@ -429,7 +416,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	// size of allocation for a blobber
 	var bSize = (sa.Size + int64(size-1)) / int64(size)
 	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-		bSize, filterHealthyBlobbers(creationDate),
+		bSize, filterSelectedBlobbers(blobbers), filterHealthyBlobbers(creationDate),
 		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
@@ -439,33 +426,7 @@ func (sc *StorageSmartContract) selectBlobbers(
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)
 	sa.Stats = &StorageAllocationStats{}
 
-	var blobberNodes []*StorageNode
-	if len(sa.PreferredBlobbers) > 0 {
-		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
-		if err != nil {
-			return nil, 0, common.NewError("allocation_creation_failed",
-				err.Error())
-		}
-	}
-
-	if len(blobberNodes) < size {
-		if sa.DiverseBlobbers {
-			// removed pre selected blobbers from list
-			for _, preferredBlobber := range blobberNodes {
-				for i, blobber := range list {
-					if blobber.BaseURL == preferredBlobber.BaseURL {
-						list = append(list[:i], list[i+1:]...)
-						break
-					}
-				}
-			}
-			blobberNodes = append(blobberNodes, sa.diversifyBlobbers(list, size-len(blobberNodes))...)
-		} else {
-			blobberNodes = randomizeNodes(list, blobberNodes, size, randomSeed)
-		}
-	}
-
-	return blobberNodes[:size], bSize, nil
+	return list[:size], bSize, nil
 }
 
 type updateAllocationRequest struct {
