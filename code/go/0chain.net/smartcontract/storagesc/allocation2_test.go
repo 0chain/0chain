@@ -58,7 +58,7 @@ func TestNewAllocation(t *testing.T) {
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
-		Blobbers:          			[]string{"mockBaseUrl1", "mockBaseUrl3"},
+		Blobbers:          			[]string{"mockBaseUrl0", "mockBaseUrl1"},
 	}
 	var goodBlobber = StorageNode{
 		Capacity: 536870912,

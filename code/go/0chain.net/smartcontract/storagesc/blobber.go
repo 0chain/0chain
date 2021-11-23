@@ -299,7 +299,7 @@ func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
 
 func filterSelectedBlobbers(urls []string) filterBlobberFunc {
 	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
-		return sort.SearchStrings(urls, b.BaseURL) >= 0
+		return sort.SearchStrings(urls, b.BaseURL) < len(urls)
 	})
 }
 
