@@ -269,11 +269,9 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 	var sa = request.storageAllocation()
 
-	var bl []string
 	blobberNodes, bSize, err := ssc.selectBlobbers(
-		creationDate, *allBlobbersList, sa, balances, bl)
-	//blobberNodes, bSize, err := ssc.selectBlobbers(
-	//	creationDate, *allBlobbersList, sa, int64(creationDate), balances)
+		creationDate, *allBlobbersList, sa, balances, request.Blobbers)
+
 	if err != nil {
 		return "", common.NewErrInternal("selecting blobbers", err.Error())
 	}
