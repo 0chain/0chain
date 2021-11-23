@@ -117,7 +117,7 @@ func cacheInit(cViper *viper.Viper) *cacheTier {
 	}
 
 	volumesMapI := volumesI.([]interface{})
-	volumesMap := make([]map[string]interface{}, len(volumesMapI))
+	volumesMap := make([]map[string]interface{}, 0, len(volumesMapI))
 	for _, vI := range volumesMapI {
 		m := make(map[string]interface{})
 		volIMap := vI.(map[interface{}]interface{})
