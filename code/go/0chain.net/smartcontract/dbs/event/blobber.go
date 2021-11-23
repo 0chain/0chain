@@ -1,0 +1,166 @@
+package event
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
+
+	"0chain.net/smartcontract/dbs"
+
+	"gorm.io/gorm"
+)
+
+type Blobber struct {
+	gorm.Model
+	BlobberID string `json:"id" gorm:"uniqueIndex"`
+	BaseURL   string `json:"url"`
+
+	// geolocation
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+
+	// terms
+	ReadPrice               int64   `json:"read_price"`
+	WritePrice              int64   `json:"write_price"`
+	MinLockDemand           float64 `json:"min_lock_demand"`
+	MaxOfferDuration        string  `json:"max_offer_duration"`
+	ChallengeCompletionTime string  `json:"challenge_completion_time"`
+
+	Capacity        int64 `json:"capacity"` // total blobber capacity
+	Used            int64 `json:"used"`     // allocated capacity
+	LastHealthCheck int64 `json:"last_health_check"`
+
+	// stake_pool_settings
+	DelegateWallet string  `json:"delegate_wallet"`
+	MinStake       int64   `json:"min_stake"`
+	MaxStake       int64   `json:"max_stake"`
+	NumDelegates   int     `json:"num_delegates"`
+	ServiceCharge  float64 `json:"service_charge"`
+}
+
+func (bl *Blobber) exists(edb *EventDb) (bool, error) {
+	var count int64
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("blobber_id", bl.BlobberID).
+		Count(&count)
+	if result.Error != nil {
+		return false, fmt.Errorf("error searching for blobber %v, error %v",
+			bl.BlobberID, result.Error)
+	}
+	return count > 0, nil
+}
+
+func (bl *Blobber) create(edb *EventDb) error {
+	result := edb.Store.Get().Create(bl)
+	return result.Error
+}
+
+func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
+	exists, err := (&Blobber{
+		BlobberID: id,
+	}).exists(edb)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("blobber %v not in event db", id)
+	}
+
+	var blobber Blobber
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Find(&Blobber{}).
+		Where("blobber_id", id).
+		First(&blobber)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
+			id, result.Error)
+	}
+	logging.Logger.Info("piers GetBlobber",
+		zap.Any("blobber", blobber),
+	)
+
+	return &blobber, nil
+}
+
+func (edb *EventDb) deleteBlobber(data []byte) error {
+	result := edb.Store.Get().
+		Where("blobber_id = ?", string(data)).Delete(&Blobber{})
+	return result.Error
+}
+
+func (edb *EventDb) updateBlobber(data []byte) error {
+	var updates dbs.DbUpdates
+	err := json.Unmarshal(data, &updates)
+	if err != nil {
+		return err
+	}
+
+	var blobber = Blobber{BlobberID: updates.Id}
+	exists, err := blobber.exists(edb)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("blobber %v not in database cannot update",
+			blobber.BlobberID)
+	}
+
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("blobber_id = ?", updates.Id).
+		Updates(updates.Updates)
+	return result.Error
+}
+
+func (edb *EventDb) addBlobber(data []byte) error {
+	var blobber Blobber
+	err := json.Unmarshal(data, &blobber)
+	if err != nil {
+		return err
+	}
+
+	exists, err := blobber.exists(edb)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("blobber %v already in event databse", blobber.BlobberID)
+	}
+
+	result := edb.Store.Get().Create(&blobber)
+	return result.Error
+}
+
+/*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ */

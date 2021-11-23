@@ -319,6 +319,10 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"can't save all blobbers list: "+err.Error())
 	}
 
+	err = emitUpdateBlobber(blobber, balances)
+	if err != nil {
+		return "", common.NewError("blobber_health_check_failed", err.Error())
+	}
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {

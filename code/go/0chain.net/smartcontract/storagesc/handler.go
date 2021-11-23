@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
 
@@ -32,7 +33,19 @@ func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber")
 	}
 
-	return bl, nil
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			err, true, "cannot get event database")
+	}
+
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if bl.BaseURL != blobber.BaseURL {
+		return nil, common.NewErrorf("mismatch",
+			"blobber %v does not match %v", bl, blobber)
+	}
+
+	return blobber, err
+	//return bl, nil
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding

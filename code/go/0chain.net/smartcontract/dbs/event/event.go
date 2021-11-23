@@ -2,64 +2,22 @@ package event
 
 import (
 	"errors"
-	"sort"
-	"strconv"
+	"fmt"
 
-	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
-	"0chain.net/smartcontract/dbs/postgresql"
-
-	"0chain.net/smartcontract/dbs"
 	"gorm.io/gorm"
 )
 
 type Event struct {
 	gorm.Model
-	BlockNumber int64  `json:"block_number"`
-	TxHash      string `json:"tx_hash"`
-	Type        string `json:"type"`
-	Tag         string `json:"tag"`
+	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
+	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
+	Type        string `json:"type" gorm:"index:idx_event"`
+	Tag         string `json:"tag" gorm:"index:idx_event"`
+	Index       int    `json:"index" gorm:"index:idx_event"`
 	Data        string `json:"data"`
-}
-
-func (ev *Event) hashData() string {
-	return strconv.Itoa(int(ev.BlockNumber)) + ":" +
-		ev.TxHash + ":" + ev.Type + ":" + ev.Tag
-}
-
-func (ev *Event) Hash() string {
-	return encryption.Hash(ev.hashData())
-}
-
-func HashEvents(events []Event) string {
-	var hashes []string
-	for _, event := range events {
-		hashes = append(hashes, event.Hash())
-	}
-	sort.Strings(hashes)
-	var hashStr string
-	for _, subHash := range hashes {
-		hashStr += subHash
-	}
-	return encryption.Hash(hashStr)
-}
-
-func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
-	db, err := postgresql.GetPostgresSqlDb(config)
-	if err != nil {
-		return nil, err
-	}
-	return &EventDb{
-		Store: db,
-	}, nil
-}
-
-type EventDb struct {
-	dbs.Store
-}
-
-func (edb *EventDb) AutoMigrate() error {
-	return edb.Store.Get().AutoMigrate(&Event{})
 }
 
 func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
@@ -92,12 +50,6 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	return events, nil
 }
 
-func (edb *EventDb) AddEvents(events []Event) {
-	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().Create(&events)
-	}
-}
-
 func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
 	var events []Event
 	if edb.Store == nil {
@@ -108,11 +60,50 @@ func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
 }
 
 func (edb *EventDb) drop() error {
-	return edb.Store.Get().Migrator().DropTable(&Event{})
+	err := edb.Store.Get().Migrator().DropTable(&Event{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (edb *EventDb) first() Event {
-	event := &Event{}
-	_ = edb.Store.Get().First(event)
-	return *event
+func (edb *EventDb) exists(event Event) (bool, error) {
+	var count int64
+	result := edb.Store.Get().
+		Model(&Event{}).
+		Where("tx_hash = ? AND index = ?", event.TxHash, event.Index).
+		Count(&count)
+	if result.Error != nil {
+		return false, fmt.Errorf("error counting events matching %v, error %v",
+			event, result.Error)
+	}
+	return count > 0, nil
+}
+
+func (edb *EventDb) removeDuplicate(events []Event) []Event {
+	for i := len(events) - 1; i >= 0; i-- {
+		exists, err := edb.exists(events[i])
+		if err != nil {
+			logging.Logger.Error("error process event",
+				zap.Any("event", events[i]),
+				zap.Error(err),
+			)
+		}
+		if exists || err != nil {
+			events[i] = events[len(events)-1]
+			events = events[:len(events)-1]
+		}
+	}
+	return events
+}
+
+func (edb *EventDb) addEvents(events []Event) {
+	if edb.Store != nil && len(events) > 0 {
+		edb.Store.Get().Create(&events)
+	}
 }

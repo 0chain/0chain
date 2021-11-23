@@ -5,11 +5,9 @@ import (
 	"time"
 
 	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	"github.com/stretchr/testify/require"
-
 	"0chain.net/smartcontract/dbs"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -17,7 +15,7 @@ func init() {
 }
 
 func TestSetupDatabase(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -31,6 +29,7 @@ func TestSetupDatabase(t *testing.T) {
 	}
 	eventDb, err := NewEventDb(access)
 	require.NoError(t, err)
+	defer eventDb.Close()
 
 	err = eventDb.drop()
 	require.NoError(t, err)
@@ -74,6 +73,7 @@ func TestSetupDatabase(t *testing.T) {
 		},
 	}
 
+	eventDb.AddEvents(events)
 	eventDb.AddEvents(events)
 
 	oldEvents, err := eventDb.GetEvents(0)
