@@ -22,18 +22,35 @@ func (bc *BlobberChallenge) add(edb *EventDb) error {
 	return result.Error
 }
 
-func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error {
+func (_ *BlobberChallenge) exists(edb *EventDb, blobberId string) (bool, error) {
 	var count int64
 	result := edb.Store.Get().
 		Model(&BlobberChallenge{}).
 		Where("blobber_id", blobberId).
 		Count(&count)
 	if result.Error != nil {
-		return fmt.Errorf("error counting blobber challenge, blobber %v, error %v",
+		return false, fmt.Errorf("error counting blobber challenge, blobber %v, error %v",
 			blobberId, result.Error)
 	}
+	return count > 0, nil
+}
 
-	if count == 0 {
+func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error {
+	//var count int64
+	//result := edb.Store.Get().
+	//	Model(&BlobberChallenge{}).
+	//	Where("blobber_id", blobberId).
+	//	Count(&count)
+	//if result.Error != nil {
+	//	return fmt.Errorf("error counting blobber challenge, blobber %v, error %v",
+	//		blobberId, result.Error)
+	//}
+	exists, err := (&BlobberChallenge{}).exists(edb, blobberId)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
 		bc := BlobberChallenge{
 			BlobberID: blobberId,
 		}
@@ -42,7 +59,7 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 			return err
 		}
 	}
-	result = edb.Store.Get().
+	result := edb.Store.Get().
 		Model(&BlobberChallenge{}).
 		Find(&BlobberChallengeId{}).
 		Where("blobber_id", blobberId).
@@ -56,6 +73,14 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 }
 
 func (edb *EventDb) GetBlobberChallenges(blobberId string) (*BlobberChallenge, error) {
+	exists, err := (&BlobberChallenge{}).exists(edb, blobberId)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
+
 	var bc BlobberChallenge
 	result := edb.Store.Get().
 		Model(&BlobberChallenge{}).

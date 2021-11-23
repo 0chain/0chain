@@ -75,7 +75,7 @@ func (edb *EventDb) exists(event Event) (bool, error) {
 	var count int64
 	result := edb.Store.Get().
 		Model(&Event{}).
-		Where("tx_hash = ? index = ?", event.TxHash, event.Index).
+		Where("tx_hash = ? AND index = ?", event.TxHash, event.Index).
 		Count(&count)
 	if result.Error != nil {
 		return false, fmt.Errorf("error counting events matching %v, error %v",
