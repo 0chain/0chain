@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	Logger   *zap.Logger
-	N2n      *zap.Logger
-	MemUsage *zap.Logger
+	Logger   = zap.NewNop()
+	N2n      = zap.NewNop()
+	MemUsage = zap.NewNop()
 
 	mLogger    *MemLogger
 	mHCLogger  *MemLogger

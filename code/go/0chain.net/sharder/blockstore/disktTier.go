@@ -114,7 +114,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			if err := os.MkdirAll(blocksPath, 0644); err != nil {
+			if err := os.MkdirAll(blocksPath, 0777); err != nil {
 				return err
 			}
 		}
@@ -645,7 +645,7 @@ func startvolumes(mVolumes []map[string]interface{}, shouldDelete bool, dTier *d
 				continue
 			}
 
-			if err := os.MkdirAll(vPath, 0644); err != nil {
+			if err := os.MkdirAll(vPath, 0777); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}

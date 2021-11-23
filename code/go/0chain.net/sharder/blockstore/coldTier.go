@@ -81,6 +81,7 @@ func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
 	switch ct.StorageType {
 	case "minio":
 		mc, ok := coldStoragesMap[coldPath]
+
 		if !ok {
 			return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
 		}
@@ -780,7 +781,7 @@ func startcoldVolumes(mVolumes []map[string]interface{}, cTier *coldTier, should
 				continue
 			}
 
-			if err = os.MkdirAll(vPath, 0644); err != nil {
+			if err = os.MkdirAll(vPath, 0777); err != nil {
 				Logger.Error(err.Error())
 				continue
 			}

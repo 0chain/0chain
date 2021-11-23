@@ -77,7 +77,7 @@ func (sm *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block
 }
 
 func (sm *BlockStore) Read(hash string, round int64) (b *block.Block, err error) {
-	Logger.Info("Reading block: " + b.Hash)
+	Logger.Info("Reading block: " + hash)
 	return sm.read(hash, round)
 }
 
@@ -85,12 +85,19 @@ func (sm *BlockStore) Delete(hash string) error {
 	return nil // Not implemented
 }
 
+const (
+	storageTypeCfgKey         = "storage_type"
+	boltCfgKey                = "bolt"
+	blockMetaRecordPathMapKey = "block_meta_record_path"
+	queryMetaRecordPathMapKey = "query_meta_record_path"
+)
+
 func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 	Logger.Info("Initializing storages")
 	var mode string
 	var storageType int
 
-	storageType = sViper.GetInt("storage_type")
+	storageType = sViper.GetInt(storageTypeCfgKey)
 
 	if storageType == 0 {
 		panic(errors.New("Storage Type is a required field"))
@@ -102,18 +109,22 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 	}
 
 	var bmrPath, qmrPath string = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
-	boltConfigMap := sViper.GetStringMapString("bolt")
+	boltConfigMap := sViper.GetStringMapString(boltCfgKey)
 	if boltConfigMap == nil {
 		bmrPath = DefaultBlockMetaRecordDB
 		qmrPath = DefaultQueryMetaRecordDB
 	} else {
 
-		if boltConfigMap["block_meta_record_path"] == "" {
+		if val, ok := boltConfigMap[blockMetaRecordPathMapKey]; !ok {
 			bmrPath = DefaultBlockMetaRecordDB
+		} else {
+			bmrPath = val
 		}
 
-		if boltConfigMap["query_meta_record_path"] == "" {
+		if val, ok := boltConfigMap[queryMetaRecordPathMapKey]; !ok {
 			qmrPath = DefaultQueryMetaRecordDB
+		} else {
+			qmrPath = val
 		}
 	}
 
@@ -858,6 +869,7 @@ func readFromDiskTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, 
 	}
 	defer r.Close()
 
+	b = &block.Block{}
 	err = datastore.ReadJSON(r, b)
 	if err != nil {
 		Logger.Error(err.Error())
@@ -891,7 +903,7 @@ func readFromCacheTier(bwr *BlockWhereRecord) (b *block.Block, err error) {
 }
 
 func readFromColdTier(bwr *BlockWhereRecord, shouldCache bool) (b *block.Block, err error) {
-	bwr, err = GetBlockWhereRecord(bwr.ColdPath)
+	bwr, err = GetBlockWhereRecord(bwr.Hash)
 	if err != nil {
 		Logger.Error(err.Error())
 		return nil, err
