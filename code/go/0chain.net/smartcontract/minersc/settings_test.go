@@ -51,7 +51,6 @@ func TestUpdateSettings(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
-			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -142,7 +141,7 @@ func TestUpdateSettings(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{},
+			gn:       &GlobalNode{OwnerId: owner},
 			balances: balances,
 		}
 	}
@@ -182,6 +181,7 @@ func TestUpdateSettings(t *testing.T) {
 					"reward_decline_rate":    "0.1",
 					"interest_decline_rate":  "0.1",
 					"max_mint":               "1500000.0",
+					"owner_id":               owner,
 				},
 			},
 		},

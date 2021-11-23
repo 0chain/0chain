@@ -62,7 +62,7 @@ func BenchmarkTests(
 ) bk.TestSuite {
 	var now = common.Now()
 	var ssc = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
+
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	ssc.setSC(ssc.SmartContract, &smartcontract.BCContext{})

@@ -41,7 +41,6 @@ func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
 	var isc = InterestPoolSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	isc.setSC(isc.SmartContract, &smartcontract.BCContext{})

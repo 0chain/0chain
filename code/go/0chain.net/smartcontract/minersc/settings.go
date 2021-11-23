@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
@@ -38,7 +40,7 @@ const (
 	RewardDeclineRate
 	InterestDeclineRate
 	MaxMint
-	NumberOfSettings
+	OwnerId
 )
 
 var (
@@ -63,7 +65,9 @@ var (
 		"reward_decline_rate",
 		"interest_decline_rate",
 		"max_mint",
+		"owner_id",
 	}
+	NumberOfSettings = len(SettingName)
 
 	Settings = map[string]struct {
 		Setting    Setting
@@ -89,6 +93,7 @@ var (
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
 		"interest_decline_rate":  {InterestDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
+		"owner_id":               {OwnerId, smartcontract.Key},
 	}
 )
 
@@ -160,6 +165,15 @@ func (gn *GlobalNode) setFloat64(key string, change float64) {
 	}
 }
 
+func (gn *GlobalNode) setKey(key string, change string) {
+	switch Settings[key].Setting {
+	case OwnerId:
+		gn.OwnerId = change
+	default:
+		panic("key: " + key + "not implemented as key")
+	}
+}
+
 func (gn *GlobalNode) set(key string, change string) error {
 	switch Settings[key].ConfigType {
 	case smartcontract.Int:
@@ -186,6 +200,11 @@ func (gn *GlobalNode) set(key string, change string) error {
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
+	case smartcontract.Key:
+		if _, err := hex.DecodeString(change); err != nil {
+			return fmt.Errorf("%s must be a hes string: %v", key, err)
+		}
+		gn.setKey(key, change)
 	default:
 		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}
@@ -208,8 +227,9 @@ func (msc *MinerSmartContract) updateSettings(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-
-	if err := msc.Authorize(t.ClientID, "update_settings"); err != nil {
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		return gn.Get(OwnerId) == t.ClientID
+	}); err != nil {
 		return "", err
 	}
 

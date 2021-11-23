@@ -24,7 +24,7 @@ func AddMockAllocations(
 	const mockMinLockDemand = 1
 	var (
 		sscId = StorageSmartContract{
-			Authorizer:    sci.NewOwned(owner),
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
 		allocations Allocations
@@ -260,7 +260,6 @@ func AddMockBlobbers(
 	balances cstate.StateContextI,
 ) []*StorageNode {
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var blobbers StorageNodes
@@ -305,7 +304,6 @@ func AddMockValidators(
 	balances cstate.StateContextI,
 ) []*ValidationNode {
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	var validators ValidatorNodes
@@ -368,7 +366,6 @@ func GetMockStakePools(
 	}
 
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for cId, usp := range usps {
@@ -388,7 +385,6 @@ func GetMockValidatorStakePools(
 	balances cstate.StateContextI,
 ) {
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
@@ -424,7 +420,6 @@ func SaveMockStakePools(
 	balances cstate.StateContextI,
 ) {
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for i, sp := range sps {
@@ -442,7 +437,6 @@ func AddMockFreeStorageAssigners(
 	balances cstate.StateContextI,
 ) {
 	var sscId = StorageSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
 	for i := 0; i < viper.GetInt(sc.NumFreeStorageAssigners); i++ {

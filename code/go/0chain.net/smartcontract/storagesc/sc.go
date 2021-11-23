@@ -25,13 +25,11 @@ const (
 )
 
 type StorageSmartContract struct {
-	sci.Authorizer
 	*sci.SmartContract
 }
 
 func NewStorageSmartContract() sci.SmartContractInterface {
 	var sscCopy = &StorageSmartContract{
-		Authorizer:    sci.NewOwned("smart_contracts.storagesc.ownerId"),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	sscCopy.setSC(sscCopy.SmartContract, &smartcontract.BCContext{})

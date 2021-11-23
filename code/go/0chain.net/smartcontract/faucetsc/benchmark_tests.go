@@ -39,7 +39,6 @@ func (bt BenchTest) Transaction() *transaction.Transaction {
 
 func (bt BenchTest) Run(balances cstate.StateContextI, b *testing.B) error {
 	var fsc = FaucetSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})

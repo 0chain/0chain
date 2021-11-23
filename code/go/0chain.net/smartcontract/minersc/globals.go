@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -497,13 +498,14 @@ func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
 func (msc *MinerSmartContract) updateGlobals(
 	txn *transaction.Transaction,
 	inputData []byte,
-	_ *GlobalNode,
+	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := msc.Authorize(txn.ClientID, "update_globals"); err != nil {
+	if err := smartcontractinterface.AuthorizeWithOwner("update_globals", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
 		return "", err
 	}
-
 	var changes smartcontract.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())

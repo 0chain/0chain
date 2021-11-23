@@ -26,7 +26,7 @@ func TestAddToFundedPools(t *testing.T) {
 	) (*StorageSmartContract, cstate.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
-			Authorizer:    sci.NewOwned(owner),
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		if len(p.existing) != 0 {
@@ -122,7 +122,7 @@ func TestIsFundedPool(t *testing.T) {
 	) (*StorageSmartContract, cstate.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
-			Authorizer:    sci.NewOwned(owner),
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 

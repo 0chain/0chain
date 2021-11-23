@@ -57,7 +57,6 @@ func TestUpdateGlobals(t *testing.T) {
 	setExpectations := func(t *testing.T, p parameters) args {
 		var balances = &mocks.StateContextI{}
 		var msc = &MinerSmartContract{
-			Authorizer:    sci.NewOwned(owner),
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = &transaction.Transaction{
@@ -83,7 +82,7 @@ func TestUpdateGlobals(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{},
+			gn:       &GlobalNode{OwnerId: owner},
 			balances: balances,
 		}
 	}

@@ -199,7 +199,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 		store:         make(map[datastore.Key]util.Serializable),
 	}
 	var ssc = &StorageSmartContract{
-		sci.NewOwned(owner),
 		&sci.SmartContract{
 			ID: storageScId,
 		},

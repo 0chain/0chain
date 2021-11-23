@@ -100,7 +100,6 @@ func newTransaction(f, t datastore.Key, val state.Balance,
 
 func newTestVestingSC() (vsc *VestingSmartContract) {
 	vsc = new(VestingSmartContract)
-	vsc.Authorizer = smartcontractinterface.NewOwned(owner)
 	vsc.SmartContract = new(smartcontractinterface.SmartContract)
 	vsc.ID = ADDRESS
 	return

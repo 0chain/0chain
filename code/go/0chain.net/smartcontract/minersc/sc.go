@@ -1,7 +1,6 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/config"
 	"context"
 	"errors"
 	"fmt"
@@ -51,7 +50,6 @@ var (
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
-	sci.Authorizer
 	*sci.SmartContract
 	bcContext sci.BCContextI
 
@@ -61,7 +59,6 @@ type MinerSmartContract struct {
 
 func NewMinerSmartContract() sci.SmartContractInterface {
 	var mscCopy = &MinerSmartContract{
-		Authorizer:    sci.NewOwned(config.SmartContractConfig.GetString("smart_contracts.minersc.ownerId")),
 		SmartContract: sci.NewSC(ADDRESS),
 		bcContext:     &smartcontract.BCContext{},
 	}

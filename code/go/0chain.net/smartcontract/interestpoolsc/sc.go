@@ -28,13 +28,11 @@ const (
 )
 
 type InterestPoolSmartContract struct {
-	smartcontractinterface.Authorizer
 	*smartcontractinterface.SmartContract
 }
 
 func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
 	var ipscCopy = &InterestPoolSmartContract{
-		Authorizer:    smartcontractinterface.NewOwned(config.SmartContractConfig.GetString("smart_contracts.interestpoolsc.ownerId")),
 		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
@@ -175,6 +173,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	gn.OwnerId = conf.GetString(pfx + "owner_id")
 	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}

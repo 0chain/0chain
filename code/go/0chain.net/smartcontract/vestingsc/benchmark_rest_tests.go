@@ -41,7 +41,6 @@ func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
 	var vsc = VestingSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	vsc.setSC(vsc.SmartContract, &smartcontract.BCContext{})

@@ -220,7 +220,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		RewardRoundFrequency: scYaml.rewardRoundPeriod,
 	}
 	var msc = &MinerSmartContract{
-		Authorizer: sci.NewOwned(owner),
 		SmartContract: &sci.SmartContract{
 			SmartContractExecutionStats: make(map[string]interface{}),
 		},

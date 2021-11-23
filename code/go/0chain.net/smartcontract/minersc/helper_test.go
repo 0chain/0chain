@@ -279,7 +279,6 @@ func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 
 func newTestMinerSC() (msc *MinerSmartContract) {
 	msc = new(MinerSmartContract)
-	msc.Authorizer = smartcontractinterface.NewOwned(owner)
 	msc.SmartContract = new(smartcontractinterface.SmartContract)
 	msc.ID = ADDRESS
 	msc.SmartContractExecutionStats = make(map[string]interface{})

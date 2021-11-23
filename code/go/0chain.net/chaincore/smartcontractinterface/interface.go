@@ -48,7 +48,3 @@ These functions should not modify blockchain states in anyway.
 type BCContextI interface {
 	GetNodepoolInfo() interface{}
 }
-
-type Authorizer interface {
-	Authorize(clientId, funcName string) error
-}

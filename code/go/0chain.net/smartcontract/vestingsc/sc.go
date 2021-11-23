@@ -1,7 +1,6 @@
 package vestingsc
 
 import (
-	config2 "0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
 	"context"
 	"fmt"
@@ -21,13 +20,11 @@ const (
 type RestPoints = map[string]smartcontractinterface.SmartContractRestHandler
 
 type VestingSmartContract struct {
-	smartcontractinterface.Authorizer
 	*smartcontractinterface.SmartContract
 }
 
 func NewVestingSmartContract() smartcontractinterface.SmartContractInterface {
 	var vscCopy = &VestingSmartContract{
-		smartcontractinterface.NewOwned(config2.SmartContractConfig.GetString("smart_contracts.vestingsc.ownerId")),
 		smartcontractinterface.NewSC(ADDRESS),
 	}
 	vscCopy.setSC(vscCopy.SmartContract, &smartcontract.BCContext{})

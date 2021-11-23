@@ -1,7 +1,6 @@
 package faucetsc
 
 import (
-	"0chain.net/chaincore/config"
 	"context"
 	"fmt"
 	"net/url"
@@ -27,13 +26,11 @@ const (
 )
 
 type FaucetSmartContract struct {
-	smartcontractinterface.Authorizer
 	*smartcontractinterface.SmartContract
 }
 
 func NewFaucetSmartContract() smartcontractinterface.SmartContractInterface {
 	var fcCopy = &FaucetSmartContract{
-		Authorizer:    smartcontractinterface.NewOwned(config.SmartContractConfig.GetString("smart_contracts.faucetsc.ownerId")),
 		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	fcCopy.setSC(fcCopy.SmartContract, &smartcontract.BCContext{})
@@ -100,7 +97,9 @@ func (fc *FaucetSmartContract) updateSettings(
 	balances c_state.StateContextI,
 	gn *GlobalNode,
 ) (string, error) {
-	if err := fc.Authorize(t.ClientID, "update_settings"); err != nil {
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		return gn.FaucetConfig.OwnerId == t.ClientID
+	}); err != nil {
 		return "", err
 	}
 

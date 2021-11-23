@@ -39,7 +39,6 @@ func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {
 	var fsc = FaucetSmartContract{
-		Authorizer:    sci.NewOwned(owner),
 		SmartContract: sci.NewSC(ADDRESS),
 	}
 	fsc.setSC(fsc.SmartContract, &smartcontract.BCContext{})
