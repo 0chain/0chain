@@ -71,9 +71,9 @@ func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return tb.lfmb
 }
-func (tb *testBalances) EmitEvent(string, string, string) {}
-func (tb *testBalances) EmitError(error)                  {}
-func (tb *testBalances) GetEvents() []event.Event         { return nil }
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string) {}
+func (tb *testBalances) EmitError(error)                                   {}
+func (tb *testBalances) GetEvents() []event.Event                          { return nil }
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }

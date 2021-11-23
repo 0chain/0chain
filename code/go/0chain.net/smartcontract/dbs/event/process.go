@@ -7,15 +7,22 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	TypeError = "error"
-	TypeStats = "stats"
+type (
+	EventType int
+	EventTag  int
 )
 
 const (
-	TagAddBlobber    = "add_blobber"
-	TagUpdateBlobber = "update_blobber"
-	TagDeleteBlobber = "delete_blobber"
+	TypeNone EventType = iota
+	TypeError
+	TypeStats
+)
+
+const (
+	TagNone EventTag = iota
+	TagAddBlobber
+	TagUpdateBlobber
+	TagDeleteBlobber
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
@@ -26,7 +33,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 	edb.addEvents(newEvents)
 	for _, event := range newEvents {
 		var err error = nil
-		switch event.Type {
+		switch EventType(event.Type) {
 		case TypeStats:
 			err = edb.addStat(event)
 		default:
@@ -42,7 +49,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
-	switch event.Tag {
+	switch EventTag(event.Tag) {
 	case TagAddBlobber:
 		return edb.addBlobber([]byte(event.Data))
 	case TagUpdateBlobber:

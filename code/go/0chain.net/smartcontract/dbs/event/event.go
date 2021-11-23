@@ -14,8 +14,8 @@ type Event struct {
 	gorm.Model
 	BlockNumber int64  `json:"block_number" gorm:"index:idx_event"`
 	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
-	Type        string `json:"type" gorm:"index:idx_event"`
-	Tag         string `json:"tag" gorm:"index:idx_event"`
+	Type        int    `json:"type" gorm:"index:idx_event"`
+	Tag         int    `json:"tag" gorm:"index:idx_event"`
 	Index       int    `json:"index" gorm:"index:idx_event"`
 	Data        string `json:"data"`
 }
@@ -26,7 +26,7 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	}
 
 	if search.BlockNumber == 0 && len(search.TxHash) == 0 &&
-		len(search.Type) == 0 && len(search.Tag) == 0 {
+		search.Type == 0 && search.Tag == 0 {
 		return nil, errors.New("no search field")
 	}
 
@@ -38,10 +38,10 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	if len(search.TxHash) > 0 {
 		db = db.Where("tx_hash", search.TxHash).Find(eventTable)
 	}
-	if len(search.Type) > 0 {
+	if EventType(search.Type) != TypeNone {
 		db = db.Where("type", search.Type).Find(eventTable)
 	}
-	if len(search.Tag) > 0 {
+	if EventTag(search.Tag) != TagNone {
 		db = db.Where("tag", search.Tag).Find(eventTable)
 	}
 

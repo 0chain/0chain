@@ -49,7 +49,7 @@ func (sc *mockStateContext) Validate() error                             { retur
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
-func (sc *mockStateContext) EmitEvent(string, string, string)                      {}
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string)         {}
 func (sc *mockStateContext) EmitError(error)                                       {}
 func (sc *mockStateContext) GetEvents() []event.Event                              { return nil }
 func (tb *mockStateContext) GetEventDB() *event.EventDb                            { return nil }
