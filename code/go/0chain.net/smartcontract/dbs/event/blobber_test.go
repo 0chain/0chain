@@ -127,8 +127,8 @@ func TestBlobbers(t *testing.T) {
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
-		Type:        TypeStats,
-		Tag:         TagAddBlobber,
+		Type:        int(TypeStats),
+		Tag:         int(TagAddBlobber),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -154,8 +154,8 @@ func TestBlobbers(t *testing.T) {
 	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
-		Type:        TypeStats,
-		Tag:         TagUpdateBlobber,
+		Type:        int(TypeStats),
+		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
 	eventDb.AddEvents([]Event{eventUpdateSn})
@@ -167,8 +167,8 @@ func TestBlobbers(t *testing.T) {
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash3",
-		Type:        TypeStats,
-		Tag:         TagDeleteBlobber,
+		Type:        int(TypeStats),
+		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,
 	}
 	eventDb.AddEvents([]Event{deleteEvent})

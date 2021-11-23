@@ -10,9 +10,14 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EventDb{
+	eventDb := &EventDb{
 		Store: db,
-	}, nil
+	}
+
+	if err := eventDb.AutoMigrate(); err != nil {
+		return nil, err
+	}
+	return eventDb, nil
 }
 
 type EventDb struct {
