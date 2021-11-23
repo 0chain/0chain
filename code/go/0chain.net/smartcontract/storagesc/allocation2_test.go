@@ -105,6 +105,14 @@ func TestNewAllocation(t *testing.T) {
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
 	})
+
+	t.Run("unable to find blobbers", func(t *testing.T) {
+		request := request
+		request.DiversifyBlobbers = false
+		request.Blobbers = []string{"wrongUrl1", "wrongUrl2"}
+		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
+		require.Error(t, err)
+	})
 }
 
 func TestCancelAllocationRequest(t *testing.T) {

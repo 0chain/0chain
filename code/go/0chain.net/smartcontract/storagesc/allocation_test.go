@@ -82,7 +82,6 @@ func TestSelectBlobbers(t *testing.T) {
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
-			//PreferredBlobbers: []string{},
 			DataShards:        args.dataShards,
 			ParityShards:      args.parityShards,
 			Owner:             mockOwner,
@@ -93,9 +92,7 @@ func TestSelectBlobbers(t *testing.T) {
 			WritePriceRange:   PriceRange{mockMinPrice, mockMaxPrice},
 			DiverseBlobbers:   args.diverseBlobbers,
 		}
-		//for i := 0; i < args.numPreferredBlobbers; i++ {
-		//	sa.PreferredBlobbers = append(sa.PreferredBlobbers, mockURL+strconv.Itoa(i))
-		//}
+
 		var sNodes = StorageNodes{}
 		for i := 0; i < args.numBlobbers; i++ {
 			sNodes.Nodes.add(makeMockBlobber(i))
@@ -779,8 +776,6 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	require.Equal(t, alloc.Expiration, nar.Expiration)
 	require.Equal(t, alloc.Owner, nar.Owner)
 	require.Equal(t, alloc.OwnerPublicKey, nar.OwnerPublicKey)
-	//require.True(t, isEqualStrings(alloc.Blobbers,
-	//	nar.Blobbers))
 	require.Equal(t, alloc.ReadPriceRange, nar.ReadPriceRange)
 	require.Equal(t, alloc.WritePriceRange, nar.WritePriceRange)
 }
@@ -1743,10 +1738,10 @@ func Test_finalize_allocation(t *testing.T) {
 		"should receive min_lock_demand")
 }
 
-// user request allocation with preferred blobbers, but the blobbers
+// user request allocation with selected in payload blobbers, but the blobbers
 // doesn't exist in the SC (or didn't dens health check transaction
 // last time becoming themselves unhealthy)
-/*func Test_preferred_blobbers(t *testing.T) {
+func Test_preferred_blobbers(t *testing.T) {
 
 	var (
 		ssc            = newTestStorageSC()
@@ -1776,20 +1771,8 @@ func Test_finalize_allocation(t *testing.T) {
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 2 * GB // 2 GB
 		nar.MaxChallengeCompletionTime = 200 * time.Hour
+		nar.Blobbers = []string{getBlobberURL("mockBaseUrl0"), getBlobberURL("mockBaseUrl1")}
 		return
-	}
-
-	var newAlloc = func(t *testing.T, nar *newAllocationRequest) string {
-		t.Helper()
-		// call SC function
-		tp += 100
-		var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp,
-			balances)
-		require.NoError(t, err)
-		// decode response to get allocation ID
-		var deco StorageAllocation
-		require.NoError(t, deco.Decode([]byte(resp)))
-		return deco.ID
 	}
 
 	// preferred blobbers alive (just choose n-th first)
@@ -1802,51 +1785,6 @@ func Test_finalize_allocation(t *testing.T) {
 		}
 		return
 	}
-
-	// create allocation with preferred blobbers list
-	t.Run("preferred blobbers", func(t *testing.T) {
-		var (
-			nar = getAllocRequest()
-			pbl = getPreferredBlobbers(blobs, 4)
-		)
-		nar.Blobbers = pbl
-		var (
-			allocID    = newAlloc(t, nar)
-			alloc, err = ssc.getAllocation(allocID, balances)
-		)
-		require.NoError(t, err)
-	Preferred:
-		for _, url := range pbl {
-			var id = blobberIDByURL(url)
-			for _, d := range alloc.BlobberDetails {
-				if id == d.BlobberID {
-					continue Preferred // ok
-				}
-			}
-			t.Error("missing preferred blobber in allocation blobbers")
-		}
-	})
-
-	t.Run("no preferred blobbers", func(t *testing.T) {
-
-		var getBlobbersNotExists = func(n int) (bns []string) {
-			bns = make([]string, 0, n)
-			for i := 0; i < n; i++ {
-				bns = append(bns, newClient(0, balances).id)
-			}
-			return
-		}
-
-		var (
-			nar = getAllocRequest()
-			pbl = getBlobbersNotExists(4)
-			err error
-		)
-		nar.PreferredBlobbers = pbl
-		tp += 100
-		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
-		require.Error(t, err) // expected error
-	})
 
 	t.Run("unhealthy preferred blobbers", func(t *testing.T) {
 
@@ -1888,9 +1826,9 @@ func Test_finalize_allocation(t *testing.T) {
 		}
 
 		nar.Expiration += common.Timestamp(tp)
-		nar.PreferredBlobbers = pbl
+
 		_, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, tp, balances)
 		require.Error(t, err) // expected error
 	})
 
-}*/
+}
