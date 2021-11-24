@@ -121,10 +121,14 @@ func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
 	}
 
 	scanner := bufio.NewScanner(f)
+	if !scanner.Scan() {
+		err = errors.New("current K Index and directory index missing")
+		return
+	}
 	curKIndStr := scanner.Text()
-	more := scanner.Scan()
-	if more == false {
-		err = errors.New("Current Directory Index missing")
+
+	if !scanner.Scan() {
+		err = errors.New("current Directory Index missing")
 		return
 	}
 	curDirIndStr := scanner.Text()
