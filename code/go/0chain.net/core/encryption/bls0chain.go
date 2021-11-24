@@ -38,7 +38,6 @@ type BLS0ChainScheme struct {
 	publicKey  []byte
 	pubKey     *bls.PublicKey
 	secKey     *bls.SecretKey
-	g2         *bls.G2
 }
 
 //NewBLS0ChainScheme - create a BLS0ChainScheme object
@@ -159,13 +158,24 @@ func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
 		return err
 	}
 	b0.publicKey = publicKeyBytes
-	pk, err := b0.getPublicKey()
+	pk, err := decodePublicKey(publicKeyBytes)
 	if err != nil {
 		return errors.New("failed to decode public key")
 	}
 	b0.pubKey = pk
-	b0.g2 = bls.CastFromPublicKey(pk)
 	return nil
+}
+
+func newBLS0ChainSchemeFromPublicKey(publicKey []byte) (*BLS0ChainScheme, error) {
+	b0 := &BLS0ChainScheme{}
+	var pubKey bls.PublicKey
+	if err := pubKey.Deserialize(publicKey); err != nil {
+		return nil, err
+	}
+
+	b0.pubKey = &pubKey
+	b0.publicKey = publicKey
+	return b0, nil
 }
 
 // GetPublicKey returns the public key string
@@ -221,12 +231,12 @@ func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
 	return &sign, nil
 }
 
-func (b0 *BLS0ChainScheme) getPublicKey() (*bls.PublicKey, error) {
-	var pk = &bls.PublicKey{}
-	err := pk.Deserialize(b0.publicKey)
-	if err != nil {
+func decodePublicKey(key []byte) (*bls.PublicKey, error) {
+	pk := &bls.PublicKey{}
+	if err := pk.Deserialize(key); err != nil {
 		return nil, err
 	}
+
 	return pk, nil
 }
 
@@ -272,8 +282,10 @@ func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]SignatureScheme, 
 	var lastSecretKey bls.SecretKey
 	lastSecretKey.SetLittleEndian(lastSk.Serialize())
 	lastKey.privateKey = lastSecretKey.GetLittleEndian()
+	lastKey.secKey = &lastSecretKey
 	lastSecretKey.SetLittleEndian(lastKey.privateKey)
-	lastKey.publicKey = lastSecretKey.GetPublicKey().Serialize()
+	lastKey.pubKey = lastSecretKey.GetPublicKey()
+	lastKey.publicKey = lastKey.pubKey.Serialize()
 	splitKeys[numSplits-1] = lastKey
 	return splitKeys, nil
 }
