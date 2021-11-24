@@ -78,6 +78,11 @@ type BlockStateHandler interface {
 	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
+type updateLFMBWithReply struct {
+	block *block.Block
+	reply chan struct{}
+}
+
 /*Chain - data structure that holds the chain data*/
 type Chain struct {
 	datastore.IDField
@@ -94,8 +99,8 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	getLFMB                      chan *block.Block `json:"-"`
-	updateLFMB                   chan *block.Block `json:"-"`
+	getLFMB                      chan *block.Block         `json:"-"`
+	updateLFMB                   chan *updateLFMBWithReply `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
 
@@ -506,7 +511,7 @@ func Provider() datastore.Entity {
 
 	c.getLFBTicket = make(chan *LFBTicket) // should be unbuffered
 	c.getLFMB = make(chan *block.Block)
-	c.updateLFMB = make(chan *block.Block, 100)
+	c.updateLFMB = make(chan *updateLFMBWithReply, 100)
 	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //

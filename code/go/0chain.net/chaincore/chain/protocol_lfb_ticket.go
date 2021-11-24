@@ -400,8 +400,10 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 	for {
 		select {
 		case c.getLFMB <- lfmb:
-		case lfmb = <-c.updateLFMB:
+		case v := <-c.updateLFMB:
+			lfmb = v.block
 			logging.Logger.Debug("update LFMB", zap.Int64("round", lfmb.Round))
+			v.reply <- struct{}{}
 		case <-ctx.Done():
 			return
 		}
@@ -409,8 +411,13 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 }
 
 func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block.Block) {
+	v := &updateLFMBWithReply{
+		block: lfmb.Clone(),
+		reply: make(chan struct{}, 1),
+	}
 	select {
-	case c.updateLFMB <- lfmb.Clone():
+	case c.updateLFMB <- v:
+		<-v.reply
 	case <-ctx.Done():
 		logging.Logger.Debug("update LFMB missed")
 	}
