@@ -116,6 +116,36 @@ func (edb *EventDb) updateBlobber(data []byte) error {
 	return result.Error
 }
 
+func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
+	updates := dbs.DbUpdates{
+		Id: blobber.BlobberID,
+		Updates: map[string]interface{}{
+			"base_url":                  blobber.BaseURL,
+			"latitude":                  blobber.Latitude,
+			"longitude":                 blobber.Longitude,
+			"read_price":                blobber.ReadPrice,
+			"write_price":               blobber.WritePrice,
+			"min_lock_demand":           blobber.MinLockDemand,
+			"max_offer_duration":        blobber.MaxOfferDuration,
+			"challenge_completion_time": blobber.ChallengeCompletionTime,
+			"capacity":                  blobber.Capacity,
+			"used":                      blobber.Used,
+			"last_health_check":         blobber.LastHealthCheck,
+			"delegate_wallet":           blobber.DelegateWallet,
+			"min_stake":                 blobber.MaxStake,
+			"max_stake":                 blobber.MaxStake,
+			"num_delegates":             blobber.NumDelegates,
+			"service_charge":            blobber.ServiceCharge,
+		},
+	}
+
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("blobber_id = ?", updates.Id).
+		Updates(updates.Updates)
+	return result.Error
+}
+
 func (edb *EventDb) addBlobber(data []byte) error {
 	var blobber Blobber
 	err := json.Unmarshal(data, &blobber)
@@ -128,39 +158,9 @@ func (edb *EventDb) addBlobber(data []byte) error {
 		return err
 	}
 	if exists {
-		return fmt.Errorf("blobber %v already in event databse", blobber.BlobberID)
+		return edb.overwriteBlobber(blobber)
 	}
 
 	result := edb.Store.Get().Create(&blobber)
 	return result.Error
 }
-
-/*
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- */

@@ -54,7 +54,7 @@ type StateContextI interface {
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
-	EmitEvent(event.EventType, event.EventTag, string)
+	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
@@ -177,7 +177,7 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, data string) {
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
 	sc.events = append(sc.events, event.Event{
@@ -185,6 +185,7 @@ func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag,
 		TxHash:      sc.txn.Hash,
 		Type:        int(eventType),
 		Tag:         int(tag),
+		Index:       index,
 		Data:        data,
 	})
 }

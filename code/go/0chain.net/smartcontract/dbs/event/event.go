@@ -16,7 +16,7 @@ type Event struct {
 	TxHash      string `json:"tx_hash" gorm:"index:idx_event"`
 	Type        int    `json:"type" gorm:"index:idx_event"`
 	Tag         int    `json:"tag" gorm:"index:idx_event"`
-	Index       int    `json:"index" gorm:"index:idx_event"`
+	Index       string `json:"index" gorm:"index:idx_event"`
 	Data        string `json:"data"`
 }
 

@@ -20,6 +20,7 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
 	type StorageNodeGeolocation struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -164,9 +165,50 @@ func TestBlobbers(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, blobber.BaseURL, update.Updates["base_url"])
 
+	sn2 := StorageNode{
+		ID:      "blobber one",
+		BaseURL: "another base url",
+		Geolocation: StorageNodeGeolocation{
+			Longitude: 91,
+			Latitude:  93,
+		},
+		Terms: Terms{
+			ReadPrice:               state.Balance(97),
+			WritePrice:              state.Balance(101),
+			MinLockDemand:           103.0,
+			MaxOfferDuration:        107 * time.Minute,
+			ChallengeCompletionTime: 113 * time.Minute,
+		},
+		Capacity:        119,
+		Used:            127,
+		LastHealthCheck: common.Timestamp(131),
+		PublicKey:       "public key",
+		StakePoolSettings: stakePoolSettings{
+			DelegateWallet: "delegate wallet",
+			MinStake:       state.Balance(137),
+			MaxStake:       state.Balance(139),
+			NumDelegates:   143,
+			ServiceCharge:  149.0,
+		},
+	}
+	SnBlobber2 := convertSn(sn2)
+	data, err = json.Marshal(&SnBlobber2)
+	require.NoError(t, err)
+	eventOverwrite := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash3",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddBlobber),
+		Data:        string(data),
+	}
+	eventDb.AddEvents([]Event{eventOverwrite})
+	blobber, err = eventDb.GetBlobber(sn.ID)
+	require.NoError(t, err)
+	require.EqualValues(t, blobber.BaseURL, sn2.BaseURL)
+
 	deleteEvent := Event{
 		BlockNumber: 3,
-		TxHash:      "tx hash3",
+		TxHash:      "tx hash4",
 		Type:        int(TypeStats),
 		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,

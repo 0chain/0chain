@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/encryption"
@@ -102,6 +104,7 @@ const (
 	InterestPoolSC = "interestpoolsc."
 	VestingSc      = "vestingsc."
 	Zcn            = "zcn."
+	DbsEvents      = "dbs.Events."
 
 	Fas = "free_allocation_settings."
 
@@ -178,6 +181,16 @@ const (
 	MinBurnAmount      = SmartContract + Zcn + "min_burn_amount"
 	MinStakeAmount     = SmartContract + Zcn + "min_stake_amount"
 	BurnAddress        = SmartContract + Zcn + "burn_address"
+
+	EventDbEnabled         = DbsEvents + "enabled"
+	EventDbName            = DbsEvents + "name"
+	EventDbUser            = DbsEvents + "user"
+	EventDbPassword        = DbsEvents + "password"
+	EventDbHost            = DbsEvents + "host"
+	EventDbPort            = DbsEvents + "port"
+	EventDbMaxIdleConns    = DbsEvents + "max_idle_conns"
+	EventDbOpenConns       = DbsEvents + "max_open_conns"
+	EventDbConnMaxLifetime = DbsEvents + "conn_max_lifetime"
 )
 
 func (s Source) String() string {
@@ -285,4 +298,5 @@ type BenchData struct {
 	PublicKeys  []string
 	PrivateKeys []string
 	Sharders    []string
+	EventDb     *event.EventDb
 }
