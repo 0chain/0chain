@@ -93,6 +93,7 @@ func (fc *FaucetSmartContract) getConfigHandler(
 			Settings[GlobalLimit]:     fmt.Sprintf("%v", float64(faucetConfig.GlobalLimit)/1e10),
 			Settings[IndividualReset]: fmt.Sprintf("%v", faucetConfig.IndividualReset),
 			Settings[GlobalReset]:     fmt.Sprintf("%v", faucetConfig.GlobalReset),
+			Settings[OwnerId]:         fmt.Sprintf("%v", faucetConfig.OwnerId),
 		},
 	}, nil
 }

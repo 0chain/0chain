@@ -17,6 +17,7 @@ const (
 	GlobalLimit
 	IndividualReset
 	GlobalReset
+	OwnerId
 )
 
 var (
@@ -27,6 +28,7 @@ var (
 		"global_limit",
 		"individual_reset",
 		"global_rest",
+		"owner_id",
 	}
 )
 

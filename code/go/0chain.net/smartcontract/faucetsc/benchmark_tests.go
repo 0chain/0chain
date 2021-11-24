@@ -79,6 +79,7 @@ func BenchmarkTests(
 					Settings[GlobalLimit]:     "5",
 					Settings[IndividualReset]: "7s",
 					Settings[GlobalReset]:     "11m",
+					Settings[OwnerId]:         owner,
 				},
 			}).Encode(),
 		},
