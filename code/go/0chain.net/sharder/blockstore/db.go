@@ -167,8 +167,8 @@ func GetBlockWhereRecord(hash string) (*BlockWhereRecord, error) {
 }
 
 //Delete metadata
-func DeleteBlockWhereRecord(hash string) {
-	bwrDB.Update(func(t *bbolt.Tx) error {
+func DeleteBlockWhereRecord(hash string) error {
+	return bwrDB.Update(func(t *bbolt.Tx) error {
 		bkt := t.Bucket([]byte(BlockWhereBucket))
 		if bkt == nil {
 			return nil
