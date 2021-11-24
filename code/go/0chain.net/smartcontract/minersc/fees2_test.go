@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -15,14 +14,18 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"github.com/rcrowley/go-metrics"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	blockHash           = datastore.Key("myHash")
-	minerId             = datastore.Key("myMiner")
+	blockHash = datastore.Key("myHash")
+	//minerId   = datastore.Key("myMiner")
+	//minerId = datastore.Key("3f9028edfcc1f1a09c71139dadedbb25565389b8df13ba011a9a325dd42a335a")
+	signatureSchemeType = encryption.SignatureSchemeEd25519
+	minerPk             = datastore.Key("25206bf74fb1afa8045acd269ef76890d8a1e34d89eb681c042ac58dbc080e30")
 	selfId              = datastore.Key("mySelfId")
 	sharderId           = "sharder"
 	delegateId          = "delegate"
@@ -32,6 +35,14 @@ const (
 	errPayFee           = "pay_fee"
 	errJumpedBackInTime = "jumped back in time"
 )
+
+var sharderPKs = []datastore.Key{
+	"76b77d4efdaa2320244a86d864a5fbd35eecd1bb21dd062f083187ed6b9e14a1",
+	"a9fa275bca2d8ee06d3f5de6f0a1900d5e4ee13f48e08cec17273031fc154cbc",
+	"c7ecdf1a8d16717d2cf345845bf6c5effb26430087c8c7dbf9be7eddd6e9db63",
+	"a107c2a8ee0f60806ba53f77a94641c6a0782054e371c7a86dd8272ccae12566",
+	"53af72f0fcdc1c7f1beb6091d487835c723351846e9aaf4a72a788edd10b72d1",
+}
 
 type mockScYaml struct {
 	startRound          int64
@@ -198,6 +209,30 @@ func TestPayFees(t *testing.T) {
 }
 
 func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64, runtime runtimeValues) error {
+	minersPool := node.NewPool(node.NodeTypeMiner)
+	shardersPool := node.NewPool(node.NodeTypeSharder)
+
+	minerNode := node.Provider()
+	minerNode.Type = node.NodeTypeMiner
+	minerNode.PublicKey = minerPk
+	minerNode.SetSignatureSchemeType(signatureSchemeType)
+	minersPool.AddNode(minerNode)
+	minerID := minerNode.ID
+
+	var numberOfSharders = len(sharderStakes)
+	sharderIDs := make([]string, numberOfSharders)
+	for i := 0; i < numberOfSharders; i++ {
+		sharderNode := node.Provider()
+		sharderNode.Type = node.NodeTypeSharder
+		sharderNode.PublicKey = sharderPKs[i]
+		sharderNode.SetSignatureSchemeType(signatureSchemeType)
+		shardersPool.AddNode(sharderNode)
+	}
+
+	for i, s := range shardersPool.Nodes {
+		sharderIDs[i] = s.ID
+	}
+
 	var f = formulae{
 		zChain:           zChainYaml,
 		sc:               scYaml,
@@ -206,7 +241,6 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		sharderDelegates: sharderStakes,
 	}
 
-	var numberOfSharders = len(sharderStakes)
 	var globalNode = &GlobalNode{
 		//ViewChange:           runtime.nextViewChange,
 		LastRound:            runtime.lastRound,
@@ -227,7 +261,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	msc.SmartContractExecutionStats["feesPaid"] = nil
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.NilCounter{}
 	var txn = &transaction.Transaction{
-		ClientID:   minerId,
+		ClientID:   minerID,
 		ToClientID: minerScId,
 	}
 	var ctx = &mockStateContext{
@@ -244,7 +278,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		),
 		block: &block.Block{
 			UnverifiedBlockBody: block.UnverifiedBlockBody{
-				MinerID: minerId,
+				MinerID: minerID,
 				Round:   runtime.blockRound,
 				Txns:    []*transaction.Transaction{},
 			},
@@ -253,26 +287,17 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			},
 			PrevBlock: &block.Block{},
 		},
-		sharders: []string{},
+		sharders: sharderIDs,
 		store:    make(map[datastore.Key]util.Serializable),
 		LastestFinalizedMagicBlock: &block.Block{
 			MagicBlock: &block.MagicBlock{
-				Miners: &node.Pool{
-					Nodes:    make([]*node.Node, 1),
-					NodesMap: make(map[string]*node.Node),
-				},
-				Sharders: &node.Pool{
-					Nodes:    make([]*node.Node, numberOfSharders),
-					NodesMap: make(map[string]*node.Node),
-				},
+				Miners:   minersPool,
+				Sharders: shardersPool,
 			},
 		},
 	}
 	for _, fee := range runtime.fees {
 		ctx.block.Txns = append(ctx.block.Txns, &transaction.Transaction{Fee: fee})
-	}
-	for i := 0; i < numberOfSharders; i++ {
-		ctx.sharders = append(ctx.sharders, sharderId+" "+strconv.Itoa(i))
 	}
 	var phaseNode = &PhaseNode{
 		Phase:      runtime.phase,
@@ -292,10 +317,10 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 
 	var miner = &MinerNode{
 		SimpleNode: &SimpleNode{
-			ID:             minerId,
+			ID:             minerID,
 			TotalStaked:    100,
 			ServiceCharge:  zChainYaml.ServiceCharge,
-			DelegateWallet: datastore.Key(minerId),
+			DelegateWallet: minerID,
 		},
 		Active: make(map[string]*sci.DelegatePool),
 	}
@@ -306,14 +331,14 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	err = updateMinersList(ctx, allMiners)
 	require.NoError(t, err)
 
-	var sharders = []*MinerNode{}
+	var sharders []*MinerNode
 	for i := 0; i < numberOfSharders; i++ {
 		sharders = append(sharders, &MinerNode{
 			SimpleNode: &SimpleNode{
-				ID:             datastore.Key(sharderId + " " + strconv.Itoa(i)),
+				ID:             sharderIDs[i],
 				TotalStaked:    100,
 				ServiceCharge:  zChainYaml.ServiceCharge,
-				DelegateWallet: datastore.Key(sharderId + " " + strconv.Itoa(i)),
+				DelegateWallet: datastore.Key(sharderIDs[i]),
 			},
 			Active: make(map[string]*sci.DelegatePool),
 		})
@@ -325,17 +350,12 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	for i := 0; i < numberOfSharders; i++ {
 		_, err = ctx.InsertTrieNode(sharders[i].GetKey(), sharders[i])
 		require.NoError(t, err)
-		ctx.LastestFinalizedMagicBlock.Sharders.Nodes = append(ctx.LastestFinalizedMagicBlock.Sharders.Nodes, &node.Node{})
-		ctx.LastestFinalizedMagicBlock.Sharders.NodesMap[sharders[i].ID] = &node.Node{}
 	}
 	var allSharders = &MinerNodes{
 		Nodes: sharders,
 	}
 	err = updateAllShardersList(ctx, allSharders)
 	require.NoError(t, err)
-
-	ctx.LastestFinalizedMagicBlock.Miners.Nodes = []*node.Node{{}}
-	ctx.LastestFinalizedMagicBlock.Miners.NodesMap[miner.ID] = &node.Node{}
 
 	// Add information only relevant to view change rounds
 	config.DevConfiguration.ViewChange = zChainYaml.viewChange

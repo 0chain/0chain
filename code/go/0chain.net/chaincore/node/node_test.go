@@ -14,11 +14,13 @@ import (
 	"0chain.net/core/memorystore"
 )
 
-var Miners = NewPool(NodeTypeMiner)
+var Miners *Pool
 
 func init() {
 	logging.InitLogging("development")
+	Miners = NewPool(NodeTypeMiner)
 	createMiners(Miners)
+
 }
 
 func createMiners(np *Pool) {
@@ -28,7 +30,7 @@ func createMiners(np *Pool) {
 	if err != nil {
 		panic(err)
 	}
-	sd.SetPublicKey(sigScheme1.GetPublicKey())
+	sd.SetSignatureScheme(sigScheme1)
 	np.AddNode(&sd)
 
 	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
@@ -37,7 +39,7 @@ func createMiners(np *Pool) {
 	if err != nil {
 		panic(err)
 	}
-	sb.SetPublicKey(sigScheme2.GetPublicKey())
+	sb.SetSignatureScheme(sigScheme2)
 	np.AddNode(&sb)
 
 	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
@@ -46,7 +48,7 @@ func createMiners(np *Pool) {
 	if err != nil {
 		panic(err)
 	}
-	ns.SetPublicKey(sigScheme3.GetPublicKey())
+	ns.SetSignatureScheme(sigScheme3)
 	np.AddNode(&ns)
 
 	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
@@ -55,7 +57,7 @@ func createMiners(np *Pool) {
 	if err != nil {
 		panic(err)
 	}
-	nr.SetPublicKey(sigScheme4.GetPublicKey())
+	nr.SetSignatureScheme(sigScheme4)
 	np.AddNode(&nr)
 
 	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
@@ -64,17 +66,12 @@ func createMiners(np *Pool) {
 	if err != nil {
 		panic(err)
 	}
-	gg.SetPublicKey(sigScheme5.GetPublicKey())
+	gg.SetSignatureScheme(sigScheme5)
 	np.AddNode(&gg)
-	np.ComputeProperties()
 }
 
 func TestNodeSetup(t *testing.T) {
 	Miners.Print(bytes.NewBuffer(nil))
-}
-
-func TestNodeGetRandomNodes(t *testing.T) {
-	Miners.GetRandomNodes(2)
 }
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
@@ -88,17 +85,36 @@ func TestNode2NodeCommunication(t *testing.T) {
 		panic(err)
 	}
 	entity := client.Provider().(*client.Client)
-	entity.SetPublicKey(sigScheme.GetPublicKey())
+	entity.SetSignatureScheme(sigScheme)
 
-	n1 := &Node{Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
-	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
-	n2 := &Node{Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
-	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
-	n3 := &Node{Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
-	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+	n1 := Provider()
+	n1.Type = NodeTypeMiner
+	n1.Port = 7071
+	n1.Status = NodeStatusActive
+	s1 := encryption.NewED25519Scheme()
+	s1.GenerateKeys()
+	n1.SetSignatureScheme(s1)
+
+	n2 := Provider()
+	n2.Type = NodeTypeMiner
+	n2.Port = 7072
+	n2.Status = NodeStatusActive
+	s2 := encryption.NewED25519Scheme()
+	s2.GenerateKeys()
+	n2.SetSignatureScheme(s2)
+
+	n3 := Provider()
+	n3.Type = NodeTypeMiner
+	n3.Port = 7073
+	n3.Status = NodeStatusActive
+	s3 := encryption.NewED25519Scheme()
+	s3.GenerateKeys()
+	n3.SetSignatureScheme(s3)
+	//n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
 
 	Self = &SelfNode{}
 	Self.Node = n1
+	Self.SetSignatureScheme(s1)
 	// Self.privateKey = "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	np := NewPool(NodeTypeMiner)
 	np.AddNode(n1)
@@ -119,14 +135,9 @@ func TestPoolScorer(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
-		publicKey := sigScheme.GetPublicKey()
-		nd.SetPublicKey(publicKey)
-		if err := nd.SetID(nd.GetKey()); err != nil {
-			t.Fatal(err)
-		}
+		nd.SetSignatureScheme(sigScheme)
 		sharders.AddNode(&nd)
 	}
-	sharders.ComputeProperties()
 	hashes := []string{
 		"fb5a64691303a34515d547ea972bfadad10f4a287bba6c434a064b6bd42baee0",
 		"73b64d8e25c570d6a537b6b2d3023a3884468487c11e53886c3b13c87a9d4892",

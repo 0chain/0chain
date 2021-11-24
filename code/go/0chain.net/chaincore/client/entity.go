@@ -6,19 +6,19 @@ import (
 	"errors"
 	"time"
 
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
+	"github.com/herumi/bls/ffi/go/bls"
 )
 
-var clientSignatureScheme string
+var defaultClientSignatureScheme = encryption.SignatureSchemeBls0chain
 
 // SetClientSignatureScheme - set the signature scheme to be used by the client
 func SetClientSignatureScheme(scheme string) {
-	clientSignatureScheme = scheme
+	defaultClientSignatureScheme = scheme
 }
 
 var cacher cache.Cache
@@ -33,14 +33,24 @@ type Client struct {
 	datastore.IDField               `yaml:",inline"`
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string                     `yaml:"public_key" json:"public_key"`
-	PublicKeyBytes []byte                     `json:"-" msgpack:"-"`
+	PublicKey      string `yaml:"public_key" json:"public_key"`
+	PublicKeyBytes []byte `json:"-" msgpack:"-"`
+	sigSchemeType  string
 	SigScheme      encryption.SignatureScheme `json:"-" msgpack:"-"`
 }
 
 // NewClient - create a new client object
-func NewClient() *Client {
-	return datastore.GetEntityMetadata("client").Instance().(*Client)
+func NewClient(opts ...Option) *Client {
+	cli := datastore.GetEntityMetadata("client").Instance().(*Client)
+	for _, opt := range opts {
+		opt(cli)
+	}
+
+	if cli.sigSchemeType == "" {
+		cli.sigSchemeType = defaultClientSignatureScheme
+	}
+
+	return cli
 }
 
 // Clone returns a clone of the Client.
@@ -53,6 +63,7 @@ func (c *Client) Clone() *Client {
 		IDField:           c.IDField,
 		VersionField:      c.VersionField,
 		CreationDateField: c.CreationDateField,
+		sigSchemeType:     c.sigSchemeType,
 		CollectionMemberField: datastore.CollectionMemberField{
 			CollectionScore: c.CollectionMemberField.CollectionScore,
 		},
@@ -119,6 +130,7 @@ func (c *Client) GetSignatureScheme() encryption.SignatureScheme {
 func Provider() datastore.Entity {
 	c := &Client{}
 	c.Version = "1.0"
+	c.sigSchemeType = defaultClientSignatureScheme
 	c.InitializeCreationDate()
 	c.EntityCollection = cliEntityCollection
 	return c
@@ -140,11 +152,34 @@ func (c *Client) computePublicKeyBytes() {
 func (c *Client) SetPublicKey(key string) {
 	c.PublicKey = key
 	c.computePublicKeyBytes()
-	var ss = encryption.GetSignatureScheme(clientSignatureScheme)
+	sigSchemeType := c.sigSchemeType
+	if sigSchemeType == "" {
+		sigSchemeType = defaultClientSignatureScheme
+	}
+
+	var ss = encryption.GetSignatureScheme(sigSchemeType)
 	if err := ss.SetPublicKey(c.PublicKey); err != nil {
 		panic(err)
 	}
 	c.SigScheme = ss
+}
+
+// SetSignatureScheme sets the signature scheme
+func (c *Client) SetSignatureScheme(sig encryption.SignatureScheme) {
+	c.PublicKey = sig.GetPublicKey()
+	c.computePublicKeyBytes()
+	c.SigScheme = sig
+	switch sig.(type) {
+	case *encryption.ED25519Scheme:
+		c.sigSchemeType = encryption.SignatureSchemeEd25519
+	case *encryption.BLS0ChainScheme:
+		c.sigSchemeType = encryption.SignatureSchemeBls0chain
+	}
+}
+
+// SetSignatureSchemeType sets the signature scheme type
+func (c *Client) SetSignatureSchemeType(v string) {
+	c.sigSchemeType = v
 }
 
 // GetBLSPublicKey returns the *bls.PublicKey
@@ -277,3 +312,14 @@ func GetIDFromPublicKey(pubkey string) (string, error) {
 }
 
 var cliEntityCollection *datastore.EntityCollection
+
+// Option represents the optional parameters type for creating
+// a client instance
+type Option func(opt *Client)
+
+// SignatureScheme is the option for setting client's signature scheme name
+func SignatureScheme(schemeType string) Option {
+	return func(opt *Client) {
+		opt.sigSchemeType = schemeType
+	}
+}

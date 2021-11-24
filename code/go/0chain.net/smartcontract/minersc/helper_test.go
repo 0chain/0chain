@@ -252,13 +252,17 @@ func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
 	for _, mn := range miners {
 		var n = node.Provider()
 		n.SetID(mn.id)
+		n.PublicKey = mn.pk
 		n.Type = node.NodeTypeMiner
+		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
 		mb.Miners.AddNode(n)
 	}
 	for _, sh := range sharders {
 		var n = node.Provider()
 		n.SetID(sh.id)
+		n.PublicKey = sh.pk
 		n.Type = node.NodeTypeSharder
+		n.SetSignatureSchemeType(encryption.SignatureSchemeBls0chain)
 		mb.Sharders.AddNode(n)
 	}
 

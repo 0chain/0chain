@@ -162,7 +162,7 @@ func TestToMsgpack(t *testing.T) {
 	entity := block.NewBlock("", 1)
 	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if err := encoder.Encode(entity); err != nil {
 		t.Fatal(err)
 	}
@@ -393,7 +393,7 @@ func TestFromMsgpack(t *testing.T) {
 	c := CodecTestStruct{Numbers: []int{1, 2, 3}}
 	buf := bytes.Buffer{}
 	encoder := msgpack.NewEncoder(&buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("msgpack")
 	if err := encoder.Encode(&c); err != nil {
 		t.Fatal(err)
 	}

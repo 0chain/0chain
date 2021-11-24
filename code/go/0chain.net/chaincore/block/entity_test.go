@@ -125,6 +125,12 @@ func copyTxn(txn *transaction.Transaction) *transaction.Transaction {
 }
 
 func makeTestNode(pbK string) (*node.Node, error) {
+	if pbK == "" {
+		ss := encryption.NewBLS0ChainScheme()
+		ss.GenerateKeys()
+		pbK = ss.GetPublicKey()
+	}
+
 	nc := map[interface{}]interface{}{
 		"type":       int8(1),
 		"public_ip":  "public ip",

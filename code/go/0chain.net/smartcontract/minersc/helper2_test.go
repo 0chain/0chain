@@ -153,67 +153,81 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 		sharderDelegatesInt[i] = make([]bool, len(f.sharderDelegates[i]))
 	}
 
+	isMinerID := func(id string) (bool, int) {
+		return id == ctx.GetBlock().MinerID, 0
+	}
+
+	isSharderID := func(id string) (bool, int) {
+		sharderIDs := ctx.GetBlockSharders(nil)
+		for i, s := range sharderIDs {
+			if s == id {
+				return true, i
+			}
+		}
+		return false, 0
+	}
+
 	for _, mint := range ctx.GetMints() {
 		require.EqualValues(t, minerScId, mint.Minter)
-		var wallet = strings.Split(mint.ToClientID, " ")
-		switch wallet[0] {
-		case sharderId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				require.True(t, index/maxDelegates < len(f.sharderDelegates))
-				require.InDelta(t, f.sharderReward(t, EtBlockReward, index), int64(mint.Amount), errDelta)
-				sharderBr[index] = true
-				break
-			}
-		case minerId:
+		isMiner, _ := isMinerID(mint.ToClientID)
+		if isMiner {
 			require.InDelta(t, f.minerReward(EtBlockReward), int64(mint.Amount), errDelta)
 			minerBr = true
-			break
+			continue
+		}
+
+		isSharder, index := isSharderID(mint.ToClientID)
+		if isSharder {
+			require.True(t, index/maxDelegates < len(f.sharderDelegates))
+			require.InDelta(t, f.sharderReward(t, EtBlockReward, index), int64(mint.Amount), errDelta)
+			sharderBr[index] = true
+			continue
+		}
+
+		var wallet = strings.Split(mint.ToClientID, " ")
+		switch wallet[0] {
 		case delegateId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				var node = index / maxDelegates
-				var delegate = index % maxDelegates
-				require.True(t, node < len(f.sharderDelegates)+1)
-				if node == 0 {
-					var blockReward = f.minerDelegateReward(t, EtBlockReward, delegate)
-					require.True(t, delegate < len(f.minerDelegates))
-					if viewChangeRound {
-						var interest = f.minerDelegateInterest(delegate)
-						if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
-							require.False(t, minerDelegateInt[delegate])
-							minerDelegateInt[delegate] = true
-						} else {
-							require.False(t, minerDelegateBr[delegate])
-							require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-							minerDelegateBr[delegate] = true
-						}
+			index, err := strconv.Atoi(wallet[1])
+			require.NoError(t, err)
+			var node = index / maxDelegates
+			var delegate = index % maxDelegates
+			require.True(t, node < len(f.sharderDelegates)+1)
+			if node == 0 {
+				var blockReward = f.minerDelegateReward(t, EtBlockReward, delegate)
+				require.True(t, delegate < len(f.minerDelegates))
+				if viewChangeRound {
+					var interest = f.minerDelegateInterest(delegate)
+					if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
+						require.False(t, minerDelegateInt[delegate])
+						minerDelegateInt[delegate] = true
 					} else {
 						require.False(t, minerDelegateBr[delegate])
 						require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
 						minerDelegateBr[delegate] = true
 					}
 				} else {
-					node--
-					var blockReward = f.sharderDelegateReward(t, EtBlockReward, delegate, node)
-					if viewChangeRound {
-						var interest = f.sharderDelegateInterest(delegate, node)
-						if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
-							require.False(t, sharderDelegatesInt[node][delegate])
-							sharderDelegatesInt[node][delegate] = true
-						} else {
-							require.False(t, sharderDelegatesBr[node][delegate])
-							require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
-							sharderDelegatesBr[node][delegate] = true
-						}
+					require.False(t, minerDelegateBr[delegate])
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					minerDelegateBr[delegate] = true
+				}
+			} else {
+				node--
+				var blockReward = f.sharderDelegateReward(t, EtBlockReward, delegate, node)
+				if viewChangeRound {
+					var interest = f.sharderDelegateInterest(delegate, node)
+					if errDelta > math.Abs(float64(interest)-float64(mint.Amount)) {
+						require.False(t, sharderDelegatesInt[node][delegate])
+						sharderDelegatesInt[node][delegate] = true
 					} else {
 						require.False(t, sharderDelegatesBr[node][delegate])
-						require.True(t, delegate < len(f.sharderDelegates[node]))
 						require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
 						sharderDelegatesBr[node][delegate] = true
 					}
+				} else {
+					require.False(t, sharderDelegatesBr[node][delegate])
+					require.True(t, delegate < len(f.sharderDelegates[node]))
+					require.InDelta(t, blockReward, int64(mint.Amount), errDelta)
+					sharderDelegatesBr[node][delegate] = true
 				}
 			}
 		default:
@@ -223,22 +237,22 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 
 	for _, transfer := range ctx.GetTransfers() {
 		require.EqualValues(t, minerScId, transfer.ClientID)
-		var wallet = strings.Split(transfer.ToClientID, " ")
-		switch wallet[0] {
-		case sharderId:
-			{
-				index, err := strconv.Atoi(wallet[1])
-				require.NoError(t, err)
-				require.True(t, index/maxDelegates < len(f.sharderDelegates))
-				require.False(t, sharderFees[index])
-				require.InDelta(t, f.sharderReward(t, EtFees, index), int64(transfer.Amount), errDelta)
-				sharderFees[index] = true
-				break
-			}
-		case minerId:
+		if isMiner, _ := isMinerID(transfer.ToClientID); isMiner {
 			require.InDelta(t, f.minerReward(EtFees), int64(transfer.Amount), errDelta)
 			minerFees = true
-			break
+			continue
+		}
+
+		if isSharder, index := isSharderID(transfer.ToClientID); isSharder {
+			require.True(t, index/maxDelegates < len(f.sharderDelegates))
+			require.False(t, sharderFees[index])
+			require.InDelta(t, f.sharderReward(t, EtFees, index), int64(transfer.Amount), errDelta)
+			sharderFees[index] = true
+			continue
+		}
+
+		var wallet = strings.Split(transfer.ToClientID, " ")
+		switch wallet[0] {
 		case delegateId:
 			{
 				index, err := strconv.Atoi(wallet[1])

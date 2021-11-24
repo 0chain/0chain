@@ -1,14 +1,11 @@
 package blockstore
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/minio/minio-go"
 	"github.com/stretchr/testify/assert"
@@ -80,14 +77,12 @@ func (mock minioClientMock) DeleteLocal() bool {
 }
 
 func makeTestFSBlockStore(t *testing.T) (*FSBlockStore, func()) {
-	currDir, err := os.Getwd()
+	tmpDir, err := os.MkdirTemp("", "store")
 	require.NoError(t, err)
-	randUniqFolder := fmt.Sprintf("%d", time.Now().Unix())
 
-	storeDir := filepath.Join(currDir, "tmp", randUniqFolder)
-	bs := NewFSBlockStore(storeDir, &minioClientMock{})
+	bs := NewFSBlockStore(tmpDir, &minioClientMock{})
 	cleanUp := func() {
-		err := os.RemoveAll(filepath.Join(storeDir))
+		err := os.RemoveAll(filepath.Join(tmpDir))
 		require.NoError(t, err)
 	}
 
@@ -704,8 +699,6 @@ func TestFSBlockStore_CloudObjectExists(t *testing.T) {
 func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 	t.Parallel()
 
-	bs, cleanUp := makeTestFSBlockStore(t)
-	defer cleanUp()
 	b := block.Block{
 		HashIDField: datastore.HashIDField{
 			Hash: encryption.Hash("bs data"),
@@ -719,58 +712,54 @@ func TestFSBlockStore_ReadWithBlockSummary(t *testing.T) {
 	}
 	b.Round = 0
 
-	type fields struct {
-		RootDirectory         string
-		blockMetadataProvider datastore.EntityMetadata
-		Minio                 MinioClient
-	}
 	type args struct {
 		bs *block.BlockSummary
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		want    *block.Block
 		wantErr bool
 	}{
 		{
-			name: "Test_FSBlockStore_ReadWithBlockSummary_ERR",
-			fields: fields{
-				RootDirectory:         bs.RootDirectory,
-				blockMetadataProvider: bs.blockMetadataProvider,
-				Minio:                 bs.Minio,
-			},
-			want: &b,
-			args: args{b.GetSummary()},
-			//wantErr: true,
+			name:    "Test_FSBlockStore_ReadWithBlockSummary_OK",
+			want:    &b,
+			args:    args{b.GetSummary()},
+			wantErr: false,
+		},
+		{
+			name:    "Test_FSBlockStore_ReadWithBlockSummary_ERR",
+			want:    &b,
+			args:    args{b.GetSummary()},
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			bs, cleanUp := makeTestFSBlockStore(t)
+			defer cleanUp()
 
 			fbs := &FSBlockStore{
-				RootDirectory:         tt.fields.RootDirectory,
-				blockMetadataProvider: tt.fields.blockMetadataProvider,
-				Minio:                 tt.fields.Minio,
+				RootDirectory:         bs.RootDirectory,
+				blockMetadataProvider: bs.blockMetadataProvider,
+				Minio:                 bs.Minio,
 			}
-			err := fbs.Write(&b)
-			require.NoError(t, err)
-			got, err := fbs.ReadWithBlockSummary(tt.args.bs)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ReadWithBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
+
+			if !tt.wantErr {
+				err := fbs.Write(&b)
+				require.NoError(t, err, err)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ReadWithBlockSummary() got = %v, want %v", got, tt.want)
-			}
-			v, err := json.MarshalIndent(got, "", "\t")
-			require.NoError(t, err)
-			fmt.Println(string(v))
 
-			//got, err := fbs.ReadWithBlockSummary()
+			got, err := fbs.ReadWithBlockSummary(tt.args.bs)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
