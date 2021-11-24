@@ -453,74 +453,77 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		buf := bytes.Buffer{}
 		buf.ReadFrom(r.Body)
-		defer r.Body.Close()
-		go common.Respond(w, r, nil, nil)
+		r.Body.Close()
 
-		vctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
-		defer cancel()
-		if err := n2nVerifyRequestsWithContext.Run(vctx, func() error {
-			if !validateSendRequest(sender, r) {
-				return errors.New("failed to validate request")
-			}
-			return nil
-		}); err != nil {
-			logging.N2n.Error("message received - failed to validate request",
-				zap.String("from", nodeID),
-				zap.Int("to", Self.Underlying().SetIndex),
-				zap.String("handler", r.RequestURI),
-				zap.Error(err))
-			return
-		}
-
-		entityName := r.Header.Get(HeaderRequestEntityName)
-		entityID := r.Header.Get(HeaderRequestEntityID)
-		entityMetadata := datastore.GetEntityMetadata(entityName)
-		if options != nil && options.MessageFilter != nil {
-			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
+		go func() {
+			vctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if err := n2nVerifyRequestsWithContext.Run(vctx, func() error {
+				if !validateSendRequest(sender, r) {
+					return errors.New("failed to validate request")
+				}
+				return nil
+			}); err != nil {
+				logging.N2n.Error("message received - failed to validate request",
+					zap.String("from", nodeID),
+					zap.Int("to", Self.Underlying().SetIndex),
+					zap.String("handler", r.RequestURI),
+					zap.Error(err))
 				return
 			}
-		}
-		ctx := context.Background()
-		initialNodeID := r.Header.Get(HeaderInitialNodeID)
-		if initialNodeID != "" {
-			initSender := GetNode(initialNodeID)
-			if initSender == nil {
+
+			entityName := r.Header.Get(HeaderRequestEntityName)
+			entityID := r.Header.Get(HeaderRequestEntityID)
+			entityMetadata := datastore.GetEntityMetadata(entityName)
+			if options != nil && options.MessageFilter != nil {
+				if !options.MessageFilter.AcceptMessage(entityName, entityID) {
+					return
+				}
+			}
+			ctx := context.Background()
+			initialNodeID := r.Header.Get(HeaderInitialNodeID)
+			if initialNodeID != "" {
+				initSender := GetNode(initialNodeID)
+				if initSender == nil {
+					return
+				}
+				ctx = WithNode(ctx, initSender)
+			} else {
+				ctx = WithNode(ctx, sender)
+			}
+
+			if r.Header.Get(HeaderRequestToPull) == "true" {
+				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
+				sender.AddReceived(1)
 				return
 			}
-			ctx = WithNode(ctx, initSender)
-		} else {
-			ctx = WithNode(ctx, sender)
-		}
 
-		if r.Header.Get(HeaderRequestToPull) == "true" {
-			go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
+			entity, err := getRequestEntity(r, &buf, entityMetadata)
+			if err != nil {
+				return
+			}
+			if entity.GetKey() != entityID {
+				logging.N2n.Error("message received - entity id doesn't match with signed id",
+					zap.Int("from", sender.SetIndex),
+					zap.Int("to", Self.SetIndex),
+					zap.String("handler", r.RequestURI),
+					zap.String("entity_id", entityID),
+					zap.String("entity.id", entity.GetKey()))
+				return
+			}
+			start := time.Now()
+			_, err = handler(ctx, entity)
+			duration := time.Since(start)
+			if err != nil {
+				logging.N2n.Error("message received", zap.Int("from", sender.SetIndex),
+					zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+			} else {
+				logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
+					zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+			}
 			sender.AddReceived(1)
-			return
-		}
 
-		entity, err := getRequestEntity(r, &buf, entityMetadata)
-		if err != nil {
-			return
-		}
-		if entity.GetKey() != entityID {
-			logging.N2n.Error("message received - entity id doesn't match with signed id",
-				zap.Int("from", sender.SetIndex),
-				zap.Int("to", Self.SetIndex),
-				zap.String("handler", r.RequestURI),
-				zap.String("entity_id", entityID),
-				zap.String("entity.id", entity.GetKey()))
-			return
-		}
-		start := time.Now()
-		_, err = handler(ctx, entity)
-		duration := time.Since(start)
-		if err != nil {
-			logging.N2n.Error("message received", zap.Int("from", sender.SetIndex),
-				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
-		} else {
-			logging.N2n.Info("message received", zap.Int("from", sender.SetIndex),
-				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
-		}
-		sender.AddReceived(1)
+		}()
+		common.Respond(w, r, "", nil)
 	}
 }
