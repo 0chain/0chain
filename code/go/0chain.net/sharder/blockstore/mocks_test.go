@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/viper"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 type (
