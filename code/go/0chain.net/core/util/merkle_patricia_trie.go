@@ -1009,6 +1009,8 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return errors.New("mpt does not merge changes from its child")
 	}
 
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
 	db, ok := mpt.db.(*LevelNodeDB)
 	if ok {
 		db.version = newLNDB.version
