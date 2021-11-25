@@ -1,7 +1,7 @@
 # TestNet Setup with Docker Containers
 
-
 ## Table of Contents
+
 
 - [Initial Setup](#initial-setup) 
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders) 
