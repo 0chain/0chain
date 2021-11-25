@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
@@ -26,38 +24,14 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	params url.Values,
 	balances cstate.StateContextI,
 ) (resp interface{}, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			logging.Logger.Info("piers GetBlobberHandler panic",
-				zap.Any("blobber", r))
-		}
-	}()
-
 	var blobberID = params.Get("blobber_id")
 	if blobberID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
-	logging.Logger.Info("piers GetBlobberHandler",
-		zap.String("blobber", blobberID))
-
-	bl, err := ssc.getBlobber(blobberID, balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber")
-	}
-
-	logging.Logger.Info("piers getBlobber",
-		zap.Any("old blobber", bl))
-
 	if balances.GetEventDB() == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(
 			err, true, "cannot get event database")
 	}
-
-	logging.Logger.Info("piers getBlobber got event db",
-		zap.Any("event db", balances.GetEventDB()),
-		zap.Any("gorm db", balances.GetEventDB().Get()),
-		zap.String("about to call getBlobber", blobberID),
-	)
 
 	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
 	if err != nil {
@@ -66,10 +40,10 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	}
 
 	sn, err := blobberTableToStorageNode(*blobber)
-
-	logging.Logger.Info("piers GetBlobberHandler rtv",
-		zap.Any("result", sn))
-
+	if err != nil {
+		return nil, common.NewErrorf("cannot parse blobber",
+			"%v", blobberID)
+	}
 	return sn, err
 }
 

@@ -25,39 +25,31 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	err := edb.drop()
-	if err != nil {
+	/*
+		if !edb.Store.Get().Migrator().HasTable(&Event{}) {
+			err := edb.Store.Get().Migrator().CreateTable(
+				&Event{},
+			)
+			if err != nil {
+				return err
+			}
+		}
+
+		if !edb.Store.Get().Migrator().HasTable(&Blobber{}) {
+			err := edb.Store.Get().Migrator().CreateTable(
+				&Blobber{},
+			)
+			if err != nil {
+				return err
+			}
+		}
+	*/
+	if err := edb.Store.Get().AutoMigrate(&Event{}); err != nil {
 		return err
 	}
 
-	if !edb.Store.Get().Migrator().HasTable(&Event{}) {
-		panic("no event table")
-		err := edb.Store.Get().Migrator().CreateTable(
-			&Event{},
-		)
-		if err != nil {
-			return err
-		}
+	if err := edb.Store.Get().AutoMigrate(&Blobber{}); err != nil {
+		return err
 	}
-
-	if !edb.Store.Get().Migrator().HasTable(&Blobber{}) {
-		panic("no event table")
-		err := edb.Store.Get().Migrator().CreateTable(
-			&Blobber{},
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	//err = edb.Store.Get().AutoMigrate(&Event{})
-	if err != nil {
-		return nil
-	}
-
-	//err = edb.Store.Get().AutoMigrate(&Blobber{})
-	if err != nil {
-		return nil
-	}
-	return err
+	return nil
 }
