@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/transaction"
 )
 
-
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	conf *scConfig, blobber *StorageNode, blobbers *StorageNodes,
@@ -44,6 +43,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// update the list
 	blobbers.Nodes.add(blobber)
+	if err := emitAddBlobber(blobber, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
+	}
 
 	// update statistic
 	sc.statIncr(statAddBlobber)

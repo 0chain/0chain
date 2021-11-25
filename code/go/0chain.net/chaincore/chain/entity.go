@@ -224,9 +224,9 @@ func (c *Chain) SetupEventDatabase() error {
 	if err != nil {
 		return err
 	}
-	if err := c.EventDb.AutoMigrate(); err != nil {
-		return err
-	}
+	//if err := c.EventDb.AutoMigrate(); err != nil {
+	//	return err
+	//}
 	return nil
 }
 

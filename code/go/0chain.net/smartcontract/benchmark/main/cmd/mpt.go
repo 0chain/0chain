@@ -72,7 +72,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
-		nil,
+		data.EventDb,
 	)
 }
 

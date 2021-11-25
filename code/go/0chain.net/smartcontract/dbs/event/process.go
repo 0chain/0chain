@@ -27,8 +27,10 @@ const (
 
 func (edb *EventDb) AddEvents(events []Event) {
 	newEvents := edb.removeDuplicate(events)
-	logging.Logger.Info("piers processing events",
-		zap.Any("events", newEvents))
+	if len(events) > 0 {
+		logging.Logger.Info("piers processing events",
+			zap.Any("events", newEvents))
+	}
 
 	edb.addEvents(newEvents)
 	for _, event := range newEvents {

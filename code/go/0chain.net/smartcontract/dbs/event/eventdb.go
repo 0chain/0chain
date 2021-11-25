@@ -30,12 +30,32 @@ func (edb *EventDb) AutoMigrate() error {
 		return err
 	}
 
-	err = edb.Store.Get().AutoMigrate(&Event{})
+	if !edb.Store.Get().Migrator().HasTable(&Event{}) {
+		panic("no event table")
+		err := edb.Store.Get().Migrator().CreateTable(
+			&Event{},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !edb.Store.Get().Migrator().HasTable(&Blobber{}) {
+		panic("no event table")
+		err := edb.Store.Get().Migrator().CreateTable(
+			&Blobber{},
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	//err = edb.Store.Get().AutoMigrate(&Event{})
 	if err != nil {
 		return nil
 	}
 
-	err = edb.Store.Get().AutoMigrate(&Blobber{})
+	//err = edb.Store.Get().AutoMigrate(&Blobber{})
 	if err != nil {
 		return nil
 	}

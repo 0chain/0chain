@@ -2,6 +2,7 @@ package event
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -20,7 +21,35 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
+	type Key string
+	type Size int64
+	type Balance int64
+	type GosdkTerms struct {
+		ReadPrice               Balance       `json:"read_price"`  // tokens / GB
+		WritePrice              Balance       `json:"write_price"` // tokens / GB
+		MinLockDemand           float64       `json:"min_lock_demand"`
+		MaxOfferDuration        time.Duration `json:"max_offer_duration"`
+		ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	}
+	type GosdkStakePoolSettings struct {
+		DelegateWallet string  `json:"delegate_wallet"`
+		MinStake       Balance `json:"min_stake"`
+		MaxStake       Balance `json:"max_stake"`
+		NumDelegates   int     `json:"num_delegates"`
+		// ServiceCharge is blobber service charge.	ServiceCharge float64 `json:"service_charge"`
+	}
+	type goSdkBlobber struct {
+		ID                Key                    `json:"id"`
+		BaseURL           string                 `json:"url"`
+		Terms             GosdkTerms             `json:"terms"`
+		Capacity          Size                   `json:"capacity"`
+		Used              Size                   `json:"used"`
+		LastHealthCheck   common.Timestamp       `json:"last_health_check"`
+		PublicKey         string                 `json:"-"`
+		StakePoolSettings GosdkStakePoolSettings `json:"stake_pool_settings"`
+	}
+
 	type StorageNodeGeolocation struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -138,6 +167,14 @@ func TestBlobbers(t *testing.T) {
 	blobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, blobber.BaseURL, sn.BaseURL)
+
+	data, err = json.Marshal(&blobber)
+	require.NoError(t, err)
+	strData := string(data)
+	fmt.Println("string data", strData)
+	var gBlobber goSdkBlobber
+	err = json.Unmarshal(data, &gBlobber)
+	require.NoError(t, err)
 
 	update := dbs.DbUpdates{
 		Id: sn.ID,

@@ -42,7 +42,7 @@ type Blobber struct {
 
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 	var count int64
-	result := edb.Store.Get().
+	result := edb.Get().
 		Model(&Blobber{}).
 		Where("blobber_id", bl.BlobberID).
 		Count(&count)
@@ -59,6 +59,13 @@ func (bl *Blobber) create(edb *EventDb) error {
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
+	var blobbers []Blobber
+	res := edb.Get().Find(&blobbers)
+	logging.Logger.Info("piers all blobber table",
+		zap.Error(res.Error),
+		zap.Any("blobbers", blobbers),
+	)
+
 	exists, err := (&Blobber{
 		BlobberID: id,
 	}).exists(edb)
@@ -66,6 +73,7 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, err
 	}
 	if !exists {
+		logging.Logger.Info("piers inside GetBlobber after !exists = true")
 		return nil, fmt.Errorf("blobber %v not in event db", id)
 	}
 
@@ -79,9 +87,6 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
 			id, result.Error)
 	}
-	logging.Logger.Info("piers GetBlobber",
-		zap.Any("blobber", blobber),
-	)
 
 	return &blobber, nil
 }
@@ -101,6 +106,7 @@ func (edb *EventDb) updateBlobber(data []byte) error {
 
 	var blobber = Blobber{BlobberID: updates.Id}
 	exists, err := blobber.exists(edb)
+
 	if err != nil {
 		return err
 	}
@@ -154,6 +160,7 @@ func (edb *EventDb) addBlobber(data []byte) error {
 	}
 
 	exists, err := blobber.exists(edb)
+
 	if err != nil {
 		return err
 	}
