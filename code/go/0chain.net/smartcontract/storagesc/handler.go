@@ -30,19 +30,20 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 	}
 	if balances.GetEventDB() == nil {
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(
-			err, true, "cannot get event database")
+			util.ErrValueNotPresent,
+			true,
+			"cannot find event database",
+		)
 	}
 
 	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
 	if err != nil {
-		return nil, common.NewErrorf("cannot find blobber",
-			"%v", blobberID)
+		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
 	}
 
 	sn, err := blobberTableToStorageNode(*blobber)
 	if err != nil {
-		return nil, common.NewErrorf("cannot parse blobber",
-			"%v", blobberID)
+		return nil, common.NewErrorf("get_blobber", "cannot parse blobber %v", blobberID)
 	}
 	return sn, err
 }
