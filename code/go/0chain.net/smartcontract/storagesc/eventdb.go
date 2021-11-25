@@ -81,7 +81,7 @@ func emitUpdateBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	data, err := json.Marshal(&dbs.DbUpdates{
 		Id: sn.ID,
 		Updates: map[string]interface{}{
-			"url":                       sn.BaseURL,
+			"base_url":                  sn.BaseURL,
 			"latitude":                  sn.Geolocation.Latitude,
 			"longitude":                 sn.Geolocation.Longitude,
 			"read_price":                int64(sn.Terms.ReadPrice),
