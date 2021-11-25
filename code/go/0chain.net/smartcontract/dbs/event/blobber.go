@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract/dbs"
 
 	"gorm.io/gorm"
@@ -59,13 +56,6 @@ func (bl *Blobber) create(edb *EventDb) error {
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
-	var blobbers []Blobber
-	res := edb.Get().Find(&blobbers)
-	logging.Logger.Info("piers all blobber table",
-		zap.Error(res.Error),
-		zap.Any("blobbers", blobbers),
-	)
-
 	exists, err := (&Blobber{
 		BlobberID: id,
 	}).exists(edb)
@@ -73,7 +63,6 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 		return nil, err
 	}
 	if !exists {
-		logging.Logger.Info("piers inside GetBlobber after !exists = true")
 		return nil, fmt.Errorf("blobber %v not in event db", id)
 	}
 

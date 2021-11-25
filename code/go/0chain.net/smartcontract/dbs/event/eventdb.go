@@ -25,25 +25,6 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	/*
-		if !edb.Store.Get().Migrator().HasTable(&Event{}) {
-			err := edb.Store.Get().Migrator().CreateTable(
-				&Event{},
-			)
-			if err != nil {
-				return err
-			}
-		}
-
-		if !edb.Store.Get().Migrator().HasTable(&Blobber{}) {
-			err := edb.Store.Get().Migrator().CreateTable(
-				&Blobber{},
-			)
-			if err != nil {
-				return err
-			}
-		}
-	*/
 	if err := edb.Store.Get().AutoMigrate(&Event{}); err != nil {
 		return err
 	}
