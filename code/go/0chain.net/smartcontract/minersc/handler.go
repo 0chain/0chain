@@ -261,5 +261,5 @@ func (msc *MinerSmartContract) configHandler(
 	if err != nil {
 		return nil, common.NewErrInternal(err.Error())
 	}
-	return gn.getConfigMap(), nil
+	return gn.getConfigMap()
 }

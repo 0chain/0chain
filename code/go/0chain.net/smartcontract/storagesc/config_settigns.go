@@ -202,7 +202,7 @@ var (
 	}
 )
 
-func (conf *scConfig) getConfigMap() smartcontract.StringMap {
+func (conf *scConfig) getConfigMap() (smartcontract.StringMap, error) {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
@@ -210,16 +210,16 @@ func (conf *scConfig) getConfigMap() smartcontract.StringMap {
 		if info.configType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
-				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
+				return im, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
 			iSetting = float64(sbSetting) / x10
 		}
 		im.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
-	return im
+	return im, nil
 }
 
-func (conf *scConfig) setInt(key string, change int) {
+func (conf *scConfig) setInt(key string, change int) error {
 	switch Settings[key].setting {
 	case FreeAllocationDataShards:
 		conf.FreeAllocationSettings.DataShards = change
@@ -234,11 +234,13 @@ func (conf *scConfig) setInt(key string, change int) {
 	case MaxDelegates:
 		conf.MaxDelegates = change
 	default:
-		panic("key: " + key + "not implemented as int")
+		return fmt.Errorf("key: %v not implemented as int", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setBalance(key string, change state.Balance) {
+func (conf *scConfig) setBalance(key string, change state.Balance) error {
 	switch Settings[key].setting {
 	case MaxMint:
 		conf.MaxMint = change
@@ -271,11 +273,13 @@ func (conf *scConfig) setBalance(key string, change state.Balance) {
 		}
 		conf.BlockReward.QualifyingStake = change
 	default:
-		panic("key: " + key + "not implemented as balance")
+		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setInt64(key string, change int64) {
+func (conf *scConfig) setInt64(key string, change int64) error {
 	switch Settings[key].setting {
 	case MinAllocSize:
 		conf.MinAllocSize = change
@@ -299,11 +303,13 @@ func (conf *scConfig) setInt64(key string, change int64) {
 	case FreeAllocationSize:
 		conf.FreeAllocationSettings.Size = change
 	default:
-		panic("key: " + key + "not implemented as int64")
+		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
+
+	return nil
 }
 
-func (conf *scConfig) setFloat64(key string, change float64) {
+func (conf *scConfig) setFloat64(key string, change float64) error {
 	switch Settings[key].setting {
 	case StakePoolInterestRate:
 		if conf.StakePool == nil {
@@ -339,11 +345,12 @@ func (conf *scConfig) setFloat64(key string, change float64) {
 		}
 		conf.BlockReward.BlobberUsageWeight = change
 	default:
-		panic("key: " + key + "not implemented as float64")
+		return fmt.Errorf("key: %v not implemented as float64", key)
 	}
+	return nil
 }
 
-func (conf *scConfig) setDuration(key string, change time.Duration) {
+func (conf *scConfig) setDuration(key string, change time.Duration) error {
 	switch Settings[key].setting {
 	case TimeUnit:
 		conf.TimeUnit = change
@@ -383,56 +390,75 @@ func (conf *scConfig) setDuration(key string, change time.Duration) {
 	case FreeAllocationMaxChallengeCompletionTime:
 		conf.FreeAllocationSettings.MaxChallengeCompletionTime = change
 	default:
-		panic("key: " + key + "not implemented as duration")
+		return fmt.Errorf("key: %v not implemented as duration", key)
 	}
+	return nil
 }
 
-func (conf *scConfig) setBoolean(key string, change bool) {
+func (conf *scConfig) setBoolean(key string, change bool) error {
 	switch Settings[key].setting {
 	case ChallengeEnabled:
 		conf.ChallengeEnabled = change
 	case ExposeMpt:
 		conf.ExposeMpt = change
 	default:
-		panic("key: " + key + "not implemented as boolean")
+		return fmt.Errorf("key: %v not implemented as boolean", key)
 	}
+	return nil
 }
 
 func (conf *scConfig) set(key string, change string) error {
-	switch Settings[key].configType {
+	s, ok := Settings[key]
+	if !ok {
+		return fmt.Errorf("unknown key %s, can't set value %v", key, change)
+	}
+
+	switch s.configType {
 	case smartcontract.Int:
 		if value, err := strconv.Atoi(change); err == nil {
-			conf.setInt(key, value)
+			if err := conf.setInt(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setBalance(key, state.Balance(value*x10))
+			if err := conf.setBalance(key, state.Balance(value*x10)); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
 	case smartcontract.Int64:
 		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			conf.setInt64(key, value)
+			if err := conf.setInt64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
 	case smartcontract.Float64:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			conf.setFloat64(key, value)
+			if err := conf.setFloat64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
 	case smartcontract.Duration:
 		if value, err := time.ParseDuration(change); err == nil {
-			conf.setDuration(key, value)
+			if err := conf.setDuration(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to duration: %v", key, change, err)
 		}
 	case smartcontract.Boolean:
 		if value, err := strconv.ParseBool(change); err == nil {
-			conf.setBoolean(key, value)
+			if err := conf.setBoolean(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to boolean: %v", key, change, err)
 		}
