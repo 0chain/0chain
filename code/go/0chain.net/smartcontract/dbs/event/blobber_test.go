@@ -21,7 +21,7 @@ func init() {
 }
 
 func TestBlobbers(t *testing.T) {
-	//t.Skip("only for local debugging, requires local postgresql")
+	t.Skip("only for local debugging, requires local postgresql")
 	type Key string
 	type Size int64
 	type Balance int64
@@ -103,7 +103,6 @@ func TestBlobbers(t *testing.T) {
 
 	}
 
-	//t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
