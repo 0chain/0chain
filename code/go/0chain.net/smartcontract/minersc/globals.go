@@ -523,11 +523,11 @@ func (msc *MinerSmartContract) updateGlobals(
 	}
 
 	if err = globals.update(changes); err != nil {
-		return "", common.NewErrorf("update_settings", "validation: %v", err.Error())
+		return "", common.NewErrorf("update_globals", "validation: %v", err.Error())
 	}
 
 	if err := globals.save(balances); err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_globals", err.Error())
 	}
 
 	return "", nil
