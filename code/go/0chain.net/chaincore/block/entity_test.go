@@ -69,7 +69,7 @@ func copyBlock(b *Block) *Block {
 	if b.Txns != nil {
 		copiedB.Txns = make([]*transaction.Transaction, len(b.Txns))
 		for i, v := range b.Txns {
-			copiedB.Txns[i] = copyTxn(v)
+			copiedB.Txns[i] = v.Clone()
 		}
 	}
 
@@ -104,24 +104,6 @@ func copyVerTickets(t []*VerificationTicket) []*VerificationTicket {
 	}
 
 	return copiedT
-}
-
-func copyTxn(txn *transaction.Transaction) *transaction.Transaction {
-	copiedTxn := *txn
-	copiedTxn.CollectionMemberField = datastore.CollectionMemberField{
-		EntityCollection: nil,
-		CollectionScore:  txn.CollectionScore,
-	}
-
-	if txn.EntityCollection != nil {
-		copiedTxn.EntityCollection = &datastore.EntityCollection{
-			CollectionName:     txn.EntityCollection.CollectionName,
-			CollectionSize:     txn.EntityCollection.CollectionSize,
-			CollectionDuration: txn.EntityCollection.CollectionDuration,
-		}
-	}
-
-	return &copiedTxn
 }
 
 func makeTestNode(pbK string) (*node.Node, error) {

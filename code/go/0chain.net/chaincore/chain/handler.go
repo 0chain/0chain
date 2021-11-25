@@ -1618,7 +1618,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 			logging.Logger.Error("Dump state failed", zap.Error(err))
 			return
 		}
-		fmt.Fprintf(w, string(out))
+		fmt.Fprint(w, string(out))
 		return
 	}
 

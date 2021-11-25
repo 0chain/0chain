@@ -569,10 +569,7 @@ func (b *Block) GetStateStatus() int8 {
 func (b *Block) IsStateComputed() bool {
 	b.stateStatusMutex.RLock()
 	defer b.stateStatusMutex.RUnlock()
-	if b.stateStatus >= StateSuccessful {
-		return true
-	}
-	return false
+	return b.stateStatus >= StateSuccessful
 }
 
 /*SetStateStatus - set if the client state is computed or not for the block */

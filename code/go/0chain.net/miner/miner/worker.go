@@ -44,11 +44,13 @@ func TransactionGenerator(c *chain.Chain) {
 	viper.SetDefault("development.txn_generation.min_txn_value", 100)
 	minValue = viper.GetInt64("development.txn_generation.min_txn_value")
 
-	var numClients = viper.GetInt("development.txn_generation.wallets")
-	var numTxns int32
+	var (
+		numClients = viper.GetInt("development.txn_generation.wallets")
+		numTxns    int32
+		numWorkers int
+	)
 
 	GenerateClients(c, numClients)
-	numWorkers := 1
 
 	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
@@ -69,13 +71,13 @@ func TransactionGenerator(c *chain.Chain) {
 		numWorkers = 1
 	case blockSize <= 1000:
 		numWorkers = 2
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	case blockSize <= 10000:
 		numWorkers = 4
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	case blockSize <= 100000:
 		numWorkers = 8
-		numTxns = blockSize / 2
+		//numTxns = blockSize / 2
 	default:
 		numWorkers = 16
 	}
@@ -100,7 +102,7 @@ func TransactionGenerator(c *chain.Chain) {
 	var timerCount int64
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
-	for true {
+	for {
 		numTxns = trng.Int31n(blockSize)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {

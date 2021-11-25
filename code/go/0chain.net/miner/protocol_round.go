@@ -588,7 +588,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
-						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
+						if startLogging.IsZero() || time.Since(startLogging) > time.Second {
 							startLogging = time.Now()
 							logging.Logger.Info("generate block",
 								zap.Any("round", roundNumber),

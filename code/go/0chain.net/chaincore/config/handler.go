@@ -20,7 +20,7 @@ func GetConfigHandler(w http.ResponseWriter, r *http.Request) {
 	c := viper.AllSettings()
 	bs, err := yaml.Marshal(c)
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprint(w, err.Error())
 	}
 	fmt.Fprintf(w, "%v", string(bs))
 }

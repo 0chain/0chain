@@ -48,7 +48,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	var (
 		total  = len(nds)
 		minNum = 4
-		reqNum = minNum
+		reqNum int
 	)
 
 	if total < minNum {

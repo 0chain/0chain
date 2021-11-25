@@ -103,9 +103,9 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
-	ctxn := *txn
+	ctxn := txn.Clone()
 	ctxn.OutputHash = ""
-	return &ctxn
+	return ctxn
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
@@ -410,7 +410,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		btvTimer.UpdateSince(ts)
 		if mc.discoverClients {
-			go mc.SaveClients(ctx, b.GetClients())
+			go mc.SaveClients(b.GetClients())
 		}
 		return nil
 	})

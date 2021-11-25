@@ -566,10 +566,7 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 			return new(minersc.PhaseNode)
 		}, func(val util.Serializable) bool {
 			if pn, ok := val.(*minersc.PhaseNode); ok {
-				if pn.StartRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return pn.StartRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {

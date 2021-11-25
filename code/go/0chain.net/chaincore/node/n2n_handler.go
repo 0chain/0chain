@@ -250,10 +250,7 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 
 func validateChain(sender *Node, r *http.Request) bool {
 	chainID := r.Header.Get(HeaderRequestChainID)
-	if config.GetServerChainID() != chainID {
-		return false
-	}
-	return true
+	return config.GetServerChainID() == chainID
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {

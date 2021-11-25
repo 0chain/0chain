@@ -1827,8 +1827,10 @@ func TestRound_GetMinersByRank(t *testing.T) {
 			}
 			got := r.GetMinersByRank(tt.args.miners)
 			for i, n := range got {
-				require.Equal(t, tt.want[i].ID, n.ID, "i:", i, "set_index:", n.SetIndex)
-				require.Equal(t, tt.want[i].PublicKey, n.PublicKey, "i:", i, "set_index:", n.SetIndex)
+				require.Equal(t, tt.want[i].ID, n.ID,
+					fmt.Sprintf("i:%v, set_index:%v, ids:%v",
+						i, n.SetIndex, []string{got[0].ID, got[1].ID}))
+				require.Equal(t, tt.want[i].PublicKey, n.PublicKey, fmt.Sprintf("i:%v, set_index:%v", i, n.SetIndex))
 			}
 		})
 	}

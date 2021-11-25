@@ -14,6 +14,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewMagicBlock(t *testing.T) {
@@ -228,6 +229,7 @@ func TestMagicBlock_Decode(t *testing.T) {
 func TestMagicBlock_GetHash(t *testing.T) {
 	client.SetClientSignatureScheme("ed25519")
 	pbK, _, err := encryption.GenerateKeys()
+	require.NoError(t, err)
 	mb := NewMagicBlock()
 	mb.MagicBlockNumber = 10
 	mb.PreviousMagicBlockHash = encryption.Hash("prev mb")

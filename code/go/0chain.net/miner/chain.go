@@ -266,7 +266,7 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 }
 
 // SaveClients - save clients from the block.
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
+func (mc *Chain) SaveClients(clients []*client.Client) error {
 	var err error
 	clientKeys := make([]datastore.Key, len(clients))
 	for idx, c := range clients {
@@ -274,7 +274,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	}
 	clientEntityMetadata := datastore.GetEntityMetadata("client")
 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
 	defer memorystore.Close(ctx)
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
 	if err != nil {

@@ -12,7 +12,7 @@ type (
 		EntityCollection *EntityCollection `json:"-" msgpack:"-"`
 		CollectionScore  int64             `json:"-" msgpack:"-"`
 
-		mutex sync.RWMutex `json:"-" msgpack:"-"`
+		mutex sync.RWMutex
 	}
 )
 

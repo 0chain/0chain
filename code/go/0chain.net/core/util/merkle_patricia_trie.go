@@ -94,7 +94,7 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	defer mpt.mutex.RUnlock()
 
 	rootKey := []byte(mpt.root)
-	if rootKey == nil || len(rootKey) == 0 {
+	if len(rootKey) == 0 {
 		return nil, ErrValueNotPresent
 	}
 

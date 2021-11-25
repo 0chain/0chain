@@ -169,10 +169,12 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
-	_, ok = cMap.get(dbpool.CtxKey)
-	if !ok {
-		id := connID.Add(1)
-		cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
+	if ok {
+		_, ok = cMap.get(dbpool.CtxKey)
+		if !ok {
+			id := connID.Add(1)
+			cMap.set(dbpool.CtxKey, &Conn{Conn: dbpool.Pool.Get(), Tm: time.Now(), ID: id, Pool: dbpool.Pool})
+		}
 	}
 	return ctx
 

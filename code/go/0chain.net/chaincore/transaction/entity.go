@@ -406,12 +406,32 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 
 // Clone returns a clone of the transaction instance
 func (t *Transaction) Clone() *Transaction {
-	clone := *t
-	if t.CollectionMemberField.EntityCollection != nil {
-		entityCollection := *t.CollectionMemberField.EntityCollection
-		clone.CollectionMemberField.EntityCollection = &entityCollection
+	clone := &Transaction{
+		HashIDField:       t.HashIDField,
+		VersionField:      t.VersionField,
+		ClientID:          t.ClientID,
+		PublicKey:         t.PublicKey,
+		ToClientID:        t.ToClientID,
+		ChainID:           t.ChainID,
+		TransactionData:   t.TransactionData,
+		Value:             t.Value,
+		Signature:         t.Signature,
+		CreationDate:      t.CreationDate,
+		Fee:               t.Fee,
+		TransactionType:   t.TransactionType,
+		TransactionOutput: t.TransactionOutput,
+		OutputHash:        t.OutputHash,
+		Status:            t.Status,
 	}
-	return &clone
+
+	if ent := t.CollectionMemberField.EntityCollection; ent != nil {
+		clone.CollectionMemberField.EntityCollection = &datastore.EntityCollection{
+			CollectionName:     ent.CollectionName,
+			CollectionSize:     ent.CollectionSize,
+			CollectionDuration: ent.CollectionDuration,
+		}
+	}
+	return clone
 }
 
 func SetTxnTimeout(timeout int64) {

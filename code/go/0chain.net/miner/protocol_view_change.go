@@ -334,10 +334,7 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 			return new(minersc.DKGMinerNodes)
 		}, func(val util.Serializable) bool {
 			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
-				if dmn.StartRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return dmn.StartRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {
@@ -566,10 +563,7 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 			return block.NewMagicBlock()
 		}, func(val util.Serializable) bool {
 			if mx, ok := val.(*block.MagicBlock); ok {
-				if mx.StartingRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return mx.StartingRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {
