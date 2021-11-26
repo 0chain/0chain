@@ -436,6 +436,7 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 	np.initGetNodesC()
 	np.computeNodePositions()
 	np.startOnce = &sync.Once{}
+	np.updateNodesToC(np.Nodes)
 
 	return nil
 }
@@ -468,5 +469,6 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 	np.initGetNodesC()
 	np.computeNodePositions()
 	np.startOnce = &sync.Once{}
+	np.updateNodesToC(np.Nodes)
 	return nil
 }
