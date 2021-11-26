@@ -13,6 +13,8 @@ import (
 	"0chain.net/core/memorystore"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 func init() {
@@ -55,6 +57,27 @@ func setupEntity() {
 	cliEntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
 }
 
+func TestSaveClients(t *testing.T) {
+	common.SetupRootContext(context.Background())
+	if err := initDefaultPool(); err != nil {
+		t.Fatal(err)
+	}
+	setupEntity()
+
+	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
+	client := NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
+	client.SetPublicKey(publicKey)
+
+	v, err := msgpack.Marshal(client)
+	require.NoError(t, err)
+
+	var c Client
+	err = msgpack.Unmarshal(v, &c)
+	require.NoError(t, err)
+
+	require.Equal(t, client.PublicKey, c.PublicKey)
+}
+
 func TestClientChunkSave(t *testing.T) {
 	common.SetupRootContext(context.Background())
 	if err := initDefaultPool(); err != nil {
@@ -69,7 +92,7 @@ func TestClientChunkSave(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		go postClient(sigScheme.GetPublicKey(), done)
+		go postClient(sigScheme, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -82,28 +105,28 @@ func TestClientChunkSave(t *testing.T) {
 }
 
 func TestClientID(t *testing.T) {
+	setupEntity()
 	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
-	entity := Provider()
-	client, ok := entity.(*Client)
-	if !ok {
-		t.Fatal("expected Client implementation")
-	}
+	client := NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
 	client.SetPublicKey(publicKey)
 }
 
-func postClient(publicKey string, done chan<- bool) {
-	entity := Provider()
-	client, ok := entity.(*Client)
-	if !ok {
-		panic("expected Client implementation")
+func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
+	var client *Client
+	switch sigScheme.(type) {
+	case *encryption.ED25519Scheme:
+		client = NewClient(SignatureScheme(encryption.SignatureSchemeEd25519))
+	case *encryption.BLS0ChainScheme:
+		client = NewClient(SignatureScheme(encryption.SignatureSchemeBls0chain))
 	}
-	client.SetPublicKey(publicKey)
 
+	pk := sigScheme.GetPublicKey()
+	client.SetPublicKey(pk)
 	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
 	ctx = memorystore.WithConnection(ctx)
-	_, err := PutClient(ctx, entity)
+	_, err := PutClient(ctx, client)
 	if err != nil {
-		fmt.Printf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
+		fmt.Printf("error for %v : %v %v\n", pk, client.GetKey(), err)
 	}
 	done <- true
 }

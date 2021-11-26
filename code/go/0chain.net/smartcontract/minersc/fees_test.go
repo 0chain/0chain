@@ -171,21 +171,17 @@ func Test_payFees(t *testing.T) {
 
 	setConfig(t, balances)
 
-	t.Run("add miners", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			miners = append(miners, newMiner(t, msc, now, stakeHolders,
-				stakeVal, balances))
-			now += 10
-		}
-	})
+	for i := 0; i < 10; i++ {
+		miners = append(miners, newMiner(t, msc, now, stakeHolders,
+			stakeVal, balances))
+		now += 10
+	}
 
-	t.Run("add sharders", func(t *testing.T) {
-		for i := 0; i < 10; i++ {
-			sharders = append(sharders, newSharder(t, msc, now, stakeHolders,
-				stakeVal, balances))
-			now += 10
-		}
-	})
+	for i := 0; i < 10; i++ {
+		sharders = append(sharders, newSharder(t, msc, now, stakeHolders,
+			stakeVal, balances))
+		now += 10
+	}
 
 	// add all the miners to DKG miners list
 	// add all the miners and the sharders to latest finalized magic block

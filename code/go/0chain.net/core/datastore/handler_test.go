@@ -11,7 +11,10 @@ import (
 	"reflect"
 	"testing"
 
+	"0chain.net/core/logging"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
@@ -23,6 +26,8 @@ import (
 )
 
 func init() {
+	logging.Logger = zap.NewNop()
+	logging.N2n = zap.NewNop()
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetClientSignatureScheme("ed25519")
 	log.SetOutput(bytes.NewBuffer(nil))
@@ -154,9 +159,7 @@ func TestToJSONEntityReqResponse(t *testing.T) {
 			handler := datastore.ToJSONEntityReqResponse(tt.args.handler, tt.args.entityMetadata)
 			handler(w, tt.args.r)
 
-			if !reflect.DeepEqual(w, tt.want) {
-				t.Errorf("ToJSONEntityReqResponse() = %#v, want %#v", w, tt.want)
-			}
+			require.Equal(t, tt.want, w)
 		})
 	}
 }

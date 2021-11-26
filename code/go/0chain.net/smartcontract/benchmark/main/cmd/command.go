@@ -42,7 +42,7 @@ var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.Signat
 func init() {
 	logging.InitLogging("testing")
 	node.Self = &node.SelfNode{
-		Node: &node.Node{},
+		Node: node.Provider(),
 	}
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")

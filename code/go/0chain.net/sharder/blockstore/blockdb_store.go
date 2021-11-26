@@ -92,9 +92,9 @@ func (bdbs *BlockDBStore) Write(b *block.Block) error {
 	if err != nil {
 		return err
 	}
-	var headerBlock = *b
+	var headerBlock = b // maybe use b.Clone()
 	headerBlock.Txns = nil
-	bh := &blockHeader{Block: &headerBlock}
+	bh := &blockHeader{Block: headerBlock}
 	db.SetDBHeader(bh)
 	err = db.Create()
 	if err != nil {

@@ -136,6 +136,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		if txnProcessor(ctx, txn) {
 			if idx >= mc.BlockSize || byteSize >= mc.MaxByteSize {
+				logging.Logger.Error("generate block (too big block size)",
+					zap.Bool("idx >= block size", idx >= mc.BlockSize),
+					zap.Bool("byteSize >= mc.NMaxByteSize", byteSize >= mc.MaxByteSize),
+					zap.Int32("idx", idx),
+					zap.Int32("block size", mc.BlockSize),
+					zap.Int64("byte size", byteSize),
+					zap.Int64("max byte size", mc.MaxByteSize),
+					zap.Int32("count", count),
+					zap.Int("txns", len(b.Txns)))
 				return false
 			}
 		}

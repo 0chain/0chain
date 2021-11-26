@@ -2,10 +2,14 @@ package datastore
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"encoding/json"
+
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 )
@@ -36,16 +40,15 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 			http.Error(w, "Header Content-type=application/json not found", 400)
 			return
 		}
-		decoder := json.NewDecoder(r.Body)
 		entity := entityMetadata.Instance()
-		err := decoder.Decode(entity)
-		if err != nil {
+		if err := json.NewDecoder(r.Body).Decode(entity); err != nil {
+			logging.Logger.Error("decode err", zap.Error(err))
 			http.Error(w, "Error decoding json", 500)
 			return
 		}
 		ctx := r.Context()
-		data, err := handler(ctx, entity)
-		common.Respond(w, r, data, err)
+		rsp, err := handler(ctx, entity)
+		common.Respond(w, r, rsp, err)
 	}
 }
 

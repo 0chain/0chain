@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -21,6 +22,22 @@ import (
 	"0chain.net/core/mocks"
 )
 
+var (
+	//blsPublicKeysNum = 10
+	blsPublicKeys = []string{
+		"046a69c7525694e67f5039b2004110b09b362e83cb232379a071a8234a14f41f4118f5e4e0b33c4debb6ac0b626010b501f2463d21b3850fcd5a8bbbe3270221",
+		"b15102bec92dababc953437ac46e90f8ef0bb99e4e78613aa5bf01ddc12e6b04b911fd752d35b7fb03546fa5883024d56f1fdc0ee1a836e137da79032d01e408",
+		"6280bbf63ab8ad84c9ef72d56705a7a0d3207102ec58fcc6972098be87da342074851b07774924a29c1df253fc7e27571b09c1779e0b461a4216b5e8052fe086",
+		"2d065b09841817b00b502ba7df7a0f26fe1c0aae0a1f56f3cec7eea51967c1130bf9cdd935f9a4b72b596c1b6ecfdc4d17d725c9ddd99b76fe06f063dc9a3e88",
+		"8650897e1fb58e91d92dff86d1d0bf0833c2960b39f3ca340ed612ff16e30e03bb75fc5e1b9dfbca8a33f8aefed18121366fcf0eb22c7c955045a990d303fd1d",
+		"53207759a66f139ad4b15202ca60d5d694a2a122ee0519cf57744e08b6ba940024459ded6d51b81ab2a645ea386bcf11bdabb2b197083287a4c0e5a5cf448415",
+		"625fc0c291ff10e1fe647803f4e1a463b010e7b0cdd17d064f2f085760d7c910e923224022d063c3b04d74028cb0f758c5595c15eb08bcd012aa0a2feb8e7493",
+		"9603a712393d9b9d6d4291874f9474dbc057035e7f385280c25b7257926b8118711fcc8cf439c7481faadcb8790be851bd12d01882eb18644df925b302444a90",
+		"3eb2b0d62136e30c5e3bdb56b2d5e5015554b56ea903fdbae527b613b5338b00a69741dda6fd692011a5f244de27dbb4c9000cb220a9dca36ea333c271875183",
+		"35f73f4ef2b79857200ea98a8efe472944cdb758753f1642ecbcc3a5e984c3090aee9d3347c0e8db987674f3b1f4cd9adb888ebc0a241a01891842eb9531f295",
+	}
+)
+
 func init() {
 	logging.InitLogging("development")
 
@@ -29,6 +46,14 @@ func init() {
 	block.SetupEntity(sp)
 
 	setupRoundDBMocks()
+
+	//blsPublicKeys = make([]string, blsPublicKeysNum)
+	//for i := 0; i < blsPublicKeysNum; i++ {
+	//	ss := encryption.NewBLS0ChainScheme()
+	//	ss.GenerateKeys()
+	//	blsPublicKeys[i] = ss.GetPublicKey()
+	//	fmt.Printf("%q,\n", blsPublicKeys[i])
+	//}
 }
 
 func setupRoundDBMocks() {
@@ -1631,7 +1656,7 @@ func TestRound_IsRanksComputed(t *testing.T) {
 func TestRound_GetMinerRank(t *testing.T) {
 	t.Parallel()
 
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1724,24 +1749,21 @@ func TestRound_GetMinerRank(t *testing.T) {
 func TestRound_GetMinersByRank(t *testing.T) {
 	t.Parallel()
 
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	n.SetIndex = 1
 	n.Type = node.NodeTypeMiner
-	n.ID = "id 1"
-	n2, err := makeTestNode("")
-	if err != nil {
-		t.Fatal(err)
-	}
-	n2.SetIndex = 2
-	n2.Type = node.NodeTypeMiner
-	n2.ID = "id 2"
+
 	p := node.NewPool(node.NodeTypeMiner)
 	p.AddNode(n)
+
+	n2, err := makeTestNode(blsPublicKeys[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	n2.Type = node.NodeTypeMiner
 	p.AddNode(n2)
-	p.ComputeProperties()
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -1760,7 +1782,7 @@ func TestRound_GetMinersByRank(t *testing.T) {
 		vrfStartTime     atomic.Value
 	}
 	type args struct {
-		miners *node.Pool
+		miners []*node.Node
 	}
 	tests := []struct {
 		name   string
@@ -1773,7 +1795,7 @@ func TestRound_GetMinersByRank(t *testing.T) {
 			fields: fields{
 				minerPerm: []int{0, 2},
 			},
-			args: args{miners: p},
+			args: args{miners: p.Nodes},
 			want: []*node.Node{
 				n2,
 				n,
@@ -1803,8 +1825,12 @@ func TestRound_GetMinersByRank(t *testing.T) {
 				vrfStartTime:     tt.fields.vrfStartTime,
 				timeoutCounter:   timeoutCounter{},
 			}
-			if got := r.GetMinersByRank(tt.args.miners); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetMinersByRank() = %v, want %v", got, tt.want)
+			got := r.GetMinersByRank(tt.args.miners)
+			for i, n := range got {
+				require.Equal(t, tt.want[i].ID, n.ID,
+					fmt.Sprintf("i:%v, set_index:%v, ids:%v",
+						i, n.SetIndex, []string{got[0].ID, got[1].ID}))
+				require.Equal(t, tt.want[i].PublicKey, n.PublicKey, fmt.Sprintf("i:%v, set_index:%v", i, n.SetIndex))
 			}
 		})
 	}
@@ -1955,11 +1981,10 @@ func TestRound_Restart(t *testing.T) {
 func TestRound_AddAdditionalVRFShare(t *testing.T) {
 	t.Parallel()
 
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	n.ID = "id"
 
 	share := &VRFShare{
 		party: n,
@@ -2046,11 +2071,10 @@ func TestRound_AddAdditionalVRFShare(t *testing.T) {
 func TestRound_AddVRFShare(t *testing.T) {
 	t.Parallel()
 
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	n.ID = "id"
 
 	share := &VRFShare{
 		party: n,
@@ -2150,7 +2174,6 @@ func TestRound_HasRandomSeed(t *testing.T) {
 		NOIDField        datastore.NOIDField
 		Number           int64
 		RandomSeed       int64
-		hasRandomSeed    uint32
 		Block            *block.Block
 		BlockHash        string
 		VRFOutput        string
@@ -2169,12 +2192,12 @@ func TestRound_HasRandomSeed(t *testing.T) {
 	}{
 		{
 			name:   "TRUE",
-			fields: fields{hasRandomSeed: 1},
+			fields: fields{RandomSeed: 1},
 			want:   true,
 		},
 		{
 			name:   "FALSE",
-			fields: fields{hasRandomSeed: 0},
+			fields: fields{RandomSeed: 0},
 			want:   false,
 		},
 	}
@@ -2187,7 +2210,6 @@ func TestRound_HasRandomSeed(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
@@ -2582,31 +2604,27 @@ func Test_timeoutCounter_GetTimeoutCount(t *testing.T) {
 }
 
 func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 	n.SetIndex = 1
 	n.Type = node.NodeTypeMiner
-	n.ID = "id 1"
-	n2, err := makeTestNode("")
+	n2, err := makeTestNode(blsPublicKeys[1])
 	if err != nil {
 		t.Fatal(err)
 	}
 	n2.SetIndex = 2
 	n2.Type = node.NodeTypeMiner
-	n2.ID = "id 2"
-	n3, err := makeTestNode("")
+	n3, err := makeTestNode(blsPublicKeys[2])
 	if err != nil {
 		t.Fatal(err)
 	}
 	n3.SetIndex = 3
 	n3.Type = node.NodeTypeMiner
-	n3.ID = "id 3"
 	p := node.NewPool(node.NodeTypeMiner)
 	p.AddNode(n)
 	p.AddNode(n2)
-	p.ComputeProperties()
 
 	tc := makeTestTimeoutCounter()
 	tc.votes[n2.ID] = 4
@@ -2615,7 +2633,13 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 	p2 := node.NewPool(node.NodeTypeMiner)
 	p2.AddNode(n)
 	p2.AddNode(n3)
-	p2.ComputeProperties()
+
+	sortPerm := func(ids []string) []string {
+		sort.SliceStable(ids, func(i, j int) bool {
+			return ids[i] < ids[j]
+		})
+		return ids
+	}
 
 	type fields struct {
 		prrs  int64
@@ -2675,10 +2699,10 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 			args: args{prrs: 1, miners: p},
 			want: &timeoutCounter{
 				prrs: tc.prrs,
-				perm: []string{
+				perm: sortPerm([]string{
 					n.ID,
 					n2.ID,
-				},
+				}),
 				count: 4,
 				votes: make(map[string]int),
 			},
@@ -2697,10 +2721,10 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 			args: args{prrs: 1, miners: p2},
 			want: &timeoutCounter{
 				prrs: tc.prrs,
-				perm: []string{
+				perm: sortPerm([]string{
 					n.ID,
 					n3.ID,
-				},
+				}),
 				count: 5,
 				votes: make(map[string]int),
 			},
@@ -2717,7 +2741,7 @@ func Test_timeoutCounter_IncrementTimeoutCount(t *testing.T) {
 			}
 
 			tc.IncrementTimeoutCount(tt.args.prrs, tt.args.miners)
-			if !assert.Equal(t, tc, tt.want) {
+			if !assert.Equal(t, tt.want, tc) {
 				t.Errorf("AddTimeoutVote() got = %v, want = %v", tc, tt.want)
 			}
 		})

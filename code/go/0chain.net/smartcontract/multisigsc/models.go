@@ -149,11 +149,7 @@ func (w Wallet) isVoteAuthorized(signingClientID string, v Vote) bool {
 	}
 
 	err := w.makeSignedTransferForVote(publicKey, v).VerifySignature(false)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
 func (w Wallet) makeSignedTransferForVote(signingPublicKey string, v Vote) state.SignedTransfer {
