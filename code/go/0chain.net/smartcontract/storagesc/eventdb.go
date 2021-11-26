@@ -50,7 +50,7 @@ func blobberTableToStorageNode(blobber event.Blobber) (StorageNode, error) {
 	}, nil
 }
 
-func emitAddBlobber(sn *StorageNode, balances cstate.StateContextI) error {
+func emitAddOrOverwriteBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	data, err := json.Marshal(&event.Blobber{
 		BlobberID:               sn.ID,
 		BaseURL:                 sn.BaseURL,

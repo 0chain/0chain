@@ -43,7 +43,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	// update the list
 	blobbers.Nodes.add(blobber)
-	if err := emitAddBlobber(blobber, balances); err != nil {
+	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
 		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
 	}
 
