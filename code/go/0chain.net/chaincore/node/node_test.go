@@ -12,12 +12,14 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"go.uber.org/zap"
 )
 
 var Miners *Pool
 
 func init() {
-	logging.InitLogging("development")
+	logging.Logger = zap.NewNop()
+	logging.N2n = zap.NewNop()
 	Miners = NewPool(NodeTypeMiner)
 	createMiners(Miners)
 

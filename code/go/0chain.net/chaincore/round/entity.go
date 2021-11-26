@@ -565,8 +565,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 }
 
 /*GetMinersByRank - get the rnaks of the miners */
-func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
-	nodes := miners.CopyNodes()
+func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	logging.Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),

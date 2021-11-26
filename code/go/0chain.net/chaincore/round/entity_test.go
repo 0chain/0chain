@@ -1782,7 +1782,7 @@ func TestRound_GetMinersByRank(t *testing.T) {
 		vrfStartTime     atomic.Value
 	}
 	type args struct {
-		miners *node.Pool
+		miners []*node.Node
 	}
 	tests := []struct {
 		name   string
@@ -1795,7 +1795,7 @@ func TestRound_GetMinersByRank(t *testing.T) {
 			fields: fields{
 				minerPerm: []int{0, 2},
 			},
-			args: args{miners: p},
+			args: args{miners: p.Nodes},
 			want: []*node.Node{
 				n2,
 				n,

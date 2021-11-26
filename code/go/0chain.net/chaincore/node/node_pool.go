@@ -39,11 +39,11 @@ type Pool struct {
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
-	medianNetworkTime uint64       // float64
-	getNodesC         chan []*Node `json:"-"`
-	updateNodesC      chan []*Node `json:"-"`
-	startOnce         *sync.Once   `json:"-"`
-	id                int32        `json:"-"`
+	medianNetworkTime uint64                     // float64
+	getNodesC         chan []*Node               `json:"-"`
+	updateNodesC      chan *updateNodesWithReply `json:"-"`
+	startOnce         *sync.Once                 `json:"-"`
+	id                int32                      `json:"-"`
 }
 
 /*NewPool - create a new node pool of given type */
@@ -63,7 +63,7 @@ func NewPool(Type int8) *Pool {
 
 func (np *Pool) initGetNodesC() {
 	if np.updateNodesC == nil {
-		np.updateNodesC = make(chan []*Node, 100)
+		np.updateNodesC = make(chan *updateNodesWithReply, 100)
 	}
 
 	if np.getNodesC == nil {
@@ -79,9 +79,7 @@ func (np *Pool) start() {
 			np.id = atomic.AddInt32(&poolID, 1)
 			logging.Logger.Warn("node pool start", zap.Int32("ID", np.id))
 
-			np.mmx.RLock()
-			nds := np.Nodes
-			np.mmx.RUnlock()
+			var nds []*Node
 
 			// return if there's no request to get nodes from this pool in one minutes
 			const expireTime = time.Minute
@@ -91,7 +89,9 @@ func (np *Pool) start() {
 				select {
 				case np.getNodesC <- nds:
 					cleanTimer = time.NewTimer(expireTime)
-				case nds = <-np.updateNodesC:
+				case v := <-np.updateNodesC:
+					nds = v.nodes
+					v.reply <- struct{}{}
 					cleanTimer = time.NewTimer(expireTime)
 				case <-cleanTimer.C:
 					logging.Logger.Debug("node pool cleaned")
@@ -120,11 +120,22 @@ func (np *Pool) getNodesFromC() (nds []*Node) {
 	}
 }
 
+type updateNodesWithReply struct {
+	nodes []*Node
+	reply chan struct{}
+}
+
 func (np *Pool) updateNodesToC(nds []*Node) {
 	np.start()
 
+	ndsWithReply := &updateNodesWithReply{
+		nodes: nds,
+		reply: make(chan struct{}, 1),
+	}
+
 	select {
-	case np.updateNodesC <- nds:
+	case np.updateNodesC <- ndsWithReply:
+		<-ndsWithReply.reply
 		logging.Logger.Debug("update nodes to channel", zap.Int32("id", np.id))
 	case <-time.After(500 * time.Millisecond):
 		logging.Logger.Warn("update nodes to channel timeout")
