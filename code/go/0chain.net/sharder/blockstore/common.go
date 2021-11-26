@@ -20,23 +20,23 @@ const (
 	fileExt            = ".dat"
 	IndexStateFileName = "index.state"
 
-	//strategies
+	// strategies
 	Random        = "random"
 	RoundRobin    = "round_robin"
 	MinSizeFirst  = "min_size_first"
 	MinCountFirst = "min_count_first"
 
-	//DefaultStrategies
+	// DefaultStrategies
 	DefaultVolumeStrategy = "random"
 	DefaultColdStrategy   = "random"
 	DefaultCacheStrategy  = "random"
 
-	//BlockLimit Limit the number of blocks to store in any tier
+	// BlockLimit Limit the number of blocks to store in any tier
 	BlockLimitNumber = 1000000000 // 10 powered 9
 	GB               = 1024 * 1024 * 1024
 )
 
-//Common errors
+// Common errors
 var (
 	ErrInodesLimit = func(vPath string, inodesToMaintain uint64) error {
 		return fmt.Errorf("Volume %v has inodes lesser than inodes to maintain, %v", vPath, inodesToMaintain)
@@ -85,7 +85,7 @@ func countFiles(dirPath string) (count int, err error) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	var dirs []os.DirEntry
 	for {
 		dirs, err = f.ReadDir(1000)
@@ -121,14 +121,10 @@ func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
 	}
 
 	scanner := bufio.NewScanner(f)
-	if !scanner.Scan() {
-		err = errors.New("current K Index and directory index missing")
-		return
-	}
 	curKIndStr := scanner.Text()
-
-	if !scanner.Scan() {
-		err = errors.New("current Directory Index missing")
+	more := scanner.Scan()
+	if more == false {
+		err = errors.New("Current Directory Index missing")
 		return
 	}
 	curDirIndStr := scanner.Text()
@@ -233,7 +229,7 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	return grandCount.totalBlocksSize, totalBlocksCount
 }
 
-//Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
+// Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
 func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
 	switch v.(type) {
 	case int:
