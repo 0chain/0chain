@@ -73,7 +73,7 @@ func emitAddBlobber(sn *StorageNode, balances cstate.StateContextI) error {
 	if err != nil {
 		return fmt.Errorf("marshalling blobber: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, sn.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteBlobber, sn.ID, string(data))
 	return nil
 }
 

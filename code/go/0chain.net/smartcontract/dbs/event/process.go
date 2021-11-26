@@ -1,7 +1,10 @@
 package event
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -20,7 +23,7 @@ const (
 
 const (
 	TagNone EventTag = iota
-	TagAddBlobber
+	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagDeleteBlobber
 )
@@ -48,12 +51,22 @@ func (edb *EventDb) AddEvents(events []Event) {
 
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
-	case TagAddBlobber:
-		return edb.addBlobber([]byte(event.Data))
+	case TagAddOrOverwriteBlobber:
+		var blobber Blobber
+		err := json.Unmarshal([]byte(event.Data), &blobber)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteBlobber(blobber)
 	case TagUpdateBlobber:
-		return edb.updateBlobber([]byte(event.Data))
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
-		return edb.deleteBlobber([]byte(event.Data))
+		return edb.deleteBlobber(event.Data)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

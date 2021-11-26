@@ -1,7 +1,6 @@
 package event
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs"
@@ -56,20 +55,9 @@ func (bl *Blobber) create(edb *EventDb) error {
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
-	exists, err := (&Blobber{
-		BlobberID: id,
-	}).exists(edb)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, fmt.Errorf("blobber %v not in event db", id)
-	}
-
 	var blobber Blobber
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Find(&Blobber{}).
 		Where("blobber_id", id).
 		First(&blobber)
 	if result.Error != nil {
@@ -80,19 +68,13 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
-func (edb *EventDb) deleteBlobber(data []byte) error {
+func (edb *EventDb) deleteBlobber(id string) error {
 	result := edb.Store.Get().
-		Where("blobber_id = ?", string(data)).Delete(&Blobber{})
+		Where("blobber_id = ?", id).Delete(&Blobber{})
 	return result.Error
 }
 
-func (edb *EventDb) updateBlobber(data []byte) error {
-	var updates dbs.DbUpdates
-	err := json.Unmarshal(data, &updates)
-	if err != nil {
-		return err
-	}
-
+func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 	var blobber = Blobber{BlobberID: updates.Id}
 	exists, err := blobber.exists(edb)
 
@@ -112,9 +94,10 @@ func (edb *EventDb) updateBlobber(data []byte) error {
 }
 
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
-	updates := dbs.DbUpdates{
-		Id: blobber.BlobberID,
-		Updates: map[string]interface{}{
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Where("blobber_id = ?", blobber.BlobberID).
+		Updates(map[string]interface{}{
 			"base_url":                  blobber.BaseURL,
 			"latitude":                  blobber.Latitude,
 			"longitude":                 blobber.Longitude,
@@ -132,24 +115,12 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"num_delegates":             blobber.NumDelegates,
 			"service_charge":            blobber.ServiceCharge,
 		},
-	}
-
-	result := edb.Store.Get().
-		Model(&Blobber{}).
-		Where("blobber_id = ?", updates.Id).
-		Updates(updates.Updates)
+		)
 	return result.Error
 }
 
-func (edb *EventDb) addBlobber(data []byte) error {
-	var blobber Blobber
-	err := json.Unmarshal(data, &blobber)
-	if err != nil {
-		return err
-	}
-
+func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 	exists, err := blobber.exists(edb)
-
 	if err != nil {
 		return err
 	}

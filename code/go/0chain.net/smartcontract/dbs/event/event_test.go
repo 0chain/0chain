@@ -37,3 +37,16 @@ func TestSetupDatabase(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 }
+
+func (edb *EventDb) drop() error {
+	err := edb.Store.Get().Migrator().DropTable(&Event{})
+	if err != nil {
+		return err
+	}
+
+	err = edb.Store.Get().Migrator().DropTable(&Blobber{})
+	if err != nil {
+		return err
+	}
+	return nil
+}

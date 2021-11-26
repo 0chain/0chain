@@ -157,7 +157,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddBlobber),
+		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
@@ -234,7 +234,7 @@ func TestBlobbers(t *testing.T) {
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddBlobber),
+		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
 	eventDb.AddEvents([]Event{eventOverwrite})
