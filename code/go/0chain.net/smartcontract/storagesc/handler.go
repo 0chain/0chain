@@ -6,8 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"go.uber.org/zap"
-
 	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
@@ -21,21 +19,33 @@ import (
 const cantGetBlobberMsg = "can't get blobber"
 
 // GetBlobberHandler returns Blobber object from its individual stored value.
-func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
+func (ssc *StorageSmartContract) GetBlobberHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
 	var blobberID = params.Get("blobber_id")
 	if blobberID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
-
-	bl, err := ssc.getBlobber(blobberID, balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber")
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent,
+			true,
+			"cannot find event database",
+		)
 	}
 
-	return bl, nil
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
+	}
+
+	sn, err := blobberTableToStorageNode(*blobber)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot parse blobber %v", blobberID)
+	}
+	return sn, err
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
@@ -169,26 +179,7 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 	}
 
 	return commitRead.ReadMarker, nil // ok
-}
 
-type blobberChallengeResponse struct {
-	BlobberID  string              `json:"blobber_id"`
-	Challenges []challengeResponse `json:"challenges"`
-	ExpectedBC BlobberChallenge    `json:"expected_bc"`
-}
-
-type challengeResponse struct {
-	ID             string         `json:"id"`
-	Validators     []nodeResponse `json:"validators"`
-	RandomNumber   int64          `json:"seed"`
-	AllocationID   string         `json:"allocation_id"`
-	Blobber        nodeResponse   `json:"blobber"`
-	AllocationRoot string         `json:"allocation_root"`
-}
-
-type nodeResponse struct {
-	ID  string `json:"id"`
-	URL string `json:"url"`
 }
 
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
@@ -210,44 +201,15 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		}
 	}
 
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("no event database found")
-	}
-
-	bc, err := balances.GetEventDB().GetBlobberChallenges(blobberID)
-	if err != nil {
-		return nil, common.NewErrInternal("getting blobber challenges", err.Error())
-	}
-
-	var response = blobberChallengeResponse{
-		BlobberID:  blobberID,
-		ExpectedBC: *blobberChallengeObj,
-	}
-	for _, ch := range bc.Challenges {
-		var chr = challengeResponse{
-			ID:             ch.ChallengeID,
-			RandomNumber:   ch.RandomNumber,
-			AllocationID:   ch.AllocationID,
-			AllocationRoot: ch.AllocationRoot,
-			Blobber: nodeResponse{
-				ID: blobberID,
-			},
-		}
-		for _, v := range ch.Validators {
-			chr.Validators = append(chr.Validators, nodeResponse{
-				ID:  v.ValidatorID,
-				URL: v.BaseURL,
-			})
-		}
-		response.Challenges = append(response.Challenges, chr)
-	}
-
-	logging.Logger.Error("piers OpenChallengeHandler",
-		zap.Any("challenge list", response))
+	// for k, v := range blobberChallengeObj.ChallengeMap {
+	// 	if v.Response != nil {
+	// 		delete(blobberChallengeObj.ChallengeMap, k)
+	// 	}
+	// }
 
 	// return populate or empty list of challenges
 	// don't return error, if no challenges (expected by blobbers)
-	return &response, nil
+	return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
@@ -274,32 +236,5 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
 
-	if balances.GetEventDB() == nil {
-		return nil, common.NewErrInternal("no event database found")
-	}
-
-	ch, err := balances.GetEventDB().GetChallenge(challengeID)
-	if err != nil {
-		return nil, common.NewErrInternal("getting blobber challenges", err.Error())
-	}
-
-	var response = challengeResponse{
-		ID:             ch.ChallengeID,
-		RandomNumber:   ch.RandomNumber,
-		AllocationID:   ch.AllocationID,
-		AllocationRoot: ch.AllocationRoot,
-		Blobber: nodeResponse{
-			ID: blobberID,
-		},
-	}
-	for _, v := range ch.Validators {
-		response.Validators = append(response.Validators, nodeResponse{
-			ID:  v.ValidatorID,
-			URL: v.BaseURL,
-		})
-	}
-	logging.Logger.Error("piers GetChallengeHandler",
-		zap.Any("challenge list", response))
-	return response, nil
-	//return blobberChallengeObj.ChallengeMap[challengeID], nil
+	return blobberChallengeObj.ChallengeMap[challengeID], nil
 }

@@ -1,31 +1,40 @@
 package event
 
 import (
+	"encoding/json"
 	"fmt"
+
+	"0chain.net/smartcontract/dbs"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
-const (
-	TypeError = "error"
-	TypeStats = "stats"
+type (
+	EventType int
+	EventTag  int
 )
 
 const (
-	TagNewChallenge    = "new_challenge"
-	TagRemoveChallenge = "remove_challenge"
+	TypeNone EventType = iota
+	TypeError
+	TypeStats
+)
+
+const (
+	TagNone EventTag = iota
+	TagAddOrOverwriteBlobber
+	TagUpdateBlobber
+	TagDeleteBlobber
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
 	newEvents := edb.removeDuplicate(events)
-	logging.Logger.Info("piers processing events",
-		zap.Any("events", newEvents))
 
 	edb.addEvents(newEvents)
 	for _, event := range newEvents {
 		var err error = nil
-		switch event.Type {
+		switch EventType(event.Type) {
 		case TypeStats:
 			err = edb.addStat(event)
 		default:
@@ -41,16 +50,23 @@ func (edb *EventDb) AddEvents(events []Event) {
 }
 
 func (edb *EventDb) addStat(event Event) error {
-	switch event.Tag {
-	case TagNewChallenge:
-		var challenge Challenge
-		logging.Logger.Info("piers event db adding",
-			zap.Any("challenge", event.Data))
-		return challenge.Add(edb, []byte(event.Data))
-	case TagRemoveChallenge:
-		logging.Logger.Info("piers event db removing",
-			zap.Any("challenge", event.Data))
-		return edb.removeChallenge(event.Data)
+	switch EventTag(event.Tag) {
+	case TagAddOrOverwriteBlobber:
+		var blobber Blobber
+		err := json.Unmarshal([]byte(event.Data), &blobber)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteBlobber(blobber)
+	case TagUpdateBlobber:
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateBlobber(updates)
+	case TagDeleteBlobber:
+		return edb.deleteBlobber(event.Data)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

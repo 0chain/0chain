@@ -10,37 +10,23 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EventDb{
+	eventDb := &EventDb{
 		Store: db,
-	}, nil
+	}
+
+	if err := eventDb.AutoMigrate(); err != nil {
+		return nil, err
+	}
+	return eventDb, nil
 }
 
 type EventDb struct {
 	dbs.Store
 }
 
-func (edb *EventDb) CreateEventTable() error {
-	result := edb.Store.Get().Create(&Event{})
-	return result.Error
-}
-
 func (edb *EventDb) AutoMigrate() error {
-	err := edb.drop()
-	if err != nil {
+	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}); err != nil {
 		return err
 	}
-
-	err = edb.Store.Get().AutoMigrate(&Event{})
-	if err != nil {
-		return nil
-	}
-
-	if !edb.Store.Get().Migrator().HasTable(&BlobberChallenge{}) {
-		err = edb.createChallengeTable()
-		if err != nil {
-			return err
-		}
-	}
-
-	return err
+	return nil
 }

@@ -1,16 +1,16 @@
 package state
 
 import (
+	"sync"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
-	"go.uber.org/zap"
 )
 
 var (
@@ -54,7 +54,7 @@ type StateContextI interface {
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
 	GetSignatureScheme() encryption.SignatureScheme
-	EmitEvent(string, string, string)
+	EmitEvent(event.EventType, event.EventTag, string, string)
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
@@ -75,7 +75,7 @@ type StateContext struct {
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
-	eventIndex                    int
+	mutex                         *sync.Mutex
 }
 
 // NewStateContext - create a new state context
@@ -102,6 +102,7 @@ func NewStateContext(
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		eventDb:                       eventDb,
+		mutex:                         new(sync.Mutex),
 	}
 }
 
@@ -126,6 +127,8 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 
 //AddTransfer - add the transfer
 func (sc *StateContext) AddTransfer(t *state.Transfer) error {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	if t.ClientID != sc.txn.ClientID && t.ClientID != sc.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
@@ -141,6 +144,8 @@ func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
 
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	if !sc.isApprovedMinter(m) {
 		return state.ErrInvalidMint
 	}
@@ -172,25 +177,17 @@ func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
-func (sc *StateContext) EmitEvent(eventType, tag string, data string) {
-	logging.Logger.Info("piers emitting event,",
-		zap.Any("event", event.Event{
-			BlockNumber: sc.block.Round,
-			TxHash:      sc.txn.Hash,
-			Type:        eventType,
-			Tag:         tag,
-			Index:       sc.eventIndex,
-			Data:        data,
-		}))
+func (sc *StateContext) EmitEvent(eventType event.EventType, tag event.EventTag, index string, data string) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
 	sc.events = append(sc.events, event.Event{
 		BlockNumber: sc.block.Round,
 		TxHash:      sc.txn.Hash,
-		Type:        eventType,
-		Tag:         tag,
-		Index:       sc.eventIndex,
+		Type:        int(eventType),
+		Tag:         int(tag),
+		Index:       index,
 		Data:        data,
 	})
-	sc.eventIndex++
 }
 
 func (sc *StateContext) EmitError(err error) {
@@ -198,12 +195,10 @@ func (sc *StateContext) EmitError(err error) {
 		{
 			BlockNumber: sc.block.Round,
 			TxHash:      sc.txn.Hash,
-			Type:        "Error",
-			Index:       0,
+			Type:        int(event.TypeError),
 			Data:        err.Error(),
 		},
 	}
-	sc.eventIndex = 1
 }
 
 func (sc *StateContext) GetEvents() []event.Event {

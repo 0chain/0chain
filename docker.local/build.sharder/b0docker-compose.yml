@@ -49,10 +49,6 @@ services:
     volumes:
       - ../bin:/0chain/bin
       - ../sql:/0chain/sql
-      - ../sql_script/:/docker-entrypoint-initdb.d/
-    links:
-      - postgres:postgres
-
   sharder:
     image: "sharder"
     # deploy:

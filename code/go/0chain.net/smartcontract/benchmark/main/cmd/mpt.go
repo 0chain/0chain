@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 
 	"0chain.net/smartcontract/dbs"
-
 	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/smartcontract/zcnsc"
@@ -116,6 +115,7 @@ func setUpMpt(
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
 	)
+	log.Println("created balances")
 
 	eventDb, err := event.NewEventDb(dbs.DbAccess{
 		Enabled:         viper.GetBool(benchmark.EventDbEnabled),
@@ -136,19 +136,18 @@ func setUpMpt(
 	}
 	log.Println("created event database")
 
-	log.Println("created balances")
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
 	validators := storagesc.AddMockValidators(publicKeys, balances)
 	log.Println("added validators")
-	blobbers := storagesc.AddMockBlobbers(balances)
+	blobbers := storagesc.AddMockBlobbers(eventDb, balances)
 	log.Println("added blobbers")
 	stakePools := storagesc.GetMockStakePools(clients, balances)
 	log.Println("added stake pools")
 	storagesc.GetMockValidatorStakePools(clients, balances)
 	log.Println("added validator stake pools")
 	storagesc.AddMockAllocations(
-		clients, publicKeys, stakePools, blobbers, validators, eventDb, balances,
+		clients, publicKeys, stakePools, blobbers, validators, balances,
 	)
 	log.Println("added allocations")
 	storagesc.SaveMockStakePools(stakePools, balances)

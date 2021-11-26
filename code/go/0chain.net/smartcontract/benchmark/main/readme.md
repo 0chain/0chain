@@ -45,7 +45,7 @@ dbs:
     max_open_conns: 200
     conn_max_lifetime: 20s
 ```
-Set enabled to false if you have not setup a postgreSQL database. Some of the Rest Api 
+Set enabled to false if you have not setup a postgreSQL database. Some of the Rest Api
 endpoint will not work without an event database.
 
 You can also set all these options in the
