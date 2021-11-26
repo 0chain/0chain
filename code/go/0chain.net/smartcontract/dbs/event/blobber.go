@@ -36,24 +36,6 @@ type Blobber struct {
 	ServiceCharge  float64 `json:"service_charge"`
 }
 
-func (bl *Blobber) exists(edb *EventDb) (bool, error) {
-	var count int64
-	result := edb.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: bl.BlobberID}).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error searching for blobber %v, error %v",
-			bl.BlobberID, result.Error)
-	}
-	return count > 0, nil
-}
-
-func (bl *Blobber) create(edb *EventDb) error {
-	result := edb.Store.Get().Create(bl)
-	return result.Error
-}
-
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
@@ -129,4 +111,17 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 
 	result := edb.Store.Get().Create(&blobber)
 	return result.Error
+}
+
+func (bl *Blobber) exists(edb *EventDb) (bool, error) {
+	var count int64
+	result := edb.Get().
+		Model(&Blobber{}).
+		Where(&Blobber{BlobberID: bl.BlobberID}).
+		Count(&count)
+	if result.Error != nil {
+		return false, fmt.Errorf("error searching for blobber %v, error %v",
+			bl.BlobberID, result.Error)
+	}
+	return count > 0, nil
 }
