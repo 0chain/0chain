@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package miner;
+
+option go_package = "code/go/0chain.net/miner/minergrpc";
+
+import "miner_contract.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    version: "1.0";
+  };
+  external_docs: {
+    url: "https://github.com/0chain/0chain";
+    description: "0chain repository";
+  }
+  schemes: HTTPS;
+};
+
+service MinerService {
+  rpc GetNotarizedBlock(GetNotarizedBlockRequest) returns (GetNotarizedBlockResponse) {
+    option (google.api.http) = {
+      get: "/v2/_x2m/block/notarized_block/get"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get notarized block"
+      description: "Get notarized block"
+      tags: "Block"
+    };
+  }
+}

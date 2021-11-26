@@ -1,0 +1,432 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "miner_service.proto",
+    "version": "1.0"
+  },
+  "tags": [
+    {
+      "name": "MinerService"
+    }
+  ],
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v2/_x2m/block/notarized_block/get": {
+      "get": {
+        "summary": "Get notarized block",
+        "description": "Get notarized block",
+        "operationId": "MinerService_GetNotarizedBlock",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/minerGetNotarizedBlockResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "round",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "hash",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Block"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "MagicBlockMPK": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "Mpk": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "MagicBlockShareOrSigns": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "shareOrSign": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ShareOrSignsDKGKeyShare"
+          }
+        }
+      }
+    },
+    "PoolNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "creationDate": {
+          "type": "string",
+          "format": "int64"
+        },
+        "publicKey": {
+          "type": "string"
+        },
+        "n2nHost": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "string",
+          "format": "int64"
+        },
+        "grpcPort": {
+          "type": "string",
+          "format": "int64"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "format": "int64"
+        },
+        "description": {
+          "type": "string"
+        },
+        "setIndex": {
+          "type": "string",
+          "format": "int64"
+        },
+        "status": {
+          "type": "string",
+          "format": "int64"
+        },
+        "inPrevMb": {
+          "type": "boolean"
+        },
+        "info": {
+          "$ref": "#/definitions/PoolNodeInfo"
+        }
+      }
+    },
+    "PoolNodeInfo": {
+      "type": "object",
+      "properties": {
+        "buildTag": {
+          "type": "string"
+        },
+        "stateMissingNodes": {
+          "type": "string",
+          "format": "int64"
+        },
+        "minersMedianNetworkTime": {
+          "type": "string",
+          "format": "int64"
+        },
+        "avgBlockTxns": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "ShareOrSignsDKGKeyShare": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "share": {
+          "type": "string"
+        },
+        "sign": {
+          "type": "string"
+        }
+      }
+    },
+    "minerBlock": {
+      "type": "object",
+      "properties": {
+        "verificationTickets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/minerVerificationTicket"
+          }
+        },
+        "hash": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "string"
+        },
+        "chainWeight": {
+          "type": "number",
+          "format": "double"
+        },
+        "runningTxnCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "magicBlock": {
+          "$ref": "#/definitions/minerMagicBlock"
+        },
+        "version": {
+          "type": "string"
+        },
+        "creationDate": {
+          "type": "string",
+          "format": "int64"
+        },
+        "latestFinalizedMagicBlockHash": {
+          "type": "string"
+        },
+        "latestFinalizedMagicBlockRound": {
+          "type": "string",
+          "format": "int64"
+        },
+        "prevHash": {
+          "type": "string"
+        },
+        "prevVerificationTickets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/minerVerificationTicket"
+          }
+        },
+        "minerId": {
+          "type": "string"
+        },
+        "round": {
+          "type": "string",
+          "format": "int64"
+        },
+        "roundRandomSeed": {
+          "type": "string",
+          "format": "int64"
+        },
+        "roundTimeoutCount": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateHash": {
+          "type": "string"
+        },
+        "transactions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/minerTransaction"
+          }
+        }
+      }
+    },
+    "minerGetNotarizedBlockResponse": {
+      "type": "object",
+      "properties": {
+        "block": {
+          "$ref": "#/definitions/minerBlock"
+        }
+      }
+    },
+    "minerMagicBlock": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "previousHash": {
+          "type": "string"
+        },
+        "magicBlockNumber": {
+          "type": "string",
+          "format": "int64"
+        },
+        "startingRound": {
+          "type": "string",
+          "format": "int64"
+        },
+        "miners": {
+          "$ref": "#/definitions/minerPool"
+        },
+        "sharders": {
+          "$ref": "#/definitions/minerPool"
+        },
+        "shares": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/MagicBlockShareOrSigns"
+          }
+        },
+        "mpks": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/MagicBlockMPK"
+          }
+        },
+        "t": {
+          "type": "string",
+          "format": "int64"
+        },
+        "k": {
+          "type": "string",
+          "format": "int64"
+        },
+        "n": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "minerPool": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "format": "int64"
+        },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/PoolNode"
+          }
+        }
+      }
+    },
+    "minerTransaction": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "clientId": {
+          "type": "string"
+        },
+        "toClientId": {
+          "type": "string"
+        },
+        "chainId": {
+          "type": "string"
+        },
+        "transactionData": {
+          "type": "string"
+        },
+        "transactionValue": {
+          "type": "string",
+          "format": "int64"
+        },
+        "signature": {
+          "type": "string"
+        },
+        "creationDate": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transactionFee": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transactionType": {
+          "type": "string",
+          "format": "int64"
+        },
+        "transactionOutput": {
+          "type": "string"
+        },
+        "txnOutputHash": {
+          "type": "string"
+        },
+        "transactionStatus": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "minerVerificationTicket": {
+      "type": "object",
+      "properties": {
+        "verifierId": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "typeUrl": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "0chain repository",
+    "url": "https://github.com/0chain/0chain"
+  }
+}
