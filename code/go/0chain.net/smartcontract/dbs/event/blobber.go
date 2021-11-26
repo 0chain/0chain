@@ -114,8 +114,7 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 			"max_stake":                 blobber.MaxStake,
 			"num_delegates":             blobber.NumDelegates,
 			"service_charge":            blobber.ServiceCharge,
-		},
-		)
+		})
 	return result.Error
 }
 
