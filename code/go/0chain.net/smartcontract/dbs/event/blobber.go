@@ -40,7 +40,7 @@ func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 	var count int64
 	result := edb.Get().
 		Model(&Blobber{}).
-		Where("blobber_id", bl.BlobberID).
+		Where(&Blobber{BlobberID: bl.BlobberID}).
 		Count(&count)
 	if result.Error != nil {
 		return false, fmt.Errorf("error searching for blobber %v, error %v",
@@ -58,7 +58,7 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Where("blobber_id", id).
+		Where(&Blobber{BlobberID: id}).
 		First(&blobber)
 	if result.Error != nil {
 		return nil, fmt.Errorf("error retrieving blobber %v, error %v",
@@ -88,7 +88,7 @@ func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Where("blobber_id = ?", updates.Id).
+		Where(&Blobber{BlobberID: blobber.BlobberID}).
 		Updates(updates.Updates)
 	return result.Error
 }
@@ -96,7 +96,7 @@ func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 	result := edb.Store.Get().
 		Model(&Blobber{}).
-		Where("blobber_id = ?", blobber.BlobberID).
+		Where(&Blobber{BlobberID: blobber.BlobberID}).
 		Updates(map[string]interface{}{
 			"base_url":                  blobber.BaseURL,
 			"latitude":                  blobber.Latitude,
