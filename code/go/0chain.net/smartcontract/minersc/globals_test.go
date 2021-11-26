@@ -107,7 +107,7 @@ func TestUpdateGlobals(t *testing.T) {
 			},
 			want: want{
 				error: true,
-				msg:   "update_settings: validation: 'mock not a setting' is not a valid global setting",
+				msg:   "update_globals: validation: 'mock not a setting' is not a valid global setting",
 			},
 		},
 		{
@@ -148,7 +148,7 @@ func TestUpdateGlobals(t *testing.T) {
 			},
 			want: want{
 				error: true,
-				msg:   "update_settings: validation: server_chain.health_check.deep_scan.enabled is an immutable setting",
+				msg:   "update_globals: validation: server_chain.health_check.deep_scan.enabled is an immutable setting",
 			},
 		},
 	}
