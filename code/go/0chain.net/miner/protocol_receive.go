@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -34,7 +36,10 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	msg *BlockMessage) {
 
-	var b = msg.Block
+	var (
+		b         = msg.Block
+		vrfShares = msg.VRFShares
+	)
 
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round < lfb.Round {
@@ -62,6 +67,14 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 		}
 	}
 
+	if err := mc.mergeBlockVRFShares(ctx, b, vrfShares); err != nil {
+		logging.Logger.Error("handle verify block - failed to merge vrf shares",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
+
 	if err := mc.pushToBlockVerifyWorker(ctx, b); err != nil {
 		logging.Logger.Error("handle verify block - push to block verify worker failed",
 			zap.Int64("round", b.Round),
@@ -69,7 +82,91 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			zap.Error(err))
 		return
 	}
+}
 
+func (mc *Chain) mergeBlockVRFShares(ctx context.Context, b *block.Block, vrfShares map[string]*round.VRFShare) error {
+	// merge vrf shares requests one by one to avoid duplicate share verification
+	return mc.mergeBlockVRFSharesWorker.Run(ctx, func() error {
+		var (
+			mb             = mc.GetMagicBlock(b.Round)
+			blsThreshold   = mb.T
+			mr             = mc.GetMinerRound(b.Round)
+			newVRFShares   = make(map[string]*round.VRFShare)
+			localVRFShares = make(map[string]*round.VRFShare)
+			vrfSharesNum   int
+		)
+
+		if len(vrfShares) < blsThreshold {
+			return errors.New("vrf shares of block not reached threshold")
+		}
+
+		if mr == nil {
+			newVRFShares = vrfShares
+			mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
+		} else {
+			if mr.IsVRFComplete() {
+				if mr.GetRandomSeed() != b.RoundRandomSeed {
+					return fmt.Errorf("mismatched round random seed")
+				}
+
+				// round VRF shares already reached threshold
+				return nil
+			}
+
+			localVRFShares = mr.GetVRFShares()
+			vrfSharesNum = len(localVRFShares)
+			if vrfSharesNum < blsThreshold {
+				for partyID, vrfs := range vrfShares {
+					if _, ok := localVRFShares[partyID]; ok {
+						continue
+					}
+					newVRFShares[partyID] = vrfs
+				}
+			}
+		}
+
+		dkg := mc.GetDKG(b.Round)
+
+		for id, vrfs := range newVRFShares {
+			mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), id)
+			msg, err := mc.GetBlsMessageForRound(mr.Round)
+			if err != nil {
+				return errors.New("failed to get bls message")
+			}
+
+			var share bls.Sign
+			if err := share.SetHexString(vrfs.Share); err != nil {
+				return fmt.Errorf("failed to decode share string, share: %s", vrfs.Share)
+			}
+
+			nd := mb.Miners.GetNode(id)
+			if nd == nil {
+				return fmt.Errorf("could not find node in magic block, mb_starting_round: %v, id: %v",
+					mb.StartingRound, id)
+			}
+
+			vrfs.SetParty(nd)
+
+			partyID := bls.ComputeIDdkg(id)
+			if !dkg.VerifySignature(&share, msg, partyID) {
+				return fmt.Errorf("failed to verify vrf share signature, id: %s, bls_msg: %s, share: %s",
+					id, msg, vrfs.Share)
+			}
+
+			mr.AddVRFShare(newVRFShares[id], blsThreshold)
+			vrfSharesNum++
+			logging.Logger.Debug("handle verify block - added vrf_share",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Int("vrf_share_num", vrfSharesNum))
+			if vrfSharesNum >= blsThreshold {
+				mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+				return nil
+			}
+		}
+
+		return nil
+	})
 }
 
 func (mc *Chain) pushToBlockVerifyWorker(ctx context.Context, b *block.Block) error {

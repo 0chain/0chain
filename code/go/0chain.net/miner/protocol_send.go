@@ -5,14 +5,15 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 )
 
 // SendBlock - send the block proposal to the network.
-func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) SendBlock(ctx context.Context, b *block.Block, vrfShares map[string]*round.VRFShare) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
-	m2m.SendAll(ctx, VerifyBlockSender(b))
+	m2m.SendAll(ctx, VerifyBlockSender(round.NewVerifyBlock(b, vrfShares)))
 }
 
 // SendNotarization - send the block notarization (collection of verification

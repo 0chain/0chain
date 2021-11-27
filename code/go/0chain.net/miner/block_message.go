@@ -32,15 +32,17 @@ type BlockMessage struct {
 	Timestamp               time.Time
 	RetryCount              int8
 	VRFShare                *round.VRFShare
+	VRFShares               map[string]*round.VRFShare
 }
 
 /*NewBlockMessage - create a new block message */
-func NewBlockMessage(messageType int, sender *node.Node, round *Round, block *block.Block) *BlockMessage {
+func NewBlockMessage(messageType int, sender *node.Node, round *Round, block *block.Block, vrfShares map[string]*round.VRFShare) *BlockMessage {
 	bm := &BlockMessage{}
 	bm.Type = messageType
 	bm.Sender = sender
 	bm.Round = round
 	bm.Block = block
+	bm.VRFShares = vrfShares
 	bm.Timestamp = time.Now()
 	return bm
 }

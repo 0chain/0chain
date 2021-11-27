@@ -18,7 +18,7 @@ type ProtocolRoundRandomBeacon interface {
 type ProtocolMessageSender interface {
 	SendVRFShare(ctx context.Context, r *round.VRFShare)
 
-	SendBlock(ctx context.Context, b *block.Block)
+	SendBlock(ctx context.Context, b *block.Block, vrfShares map[string]*round.VRFShare)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
 	SendNotarization(ctx context.Context, b *block.Block)
 

@@ -74,6 +74,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.notarizingBlocksMap = make(map[string]struct{})
 	minerChain.nbmMutex = &sync.Mutex{}
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
+	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -143,6 +144,7 @@ type Chain struct {
 	notarizingBlocksMap                  map[string]struct{}
 	nbmMutex                             *sync.Mutex
 	verifyBlockNotarizationWorker        *common.WithContextFunc
+	mergeBlockVRFSharesWorker            *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {

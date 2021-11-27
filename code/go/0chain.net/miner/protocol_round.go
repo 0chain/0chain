@@ -197,7 +197,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	)
 
 	if er != mr && mc.isStarted() {
-		logging.Logger.Info("StartNextRound found next round ready. No VRFs Sent",
+		logging.Logger.Info("StartNextRound found next round ready. No VRFShares Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
 			zap.Int64("rrs", r.GetRandomSeed()),
 			zap.Bool("is_started", mc.isStarted()))
@@ -208,7 +208,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
 	} else {
-		logging.Logger.Info("StartNextRound no VRFs sent -- "+
+		logging.Logger.Info("StartNextRound no VRFShares sent -- "+
 			"current round has no random seed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", rn))
 	}
@@ -654,7 +654,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
-	go mc.SendBlock(ctx, b)
+
+	go mc.SendBlock(ctx, b, r.GetVRFShares())
 	return b, nil
 }
 
@@ -1407,8 +1408,8 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	r.IncSoftTimeoutCount()
 }
 
-func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
-	r := mc.GetMinerRound(round)
+func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
+	r := mc.GetMinerRound(rn)
 	proposals := r.GetProposedBlocks()
 	if len(proposals) > 0 { // send the best block to the network
 		b := r.Block
@@ -1418,7 +1419,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
 			}
-			lfmbr := mc.GetLatestFinalizedMagicBlockRound(round) // related magic block
+			lfmbr := mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
 					zap.Any("lfmbr hash", lfmbr.Hash),
@@ -1430,7 +1431,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
-			go mc.SendBlock(context.Background(), b)
+			go mc.SendBlock(context.Background(), b, r.GetVRFShares())
 		}
 	}
 
