@@ -1,7 +1,7 @@
 # TestNet Setup with Docker Containers
 
 ## Table of Contents
-
+- [What is 0Chain?](#what-is-0chain)
 - [Initial Setup](#initial-setup) 
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders) 
   - [Setup Network](#setup-network)
@@ -19,6 +19,9 @@
 - [Integration tests](#integration-tests)
 - [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 - [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
+
+## What is 0Chain?
+0Chain is a decentralized blockchain-based storage platform with built-in privacy and security compliance. It provides high performance, enforceable SLAs, choice of providers for all enterprise grade applications.
 
 ## Initial Setup
 
