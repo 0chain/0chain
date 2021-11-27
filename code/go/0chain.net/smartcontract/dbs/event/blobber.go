@@ -50,6 +50,14 @@ func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	return &blobber, nil
 }
 
+func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
+	var blobbers []Blobber
+	result := edb.Store.Get().
+		Model(&Blobber{}).
+		Find(&blobbers)
+	return blobbers, result.Error
+}
+
 func (edb *EventDb) deleteBlobber(id string) error {
 	result := edb.Store.Get().
 		Where("blobber_id = ?", id).Delete(&Blobber{})

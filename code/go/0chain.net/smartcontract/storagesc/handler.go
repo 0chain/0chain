@@ -50,14 +50,29 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
-func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	blobbers, err := ssc.getBlobbersList(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
+func (ssc *StorageSmartContract) GetBlobbersHandler(
+	ctx context.Context,
+	params url.Values, balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent, true, "cannot find event database",
+		)
 	}
-	return blobbers, nil
+	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if err != nil {
+		return nil, common.NewError("get_blobbers", "cannot get blobbers from db")
+	}
+
+	var sns StorageNodes
+	for _, blobber := range blobbers {
+		sn, err := blobberTableToStorageNode(blobber)
+		if err != nil {
+			return nil, common.NewErrorf("get_blobber", "cannot parse blobber %v", blobber.BlobberID)
+		}
+		sns.Nodes.add(&sn)
+	}
+	return sns, nil
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
