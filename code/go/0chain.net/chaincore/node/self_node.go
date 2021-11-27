@@ -49,7 +49,7 @@ func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureSchem
 	sn.mx.Lock()
 	defer sn.mx.Unlock()
 	sn.signatureScheme = signatureScheme
-	sn.Node.SetPublicKey(signatureScheme.GetPublicKey())
+	sn.Node.SetSignatureScheme(signatureScheme)
 }
 
 /*Sign - sign the given hash */

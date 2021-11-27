@@ -785,7 +785,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)))
 
 	for _, v := range dkgMinersList.SimpleNodes {
-		n := &node.Node{}
+		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
@@ -801,7 +801,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 	}
 
 	for _, v := range sharders.Nodes {
-		n := &node.Node{}
+		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host

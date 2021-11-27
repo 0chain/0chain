@@ -113,7 +113,12 @@ func NewSimpleNodes() SimpleNodes {
 // not thread safe
 type SimpleNodes map[string]*SimpleNode
 
-func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *node.Pool) (maxNodes int) {
+// Pooler represents a pool interface
+type Pooler interface {
+	HasNode(id string) bool
+}
+
+func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp Pooler) (maxNodes int) {
 	var pmbNodes, newNodes, selectedNodes []*SimpleNode
 
 	// separate previous mb miners and new miners from dkg miners list

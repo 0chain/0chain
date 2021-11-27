@@ -3,7 +3,6 @@ package chain
 import (
 	"container/ring"
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/herumi/bls/ffi/go/bls"
 
 	"go.uber.org/zap"
 
@@ -78,6 +78,11 @@ type BlockStateHandler interface {
 	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
+type updateLFMBWithReply struct {
+	block *block.Block
+	reply chan struct{}
+}
+
 /*Chain - data structure that holds the chain data*/
 type Chain struct {
 	datastore.IDField
@@ -94,7 +99,8 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	latestFinalizedMagicBlock    *block.Block `json:"-"`
+	getLFMB                      chan *block.Block         `json:"-"`
+	updateLFMB                   chan *updateLFMBWithReply `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
 
@@ -120,7 +126,7 @@ type Chain struct {
 	stateMutex              *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
-	finalizedBlocksChannel chan *block.Block
+	finalizedBlocksChannel chan *finalizeBlockWithReply
 
 	*Stats `json:"-"`
 
@@ -175,7 +181,18 @@ type Chain struct {
 	syncLFBStateNowC      chan struct{}            // sync latest finalized round state from network immediately
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
-	syncBlocksC chan *SyncBlockReq
+
+	vldTxnsMtx               *sync.Mutex
+	validatedTxnsCache       map[string]string // validated transactions, key as hash, value as signature
+	verifyTicketsWithContext *common.WithContextFunc
+
+	notarizedBlockVerifyC map[string]chan struct{}
+	nbvcMutex             *sync.Mutex
+	blockSyncC            map[string]chan chan *block.Block
+	bscMutex              *sync.Mutex
+
+	// compute state
+	computeBlockStateC chan struct{}
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -185,27 +202,6 @@ type SyncBlockReq struct {
 	Round    int64
 	Num      int64
 	SaveToDB bool
-}
-
-// GetSyncBlocksChan returns the channel for receving block
-// sync request
-func (c *Chain) GetSyncBlocksChan() chan *SyncBlockReq {
-	return c.syncBlocksC
-}
-
-// AsyncSyncBlocks send a request to sync blocks back that startinng
-// from the given block or round,
-// return error if failed to push to channel or timeout
-func (c *Chain) AsyncSyncBlocks(ctx context.Context, req SyncBlockReq) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case c.syncBlocksC <- &req:
-	case <-time.After(500 * time.Millisecond):
-		return errors.New("push block sync request to channel timeout")
-	}
-
-	return nil
 }
 
 func (c *Chain) SetupEventDatabase() error {
@@ -513,7 +509,9 @@ func Provider() datastore.Entity {
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
 
-	c.getLFBTicket = make(chan *LFBTicket)              // should be unbuffered
+	c.getLFBTicket = make(chan *LFBTicket) // should be unbuffered
+	c.getLFMB = make(chan *block.Block)
+	c.updateLFMB = make(chan *updateLFMBWithReply, 100)
 	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
@@ -523,8 +521,16 @@ func Provider() datastore.Entity {
 	c.syncLFBStateNowC = make(chan struct{})
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
-	c.syncBlocksC = make(chan *SyncBlockReq, 100)
 
+	c.vldTxnsMtx = &sync.Mutex{}
+	c.validatedTxnsCache = make(map[string]string)
+	c.verifyTicketsWithContext = common.NewWithContextFunc(4)
+	c.notarizedBlockVerifyC = make(map[string]chan struct{})
+	c.nbvcMutex = &sync.Mutex{}
+	c.blockSyncC = make(map[string]chan chan *block.Block)
+	c.bscMutex = &sync.Mutex{}
+
+	c.computeBlockStateC = make(chan struct{}, 1)
 	return c
 }
 
@@ -536,9 +542,11 @@ func (c *Chain) Initialize() {
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 1)
-	c.finalizedBlocksChannel = make(chan *block.Block, 1)
+	c.finalizedBlocksChannel = make(chan *finalizeBlockWithReply, 1)
 	c.clientStateDeserializer = &state.Deserializer{}
+	// TODO: debug purpose, add the stateDB back
 	c.stateDB = stateDB
+	//c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
@@ -697,6 +705,13 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 	}
+
+	var err error
+	b, _, err = r.AddNotarizedBlock(b)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return b, r, nil
 }
 
@@ -828,7 +843,7 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
-	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()))
+	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators, c.GeneratorsPercent)
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
@@ -954,20 +969,18 @@ func (c *Chain) ReadNodePools(configFile string) {
 	mb := c.GetCurrentMagicBlock()
 	if miners, ok := conf.([]interface{}); ok {
 		mb.Miners.AddNodes(miners)
-		mb.Miners.ComputeProperties()
 		c.InitializeMinerPool(mb)
 	}
 	conf = nodeConfig.Get("sharders")
 	if sharders, ok := conf.([]interface{}); ok {
 		mb.Sharders.AddNodes(sharders)
-		mb.Sharders.ComputeProperties()
 	}
 }
 
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
-	for cb := b; cb != nil; pb, cb = cb, c.GetPreviousBlock(ctx, cb) {
+	for cb := b; cb != nil; pb, cb = cb, c.GetLocalPreviousBlock(ctx, cb) {
 		if cb.Round == 0 {
 			return false, nil
 		}
@@ -1108,7 +1121,7 @@ func (c *Chain) getBlocks() []*block.Block {
 // SetRoundRank - set the round rank of the block.
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
-	if miners == nil || miners.MapSize() == 0 {
+	if miners == nil || miners.Size() == 0 {
 		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
@@ -1383,14 +1396,14 @@ func (c *Chain) IsActiveInChain() bool {
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
-	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
+	if newMagicBlock.Miners == nil || newMagicBlock.Miners.Size() == 0 {
 		return common.NewError("failed to update magic block",
 			"there are no miners in the magic block")
 	}
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlock()
+		lfmb = c.GetLatestFinalizedMagicBlock(context.Background())
 	)
 
 	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
@@ -1402,6 +1415,11 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 			zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block",
 			fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, lfmb.MagicBlock.Hash))
+	}
+
+	// there's no new magic block
+	if lfmb != nil && newMagicBlock.StartingRound == lfmb.StartingRound {
+		return nil
 	}
 
 	// initialize magicblock nodepools
@@ -1434,9 +1452,6 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 	)
 
 	c.SetupNodes(newMagicBlock)
-
-	newMagicBlock.Sharders.ComputeProperties()
-	newMagicBlock.Miners.ComputeProperties()
 
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
@@ -1495,11 +1510,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
-	c.lfmbMutex.Lock()
-	defer c.lfmbMutex.Unlock()
-
-	var latest = c.latestFinalizedMagicBlock
-
+	var latest = c.GetLatestFinalizedMagicBlock(context.Background())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
 		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
@@ -1511,29 +1522,29 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
+	if latest != nil && latest.MagicBlock.Hash == b.MagicBlock.Hash {
+		return
+	}
+
 	logging.Logger.Warn("update lfmb",
 		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
-	c.latestFinalizedMagicBlock = b
+
+	c.lfmbMutex.Lock()
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
+	c.lfmbMutex.Unlock()
+
+	c.updateLatestFinalizedMagicBlock(context.Background(), b)
 }
 
 // GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
 // note: the block will be deep copied, used this carefully.
-func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	if c.latestFinalizedMagicBlock == nil {
-		return nil
+func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Block) {
+	select {
+	case lfb = <-c.getLFMB:
+	case <-ctx.Done():
 	}
-	return c.latestFinalizedMagicBlock.Clone()
-}
-
-// GetLatestFinalizedBlockSummary - get the latest finalized block summary.
-func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-	return c.latestFinalizedMagicBlock.GetSummary()
+	return
 }
 
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
@@ -1649,71 +1660,6 @@ func (c *Chain) UpdateBlocks(bs []*block.Block) {
 	}
 }
 
-func (c *Chain) pullNotarizedBlocks(ctx context.Context, b *block.Block, num int64) []*block.Block {
-	blocks := make([]*block.Block, 0, num)
-	cb := b
-	// get one more blocks from network in case the last block does not have previous block in local
-	for i := int64(0); i < num+1; i++ {
-		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
-		if nb == nil {
-			logging.Logger.Error("pull_notarized_block - could not get notarized block",
-				zap.Int64("end_round", b.Round),
-				zap.Int64("round", b.Round-1-i),
-				zap.Int64("current_round", c.GetCurrentRound()),
-				zap.Int64("index", i))
-			break
-		}
-		nb = nb.Clone()
-
-		logging.Logger.Debug("pull_notarized_block - got notarized block",
-			zap.Int64("round", nb.Round),
-			zap.String("block", nb.Hash),
-			zap.Int64("index", i))
-
-		// link blocks
-		if cb != b {
-			cb.SetPreviousBlock(nb)
-		}
-
-		cb = nb
-
-		blocks = append(blocks, nb)
-
-		// check if previous block does exist locally
-		pb, _ := c.GetBlock(ctx, cb.PrevHash)
-		if pb != nil {
-			cb.SetPreviousBlock(pb)
-			if pb.IsStateComputed() {
-				break
-			}
-		}
-	}
-
-	// set the last block's previous block
-	if len(blocks) == int(num+1) {
-		blocks = blocks[:num]
-	}
-
-	if len(blocks) > 0 {
-		// reverse blocks
-		for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
-			blocks[i], blocks[j] = blocks[j], blocks[i]
-		}
-
-		if blocks[0] == nil {
-			panic(fmt.Sprintf("last is nil, len(blocks)=%d, num: %v, blocks: %v", len(blocks), num, blocks))
-		}
-
-		if blocks[0].Round > 0 && blocks[0].PrevBlock == nil {
-			logging.Logger.Warn("pull_notarized_block - last block has no previous block",
-				zap.Int64("end_round", b.Round),
-				zap.Int64("round", blocks[0].Round))
-		}
-	}
-
-	return blocks
-}
-
 // The ViewChanger represents node makes view change where a block with new
 // magic block finalized. It called for every finalized block and used not
 // only for a ViewChange.
@@ -1730,4 +1676,75 @@ type AfterFetcher interface {
 	// AfterFetch can be used to reject the block returning error. It never
 	// receive an unverified and invalid block.
 	AfterFetch(ctx context.Context, b *block.Block) (err error)
+}
+
+func (c *Chain) LoadMinersPublicKeys() error {
+	mb := c.GetLatestFinalizedMagicBlock(context.Background())
+	if mb == nil {
+		return nil
+	}
+
+	for _, nd := range mb.Miners.Nodes {
+		var pk bls.PublicKey
+		if err := pk.DeserializeHexStr(nd.PublicKey); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Chain) AddValidatedTxns(hash, sig string) {
+	c.vldTxnsMtx.Lock()
+	c.validatedTxnsCache[hash] = sig
+	c.vldTxnsMtx.Unlock()
+}
+
+func (c *Chain) DeleteValidatedTxns(hashes []string) {
+	c.vldTxnsMtx.Lock()
+	for _, hash := range hashes {
+		delete(c.validatedTxnsCache, hash)
+	}
+	c.vldTxnsMtx.Unlock()
+}
+
+// FilterOutValidatedTxns filters out validated transactions
+func (c *Chain) FilterOutValidatedTxns(txns []*transaction.Transaction) []*transaction.Transaction {
+	needValidTxns := make([]*transaction.Transaction, 0, len(txns))
+	c.vldTxnsMtx.Lock()
+	for i, txn := range txns {
+		sig, ok := c.validatedTxnsCache[txn.Hash]
+		if ok && txn.Signature == sig {
+			continue
+		}
+
+		needValidTxns = append(needValidTxns, txns[i])
+	}
+	c.vldTxnsMtx.Unlock()
+
+	return needValidTxns
+}
+
+// BlockTicketsVerifyWithLock ensures that only one goroutine is allowed
+// to verify the tickets for the same block.
+func (c *Chain) BlockTicketsVerifyWithLock(ctx context.Context, blockHash string, f func() error) error {
+	c.nbvcMutex.Lock()
+	defer c.nbvcMutex.Unlock()
+	ch, ok := c.notarizedBlockVerifyC[blockHash]
+	if !ok {
+		// only one gorountine is allowed for each block notarization tickets verification
+		ch = make(chan struct{}, 1)
+		c.notarizedBlockVerifyC[blockHash] = ch
+	}
+
+	select {
+	case ch <- struct{}{}:
+		defer func() {
+			<-ch
+		}()
+
+		return f()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

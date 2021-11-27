@@ -1004,7 +1004,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	}
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientId, ctx)
-	wp = wp
 
 	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, individualBlobbers, newStakePools, *wp, ctx)
 
