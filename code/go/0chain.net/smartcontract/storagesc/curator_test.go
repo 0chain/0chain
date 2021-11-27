@@ -40,7 +40,6 @@ func TestAddCurator(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
-
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)

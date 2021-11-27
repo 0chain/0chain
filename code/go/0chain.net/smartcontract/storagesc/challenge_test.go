@@ -153,7 +153,6 @@ func TestAddChallenge(t *testing.T) {
 			t.Parallel()
 			args := parametersToArgs(tt.parameters)
 			var ssc = &StorageSmartContract{
-
 				SmartContract: sci.NewSC(ADDRESS),
 			}
 

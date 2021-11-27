@@ -24,7 +24,6 @@ func AddMockAllocations(
 	const mockMinLockDemand = 1
 	var (
 		sscId = StorageSmartContract{
-
 			SmartContract: sci.NewSC(ADDRESS),
 		}.ID
 		allocations Allocations

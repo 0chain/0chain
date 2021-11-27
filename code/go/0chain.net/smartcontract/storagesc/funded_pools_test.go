@@ -26,7 +26,6 @@ func TestAddToFundedPools(t *testing.T) {
 	) (*StorageSmartContract, cstate.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = &StorageSmartContract{
-
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		if len(p.existing) != 0 {
