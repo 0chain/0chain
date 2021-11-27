@@ -1,7 +1,6 @@
 package event
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"0chain.net/core/common"
@@ -21,41 +20,13 @@ type Challenge struct {
 	AllocationRoot     string           `json:"allocation_root"`
 }
 
-func (ch *Challenge) Add(edb *EventDb, data []byte) error {
-	err := json.Unmarshal(data, ch)
-	if err != nil {
-		return err
-	}
-
+func (edb *EventDb) AddChallenge(challenge Challenge) error {
 	bci := BlobberChallengeId{}
-	if err := bci.getOrCreate(edb, ch.BlobberID); err != nil {
+	if err := bci.getOrCreate(edb, challenge.BlobberID); err != nil {
 		return err
 	}
-	ch.BlobberChallengeID = bci.ID
-	result := edb.Store.Get().Create(ch)
-	if result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-func (edb *EventDb) getChallenges(blobberId string) ([]Challenge, error) {
-	var challenges []Challenge
-	result := edb.Store.Get().
-		Model(&Challenge{}).
-		Where("blobber_id", blobberId).
-		Find(&challenges)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	for i, ch := range challenges {
-		validators, err := edb.getValidationNoes(ch.ID)
-		if err != nil {
-			return nil, fmt.Errorf("challenge %v: %v", ch.ChallengeID, err)
-		}
-		challenges[i].Validators = validators
-	}
-	return challenges, nil
+	challenge.BlobberChallengeID = bci.ID
+	return edb.Store.Get().Create(challenge).Error
 }
 
 func (edb *EventDb) GetChallenge(challengeId string) (*Challenge, error) {
@@ -81,4 +52,23 @@ func (edb *EventDb) GetChallenge(challengeId string) (*Challenge, error) {
 func (edb *EventDb) removeChallenge(challengeId string) error {
 	result := edb.Store.Get().Delete(&Challenge{}, "challenge_id", challengeId)
 	return result.Error
+}
+
+func (edb *EventDb) getChallenges(blobberId string) ([]Challenge, error) {
+	var challenges []Challenge
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where("blobber_id", blobberId).
+		Find(&challenges)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	for i, ch := range challenges {
+		validators, err := edb.getValidationNoes(ch.ID)
+		if err != nil {
+			return nil, fmt.Errorf("challenge %v: %v", ch.ChallengeID, err)
+		}
+		challenges[i].Validators = validators
+	}
+	return challenges, nil
 }

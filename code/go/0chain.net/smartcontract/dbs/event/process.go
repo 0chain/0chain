@@ -75,7 +75,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return nil //edb.Add(edb, []byte(event.Data))
+		return edb.AddChallenge(challenge)
 	case TagDeleteChallenge:
 		return edb.removeChallenge(event.Data)
 	default:

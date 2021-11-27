@@ -36,15 +36,6 @@ func (_ *BlobberChallenge) exists(edb *EventDb, blobberId string) (bool, error) 
 }
 
 func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error {
-	//var count int64
-	//result := edb.Store.Get().
-	//	Model(&BlobberChallenge{}).
-	//	Where("blobber_id", blobberId).
-	//	Count(&count)
-	//if result.Error != nil {
-	//	return fmt.Errorf("error counting blobber challenge, blobber %v, error %v",
-	//		blobberId, result.Error)
-	//}
 	exists, err := (&BlobberChallenge{}).exists(edb, blobberId)
 	if err != nil {
 		return err
@@ -62,7 +53,7 @@ func (bci *BlobberChallengeId) getOrCreate(edb *EventDb, blobberId string) error
 	result := edb.Store.Get().
 		Model(&BlobberChallenge{}).
 		Find(&BlobberChallengeId{}).
-		Where("blobber_id", blobberId).
+		Where(&BlobberChallenge{BlobberID: blobberId}).
 		First(&bci)
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("cannot create blobber challenge %v, db error %v",
@@ -109,29 +100,4 @@ func (edb *EventDb) createChallengeTable() error {
 		&ValidationNode{},
 		//&ValidationTicket{},
 	)
-}
-
-func (edb *EventDb) dropChallengeTable() error {
-	var err error
-	//err := edb.Store.Get().Migrator().DropTable(&ValidationTicket{})
-	if err != nil {
-		return err
-	}
-	//err = edb.Store.Get().Migrator().DropTable(&Response{})
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().DropTable(&ValidationNode{})
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().DropTable(&Challenge{})
-	if err != nil {
-		return err
-	}
-	err = edb.Store.Get().Migrator().DropTable(&BlobberChallenge{})
-	if err != nil {
-		return err
-	}
-	return nil
 }

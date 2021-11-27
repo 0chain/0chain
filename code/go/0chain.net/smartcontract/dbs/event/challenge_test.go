@@ -49,15 +49,29 @@ func TestChallenges(t *testing.T) {
 	require.NoError(t, err)
 	data, err := json.Marshal(&challenge1)
 	require.NoError(t, err)
-	err = (&Challenge{}).Add(eventDb, data)
-	require.NoError(t, err)
+	eventAddCh := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteBlobber),
+		Data:        string(data),
+	}
 
 	data2, err := json.Marshal(&challenge2)
 	require.NoError(t, err)
-	err = (&Challenge{}).Add(eventDb, data2)
+	eventAddCh2 := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteBlobber),
+		Data:        string(data2),
+	}
 	require.NoError(t, err)
 
-	ch, err := eventDb.GetChallenge("first")
+	events := []Event{eventAddCh, eventAddCh2}
+	eventDb.AddEvents(events)
+
+	ch, err := eventDb.GetChallenge(challenge1.ChallengeID)
 	require.NoError(t, err)
 	require.EqualValues(t, len(challenge1.Validators), len(ch.Validators))
 	ch = ch
@@ -67,6 +81,14 @@ func TestChallenges(t *testing.T) {
 	require.EqualValues(t, len(bc.Challenges), 1)
 	require.EqualValues(t, len(bc.Challenges[0].Validators), 2)
 
-	err = eventDb.removeChallenge("first")
-	require.NoError(t, err)
+	deleteEvent := Event{
+		BlockNumber: 3,
+		TxHash:      "tx hash4",
+		Type:        int(TypeStats),
+		Tag:         int(TagDeleteBlobber),
+		Data:        challenge1.ChallengeID,
+	}
+	eventDb.AddEvents([]Event{deleteEvent})
+	_, err = eventDb.GetChallenge(challenge1.ChallengeID)
+	require.Error(t, err)
 }
