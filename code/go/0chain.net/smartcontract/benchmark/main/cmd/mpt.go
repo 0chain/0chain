@@ -147,7 +147,7 @@ func setUpMpt(
 	storagesc.GetMockValidatorStakePools(clients, balances)
 	log.Println("added validator stake pools")
 	storagesc.AddMockAllocations(
-		clients, publicKeys, stakePools, blobbers, validators, balances,
+		clients, publicKeys, stakePools, blobbers, validators, eventDb, balances,
 	)
 	log.Println("added allocations")
 	storagesc.SaveMockStakePools(stakePools, balances)
