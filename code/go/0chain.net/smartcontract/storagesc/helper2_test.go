@@ -49,13 +49,13 @@ func (sc *mockStateContext) Validate() error                             { retur
 func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
-func (sc *mockStateContext) EmitEvent(string, string, string)                      {}
-func (sc *mockStateContext) EmitError(error)                                       {}
-func (sc *mockStateContext) GetEvents() []event.Event                              { return nil }
-func (tb *mockStateContext) GetEventDB() *event.EventDb                            { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             { return }
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
+func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (sc *mockStateContext) EmitError(error)                                           {}
+func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	return sc.clientBalance, nil
 }

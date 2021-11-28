@@ -1,11 +1,12 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
+
+	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
 
@@ -18,33 +19,60 @@ import (
 const cantGetBlobberMsg = "can't get blobber"
 
 // GetBlobberHandler returns Blobber object from its individual stored value.
-func (ssc *StorageSmartContract) GetBlobberHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (
-	resp interface{}, err error) {
-
+func (ssc *StorageSmartContract) GetBlobberHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (resp interface{}, err error) {
 	var blobberID = params.Get("blobber_id")
 	if blobberID == "" {
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
-
-	bl, err := ssc.getBlobber(blobberID, balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobber")
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent,
+			true,
+			"cannot find event database",
+		)
 	}
 
-	return bl, nil
+	blobber, err := balances.GetEventDB().GetBlobber(blobberID)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
+	}
+
+	sn, err := blobberTableToStorageNode(*blobber)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot parse blobber %v", blobberID)
+	}
+	return sn, err
 }
 
 // GetBlobbersHandler returns list of all blobbers alive (e.g. excluding
 // blobbers with zero capacity).
-func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
-
-	blobbers, err := ssc.getBlobbersList(balances)
-	if err != nil {
-		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get blobbers list")
+func (ssc *StorageSmartContract) GetBlobbersHandler(
+	ctx context.Context,
+	params url.Values, balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent, true, "cannot find event database",
+		)
 	}
-	return blobbers, nil
+	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if err != nil {
+		return nil, common.NewError("get_blobbers", "cannot get blobbers from db")
+	}
+
+	var sns StorageNodes
+	for _, blobber := range blobbers {
+		sn, err := blobberTableToStorageNode(blobber)
+		if err != nil {
+			return nil, common.NewErrorf("get_blobber", "cannot parse blobber %v", blobber.BlobberID)
+		}
+		sns.Nodes.add(&sn)
+	}
+	return sns, nil
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
