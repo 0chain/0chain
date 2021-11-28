@@ -1,8 +1,6 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -142,8 +140,8 @@ func AddMockAllocations(
 		}
 	}
 
-	for i, bc := range challanges {
-		for j, challenge := range bc.Challenges {
+	for _, bc := range challanges {
+		for _, challenge := range bc.Challenges {
 			var ch event.Challenge
 			ch.ChallengeID = challenge.ID
 			for _, validator := range challenge.Validators {
@@ -156,13 +154,8 @@ func AddMockAllocations(
 			ch.RandomNumber = challenge.RandomNumber
 			ch.AllocationID = challenge.AllocationID
 			ch.AllocationRoot = challenge.AllocationRoot
-			data, err := json.Marshal(&ch)
+			err := eventDb.AddChallenge(ch)
 			if err != nil {
-				panic(err)
-			}
-			err = (&event.Challenge{}).Add(eventDb, data)
-			if err != nil {
-				fmt.Println("i j", i, j)
 				panic(err)
 			}
 		}

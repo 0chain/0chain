@@ -748,6 +748,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = alloc.ID
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
+	storageChallenge.Created = creationDate
 
 	var challenge event.Challenge
 	challenge.ChallengeID = challengeID
@@ -757,11 +758,12 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 			BaseURL:     validator.BaseURL,
 		})
 	}
+	challenge.Created = creationDate
 	challenge.BlobberID = selectedBlobberObj.ID
 	challenge.BlobberUrl = selectedBlobberObj.BaseURL
 	challenge.RandomNumber = challengeSeed
 	challenge.AllocationID = alloc.ID
-	challenge.AllocationRoot = blobberAllocation.AllocationID
+	challenge.AllocationRoot = blobberAllocation.AllocationRoot
 	data, err := json.Marshal(&challenge)
 	if err != nil {
 		return "", fmt.Errorf("Error marshalling challenge %v: %v", challenge, err)
@@ -781,7 +783,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		}
 	}
 
-	storageChallenge.Created = creationDate
 	addedChallege := blobberChallengeObj.addChallenge(&storageChallenge)
 	if !addedChallege {
 		challengeBytes, err := json.Marshal(storageChallenge)
