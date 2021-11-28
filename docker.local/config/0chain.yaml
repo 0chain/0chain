@@ -176,26 +176,16 @@ storage:
   #Cache = 1, Warm = 2, Hot = 4, Cold = 8. And their combination is sum of these numbers
   #If storage type is Cache and Warm then 1 + 2 = 3
 
-  storage_type: 12
+  storage_type: 13
   cache:
-    storage_strategy: "random" # random, round robin, min_size_first, min_count_first etc.
-    replacement_policy: ""
+    replacement_policy: "lru"
     write_policy: "write_through" # write_through, write_back
-    poll_interval: 1 # In hour
-    block_expire_in: 2 # In hour; Block that has not been accessed for 2 hours will be removed from cache
-    volumes:
-      - path: "/path/to/cache/blocks"
-        recovery: false # Defaults to false
-        size_to_maintain: 10 # In GB
-        inodes_to_maintain: 10 # In percent
-        allowed_block_numbers: 10000
-        allowed_block_size: 1 # In GB
-      - path: "/path/to/another/cache/blocks"
-        recovery: false
-        size_to_maintain: 2 # In GB
-        inodes_to_maintain: 10 # In percent
-        allowed_block_numbers: 100000
-        allowed_block_size: 1 # In GB
+    replacement_interval: 120 # In minutes
+    path: "/path/to/cache/blocks"
+    size_to_maintain: 10 # In GB
+    inodes_to_maintain: 10 # In percent
+    allowed_block_numbers: 10000
+    allowed_block_size: 1 # In GB
   hot:
     strategy: "random"
     volumes:
