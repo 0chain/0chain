@@ -70,6 +70,10 @@ var (
 		return fmt.Errorf("Storage type %v is not supported", storageType)
 	}
 
+	ErrCacheWritePolicyNotSupported = func(writePolicy string) error {
+		return fmt.Errorf("Cache write policy %v is not supported", writePolicy)
+	}
+
 	ErrFiftyPercent                = errors.New("At least 50%% volumes must be able to store blocks")
 	ErrCacheStorageConfNotProvided = errors.New("Storage type includes cache but cache config not provided")
 	ErrHotStorageConfNotProvided   = errors.New("Storage type includes hot tier but hot tier config not provided")
