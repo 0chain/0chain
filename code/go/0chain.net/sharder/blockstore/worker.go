@@ -131,6 +131,19 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 	}
 }
 
+func setupCacheReplacement(ctx context.Context, cacheI cacher) {
+	cache := cacheI.(*diskCache)
+	t := time.NewTicker(cache.ReplaceInterval)
+	for {
+		select {
+		case <-ctx.Done():
+			break
+		case <-t.C:
+			cache.Replace()
+		}
+	}
+}
+
 func newTiering(previousTiering WhichTier, skipOrSubtractTier WhichTier, deleteLocal bool) (nt WhichTier) {
 	nt = previousTiering + ColdTier
 	if deleteLocal {

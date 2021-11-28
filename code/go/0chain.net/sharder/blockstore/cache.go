@@ -1,443 +1,306 @@
-//cache
 package blockstore
 
 import (
 	"fmt"
-	"math/rand"
+	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
-	"0chain.net/chaincore/block"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
 )
 
 const (
-	LFU      = "lfu"   //Least frequently used blocks will be replaced
-	LRU      = "lru"   //Least recently added
-	RaAndMfu = "ramfu" //recently added and most frequently used
-
-	ChK   = "ChK"
-	ChDCL = 2000
-
-	WriteThrough = "writethrough"
-	WriteBack    = "writeback"
+	LRU                           = "lru"
+	LFU                           = "lfu"
+	WriteThrough                  = "write_through"
+	WriteBack                     = "write_back"
+	DefaultCacheReplacementPolicy = LRU
+	DefaultCacheWritePolicy       = WriteBack
+	DefaultCacheReplaceTime       = time.Hour * 2
 )
 
-// var chTier cacheTier
-
-type cacheTier struct {
-	CacheWrite        string //writethrough, writeback
-	SelectedVolumeCh  <-chan *volumeSelected
-	Volumes           []*cacheVolume
-	SelectNextStorage func(volumes []*cacheVolume, prevInd int)
-	CacheBlock        func(hash string, data []byte) error
-	RemoveBlock       func()
-	prevVolInd        int
-	DirPrefix         string
-	DCL               int
-	Mu                sync.Mutex
+type cacher interface {
+	Write(hash string, data []byte, t *time.Time) error
+	Read(hash string) (io.ReadCloser, error)
+	Replace()
+	UpadateMetaData(hash string, t *time.Time)
 }
 
-type volumeSelected struct {
-	volume  *cacheVolume
-	prevInd int
-	err     error
+type diskCache struct {
+	CachePath string
+
+	AllowedBlockNumbers uint64
+	AllowedBlockSize    uint64
+
+	CurrentBlockNumbers uint64
+	CurrentBlocksSize   uint64
+
+	ReplaceInterval time.Duration
 }
 
-func (ct *cacheTier) write(hash string, data []byte) (cachePath string, err error) {
-	sv := <-ct.SelectedVolumeCh
-	ct.prevVolInd = sv.prevInd
+func (c *diskCache) UpadateMetaData(hash string, t *time.Time) {
+	lockCh := getLock(hash)
+	lockHash(lockCh)
+	defer unlockHash(lockCh)
 
-	if sv.err != nil {
-		Logger.Error(sv.err.Error())
-		return "", sv.err
+	ca := cacheAccess{
+		Hash:       hash,
+		AccessTime: t,
+	}
+	ca.addOrUpdate()
+}
+
+func (c *diskCache) Write(hash string, data []byte, t *time.Time) error {
+	lockCh := getLock(hash)
+	lockHash(lockCh)
+	defer unlockHash(lockCh)
+
+	Logger.Info(fmt.Sprintf("Writing %v to cache", hash))
+	if c.CurrentBlockNumbers >= c.AllowedBlockNumbers || c.CurrentBlocksSize >= c.AllowedBlockSize {
+		c.Replace()
 	}
 
-	if cachePath, err = sv.volume.write(hash, data); err != nil {
+	bPath := filepath.Join(c.CachePath, hash)
+	f, err := os.Create(bPath)
+	if err != nil {
+		return err
+	}
+
+	//Try writing twice first with possible cache replacement and if error occurs replace cache and write data.
+	_, err = f.Write(data)
+	if err != nil {
+		f.Close()
+		c.Replace()
+
+		f, err := os.Create(bPath)
+		if err != nil {
+			return err
+		}
+
+		_, err = f.Write(data)
+		if err != nil {
+			return err
+		}
+	}
+
+	ca := cacheAccess{
+		Hash:       hash,
+		AccessTime: t,
+	}
+	ca.addOrUpdate()
+
+	return nil
+}
+
+func (c *diskCache) Read(hash string) (io.ReadCloser, error) {
+	lockCh := getLock(hash)
+	lockHash(lockCh)
+	defer unlockHash(lockCh)
+
+	bPath := filepath.Join(c.CachePath, hash)
+	f, err := os.Open(bPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return f, nil
+}
+
+var replaceLock chan struct{}
+
+func (c *diskCache) Replace() { //only lru implemented
+	select {
+	case replaceLock <- struct{}{}:
+	default:
 		return
 	}
 
-	//TODO /sif cache is full error; prune cache
-	go ct.SelectNextStorage(ct.Volumes, ct.prevVolInd)
-	return
+	defer func() {
+		<-replaceLock
+	}()
+
+	limitCh := make(chan struct{}, 10)
+	wg := sync.WaitGroup{}
+	for ca := range GetHashKeyForReplacement() {
+		limitCh <- struct{}{}
+		wg.Add(1)
+		go func(ca *cacheAccess) {
+			defer func() {
+				<-limitCh
+				wg.Done()
+			}()
+
+			lockCh := getLock(ca.Hash)
+			select {
+			case lockCh <- struct{}{}:
+				defer unlockHash(lockCh)
+			default:
+				return
+			}
+
+			os.Remove(filepath.Join(c.CachePath, ca.Hash))
+			ca.delete()
+
+		}(ca)
+	}
+	wg.Wait()
 }
 
-type cacheVolume struct {
-	Path                string
-	SizeToMaintain      uint64
-	InodesToMaintain    uint64
-	AllowedBlockNumbers uint64
-	AllowedBlockSize    uint64
-	BlocksCount         uint64
-	BlocksSize          uint64
-	//This field will determine when to poll and clean cache's blocks.
-	PollInterval int
-}
+func cacheInit(cViper *viper.Viper) cacher {
+	cachePath := cViper.GetString("path")
+	if cachePath == "" {
+		panic("Cache path is required")
+	}
 
-type cacheInfo struct {
-	Hash                  string
-	BlockCreateTime       time.Time
-	BlockLatestAccessTime time.Time
-	BlockAccessCount      uint
-}
+	if err := os.RemoveAll(cachePath); err != nil {
+		panic(err)
+	}
 
-func (v *cacheVolume) isAbleToStoreBlock() (ableToStore bool) {
-	return true
-}
+	if err := os.MkdirAll(cachePath, 0644); err != nil {
+		panic(err)
+	}
 
-func (v *cacheVolume) write(hash string, data []byte) (cachePath string, err error) {
+	availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(cachePath)
 	if err != nil {
-		//log error
+		panic(err)
 	}
+
+	var sizeToMaintain uint64
+	sizeToMaintainI := cViper.Get("size_to_maintain")
+	if sizeToMaintainI != nil {
+		sizeToMaintain, err = getUint64ValueFromYamlConfig(sizeToMaintainI)
+		if err != nil {
+			panic(err)
+		}
+
+		sizeToMaintain *= GB
+	}
+
+	if availableSize <= sizeToMaintain {
+		panic(ErrSizeLimit(cachePath, sizeToMaintain).Error())
+	}
+
+	var inodesToMaintain uint64
+	inodesToMaintainI := cViper.Get("inodes_to_maintain")
+	if inodesToMaintainI != nil {
+		inodesToMaintain, err = getUint64ValueFromYamlConfig(inodesToMaintainI)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
+		panic(ErrInodesLimit(cachePath, inodesToMaintain).Error())
+	}
+
+	var allowedBlockNumbers uint64
+	allowedBlockNumbersI := cViper.Get("allowed_block_numbers")
+	if allowedBlockNumbersI != nil {
+		allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	var allowedBlockSize uint64
+	allowedBlockSizeI := cViper.Get("allowed_block_size")
+	if allowedBlockSizeI != nil {
+		allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	cacheWritePolicy := cViper.GetString("write_policy")
+	if cacheWritePolicy == "" {
+		cacheWritePolicy = DefaultCacheWritePolicy
+	}
+
+	switch cacheWritePolicy {
+	case WriteThrough, WriteBack:
+	default:
+		panic(fmt.Errorf("cache write policy %v is not supported", cacheWritePolicy))
+	}
+
+	cacheReplacementPolicy := cViper.GetString("replacement_policy")
+	if cacheReplacementPolicy == "" {
+		cacheReplacementPolicy = DefaultCacheReplacementPolicy
+	}
+	var replaceDuration time.Duration
+	cacheReplacementInterval := cViper.GetInt("replacement_interval")
+	if cacheReplacementInterval == 0 {
+		replaceDuration = time.Duration(DefaultCacheReplaceTime)
+	} else {
+		replaceDuration = time.Duration(cacheReplacementInterval)
+	}
+
+	switch cacheReplacementPolicy { //When other policies are supported then it should be registered here and respectively called.
+	case LRU:
+	default:
+		panic(fmt.Errorf("cache replacement policy %v is not supported", cacheReplacementPolicy))
+	}
+
+	return &diskCache{
+		CachePath:           cachePath,
+		AllowedBlockNumbers: allowedBlockNumbers,
+		AllowedBlockSize:    allowedBlockSize,
+		ReplaceInterval:     replaceDuration,
+	}
+}
+
+var cacheBucketLock chan struct{}
+
+func init() {
+	cacheBucketLock = make(chan struct{}, 1)
+	initHashLock()
+}
+
+var mutateLock chan struct{}
+var hashLock map[string]chan struct{}
+
+func initHashLock() {
+	hashLock = make(map[string]chan struct{})
+	mutateLock = make(chan struct{}, 1)
+	go cleanHashLock()
+}
+
+func getLock(hash string) (lock chan struct{}) {
+	mutateLock <- struct{}{}
+	var ok bool
+	lock, ok = hashLock[hash]
+	if !ok {
+		lock = make(chan struct{}, 1)
+		hashLock[hash] = lock
+	}
+	<-mutateLock
 	return
 }
 
-func deleteFromCache() {
-	//
+func lockHash(ch chan struct{}) {
+	ch <- struct{}{}
 }
 
-//Check for old blocks and clean cache
-func pollCache() {
-	//
+func unlockHash(ch chan struct{}) {
+	<-ch
 }
 
-func getFromCache() (*block.Block, error) {
-	//
-	return nil, nil
-}
+func cleanHashLock() {
+	t := time.NewTicker(time.Second)
 
-func cacheInit(cViper *viper.Viper) *cacheTier {
-	Logger.Info("Initializing cache")
+	for range t.C {
+		mutateLock <- struct{}{}
 
-	volumesI := cViper.Get("volumes")
-	if volumesI == nil {
-		panic("volume config not available")
-	}
+		for hash, lock := range hashLock {
+			select {
+			case lock <- struct{}{}:
+				// <-lock
+				delete(hashLock, hash)
+			default:
 
-	volumesMapI := volumesI.([]interface{})
-	volumesMap := make([]map[string]interface{}, len(volumesMapI))
-	for _, vI := range volumesMapI {
-		m := make(map[string]interface{})
-		volIMap := vI.(map[interface{}]interface{})
-		for k, v := range volIMap {
-			sK := k.(string)
-			m[sK] = v
-		}
-		volumesMap = append(volumesMap, m)
-	}
-
-	volumeStrategy := cViper.GetString("volume_strategy")
-	if volumeStrategy == "" {
-		volumeStrategy = DefaultCacheStrategy
-	}
-
-	cacheStrategy := cViper.GetString("cache_strategy")
-	if cacheStrategy == "" {
-		cacheStrategy = LRU
-	}
-
-	cacheWrite := cViper.GetString("write_policy")
-	if cacheWrite == "" {
-		cacheWrite = WriteBack
-	}
-
-	if !(cacheWrite == WriteBack || cacheWrite == WriteThrough) {
-		panic(fmt.Errorf("Cache write policy %v is not supported", cacheWrite))
-	}
-
-	Logger.Info(fmt.Sprintf("Registering function for volume strategy: %v", volumeStrategy))
-	var vf func(volumes []*cacheVolume, prevInd int)
-
-	selectedVolumeChan := make(chan *volumeSelected, 1)
-	chTier := new(cacheTier)
-	switch volumeStrategy {
-	default:
-		panic(ErrStrategyNotSupported(volumeStrategy))
-	case Random:
-		vf = func(volumes []*cacheVolume, prevInd int) {
-			var selectedVolume *cacheVolume
-			var selectedIndex int
-
-			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-			for len(volumes) > 0 {
-				ind := r.Intn(len(volumes))
-				sv := volumes[ind]
-
-				if sv.isAbleToStoreBlock() {
-					selectedVolume = sv
-					selectedIndex = ind
-					break
-				}
-
-				volumes[ind] = volumes[len(volumes)-1]
-				volumes = volumes[:len(volumes)-1]
-			}
-
-			chTier.Volumes = volumes
-
-			if selectedVolume == nil {
-				selectedVolumeChan <- &volumeSelected{
-					err: ErrUnableToSelectVolume,
-				}
-
-			} else {
-
-				selectedVolumeChan <- &volumeSelected{
-					volume:  selectedVolume,
-					prevInd: selectedIndex,
-				}
-			}
-
-		}
-	case RoundRobin:
-		vf = func(volumes []*cacheVolume, prevInd int) {
-			var selectedVolume *cacheVolume
-			prevVolume := volumes[prevInd]
-			var selectedIndex int
-
-			if prevInd < 0 {
-				prevInd = -1
-			}
-
-			for i := prevInd + 1; i != prevInd; i++ {
-				if len(volumes) == 0 {
-					break
-				}
-
-				if i >= len(volumes) {
-					i = len(volumes) - i
-				}
-				if i < 0 {
-					i = 0
-				}
-
-				v := volumes[i]
-				if v.isAbleToStoreBlock() {
-					selectedVolume = v
-					selectedIndex = i
-
-					break
-				} else {
-					volumes = append(volumes[:i], volumes[i+1:]...)
-
-					if i < prevInd {
-						prevInd--
-					}
-
-					i--
-				}
-
-			}
-
-			if selectedVolume == nil {
-				if prevVolume.isAbleToStoreBlock() {
-					selectedVolume = prevVolume
-					selectedIndex = 0
-				}
-			}
-
-			chTier.Volumes = volumes
-			if selectedVolume == nil {
-				selectedVolumeChan <- &volumeSelected{
-					err: ErrUnableToSelectVolume,
-				}
-			} else {
-				selectedVolumeChan <- &volumeSelected{
-					volume:  selectedVolume,
-					prevInd: selectedIndex,
-				}
-			}
-		}
-	case MinSizeFirst:
-		vf = func(volumes []*cacheVolume, prevInd int) {
-			var selectedVolume *cacheVolume
-			var selectedIndex int
-
-			totalVolumes := len(volumes)
-			for i := 0; i < totalVolumes; i++ {
-				if len(volumes) == 0 {
-					break
-				}
-
-				v := volumes[i]
-				if !v.isAbleToStoreBlock() {
-					volumes = append(volumes[:i], volumes[i+1:]...)
-					i--
-					totalVolumes--
-					continue
-				}
-
-				if selectedVolume == nil {
-					selectedVolume = v
-					selectedIndex = i
-					continue
-				}
-
-				if v.BlocksSize < selectedVolume.BlocksSize {
-					selectedVolume = v
-					selectedIndex = i
-				}
-			}
-
-			chTier.Volumes = volumes
-			if selectedVolume == nil {
-				selectedVolumeChan <- &volumeSelected{
-					err: ErrUnableToSelectVolume,
-				}
-			} else {
-				selectedVolumeChan <- &volumeSelected{
-					volume:  selectedVolume,
-					prevInd: selectedIndex,
-				}
-			}
-		}
-	case MinCountFirst:
-		vf = func(volumes []*cacheVolume, prevInd int) {
-			var selectedVolume *cacheVolume
-			var selectedIndex int
-
-			totalVolumes := len(volumes)
-			for i := 0; i < totalVolumes; i++ {
-				if len(volumes) == 0 {
-					break
-				}
-
-				v := volumes[i]
-				if !v.isAbleToStoreBlock() {
-					volumes = append(volumes[:i], volumes[i+1:]...)
-					i--
-					totalVolumes--
-					continue
-				}
-
-				if selectedVolume == nil {
-					selectedVolume = v
-					selectedIndex = i
-				}
-
-				if v.BlocksCount < selectedVolume.BlocksCount {
-					selectedVolume = v
-					selectedIndex = i
-				}
-			}
-
-			chTier.Volumes = volumes
-			if selectedVolume == nil {
-				selectedVolumeChan <- &volumeSelected{
-					err: ErrUnableToSelectVolume,
-				}
-			} else {
-				selectedVolumeChan <- &volumeSelected{
-					volume:  selectedVolume,
-					prevInd: selectedIndex,
-				}
 			}
 		}
 	}
-
-	Logger.Info(fmt.Sprintf("Registering function for cache strategy: %v", cacheStrategy))
-
-	var cf func()
-
-	switch cacheStrategy {
-	default:
-		panic(ErrStrategyNotSupported(cacheStrategy))
-	case LFU:
-		_ = cf
-		//
-	case LRU:
-		//
-	}
-
-	startCacheVolumes(volumesMap, chTier)
-
-	chTier.SelectedVolumeCh = selectedVolumeChan
-	chTier.SelectNextStorage = vf
-	chTier.DCL = ChDCL
-	chTier.DirPrefix = ChK
-
-	return chTier
-}
-
-func startCacheVolumes(mVolumes []map[string]interface{}, chTier *cacheTier) {
-	for _, volI := range mVolumes {
-		vPathI, ok := volI["path"]
-		if !ok {
-			Logger.Error("Discarding volume; Path field is required")
-			continue
-		}
-
-		vPath := vPathI.(string)
-
-		if err := os.RemoveAll(vPath); err != nil {
-			Logger.Error(err.Error())
-			continue
-		}
-
-		if err := os.MkdirAll(vPath, 0644); err != nil {
-			Logger.Error(err.Error())
-			continue
-		}
-
-		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(vPath)
-
-		if err != nil {
-			Logger.Error(err.Error())
-			continue
-		}
-
-		var sizeToMaintain uint64
-		sizeToMaintainI, ok := volI["size_to_maintain"]
-		if ok {
-			sizeToMaintain = sizeToMaintainI.(uint64)
-		}
-
-		if availableSize/(1024^3) <= sizeToMaintain {
-			Logger.Error(ErrSizeLimit(vPath, sizeToMaintain).Error())
-			continue
-		}
-
-		var inodesToMaintain uint64
-		inodesToMaintainI, ok := volI["inodes_to_maintain"]
-		if ok {
-			inodesToMaintain = inodesToMaintainI.(uint64)
-		}
-		if float64(100*availableInodes)/float64(totalInodes) <= float64(inodesToMaintain) {
-			Logger.Error(ErrInodesLimit(vPath, inodesToMaintain).Error())
-			continue
-		}
-
-		var allowedBlockNumbers uint64
-		allowedBlockNumbersI, ok := volI["allowed_block_numbers"]
-		if ok {
-			allowedBlockNumbers, err = getUint64ValueFromYamlConfig(allowedBlockNumbersI)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		var allowedBlockSize uint64
-		allowedBlockSizeI, ok := volI["allowed_block_size"]
-		if ok {
-			allowedBlockSize, err = getUint64ValueFromYamlConfig(allowedBlockSizeI)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		chTier.Volumes = append(chTier.Volumes, &cacheVolume{
-			Path:                vPath,
-			AllowedBlockNumbers: allowedBlockNumbers,
-			AllowedBlockSize:    allowedBlockSize,
-			SizeToMaintain:      sizeToMaintain,
-		})
-	}
-
-	if len(chTier.Volumes) < len(mVolumes)/2 {
-		panic(ErrFiftyPercent)
-	}
-
 }

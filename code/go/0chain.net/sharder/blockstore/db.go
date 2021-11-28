@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,16 +28,11 @@ Hot   = 4
 Cold  = 8
 */
 const (
-	WarmTier             WhichTier = 2 //Warm tier only
-	HotTier              WhichTier = 4 //Hot tier only
-	ColdTier             WhichTier = 8 //Cold tier only
-	CacheAndHotTier      WhichTier = 5
-	HotAndColdTier       WhichTier = 12
-	CacheHotAndColdTier  WhichTier = 13
-	WarmAndColdTier      WhichTier = 10
-	CacheWarmAndColdTier WhichTier = 11
-	CacheAndWarmTier     WhichTier = 3
-	CacheAndColdTier     WhichTier = 9
+	WarmTier        WhichTier = 2 //Warm tier only
+	HotTier         WhichTier = 4 //Hot tier only
+	ColdTier        WhichTier = 8 //Cold tier only
+	HotAndColdTier  WhichTier = 12
+	WarmAndColdTier WhichTier = 10
 )
 
 //bucket constant values
@@ -46,6 +42,11 @@ const (
 	BlockWhereBucket         = "bwb"
 	UnmovedBlockBucket       = "ubb"
 	BlockUsageBucket         = "bub"
+	//Contains key that is combination of "accessTime:hash" and value of nil
+	CacheAccessTimeHashBucket = "cahb"
+	CacheAccessTimeSeparator  = ":"
+	//Contains key value; "hash:accessTime"
+	CacheHashAccessTimeBucket = "chab"
 )
 
 //Create db file and create buckets
@@ -113,7 +114,6 @@ type BlockWhereRecord struct {
 	Hash      string    `json:"-"`
 	Tiering   WhichTier `json:"tr"`
 	BlockPath string    `json:"vp,omitempty"` //For disk volume it is simple unix path. For cold storage it is "storageUrl:bucketName"
-	CachePath string    `json:"chp,omitempty"`
 	ColdPath  string    `json:"cp,omitempty"`
 }
 
@@ -239,4 +239,125 @@ func GetUnmovedBlock(prevKey, upto []byte) (ubr *UnmovedBlockRecord, timeByte []
 	}
 
 	return
+}
+
+//Add a cache bucket to store accessed time as key and hash as its value
+//eg accessedTime:hash
+//Use sorting feature of boltdb to quickly delete cached blocks that should be replaced
+type cacheAccess struct {
+	Hash       string
+	AccessTime *time.Time
+}
+
+func GetHashKeyForReplacement() chan *cacheAccess {
+	ch := make(chan *cacheAccess, 10)
+
+	go func() {
+		defer func() {
+			close(ch)
+		}()
+
+		bwrDB.View(func(t *bbolt.Tx) error {
+			bkt := t.Bucket([]byte(CacheAccessTimeHashBucket))
+			if bkt == nil {
+				return nil
+			}
+
+			i := bkt.Stats().KeyN / 2 //Number of blocks to replace
+			count := 0
+
+			cursor := bkt.Cursor()
+			for k, _ := cursor.Next(); k != nil && count < i; k, _ = cursor.Next() {
+				ca := new(cacheAccess)
+				sl := strings.Split(string(k), CacheAccessTimeSeparator)
+				ca.Hash = sl[1]
+				accessTime, _ := time.Parse(time.RFC3339, sl[0])
+				ca.AccessTime = &accessTime
+				ch <- ca
+				count++
+			}
+			return nil
+		})
+
+	}()
+
+	return ch
+}
+
+func (ca *cacheAccess) addOrUpdate() error {
+	timeStr := ca.AccessTime.Format(time.RFC3339)
+	accessTimeKey := []byte(fmt.Sprintf("%v:%v", timeStr, ca.Hash))
+
+	return bwrDB.Update(func(t *bbolt.Tx) error {
+		accessTimeBkt := t.Bucket([]byte(CacheAccessTimeHashBucket))
+		if accessTimeBkt == nil {
+			return fmt.Errorf("%v bucket does not exist", CacheAccessTimeHashBucket)
+		}
+
+		hashBkt := t.Bucket([]byte(CacheHashAccessTimeBucket))
+		if hashBkt == nil {
+			return fmt.Errorf("%v bucket does not exist", CacheHashAccessTimeBucket)
+		}
+
+		timeValue := hashBkt.Get([]byte(ca.Hash))
+		if timeValue != nil {
+			delKey := []byte(fmt.Sprintf("%v%v%v", string(timeValue), CacheAccessTimeSeparator, ca.Hash))
+			accessTimeBkt.Delete(delKey)
+		}
+
+		if err := accessTimeBkt.Put(accessTimeKey, nil); err != nil {
+			return err
+		}
+
+		return hashBkt.Put([]byte(ca.Hash), []byte(timeStr))
+	})
+}
+
+// func (ca *cacheAccess) update() {
+// 	timeStr := ca.AccessTime.Format(time.RFC3339)
+// 	accessTimeKey := []byte(fmt.Sprintf("%v%v%v", timeStr, CacheAccessTimeSeparator, ca.Hash))
+
+// 	bwrDB.Update(func(t *bbolt.Tx) error {
+// 		accessTimeBkt := t.Bucket([]byte(CacheAccessTimeHashBucket))
+// 		if accessTimeBkt == nil {
+// 			return fmt.Errorf("%v bucket does not exist", CacheAccessTimeHashBucket)
+// 		}
+
+// 		hashBkt := t.Bucket([]byte(CacheHashAccessTimeBucket))
+// 		if hashBkt == nil {
+// 			return fmt.Errorf("%v bucket does not exist", CacheHashAccessTimeBucket)
+// 		}
+
+// 		oldAccessTime := hashBkt.Get([]byte(ca.Hash))
+// 		if oldAccessTime != nil {
+// 			k := []byte(fmt.Sprintf("%v%v%v", string(oldAccessTime), CacheAccessTimeSeparator, ca.Hash))
+// 			accessTimeBkt.Delete(k)
+// 		}
+
+// 		if err := hashBkt.Put([]byte(ca.Hash), []byte(timeStr)); err != nil {
+// 			return err
+// 		}
+// 		return accessTimeBkt.Put(accessTimeKey, nil)
+// 	})
+// }
+
+func (ca *cacheAccess) delete() error {
+	return bwrDB.Update(func(t *bbolt.Tx) error {
+		tBucket := t.Bucket([]byte(CacheAccessTimeHashBucket))
+		if tBucket == nil {
+			return nil
+		}
+
+		hBucket := t.Bucket([]byte(CacheHashAccessTimeBucket))
+		if hBucket == nil {
+			return nil
+		}
+
+		tKey := []byte(fmt.Sprintf("%v%v%v", ca.AccessTime.Format(time.RFC3339), CacheAccessTimeSeparator, ca.Hash))
+		if err := tBucket.Delete(tKey); err != nil {
+			return err
+		}
+
+		return hBucket.Delete([]byte(ca.Hash))
+	})
 }
