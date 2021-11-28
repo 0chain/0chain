@@ -67,7 +67,7 @@ func TestUpdateSettings(t *testing.T) {
 					//}
 
 					//var setting interface{} = getConfField(*conf, key)
-					var setting interface{} = gn.Get(Settings[key].Setting)
+					setting, _ := gn.Get(Settings[key].Setting)
 					fmt.Println("setting", setting, "value", value)
 					switch Settings[key].ConfigType {
 					case smartcontract.Int:

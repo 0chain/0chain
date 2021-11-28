@@ -536,7 +536,7 @@ func (ssc *StorageSmartContract) getConfigHandler(
 		}
 	}
 
-	return conf.getConfigMap(), nil // actual value
+	return conf.getConfigMap() // actual value
 }
 
 // getWritePoolConfig

@@ -224,7 +224,39 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 
 // AddVRFShare - implement the interface for the RoundRandomBeacon protocol.
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
-	var rn = mr.GetRoundNumber()
+	var (
+		partyID = bls.ComputeIDdkg(vrfs.GetParty().ID)
+		rn      = mr.GetRoundNumber()
+		dkg     = mc.GetDKG(rn)
+	)
+
+	if dkg == nil {
+		return false
+	}
+
+	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
+		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
+		Logger.Info("TOC_FIX VRF Timeout > round timeout",
+			zap.Int("vrfs_timeout", vrfs.GetRoundTimeoutCount()),
+			zap.Int("round_timeout", mr.GetTimeoutCount()),
+			zap.Int64("round", mr.GetRoundNumber()),
+			zap.Int64("vrf round", vrfs.Round))
+		return false
+	}
+
+	if mr.VRFShareExist(vrfs) {
+		return false
+	}
+
+	blsThreshold := dkg.T
+	if len(mr.GetVRFShares()) >= blsThreshold {
+		Logger.Info("Ignoring VRFShare. Already at threshold",
+			zap.Int64("Round", rn),
+			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
+			zap.Int("bls_threshold", blsThreshold))
+		return false
+	}
+
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", rn), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
 		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()),
 		zap.String("vrf_share", vrfs.Share))
@@ -240,15 +272,6 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
 		return false
 	}
-
-	var (
-		partyID = bls.ComputeIDdkg(vrfs.GetParty().ID)
-		dkg     = mc.GetDKG(rn)
-	)
-	if dkg == nil {
-		return false
-	}
-	blsThreshold := dkg.T
 
 	if !dkg.VerifySignature(&share, msg, partyID) {
 		var prSeed string
@@ -271,39 +294,22 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 			zap.String("pr_seed", prSeed),
 		)
 		return false
-	} else {
-		Logger.Info("verified vrf",
-			zap.Any("share", share.GetHexString()),
-			zap.Any("message", msg),
-			zap.Any("from", (&partyID).GetHexString()),
-			zap.String("node_id", vrfs.GetParty().GetKey()),
-			zap.Int64("round", vrfs.Round))
 	}
-	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
-		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
-		Logger.Info("TOC_FIX VRF Timeout > round timeout",
-			zap.Int("vrfs_timeout", vrfs.GetRoundTimeoutCount()),
-			zap.Int("round_timeout", mr.GetTimeoutCount()))
-		return false
-	}
-	if len(mr.GetVRFShares()) >= blsThreshold {
-		//ignore VRF shares coming after threshold is reached to avoid locking issues.
-		//Todo: Remove this logging
-		mr.AddAdditionalVRFShare(vrfs)
-		mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
-		Logger.Info("Ignoring VRFShare. Already at threshold",
-			zap.Int64("Round", rn),
-			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
-			zap.Int("bls_threshold", blsThreshold))
-		return false
-	}
-	if mr.AddVRFShare(vrfs, blsThreshold) {
-		mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
-		return true
-	} else {
+
+	Logger.Info("verified vrf",
+		zap.Any("share", share.GetHexString()),
+		zap.Any("message", msg),
+		zap.Any("from", (&partyID).GetHexString()),
+		zap.String("node_id", vrfs.GetParty().GetKey()),
+		zap.Int64("round", vrfs.Round))
+
+	if !mr.AddVRFShare(vrfs, blsThreshold) {
 		Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
+		return false
 	}
-	return false
+
+	mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+	return true
 }
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
@@ -318,42 +324,43 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	}
 
 	var shares = mr.GetVRFShares()
-	if len(shares) >= blsThreshold {
-		Logger.Debug("VRF Hurray we've threshold BLS shares")
-		if !config.DevConfiguration.IsDkgEnabled {
-			// We're still waiting for threshold number of VRF shares,
-			// even though DKG is not enabled.
-
-			var rbOutput string // rboutput will ignored anyway
-			mc.computeRBO(ctx, mr, rbOutput)
-
-			return
-		}
-
-		var (
-			recSig, recFrom     = getVRFShareInfo(mr)
-			dkg                 = mc.GetDKG(mr.GetRoundNumber())
-			groupSignature, err = dkg.CalBlsGpSign(recSig, recFrom)
-		)
-		if err != nil {
-			Logger.Error("calculates the Gp Sign", zap.Error(err))
-		}
-
-		var rbOutput = encryption.Hash(groupSignature.GetHexString())
-		Logger.Info("recieve bls sign", zap.Any("sigs", recSig),
-			zap.Any("from", recFrom),
-			zap.Any("group_signature", groupSignature.GetHexString()))
-
-		// rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
-		Logger.Debug("VRF ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
-		mc.computeRBO(ctx, mr, rbOutput)
-	} else {
+	if len(shares) < blsThreshold {
 		//TODO: remove this log
 		Logger.Info("Not yet reached threshold",
 			zap.Int("vrfShares_num", len(shares)),
 			zap.Int("threshold", blsThreshold),
 			zap.Int64("round", mr.GetRoundNumber()))
+		return
 	}
+
+	Logger.Debug("VRF Hurray we've threshold BLS shares", zap.Int64("round", mr.GetRoundNumber()))
+	if !config.DevConfiguration.IsDkgEnabled {
+		// We're still waiting for threshold number of VRF shares,
+		// even though DKG is not enabled.
+
+		var rbOutput string // rboutput will ignored anyway
+		mc.computeRBO(ctx, mr, rbOutput)
+
+		return
+	}
+
+	var (
+		recSig, recFrom     = getVRFShareInfo(mr)
+		dkg                 = mc.GetDKG(mr.GetRoundNumber())
+		groupSignature, err = dkg.CalBlsGpSign(recSig, recFrom)
+	)
+	if err != nil {
+		Logger.Error("calculates the Gp Sign", zap.Error(err))
+	}
+
+	var rbOutput = encryption.Hash(groupSignature.GetHexString())
+	Logger.Info("recieve bls sign", zap.Any("sigs", recSig),
+		zap.Any("from", recFrom),
+		zap.Any("group_signature", groupSignature.GetHexString()))
+
+	// rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
+	Logger.Debug("VRF ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
+	mc.computeRBO(ctx, mr, rbOutput)
 }
 
 func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {

@@ -30,6 +30,24 @@ go build -tags bn256
 ./main benchmark --omit "storage_rest.allocation, storage_rest.allocations" | column -t -s,
 ```
 
+To use the event database you need a to set up a local postgreSQL database. Login in parameters
+are read from the benchmark yaml, dbs.events section.
+```yanl
+dbs:
+  events:
+    enabled: true
+    name: events_db
+    user: zchain_user
+    password: zchian
+    host: localhost
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
+```
+Set enabled to false if you have not setup a postgreSQL database. Some of the Rest Api
+endpoint will not work without an event database.
+
 You can also set all these options in the
 [benchmark.yaml](https://github.com/0chain/0chain/blob/staging/code/go/0chain.net/smartcontract/benchmark/main/config/benchmark.yaml).
 file. The command line options will take precedence over those in the `.yaml` file.

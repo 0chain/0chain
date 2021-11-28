@@ -118,26 +118,26 @@ type Node struct {
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status"`
 	InPrevMB       bool          `json:"in_prev_mb"`
-	LastActiveTime time.Time     `json:"-"`
-	ErrorCount     int64         `json:"-"`
-	CommChannel    chan struct{} `json:"-"`
+	LastActiveTime time.Time     `json:"-" msgpack:"-"`
+	ErrorCount     int64         `json:"-" msgpack:"-"`
+	CommChannel    chan struct{} `json:"-" msgpack:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-"` // messages sent to this node
-	sendErrors int64 `json:"-"` // failed message sent to this node
-	received   int64 `json:"-"` // messages received from this node
+	sent       int64 `json:"-" msgpack:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" msgpack:"-"` // failed message sent to this node
+	received   int64 `json:"-" msgpack:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-"`
 
 	largeMessageSendTime uint64
 	smallMessageSendTime uint64
 
-	LargeMessagePullServeTime float64 `json:"-"`
-	SmallMessagePullServeTime float64 `json:"-"`
+	LargeMessagePullServeTime float64 `json:"-" msgpack:"-"`
+	SmallMessagePullServeTime float64 `json:"-" msgpack:"-"`
 
-	mutex sync.RWMutex
+	mutex sync.RWMutex `json:"-" msgpack:"-"`
 
-	ProtocolStats interface{} `json:"-"`
+	ProtocolStats interface{} `json:"-" msgpack:"-"`
 
 	idBytes []byte
 
@@ -170,7 +170,7 @@ func (n *Node) setupCommChannel() {
 	// because of this, we don't want the status monitoring to use this
 	// communication layer
 	if n.CommChannel == nil {
-		n.CommChannel = make(chan struct{}, 5)
+		n.CommChannel = make(chan struct{}, 15)
 	}
 }
 
@@ -308,8 +308,7 @@ func Read(line string) (*Node, error) {
 	}
 	node.Port = int(port)
 	node.SetID(fields[3])
-	node.PublicKey = fields[4]
-	node.Client.SetPublicKey(node.PublicKey)
+	node.Client.SetPublicKey(fields[4])
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
@@ -327,14 +326,13 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
 	node.SetID(nc["id"].(string))
-	node.PublicKey = nc["public_key"].(string)
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
 	} else {
 		node.Description = node.GetNodeType() + node.GetKey()[:6]
 	}
 
-	node.Client.SetPublicKey(node.PublicKey)
+	node.Client.SetPublicKey(nc["public_key"].(string))
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewErrorf("invalid_client_id",
@@ -715,7 +713,7 @@ func (n *Node) Clone() *Node {
 		smallMessageSendTime:      n.smallMessageSendTime,
 		LargeMessagePullServeTime: n.LargeMessagePullServeTime,
 		SmallMessagePullServeTime: n.SmallMessagePullServeTime,
-		CommChannel:               make(chan struct{}, 5),
+		CommChannel:               make(chan struct{}, 15),
 	}
 
 	cc := n.Client.Clone()

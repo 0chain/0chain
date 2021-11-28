@@ -41,6 +41,9 @@ func newTestWallet(id int, signatureScheme string, t, n int) testWallet {
 	groupClientID := clientIDForKey(groupKey)
 
 	signerKeys, err := encryption.GenerateThresholdKeyShares(signatureScheme, t, n, groupKey)
+	if err != nil {
+		panic(err)
+	}
 
 	var signerClientIDs []string
 	for _, key := range signerKeys {

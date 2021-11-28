@@ -285,7 +285,7 @@ func TestExtendAllocation(t *testing.T) {
 		t *testing.T, args args,
 	) (
 		StorageSmartContract,
-		transaction.Transaction,
+		*transaction.Transaction,
 		StorageAllocation,
 		[]*StorageNode,
 		chainState.StateContextI,
@@ -424,7 +424,7 @@ func TestExtendAllocation(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		return ssc, txn, sa, blobbers, balances
+		return ssc, &txn, sa, blobbers, balances
 	}
 
 	testCases := []struct {
@@ -492,7 +492,7 @@ func TestExtendAllocation(t *testing.T) {
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
 
 			err := ssc.extendAllocation(
-				&txn,
+				txn,
 				&sa,
 				aBlobbers,
 				&tt.args.request,

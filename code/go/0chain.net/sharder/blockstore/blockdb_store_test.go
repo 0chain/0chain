@@ -12,11 +12,14 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/sharder/blockdb"
+	"go.uber.org/zap"
 )
 
 func init() {
+	logging.Logger = zap.NewNop()
 	transactionEntityMetadata := datastore.MetadataProvider()
 	transactionEntityMetadata.Name = "txn"
 	transactionEntityMetadata.DB = "txndb"

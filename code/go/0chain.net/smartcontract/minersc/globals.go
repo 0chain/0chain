@@ -384,7 +384,7 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
 	}
 	value, ok := iValue.(int64)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", key, value))
+		return value, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
 	return value, nil
 }

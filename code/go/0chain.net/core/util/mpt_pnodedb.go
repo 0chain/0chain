@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"sync"
+	"time"
 
 	"github.com/0chain/gorocksdb"
 
@@ -115,6 +116,7 @@ func (pndb *PNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
 
 /*MultiPutNode - implement interface */
 func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	ts := time.Now()
 	wb := gorocksdb.NewWriteBatch()
 	defer wb.Destroy()
 	for idx, key := range keys {
@@ -127,6 +129,12 @@ func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 		}
 	}
 	err := pndb.db.Write(pndb.wo, wb)
+	if err != nil {
+		logging.Logger.Debug("pnode save nodes failed",
+			zap.Int64("round", pndb.version),
+			zap.Any("duration", ts),
+			zap.Error(err))
+	}
 	return err
 }
 
