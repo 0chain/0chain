@@ -70,6 +70,7 @@ func (sm *BlockStore) Write(b *block.Block) error {
 }
 
 func (sm *BlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
+	Logger.Info(fmt.Sprintf("Reading block summary for block: %v", bs.Hash))
 	return sm.read(bs.Hash, bs.Round)
 }
 
@@ -880,6 +881,12 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		go setupColdWorker(ctx)
 		go setupVolumeRevivingWorker(ctx)
 	}
+
+	switch Store.Tiering {
+	case CacheAndCold, CacheAndWarm, CacheHotAndCold, CacheWarmAndCold:
+		go setupCacheReplacement(ctx, Store.Cache)
+	}
+
 	return nil
 }
 
@@ -913,6 +920,7 @@ func readFromDiskTier(bPath string) (b *block.Block, err error) {
 }
 
 func readFromCache(hash string) (b *block.Block, err error) {
+	b = new(block.Block)
 	f, err := Store.Cache.Read(hash)
 	if err != nil {
 		Logger.Error(err.Error())
