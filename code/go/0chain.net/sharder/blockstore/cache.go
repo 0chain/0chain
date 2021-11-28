@@ -42,6 +42,7 @@ type diskCache struct {
 }
 
 func (c *diskCache) UpadateMetaData(hash string, t *time.Time) {
+	Logger.Info(fmt.Sprintf("Updating cache metadata for block %v", hash))
 	lockCh := getLock(hash)
 	lockHash(lockCh)
 	defer unlockHash(lockCh)
@@ -54,8 +55,11 @@ func (c *diskCache) UpadateMetaData(hash string, t *time.Time) {
 }
 
 func (c *diskCache) Write(hash string, data []byte, t *time.Time) error {
+	// fmt.Println("Acquiring lock for cache write")
 	lockCh := getLock(hash)
 	lockHash(lockCh)
+	// fmt.Println("Lock acquired")
+
 	defer unlockHash(lockCh)
 
 	Logger.Info(fmt.Sprintf("Writing %v to cache", hash))
@@ -234,7 +238,7 @@ func cacheInit(cViper *viper.Viper) cacher {
 	if cacheReplacementInterval == 0 {
 		replaceDuration = time.Duration(DefaultCacheReplaceTime)
 	} else {
-		replaceDuration = time.Duration(cacheReplacementInterval)
+		replaceDuration = time.Minute * time.Duration(cacheReplacementInterval)
 	}
 
 	switch cacheReplacementPolicy { //When other policies are supported then it should be registered here and respectively called.
@@ -268,6 +272,7 @@ func initHashLock() {
 }
 
 func getLock(hash string) (lock chan struct{}) {
+	// fmt.Println("Get lock for hash: ", hash)
 	mutateLock <- struct{}{}
 	var ok bool
 	lock, ok = hashLock[hash]
@@ -288,9 +293,10 @@ func unlockHash(ch chan struct{}) {
 }
 
 func cleanHashLock() {
-	t := time.NewTicker(time.Second)
-
+	t := time.NewTicker(time.Second * 5)
 	for range t.C {
+		// fmt.Printf("\nBefore cleaning map: %v\nTotal elements: %v\n", len(hashLock), hashLock)
+		Logger.Info("Cleaning hash lock map")
 		mutateLock <- struct{}{}
 
 		for hash, lock := range hashLock {
@@ -302,5 +308,7 @@ func cleanHashLock() {
 
 			}
 		}
+		// fmt.Printf("\nAfter cleaning map: %v\n\n", hashLock)
+		<-mutateLock
 	}
 }
