@@ -10,6 +10,7 @@ import (
 )
 
 func setupColdWorker(ctx context.Context) {
+	Logger.Info("Setting up cold worker")
 	pollInterval := time.Hour * time.Duration(Store.ColdTier.PollInterval)
 	// pollInterval := time.Minute
 	t := time.NewTicker(pollInterval)
@@ -99,6 +100,7 @@ func setupColdWorker(ctx context.Context) {
 }
 
 func setupVolumeRevivingWorker(ctx context.Context) {
+	Logger.Info("Setting volume reviving worker")
 	interval := 2 * time.Hour * time.Duration(Store.ColdTier.PollInterval)
 	// interval := 2 * time.Minute
 	t := time.NewTicker(interval)
@@ -132,13 +134,16 @@ func setupVolumeRevivingWorker(ctx context.Context) {
 }
 
 func setupCacheReplacement(ctx context.Context, cacheI cacher) {
+	Logger.Info("Setting cache replacement worker")
 	cache := cacheI.(*diskCache)
 	t := time.NewTicker(cache.ReplaceInterval)
+	// t := time.NewTicker(time.Minute * 2)
 	for {
 		select {
 		case <-ctx.Done():
 			break
 		case <-t.C:
+			Logger.Info("Replacing old cache")
 			cache.Replace()
 		}
 	}
