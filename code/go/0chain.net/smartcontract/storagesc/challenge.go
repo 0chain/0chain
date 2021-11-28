@@ -758,6 +758,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 		})
 	}
 	challenge.BlobberID = selectedBlobberObj.ID
+	challenge.BlobberUrl = selectedBlobberObj.BaseURL
 	challenge.RandomNumber = challengeSeed
 	challenge.AllocationID = alloc.ID
 	challenge.AllocationRoot = blobberAllocation.AllocationID

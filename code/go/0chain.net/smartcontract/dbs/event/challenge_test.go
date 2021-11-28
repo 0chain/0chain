@@ -30,9 +30,25 @@ func TestChallenges(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
+	blobber1 := Blobber{
+		BlobberID: "one",
+		BaseURL:   "one url",
+	}
+	data, err := json.Marshal(&blobber1)
+	require.NoError(t, err)
+	eventAddBlobber := Event{
+		BlockNumber: 2,
+		TxHash:      "tx hash1",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteBlobber),
+		Index:       blobber1.BlobberID,
+		Data:        string(data),
+	}
+
 	challenge1 := Challenge{
 		BlobberID:   "one",
 		ChallengeID: "first",
+		BlobberUrl:  "one url",
 		Validators: []ValidationNode{
 			{ValidatorID: "val one"}, {ValidatorID: "val two"},
 		},
@@ -41,19 +57,20 @@ func TestChallenges(t *testing.T) {
 	challenge2 := Challenge{
 		BlobberID:   "two",
 		ChallengeID: "second",
+		BlobberUrl:  "two url",
 		Validators: []ValidationNode{
 			{ValidatorID: "val two one"}, {ValidatorID: "val two two"},
 		},
 	}
 
-	require.NoError(t, err)
-	data, err := json.Marshal(&challenge1)
+	data, err = json.Marshal(&challenge1)
 	require.NoError(t, err)
 	eventAddCh := Event{
 		BlockNumber: 2,
-		TxHash:      "tx hash",
+		TxHash:      "tx hash2",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagAddChallenge),
+		Index:       challenge1.ChallengeID,
 		Data:        string(data),
 	}
 
@@ -61,14 +78,15 @@ func TestChallenges(t *testing.T) {
 	require.NoError(t, err)
 	eventAddCh2 := Event{
 		BlockNumber: 2,
-		TxHash:      "tx hash",
+		TxHash:      "tx hash3",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteBlobber),
+		Tag:         int(TagAddChallenge),
+		Index:       challenge2.ChallengeID,
 		Data:        string(data2),
 	}
 	require.NoError(t, err)
 
-	events := []Event{eventAddCh, eventAddCh2}
+	events := []Event{eventAddBlobber, eventAddCh, eventAddCh2}
 	eventDb.AddEvents(events)
 
 	ch, err := eventDb.GetChallenge(challenge1.ChallengeID)
@@ -85,7 +103,8 @@ func TestChallenges(t *testing.T) {
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
 		Type:        int(TypeStats),
-		Tag:         int(TagDeleteBlobber),
+		Tag:         int(TagDeleteChallenge),
+		Index:       challenge1.ChallengeID,
 		Data:        challenge1.ChallengeID,
 	}
 	eventDb.AddEvents([]Event{deleteEvent})

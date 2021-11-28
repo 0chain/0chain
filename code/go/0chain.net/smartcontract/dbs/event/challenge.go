@@ -11,6 +11,7 @@ type Challenge struct {
 	gorm.Model
 	BlobberChallengeID uint
 	BlobberID          string           `json:"blobber_id"`
+	BlobberUrl         string           `json:"url"`
 	Created            common.Timestamp `json:"created"`
 	ChallengeID        string           `json:"id" gorm:"uniqueIndex"`
 	PrevID             string           `json:"prev_id"`
@@ -21,12 +22,15 @@ type Challenge struct {
 }
 
 func (edb *EventDb) AddChallenge(challenge Challenge) error {
-	bci := BlobberChallengeId{}
-	if err := bci.getOrCreate(edb, challenge.BlobberID); err != nil {
+	bci := BlobberChallengeId{
+		BlobberID: challenge.BlobberID,
+		Url:       challenge.BlobberUrl,
+	}
+	if err := bci.getOrCreate(edb); err != nil {
 		return err
 	}
 	challenge.BlobberChallengeID = bci.ID
-	return edb.Store.Get().Create(challenge).Error
+	return edb.Store.Get().Create(&challenge).Error
 }
 
 func (edb *EventDb) GetChallenge(challengeId string) (*Challenge, error) {

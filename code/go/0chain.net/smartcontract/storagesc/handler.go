@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"time"
 
+	"go.uber.org/zap"
+
 	"0chain.net/smartcontract"
 
 	"0chain.net/core/logging"
@@ -215,8 +217,48 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 			return nil, common.NewErrInternal("fail decoding blobber challenge", err.Error())
 		}
 	}
+	logging.Logger.Info("piers OpenChallengeHandler",
+		zap.Any("old blobber challenge", blobberChallengeObj),
+	)
 
-	return &blobberChallengeObj, nil
+	//Piers new
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent, true, "cannot find event database",
+		)
+	}
+	blobberEdb, err := balances.GetEventDB().GetBlobberChallenges(blobberID)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
+	}
+	var bc = BlobberChallenge{
+		BlobberID: blobberID,
+	}
+	for _, challenge := range blobberEdb.Challenges {
+		var ch = StorageChallenge{
+			Created:        challenge.Created,
+			ID:             challenge.ChallengeID,
+			RandomNumber:   challenge.RandomNumber,
+			AllocationID:   challenge.AllocationID,
+			AllocationRoot: challenge.AllocationRoot,
+			Blobber: &StorageNode{
+				ID:      blobberEdb.BlobberID,
+				BaseURL: blobberEdb.Url,
+			},
+		}
+		for _, validator := range challenge.Validators {
+			ch.Validators = append(ch.Validators, &ValidationNode{
+				ID:      validator.ValidatorID,
+				BaseURL: validator.BaseURL,
+			})
+		}
+		bc.Challenges = append(bc.Challenges, &ch)
+	}
+	logging.Logger.Info("piers OpenChallengeHandler",
+		zap.Any("new blobber challenge", bc),
+	)
+	return &bc, nil
+	//return &blobberChallengeObj, nil
 }
 
 func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (retVal interface{}, retErr error) {
