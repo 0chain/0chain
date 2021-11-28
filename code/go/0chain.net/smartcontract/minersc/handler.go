@@ -192,11 +192,19 @@ func (msc *MinerSmartContract) GetEventsHandler(
 		return nil, errors.New("no event database found")
 	}
 
+	eventType, err := strconv.Atoi(params.Get("type"))
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse type %s: %v", params.Get("type"), err)
+	}
+	eventTag, err := strconv.Atoi(params.Get("tag"))
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse tag %s: %v", params.Get("type"), err)
+	}
 	filter := event.Event{
 		BlockNumber: int64(blockNumber),
 		TxHash:      params.Get("tx_hash"),
-		Type:        params.Get("type"),
-		Tag:         params.Get("tag"),
+		Type:        eventType,
+		Tag:         eventTag,
 	}
 
 	events, err := balances.GetEventDB().FindEvents(filter)

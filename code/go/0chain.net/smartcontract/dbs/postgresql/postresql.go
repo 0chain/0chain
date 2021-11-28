@@ -39,8 +39,8 @@ func (store *PostgresStore) Open(config dbs.DbAccess) error {
 		config.Name,
 		config.Password)),
 		&gorm.Config{
-			SkipDefaultTransaction: true,
-			PrepareStmt:            true,
+			//		SkipDefaultTransaction: true,
+			//		PrepareStmt:            true,
 		})
 	if err != nil {
 		return fmt.Errorf("db_open_error, Error opening the DB connection: %v", err)
