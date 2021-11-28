@@ -68,10 +68,6 @@ func setupColdWorker(ctx context.Context) {
 						bwr.Tiering = newTiering(HotTier, HotTier, Store.ColdTier.DeleteLocal)
 					case WarmTier:
 						bwr.Tiering = newTiering(WarmTier, WarmTier, Store.ColdTier.DeleteLocal)
-					case CacheAndWarmTier:
-						bwr.Tiering = newTiering(CacheAndWarmTier, WarmTier, Store.ColdTier.DeleteLocal)
-					case CacheAndHotTier:
-						bwr.Tiering = newTiering(CacheAndHotTier, HotTier, Store.ColdTier.DeleteLocal)
 					}
 
 					if Store.ColdTier.DeleteLocal {
