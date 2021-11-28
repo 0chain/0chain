@@ -1,15 +1,16 @@
 package memorystore
 
 import (
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/logging"
 	"context"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
 	"reflect"
 	"sync"
 	"testing"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"github.com/gomodule/redigo/redis"
 )
 
 func init() {
@@ -484,7 +485,6 @@ func TestClose(t *testing.T) {
 		},
 		mutex: &sync.RWMutex{},
 	}
-	cMap = cMap
 	type args struct {
 		ctx context.Context
 	}

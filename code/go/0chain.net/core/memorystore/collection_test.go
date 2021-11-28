@@ -1,14 +1,15 @@
 package memorystore_test
 
 import (
+	"context"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"context"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -113,6 +114,7 @@ func TestStore_IterateCollection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := &memorystore.Store{}
 			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
 
 			if tt.cancel {
 				cancel()
@@ -165,6 +167,7 @@ func TestStore_IterateCollection_Closed_Conn_Err(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ms := &memorystore.Store{}
 			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
 
 			if tt.cancel {
 				cancel()

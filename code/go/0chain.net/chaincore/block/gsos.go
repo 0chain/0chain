@@ -12,7 +12,7 @@ import (
 )
 
 type GroupSharesOrSigns struct {
-	mutex  sync.RWMutex
+	mutex  sync.RWMutex             `json:"-" msgpack:"-"`
 	Shares map[string]*ShareOrSigns `json:"shares"`
 }
 

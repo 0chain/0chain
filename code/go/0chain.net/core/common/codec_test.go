@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -104,7 +104,9 @@ func TestToJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := common.ToJSON(tt.args.entity); !bytes.Equal(got.Bytes(), tt.want.Bytes()) {
+			got, err := common.ToJSON(tt.args.entity)
+			require.NoError(t, err)
+			if !bytes.Equal(got.Bytes(), tt.want.Bytes()) {
 				t.Errorf("ToJSON() = %v, want %v", got.Bytes(), tt.want.Bytes())
 			}
 		})
@@ -160,7 +162,7 @@ func TestToMsgpack(t *testing.T) {
 	entity := block.NewBlock("", 1)
 	buf := bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if err := encoder.Encode(entity); err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +393,7 @@ func TestFromMsgpack(t *testing.T) {
 	c := CodecTestStruct{Numbers: []int{1, 2, 3}}
 	buf := bytes.Buffer{}
 	encoder := msgpack.NewEncoder(&buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("msgpack")
 	if err := encoder.Encode(&c); err != nil {
 		t.Fatal(err)
 	}

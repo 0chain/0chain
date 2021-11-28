@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"encoding/json"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -41,11 +42,11 @@ func SetupTransactionDB() {
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.HashIDField
-	datastore.CollectionMemberField `json:"-"`
+	datastore.CollectionMemberField `json:"-" msgpack:"-"`
 	datastore.VersionField
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
-	PublicKey string        `json:"-" msgpack:"puk,omitempty"`
+	PublicKey string        `json:"public_key,omitempty" msgpack:"puk,omitempty"`
 
 	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
@@ -126,14 +127,21 @@ func (t *Transaction) ComputeClientID() {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
-			co := client.NewClient()
-			co.SetPublicKey(t.PublicKey)
-			t.ClientID = co.ID
+			id, err := client.GetIDFromPublicKey(t.PublicKey)
+			if err != nil {
+				panic(err)
+			}
+
+			t.ClientID = id
 		}
 	} else {
 		if t.ClientID == "" {
 			logging.Logger.Error("invalid transaction", zap.String("txn", datastore.ToJSON(t).String()))
 		}
+	}
+
+	if t.ClientID == "" {
+		logging.Logger.Error("invalid transaction, client id is empty")
 	}
 }
 
@@ -279,18 +287,41 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 /*GetSignatureScheme - get the signature scheme associated with this transaction */
 func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
 	var err error
-	var co *client.Client
-	if t.PublicKey == "" {
-		co, err = t.GetClient(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
+	co, err := client.GetClientFromCache(t.ClientID)
+	if err != nil {
 		co = client.NewClient()
 		co.ID = t.ClientID
 		co.SetPublicKey(t.PublicKey)
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
 	}
-	return co.GetSignatureScheme(), nil
+
+	if co.SigScheme == nil {
+		if t.PublicKey == "" {
+			return nil, errors.New("get signature scheme failed, empty public key in transaction")
+		}
+		co.ID = t.ClientID
+		co.SetPublicKey(t.PublicKey)
+		if err := client.PutClientCache(co); err != nil {
+			return nil, err
+		}
+	}
+
+	return co.SigScheme, nil
+}
+
+func (t *Transaction) GetPublicKeyStr(ctx context.Context) (string, error) {
+	if t.PublicKey != "" {
+		return t.PublicKey, nil
+	}
+
+	co, err := client.GetClient(ctx, t.ClientID)
+	if err != nil {
+		return "", err
+	}
+
+	return co.PublicKey, nil
 }
 
 /*Provider - entity provider for client object */
@@ -375,12 +406,32 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 
 // Clone returns a clone of the transaction instance
 func (t *Transaction) Clone() *Transaction {
-	clone := *t
-	if t.CollectionMemberField.EntityCollection != nil {
-		entityCollection := *t.CollectionMemberField.EntityCollection
-		clone.CollectionMemberField.EntityCollection = &entityCollection
+	clone := &Transaction{
+		HashIDField:       t.HashIDField,
+		VersionField:      t.VersionField,
+		ClientID:          t.ClientID,
+		PublicKey:         t.PublicKey,
+		ToClientID:        t.ToClientID,
+		ChainID:           t.ChainID,
+		TransactionData:   t.TransactionData,
+		Value:             t.Value,
+		Signature:         t.Signature,
+		CreationDate:      t.CreationDate,
+		Fee:               t.Fee,
+		TransactionType:   t.TransactionType,
+		TransactionOutput: t.TransactionOutput,
+		OutputHash:        t.OutputHash,
+		Status:            t.Status,
 	}
-	return &clone
+
+	if ent := t.CollectionMemberField.EntityCollection; ent != nil {
+		clone.CollectionMemberField.EntityCollection = &datastore.EntityCollection{
+			CollectionName:     ent.CollectionName,
+			CollectionSize:     ent.CollectionSize,
+			CollectionDuration: ent.CollectionDuration,
+		}
+	}
+	return clone
 }
 
 func SetTxnTimeout(timeout int64) {

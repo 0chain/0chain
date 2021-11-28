@@ -65,6 +65,7 @@ var (
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
 	HeaderRequestCODEC          = "X-Chain-CODEC"
+	HeaderRequestToPull         = "X-Request-To-Pull"
 
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
@@ -170,12 +171,11 @@ func getDataAndClose(reader io.ReadCloser) []byte {
 	return buf.Bytes()
 }
 
-func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
+func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		cbuffer.ReadFrom(buffer)
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -190,13 +190,12 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
-	defer resp.Body.Close()
-	var buffer io.Reader = resp.Body
+func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
+	buffer := reader
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(resp.Body)
+		cbuffer.ReadFrom(reader)
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -251,10 +250,7 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 
 func validateChain(sender *Node, r *http.Request) bool {
 	chainID := r.Header.Get(HeaderRequestChainID)
-	if config.GetServerChainID() != chainID {
-		return false
-	}
-	return true
+	return config.GetServerChainID() == chainID
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {

@@ -279,7 +279,7 @@ func TestVRFShare_GetRoundTimeoutCount(t *testing.T) {
 func TestVRFShare_GetParty(t *testing.T) {
 	t.Parallel()
 
-	n, err := makeTestNode("")
+	n, err := makeTestNode(blsPublicKeys[0])
 	if err != nil {
 		t.Error(err)
 	}

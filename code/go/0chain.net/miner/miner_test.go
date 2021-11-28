@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/chaincore/state"
 	"bytes"
 	"context"
 	"flag"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/state"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -48,9 +49,8 @@ func getContext() (context.Context, func()) {
 	}
 }
 
-func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
+func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
-	mc := GetMinerChain()
 	if prevBlock == nil {
 		gb := SetupGenesisBlock()
 		prevBlock = gb
@@ -136,6 +136,21 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 	return blockstore.CreateMinioClientFromConfig(mConf)
 }
 
+func setupMinerChain() (*Chain, func()) {
+	mc := GetMinerChain()
+	mc.Chain = chain.Provider().(*chain.Chain)
+	doneC := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		mc.StartLFMBWorker(ctx)
+		close(doneC)
+	}()
+	return mc, func() {
+		cancel()
+		<-doneC
+	}
+}
+
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
@@ -143,7 +158,9 @@ func TestBlockGeneration(t *testing.T) {
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
 
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+
 	gb := SetupGenesisBlock()
 	mc.AddGenesisBlock(gb)
 
@@ -182,13 +199,14 @@ func TestBlockGeneration(t *testing.T) {
 func TestBlockVerification(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
 
-	b, err := generateSingleBlock(ctx, nil, mr)
+	b, err := generateSingleBlock(ctx, mc, nil, mr)
 	if b != nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
 	}
@@ -204,15 +222,18 @@ func TestTwoCorrectBlocks(t *testing.T) {
 	ctx := context.Background()
 	mr := CreateMockRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b0, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
-	rd := mc.GetRound(1)
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	b0, err := generateSingleBlock(ctx, mc, nil, mr)
+	require.NoError(t, err)
+
+	rd := mc.GetRound(0)
 	require.NotNil(t, rd)
 	if b0 != nil {
 		var b1 *block.Block
-		mr2 := CreateMockRound(2)
+		mr2 := CreateMockRound(1)
 		mr2.RandomSeed = time.Now().UnixNano()
-		b1, err = generateSingleBlock(ctx, b0, mr2.Round)
+		b1, err = generateSingleBlock(ctx, mc, b0, mr2.Round)
 		require.NoError(t, err)
 		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
 	}
@@ -229,12 +250,14 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 	defer clean()
 	mr := CreateRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b0, err := generateSingleBlock(ctx, nil, mr)
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	b0, err := generateSingleBlock(ctx, mc, nil, mr)
 	//mc := GetMinerChain()
 	if b0 != nil {
 		//var b1 *block.Block
 		mr3 := CreateRound(3)
-		_, err = generateSingleBlock(ctx, b0, mr3)
+		_, err = generateSingleBlock(ctx, mc, b0, mr3)
 		//_, err = mc.VerifyRoundBlock(ctx, b1)
 	}
 	if err == nil {
@@ -250,8 +273,10 @@ func TestBlockVerificationBadHash(t *testing.T) {
 	defer clean()
 	mr := CreateRound(1)
 	mr.RandomSeed = time.Now().UnixNano()
-	b, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+
+	b, err := generateSingleBlock(ctx, mc, nil, mr)
 	if b != nil {
 		b.Hash = "bad hash"
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
@@ -270,7 +295,10 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 	defer clean()
 
 	mr := CreateRound(1)
-	block, _ := generateSingleBlock(ctx, nil, mr)
+	mr.RandomSeed = time.Now().UnixNano()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	block, _ := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil {
 		b.Logf("Created block with %v transactions", len(block.Txns))
 	} else {
@@ -284,8 +312,9 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
-	block, err := generateSingleBlock(ctx, nil, mr)
-	mc := GetMinerChain()
+	mc, stopAndClean := setupMinerChain()
+	defer stopAndClean()
+	block, err := generateSingleBlock(ctx, mc, nil, mr)
 	if block != nil && err == nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, block)
 		if err != nil {
@@ -364,16 +393,26 @@ func SetUpSingleSelf() func() {
 	})
 
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
-	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	s1 := encryption.NewED25519Scheme()
+	s1.GenerateKeys()
+	n1.SetSignatureScheme(s1)
+	//n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
-	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	s2 := encryption.NewED25519Scheme()
+	s2.GenerateKeys()
+	n2.SetSignatureScheme(s2)
+	//n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
 	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
-	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+	s3 := encryption.NewED25519Scheme()
+	s3.GenerateKeys()
+	n3.SetSignatureScheme(s3)
+	//n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
 
 	node.Self = &node.SelfNode{}
 	node.Self.Node = n1
+	node.Self.SetSignatureScheme(s1)
 
-	setupSelfNodeKeys()
+	//setupSelfNodeKeys()
 
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)

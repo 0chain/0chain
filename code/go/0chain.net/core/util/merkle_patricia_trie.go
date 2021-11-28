@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -93,7 +94,7 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	defer mpt.mutex.RUnlock()
 
 	rootKey := []byte(mpt.root)
-	if rootKey == nil || len(rootKey) == 0 {
+	if len(rootKey) == 0 {
 		return nil, ErrValueNotPresent
 	}
 
@@ -238,18 +239,27 @@ func (mpt *MerklePatriciaTrie) SaveChanges(ctx context.Context, ndb NodeDB, incl
 	cc := mpt.ChangeCollector
 
 	doneC := make(chan struct{})
-	errC := make(chan error)
+	errC := make(chan error, 1)
+	ts := time.Now()
 	go func() {
-		defer close(doneC)
+		defer func() {
+			close(doneC)
+			logging.Logger.Debug("MPT save changes success", zap.Any("duration", time.Since(ts)))
+		}()
 		err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
 		if err != nil {
+			logging.Logger.Error("MPT save changes failed",
+				zap.Any("version", mpt.Version),
+				zap.Error(err))
 			errC <- err
 		}
 	}()
 
 	select {
 	case <-ctx.Done():
-		Logger.Debug("MPT save changes failed", zap.Error(ctx.Err()))
+		Logger.Debug("MPT save changes timeout",
+			zap.Any("duration", time.Since(ts)),
+			zap.Error(ctx.Err()))
 		return ctx.Err()
 	case err := <-errC:
 		Logger.Debug("MPT save changes failed", zap.Error(err))
@@ -976,7 +986,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 // MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	if bytes.Compare(mpt.GetRoot(), mpt2.GetRoot()) == 0 {
-		Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
+		//Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
 		return nil
 	}
 
@@ -999,14 +1009,20 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return errors.New("mpt does not merge changes from its child")
 	}
 
-	db := mpt.db.(*LevelNodeDB)
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+	db, ok := mpt.db.(*LevelNodeDB)
+	if ok {
+		db.version = newLNDB.version
+	} else {
+		Logger.Warn("MergeMPTChanges - mpt db is not *LevelNodeDB",
+			zap.Int64("version", int64(mpt.GetVersion())))
+	}
 
 	newRoot, changes, deletes, startRoot := mpt2.GetChanges()
 	if err := mpt.mergeChanges(newRoot, changes, deletes, startRoot); err != nil {
 		return err
 	}
-	db.versions = append(db.versions, newLNDB.version)
-	db.version = newLNDB.version
 
 	return nil
 }
