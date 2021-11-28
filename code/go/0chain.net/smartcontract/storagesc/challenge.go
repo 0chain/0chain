@@ -426,7 +426,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		}
 		balances.EmitEvent(
 			event.TypeStats,
-			event.TagRemoveChallenge,
+			event.TagDeleteChallenge,
+			challResp.ID,
 			challResp.ID,
 		)
 		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
@@ -478,7 +479,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		}
 		balances.EmitEvent(
 			event.TypeStats,
-			event.TagRemoveChallenge,
+			event.TagDeleteChallenge,
+			challResp.ID,
 			challResp.ID,
 		)
 		alloc.Stats.LastestClosedChallengeTxn = challReq.ID
@@ -763,7 +765,7 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	if err != nil {
 		return "", fmt.Errorf("Error marshalling challenge %v: %v", challenge, err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagNewChallenge, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddChallenge, challengeID, string(data))
 	Logger.Info("piers emit challenge", zap.Any("challenge", challenge))
 
 	blobberChallengeObj := &BlobberChallenge{}

@@ -201,14 +201,6 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 		}
 	}
 
-	// for k, v := range blobberChallengeObj.ChallengeMap {
-	// 	if v.Response != nil {
-	// 		delete(blobberChallengeObj.ChallengeMap, k)
-	// 	}
-	// }
-
-	// return populate or empty list of challenges
-	// don't return error, if no challenges (expected by blobbers)
 	return &blobberChallengeObj, nil
 }
 
