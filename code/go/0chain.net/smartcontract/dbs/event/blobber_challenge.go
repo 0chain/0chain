@@ -98,8 +98,6 @@ func (edb *EventDb) createChallengeTable() error {
 	return edb.Store.Get().Migrator().CreateTable(
 		&BlobberChallenge{},
 		&Challenge{},
-		//&Response{},
 		&ValidationNode{},
-		//&ValidationTicket{},
 	)
 }

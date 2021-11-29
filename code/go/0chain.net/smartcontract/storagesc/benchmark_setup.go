@@ -146,15 +146,15 @@ func AddMockAllocations(
 			ch.ChallengeID = challenge.ID
 			//for _, validator := range challenge.Validators {
 			//	ch.Validators = append(ch.Validators, event.ValidationNode{
-			//		ValidatorID: validator.ID,
-			//		BaseURL:     validator.BaseURL,
-			//	})
+			//			ValidatorID: validator.ID,
+			//			BaseURL:     validator.BaseURL,
+			//		})
 			//}
 			ch.BlobberID = bc.BlobberID
 			//ch.RandomNumber = challenge.RandomNumber
 			ch.AllocationID = challenge.AllocationID
 			//ch.AllocationRoot = challenge.AllocationRoot
-			err := eventDb.AddChallenge(ch)
+			err := ch.Add(eventDb)
 			if err != nil {
 				panic(err)
 			}

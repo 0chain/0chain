@@ -83,7 +83,7 @@ func (edb *EventDb) updateBlobber(updates dbs.DbUpdates) error {
 	return result.Error
 }
 
-func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
+func (blobber *Blobber) update(edb *EventDb) error {
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Where(&Blobber{BlobberID: blobber.BlobberID}).
@@ -108,13 +108,13 @@ func (edb *EventDb) overwriteBlobber(blobber Blobber) error {
 	return result.Error
 }
 
-func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
+func (blobber Blobber) addOrUpdate(edb *EventDb) error {
 	exists, err := blobber.exists(edb)
 	if err != nil {
 		return err
 	}
 	if exists {
-		return edb.overwriteBlobber(blobber)
+		return blobber.update(edb)
 	}
 
 	result := edb.Store.Get().Create(&blobber)

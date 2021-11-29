@@ -59,7 +59,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return edb.addOrOverwriteBlobber(blobber)
+		return blobber.addOrUpdate(edb)
 	case TagUpdateBlobber:
 		var updates dbs.DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)
@@ -75,7 +75,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return edb.AddChallenge(challenge)
+		return challenge.AddOrUpdate(edb)
 	case TagDeleteChallenge:
 		return edb.removeChallenge(event.Data)
 	default:

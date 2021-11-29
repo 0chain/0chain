@@ -21,16 +21,57 @@ type Challenge struct {
 	AllocationRoot     string           `json:"allocation_root"`
 }
 
-func (edb *EventDb) AddChallenge(challenge Challenge) error {
+func (challenge *Challenge) AddOrUpdate(edb *EventDb) error {
+	exists, err := challenge.exists(edb)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return challenge.update(edb)
+	}
+
+	return challenge.Add(edb)
+}
+
+func (ch *Challenge) update(edb *EventDb) error {
+	result := edb.Store.Get().
+		Model(&Challenge{}).
+		Where(&Challenge{ChallengeID: ch.ChallengeID}).
+		Updates(map[string]interface{}{
+			"url":             ch.BlobberUrl,
+			"created":         ch.Created,
+			"prev_id":         ch.PrevID,
+			"validators":      ch.Validators,
+			"random_number":   ch.RandomNumber,
+			"allocation_id":   ch.AllocationID,
+			"allocation_root": ch.AllocationRoot,
+		})
+	return result.Error
+}
+
+func (ch *Challenge) exists(edb *EventDb) (bool, error) {
+	var count int64
+	result := edb.Get().
+		Model(&Challenge{}).
+		Where(&Challenge{ChallengeID: ch.ChallengeID}).
+		Count(&count)
+	if result.Error != nil {
+		return false, fmt.Errorf("error searching for challlenge %v, error %v",
+			ch.ChallengeID, result.Error)
+	}
+	return count > 0, nil
+}
+
+func (ch *Challenge) Add(edb *EventDb) error {
 	bci := BlobberChallengeId{
-		BlobberID: challenge.BlobberID,
-		Url:       challenge.BlobberUrl,
+		BlobberID: ch.BlobberID,
+		Url:       ch.BlobberUrl,
 	}
 	if err := bci.getOrCreate(edb); err != nil {
 		return err
 	}
-	challenge.BlobberChallengeID = bci.ID
-	return edb.Store.Get().Create(&challenge).Error
+	ch.BlobberChallengeID = bci.ID
+	return edb.Store.Get().Create(&ch).Error
 }
 
 func (edb *EventDb) GetChallenge(challengeId string) (*Challenge, error) {
