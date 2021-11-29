@@ -21,8 +21,7 @@ type VerifyBlock struct {
 // NewVerifyBlock returns a new VerifyBlock instance
 func NewVerifyBlock(b *block.Block, vrfShares map[string]*VRFShare) *VerifyBlock {
 	return &VerifyBlock{
-		Block:     b,
-		VRFShares: vrfShares,
+		Block: b,
 	}
 }
 
