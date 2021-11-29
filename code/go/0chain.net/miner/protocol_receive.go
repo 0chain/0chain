@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/round"
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -26,7 +24,7 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	// add the VRFShare
 	logging.Logger.Debug("handle vrf share",
 		zap.Int64("round", msg.VRFShare.Round),
-		zap.Int("round", msg.VRFShare.RoundTimeoutCount),
+		zap.Int("round_timeout_count", msg.VRFShare.RoundTimeoutCount),
 		zap.Int("sender_index", msg.Sender.SetIndex),
 	)
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
@@ -81,25 +79,11 @@ func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error {
 				zap.Int64("round", r))
 		}
 
-			vrfs.SetParty(nd)
-
-			partyID := bls.ComputeIDdkg(id)
-			if !dkg.VerifySignature(&share, msg, partyID) {
-				return fmt.Errorf("failed to verify vrf share signature, id: %s, bls_msg: %s, share: %s",
-					id, msg, vrfs.Share)
-			}
-
-			mr.AddVRFShare(newVRFShares[id], blsThreshold)
-			vrfSharesNum++
-			logging.Logger.Debug("handle verify block - added vrf_share",
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.Int("vrf_share_num", vrfSharesNum))
-			if vrfSharesNum >= blsThreshold {
-				mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
-				return nil
-			}
+		if roundRRS == rrs {
+			return nil
 		}
+		return fmt.Errorf("RRS does not match, round_rrs: %d, block_rrs: %d", roundRRS, rrs)
+	}
 
 	return fmt.Errorf("vrf shares not reached threshold, vrf num: %d, threshold: %d", len(vrfShares), blsThreshold)
 }
