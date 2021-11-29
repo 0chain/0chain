@@ -117,22 +117,25 @@ func setUpMpt(
 	)
 	log.Println("created balances")
 
-	eventDb, err := event.NewEventDb(dbs.DbAccess{
-		Enabled:         viper.GetBool(benchmark.EventDbEnabled),
-		Name:            viper.GetString(benchmark.EventDbName),
-		User:            viper.GetString(benchmark.EventDbUser),
-		Password:        viper.GetString(benchmark.EventDbPassword),
-		Host:            viper.GetString(benchmark.EventDbHost),
-		Port:            viper.GetString(benchmark.EventDbPort),
-		MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
-		MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
-		ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
-	})
-	if err != nil {
-		panic(err)
-	}
-	if err := eventDb.AutoMigrate(); err != nil {
-		panic(err)
+	var eventDb *event.EventDb
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		eventDb, err := event.NewEventDb(dbs.DbAccess{
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+		})
+		if err != nil {
+			panic(err)
+		}
+		if err := eventDb.AutoMigrate(); err != nil {
+			panic(err)
+		}
 	}
 	log.Println("created event database")
 
