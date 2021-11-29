@@ -24,17 +24,17 @@ options:
   test_suites:
     - "storage"
     - "storage_rest"
-    - - "miner"
-      - "miner_rest"
-      - "faucet"
-      - "faucet_rest"
-      - "interest_pool"
-      - "interest_pool_rest"
-      - "vesting"
-      - "vesting_rest"
-      - "multi_sig"
-      - "zcnscbridge"
-      - "zcnscbridge_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
 
 dbs:
