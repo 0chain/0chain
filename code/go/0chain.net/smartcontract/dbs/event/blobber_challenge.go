@@ -71,7 +71,7 @@ func (edb *EventDb) GetBlobberChallenges(blobberId string) (*BlobberChallenge, e
 		return nil, err
 	}
 	if !exists {
-		return nil, nil
+		return &BlobberChallenge{BlobberID: blobberId}, nil
 	}
 
 	var bc BlobberChallenge

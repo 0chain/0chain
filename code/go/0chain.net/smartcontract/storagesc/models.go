@@ -133,10 +133,10 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	}
 	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
 		if len(sn.Challenges) > 0 {
-			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
-			challenge.PrevID = lastChallenge.ID
+			//lastChallenge := sn.Challenges[len(sn.Challenges)-1]
+			//challenge.PrevID = lastChallenge.ID
 		} else if sn.LatestCompletedChallenge != nil {
-			challenge.PrevID = sn.LatestCompletedChallenge.ID
+			//challenge.PrevID = sn.LatestCompletedChallenge.ID
 		}
 		sn.Challenges = append(sn.Challenges, challenge)
 		sn.ChallengeMap[challenge.ID] = challenge
@@ -146,15 +146,17 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 }
 
 type StorageChallenge struct {
-	Created        common.Timestamp   `json:"created"`
-	ID             string             `json:"id"`
-	PrevID         string             `json:"prev_id"`
-	Validators     []*ValidationNode  `json:"validators"`
-	RandomNumber   int64              `json:"seed"`
-	AllocationID   string             `json:"allocation_id"`
-	Blobber        *StorageNode       `json:"blobber"`
-	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+	Created       common.Timestamp `json:"created"`
+	ID            string           `json:"id"`
+	NumValidators int              `json:"num_validators"`
+	//PrevID  string           `json:"prev_id"`
+	//Validators     []*ValidationNode  `json:"validators"`
+	//RandomNumber   int64              `json:"seed"`
+	AllocationID string `json:"allocation_id"`
+	//BlobberId    string `json:"blobber_id"`
+	//Blobber        *StorageNode       `json:"blobber"`
+	//AllocationRoot string             `json:"allocation_root"`
+	Response *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
 type ValidationNode struct {

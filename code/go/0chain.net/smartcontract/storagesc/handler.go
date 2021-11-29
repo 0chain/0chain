@@ -199,6 +199,27 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 }
 
+type BlobberChallengeReturn struct {
+	BlobberID  string             `json:"blobber_id"`
+	Challenges []*ChallengeReturn `json:"challenges"`
+	//ChallengeMap             map[string]*StorageChallenge `json:"-"`
+	//LatestCompletedChallenge *StorageChallenge            `json:"lastest_completed_challenge"`
+}
+
+type ChallengeReturn struct {
+	Created        common.Timestamp   `json:"created"`
+	ID             string             `json:"id"`
+	NumValidators  int                `json:"num_validators"`
+	PrevID         string             `json:"prev_id"`
+	Validators     []*ValidationNode  `json:"validators"`
+	RandomNumber   int64              `json:"seed"`
+	AllocationID   string             `json:"allocation_id"`
+	BlobberId      string             `json:"blobber_id"`
+	Blobber        *StorageNode       `json:"blobber"`
+	AllocationRoot string             `json:"allocation_root"`
+	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
@@ -231,11 +252,12 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	if err != nil {
 		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
 	}
-	var bc = BlobberChallenge{
-		BlobberID: blobberID,
+	var bc = BlobberChallengeReturn{
+		BlobberID:  blobberID,
+		Challenges: []*ChallengeReturn{},
 	}
 	for _, challenge := range blobberEdb.Challenges {
-		var ch = StorageChallenge{
+		var ch = ChallengeReturn{
 			Created:        challenge.Created,
 			ID:             challenge.ChallengeID,
 			RandomNumber:   challenge.RandomNumber,
@@ -284,6 +306,39 @@ func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params
 	if _, ok := blobberChallengeObj.ChallengeMap[challengeID]; !ok {
 		return nil, common.NewErrBadRequest("can't find challenge with provided 'challenge' param")
 	}
+	logging.Logger.Info("piers GetChallengeHandler",
+		zap.Any("old challenge", blobberChallengeObj.ChallengeMap[challengeID]),
+	)
 
-	return blobberChallengeObj.ChallengeMap[challengeID], nil
+	//Piers new
+	if balances.GetEventDB() == nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(
+			util.ErrValueNotPresent, true, "cannot find event database",
+		)
+	}
+	challengeEdb, err := balances.GetEventDB().GetChallenge(challengeID)
+	if err != nil {
+		return nil, common.NewErrorf("get_blobber", "cannot find blobber %v", blobberID)
+	}
+	var ch = ChallengeReturn{
+		Created:        challengeEdb.Created,
+		ID:             challengeEdb.ChallengeID,
+		RandomNumber:   challengeEdb.RandomNumber,
+		AllocationID:   challengeEdb.AllocationID,
+		AllocationRoot: challengeEdb.AllocationRoot,
+		Blobber: &StorageNode{
+			ID:      challengeEdb.BlobberID,
+			BaseURL: challengeEdb.BlobberUrl,
+		},
+	}
+	for _, validator := range challengeEdb.Validators {
+		ch.Validators = append(ch.Validators, &ValidationNode{
+			ID:      validator.ValidatorID,
+			BaseURL: validator.BaseURL,
+		})
+	}
+	logging.Logger.Info("piers GetChallengeHandler",
+		zap.Any("new challenge", ch),
+	)
+	return ch, nil
 }

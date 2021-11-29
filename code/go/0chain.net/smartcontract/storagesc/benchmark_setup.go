@@ -144,16 +144,16 @@ func AddMockAllocations(
 		for _, challenge := range bc.Challenges {
 			var ch event.Challenge
 			ch.ChallengeID = challenge.ID
-			for _, validator := range challenge.Validators {
-				ch.Validators = append(ch.Validators, event.ValidationNode{
-					ValidatorID: validator.ID,
-					BaseURL:     validator.BaseURL,
-				})
-			}
+			//for _, validator := range challenge.Validators {
+			//	ch.Validators = append(ch.Validators, event.ValidationNode{
+			//		ValidatorID: validator.ID,
+			//		BaseURL:     validator.BaseURL,
+			//	})
+			//}
 			ch.BlobberID = bc.BlobberID
-			ch.RandomNumber = challenge.RandomNumber
+			//ch.RandomNumber = challenge.RandomNumber
 			ch.AllocationID = challenge.AllocationID
-			ch.AllocationRoot = challenge.AllocationRoot
+			//ch.AllocationRoot = challenge.AllocationRoot
 			err := eventDb.AddChallenge(ch)
 			if err != nil {
 				panic(err)
@@ -270,12 +270,12 @@ func setupMockChallenges(
 	validators []*ValidationNode,
 ) {
 	bc.BlobberID = blobber.ID //d46458063f43eb4aeb4adf1946d123908ef63143858abb24376d42b5761bf577
-	var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
+	//var selValidators = validators[:viper.GetInt(sc.NumBlobbersPerAllocation)/2]
 	for i := 0; i < viper.GetInt(sc.NumChallengesBlobber); i++ {
 		bc.addChallenge(&StorageChallenge{
-			ID:           getMockChallengeId(allocationIndex, bIndex, i),
-			Validators:   selValidators,
-			Blobber:      blobber,
+			ID: getMockChallengeId(allocationIndex, bIndex, i),
+			//Validators:   selValidators,
+			//Blobber:      blobber,
 			AllocationID: allocationId,
 		})
 	}
