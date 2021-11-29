@@ -116,12 +116,12 @@ func TestSleepOrDone(t *testing.T) {
 	}{
 		{
 			name:     "Test_SleepOrDone_FALSE",
-			args:     args{ctx: context.TODO(), sleep: time.Nanosecond},
+			args:     args{ctx: context.TODO(), sleep: time.Millisecond},
 			wantDone: false,
 		},
 		{
 			name:     "Test_SleepOrDone_TRUE",
-			args:     args{ctx: context.TODO(), sleep: time.Nanosecond},
+			args:     args{ctx: context.TODO(), sleep: time.Millisecond},
 			wantDone: true,
 		},
 	}

@@ -11,8 +11,6 @@ import (
 	"0chain.net/core/logging"
 	"go.uber.org/atomic"
 
-	"reflect"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -55,8 +53,6 @@ type NodeDB interface {
 	MultiDeleteNode(keys []Key) error
 
 	PruneBelowVersion(ctx context.Context, version Sequence) error
-
-	GetDBVersions() []int64
 }
 
 // StrKey - data type for the key used to store the node into some storage
@@ -333,25 +329,11 @@ type LevelNodeDB struct {
 	PropagateDeletes bool // Setting this to false (default) will not propagate delete to lower level db
 	DeletedNodes     map[StrKey]bool
 	version          int64
-	versions         []int64
 }
 
 // NewLevelNodeDB - create a level node db
 func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *LevelNodeDB {
-	vs := prevNDB.GetDBVersions()
 	v := levelNodeVersion.Add(1)
-
-	if len(vs) == 0 {
-		Logger.Debug("NewLevelNodeDB new thread",
-			zap.Any("predb type", reflect.TypeOf(prevNDB)),
-			zap.Any("new start db version", v),
-		)
-	}
-
-	vs = append(vs, v)
-	if len(vs) > 40 {
-		vs = vs[len(vs)-40:]
-	}
 
 	lndb := &LevelNodeDB{
 		current:          curNDB,
@@ -359,7 +341,6 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 		PropagateDeletes: propagateDeletes,
 		mutex:            &sync.RWMutex{},
 		version:          v,
-		versions:         vs,
 	}
 	lndb.DeletedNodes = make(map[StrKey]bool)
 	return lndb
@@ -370,15 +351,6 @@ func (lndb *LevelNodeDB) GetDBVersion() int64 {
 	lndb.mutex.RLock()
 	defer lndb.mutex.RUnlock()
 	return lndb.version
-}
-
-// GetDBVersions returns all tracked db versions
-func (lndb *LevelNodeDB) GetDBVersions() (versions []int64) {
-	lndb.mutex.RLock()
-	defer lndb.mutex.RUnlock()
-	versions = make([]int64, len(lndb.versions))
-	copy(versions, lndb.versions)
-	return
 }
 
 // GetCurrent returns current node db

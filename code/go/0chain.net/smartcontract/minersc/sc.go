@@ -103,6 +103,8 @@ func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
 	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
 
+	msc.SmartContract.RestHandlers["/getEvents"] = msc.GetEventsHandler
+
 	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
 	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
 	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
@@ -124,11 +126,10 @@ func (msc *MinerSmartContract) addMint(gn *GlobalNode, mint state.Balance) {
 	gn.Minted += mint
 
 	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
-	if !found {
-		panic("missing mintedTokens stat in miner SC")
+	if found {
+		var mintStats = mintStatsRaw.(metrics.Counter)
+		mintStats.Inc(int64(mint))
 	}
-	var mintStats = mintStatsRaw.(metrics.Counter)
-	mintStats.Inc(int64(mint))
 }
 
 //Execute implementing the interface

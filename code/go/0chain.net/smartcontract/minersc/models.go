@@ -113,7 +113,12 @@ func NewSimpleNodes() SimpleNodes {
 // not thread safe
 type SimpleNodes map[string]*SimpleNode
 
-func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp *node.Pool) (maxNodes int) {
+// Pooler represents a pool interface
+type Pooler interface {
+	HasNode(id string) bool
+}
+
+func (sns SimpleNodes) reduce(limit int, xPercent float64, pmbrss int64, pmbnp Pooler) (maxNodes int) {
 	var pmbNodes, newNodes, selectedNodes []*SimpleNode
 
 	// separate previous mb miners and new miners from dkg miners list
@@ -295,67 +300,70 @@ func (gn *GlobalNode) validate() error {
 	return nil
 }
 
-func (gn *GlobalNode) getConfigMap() smartcontract.StringMap {
+func (gn *GlobalNode) getConfigMap() (smartcontract.StringMap, error) {
 	var im smartcontract.StringMap
 	im.Fields = make(map[string]string)
 	for key, info := range Settings {
-		iSetting := gn.Get(info.Setting)
+		iSetting, err := gn.Get(info.Setting)
+		if err != nil {
+			return im, err
+		}
 		if info.ConfigType == smartcontract.StateBalance {
 			sbSetting, ok := iSetting.(state.Balance)
 			if !ok {
-				panic(fmt.Sprintf("%s key not implemented as state.balance", key))
+				return im, fmt.Errorf("%s key not implemented as state.balance", key)
 			}
 			iSetting = float64(sbSetting) / x10
 		}
 		im.Fields[key] = fmt.Sprintf("%v", iSetting)
 	}
-	return im
+	return im, nil
 }
 
-func (gn *GlobalNode) Get(key Setting) interface{} {
+func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 	switch key {
 	case MinStake:
-		return gn.MinStake
+		return gn.MinStake, nil
 	case MaxStake:
-		return gn.MaxStake
+		return gn.MaxStake, nil
 	case MaxN:
-		return gn.MaxN
+		return gn.MaxN, nil
 	case MinN:
-		return gn.MinN
+		return gn.MinN, nil
 	case TPercent:
-		return gn.TPercent
+		return gn.TPercent, nil
 	case KPercent:
-		return gn.KPercent
+		return gn.KPercent, nil
 	case XPercent:
-		return gn.XPercent
+		return gn.XPercent, nil
 	case MaxS:
-		return gn.MaxS
+		return gn.MaxS, nil
 	case MinS:
-		return gn.MinS
+		return gn.MinS, nil
 	case MaxDelegates:
-		return gn.MaxDelegates
+		return gn.MaxDelegates, nil
 	case RewardRoundFrequency:
-		return gn.RewardRoundFrequency
+		return gn.RewardRoundFrequency, nil
 	case InterestRate:
-		return gn.InterestRate
+		return gn.InterestRate, nil
 	case RewardRate:
-		return gn.RewardRate
+		return gn.RewardRate, nil
 	case ShareRatio:
-		return gn.ShareRatio
+		return gn.ShareRatio, nil
 	case BlockReward:
-		return gn.BlockReward
+		return gn.BlockReward, nil
 	case MaxCharge:
-		return gn.MaxCharge
+		return gn.MaxCharge, nil
 	case Epoch:
-		return gn.Epoch
+		return gn.Epoch, nil
 	case RewardDeclineRate:
-		return gn.RewardDeclineRate
+		return gn.RewardDeclineRate, nil
 	case InterestDeclineRate:
-		return gn.InterestDeclineRate
+		return gn.InterestDeclineRate, nil
 	case MaxMint:
-		return gn.MaxMint
+		return gn.MaxMint, nil
 	default:
-		panic("Setting not implemented")
+		return nil, errors.New("Setting not implemented")
 	}
 }
 

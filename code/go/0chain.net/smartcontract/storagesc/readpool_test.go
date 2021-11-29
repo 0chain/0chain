@@ -105,13 +105,13 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 
 		rp *readPool
 
-		b, err = ssc.getReadPoolBytes(clientID, balances)
+		_, err = ssc.getReadPoolBytes(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
 	rp = new(readPool)
 	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getReadPoolBytes(clientID, balances)
+	b, err := ssc.getReadPoolBytes(clientID, balances)
 	require.NoError(t, err)
 	assert.EqualValues(t, rp.Encode(), b)
 }
@@ -125,14 +125,13 @@ func TestStorageSmartContract_getReadPool(t *testing.T) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
-		rps, err = ssc.getReadPool(clientID, balances)
+		_, err   = ssc.getReadPool(clientID, balances)
 		nrps     = new(readPool)
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	nrps = new(readPool)
 	require.NoError(t, nrps.save(ssc.ID, clientID, balances))
-	rps, err = ssc.getReadPool(clientID, balances)
+	rps, err := ssc.getReadPool(clientID, balances)
 	require.NoError(t, err)
 	require.EqualValues(t, nrps, rps)
 }
@@ -253,7 +252,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation
 	lr.Duration = 15 * time.Second
-	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	require.Error(t, err)
 
 	balances.balances[client.id] = 200e10

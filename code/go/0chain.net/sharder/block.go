@@ -117,11 +117,7 @@ func (sc *Chain) StoreBlockSummaryFromBlock(b *block.Block) error {
 		return err
 	}
 	con := ememorystore.GetEntityCon(bctx, bSummaryEntityMetadata)
-	err = con.Commit()
-	if err != nil {
-		return err
-	}
-	return nil
+	return con.Commit()
 }
 
 /*StoreBlockSummary - stores block summary to ememory/rocksdb */

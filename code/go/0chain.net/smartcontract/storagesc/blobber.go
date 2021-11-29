@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -102,6 +104,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	// update the list
 	blobbers.Nodes.add(blobber)
 
+	if err := emitAddOrOverwriteBlobber(blobber, balances); err != nil {
+		return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
+	}
+
 	// update statistics
 	sc.statIncr(statUpdateBlobber)
 
@@ -151,6 +157,8 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		sc.statIncr(statRemoveBlobber)
 		sc.statDecr(statNumberOfBlobbers)
 	}
+
+	balances.EmitEvent(event.TypeStats, event.TagDeleteBlobber, blobber.ID, blobber.ID)
 
 	return // opened offers are still opened
 }
@@ -319,6 +327,10 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"can't save all blobbers list: "+err.Error())
 	}
 
+	err = emitUpdateBlobber(blobber, balances)
+	if err != nil {
+		return "", common.NewError("blobber_health_check_failed", err.Error())
+	}
 	_, err = balances.InsertTrieNode(blobber.GetKey(sc.ID),
 		blobber)
 	if err != nil {

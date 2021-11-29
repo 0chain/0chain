@@ -7,10 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/herumi/bls/ffi/go/bls"
 	"github.com/herumi/mcl/ffi/go/mcl"
 	"github.com/stretchr/testify/require"
-
-	"0chain.net/chaincore/threshold/bls"
 )
 
 func TestMiraclToHerumiPK(t *testing.T) {
@@ -463,11 +462,6 @@ func TestBLS0ChainScheme_PairMessageHash(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "TestBLS0ChainScheme_PairMessageHash_Deserializing_ERR",
-			fields:  fields{publicKey: make([]byte, 1)},
-			wantErr: true,
-		},
-		{
 			name:    "TestBLS0ChainScheme_PairMessageHash_Hex_Decoding_Hash_ERR",
 			fields:  fields{publicKey: scheme.publicKey},
 			args:    args{hash: "!"},
@@ -479,11 +473,10 @@ func TestBLS0ChainScheme_PairMessageHash(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			b0 := &BLS0ChainScheme{
-				privateKey: tt.fields.privateKey,
-				publicKey:  tt.fields.publicKey,
-			}
-			_, err := b0.PairMessageHash(tt.args.hash)
+			b0, err := newBLS0ChainSchemeFromPublicKey(tt.fields.publicKey)
+			require.NoError(t, err)
+
+			_, err = b0.PairMessageHash(tt.args.hash)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PairMessageHash() error = %v, wantErr %v", err, tt.wantErr)
 				return

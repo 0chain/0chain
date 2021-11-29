@@ -18,7 +18,7 @@ type RoundI interface {
 
 	IsRanksComputed() bool
 	GetMinerRank(miner *node.Node) int
-	GetMinersByRank(miners *node.Pool) []*node.Node
+	GetMinersByRank(miners []*node.Node) []*node.Node
 
 	AddProposedBlock(b *block.Block) (*block.Block, bool)
 	GetProposedBlocks() []*block.Block

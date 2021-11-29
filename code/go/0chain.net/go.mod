@@ -29,17 +29,21 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remeh/sizedwaitgroup v0.0.0-20180822144253-5e7302b12cce
+	github.com/selvatico/go-mocket v1.0.7
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
-	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/gozstd v1.14.1
-	github.com/vmihailenco/msgpack v4.0.4+incompatible
+	github.com/vmihailenco/msgpack/v5 v5.3.5
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.17.0
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/net v0.0.0-20211020060615-d418f374d309 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	gopkg.in/yaml.v2 v2.4.0
+	gorm.io/datatypes v1.0.3
+	gorm.io/driver/postgres v1.2.1
+	gorm.io/gorm v1.22.2
 )

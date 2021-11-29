@@ -643,6 +643,7 @@ func setupMocksFinishAllocation(
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientBalance: zcnToBalance(3.1),
 		store:         make(map[datastore.Key]util.Serializable),
@@ -945,6 +946,7 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientBalance: zcnToBalance(3),
 		store:         make(map[datastore.Key]util.Serializable),
@@ -1002,7 +1004,6 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers sort
 	}
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientId, ctx)
-	wp = wp
 
 	confirmTestNewAllocation(t, f, allBlobbersList.Nodes, individualBlobbers, newStakePools, *wp, ctx)
 
