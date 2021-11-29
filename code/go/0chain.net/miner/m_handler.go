@@ -217,7 +217,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, err
 	}
 
-	var msg = NewBlockMessage(MessageVRFShare, sender, nil, nil, nil)
+	var msg = NewBlockMessage(MessageVRFShare, sender, nil, nil)
 	msg.VRFShare = vrfs
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil
@@ -227,17 +227,14 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
 
-	var be, ok = entity.(*round.VerifyBlock)
+	var b, ok = entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
-	var (
-		b  = be.Block
-		mc = GetMinerChain()
-	)
+	mc := GetMinerChain()
 
-	if be.MinerID == node.Self.Underlying().GetKey() {
+	if b.MinerID == node.Self.Underlying().GetKey() {
 		return nil, nil
 	}
 
@@ -288,7 +285,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, err
 	}
 
-	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, be.Block, be.VRFShares)
+	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil
 }
@@ -344,7 +341,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 		return nil, err
 	}
 
-	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil, nil)
+	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil
@@ -385,7 +382,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, err
 	}
 
-	var msg = NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil, nil)
+	var msg = NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
 	mc.PushBlockMessageChannel(msg)
 	return nil, nil

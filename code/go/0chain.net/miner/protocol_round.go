@@ -655,7 +655,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
 
-	go mc.SendBlock(ctx, b, nil)
+	go mc.SendBlock(ctx, b)
 	return b, nil
 }
 
@@ -1431,7 +1431,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
-			go mc.SendBlock(context.Background(), b, nil)
+			go mc.SendBlock(context.Background(), b)
 		}
 	}
 

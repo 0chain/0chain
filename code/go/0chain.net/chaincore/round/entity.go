@@ -523,8 +523,6 @@ func SetupEntity(store datastore.Store) {
 	roundEntityMetadata.Store = store
 	roundEntityMetadata.IDColumnName = "number"
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
-
-	SetupVerifyBlockEntity()
 }
 
 //SetupRoundSummaryDB - setup the round summary db
