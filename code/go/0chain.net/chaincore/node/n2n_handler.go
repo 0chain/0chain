@@ -50,7 +50,7 @@ var pullDataRequestor EntityRequestor
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(datastore.PrintEntityHandler, nil)))
+	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(SenderValidateHandler(datastore.PrintEntityHandler), nil)))
 	http.HandleFunc(pullURL, common.N2NRateLimit(ToN2NSendEntityHandler(PushToPullHandler)))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
 	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
@@ -134,8 +134,11 @@ func init() {
 	}
 }
 
-/*SENDER - key used to get the connection object from the context */
-const SENDER common.ContextKey = "node.sender"
+const (
+	// SENDER - key used to get the connection object from the context */
+	SENDER               common.ContextKey = "node.sender"
+	SENDER_VALIDATE_FUNC common.ContextKey = "node.sender_validate_func"
+)
 
 /*WithNode takes a context and adds a connection value to it */
 func WithNode(ctx context.Context, node *Node) context.Context {
@@ -145,6 +148,24 @@ func WithNode(ctx context.Context, node *Node) context.Context {
 /*GetSender returns a connection stored in the context which got created via WithConnection */
 func GetSender(ctx context.Context) *Node {
 	return ctx.Value(SENDER).(*Node)
+}
+
+// SenderValidateFunc represents the function signature for validating sender signature
+type SenderValidateFunc func() error
+
+// WithSenderValidateFunc saves the sender validate function to context
+func WithSenderValidateFunc(ctx context.Context, f SenderValidateFunc) context.Context {
+	return context.WithValue(ctx, SENDER_VALIDATE_FUNC, f)
+}
+
+// getSenderValidateFunc retrieves the sender validate function from context
+func getSenderValidateFunc(ctx context.Context) SenderValidateFunc {
+	return ctx.Value(SENDER_VALIDATE_FUNC).(SenderValidateFunc)
+}
+
+// ValidateSenderSignature retrieves sender validate function from context and run it
+func ValidateSenderSignature(ctx context.Context) error {
+	return getSenderValidateFunc(ctx)()
 }
 
 /*SetHeaders - set common request headers */
