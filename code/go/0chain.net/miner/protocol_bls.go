@@ -225,12 +225,12 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 // AddVRFShare - implement the interface for the RoundRandomBeacon protocol.
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	var (
-		partyID = bls.ComputeIDdkg(vrfs.GetParty().ID)
-		rn      = mr.GetRoundNumber()
-		dkg     = mc.GetDKG(rn)
+		rn  = mr.GetRoundNumber()
+		dkg = mc.GetDKG(rn)
 	)
 
 	if dkg == nil {
+		Logger.Warn("AddVRFShare - dkg is nil", zap.Int64("round", rn))
 		return false
 	}
 
@@ -245,6 +245,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	}
 
 	if mr.VRFShareExist(vrfs) {
+		Logger.Debug("AddVRFShare - share already exist",
+			zap.Int64("round", rn), zap.String("share", vrfs.Share))
 		return false
 	}
 
@@ -264,25 +266,47 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
+		// cache the vrf share if the previous round is not ready yet
+		mr.vrfSharesCache.add(vrfs)
+
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
-	var share bls.Sign
-	if err := share.SetHexString(vrfs.Share); err != nil {
-		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
+
+	mc.verifyCachedVRFShares(ctx, msg, mr, dkg)
+
+	if !verifyVRFShare(mr, vrfs, msg, dkg) {
 		return false
 	}
 
-	if !dkg.VerifySignature(&share, msg, partyID) {
-		var prSeed string
-		if pr := mc.GetMinerRound(rn - 1); pr != nil {
-			prSeed = strconv.FormatInt(pr.GetRandomSeed(), 16)
-		}
+	mr.AddVRFShare(vrfs, blsThreshold)
+
+	if len(mr.GetVRFShares()) >= blsThreshold {
+		mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+	}
+
+	return true
+}
+
+func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG) bool {
+	var (
+		partyID = bls.ComputeIDdkg(vrfs.GetParty().ID)
+		share   bls.Sign
+	)
+
+	if err := share.SetHexString(vrfs.Share); err != nil {
+		Logger.Error("failed to decode share hex string",
+			zap.Any("vrfs_share", vrfs.Share),
+			zap.Any("message", blsMsg))
+		return false
+	}
+
+	if !dkg.VerifySignature(&share, blsMsg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := dkg.GetPublicKeyByID(partyID)
 		Logger.Error("failed to verify share",
 			zap.Any("share", share.GetHexString()),
-			zap.Any("message", msg),
+			zap.Any("message", blsMsg),
 			zap.Any("from", stringID),
 			zap.Any("pi", pi.GetHexString()),
 			zap.String("node_id", vrfs.GetParty().GetKey()),
@@ -290,26 +314,44 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 			zap.Int64("dkg_starting_round", dkg.StartingRound),
 			zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
 			zap.Int("chain_tc", vrfs.GetRoundTimeoutCount()),
-			zap.Int("round_tc", mr.GetTimeoutCount()),
-			zap.String("pr_seed", prSeed),
-		)
+			zap.Int("round_tc", r.GetTimeoutCount()))
 		return false
 	}
 
 	Logger.Info("verified vrf",
-		zap.Any("share", share.GetHexString()),
-		zap.Any("message", msg),
-		zap.Any("from", (&partyID).GetHexString()),
+		zap.Int64("round", vrfs.Round),
 		zap.String("node_id", vrfs.GetParty().GetKey()),
-		zap.Int64("round", vrfs.Round))
-
-	if !mr.AddVRFShare(vrfs, blsThreshold) {
-		Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
-		return false
-	}
-
-	mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+		zap.Any("share", share.GetHexString()),
+		zap.Any("from", (&partyID).GetHexString()),
+		zap.Any("message", blsMsg))
 	return true
+}
+
+func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Round, dkg *bls.DKG) {
+	if err := mc.verifyCachedVRFSharesWorker.Run(ctx, func() error {
+		var (
+			vrfShares = r.vrfSharesCache.getAll()
+			//rn           = r.GetRoundNumber()
+			blsThreshold = dkg.T
+		)
+
+		if len(vrfShares) == 0 {
+			return nil
+		}
+
+		defer r.vrfSharesCache.clean()
+
+		for _, vrfs := range vrfShares {
+			if !verifyVRFShare(r, vrfs, blsMsg, dkg) {
+				continue
+			}
+
+			r.AddVRFShare(vrfs, blsThreshold)
+		}
+		return nil
+	}); err != nil {
+		Logger.Error("verify cached vrf shares failed", zap.Error(err), zap.Int64("round", r.GetRoundNumber()))
+	}
 }
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
@@ -333,7 +375,9 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		return
 	}
 
-	Logger.Debug("VRF Hurray we've threshold BLS shares", zap.Int64("round", mr.GetRoundNumber()))
+	Logger.Debug("VRF Hurray we've threshold BLS shares",
+		zap.Int64("round", mr.GetRoundNumber()),
+		zap.String("round pointer", fmt.Sprintf("%p", mr)))
 	if !config.DevConfiguration.IsDkgEnabled {
 		// We're still waiting for threshold number of VRF shares,
 		// even though DKG is not enabled.
@@ -354,7 +398,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	}
 
 	var rbOutput = encryption.Hash(groupSignature.GetHexString())
-	Logger.Info("recieve bls sign", zap.Any("sigs", recSig),
+	Logger.Info("receive bls sign", zap.Any("sigs", recSig),
 		zap.Any("from", recFrom),
 		zap.Any("group_signature", groupSignature.GetHexString()))
 

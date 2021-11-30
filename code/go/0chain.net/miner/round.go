@@ -20,6 +20,46 @@ type Round struct {
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
+	vrfSharesCache        *vrfSharesCache
+}
+
+type vrfSharesCache struct {
+	vrfShares map[string]*round.VRFShare
+	mutex     *sync.Mutex
+}
+
+func newVRFSharesCache() *vrfSharesCache {
+	return &vrfSharesCache{
+		vrfShares: make(map[string]*round.VRFShare),
+		mutex:     &sync.Mutex{},
+	}
+}
+
+func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	if _, ok := v.vrfShares[vrfShare.GetParty().GetKey()]; ok {
+		return
+	}
+	v.vrfShares[vrfShare.Share] = vrfShare
+}
+
+func (v *vrfSharesCache) getAll() []*round.VRFShare {
+	v.mutex.Lock()
+	vrfShares := make([]*round.VRFShare, 0, len(v.vrfShares))
+	for _, vrf := range v.vrfShares {
+		vrfShares = append(vrfShares, vrf)
+	}
+	v.mutex.Unlock()
+	return vrfShares
+}
+
+func (v *vrfSharesCache) clean() {
+	v.mutex.Lock()
+	for s := range v.vrfShares {
+		delete(v.vrfShares, s)
+	}
+	v.mutex.Unlock()
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
