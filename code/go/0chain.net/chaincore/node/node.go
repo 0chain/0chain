@@ -118,26 +118,26 @@ type Node struct {
 	SetIndex       int           `json:"set_index" yaml:"set_index"`
 	Status         int           `json:"status" yaml:"-"`
 	InPrevMB       bool          `json:"in_prev_mb" yaml:"-"`
-	LastActiveTime time.Time     `json:"-" yaml:"-"`
-	ErrorCount     int64         `json:"-" yaml:"-"`
-	CommChannel    chan struct{} `json:"-" yaml:"-"`
+	LastActiveTime time.Time     `json:"-" msgpack:"-" yaml:"-"`
+	ErrorCount     int64         `json:"-" msgpack:"-" yaml:"-"`
+	CommChannel    chan struct{} `json:"-" msgpack:"-" yaml:"-"`
 	//These are approximiate as we are not going to lock to update
-	sent       int64 `json:"-" yaml:"-"` // messages sent to this node
-	sendErrors int64 `json:"-" yaml:"-"` // failed message sent to this node
-	received   int64 `json:"-" yaml:"-"` // messages received from this node
+	sent       int64 `json:"-" msgpack:"-" yaml:"-"` // messages sent to this node
+	sendErrors int64 `json:"-" msgpack:"-" yaml:"-"` // failed message sent to this node
+	received   int64 `json:"-" msgpack:"-" yaml:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer     `json:"-" yaml:"-"`
-	SizeByURI   map[string]metrics.Histogram `json:"-" yaml:"-"`
+	TimersByURI map[string]metrics.Timer     `json:"-" msgpack:"-" yaml:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-" msgpack:"-" yaml:"-"`
 
 	largeMessageSendTime uint64 `yaml:"-"`
 	smallMessageSendTime uint64 `yaml:"-"`
 
-	LargeMessagePullServeTime float64 `json:"-"  yaml:"-"`
-	SmallMessagePullServeTime float64 `json:"-"  yaml:"-"`
+	LargeMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
+	SmallMessagePullServeTime float64 `json:"-" msgpack:"-" yaml:"-"`
 
-	mutex sync.RWMutex `yaml:"-"`
+	mutex sync.RWMutex `json:"-" msgpack:"-" yaml:"-"`
 
-	ProtocolStats interface{} `json:"-"  yaml:"-"`
+	ProtocolStats interface{} `json:"-" msgpack:"-" yaml:"-"`
 
 	idBytes []byte `yaml:"-"`
 

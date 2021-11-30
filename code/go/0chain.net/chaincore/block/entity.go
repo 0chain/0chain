@@ -147,7 +147,7 @@ type Block struct {
 	ChainWeight float64       `json:"chain_weight"`
 	RoundRank   int           `json:"-" msgpack:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-" msgpack:"-"`
-	Events      []event.Event `json:"-" msgpack:"-"`
+	Events      []event.Event
 
 	TxnsMap   map[string]bool `json:"-" msgpack:"-"`
 	mutexTxns sync.RWMutex    `json:"-" msgpack:"-"`
