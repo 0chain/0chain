@@ -2,6 +2,7 @@ package node
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -12,6 +13,9 @@ import (
 	"time"
 
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	"github.com/vmihailenco/msgpack/v5"
+	"go.uber.org/zap"
 )
 
 //ErrNodeNotFound - to indicate that a node is not present in the pool
@@ -30,47 +34,149 @@ type Pool struct {
 	Type int8 `json:"type"`
 
 	// ---------------------------------------------
-	mmx      sync.RWMutex
-	Nodes    []*Node          `json:"-"`
+	mmx      sync.RWMutex     `json:"-" msgpack:"-"`
+	Nodes    []*Node          `json:"-" msgpack:"-"`
 	NodesMap map[string]*Node `json:"nodes"`
 	// ---------------------------------------------
 
-	medianNetworkTime uint64 // float64
+	medianNetworkTime uint64                     // float64
+	getNodesC         chan []*Node               `json:"-"`
+	updateNodesC      chan *updateNodesWithReply `json:"-"`
+	startOnce         *sync.Once                 `json:"-"`
+	id                int32                      `json:"-"`
 }
 
 /*NewPool - create a new node pool of given type */
 func NewPool(Type int8) *Pool {
-	return &Pool{
-		Type:     Type,
-		NodesMap: make(map[string]*Node),
+	p := &Pool{
+		Type:      Type,
+		NodesMap:  make(map[string]*Node),
+		startOnce: &sync.Once{},
 	}
+
+	p.initGetNodesC()
+
+	p.start()
+
+	return p
+}
+
+func (np *Pool) initGetNodesC() {
+	if np.updateNodesC == nil {
+		np.updateNodesC = make(chan *updateNodesWithReply, 100)
+	}
+
+	if np.getNodesC == nil {
+		np.getNodesC = make(chan []*Node)
+	}
+}
+
+var poolID int32
+
+func (np *Pool) start() {
+	np.startOnce.Do(func() {
+		go func() {
+			np.id = atomic.AddInt32(&poolID, 1)
+			logging.Logger.Warn("node pool start", zap.Int32("ID", np.id))
+
+			var nds []*Node
+
+			// return if there's no request to get nodes from this pool in one minutes
+			const expireTime = time.Minute
+			cleanTimer := time.NewTimer(expireTime)
+
+			for {
+				select {
+				case np.getNodesC <- nds:
+					cleanTimer = time.NewTimer(expireTime)
+				case v := <-np.updateNodesC:
+					nds = v.nodes
+					v.reply <- struct{}{}
+					cleanTimer = time.NewTimer(expireTime)
+				case <-cleanTimer.C:
+					logging.Logger.Debug("node pool cleaned")
+					np.startOnce = &sync.Once{}
+					return
+				}
+			}
+		}()
+	})
+}
+
+func (np *Pool) getNodesFromC() (nds []*Node) {
+	i := 0
+	for {
+		np.start()
+		select {
+		case nds = <-np.getNodesC:
+			return
+		case <-time.After(500 * time.Millisecond):
+			logging.Logger.Warn("get nodes timeout",
+				zap.Int32("ID", np.id),
+				zap.Int("retry", i))
+			i++
+			continue
+		}
+	}
+}
+
+type updateNodesWithReply struct {
+	nodes []*Node
+	reply chan struct{} `json:"-"`
+}
+
+func (np *Pool) updateNodesToC(nds []*Node) {
+	np.start()
+
+	ndsWithReply := &updateNodesWithReply{
+		nodes: nds,
+		reply: make(chan struct{}, 1),
+	}
+
+	select {
+	case np.updateNodesC <- ndsWithReply:
+		<-ndsWithReply.reply
+		logging.Logger.Debug("update nodes to channel", zap.Int32("id", np.id))
+	case <-time.After(500 * time.Millisecond):
+		logging.Logger.Warn("update nodes to channel timeout")
+	}
+	return
 }
 
 /*Size - size of the pool regardless node status */
 func (np *Pool) Size() int {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
+	nds := np.getNodesFromC()
 
-	return len(np.Nodes)
+	return len(nds)
 }
 
-// MapSize returns number of nodes added to the pool.
-func (np *Pool) MapSize() int {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-	return len(np.NodesMap)
-}
-
-/*AddNode - add a nodes to the pool */
+// AddNode - add a node to the pool
 func (np *Pool) AddNode(node *Node) {
 	if np.Type != node.Type {
 		return
 	}
 
+	node.SetPublicKey(node.PublicKey)
+	RegisterNode(node)
+
 	np.mmx.Lock()
-	defer np.mmx.Unlock()
+	_, ok := np.NodesMap[node.GetKey()]
+	if !ok {
+		np.Nodes = append(np.Nodes, node)
+	} else {
+		// node exist, replace with new one in the pool
+		for i, nd := range np.Nodes {
+			if nd.GetKey() == node.GetKey() {
+				np.Nodes[i] = node
+				break
+			}
+		}
+	}
 
 	np.NodesMap[node.GetKey()] = node
+	np.computeNodePositions()
+	np.updateNodesToC(np.Nodes)
+	np.mmx.Unlock()
 }
 
 /*GetNode - given node id, get the node object or nil */
@@ -85,11 +191,40 @@ func (np *Pool) GetNode(id string) *Node {
 	return node
 }
 
-var none = make([]*Node, 0)
+// GetActiveCount returns the active count
+func (np *Pool) GetActiveCount() (count int) {
+	nds := np.getNodesFromC()
 
-// TODO: refactor to return a copy of Nodes instead of the pointers
-func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
-	shuffled = np.Nodes
+	for _, node := range nds {
+		if node.IsActive() {
+			count++
+		}
+	}
+	return
+}
+
+// GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the
+// time to send a large message
+func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
+	sorted = np.getNodesFromC()
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].getOptimalLargeMessageSendTime() <
+			sorted[j].getOptimalLargeMessageSendTime()
+	})
+
+	return
+}
+
+func (np *Pool) shuffleNodes(preferPrevMBNodes bool) []*Node {
+	ts := time.Now()
+	defer func() {
+		du := time.Since(ts)
+		if du > time.Second {
+			logging.Logger.Debug("shuffleNodes takes too long", zap.Any("duration", du))
+		}
+	}()
+
+	shuffled := np.getNodesFromC()
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
@@ -98,76 +233,14 @@ func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
 			return shuffled[i].InPrevMB
 		})
 	}
-	return
+
+	return shuffled
 }
 
-func (np *Pool) computeNodesArray() {
-	var array = make([]*Node, 0, len(np.NodesMap))
-	for _, v := range np.NodesMap {
-		array = append(array, v)
-	}
-	np.Nodes = array
-	np.computeNodePositions()
-}
-
-// GetActiveCount returns the active count
-func (np *Pool) GetActiveCount() (count int) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-
-	for _, node := range np.Nodes {
-		if node.IsActive() {
-			count++
-		}
-	}
-	return
-}
-
-// GetRandomNodes returns a random set of nodes from the pool
-// Doesn't consider active/inactive status
-func (np *Pool) GetRandomNodes(num int) []*Node {
-	np.mmx.Lock()
-	defer np.mmx.Unlock()
-	nodes := np.shuffleNodes(false)
-	if num > len(nodes) {
-		num = len(nodes)
-	}
-	return nodes[:num]
-}
-
-/*GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the
-time to send a large message */
-func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
-	np.mmx.Lock()
-	defer np.mmx.Unlock()
-	sorted = np.Nodes
-	sort.SliceStable(sorted, func(i, j int) bool {
-		return sorted[i].getOptimalLargeMessageSendTime() <
-			sorted[j].getOptimalLargeMessageSendTime()
-	})
-
-	return
-}
-
-func (np *Pool) getNodesByLargeMessageTime() (sorted []*Node) {
-	sorted = np.Nodes
-	sort.SliceStable(sorted, func(i, j int) bool {
-		return sorted[i].getOptimalLargeMessageSendTime() <
-			sorted[j].getOptimalLargeMessageSendTime()
-	})
-	return
-}
-
-func (np *Pool) shuffleNodesLock(preferPrevMBNodes bool) []*Node {
-	np.mmx.Lock()
-	defer np.mmx.Unlock()
-	return np.shuffleNodes(preferPrevMBNodes)
-}
-
-/*Print - print this pool. This will be used for http response and Read method
-should be able to consume it*/
+// Print - print this pool. This will be used for http response and Read method
+// should be able to consume it
 func (np *Pool) Print(w io.Writer) {
-	nodes := np.shuffleNodesLock(false)
+	nodes := np.shuffleNodes(false)
 	for _, node := range nodes {
 		if node.IsActive() {
 			node.Print(w)
@@ -220,17 +293,7 @@ func (np *Pool) computeNodePositions() {
 	}
 }
 
-/*ComputeProperties - compute properties after all the initialization of the node pool */
-func (np *Pool) ComputeProperties() {
-	np.mmx.Lock()
-	defer np.mmx.Unlock()
-	np.computeNodesArray()
-	for _, node := range np.Nodes {
-		RegisterNode(node)
-	}
-}
-
-/*ComputeNetworkStats - compute the median time it takes for sending a large message to everyone in the network pool */
+// ComputeNetworkStats - compute the median time it takes for sending a large message to everyone in the network pool */
 func (np *Pool) ComputeNetworkStats() {
 	nodes := np.GetNodesByLargeMessageTime()
 	var medianTime float64
@@ -263,11 +326,11 @@ func (np *Pool) GetMedianNetworkTime() float64 {
 	return atomicLoadFloat64(&np.medianNetworkTime)
 }
 
+// N2NURLs returns the urls of all nodes in the pool
 func (np *Pool) N2NURLs() (n2n []string) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-	n2n = make([]string, 0, len(np.NodesMap))
-	for _, node := range np.NodesMap {
+	nds := np.getNodesFromC()
+	n2n = make([]string, 0, len(nds))
+	for _, node := range nds {
 		n2n = append(n2n, node.GetN2NURLBase())
 	}
 	return
@@ -275,24 +338,22 @@ func (np *Pool) N2NURLs() (n2n []string) {
 
 // CopyNodes list.
 func (np *Pool) CopyNodes() (list []*Node) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-	if len(np.Nodes) == 0 {
+	nds := np.getNodesFromC()
+	if len(nds) == 0 {
 		return
 	}
 
-	list = make([]*Node, len(np.Nodes))
+	list = make([]*Node, len(nds))
 	copy(list, np.Nodes)
 	return
 }
 
 // CopyNodesMap returns copy of underlying map.
 func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-	nodesMap = make(map[string]*Node, len(np.NodesMap))
-	for k, v := range np.NodesMap {
-		nodesMap[k] = v
+	nds := np.getNodesFromC()
+	nodesMap = make(map[string]*Node, len(nds))
+	for i, n := range nds {
+		nodesMap[n.GetKey()] = nds[i]
 	}
 
 	return
@@ -301,18 +362,17 @@ func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
 // HasNode returns true if node with given key exists in the pool's map.
 func (np *Pool) HasNode(key string) (ok bool) {
 	np.mmx.RLock()
-	defer np.mmx.RUnlock()
 	_, ok = np.NodesMap[key]
+	np.mmx.RUnlock()
 	return
 }
 
 // Keys of all nods of the pool's map.
 func (np *Pool) Keys() (keys []string) {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
-	keys = make([]string, 0, len(np.NodesMap))
-	for k := range np.NodesMap {
-		keys = append(keys, k)
+	nds := np.getNodesFromC()
+	keys = make([]string, 0, len(nds))
+	for _, n := range nds {
+		keys = append(keys, n.GetKey())
 	}
 	return
 }
@@ -344,12 +404,71 @@ func (np *Pool) Clone() *Pool {
 	clone.NodesMap = make(map[string]*Node, len(np.NodesMap))
 	clone.medianNetworkTime = np.medianNetworkTime
 
-	for k, v := range np.NodesMap {
-		nv := v.Clone()
-		clone.NodesMap[k] = nv
+	for _, v := range np.NodesMap {
+		clone.AddNode(v.Clone())
 	}
 
-	clone.computeNodesArray()
-
 	return clone
+}
+
+// UnmarshalJSON implements the json decoding for the pool
+func (np *Pool) UnmarshalJSON(data []byte) error {
+	type Alias Pool
+	var v = struct {
+		*Alias
+	}{
+		Alias: (*Alias)(np),
+	}
+
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	np.Nodes = make([]*Node, 0, len(np.NodesMap))
+	for k := range np.NodesMap {
+		n := np.NodesMap[k]
+		if n.SigScheme == nil {
+			n.SetPublicKey(n.PublicKey)
+		}
+		np.Nodes = append(np.Nodes, n)
+	}
+
+	np.initGetNodesC()
+	np.computeNodePositions()
+	np.startOnce = &sync.Once{}
+	np.updateNodesToC(np.Nodes)
+
+	return nil
+}
+
+var _ msgpack.CustomDecoder = (*Pool)(nil)
+
+// DecodeMsgpack implements custome decoder for msgpack
+// to initialize variables in the Pool
+func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
+	type Alias Pool
+	var v = struct {
+		*Alias
+	}{
+		Alias: (*Alias)(np),
+	}
+
+	if err := dec.Decode(&v); err != nil {
+		return err
+	}
+
+	np.Nodes = make([]*Node, 0, len(np.NodesMap))
+	for k := range np.NodesMap {
+		n := np.NodesMap[k]
+		if n.SigScheme == nil {
+			n.SetPublicKey(n.PublicKey)
+		}
+		np.Nodes = append(np.Nodes, n)
+	}
+
+	np.initGetNodesC()
+	np.computeNodePositions()
+	np.startOnce = &sync.Once{}
+	np.updateNodesToC(np.Nodes)
+	return nil
 }

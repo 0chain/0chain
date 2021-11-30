@@ -65,6 +65,7 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
+
 	signatureScheme := serverChain.GetSignatureScheme()
 
 	logging.Logger.Info("Owner keys file", zap.String("filename", *keysFile))
@@ -125,6 +126,10 @@ func main() {
 	if state.Debug() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
+
+	// TODO: put it in a better place
+	go mc.StartLFMBWorker(ctx)
+
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock, initStates)
 	mb := mc.GetLatestMagicBlock()
@@ -202,7 +207,7 @@ func main() {
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
 	common.ConfigRateLimits()
-	initN2NHandlers()
+	initN2NHandlers(mc.Chain)
 
 	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
@@ -220,6 +225,10 @@ func main() {
 	// ignoring error and without retries, restart round will resolve it
 	// if there is errors
 	mc.SetupLatestAndPreviousMagicBlocks(ctx)
+
+	if err := mc.LoadMinersPublicKeys(); err != nil {
+		logging.Logger.Error("failed to load miners public keys", zap.Error(err))
+	}
 
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
@@ -401,16 +410,16 @@ func initHandlers() {
 	serverChain.SetupNodeHandlers()
 }
 
-func initN2NHandlers() {
+func initN2NHandlers(c *chain.Chain) {
 	node.SetupN2NHandlers()
-	miner.SetupM2MReceivers()
+	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
 	miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
-	chain.SetupX2XResponders()
+	chain.SetupX2XResponders(c)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
 }

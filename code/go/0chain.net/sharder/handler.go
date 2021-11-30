@@ -54,6 +54,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 				return nil, err
 			}
 		}
+		// TODO: hash is overwritten by block hash getting by round number
 		hash = roundEntity.BlockHash
 
 		hash, err = sc.GetBlockHash(ctx, roundNumber)

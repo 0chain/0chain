@@ -17,11 +17,6 @@ type failingNodeDB struct {
 	underlying util.NodeDB
 }
 
-/*GetDBVersions - implement interface */
-func (fndb *failingNodeDB) GetDBVersions() []int64 {
-	return fndb.underlying.GetDBVersions()
-}
-
 /*GetNode - implement interface */
 func (fndb *failingNodeDB) GetNode(key util.Key) (util.Node, error) {
 	return fndb.underlying.GetNode(key)

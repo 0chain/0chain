@@ -13,18 +13,26 @@ import (
 	"0chain.net/core/logging"
 )
 
+var blsPublicKeys []string
+
 func init() {
 	logging.InitLogging("testing")
+	blsPublicKeys = make([]string, 10)
+	for i := 0; i < 10; i++ {
+		ss := encryption.NewBLS0ChainScheme()
+		ss.GenerateKeys()
+		blsPublicKeys[i] = ss.GetPublicKey()
+	}
 }
 
-func makeTestNode(typ int8) (*node.Node, error) {
+func makeTestNode(typ int8, pk string) (*node.Node, error) {
 	nc := map[interface{}]interface{}{
 		"type":        typ,
 		"public_ip":   "public ip",
 		"n2n_ip":      "n2n_ip",
 		"port":        8080,
 		"id":          "",
-		"public_key":  "public key",
+		"public_key":  pk,
 		"description": "description",
 	}
 	n, err := node.NewNode(nc)
@@ -38,25 +46,22 @@ func makeTestNode(typ int8) (*node.Node, error) {
 func TestBCContext_GetNodepoolInfo(t *testing.T) {
 	t.Parallel()
 
-	mn, err := makeTestNode(node.NodeTypeMiner)
+	mn, err := makeTestNode(node.NodeTypeMiner, blsPublicKeys[0])
 	if err != nil {
 		t.Fatal(err)
 	}
-	mn.ID = encryption.Hash("miner pub key")
 	node.RegisterNode(mn)
 
-	sn, err := makeTestNode(node.NodeTypeSharder)
+	sn, err := makeTestNode(node.NodeTypeSharder, blsPublicKeys[1])
 	if err != nil {
 		t.Fatal(err)
 	}
-	sn.ID = encryption.Hash("sharder pb key")
 	node.RegisterNode(sn)
 
-	bn, err := makeTestNode(node.NodeTypeBlobber)
+	bn, err := makeTestNode(node.NodeTypeBlobber, blsPublicKeys[2])
 	if err != nil {
 		t.Fatal(err)
 	}
-	bn.ID = encryption.Hash("blobber pb key")
 	node.RegisterNode(bn)
 
 	makeTestMembers := func() *PoolMembersInfo {

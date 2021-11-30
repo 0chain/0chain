@@ -141,7 +141,7 @@ func (ecb *EntityChunkBuilder) addEntity(qe QueuedEntity) {
 	}
 	if ecb.MaxHoldupTime > 0 && ecb.Chunk.Size() == 1 {
 		end := qe.QueuedTime.Add(ecb.MaxHoldupTime)
-		delta := end.Sub(time.Now())
+		delta := time.Until(end)
 		if delta > 0 {
 			ecb.TimeoutChannel.Reset(delta)
 		}

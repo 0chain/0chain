@@ -133,6 +133,10 @@ func main() {
 	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
 
+	if err := serverChain.SetupEventDatabase(); err != nil {
+		logging.Logger.Panic("Error setting up events database")
+	}
+
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	sc.SetupConfigInfoDB()
@@ -174,6 +178,9 @@ func main() {
 	if state.Debug() {
 		block.SetupStateLogger("/tmp/state.txt")
 	}
+
+	// TODO: put it in a better place
+	go sc.StartLFMBWorker(ctx)
 
 	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
@@ -249,7 +256,7 @@ func main() {
 	sc.SetupHealthyRound()
 
 	common.ConfigRateLimits()
-	initN2NHandlers()
+	initN2NHandlers(sc.Chain)
 	initWorkers(ctx)
 
 	// start sharding from the LFB stored
@@ -420,11 +427,11 @@ func initEntities() {
 	setupsc.SetupSmartContracts()
 }
 
-func initN2NHandlers() {
+func initN2NHandlers(c *chain.Chain) {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
 	sharder.SetupM2SResponders()
-	chain.SetupX2XResponders()
+	chain.SetupX2XResponders(c)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
 	sharder.SetupS2SRequestors()

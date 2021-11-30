@@ -3,11 +3,13 @@ package memorystore
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*BATCH_SIZE size of the batch */
@@ -40,7 +42,10 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	if data == nil {
 		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), redisKey))
 	}
-	datastore.FromJSON(data, entity)
+	if err := decode(data, entity); err != nil {
+		logging.Logger.Error("ememorystore read from store failed", zap.Error(err))
+	}
+	//datastore.FromJSON(data, entity)
 	entity.ComputeProperties()
 	return nil
 }
@@ -51,7 +56,7 @@ func (ms *Store) Write(ctx context.Context, entity datastore.Entity) error {
 }
 
 func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) error {
-	buffer := datastore.ToJSON(entity)
+	buffer := encode(entity)
 	redisKey := GetEntityKey(entity)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
@@ -157,8 +162,10 @@ func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 			continue
 		}
 		entity := entities[idx]
-		err = json.Unmarshal(ae.([]byte), entity)
+		err = decode(ae.([]byte), entity)
+		//err = datastore.FromJSON(ae.([]byte), entity)
 		if err != nil {
+			logging.Logger.Error("multiReadAux failed", zap.Error(err))
 			return err
 		}
 		entity.ComputeProperties()
@@ -195,7 +202,13 @@ func (ms *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.Ent
 		}
 		kvpair[2*idx] = GetEntityKey(entity)
 		kvpair[2*idx+1] = bytes.NewBuffer(make([]byte, 0, 256))
-		json.NewEncoder(kvpair[2*idx+1].(*bytes.Buffer)).Encode(entity)
+		//datastore.WriteJSON(kvpair[2*idx+1].(*bytes.Buffer), entity)
+		if err := encodeBuffer(kvpair[2*idx+1].(*bytes.Buffer), entity); err != nil {
+			logging.Logger.Error("multiWriteAux failed", zap.Error(err))
+		}
+		//if err := datastore.WriteMsgpack(kvpair[2*idx+1].(*bytes.Buffer), entity); err != nil {
+		//	return err
+		//}
 	}
 	c := GetEntityCon(ctx, entityMetadata)
 	c.Send("MSET", kvpair...)
@@ -386,3 +399,22 @@ func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore
 		return val
 	}
 }
+
+func encode(entity datastore.Entity) *bytes.Buffer {
+	//return datastore.ToMsgpack(entity)
+	return datastore.ToJSON(entity)
+}
+
+func decode(data interface{}, entity datastore.Entity) error {
+	//return datastore.FromMsgpack(data, entity)
+	return datastore.FromJSON(data, entity)
+}
+
+func encodeBuffer(w io.Writer, entity datastore.Entity) error {
+	//return datastore.WriteMsgpack(w, entity)
+	return datastore.WriteJSON(w, entity)
+}
+
+//func decodeBuffer(r io.Reader, entity datastore.Entity) error {
+//	return datastore.ReadMsgpack(r, entity)
+//}

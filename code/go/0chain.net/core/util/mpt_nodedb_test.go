@@ -1096,7 +1096,6 @@ func TestLevelNodeDB_GetDBVersion(t *testing.T) {
 				PropagateDeletes: tt.fields.PropagateDeletes,
 				DeletedNodes:     tt.fields.DeletedNodes,
 				version:          tt.fields.version,
-				versions:         tt.fields.versions,
 			}
 			if got := lndb.GetDBVersion(); got != tt.want {
 				t.Errorf("GetDBVersion() = %v, want %v", got, tt.want)
@@ -1151,7 +1150,6 @@ func TestLevelNodeDB_GetNode(t *testing.T) {
 				PropagateDeletes: tt.fields.PropagateDeletes,
 				DeletedNodes:     tt.fields.DeletedNodes,
 				version:          tt.fields.version,
-				versions:         tt.fields.versions,
 			}
 			got, err := lndb.GetNode(tt.args.key)
 			if (err != nil) != tt.wantErr {
@@ -1211,7 +1209,6 @@ func TestLevelNodeDB_MultiPutNode(t *testing.T) {
 				PropagateDeletes: tt.fields.PropagateDeletes,
 				DeletedNodes:     tt.fields.DeletedNodes,
 				version:          tt.fields.version,
-				versions:         tt.fields.versions,
 			}
 			if err := lndb.MultiPutNode(tt.args.keys, tt.args.nodes); (err != nil) != tt.wantErr {
 				t.Errorf("MultiPutNode() error = %v, wantErr %v", err, tt.wantErr)
@@ -1262,7 +1259,6 @@ func TestLevelNodeDB_Iterate(t *testing.T) {
 				PropagateDeletes: tt.fields.PropagateDeletes,
 				DeletedNodes:     tt.fields.DeletedNodes,
 				version:          tt.fields.version,
-				versions:         tt.fields.versions,
 			}
 			if err := lndb.Iterate(tt.args.ctx, tt.args.handler); (err != nil) != tt.wantErr {
 				t.Errorf("Iterate() error = %v, wantErr %v", err, tt.wantErr)

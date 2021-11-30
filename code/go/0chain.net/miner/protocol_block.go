@@ -53,7 +53,9 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if err := mc.UpdateState(ctx, b, txn); err != nil {
+	events, err := mc.UpdateState(ctx, b, txn)
+	b.Events = append(b.Events, events...)
+	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),
 			zap.String("txn_object", datastore.ToJSON(txn).String()),
 			zap.Error(err))
@@ -101,9 +103,9 @@ func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
-	ctxn := *txn
+	ctxn := txn.Clone()
 	ctxn.OutputHash = ""
-	return &ctxn
+	return ctxn
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
@@ -265,7 +267,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 
 	if err = mc.ComputeState(ctx, b); err != nil {
 		if err == context.Canceled {
-			logging.Logger.Warn("verify block canceled")
+			logging.Logger.Warn("verify block - compute state canceled",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash))
 			return
 		}
 
@@ -300,99 +304,116 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	return
 }
 
-/*ValidateTransactions - validate the transactions in the block */
 func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
-	var roundMismatch bool
-	var cancel bool
-	numWorkers := len(b.Txns) / mc.ValidationBatchSize
-	if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
-		numWorkers++
-	}
-	aggregate := true
-	var aggregateSignatureScheme encryption.AggregateSignatureScheme
-	if aggregate {
-		aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme, len(b.Txns), mc.ValidationBatchSize)
-	}
-	if aggregateSignatureScheme == nil {
-		aggregate = false
-	}
-	validChannel := make(chan bool, numWorkers)
-	validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
-		for idx, txn := range txns {
-			if cancel {
-				validChannel <- false
-				return
+	return mc.validateTxnsWithContext.Run(ctx, func() error {
+		var roundMismatch bool
+		var cancel bool
+		numWorkers := len(b.Txns) / mc.ValidationBatchSize
+		if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
+			numWorkers++
+		}
+		aggregate := true
+		var aggregateSignatureScheme encryption.AggregateSignatureScheme
+		if aggregate {
+			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme, len(b.Txns), mc.ValidationBatchSize)
+		}
+		if aggregateSignatureScheme == nil {
+			aggregate = false
+		}
+		validChannel := make(chan bool, numWorkers)
+		validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
+			validTxns := make([]*transaction.Transaction, 0, len(txns))
+			for _, txn := range txns {
+				if cancel {
+					validChannel <- false
+					return
+				}
+				if mc.GetCurrentRound() > b.Round {
+					cancel = true
+					roundMismatch = true
+					validChannel <- false
+					return
+				}
+				if txn.OutputHash == "" {
+					cancel = true
+					logging.Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+					validChannel <- false
+					return
+				}
+				err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
+				if err != nil {
+					cancel = true
+					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
+					validChannel <- false
+					return
+				}
+				ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
+				if ok || err != nil {
+					if err != nil {
+						logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+					}
+					cancel = true
+					validChannel <- false
+					return
+				}
+
+				validTxns = append(validTxns, txn)
 			}
-			if mc.GetCurrentRound() > b.Round {
-				cancel = true
-				roundMismatch = true
-				validChannel <- false
-				return
-			}
-			if txn.OutputHash == "" {
-				cancel = true
-				logging.Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
-				validChannel <- false
-				return
-			}
-			err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
-			if err != nil {
-				cancel = true
-				logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
-				validChannel <- false
-				return
-			}
+
+			txnsNeedVerify := mc.FilterOutValidatedTxns(validTxns)
+
 			if aggregate {
-				sigScheme, err := txn.GetSignatureScheme(ctx)
-				if err != nil {
-					panic(err)
+				for i, txn := range txnsNeedVerify {
+					sigScheme, err := txn.GetSignatureScheme(ctx)
+					if err != nil {
+						panic(err)
+					}
+					if err := aggregateSignatureScheme.Aggregate(sigScheme, start+i, txn.Signature, txn.Hash); err != nil {
+						logging.Logger.Error("validate transactions failed",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.Error(err))
+						cancel = true
+						validChannel <- false
+						return
+					}
 				}
-				aggregateSignatureScheme.Aggregate(sigScheme, start+idx, txn.Signature, txn.Hash)
 			}
-			ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
-			if ok || err != nil {
-				if err != nil {
-					logging.Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-				}
-				cancel = true
-				validChannel <- false
-				return
+			validChannel <- true
+		}
+		ts := time.Now()
+		for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
+			end := start + mc.ValidationBatchSize
+			if end > len(b.Txns) {
+				end = len(b.Txns)
+			}
+			go validate(ctx, b.Txns[start:end], start)
+		}
+		count := 0
+		for result := range validChannel {
+			if roundMismatch {
+				logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
+				return common.NewError(RoundMismatch, "current round different from generation round")
+			}
+			if !result {
+				return common.NewError("txn_validation_failed", "Transaction validation failed")
+			}
+			count++
+			if count == numWorkers {
+				break
 			}
 		}
-		validChannel <- true
-	}
-	ts := time.Now()
-	for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
-		end := start + mc.ValidationBatchSize
-		if end > len(b.Txns) {
-			end = len(b.Txns)
+		if aggregate {
+			if _, err := aggregateSignatureScheme.Verify(); err != nil {
+				return err
+			}
 		}
-		go validate(ctx, b.Txns[start:end], start)
-	}
-	count := 0
-	for result := range validChannel {
-		if roundMismatch {
-			logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
-			return common.NewError(RoundMismatch, "current round different from generation round")
+		btvTimer.UpdateSince(ts)
+		if mc.discoverClients {
+			go mc.SaveClients(b.GetClients())
 		}
-		if !result {
-			return common.NewError("txn_validation_failed", "Transaction validation failed")
-		}
-		count++
-		if count == numWorkers {
-			break
-		}
-	}
-	if aggregate {
-		if _, err := aggregateSignatureScheme.Verify(); err != nil {
-			return err
-		}
-	}
-	btvTimer.UpdateSince(ts)
-	if mc.discoverClients {
-		go mc.SaveClients(ctx, b.GetClients())
-	}
-	return nil
+		return nil
+	})
 }
 
 /*SignBlock - sign the block and provide the verification ticket */
