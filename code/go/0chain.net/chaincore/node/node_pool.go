@@ -122,7 +122,7 @@ func (np *Pool) getNodesFromC() (nds []*Node) {
 
 type updateNodesWithReply struct {
 	nodes []*Node
-	reply chan struct{}
+	reply chan struct{} `json:"-"`
 }
 
 func (np *Pool) updateNodesToC(nds []*Node) {

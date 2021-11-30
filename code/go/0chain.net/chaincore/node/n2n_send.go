@@ -456,22 +456,18 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		r.Body.Close()
 
 		go func() {
-			vctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			defer cancel()
-			if err := n2nVerifyRequestsWithContext.Run(vctx, func() error {
-				if !validateSendRequest(sender, r) {
-					return errors.New("failed to validate request")
-				}
-				return nil
-			}); err != nil {
-				logging.N2n.Error("message received - failed to validate request",
-					zap.String("from", nodeID),
-					zap.Int("to", Self.Underlying().SetIndex),
-					zap.String("handler", r.RequestURI),
-					zap.Error(err))
-				return
-			}
+			senderValidateFunc := func() error {
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				return n2nVerifyRequestsWithContext.Run(ctx, func() error {
+					if !validateSendRequest(sender, r) {
+						return errors.New("failed to validate request")
+					}
 
+					return nil
+				})
+			}
+			ctx := WithSenderValidateFunc(context.Background(), senderValidateFunc)
 			entityName := r.Header.Get(HeaderRequestEntityName)
 			entityID := r.Header.Get(HeaderRequestEntityID)
 			entityMetadata := datastore.GetEntityMetadata(entityName)
@@ -480,7 +476,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 					return
 				}
 			}
-			ctx := context.Background()
+
 			initialNodeID := r.Header.Get(HeaderInitialNodeID)
 			if initialNodeID != "" {
 				initSender := GetNode(initialNodeID)
@@ -525,5 +521,16 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 		}()
 		common.Respond(w, r, "", nil)
+	}
+}
+
+// SenderValidateHandler validates the sender signature
+func SenderValidateHandler(handler datastore.JSONEntityReqResponderF) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		if err := ValidateSenderSignature(ctx); err != nil {
+			return nil, err
+		}
+
+		return handler(ctx, entity)
 	}
 }

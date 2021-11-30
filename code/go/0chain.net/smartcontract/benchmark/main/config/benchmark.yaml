@@ -39,7 +39,7 @@ options:
 
 dbs:
   events:
-    enabled: true
+    enabled: false
     name: events_db
     user: zchain_user
     password: zchian

@@ -293,29 +293,30 @@ func AddMockBlobbers(
 		if err != nil {
 			panic(err)
 		}
-
-		blobberDb := event.Blobber{
-			BlobberID:               blobber.ID,
-			BaseURL:                 blobber.BaseURL,
-			Latitude:                blobber.Geolocation.Latitude,
-			Longitude:               blobber.Geolocation.Longitude,
-			ReadPrice:               int64(blobber.Terms.ReadPrice),
-			WritePrice:              int64(blobber.Terms.WritePrice),
-			MinLockDemand:           blobber.Terms.MinLockDemand,
-			MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
-			ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
-			Capacity:                blobber.Capacity,
-			Used:                    blobber.Used,
-			LastHealthCheck:         int64(blobber.LastHealthCheck),
-			DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
-			MinStake:                int64(blobber.StakePoolSettings.MaxStake),
-			MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
-			NumDelegates:            blobber.StakePoolSettings.NumDelegates,
-			ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
-		}
-		result := eventDb.Store.Get().Create(&blobberDb)
-		if result.Error != nil {
-			panic(result.Error)
+		if viper.GetBool(sc.EventDbEnabled) {
+			blobberDb := event.Blobber{
+				BlobberID:               blobber.ID,
+				BaseURL:                 blobber.BaseURL,
+				Latitude:                blobber.Geolocation.Latitude,
+				Longitude:               blobber.Geolocation.Longitude,
+				ReadPrice:               int64(blobber.Terms.ReadPrice),
+				WritePrice:              int64(blobber.Terms.WritePrice),
+				MinLockDemand:           blobber.Terms.MinLockDemand,
+				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
+				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				Capacity:                blobber.Capacity,
+				Used:                    blobber.Used,
+				LastHealthCheck:         int64(blobber.LastHealthCheck),
+				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
+				MinStake:                int64(blobber.StakePoolSettings.MaxStake),
+				MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
+				NumDelegates:            blobber.StakePoolSettings.NumDelegates,
+				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
+			}
+			result := eventDb.Store.Get().Create(&blobberDb)
+			if result.Error != nil {
+				panic(result.Error)
+			}
 		}
 	}
 	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
