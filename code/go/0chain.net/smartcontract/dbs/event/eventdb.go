@@ -37,3 +37,17 @@ func (edb *EventDb) AutoMigrate() error {
 	}
 	return nil
 }
+
+func (edb *EventDb) Drop() error {
+	err := edb.Store.Get().Migrator().DropTable(
+		&ValidationNode{},
+		&Challenge{},
+		&BlobberChallenge{},
+		&Event{},
+		&Blobber{},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}

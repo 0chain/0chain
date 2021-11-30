@@ -139,24 +139,26 @@ func AddMockAllocations(
 			panic(err)
 		}
 	}
-
-	for _, bc := range challanges {
-		for _, challenge := range bc.Challenges {
-			var ch event.Challenge
-			ch.ChallengeID = challenge.ID
-			//for _, validator := range challenge.Validators {
-			//	ch.Validators = append(ch.Validators, event.ValidationNode{
-			//			ValidatorID: validator.ID,
-			//			BaseURL:     validator.BaseURL,
-			//		})
-			//}
-			ch.BlobberID = bc.BlobberID
-			//ch.RandomNumber = challenge.RandomNumber
-			ch.AllocationID = challenge.AllocationID
-			//ch.AllocationRoot = challenge.AllocationRoot
-			err := ch.Add(eventDb)
-			if err != nil {
-				panic(err)
+	if viper.GetBool(sc.EventDbEnabled) {
+		for _, bc := range challanges {
+			for _, challenge := range bc.Challenges {
+				var ch event.Challenge
+				ch.ChallengeID = challenge.ID
+				//ch.Validators = []event.ValidationNode{}
+				//for _, validator := range challenge.Validators {
+				//	ch.Validators = append(ch.Validators, event.ValidationNode{
+				//			ValidatorID: validator.ID,
+				//			BaseURL:     validator.BaseURL,
+				//		})
+				//}
+				ch.BlobberID = bc.BlobberID
+				//ch.RandomNumber = challenge.RandomNumber
+				ch.AllocationID = challenge.AllocationID
+				//ch.AllocationRoot = challenge.AllocationRoot
+				err := ch.AddOrUpdate(eventDb)
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}
@@ -337,9 +339,10 @@ func AddMockBlobbers(
 				NumDelegates:            blobber.StakePoolSettings.NumDelegates,
 				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
 			}
-			result := eventDb.Store.Get().Create(&blobberDb)
-			if result.Error != nil {
-				panic(result.Error)
+			err = blobberDb.AddOrUpdate(eventDb)
+			//result := eventDb.Store.Get().Create(&blobberDb)
+			if err != nil {
+				panic(err)
 			}
 		}
 	}

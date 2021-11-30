@@ -38,7 +38,7 @@ func (ch *Challenge) update(edb *EventDb) error {
 		Model(&Challenge{}).
 		Where(&Challenge{ChallengeID: ch.ChallengeID}).
 		Updates(map[string]interface{}{
-			"url":             ch.BlobberUrl,
+			"blobber_url":     ch.BlobberUrl,
 			"created":         ch.Created,
 			"prev_id":         ch.PrevID,
 			"validators":      ch.Validators,

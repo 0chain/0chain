@@ -59,7 +59,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return blobber.addOrUpdate(edb)
+		return blobber.AddOrUpdate(edb)
 	case TagUpdateBlobber:
 		var updates dbs.DbUpdates
 		err := json.Unmarshal([]byte(event.Data), &updates)

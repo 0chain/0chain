@@ -108,7 +108,7 @@ func (blobber *Blobber) update(edb *EventDb) error {
 	return result.Error
 }
 
-func (blobber Blobber) addOrUpdate(edb *EventDb) error {
+func (blobber Blobber) AddOrUpdate(edb *EventDb) error {
 	exists, err := blobber.exists(edb)
 	if err != nil {
 		return err
