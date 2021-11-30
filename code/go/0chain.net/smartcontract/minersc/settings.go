@@ -240,7 +240,8 @@ func (msc *MinerSmartContract) updateSettings(
 	balances cstate.StateContextI,
 ) (resp string, err error) {
 	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
-		return gn.Get(OwnerId) == t.ClientID
+		get, _ := gn.Get(OwnerId)
+		return get == t.ClientID
 	}); err != nil {
 		return "", err
 	}
