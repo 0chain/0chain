@@ -317,8 +317,8 @@ func Benchmark_generateChallenges(b *testing.B) {
 // go test -v -timeout 1h -benchtime=5s -bench verifyChallenge | prettybench
 //
 
+// Depreciated use benchmark program.
 func Benchmark_verifyChallenge(b *testing.B) {
-
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(b, true)
@@ -461,16 +461,16 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				var challResp ChallengeResponse
 				challResp.ID = chall.ID
 
-				for _, v := range chall.Validators {
-					var vx = blobsMap[v.ID]
-					challResp.ValidationTickets = append(
-						challResp.ValidationTickets,
-						vx.validTicket(b, chall.ID, chall.Blobber.ID, true, tp),
-					)
-				}
+				//for _, v := range chall.Validators {
+				//	var vx = blobsMap[v.ID]
+				//	challResp.ValidationTickets = append(
+				//		challResp.ValidationTickets,
+				//		vx.validTicket(b, chall.ID, chall.Blobber.ID, true, tp),
+				//	)
+				//}
 
 				// 6.3 keep for the benchmark
-				blobberID = chall.Blobber.ID
+				//blobberID = chall.Blobber.ID
 
 				// 6.4 prepare transaction
 				tp += 1

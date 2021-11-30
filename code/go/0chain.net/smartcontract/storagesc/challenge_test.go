@@ -95,12 +95,9 @@ func TestAddChallenge(t *testing.T) {
 		challenge := &StorageChallenge{}
 		require.NoError(t, json.Unmarshal([]byte(resp), challenge))
 		if p.numValidators > p.dataShards {
-			require.EqualValues(t, len(challenge.Validators), p.dataShards)
+			require.EqualValues(t, challenge.NumValidators, p.dataShards)
 		} else {
-			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
-		}
-		for i, v := range want.validators {
-			require.EqualValues(t, strconv.Itoa(v), challenge.Validators[i].ID)
+			require.EqualValues(t, challenge.NumValidators, p.numValidators-1)
 		}
 	}
 

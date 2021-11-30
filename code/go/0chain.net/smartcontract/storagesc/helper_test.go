@@ -387,12 +387,13 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	var storChall = new(StorageChallenge)
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
-	storChall.PrevID = prevID
-	storChall.Validators = valids
-	storChall.RandomNumber = seed
+	//storChall.PrevID = prevID
+	//storChall.Validators = valids
+	storChall.NumValidators = len(valids)
+	//storChall.RandomNumber = seed
 	storChall.AllocationID = allocID
-	storChall.Blobber = blobber
-	storChall.AllocationRoot = allocRoot
+	//storChall.Blobber = blobber
+	//storChall.AllocationRoot = allocRoot
 
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
