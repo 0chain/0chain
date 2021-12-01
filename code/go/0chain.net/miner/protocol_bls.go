@@ -259,8 +259,13 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		return false
 	}
 
-	Logger.Info("DKG AddVRFShare", zap.Int64("Round", rn), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
-		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()),
+	Logger.Info("DKG AddVRFShare",
+		zap.Int64("round", rn),
+		zap.Int("round_vrf_num", len(mr.GetVRFShares())),
+		zap.Int("threshold", blsThreshold),
+		zap.Int("sender", vrfs.GetParty().SetIndex),
+		zap.Int("round_timeout_count", mr.GetTimeoutCount()),
+		zap.Int("vrf_timeout_count", vrfs.GetRoundTimeoutCount()),
 		zap.String("vrf_share", vrfs.Share))
 
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
@@ -281,9 +286,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 	mr.AddVRFShare(vrfs, blsThreshold)
 
-	if len(mr.GetVRFShares()) >= blsThreshold {
-		mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
-	}
+	mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
 
 	return true
 }
