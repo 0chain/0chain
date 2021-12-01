@@ -69,3 +69,31 @@ func HandleShutdown(server *http.Server) {
 		}
 	}()
 }
+
+// WithContextFunc provides the capacity for canceling a function by context
+type WithContextFunc struct {
+	c chan struct{}
+}
+
+// NewWithContextFunc returns a WithContextFunc instance
+//
+// params:
+// - concurrent: represents the max concurrent processing number
+func NewWithContextFunc(concurrent int) *WithContextFunc {
+	return &WithContextFunc{
+		c: make(chan struct{}, concurrent),
+	}
+}
+
+// Run tries to acquire a slot from a buffered channel and runs the function
+func (wcf *WithContextFunc) Run(ctx context.Context, f func() error) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case wcf.c <- struct{}{}:
+		defer func() {
+			<-wcf.c
+		}()
+		return f()
+	}
+}

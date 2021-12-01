@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/mock"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"0chain.net/chaincore/mocks"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"github.com/stretchr/testify/mock"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -282,7 +283,7 @@ func TestExtendAllocation(t *testing.T) {
 		t *testing.T, args args,
 	) (
 		StorageSmartContract,
-		transaction.Transaction,
+		*transaction.Transaction,
 		StorageAllocation,
 		[]*StorageNode,
 		chainState.StateContextI,
@@ -420,7 +421,7 @@ func TestExtendAllocation(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		return ssc, txn, sa, blobbers, balances
+		return ssc, &txn, sa, blobbers, balances
 	}
 
 	testCases := []struct {
@@ -488,7 +489,7 @@ func TestExtendAllocation(t *testing.T) {
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
 
 			err := ssc.extendAllocation(
-				&txn,
+				txn,
 				&sa,
 				aBlobbers,
 				&tt.args.request,
@@ -693,6 +694,20 @@ func TestTransferAllocation(t *testing.T) {
 			},
 		},
 		{
+			name: "ok_owner",
+			parameters: parameters{
+				curator: mockOldOwner,
+				info: transferAllocationInput{
+					AllocationId:      mockAllocationId,
+					NewOwnerId:        mockNewOwnerId,
+					NewOwnerPublicKey: mockNewOwnerPublicKey,
+				},
+				existingCurators:        []string{mockCuratorId, "another", "and another"},
+				existingNoiseWPools:     0,
+				existingWPForAllocation: false,
+			},
+		},
+		{
 			name: "Err_not_curator",
 			parameters: parameters{
 				curator: mockCuratorId,
@@ -705,7 +720,7 @@ func TestTransferAllocation(t *testing.T) {
 			},
 			want: want{
 				err:    true,
-				errMsg: "curator_transfer_allocation_failed: only curators can transfer allocations; mock curator id is not a curator",
+				errMsg: "curator_transfer_allocation_failed: only curators or the owner can transfer allocations; mock curator id is neither",
 			},
 		},
 	}

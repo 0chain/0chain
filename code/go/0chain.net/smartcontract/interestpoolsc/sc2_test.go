@@ -1,6 +1,11 @@
 package interestpoolsc
 
 import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -10,11 +15,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-	"encoding/json"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
-	"time"
 )
 
 type lockFlags struct {
@@ -268,6 +270,7 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
 		store:              make(map[datastore.Key]util.Serializable),
@@ -322,6 +325,7 @@ func testUnlock(t *testing.T, userNode *UserNode, globalNode *GlobalNode, poolSt
 			nil,
 			nil,
 			nil,
+			nil,
 		),
 		store: make(map[datastore.Key]util.Serializable),
 	}
@@ -349,21 +353,24 @@ type mockStateContext struct {
 	store              map[datastore.Key]util.Serializable
 }
 
-func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block           { return nil }
-func (sc *mockStateContext) GetBlock() *block.Block                                { return nil }
-func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                     { return }
-func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                    { return nil }
-func (sc *mockStateContext) GetTransaction() *transaction.Transaction              { return nil }
-func (sc *mockStateContext) GetTransfers() []*state.Transfer                       { return nil }
-func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer           { return nil }
-func (sc *mockStateContext) GetMints() []*state.Mint                               { return nil }
-func (sc *mockStateContext) Validate() error                                       { return nil }
-func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string              { return nil }
-func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme        { return nil }
-func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)             { return }
-func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error) { return "", nil }
-func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock          { return nil }
-
+func (sc *mockStateContext) GetLastestFinalizedMagicBlock() *block.Block               { return nil }
+func (sc *mockStateContext) GetBlock() *block.Block                                    { return nil }
+func (sc *mockStateContext) SetMagicBlock(_ *block.MagicBlock)                         { return }
+func (sc *mockStateContext) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (sc *mockStateContext) GetTransaction() *transaction.Transaction                  { return nil }
+func (sc *mockStateContext) GetTransfers() []*state.Transfer                           { return nil }
+func (sc *mockStateContext) GetSignedTransfers() []*state.SignedTransfer               { return nil }
+func (sc *mockStateContext) GetMints() []*state.Mint                                   { return nil }
+func (sc *mockStateContext) Validate() error                                           { return nil }
+func (sc *mockStateContext) GetBlockSharders(_ *block.Block) []string                  { return nil }
+func (sc *mockStateContext) GetSignatureScheme() encryption.SignatureScheme            { return nil }
+func (sc *mockStateContext) AddSignedTransfer(_ *state.SignedTransfer)                 { return }
+func (sc *mockStateContext) DeleteTrieNode(_ datastore.Key) (datastore.Key, error)     { return "", nil }
+func (sc *mockStateContext) GetChainCurrentMagicBlock() *block.MagicBlock              { return nil }
+func (tb *mockStateContext) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (sc *mockStateContext) EmitError(error)                                           {}
+func (sc *mockStateContext) GetEvents() []event.Event                                  { return nil }
+func (tb *mockStateContext) GetEventDB() *event.EventDb                                { return nil }
 func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, error) {
 	if sc.clientStartBalance == 0 {
 		return 0, util.ErrValueNotPresent

@@ -67,11 +67,6 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	//err = an.Save(balances)
-	//if err != nil {
-	//	return "", err
-	//}
-
 	logging.Logger.Debug("trying to save state", zap.String("hash", tran.Hash))
 	err = ans.Save(balances)
 	if err != nil {
@@ -126,7 +121,12 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 
 	//empty the authorizer's pool
 	var transfer *state.Transfer
-	transfer, resp, err = ans.NodeMap[tran.ClientID].Staking.EmptyPool(gn.ID, tran.ClientID, tran)
+	pool := ans.NodeMap[tran.ClientID].Staking
+	if pool == nil {
+		return "", common.NewError("failed to delete authorizer", "pool is not created")
+	}
+
+	transfer, resp, err = pool.EmptyPool(gn.ID, tran.ClientID, tran)
 	if err != nil {
 		err = common.NewError("failed to delete authorizer", fmt.Sprintf("error emptying pool(%v)", err.Error()))
 		return

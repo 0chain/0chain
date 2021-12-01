@@ -20,6 +20,46 @@ type Round struct {
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
+	vrfSharesCache        *vrfSharesCache
+}
+
+type vrfSharesCache struct {
+	vrfShares map[string]*round.VRFShare
+	mutex     *sync.Mutex
+}
+
+func newVRFSharesCache() *vrfSharesCache {
+	return &vrfSharesCache{
+		vrfShares: make(map[string]*round.VRFShare),
+		mutex:     &sync.Mutex{},
+	}
+}
+
+func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	if _, ok := v.vrfShares[vrfShare.GetParty().GetKey()]; ok {
+		return
+	}
+	v.vrfShares[vrfShare.Share] = vrfShare
+}
+
+func (v *vrfSharesCache) getAll() []*round.VRFShare {
+	v.mutex.Lock()
+	vrfShares := make([]*round.VRFShare, 0, len(v.vrfShares))
+	for _, vrf := range v.vrfShares {
+		vrfShares = append(vrfShares, vrf)
+	}
+	v.mutex.Unlock()
+	return vrfShares
+}
+
+func (v *vrfSharesCache) clean() {
+	v.mutex.Lock()
+	for s := range v.vrfShares {
+		delete(v.vrfShares, s)
+	}
+	v.mutex.Unlock()
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
@@ -36,18 +76,31 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
 		return
 	}
+
+	if b.GetRoundRandomSeed() == 0 {
+		logging.Logger.Error("block proposal - block with no RRS",
+			zap.Int64("round", roundNumber))
+		return
+	}
+
 	logging.Logger.Debug("Adding block to verifyChannel",
+		zap.Int64("round", b.Round),
 		zap.String("block hash", b.Hash),
 		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
 		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
-	r.blocksToVerifyChannel <- b
+	select {
+	case r.blocksToVerifyChannel <- b:
+	default:
+	}
 }
 
-/*AddVerificationTicket - add a verification ticket */
-func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+// AddVerificationTickets - add verification tickets
+func (r *Round) AddVerificationTickets(bvts []*block.BlockVerificationTicket) {
 	r.muVerification.Lock()
 	defer r.muVerification.Unlock()
-	r.verificationTickets[bvt.Signature] = bvt
+	for i, bvt := range bvts {
+		r.verificationTickets[bvt.Signature] = bvts[i]
+	}
 }
 
 /*GetVerificationTickets - get verification tickets for a given block in this round */
@@ -61,6 +114,15 @@ func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTick
 		}
 	}
 	return vts
+}
+
+// IsTicketCollected checks if the ticket has already verified and collected
+func (r *Round) IsTicketCollected(ticket *block.VerificationTicket) (exist bool) {
+	r.muVerification.Lock()
+	vt, ok := r.verificationTickets[ticket.Signature]
+	exist = ok && vt.VerificationTicket == *ticket
+	r.muVerification.Unlock()
+	return
 }
 
 /*GetBlocksToVerifyChannel - a channel where all the blocks requiring verification are put into */

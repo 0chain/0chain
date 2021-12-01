@@ -18,7 +18,7 @@ func HashHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		text = string(data)
 	}
-	fmt.Fprintf(w, Hash(text))
+	fmt.Fprint(w, Hash(text))
 }
 
 /*SignHandler - returns hash of the text passed */

@@ -24,7 +24,30 @@ options:
   test_suites:
     - "storage"
     - "storage_rest"
+    - "miner"
+    - "miner_rest"
+    - "faucet"
+    - "faucet_rest"
+    - "interest_pool"
+    - "interest_pool_rest"
+    - "vesting"
+    - "vesting_rest"
+    - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
+
+dbs:
+  events:
+    enabled: false
+    name: events_db
+    user: zchain_user
+    password: zchian
+    host: localhost
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
 
 smart_contracts:
   minersc:
@@ -108,6 +131,13 @@ smart_contracts:
     max_duration: 1000h
     max_destinations: 10
     max_description_length: 100
+  zcn:
+    min_mint_amount: 1
+    percent_authorizers: 0
+    min_authorizers: 1
+    min_burn_amount: 1
+    min_stake_amount: 0
+    burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
 
 internal:
   t: 2

@@ -123,6 +123,12 @@ type Config struct {
 	Commands map[string]*Command `json:"commands" yaml:"commands" mapstructure:"commands"`
 	// SkipWait nodes waiting (blobbers)
 	SkipWait []NodeName `json:"skip_wait" yaml:"skip_wait" mapstructure:"skip_wait"`
+	Env      map[string]string
+}
+
+// cleaning up custom environment variables before each test
+func (c *Config) CleanupEnv() {
+	c.Env = nil
 }
 
 // IsSkipWait skips waiting node initialization message.

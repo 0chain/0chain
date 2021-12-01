@@ -1,16 +1,17 @@
 package zcnsc
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -179,7 +180,7 @@ func (mp *MintPayload) Decode(input []byte) error {
 	id, ok = objMap["signatures"]
 	if ok {
 		if id == nil {
-			return errors.New("signatures is missing in the payload")
+			return errors.New("signatures entry is missing in payload")
 		}
 		var sigs []*json.RawMessage
 		err = json.Unmarshal(*id, &sigs)
@@ -213,7 +214,7 @@ func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
 		}
 
 		if ans.NodeMap[v.ID] == nil {
-			return errors.New(fmt.Sprintf("authorizer %s not found in authorizers", v.ID))
+			return fmt.Errorf("authorizer %s not found in authorizers", v.ID)
 		}
 
 		key := ans.NodeMap[v.ID].PublicKey
@@ -349,9 +350,9 @@ func (an *AuthorizerNode) Decode(input []byte) error {
 }
 
 func (an *AuthorizerNode) Save(balances cstate.StateContextI) (err error) {
-	_, err = balances.InsertTrieNode(ADDRESS + "auth_node" + an.ID, an)
+	_, err = balances.InsertTrieNode(ADDRESS+"auth_node"+an.ID, an)
 	if err != nil {
-		return common.NewError("save_auth_node_failed", "saving authorizer node: " + err.Error())
+		return common.NewError("save_auth_node_failed", "saving authorizer node: "+err.Error())
 	}
 	return nil
 }
@@ -363,7 +364,7 @@ func GetNewAuthorizer(pk string, authId string, url string) *AuthorizerNode {
 	return &AuthorizerNode{
 		ID:        authId,
 		PublicKey: pk,
-		URL: url,
+		URL:       url,
 		Staking: &tokenpool.ZcnLockingPool{
 			ZcnPool: tokenpool.ZcnPool{
 				TokenPool: tokenpool.TokenPool{
@@ -479,7 +480,7 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 
 func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
 	authNodes := &AuthorizerNodes{}
-	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
+	authNodesBytes, _ := balances.GetTrieNode(AllAuthorizerKey)
 	if authNodesBytes == nil {
 		authNodes.NodeMap = make(map[string]*AuthorizerNode)
 		return authNodes, nil
@@ -488,7 +489,7 @@ func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error)
 	encoded := authNodesBytes.Encode()
 	logging.Logger.Info("get authorizer nodes", zap.String("hash", string(encoded)))
 
-	err = authNodes.Decode(encoded)
+	err := authNodes.Decode(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}
@@ -547,6 +548,9 @@ type TokenLock struct {
 
 func (tl TokenLock) IsLocked(entity interface{}) bool {
 	txn, ok := entity.(*transaction.Transaction)
+	if txn.CreationDate == 0 {
+		return false
+	}
 	if ok {
 		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}

@@ -3,6 +3,11 @@ package cmd
 import (
 	"encoding/hex"
 
+	"0chain.net/smartcontract/dbs"
+	"0chain.net/smartcontract/dbs/event"
+
+	"0chain.net/smartcontract/zcnsc"
+
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -67,6 +72,7 @@ func getBalances(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
+		data.EventDb,
 	)
 }
 
@@ -85,7 +91,7 @@ func setUpMpt(
 	}
 	pMpt := util.NewMerklePatriciaTrie(pNode, 1, nil)
 	log.Println("made empty blockchain")
-	clients, publicKeys, privateKeys := addMockkClients(pMpt)
+	clients, publicKeys, privateKeys := addMockClients(pMpt)
 	log.Println("added clients")
 	faucetsc.FundMockFaucetSmartContract(pMpt)
 	log.Println("funded faucet")
@@ -107,14 +113,37 @@ func setUpMpt(
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
+		nil,
 	)
-
 	log.Println("created balances")
+
+	var eventDb *event.EventDb
+	if viper.GetBool(benchmark.EventDbEnabled) {
+		eventDb, err := event.NewEventDb(dbs.DbAccess{
+			Enabled:         viper.GetBool(benchmark.EventDbEnabled),
+			Name:            viper.GetString(benchmark.EventDbName),
+			User:            viper.GetString(benchmark.EventDbUser),
+			Password:        viper.GetString(benchmark.EventDbPassword),
+			Host:            viper.GetString(benchmark.EventDbHost),
+			Port:            viper.GetString(benchmark.EventDbPort),
+			MaxIdleConns:    viper.GetInt(benchmark.EventDbMaxIdleConns),
+			MaxOpenConns:    viper.GetInt(benchmark.EventDbOpenConns),
+			ConnMaxLifetime: viper.GetDuration(benchmark.EventDbConnMaxLifetime),
+		})
+		if err != nil {
+			panic(err)
+		}
+		if err := eventDb.AutoMigrate(); err != nil {
+			panic(err)
+		}
+	}
+	log.Println("created event database")
+
 	_ = storagesc.SetMockConfig(balances)
 	log.Println("created storage config")
 	validators := storagesc.AddMockValidators(publicKeys, balances)
 	log.Println("added validators")
-	blobbers := storagesc.AddMockBlobbers(balances)
+	blobbers := storagesc.AddMockBlobbers(eventDb, balances)
 	log.Println("added blobbers")
 	stakePools := storagesc.GetMockStakePools(clients, balances)
 	log.Println("added stake pools")
@@ -153,6 +182,9 @@ func setUpMpt(
 	vestingsc.AddVestingPools(clients, balances)
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
+	log.Println("added miners phase node")
+	zcnsc.Setup(clients, publicKeys, balances)
+	log.Println("added zcnsc")
 	log.Println("added phase node")
 	control.AddControlObjects(balances)
 	log.Println("added control objects")
@@ -162,10 +194,11 @@ func setUpMpt(
 		PublicKeys:  publicKeys,
 		PrivateKeys: privateKeys,
 		Sharders:    sharders,
+		EventDb:     eventDb,
 	}
 }
 
-func addMockkClients(
+func addMockClients(
 	pMpt *util.MerklePatriciaTrie,
 ) ([]string, []string, []string) {
 	blsScheme := BLS0ChainScheme{}

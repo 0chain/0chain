@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	cstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/core/encryption"
@@ -400,6 +402,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(nil).Once()
 
 		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
+
+		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient),
 		).Return(nil, util.ErrValueNotPresent).Once()
 		balances.On("InsertTrieNode",
@@ -744,6 +751,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					len(pool.Blobbers) == mockNumBlobbers
 			}),
 		).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}

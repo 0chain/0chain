@@ -50,7 +50,7 @@ var pullDataRequestor EntityRequestor
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(datastore.PrintEntityHandler, nil)))
+	http.HandleFunc("/v1/_n2n/entity/post", common.N2NRateLimit(ToN2NReceiveEntityHandler(SenderValidateHandler(datastore.PrintEntityHandler), nil)))
 	http.HandleFunc(pullURL, common.N2NRateLimit(ToN2NSendEntityHandler(PushToPullHandler)))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
 	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
@@ -65,6 +65,7 @@ var (
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
 	HeaderRequestCODEC          = "X-Chain-CODEC"
+	HeaderRequestToPull         = "X-Request-To-Pull"
 
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
@@ -133,8 +134,11 @@ func init() {
 	}
 }
 
-/*SENDER - key used to get the connection object from the context */
-const SENDER common.ContextKey = "node.sender"
+const (
+	// SENDER - key used to get the connection object from the context */
+	SENDER               common.ContextKey = "node.sender"
+	SENDER_VALIDATE_FUNC common.ContextKey = "node.sender_validate_func"
+)
 
 /*WithNode takes a context and adds a connection value to it */
 func WithNode(ctx context.Context, node *Node) context.Context {
@@ -144,6 +148,24 @@ func WithNode(ctx context.Context, node *Node) context.Context {
 /*GetSender returns a connection stored in the context which got created via WithConnection */
 func GetSender(ctx context.Context) *Node {
 	return ctx.Value(SENDER).(*Node)
+}
+
+// SenderValidateFunc represents the function signature for validating sender signature
+type SenderValidateFunc func() error
+
+// WithSenderValidateFunc saves the sender validate function to context
+func WithSenderValidateFunc(ctx context.Context, f SenderValidateFunc) context.Context {
+	return context.WithValue(ctx, SENDER_VALIDATE_FUNC, f)
+}
+
+// getSenderValidateFunc retrieves the sender validate function from context
+func getSenderValidateFunc(ctx context.Context) SenderValidateFunc {
+	return ctx.Value(SENDER_VALIDATE_FUNC).(SenderValidateFunc)
+}
+
+// ValidateSenderSignature retrieves sender validate function from context and run it
+func ValidateSenderSignature(ctx context.Context) error {
+	return getSenderValidateFunc(ctx)()
 }
 
 /*SetHeaders - set common request headers */
@@ -170,12 +192,11 @@ func getDataAndClose(reader io.ReadCloser) []byte {
 	return buf.Bytes()
 }
 
-func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
+func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	buffer := reader
 	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		cbuffer.ReadFrom(buffer)
 		cbytes := cbuffer.Bytes()
 		if len(cbytes) == 0 {
 			return nil, NoDataErr
@@ -190,13 +211,12 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
-	defer resp.Body.Close()
-	var buffer io.Reader = resp.Body
+func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
+	buffer := reader
 	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(resp.Body)
+		cbuffer.ReadFrom(reader)
 		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
@@ -251,10 +271,7 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 
 func validateChain(sender *Node, r *http.Request) bool {
 	chainID := r.Header.Get(HeaderRequestChainID)
-	if config.GetServerChainID() != chainID {
-		return false
-	}
-	return true
+	return config.GetServerChainID() == chainID
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {

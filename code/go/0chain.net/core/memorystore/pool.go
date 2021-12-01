@@ -1,13 +1,14 @@
 package memorystore
 
 import (
+	"fmt"
+	"os"
+	"sync"
+
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
-	"fmt"
 	"github.com/gomodule/redigo/redis"
-	"os"
-	"sync"
 )
 
 var DefaultPool *redis.Pool

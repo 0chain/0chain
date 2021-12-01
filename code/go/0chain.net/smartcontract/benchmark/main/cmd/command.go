@@ -17,11 +17,12 @@ import (
 	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
+	"0chain.net/smartcontract/zcnsc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
+var benchmarkSources = map[bk.Source]func(data bk.BenchData, sigScheme bk.SignatureScheme) bk.TestSuite{
 	bk.Storage:          storagesc.BenchmarkTests,
 	bk.StorageRest:      storagesc.BenchmarkRestTests,
 	bk.Miner:            minersc.BenchmarkTests,
@@ -33,13 +34,15 @@ var benchmarkSources = map[bk.BenchmarkSource]func(data bk.BenchData, sigScheme 
 	bk.Vesting:          vestingsc.BenchmarkTests,
 	bk.VestingRest:      vestingsc.BenchmarkRestTests,
 	bk.MultiSig:         multisigsc.BenchmarkTests,
+	bk.ZCNSCBridge:      zcnsc.BenchmarkTests,
+	bk.ZCNSCBridgeRest:  zcnsc.BenchmarkRestTests,
 	bk.Control:          control.BenchmarkTests,
 }
 
 func init() {
 	logging.InitLogging("testing")
 	node.Self = &node.SelfNode{
-		Node: &node.Node{},
+		Node: node.Provider(),
 	}
 	rootCmd.PersistentFlags().Bool("verbose", true, "show updates")
 	rootCmd.PersistentFlags().StringSlice("tests", nil, "list of tests to show, nil show all")
@@ -118,23 +121,42 @@ func printResults(results []suiteResults) {
 			} else {
 				colour = colourGreen
 			}
+
+			statusColor := colourGreen
+			status := "OK"
+			errMessage := ""
+			err := bkResult.error
+
+			if err != nil {
+				status = "FAILED"
+				errMessage = " - " + err.Error()
+				statusColor = colourRed
+			}
+
 			if verbose {
 				fmt.Printf(
-					"%s%s,%f%s%s\n",
+					"%s%s,%f%s%s %s%s%s%s\n",
 					colour,
 					bkResult.test.Name(),
 					takenMs,
 					colourReset,
 					"ms",
+					statusColor,
+					status,
+					errMessage,
+					colourReset,
 				)
 			} else {
 				fmt.Printf(
-					"%s,%f\n",
+					"%s,%f %s%s%s%s\n",
 					bkResult.test.Name(),
 					takenMs,
+					statusColor,
+					status,
+					errMessage,
+					colourReset,
 				)
 			}
-
 		}
 	}
 }

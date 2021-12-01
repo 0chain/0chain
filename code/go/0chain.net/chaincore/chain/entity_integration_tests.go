@@ -5,9 +5,13 @@ package chain
 import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/config"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 )
+
+var myFailingRound int64 // once set, we ignore all restarts for that round
 
 func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
@@ -20,6 +24,17 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 	)
 
 	if is {
+		// test if we have request to skip this round
+		if r.GetRoundNumber() == myFailingRound {
+			logging.Logger.Info("we're still pretending to be not a generator for round", zap.Int64("round", r.GetRoundNumber()))
+			return false
+		}
+		if config.Round(r.GetRoundNumber()) == state.GeneratorsFailureRoundNumber && r.GetTimeoutCount() == 0 {
+			logging.Logger.Info("we're a failing generator for round", zap.Int64("round", r.GetRoundNumber()))
+			// remember this round as failing
+			myFailingRound = r.GetRoundNumber()
+			return false
+		}
 		return true // regular round generator
 	}
 

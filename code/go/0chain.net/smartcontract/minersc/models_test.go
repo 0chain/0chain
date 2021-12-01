@@ -3,11 +3,31 @@ package minersc
 import (
 	"testing"
 
-	"0chain.net/chaincore/node"
 	"github.com/stretchr/testify/assert"
 )
 
-func createTestSimpleNodesAndNodePool() (SimpleNodes, *node.Pool) {
+type mockPooler struct {
+	ids map[string]struct{}
+}
+
+func (mp *mockPooler) HasNode(id string) bool {
+	_, ok := mp.ids[id]
+	return ok
+}
+
+func newMockPooler(ids []string) *mockPooler {
+	mp := &mockPooler{
+		ids: make(map[string]struct{}),
+	}
+
+	for _, id := range ids {
+		mp.ids[id] = struct{}{}
+	}
+
+	return mp
+}
+
+func createTestSimpleNodesAndNodePool() (SimpleNodes, Pooler) {
 
 	sn := NewSimpleNodes()
 	sn["0"] = &SimpleNode{ID: "0", TotalStaked: 12}
@@ -21,25 +41,7 @@ func createTestSimpleNodesAndNodePool() (SimpleNodes, *node.Pool) {
 	sn["8"] = &SimpleNode{ID: "8", TotalStaked: 2}
 	sn["9"] = &SimpleNode{ID: "9", TotalStaked: 1}
 
-	np := node.NewPool(node.NodeTypeMiner)
-
-	var n *node.Node
-
-	n = &node.Node{}
-	n.ID = sn["6"].ID
-	np.AddNode(n)
-
-	n = &node.Node{}
-	n.ID = sn["9"].ID
-	np.AddNode(n)
-
-	n = &node.Node{}
-	n.ID = sn["4"].ID
-	np.AddNode(n)
-
-	n = &node.Node{}
-	n.ID = sn["2"].ID
-	np.AddNode(n)
+	np := newMockPooler([]string{"6", "9", "4", "2"})
 
 	return sn, np
 }

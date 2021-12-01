@@ -11,13 +11,15 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	// metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
-	// ADDRESS ...
-	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
-	name    = "zcn"
+	ADDRESS              = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0"
+	name                 = "zcn"
+	AddAuthorizerFunc    = "AddAuthorizer"
+	DeleteAuthorizerFunc = "DeleteAuthorizer"
+	MintFunc             = "mint"
+	BurnFunc             = "burn"
 )
 
 // ZCNSmartContract ...
@@ -40,7 +42,7 @@ func (zcn *ZCNSmartContract) InitSC() {}
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
 	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.getAuthorizerNodes
-	zcn.SmartContractExecutionStats["AddAuthorizer"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, "AddAuthorizer"), nil)
+	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
 }
 
 // GetName ...
@@ -67,15 +69,20 @@ func (zcn *ZCNSmartContract) GetHandlerStats(ctx context.Context, params url.Val
 }
 
 // Execute ...
-func (zcn *ZCNSmartContract) Execute(trans *transaction.Transaction, funcName string, inputData []byte, balances cstate.StateContextI) (string, error) {
+func (zcn *ZCNSmartContract) Execute(
+	trans *transaction.Transaction,
+	funcName string,
+	inputData []byte,
+	balances cstate.StateContextI,
+) (string, error) {
 	switch funcName {
-	case "mint":
+	case MintFunc:
 		return zcn.Mint(trans, inputData, balances)
-	case "burn":
+	case BurnFunc:
 		return zcn.Burn(trans, inputData, balances)
-	case "AddAuthorizer":
+	case AddAuthorizerFunc:
 		return zcn.AddAuthorizer(trans, inputData, balances)
-	case "DeleteAuthorizer":
+	case DeleteAuthorizerFunc:
 		return zcn.DeleteAuthorizer(trans, inputData, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil

@@ -16,4 +16,5 @@ do
   mkdir -p docker.local/sharder"$i"/config/cassandra
   cp config/cassandra/* docker.local/sharder"$i"/config/cassandra/.
   mkdir -p docker.local/sharder"$i"/log
+  mkdir -p docker.local/sharder"$i"/data/postgresql
 done

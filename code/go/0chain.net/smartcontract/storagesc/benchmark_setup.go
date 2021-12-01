@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract/benchmark"
@@ -256,6 +258,7 @@ func setupMockChallenges(
 }
 
 func AddMockBlobbers(
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageNode {
 	var sscId = StorageSmartContract{
@@ -289,6 +292,31 @@ func AddMockBlobbers(
 		_, err := balances.InsertTrieNode(blobber.GetKey(sscId), blobber)
 		if err != nil {
 			panic(err)
+		}
+		if viper.GetBool(sc.EventDbEnabled) {
+			blobberDb := event.Blobber{
+				BlobberID:               blobber.ID,
+				BaseURL:                 blobber.BaseURL,
+				Latitude:                blobber.Geolocation.Latitude,
+				Longitude:               blobber.Geolocation.Longitude,
+				ReadPrice:               int64(blobber.Terms.ReadPrice),
+				WritePrice:              int64(blobber.Terms.WritePrice),
+				MinLockDemand:           blobber.Terms.MinLockDemand,
+				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
+				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				Capacity:                blobber.Capacity,
+				Used:                    blobber.Used,
+				LastHealthCheck:         int64(blobber.LastHealthCheck),
+				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
+				MinStake:                int64(blobber.StakePoolSettings.MaxStake),
+				MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
+				NumDelegates:            blobber.StakePoolSettings.NumDelegates,
+				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
+			}
+			result := eventDb.Store.Get().Create(&blobberDb)
+			if result.Error != nil {
+				panic(result.Error)
+			}
 		}
 	}
 	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
@@ -582,6 +610,7 @@ func SetMockConfig(
 	conf.BlobberSlash = 0.1
 	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
+	conf.MinWritePrice = 0
 	conf.MaxDelegates = viper.GetInt(sc.StorageMaxDelegates)
 	conf.MaxChallengeCompletionTime = viper.GetDuration(sc.StorageMaxChallengeCompletionTime)
 	conf.MaxCharge = viper.GetFloat64(sc.StorageMaxCharge)

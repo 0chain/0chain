@@ -2,12 +2,14 @@ package datastore_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
 
-	"github.com/vmihailenco/msgpack"
+	"encoding/json"
+
+	"github.com/stretchr/testify/require"
+	"github.com/vmihailenco/msgpack/v5"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -35,7 +37,11 @@ func TestToJSON(t *testing.T) {
 		{
 			name: "Test_ToJSON_OK",
 			args: args{entity: b},
-			want: common.ToJSON(b),
+			want: func() *bytes.Buffer {
+				b, err := common.ToJSON(b)
+				require.NoError(t, err)
+				return b
+			}(),
 		},
 	}
 	for _, tt := range tests {
@@ -228,7 +234,7 @@ func TestFromMsgpack(t *testing.T) {
 	b := block.NewBlock("", 1)
 	buf := bytes.Buffer{}
 	encoder := msgpack.NewEncoder(&buf)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if err := encoder.Encode(b); err != nil {
 		t.Fatal(err)
 	}

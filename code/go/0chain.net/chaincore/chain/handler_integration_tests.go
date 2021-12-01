@@ -38,10 +38,10 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
 
 	var state = crpc.Client().State()
 	if state.MagicBlock != nil {
-		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock()
+		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock(ctx)
 		lfmb.Hash = revertString(lfmb.Hash)
 		return lfmb, nil
 	}
 
-	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+	return GetServerChain().GetLatestFinalizedMagicBlock(ctx), nil
 }

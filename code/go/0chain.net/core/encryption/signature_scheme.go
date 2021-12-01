@@ -7,6 +7,11 @@ import (
 	"io"
 )
 
+const (
+	SignatureSchemeEd25519   = string("ed25519")
+	SignatureSchemeBls0chain = string("bls0chain")
+)
+
 var ErrKeyRead = errors.New("error reading the keys")
 var ErrInvalidSignatureScheme = errors.New("invalid signature scheme")
 
@@ -45,9 +50,9 @@ type ReconstructSignatureScheme interface {
 //IsValidSignatureScheme - whether a signature scheme exists
 func IsValidSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return true
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return true
 	default:
 		return false
@@ -57,9 +62,9 @@ func IsValidSignatureScheme(sigScheme string) bool {
 //GetSignatureScheme - given the name, return a signature scheme
 func GetSignatureScheme(sigScheme string) SignatureScheme {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return NewED25519Scheme()
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return NewBLS0ChainScheme()
 	default:
 		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
@@ -69,9 +74,9 @@ func GetSignatureScheme(sigScheme string) SignatureScheme {
 //IsValidAggregateSignatureScheme - whether an aggregate signature scheme exists
 func IsValidAggregateSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return false
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return true
 	default:
 		return false
@@ -81,9 +86,9 @@ func IsValidAggregateSignatureScheme(sigScheme string) bool {
 //GetAggregateSignatureScheme - get an aggregate signature scheme
 func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) AggregateSignatureScheme {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return nil
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return NewBLS0ChainAggregateSignature(total, batchSize)
 	default:
 		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
@@ -93,9 +98,9 @@ func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) Agg
 //IsValidThresholdSignatureScheme - whether a threshold signature scheme exists
 func IsValidThresholdSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return false
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return true
 	default:
 		return false
@@ -105,9 +110,9 @@ func IsValidThresholdSignatureScheme(sigScheme string) bool {
 //GetThresholdSignatureScheme - get a threshold signature scheme
 func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return nil
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return NewBLS0ChainThresholdScheme()
 	default:
 		panic(fmt.Sprintf("unknown threshold signature scheme: %v", sigScheme))
@@ -117,9 +122,9 @@ func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
 //GenerateThresholdKeyShares - generate T-of-N secret key shares for a key
 func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey SignatureScheme) ([]ThresholdSignatureScheme, error) {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return nil, nil
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return BLS0GenerateThresholdKeyShares(t, n, originalKey)
 	default:
 		panic(fmt.Sprintf("unknown threshold signature scheme: %v", sigScheme))
@@ -129,9 +134,9 @@ func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey Signatur
 //IsValidReconstructSignatureScheme - whether a signature reconstruction scheme exists
 func IsValidReconstructSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return false
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return true
 	default:
 		return false
@@ -141,9 +146,9 @@ func IsValidReconstructSignatureScheme(sigScheme string) bool {
 //GetReconstructSignatureScheme - get a signature reconstruction scheme
 func GetReconstructSignatureScheme(sigScheme string, t, n int) ReconstructSignatureScheme {
 	switch sigScheme {
-	case "ed25519":
+	case SignatureSchemeEd25519:
 		return nil
-	case "bls0chain":
+	case SignatureSchemeBls0chain:
 		return NewBLS0ChainReconstruction(t, n)
 	default:
 		panic(fmt.Sprintf("unknown signature reconstruction scheme: %v", sigScheme))
