@@ -1664,12 +1664,19 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		if xrhnb == nil ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed()) {
-			logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+
+			logging.Logger.Debug("restartRound - could not get HNB",
 				zap.Int64("round", xr.GetRoundNumber()),
 				zap.Int64("lfb_round", lfb.Round))
-			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
-			mc.RedoVrfShare(ctx, xr)
+
+			if xr.GetSoftTimeoutCount() >= mc.RoundRestartMult {
+				logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+					zap.Int64("round", xr.GetRoundNumber()),
+					zap.Int64("lfb_round", lfb.Round))
+				xr.Restart()
+				xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
+				mc.RedoVrfShare(ctx, xr)
+			}
 			return // the round has restarted <===================== [exit loop]
 		}
 

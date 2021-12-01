@@ -178,3 +178,9 @@ func (r *Round) Clear() {
 func (r *Round) IsVRFComplete() bool {
 	return r.HasRandomSeed()
 }
+
+// Restart resets round and vrf shares cache
+func (r *Round) Restart() {
+	r.Round.Restart()
+	r.vrfSharesCache = newVRFSharesCache()
+}
