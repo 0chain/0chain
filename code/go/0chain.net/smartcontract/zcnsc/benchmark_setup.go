@@ -1,6 +1,9 @@
 package zcnsc
 
 import (
+	"encoding/json"
+	"strconv"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -11,8 +14,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
-	"encoding/json"
-	"strconv"
 )
 
 const (
@@ -54,6 +55,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount)
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
+	gn.MaxFee = config.SmartContractConfig.GetInt64(benchmark.MaxFee)
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }
