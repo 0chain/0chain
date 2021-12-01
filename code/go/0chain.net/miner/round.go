@@ -38,10 +38,11 @@ func newVRFSharesCache() *vrfSharesCache {
 func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
-	if _, ok := v.vrfShares[vrfShare.GetParty().GetKey()]; ok {
+	k := vrfShare.GetParty().GetKey()
+	if _, ok := v.vrfShares[k]; ok {
 		return
 	}
-	v.vrfShares[vrfShare.Share] = vrfShare
+	v.vrfShares[k] = vrfShare
 }
 
 func (v *vrfSharesCache) getAll() []*round.VRFShare {
