@@ -508,13 +508,6 @@ func confirmFinalizeAllocation(
 		delegateMints[bIndex][dIndex] = true
 	}
 	require.EqualValues(t, minted, scYaml.Minted)
-	for i := range delegateMints {
-		for j, minted := range delegateMints[i] {
-			if !minted {
-				require.InDelta(t, f.delegateInterest(strconv.Itoa(i), j), 0, errDelta)
-			}
-		}
-	}
 
 	var rewardTransfers = []bool{}
 	var minLockTransfers = []bool{}
