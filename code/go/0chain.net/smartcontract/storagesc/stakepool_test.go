@@ -276,11 +276,6 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, storageScId, mint.Minter)
 		minted[index] = true
 	}
-	for delegate, wasMinted := range minted {
-		if !wasMinted {
-			require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
-		}
-	}
 
 	for offer, expires := range f.offers {
 		var key = offerId + strconv.Itoa(offer)
