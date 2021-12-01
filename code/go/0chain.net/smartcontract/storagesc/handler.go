@@ -257,20 +257,10 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 		return "", common.NewErrInternal("can't decode allocation request", err.Error())
 	}
 
-	var allBlobbersList *StorageNodes
-	allBlobbersList, err = ssc.getBlobbersList(balances)
-	if err != nil {
-		return "", common.NewErrInternal("can't get blobbers list", err.Error())
-	}
-	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewErrInternal("can't get blobbers list",
-			"no blobbers found")
-	}
-
 	var sa = request.storageAllocation()
 
 	blobberNodes, bSize, err := ssc.selectBlobbers(
-		creationDate, *allBlobbersList, sa, balances, request.Blobbers)
+		creationDate, sa, balances, request.Blobbers)
 
 	if err != nil {
 		return "", common.NewErrInternal("selecting blobbers", err.Error())

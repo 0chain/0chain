@@ -188,9 +188,8 @@ func TestSelectBlobbers(t *testing.T) {
 			t.Parallel()
 			ssc, sa, blobbers, balances := setup(t, tt.args)
 
-			var bl []string
 			outBlobbers, outSize, err := ssc.selectBlobbers(
-				now, blobbers, &sa, balances, bl,
+				now, &sa, balances, blobbers.Nodes.copy(),
 			)
 
 			require.EqualValues(t, len(tt.want.blobberIds), len(outBlobbers))
@@ -757,6 +756,37 @@ func isEqualStrings(a, b []string) (eq bool) {
 	return true
 }
 
+func getListOfBlobbers(dataShards, parityShards int) []*StorageNode{
+	var stakes = blobberStakes{}
+	var now = common.Timestamp(10000)
+
+	var goodBlobber = StorageNode{
+		Capacity: 536870912,
+		Used:     73,
+		Terms: Terms{
+			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
+			ReadPrice:               zcnToBalance(blobberYaml.readPrice),
+			ChallengeCompletionTime: blobberYaml.challengeCompletionTime,
+		},
+		LastHealthCheck: now - blobberHealthTime,
+	}
+	var blobbers = new(sortedBlobbers)
+	var stake = int64(scYaml.MaxStake)
+	var writePrice = blobberYaml.writePrice
+	for i := 0; i < dataShards+parityShards+4; i++ {
+		var nextBlobber = goodBlobber
+		nextBlobber.ID = strconv.Itoa(i)
+		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
+		nextBlobber.BaseURL = "mockBaseUrl" + strconv.Itoa(i)
+		writePrice *= 0.9
+		blobbers.add(&nextBlobber)
+		stakes = append(stakes, stake)
+		stake = stake / 10
+	}
+
+	return *blobbers
+}
+
 func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
 	var nar newAllocationRequest
@@ -766,7 +796,8 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 	nar.Expiration = common.Now()
 	nar.Owner = clientID
 	nar.OwnerPublicKey = clientPk
-	nar.Blobbers = []string{"one", "two"}
+	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
+
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 20}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 200}
 	var alloc = nar.storageAllocation()
@@ -789,7 +820,7 @@ func Test_newAllocationRequest_decode(t *testing.T) {
 	ne.Expiration = 1240
 	ne.Owner = clientID
 	ne.OwnerPublicKey = clientPk
-	ne.Blobbers = []string{"b1", "b2"}
+	ne.Blobbers = getListOfBlobbers(ne.DataShards, ne.ParityShards)
 	ne.ReadPriceRange = PriceRange{1, 2}
 	ne.WritePriceRange = PriceRange{2, 3}
 	require.NoError(t, nd.decode(mustEncode(t, &ne)))
@@ -848,42 +879,6 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 	assert.Equal(t, state.Balance(sizeInGB(20*1024)*4000.0), off2.Lock)
 	assert.Len(t, sp2.Offers, 1)
 
-}
-
-func Test_updateBlobbersInAll(t *testing.T) {
-	var (
-		all        StorageNodes
-		balances   = newTestBalances(t, false)
-		b1, b2, b3 StorageNode
-		u1, u2     StorageNode
-		decode     StorageNodes
-
-		err error
-	)
-
-	b1.ID, b2.ID, b3.ID = "b1", "b2", "b3"
-	b1.Capacity, b2.Capacity, b3.Capacity = 100, 100, 100
-
-	all.Nodes = []*StorageNode{&b1, &b2, &b3}
-
-	u1.ID, u2.ID = "b1", "b2"
-	u1.Capacity, u2.Capacity = 200, 200
-
-	err = updateBlobbersInAll(&all, []*StorageNode{&u1, &u2}, balances)
-	require.NoError(t, err)
-
-	var allSeri, ok = balances.tree[ALL_BLOBBERS_KEY]
-	require.True(t, ok)
-	require.NotNil(t, allSeri)
-	require.NoError(t, decode.Decode(allSeri.Encode()))
-
-	require.Len(t, decode.Nodes, 3)
-	assert.Equal(t, "b1", decode.Nodes[0].ID)
-	assert.Equal(t, int64(200), decode.Nodes[0].Capacity)
-	assert.Equal(t, "b2", decode.Nodes[1].ID)
-	assert.Equal(t, int64(200), decode.Nodes[1].Capacity)
-	assert.Equal(t, "b3", decode.Nodes[2].ID)
-	assert.Equal(t, int64(100), decode.Nodes[2].Capacity)
 }
 
 func Test_toSeconds(t *testing.T) {
@@ -1771,7 +1766,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 		nar.Size = 2 * GB // 2 GB
 		nar.MaxChallengeCompletionTime = 200 * time.Hour
-		nar.Blobbers = []string{getBlobberURL("mockBaseUrl0"), getBlobberURL("mockBaseUrl1")}
+		nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
 		return
 	}
 

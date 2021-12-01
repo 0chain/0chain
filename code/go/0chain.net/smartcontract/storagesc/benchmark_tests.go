@@ -122,35 +122,6 @@ func BenchmarkTests(
 				return bytes
 			}(),
 		},
-
-		// data.Allocations
-		{
-			name:     "storage.new_allocation_request_random",
-			endpoint: ssc.newAllocationRequest,
-			txn: &transaction.Transaction{
-				HashIDField: datastore.HashIDField{
-					Hash: encryption.Hash("mock transaction hash"),
-				},
-				ClientID:     data.Clients[0],
-				CreationDate: now,
-				Value:        100 * viper.GetInt64(bk.StorageMinAllocSize),
-			},
-			input: func() []byte {
-				bytes, _ := (&newAllocationRequest{
-					DataShards:                 viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					ParityShards:               viper.GetInt(bk.NumBlobbersPerAllocation) / 2,
-					Size:                       100 * viper.GetInt64(bk.StorageMinAllocSize),
-					Expiration:                 common.Timestamp(viper.GetDuration(bk.StorageMinAllocDuration).Seconds()) + now,
-					Owner:                      data.Clients[0],
-					OwnerPublicKey:             data.PublicKeys[0],
-					ReadPriceRange:             PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxReadPrice) * 1e10)},
-					WritePriceRange:            PriceRange{0, state.Balance(viper.GetInt64(bk.StorageMaxWritePrice) * 1e10)},
-					MaxChallengeCompletionTime: viper.GetDuration(bk.StorageMaxChallengeCompletionTime),
-					DiversifyBlobbers:          false,
-				}).encode()
-				return bytes
-			}(),
-		},
 		{
 			name:     "storage.new_allocation_request_preferred",
 			endpoint: ssc.newAllocationRequest,

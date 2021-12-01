@@ -58,7 +58,6 @@ func TestNewAllocation(t *testing.T) {
 		ReadPriceRange:             PriceRange{0, zcnToBalance(blobberYaml.readPrice) + 1},
 		WritePriceRange:            PriceRange{0, zcnToBalance(blobberYaml.writePrice) + 1},
 		MaxChallengeCompletionTime: blobberYaml.challengeCompletionTime + 1,
-		Blobbers:          			[]string{"mockBaseUrl0", "mockBaseUrl1"},
 	}
 	var goodBlobber = StorageNode{
 		Capacity: 536870912,
@@ -84,6 +83,8 @@ func TestNewAllocation(t *testing.T) {
 		stake = stake / 10
 	}
 
+	request.Blobbers = *blobbers
+
 	t.Run("new allocation random blobbers", func(t *testing.T) {
 		request := request
 		request.DiversifyBlobbers = false
@@ -104,14 +105,6 @@ func TestNewAllocation(t *testing.T) {
 
 		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
 		require.NoError(t, err)
-	})
-
-	t.Run("unable to find blobbers", func(t *testing.T) {
-		request := request
-		request.DiversifyBlobbers = false
-		request.Blobbers = []string{"wrongUrl1", "wrongUrl2"}
-		err := testNewAllocation(t, request, *blobbers, *scYaml, blobberYaml, stakes)
-		require.Error(t, err)
 	})
 }
 

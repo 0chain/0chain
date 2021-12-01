@@ -174,7 +174,7 @@ type newAllocationRequest struct {
 	WritePriceRange            PriceRange       `json:"write_price_range"`
 	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 	DiversifyBlobbers          bool             `json:"diversify_blobbers"`
-	Blobbers				   []string			`json:"blobbers"`
+	Blobbers                   []*StorageNode   `json:"blobbers"`
 }
 
 // storageAllocation from the request
@@ -289,7 +289,7 @@ func (sc *StorageSmartContract) newAllocationRequest(
 ) (string, error) {
 	var err error
 
-	resp, err := sc.newAllocationRequestInternal(t, input,false, balances)
+	resp, err := sc.newAllocationRequestInternal(t, input, false, balances)
 	if err != nil {
 		return "", err
 	}
@@ -304,16 +304,17 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	var allBlobbersList *StorageNodes
-	allBlobbersList, err = sc.getBlobbersList(balances)
-	if err != nil {
-		return "", common.NewErrorf("allocation_creation_failed",
-			"getting blobber list: %v", err)
-	}
-	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewError("allocation_creation_failed",
-			"No Blobbers registered. Failed to create a storage allocation")
-	}
+	/*
+		var allBlobbersList *StorageNodes
+		allBlobbersList, err = sc.getBlobbersList(balances)
+		if err != nil {
+			return "", common.NewErrorf("allocation_creation_failed",
+				"getting blobber list: %v", err)
+		}
+		if len(allBlobbersList.Nodes) == 0 {
+			return "", common.NewError("allocation_creation_failed",
+				"No Blobbers registered. Failed to create a storage allocation")
+		}*/
 
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
@@ -329,7 +330,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	var sa = request.storageAllocation() // (set fields, including expiration)
 
 	blobberNodes, bSize, err := sc.selectBlobbers(
-		t.CreationDate, *allBlobbersList, sa, balances, request.Blobbers)
+		t.CreationDate, sa, balances, request.Blobbers)
 
 	if err != nil {
 		return "", common.NewErrorf("allocation_creation_failed", "%v", err)
@@ -371,11 +372,6 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
-	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
-	if err != nil {
-		return "", common.NewError("allocation_creation_failed", err.Error())
-	}
-
 	// create write pool and lock tokens
 	if err = sc.createWritePool(t, sa, mintNewTokens, balances); err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
@@ -394,10 +390,9 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 func (sc *StorageSmartContract) selectBlobbers(
 	creationDate common.Timestamp,
-	allBlobbersList StorageNodes,
 	sa *StorageAllocation,
 	balances chainstate.StateContextI,
-	blobbers []string,
+	blobbers []*StorageNode,
 ) ([]*StorageNode, int64, error) {
 	var err error
 	var conf *scConfig
@@ -415,8 +410,8 @@ func (sc *StorageSmartContract) selectBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = (sa.Size + int64(size-1)) / int64(size)
-	var list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
-		bSize, filterSelectedBlobbers(blobbers), filterHealthyBlobbers(creationDate),
+	var list = sa.filterBlobbers(blobbers, creationDate,
+		bSize, filterHealthyBlobbers(creationDate),
 		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
@@ -549,11 +544,6 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 	alloc *StorageAllocation, blobbers []*StorageNode,
 	balances chainstate.StateContextI) (err error) {
-
-	// save all
-	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
-		return
-	}
 
 	// save related blobbers
 	for _, b := range blobbers {
