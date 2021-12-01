@@ -3,7 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -148,18 +147,6 @@ func TestStakePoolLock(t *testing.T) {
 		err = testStakePoolLock(t, value, value+1, delegates, offers)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
-	})
-
-	t.Run(errStakeTooSmall, func(t *testing.T) {
-		scYaml.Minted = scYaml.MaxMint
-		var value = 10 * scYaml.StakePool.MinLock
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
-		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
-		require.Error(t, err)
-		require.True(t, strings.Contains(err.Error(), errStakePoolLock))
 	})
 }
 
