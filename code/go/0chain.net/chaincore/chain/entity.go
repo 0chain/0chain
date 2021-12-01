@@ -3,6 +3,7 @@ package chain
 import (
 	"container/ring"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -1352,6 +1353,8 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 	c.lfbMutex.Unlock()
 
+	c.updateConfig(b)
+
 	// add LFB to blocks cache
 	if b != nil {
 		c.blocksMutex.Lock()
@@ -1365,6 +1368,68 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 			}
 		}
 	}
+}
+
+func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
+	if pb == nil || pb.ClientState == nil {
+		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
+	}
+	return pb.ClientState, nil
+}
+
+func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
+	if clientState == nil {
+		return nil, errors.New("client state is nil")
+	}
+
+	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
+	if err != nil {
+		return nil, err
+	}
+
+	gl := &minersc.GlobalSettings{
+		Fields: make(map[string]string),
+	}
+	err = gl.Decode(val.Encode())
+	if err != nil {
+		return nil, err
+	}
+
+	return gl, nil
+}
+
+func (mc *Chain) updateConfig(pb *block.Block) {
+	clientState, err := mc.getClientState(pb)
+	if err != nil {
+		// This might happen after stopping and starting the miners
+		// and the MPT has not been setup yet.
+		logging.Logger.Error("cannot get the client state from last block",
+			zap.Error(err),
+		)
+		return
+	}
+
+	configMap, err := getConfigMap(clientState)
+	if err != nil {
+		logging.Logger.Info("cannot get global settings",
+			zap.Int64("start of round", pb.Round),
+			zap.Error(err),
+		)
+		return
+	}
+
+	if mc.Config.ShouldUpdate(configMap) {
+		err = mc.Config.Update(configMap)
+		if err != nil {
+			logging.Logger.Error("cannot update global settings",
+				zap.Int64("start of round", pb.Round),
+				zap.Error(err),
+			)
+		}
+		logging.Logger.Info("config has been updated successfully",
+			zap.Int64("start of round", pb.Round))
+	}
+
 }
 
 // GetLatestFinalizedBlock - get the latest finalized block.

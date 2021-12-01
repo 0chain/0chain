@@ -1,6 +1,8 @@
 package chain
 
 import (
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/smartcontract/dbs"
@@ -51,6 +53,7 @@ type HealthCheckCycleScan struct {
 
 //Config - chain Configuration
 type Config struct {
+	version              string        `json:"-"`                       //version of config to track updates
 	OwnerID              datastore.Key `json:"owner_id"`                // Client who created this chain
 	BlockSize            int32         `json:"block_size"`              // Number of transactions in a block
 	MinBlockSize         int32         `json:"min_block_size"`          // Number of transactions a block needs to have
@@ -92,7 +95,19 @@ type Config struct {
 	DbsEvents dbs.DbAccess `json:"dbs_event"`
 }
 
+func (conf *Config) ShouldUpdate(cf *minersc.GlobalSettings) bool {
+	oldVersion := conf.version
+	if oldVersion == cf.Version() {
+		return false
+	}
+	return true
+}
+
 func (conf *Config) Update(cf *minersc.GlobalSettings) error {
+	old := conf.version
+	conf.version = cf.Version()
+	logging.Logger.Debug("Updating config", zap.String("old version", old), zap.String("new version", conf.version))
+
 	var err error
 	conf.MinBlockSize, err = cf.GetInt32(minersc.BlockMinSize)
 	if err != nil {

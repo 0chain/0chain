@@ -267,7 +267,12 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type GlobalSettings struct {
-	Fields map[string]string `json:"fields"`
+	version string            `json:"-"`
+	Fields  map[string]string `json:"fields"`
+}
+
+func (gl *GlobalSettings) Version() string {
+	return gl.version
 }
 
 func newGlobalSettings() *GlobalSettings {
@@ -287,6 +292,7 @@ func (gl *GlobalSettings) Encode() []byte {
 
 // Decode implements util.Serializable interface.
 func (gl *GlobalSettings) Decode(p []byte) error {
+	gl.version = encryption.Hash(p)
 	return json.Unmarshal(p, gl)
 }
 
@@ -312,6 +318,8 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		gl.Fields[key] = value
 	}
+
+	gl.version = encryption.Hash(gl.Encode())
 	return nil
 }
 
