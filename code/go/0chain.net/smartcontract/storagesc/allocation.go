@@ -1354,13 +1354,6 @@ func (sc *StorageSmartContract) finishAllocation(
 	sps []*stakePool,
 	balances chainstate.StateContextI,
 ) (err error) {
-	// SC configurations
-	var conf *scConfig
-	if conf, err = sc.getConfig(balances, false); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get SC configurations: "+err.Error())
-	}
-
 	wps, err := alloc.getAllocationPools(sc, balances)
 	if err != nil {
 		return common.NewErrorf("allocation_extending_failed", "%v", err)
