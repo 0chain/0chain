@@ -78,6 +78,12 @@ type Executor interface {
 	StorageTree(st *Bad) (err error)
 	ValidatorProof(vp *Bad) (err error)
 	Challenges(cs *Bad) (err error)
+
+	// ConfigureNotNotarisedBlockExtensionCheck prepares state for cases.NotNotarisedBlockExtension test case.
+	ConfigureNotNotarisedBlockExtensionCheck(*ExtendNotNotarisedBlock) (err error)
+
+	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
+	MakeTestCaseCheck(*TestCaseCheck) error
 }
 
 //

@@ -4,10 +4,13 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -15,6 +18,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -321,4 +325,60 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	bsHistogram.Update(int64(len(b.Txns)))
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
+}
+
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	wg := new(sync.WaitGroup)
+	if mc.isTestingNotNotarisedBlockExtension(b.Round) {
+		wg.Add(1)
+		go func() {
+			if err := sendNotNotarisedBlockExtensionTestResult(mc.GetRound(b.Round)); err != nil {
+				log.Printf("Conductor: NotNotarisedBlockExtension: error while sending result: %v", err)
+			}
+			wg.Done()
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		mc.updateFinalizedBlock(ctx, b)
+		wg.Done()
+	}()
+
+	wg.Wait()
+}
+
+func sendNotNotarisedBlockExtensionTestResult(r round.RoundI) error {
+	testRes := collectVerificationStatuses(r)
+	blob, err := json.Marshal(testRes)
+	if err != nil {
+		return err
+	}
+	return crpc.Client().AddTestCaseResult(blob)
+}
+
+func collectVerificationStatuses(r round.RoundI) map[string]int {
+	res := make(map[string]int)
+	for _, b := range r.GetProposedBlocks() {
+		res[b.PrevHash] = b.GetVerificationStatus()
+	}
+	for _, b := range r.GetNotarizedBlocks() {
+		res[b.PrevHash] = b.GetVerificationStatus()
+	}
+	return res
+}
+
+func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
+	cfg := crpc.Client().State().ExtendNotNotarisedBlock
+	shouldTest := cfg != nil && cfg.Enable && cfg.Round+1 == round
+	if !shouldTest {
+		return false
+	}
+
+	// we need to collect all block's verification statuses from the first ranked replica
+	genNum := mc.GetGeneratorsNumOfRound(round)
+	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round))
+	replicators := rankedMiners[genNum:]
+	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
 }

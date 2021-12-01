@@ -358,4 +358,22 @@ func init() {
 		return ex.Challenges(&cs)
 	})
 
+	// checks
+
+	register("configure_not_notarised_block_extension_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &ExtendNotNotarisedBlock{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureNotNotarisedBlockExtensionCheck(cfg)
+	})
+
+	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &TestCaseCheck{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.MakeTestCaseCheck(cfg)
+	})
 }

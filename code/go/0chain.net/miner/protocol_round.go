@@ -301,7 +301,7 @@ func (mc *Chain) getClientState(
 	roundNumber int64,
 ) (*util.MerklePatriciaTrie, error) {
 	pround := mc.GetRound(roundNumber - 1)
-	pb := mc.GetBlockToExtend(ctx, pround)
+	pb := mc.getBlockToExtend(ctx, pround)
 	if pb == nil || pb.ClientState == nil {
 		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
 	}
@@ -425,7 +425,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
-func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
+func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 	bnb *block.Block) {
 
 	if bnb = r.GetHeaviestNotarizedBlock(); bnb == nil {

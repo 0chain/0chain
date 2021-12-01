@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
+	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
 )
@@ -713,4 +715,48 @@ func (r *Runner) verbosePrintByGoodBad(label string, bad *config.Bad) {
 		log.Printf(" [INF] set '%s' of %s: good %s, bad %s",
 			label, bad.By, bad.Good, bad.Bad)
 	}
+}
+
+//
+// Checks
+//
+
+// ConfigureNotNotarisedBlockExtensionCheck implements config.Executor interface.
+func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.ExtendNotNotarisedBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"not notarised block extension check\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.ExtendNotNotarisedBlock = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring not notarising extending: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewNotNotarisedBlockExtension()
+
+	return
+}
+
+// MakeTestCaseCheck implements config.Executor interface.
+func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
+	if r.verbose {
+		log.Print(" [INF] making test case check")
+	}
+
+	if r.server.CurrentTest == nil {
+		return errors.New("check is not set up")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.WaitTime)
+	defer cancel()
+	success, err := r.server.CurrentTest.Check(ctx)
+	if err != nil {
+		return err
+	}
+	if !success {
+		return errors.New("check failed")
+	}
+	return nil
 }
