@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"path"
@@ -14,11 +15,12 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
-	"golang.org/x/sys/unix"
 )
 
 var volumesMap map[string]*volume
@@ -114,7 +116,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		blocksPath := filepath.Join(v.Path, fmt.Sprintf("%v%v/%v", dTier.DirPrefix, v.CurKInd, v.CurDirInd))
 		_, err := os.Stat(blocksPath)
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			if err := os.MkdirAll(blocksPath, 0644); err != nil {
+			if err := os.MkdirAll(blocksPath, 0777); err != nil {
 				return err
 			}
 		}
@@ -127,7 +129,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 		blocksCount, err := countFiles(blocksPath)
 
 		if err != nil && errors.Is(err, os.ErrNotExist) {
-			err := os.MkdirAll(blocksPath, 0644)
+			err := os.MkdirAll(blocksPath, 0777)
 			if err != nil {
 				return err
 			}
@@ -159,7 +161,7 @@ func (v *volume) selectDir(dTier *diskTier) error {
 	blocksCount, err := countFiles(blocksPath)
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(blocksPath, 0644)
+		err := os.MkdirAll(blocksPath, 0777)
 		if err != nil {
 			return err
 		}
@@ -245,13 +247,13 @@ func (v *volume) read(hash, blockPath string) (*block.Block, error) {
 	}
 	defer r.Close()
 
-	var b *block.Block
-	err = datastore.ReadJSON(r, b)
+	b := block.Block{}
+	err = datastore.ReadJSON(r, &b)
 	if err != nil {
 		return nil, err
 	}
 
-	return b, nil
+	return &b, nil
 }
 
 //When a block is moved to cold tier delete function will be called
@@ -277,17 +279,39 @@ func (v *volume) delete(hash, path string) error {
 }
 
 func (v *volume) updateSize(n int64) {
+	var volStat unix.Statfs_t
+	_ = unix.Statfs(v.Path, &volStat)
+
 	if n < 0 {
+		if v.BlocksSize < uint64((volStat.Bsize)) {
+			v.BlocksSize = 0
+			return
+		}
+		n *= -1
 		v.BlocksSize -= uint64(n)
 	} else {
+		if v.BlocksSize > (math.MaxUint64 - uint64(n)) {
+			v.BlocksSize = math.MaxUint64
+			return
+		}
 		v.BlocksSize += uint64(n)
 	}
 }
 
 func (v *volume) updateCount(n int64) {
+	var volStat unix.Statfs_t
+	_ = unix.Statfs(v.Path, &volStat)
+
 	if n < 0 {
+		n *= -1
+		if v.BlocksCount == 0 {
+			return
+		}
 		v.BlocksCount -= uint64(n)
 	} else {
+		if v.BlocksCount == math.MaxUint64 {
+			return
+		}
 		v.BlocksCount += uint64(n)
 	}
 }
