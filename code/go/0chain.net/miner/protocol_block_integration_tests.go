@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -378,7 +379,7 @@ func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
 
 	// we need to collect all block's verification statuses from the first ranked replica
 	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round))
+	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
 	replicators := rankedMiners[genNum:]
 	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
 }
