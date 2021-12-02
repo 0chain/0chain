@@ -55,10 +55,13 @@ func (v *vrfSharesCache) getAll() []*round.VRFShare {
 	return vrfShares
 }
 
-func (v *vrfSharesCache) clean() {
+// clean deletes shares that has round time out count <= the 'count' value
+func (v *vrfSharesCache) clean(count int) {
 	v.mutex.Lock()
-	for s := range v.vrfShares {
-		delete(v.vrfShares, s)
+	for s, vrf := range v.vrfShares {
+		if vrf.GetRoundTimeoutCount() <= count {
+			delete(v.vrfShares, s)
+		}
 	}
 	v.mutex.Unlock()
 }
