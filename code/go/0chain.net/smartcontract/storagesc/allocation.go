@@ -306,7 +306,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 ) (resp string, err error) {
 
 	var conf *scConfig
-	if conf, err = sc.getConfig(balances, true); err != nil {
+	if conf, err = sc.getConfig(balances, false); err != nil {
 		return "", fmt.Errorf("can't get config: %v", err)
 	}
 
@@ -325,7 +325,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		return "", common.NewErrorf("allocation_creation_failed",
-			"Too many blobbers selected, max available &d", conf.MaxBlobbersPerAllocation)
+			"Too many blobbers selected, max available %d", conf.MaxBlobbersPerAllocation)
 	}
 
 	blobberNodes, bSize, err := sc.selectBlobbers(
@@ -337,6 +337,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	var gbSize = sizeInGB(bSize) // size in gigabytes
 	allocatedBlobbers := make([]*StorageNode, 0)
+
 	for _, b := range blobberNodes {
 		var balloc BlobberAllocation
 		balloc.Stats = &StorageAllocationStats{}
@@ -368,6 +369,13 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	sa.Tx = t.Hash
 
 	if err = sc.addBlobbersOffers(sa, blobberNodes, balances); err != nil {
+		return "", common.NewError("allocation_creation_failed", err.Error())
+	}
+
+	var allBlobbersList *StorageNodes
+	allBlobbersList, err = sc.getBlobbersList(balances)
+	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
+	if err != nil {
 		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
