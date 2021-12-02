@@ -304,17 +304,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	mintNewTokens bool,
 	balances chainstate.StateContextI,
 ) (resp string, err error) {
-	/*
-		var allBlobbersList *StorageNodes
-		allBlobbersList, err = sc.getBlobbersList(balances)
-		if err != nil {
-			return "", common.NewErrorf("allocation_creation_failed",
-				"getting blobber list: %v", err)
-		}
-		if len(allBlobbersList.Nodes) == 0 {
-			return "", common.NewError("allocation_creation_failed",
-				"No Blobbers registered. Failed to create a storage allocation")
-		}*/
+
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return "", fmt.Errorf("can't get config: %v", err)
+	}
 
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
@@ -328,6 +322,11 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	}
 
 	var sa = request.storageAllocation() // (set fields, including expiration)
+
+	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
+		return "", common.NewErrorf("allocation_creation_failed",
+			"Too many blobbers selected, max available &s", conf.MaxBlobbersPerAllocation)
+	}
 
 	blobberNodes, bSize, err := sc.selectBlobbers(
 		t.CreationDate, sa, balances, request.Blobbers)
