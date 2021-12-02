@@ -325,7 +325,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 
 	if len(request.Blobbers) > conf.MaxBlobbersPerAllocation {
 		return "", common.NewErrorf("allocation_creation_failed",
-			"Too many blobbers selected, max available &s", conf.MaxBlobbersPerAllocation)
+			"Too many blobbers selected, max available &d", conf.MaxBlobbersPerAllocation)
 	}
 
 	blobberNodes, bSize, err := sc.selectBlobbers(
