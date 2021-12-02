@@ -415,12 +415,11 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	}
 
 	var rbOutput = encryption.Hash(groupSignature.GetHexString())
-	Logger.Info("receive bls sign", zap.Any("sigs", recSig),
-		zap.Any("from", recFrom),
-		zap.Any("group_signature", groupSignature.GetHexString()))
+	Logger.Info("receive bls sign",
+		zap.Int64("round", mr.GetRoundNumber()),
+		zap.Any("group_signature", groupSignature.GetHexString()),
+		zap.String("rboOutput", rbOutput))
 
-	// rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
-	Logger.Debug("VRF ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 	mc.computeRBO(ctx, mr, rbOutput)
 }
 
@@ -443,8 +442,6 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 	shares := mr.GetVRFShares()
 	for _, share := range shares {
 		n := share.GetParty()
-		Logger.Info("VRF Printing from shares: ", zap.Int("Miner Index = ", n.SetIndex), zap.Any("Share = ", share.Share))
-
 		recSig = append(recSig, share.Share)
 		recFrom = append(recFrom, ComputeBlsID(n.ID))
 	}
