@@ -77,7 +77,6 @@ func (np *Pool) start() {
 	np.startOnce.Do(func() {
 		go func() {
 			np.id = atomic.AddInt32(&poolID, 1)
-			logging.Logger.Warn("node pool start", zap.Int32("ID", np.id))
 
 			var nds []*Node
 
@@ -94,7 +93,6 @@ func (np *Pool) start() {
 					v.reply <- struct{}{}
 					cleanTimer = time.NewTimer(expireTime)
 				case <-cleanTimer.C:
-					logging.Logger.Debug("node pool cleaned")
 					np.startOnce = &sync.Once{}
 					return
 				}
@@ -136,7 +134,6 @@ func (np *Pool) updateNodesToC(nds []*Node) {
 	select {
 	case np.updateNodesC <- ndsWithReply:
 		<-ndsWithReply.reply
-		logging.Logger.Debug("update nodes to channel", zap.Int32("id", np.id))
 	case <-time.After(500 * time.Millisecond):
 		logging.Logger.Warn("update nodes to channel timeout")
 	}
