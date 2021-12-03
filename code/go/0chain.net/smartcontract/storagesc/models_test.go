@@ -85,7 +85,8 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	// 1. filter all by max offer duration
 
 	alloc.Expiration = now + 10 // one second duration
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bl, _ := alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 0)
 
 	// 2. filter all by read price range
 	alloc.Expiration = now + 5
@@ -93,7 +94,8 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	list[0].Terms.ReadPrice = 100
 	list[1].Terms.ReadPrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 0)
 
 	// 3. filter all by write price range
 	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
@@ -101,26 +103,31 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
 	list[0].Terms.WritePrice = 100
 	list[1].Terms.WritePrice = 150
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 0)
 
 	// 4. filter all by size
 	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
 	list[0].Capacity, list[0].Used = 100, 90
 	list[1].Capacity, list[1].Used = 100, 50
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 0)
 
 	// 5. filter all by max CCT
 	alloc.MaxChallengeCompletionTime = 5 * time.Second
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 0)
 
 	// accept one
 	alloc.MaxChallengeCompletionTime = 30 * time.Second
 	list[0].Capacity, list[0].Used = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 1)
 
 	// accept all
 	list[1].Capacity, list[1].Used = 330, 100
-	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+	bl, _ = alloc.filterBlobbers(list, now, size)
+	assert.Len(t, bl, 2)
 }
 
 func TestStorageAllocation_diversifyBlobbers(t *testing.T) {

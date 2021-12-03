@@ -41,6 +41,7 @@ func (rbt RestBenchTest) Run(balances cstate.StateContextI, _ *testing.B) error 
 	return err
 }
 
+
 func BenchmarkRestTests(
 	data bk.BenchData, _ bk.SignatureScheme,
 ) bk.TestSuite {

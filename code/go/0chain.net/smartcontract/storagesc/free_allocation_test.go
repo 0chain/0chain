@@ -210,6 +210,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 				MinLockPeriod: mockMinLockPeriod,
 				MaxLockPeriod: mockMaxLockPeriod,
 			},
+			MaxBlobbersPerAllocation: 	40,
 		}
 		now                         = common.Timestamp(23000000)
 		mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -273,6 +274,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		inputObj := freeStorageAllocationInput{
 			RecipientPublicKey: mockUserPublicKey,
 			Marker:             string(inputBytes),
+			Blobbers: 			getListOfBlobbers(conf.FreeAllocationSettings.DataShards, conf.FreeAllocationSettings.DataShards),
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
@@ -285,9 +287,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-			mockAllBlobbers, nil,
-		).Once()
+		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+		//	mockAllBlobbers, nil,
+		//).Once()
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
@@ -580,6 +582,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		MaxChallengeCompletionTime: 1 * time.Hour,
 		MaxTotalFreeAllocation:     mockMaxAnnualFreeAllocation,
 		FreeAllocationSettings:     mockFreeAllocationSettings,
+		MaxBlobbersPerAllocation: 	40,
 	}
 	var now = common.Timestamp(29000000)
 	var mockChallengeCompletionTime = conf.MaxChallengeCompletionTime
@@ -660,9 +663,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
 
-		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-			mockAllBlobbers, nil,
-		).Once()
+		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+		//	mockAllBlobbers, nil,
+		//).Once()
 
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,

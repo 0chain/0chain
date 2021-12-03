@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strings"
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
@@ -267,17 +268,17 @@ func sizeInGB(size int64) float64 {
 func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	size int64, balances chainstate.StateContextI) (filter filterBlobberFunc) {
 
-	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
+	return filterBlobberFunc(func(b *StorageNode) (kick bool, error string) {
 		var sp, err = sc.getStakePool(b.ID, balances)
 		if err != nil {
-			return true // kick off
+			return true, "sc.getStakePool error"
 		}
 		if b.Terms.WritePrice == 0 {
-			return false // keep, ok or already filtered by bid
+			return false, "b.Terms.WritePrice == 0"
 		}
 		// clean capacity (without delegate pools want to 'unstake')
 		var free = sp.cleanCapacity(now, b.Terms.WritePrice)
-		return free < size // kick off if it hasn't enough free space
+		return free < size, "Not enought free space in blobbers"
 	})
 }
 
@@ -417,12 +418,12 @@ func (sc *StorageSmartContract) selectBlobbers(
 	var size = sa.DataShards + sa.ParityShards
 	// size of allocation for a blobber
 	var bSize = (sa.Size + int64(size-1)) / int64(size)
-	var list = sa.filterBlobbers(blobbers, creationDate,
+	var list, errs = sa.filterBlobbers(blobbers, creationDate,
 		bSize, filterHealthyBlobbers(creationDate),
 		sc.filterBlobbersByFreeSpace(creationDate, bSize, balances))
 
 	if len(list) < size {
-		return nil, 0, errors.New("Not enough blobbers to honor the allocation")
+		return nil, 0, errors.New("Not enough blobbers to honor the allocation" + strings.Join(errs,"\n"))
 	}
 
 	sa.BlobberDetails = make([]*BlobberAllocation, 0)

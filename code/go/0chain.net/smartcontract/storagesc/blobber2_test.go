@@ -64,6 +64,7 @@ var (
 	blobberYaml = mockBlobberYaml{
 		serviceCharge:           0.3,
 		readPrice:               0.01,
+		writePrice:              0.01,
 		challengeCompletionTime: 2 * time.Minute,
 	}
 )

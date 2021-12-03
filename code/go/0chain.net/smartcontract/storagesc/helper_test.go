@@ -297,14 +297,30 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.Expiration = common.Timestamp(exp)
 	nar.Owner = client.id
 	nar.OwnerPublicKey = client.pk
-	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
-	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+	nar.ReadPriceRange = PriceRange{1, 10 * x10}
+	nar.WritePriceRange = PriceRange{1, 20 * x10}
 	nar.Size = 2 * GB // 2 GB
 	nar.MaxChallengeCompletionTime = 200 * time.Hour
 
-	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
-		blobs = append(blobs, b)
+	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
+	for _, b := range nar.Blobbers {
+		var sp = newStakePool()
+
+		b.Terms.MaxOfferDuration = 1000 * 20 * time.Second
+
+		sp.Offers[allocID] = &offerPool{
+			Expire: common.Timestamp(exp),
+			Lock:   90,
+		}
+		dp1 := new(delegatePool)
+		dp1.Balance = 20e10
+		sp.Pools["hash1"] = dp1
+
+		_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		require.NoError(t, err)
+
+		var bb = addBlobber(t, ssc, b.Capacity, now, b.Terms, 50*x10, balances)
+		blobs = append(blobs, bb)
 	}
 
 	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
@@ -368,6 +384,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 		InterestRate:     0.01,
 		InterestInterval: 5 * time.Second,
 	}
+	conf.MaxBlobbersPerAllocation = 40
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return

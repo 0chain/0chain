@@ -1458,6 +1458,24 @@ func Test_blobber_choose_randomization(t *testing.T) {
 		nar.Size = 100 * MB // 100 MB
 		nar.MaxChallengeCompletionTime = 200 * time.Hour
 
+		nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
+		for _, b := range nar.Blobbers {
+			var sp = newStakePool()
+
+			b.Terms.MaxOfferDuration = 1000 * 20 * time.Second
+
+			sp.Offers[allocID] = &offerPool{
+				Expire: common.Timestamp(exp),
+				Lock:   90,
+			}
+			dp1 := new(delegatePool)
+			dp1.Balance = 20e10
+			sp.Pools["hash1"] = dp1
+
+			_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+			require.NoError(t, err)
+		}
+
 		var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
 			balances)
 		require.NoError(t, err)

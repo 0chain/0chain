@@ -31,8 +31,9 @@ func (frm *freeStorageMarker) decode(b []byte) error {
 }
 
 type freeStorageAllocationInput struct {
-	RecipientPublicKey string `json:"recipient_public_key"`
-	Marker             string `json:"marker"`
+	RecipientPublicKey string         `json:"recipient_public_key"`
+	Marker             string         `json:"marker"`
+	Blobbers           []*StorageNode `json:"blobbers"`
 }
 
 func (frm *freeStorageAllocationInput) decode(b []byte) error {
@@ -261,7 +262,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 	readPoolTokens := int64(float64(txn.Value) * conf.FreeAllocationSettings.ReadPoolFraction)
 	txn.Value -= readPoolTokens
 
-	resp, err := ssc.newAllocationRequestInternal(txn, arBytes,true, balances)
+	resp, err := ssc.newAllocationRequestInternal(txn, arBytes, true, balances)
 	if err != nil {
 		return "", common.NewErrorf("free_allocation_failed", "creating new allocation: %v", err)
 	}

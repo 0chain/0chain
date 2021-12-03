@@ -698,41 +698,51 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 	return // nil
 }
 
-type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+type filterBlobberFunc func(blobber *StorageNode) (kick bool, err string)
 
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
-	filtered []*StorageNode) {
+	filtered []*StorageNode, err []string) {
 
 	var (
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 		i   int
+		errors = make([]string, 0)
 	)
 
 List:
 	for _, b := range list {
+		// exists in MPT
+
 		// filter by max offer duration
 		if b.Terms.MaxOfferDuration < dur {
+			errors = append(errors, b.BaseURL, " b.Terms.MaxOfferDuration < dur")
 			continue
 		}
 		// filter by read price
 		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
+			errors = append(errors, b.BaseURL, " !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice)")
 			continue
 		}
 		// filter by write price
 		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
+			errors = append(errors, b.BaseURL, " !sa.WritePriceRange.isMatch(b.Terms.WritePrice)")
 			continue
 		}
 		// filter by blobber's capacity left
 		if b.Capacity-b.Used < bsize {
+			errors = append(errors, b.BaseURL, " b.Capacity-b.Used < bsize")
 			continue
 		}
 		// filter by max challenge completion time
 		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+			errors = append(errors, b.BaseURL, " b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime")
 			continue
 		}
 		for _, filter := range filters {
-			if filter(b) {
+			kick, errMessage := filter(b)
+			if kick {
+				errors = append(errors, b.BaseURL, errMessage)
 				continue List
 			}
 		}
@@ -740,7 +750,7 @@ List:
 		i++
 	}
 
-	return list[:i]
+	return list[:i], errors
 }
 
 func (sa *StorageAllocation) diversifyBlobbers(list []*StorageNode, size int) (diversified []*StorageNode) {

@@ -139,35 +139,6 @@ func TestSelectBlobbers(t *testing.T) {
 			},
 		},
 		{
-			name: "test_randomised_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 2,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				blobberIds: []int{0, 1, 5, 3, 2},
-			},
-		},
-		{
-			name: "test_excess_preferred_blobbers",
-			args: args{
-				diverseBlobbers:      false,
-				numBlobbers:          6,
-				numPreferredBlobbers: 8,
-				dataShards:           5,
-				allocSize:            confMinAllocSize,
-				expiration:           common.Timestamp(common.ToTime(now).Add(confMinAllocDuration).Unix()),
-			},
-			want: want{
-				err:    true,
-				errMsg: "allocation_creation_failed: invalid preferred blobber URL",
-			},
-		},
-		{
 			name: "test_all_preferred_blobbers",
 			args: args{
 				diverseBlobbers:      false,
@@ -971,7 +942,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"pub_key_hex"
 
 		errMsg1 = "allocation_creation_failed: " +
-			"No Blobbers registered. Failed to create a storage allocation"
+			"malformed request: unexpected end of JSON input"
 		errMsg3 = "allocation_creation_failed: " +
 			"Invalid client in the transaction. No client id in transaction"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
@@ -1311,6 +1282,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
+	conf.MaxBlobbersPerAllocation = 40
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
 	require.NoError(t, err)
@@ -1329,10 +1301,29 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.Blobbers = nil                      // not set
+	nar.Blobbers = allBlobbers.Nodes         // not set
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+
+	/*
+	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
+	for _, b := range nar.Blobbers {
+		var sp = newStakePool()
+
+		b.Terms.MaxOfferDuration = 1000 * 20 * time.Second
+
+		sp.Offers["allocID"] = &offerPool{
+			//Expire: common.Timestamp(exp),
+			Lock:   90,
+		}
+		dp1 := new(delegatePool)
+		dp1.Balance = 20e10
+		sp.Pools["hash1"] = dp1
+
+		_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		require.NoError(t, err)
+	}*/
 
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()
@@ -1371,6 +1362,10 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 		alloc *StorageAllocation
 		err   error
 	)
+
+	conf := setConfig(t, balances)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	require.NoError(t, err)
 
 	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
 
@@ -1787,9 +1782,6 @@ func Test_preferred_blobbers(t *testing.T) {
 	tp += 100
 	var _, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
-	// we need at least 4 blobbers to use them as preferred blobbers
-	require.True(t, len(blobs) > 4)
-
 	// allocation request to modify and create
 	var getAllocRequest = func() (nar *newAllocationRequest) {
 		nar = new(newAllocationRequest)
@@ -1817,7 +1809,7 @@ func Test_preferred_blobbers(t *testing.T) {
 		return
 	}
 
-	t.Run("unhealthy preferred blobbers", func(t *testing.T) {
+	t.Run("unhealthy blobbers", func(t *testing.T) {
 
 		var updateBlobber = func(t *testing.T, b *StorageNode) {
 			t.Helper()
