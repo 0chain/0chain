@@ -106,13 +106,10 @@ func (t *Transaction) ValidateFee() error {
 		var smartContractData smartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
 		err := json.Unmarshal(dataBytes, &smartContractData)
-		if err != nil {
-			logging.Logger.Error("unmarshal txn data failed", zap.Error(err))
-			return errors.New("invalid transaction data")
-		}
-
-		if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
-			return nil
+		if err == nil {
+			if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+				return nil
+			}
 		}
 	}
 	if t.Fee < TXN_MIN_FEE {
