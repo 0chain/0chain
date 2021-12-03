@@ -296,7 +296,9 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 	mr.AddVRFShare(vrfs, blsThreshold)
 
-	mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
+	if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
+		mc.StartVerification(ctx, mr)
+	}
 
 	return true
 }
@@ -372,14 +374,14 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 }
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
-func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) {
+func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) bool {
 
 	if mr.IsVRFComplete() {
 		// BLS has completed already for this round.
 		// But, received a BLS message from a node now
 		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.",
 			zap.Int64("round", mr.GetRoundNumber()))
-		return
+		return true
 	}
 
 	var shares = mr.GetVRFShares()
@@ -389,7 +391,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 			zap.Int("vrfShares_num", len(shares)),
 			zap.Int("threshold", blsThreshold),
 			zap.Int64("round", mr.GetRoundNumber()))
-		return
+		return false
 	}
 
 	Logger.Debug("VRF Hurray we've threshold BLS shares",
@@ -402,7 +404,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		var rbOutput string // rboutput will ignored anyway
 		mc.computeRBO(ctx, mr, rbOutput)
 
-		return
+		return true
 	}
 
 	var (
@@ -421,6 +423,8 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 		zap.String("rboOutput", rbOutput))
 
 	mc.computeRBO(ctx, mr, rbOutput)
+
+	return true
 }
 
 func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {

@@ -851,12 +851,18 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("weight", b.Weight()),
 		zap.Float64("chain_weight", b.ChainWeight))
+	//mc.StartVerification(ctx, mr, b)
+	mr.AddBlockToVerify(b)
+}
+
+func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
 	vctx := mr.StartVerificationBlockCollection(ctx)
-	miner := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
-	if vctx != nil && miner != nil && mr.IsVRFComplete() {
+	gen := mc.GetGenerators(mr)
+
+	if vctx != nil && len(gen) > 0 && mr.IsVRFComplete() {
 
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
-		minerNT := time.Duration(int64(miner.GetLargeMessageSendTime()/1000000)) * time.Millisecond
+		minerNT := time.Duration(int64(gen[0].GetLargeMessageSendTime()/1000000)) * time.Millisecond
 		if minerNT >= waitTime {
 			mr.delta = time.Millisecond
 		} else {
@@ -864,7 +870,6 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
-	mr.AddBlockToVerify(b)
 }
 
 /*GetBlockProposalWaitTime - get the time to wait for the block proposals of the given round */
