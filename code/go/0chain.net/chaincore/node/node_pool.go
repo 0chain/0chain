@@ -1,9 +1,7 @@
 package node
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -245,42 +243,6 @@ func (np *Pool) Print(w io.Writer) {
 	}
 }
 
-/*ReadNodes - read the pool information */
-func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		node, err := Read(line)
-		if err != nil {
-			panic(err)
-		}
-		switch node.Type {
-		case NodeTypeMiner:
-			minerPool.AddNode(node)
-		case NodeTypeSharder:
-			sharderPool.AddNode(node)
-		default:
-			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
-		}
-	}
-}
-
-/*AddNodes - add nodes to the node pool */
-func (np *Pool) AddNodes(nodes []interface{}) {
-	for _, nci := range nodes {
-		nc, ok := nci.(map[interface{}]interface{})
-		if !ok {
-			continue
-		}
-		nc["type"] = np.Type
-		nd, err := NewNode(nc)
-		if err != nil {
-			panic(err)
-		}
-		np.AddNode(nd)
-	}
-}
-
 func (np *Pool) computeNodePositions() {
 	sort.SliceStable(np.Nodes, func(i, j int) bool {
 		return np.Nodes[i].GetKey() < np.Nodes[j].GetKey()
@@ -371,24 +333,6 @@ func (np *Pool) Keys() (keys []string) {
 	for _, n := range nds {
 		keys = append(keys, n.GetKey())
 	}
-	return
-}
-
-// NewNodes returns list of nodes exist in
-// given Pool, but don't exist in this pool.
-func (np *Pool) NewNodes(newPool *Pool) (newNodes []*Node) {
-
-	var (
-		nps      = np.CopyNodesMap()
-		newPools = newPool.CopyNodesMap()
-	)
-
-	for id, node := range newPools {
-		if _, ok := nps[id]; !ok {
-			newNodes = append(newNodes, node)
-		}
-	}
-
 	return
 }
 

@@ -959,21 +959,6 @@ func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 	return int(math.Ceil(thresholdCount))
 }
 
-/*ReadNodePools - read the node pools from configuration */
-func (c *Chain) ReadNodePools(configFile string) {
-	nodeConfig := config.ReadConfig(configFile)
-	conf := nodeConfig.Get("miners")
-	mb := c.GetCurrentMagicBlock()
-	if miners, ok := conf.([]interface{}); ok {
-		mb.Miners.AddNodes(miners)
-		c.InitializeMinerPool(mb)
-	}
-	conf = nodeConfig.Get("sharders")
-	if sharders, ok := conf.([]interface{}); ok {
-		mb.Sharders.AddNodes(sharders)
-	}
-}
-
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
 	var pb = b
@@ -1415,7 +1400,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	// there's no new magic block
-	if lfmb != nil && newMagicBlock.StartingRound == lfmb.StartingRound {
+	if lfmb != nil && newMagicBlock.StartingRound <= lfmb.StartingRound {
 		return nil
 	}
 
