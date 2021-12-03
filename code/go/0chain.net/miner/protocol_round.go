@@ -851,7 +851,7 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("weight", b.Weight()),
 		zap.Float64("chain_weight", b.ChainWeight))
-	//mc.StartVerification(ctx, mr, b)
+	//mc.StartVerification(ctx, mr)
 	mr.AddBlockToVerify(b)
 }
 
@@ -1051,6 +1051,11 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 	if b.GetRoundRandomSeed() == 0 {
 		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
+	}
+
+	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
+		return nil, common.NewError("seed_mismatch", "block RRS mismatch")
+
 	}
 
 	var hasPriorBlock = b.PrevBlock != nil

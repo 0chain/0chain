@@ -69,17 +69,17 @@ func (v *vrfSharesCache) clean(count int) {
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
 	roundNumber := r.GetRoundNumber()
-	if r.IsVerificationComplete() {
-		logging.Logger.Debug("block proposal - verification complete", zap.Int64("round", roundNumber), zap.String("block", b.Hash))
-		return
-	}
+	//if r.IsVerificationComplete() {
+	//	logging.Logger.Debug("block proposal - verification complete", zap.Int64("round", roundNumber), zap.String("block", b.Hash))
+	//	return
+	//}
 	if roundNumber != b.Round {
 		logging.Logger.Error("block proposal - round mismatch", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
-	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
-		return
-	}
+	//if b.GetRoundRandomSeed() != r.GetRandomSeed() {
+	//	return
+	//}
 
 	if b.GetRoundRandomSeed() == 0 {
 		logging.Logger.Error("block proposal - block with no RRS",
