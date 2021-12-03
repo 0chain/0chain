@@ -853,7 +853,7 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 		zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	miner := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
-	if vctx != nil && miner != nil {
+	if vctx != nil && miner != nil && mr.IsVRFComplete() {
 
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
 		minerNT := time.Duration(int64(miner.GetLargeMessageSendTime()/1000000)) * time.Millisecond
