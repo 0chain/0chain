@@ -339,6 +339,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
 
+	mc.SetLatestFinalizedMagicBlock(b)
+
 	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 
