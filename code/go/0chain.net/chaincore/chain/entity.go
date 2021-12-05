@@ -1486,6 +1486,7 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 }
 
 // SetLatestFinalizedBlock - set the latest finalized block.
+// TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if b == nil || b.MagicBlock == nil {
@@ -1516,7 +1517,9 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
 	c.lfmbMutex.Unlock()
 
-	c.updateLatestFinalizedMagicBlock(context.Background(), b)
+	if latest == nil || b.StartingRound >= latest.StartingRound {
+		c.updateLatestFinalizedMagicBlock(context.Background(), b)
+	}
 }
 
 // GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
