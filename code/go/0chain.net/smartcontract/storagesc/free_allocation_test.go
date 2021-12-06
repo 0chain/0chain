@@ -287,10 +287,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 
-		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-		//	mockAllBlobbers, nil,
-		//).Once()
-
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
 				"GetTrieNode", stakePoolKey(ssc.ID, blobber.ID),
@@ -662,10 +658,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
-
-		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-		//	mockAllBlobbers, nil,
-		//).Once()
 
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,

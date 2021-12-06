@@ -1306,25 +1306,6 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
-	/*
-	nar.Blobbers = getListOfBlobbers(nar.DataShards, nar.ParityShards)
-	for _, b := range nar.Blobbers {
-		var sp = newStakePool()
-
-		b.Terms.MaxOfferDuration = 1000 * 20 * time.Second
-
-		sp.Offers["allocID"] = &offerPool{
-			//Expire: common.Timestamp(exp),
-			Lock:   90,
-		}
-		dp1 := new(delegatePool)
-		dp1.Balance = 20e10
-		sp.Pools["hash1"] = dp1
-
-		_, err := balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
-		require.NoError(t, err)
-	}*/
-
 	var (
 		sp1, sp2 = newStakePool(), newStakePool()
 		dp1, dp2 = new(delegatePool), new(delegatePool)
