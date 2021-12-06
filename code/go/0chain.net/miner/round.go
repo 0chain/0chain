@@ -178,7 +178,7 @@ func (r *Round) CancelVerification() {
 
 /*Clear - clear any pending state before deleting this round */
 func (r *Round) Clear() {
-	logging.Logger.Debug("Rond clear - cancel verification")
+	logging.Logger.Debug("Round clear - cancel verification")
 	r.CancelVerification()
 }
 
@@ -191,4 +191,5 @@ func (r *Round) IsVRFComplete() bool {
 func (r *Round) Restart() {
 	r.Round.Restart()
 	r.vrfSharesCache = newVRFSharesCache()
+	r.CancelVerification()
 }

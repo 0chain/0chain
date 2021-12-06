@@ -863,6 +863,7 @@ func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
 
 	if vctx != nil && len(gen) > 0 && mr.IsVRFComplete() {
 
+		//mr.delta = mc.GetBlockProposalWaitTime(mr.Round)
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
 		minerNT := time.Duration(int64(gen[0].GetLargeMessageSendTime()/1000000)) * time.Millisecond
 		if minerNT >= waitTime {
@@ -1449,6 +1450,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
+			logging.Logger.Info("Sent proposal in handle NoProgress")
 			go mc.SendBlock(context.Background(), b)
 		}
 	}
