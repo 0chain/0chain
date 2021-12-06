@@ -58,7 +58,7 @@ func SetupM2MSenders() {
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
 
-	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true, Pull: true}
+	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
 
 }
@@ -133,7 +133,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		bound = lfb.Round // use lower one
 	}
 	if vrfs.GetRoundNumber() < bound {
-		logging.Logger.Info("Rejecting VRFShare: old round",
+		logging.Logger.Info("Reject VRFShare: old round",
 			zap.Int64("vrfs_round", vrfs.GetRoundNumber()),
 			zap.Int64("lfb_ticket_round", tk.Round),
 			zap.Int64("lfb_round", lfb.Round),
@@ -145,12 +145,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	if vrfs.Round < mc.GetCurrentRound() {
 		var mr = mc.GetMinerRound(vrfs.Round)
 		if mr == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing miner round",
+			logging.Logger.Info("Reject VRFShare: missing miner round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if mr.Block == nil || !mr.Block.IsBlockNotarized() {
-			logging.Logger.Info("Rejecting VRFShare: missing HNB for the round"+
+			logging.Logger.Info("Reject VRFShare: missing HNB for the round"+
 				" or it's not notarized",
 				zap.Bool("is_not_notarized", mr.Block != nil),
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
@@ -159,7 +159,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		// var hnb = mr.GetHeaviestNotarizedBlock()
 		var hnb = mr.Block
 		if hnb.GetStateStatus() != block.StateSuccessful {
-			logging.Logger.Info("Rejecting VRFShare: HNB state is not successful",
+			logging.Logger.Info("Reject VRFShare: HNB state is not successful",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 				zap.String("hash", hnb.Hash))
 			return nil, nil
@@ -169,12 +169,12 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			party = node.GetSender(ctx)
 		)
 		if mb == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing MB for the round",
+			logging.Logger.Info("Reject VRFShare: missing MB for the round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 		if party == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing party",
+			logging.Logger.Info("Reject VRFShare: missing party",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
@@ -186,7 +186,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 			}
 		}
 		if found == nil {
-			logging.Logger.Info("Rejecting VRFShare: missing party in MB",
+			logging.Logger.Info("Reject VRFShare: missing party in MB",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
@@ -198,7 +198,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		// send notarized block
 		go mb.Miners.SendTo(ctx, MinerNotarizedBlockSender(hnb), found.ID)
 
-		logging.Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
+		logging.Logger.Info("Reject VRFShare: push not. block message for the miner behind",
 			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 			zap.String("to_miner_id", found.ID),
 			zap.String("to_miner_url", found.GetN2NURLBase()))
@@ -208,6 +208,10 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	sender := node.GetSender(ctx)
 	vrfs.SetParty(sender)
 	if mr := mc.GetMinerRound(vrfs.Round); mr != nil {
+		if mr.IsVRFComplete() {
+			return nil, nil
+		}
+
 		if mr.VRFShareExist(vrfs) {
 			return nil, nil
 		}

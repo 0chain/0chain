@@ -24,7 +24,7 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	// add the VRFShare
 	logging.Logger.Debug("handle vrf share",
 		zap.Int64("round", msg.VRFShare.Round),
-		zap.Int("round_timeout_count", msg.VRFShare.RoundTimeoutCount),
+		zap.Int("vrf_timeout_count", msg.VRFShare.GetRoundTimeoutCount()),
 		zap.Int("sender_index", msg.Sender.SetIndex),
 	)
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)

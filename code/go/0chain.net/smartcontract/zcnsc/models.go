@@ -34,6 +34,7 @@ type GlobalNode struct {
 	MinStakeAmount     int64         `json:"min_stake_amount"`
 	BurnAddress        string        `json:"burn_address"`
 	MinAuthorizers     int64         `json:"min_authorizers"`
+	MaxFee             int64         `json:"max_fee"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
@@ -96,6 +97,7 @@ func GetGlobalNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_burn_amount")
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
+	gn.MaxFee = config.SmartContractConfig.GetInt64("smart_contracts.zcn.max_fee")
 
 	return gn, nil
 }
