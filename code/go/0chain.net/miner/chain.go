@@ -53,6 +53,7 @@ var (
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
+	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
@@ -400,7 +401,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 				return mc.isStarted()
 			}
 			timeoutCount++
-			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
+			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin()))
 		}
 	}
 	return false

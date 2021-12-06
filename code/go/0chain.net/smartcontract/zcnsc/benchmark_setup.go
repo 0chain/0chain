@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
-	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
 	"encoding/json"
 	"strconv"
@@ -37,7 +36,7 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 func chainSetup() {
 	// settings are irrelevant here, it needs only schema
 	ch := chain.NewChainFromConfig()
-	ch.SetSignatureScheme(viper.GetString(benchmark.InternalSignatureScheme))
+	//	ch.SetSignatureScheme(viper.GetString(benchmark.InternalSignatureScheme))
 	chain.SetServerChain(ch)
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	if signatureScheme == nil {

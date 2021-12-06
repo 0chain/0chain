@@ -18,8 +18,7 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 
 	logging.Logger = zap.NewNop()
 }
@@ -246,7 +245,7 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	require.Equal(t, targetNode.Staking.Balance, node.Staking.Balance)
 }
 
-func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
+func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing(t *testing.T) {
 	// Create authorizers nodes tree
 	balances := MakeMockStateContext()
 	tree, err := GetAuthorizerNodes(balances)

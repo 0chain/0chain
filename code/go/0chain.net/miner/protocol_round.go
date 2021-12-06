@@ -802,10 +802,10 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 
 /*GetBlockProposalWaitTime - get the time to wait for the block proposals of the given round */
 func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
-	if mc.BlockProposalWaitMode == chain.BlockProposalWaitDynamic {
+	if mc.BlockProposalWaitMode() == chain.BlockProposalWaitDynamic {
 		return mc.computeBlockProposalDynamicWaitTime(r)
 	}
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
@@ -823,7 +823,7 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 		if medianTimeMS > mc.BlockProposalMaxWaitTime {
 			return medianTimeMS
 		}*/
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -1302,9 +1302,9 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
 	ssft := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
-	tick := mc.RoundTimeoutSofttoMin
-	if tick < mc.RoundTimeoutSofttoMult*ssft {
-		tick = mc.RoundTimeoutSofttoMult * ssft
+	tick := mc.RoundTimeoutSofttoMin()
+	if tick < mc.RoundTimeoutSofttoMult()*ssft {
+		tick = mc.RoundTimeoutSofttoMult() * ssft
 	}
 	logging.Logger.Info("nextTimeout", zap.Int("tick", tick))
 	return tick
@@ -1328,7 +1328,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	var r = mc.GetMinerRound(round)
 
-	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
+	if r.GetSoftTimeoutCount() == mc.RoundRestartMult() {
 		logging.Logger.Info("triggering restartRound",
 			zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx, round)

@@ -46,11 +46,11 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 
-	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize)
+	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize())
 
 	var (
 		clients          = make(map[string]*client.Client)
-		etxns            = make([]datastore.Entity, 0, mc.BlockSize)
+		etxns            = make([]datastore.Entity, 0, mc.BlockSize())
 		invalidTxns      []datastore.Entity
 		idx              int32
 		ierr             error
@@ -59,7 +59,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		roundTimeout     bool
 		failedStateCount int32
 		byteSize         int64
-		txnMap           = make(map[datastore.Key]bool, mc.BlockSize)
+		txnMap           = make(map[datastore.Key]bool, mc.BlockSize())
 	)
 
 	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
@@ -135,14 +135,14 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			return true
 		}
 		if txnProcessor(ctx, txn) {
-			if idx >= mc.BlockSize || byteSize >= mc.MaxByteSize {
+			if idx >= mc.BlockSize() || byteSize >= mc.MaxByteSize() {
 				logging.Logger.Error("generate block (too big block size)",
-					zap.Bool("idx >= block size", idx >= mc.BlockSize),
-					zap.Bool("byteSize >= mc.NMaxByteSize", byteSize >= mc.MaxByteSize),
+					zap.Bool("idx >= block size", idx >= mc.BlockSize()),
+					zap.Bool("byteSize >= mc.NMaxByteSize", byteSize >= mc.MaxByteSize()),
 					zap.Int32("idx", idx),
-					zap.Int32("block size", mc.BlockSize),
+					zap.Int32("block size", mc.BlockSize()),
 					zap.Int64("byte size", byteSize),
-					zap.Int64("max byte size", mc.MaxByteSize),
+					zap.Int64("max byte size", mc.MaxByteSize()),
 					zap.Int32("count", count),
 					zap.Int("txns", len(b.Txns)))
 				return false
@@ -180,7 +180,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 	blockSize := idx
 	var reusedTxns int32
-	if blockSize < mc.BlockSize && byteSize < mc.MaxByteSize && mc.ReuseTransactions {
+	if blockSize < mc.BlockSize() && byteSize < mc.MaxByteSize() && mc.ReuseTransactions() {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0
 		for _, ub := range blocks {
@@ -194,12 +194,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 					}
 				}
 				if txnProcessor(ctx, rtxn) {
-					if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
+					if idx == mc.BlockSize() || byteSize >= mc.MaxByteSize() {
 						break
 					}
 				}
 			}
-			if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
+			if idx == mc.BlockSize() || byteSize >= mc.MaxByteSize() {
 				break
 			}
 		}
@@ -210,8 +210,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount),
 			zap.Int32("blockSize", idx))
 	}
-	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
-		if !waitOver && blockSize < mc.MinBlockSize {
+	if blockSize != mc.BlockSize() && byteSize < mc.MaxByteSize() {
+		if !waitOver && blockSize < mc.MinBlockSize() {
 			b.Txns = nil
 			logging.Logger.Debug("generate block (insufficient txns)",
 				zap.Int64("round", b.Round),
@@ -239,8 +239,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 	}
 
-	if mc.SmartContractSettingUpdatePeriod != 0 &&
-		b.Round%mc.SmartContractSettingUpdatePeriod == 0 {
+	if mc.SmartContractSettingUpdatePeriod() != 0 &&
+		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
 		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, clients)
 		if err != nil {
 			return err
@@ -248,7 +248,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	}
 
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
-	if count > 10*mc.BlockSize {
+	if count > 10*mc.BlockSize() {
 		logging.Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
 
