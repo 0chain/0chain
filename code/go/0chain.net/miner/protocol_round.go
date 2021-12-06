@@ -1603,7 +1603,7 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 				zap.Int64("lfb_round", lfb.Round),
 				zap.Int("soft_timeout", xr.GetSoftTimeoutCount()))
 
-			if xr.GetSoftTimeoutCount() >= mc.RoundRestartMult {
+			if xr.GetSoftTimeoutCount() >= mc.RoundRestartMult() {
 				logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
 					zap.Int64("round", xr.GetRoundNumber()),
 					zap.Int64("lfb_round", lfb.Round))
