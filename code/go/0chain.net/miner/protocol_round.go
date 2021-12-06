@@ -652,7 +652,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 
-	mc.addToRoundVerification(ctx, r, b)
+	mc.addToRoundVerification(r, b)
 	r.AddProposedBlock(b)
 
 	go mc.SendBlock(ctx, b)
@@ -759,7 +759,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	mc.addToRoundVerification(context.Background(), mr, b)
+	mc.addToRoundVerification(mr, b)
 }
 
 func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round int64, hash string) []*block.BlockVerificationTicket {
@@ -843,7 +843,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	})
 }
 
-func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
 	logging.Logger.Info("adding block to verify",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -856,7 +856,9 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 }
 
 func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
-	vctx := mr.StartVerificationBlockCollection(ctx)
+	timeout, _ := context.WithTimeout(context.Background(), time.Minute)
+	//we use one minute timeout here for emergency case. normally context should be cancelled due to network progress
+	vctx := mr.StartVerificationBlockCollection(timeout)
 	gen := mc.GetGenerators(mr)
 
 	if vctx != nil && len(gen) > 0 && mr.IsVRFComplete() {
@@ -987,18 +989,22 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
+	var verifiedBlocks []*block.Block
 	for {
 		select {
 		case <-ctx.Done():
 			r.SetState(round.RoundStateVerificationTimedOut)
+			logging.Logger.Info("verification_complete", zap.Int64("round", r.Number),
+				zap.Int("verified_blocks", len(verifiedBlocks)))
 			bRank := -1
 			if r.Block != nil {
 				bRank = r.Block.RoundRank
+				logging.Logger.Debug("verification_complete", zap.Int("top_verified_rank", r.Block.RoundRank))
 			}
 			for _, b := range blocks {
 				bs := b.GetBlockState()
 				if bRank != 0 && bRank != b.RoundRank {
-					logging.Logger.Info("verification cancel (failing block)", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("block_rank", b.RoundRank), zap.Int("best_rank", bRank), zap.Int8("block_state", bs))
+					logging.Logger.Info("failing block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("block_rank", b.RoundRank), zap.Int("best_rank", bRank), zap.Int8("block_state", bs))
 				}
 				if bs == block.StateVerificationPending || bs == block.StateVerificationAccepted {
 					b.SetBlockState(block.StateVerificationFailed)
@@ -1017,7 +1023,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 						zap.String("block", b.Hash),
 						zap.Bool("has verified block", r.Block != nil),
 						zap.Int("block round rank", b.RoundRank))
-					verifyAndSend(ctx, r, b)
+					if verifyAndSend(ctx, r, b) {
+						verifiedBlocks = append(verifiedBlocks, b)
+					}
 				} else {
 					logging.Logger.Debug("verify block - rejected",
 						zap.Int64("round", b.Round),

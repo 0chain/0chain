@@ -92,7 +92,12 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		zap.String("block hash", b.Hash),
 		zap.String("magic block", b.LatestFinalizedMagicBlockHash),
 		zap.Int64("magic block round", b.LatestFinalizedMagicBlockRound))
+
+	//we use one minute timeout here for emergency case, when buffered channel is full
+	timeout, _ := context.WithTimeout(context.Background(), time.Minute)
 	select {
+	case <-timeout.Done():
+		logging.Logger.Debug("Can't add block to verify channel, context is shut")
 	case r.blocksToVerifyChannel <- b:
 	default:
 	}
