@@ -732,7 +732,7 @@ func getListOfBlobbers(dataShards, parityShards int) []*StorageNode{
 	var now = common.Timestamp(10000)
 
 	var goodBlobber = StorageNode{
-		Capacity: 536870912,
+		Capacity: 536870912 * 3,
 		Used:     73,
 		Terms: Terms{
 			MaxOfferDuration:        1000 * scYaml.MinAllocDuration,
