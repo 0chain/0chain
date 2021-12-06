@@ -51,6 +51,8 @@ func NewPool(Type int8) *Pool {
 
 /*Size - size of the pool regardless node status */
 func (np *Pool) Size() int {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
 	return len(np.NodesMap)
 }
 
@@ -96,6 +98,9 @@ func (np *Pool) GetNode(id string) *Node {
 
 // GetActiveCount returns the active count
 func (np *Pool) GetActiveCount() (count int) {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+
 	for _, node := range np.NodesMap {
 		if node.IsActive() {
 			count++
@@ -107,9 +112,11 @@ func (np *Pool) GetActiveCount() (count int) {
 // GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the
 // time to send a large message
 func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
+	np.mmx.RLock()
 	for _, v := range np.NodesMap {
 		sorted = append(sorted, v)
 	}
+	np.mmx.RUnlock()
 
 	sort.SliceStable(sorted, func(i, j int) bool {
 		return sorted[i].getOptimalLargeMessageSendTime() <
@@ -120,9 +127,12 @@ func (np *Pool) GetNodesByLargeMessageTime() (sorted []*Node) {
 }
 
 func (np *Pool) shuffleNodes(preferPrevMBNodes bool) (shuffled []*Node) {
+	np.mmx.RLock()
 	for _, v := range np.NodesMap {
 		shuffled = append(shuffled, v)
 	}
+	defer np.mmx.RUnlock()
+
 	rand.Shuffle(len(shuffled), func(i, j int) {
 		shuffled[i], shuffled[j] = shuffled[j], shuffled[i]
 	})
@@ -147,6 +157,7 @@ func (np *Pool) Print(w io.Writer) {
 }
 
 func (np *Pool) computeNodePositions() {
+
 	sort.SliceStable(np.Nodes, func(i, j int) bool {
 		return np.Nodes[i].GetKey() < np.Nodes[j].GetKey()
 	})
@@ -190,6 +201,8 @@ func (np *Pool) GetMedianNetworkTime() float64 {
 
 // N2NURLs returns the urls of all nodes in the pool
 func (np *Pool) N2NURLs() (n2n []string) {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
 	for _, node := range np.NodesMap {
 		n2n = append(n2n, node.GetN2NURLBase())
 	}
@@ -211,6 +224,9 @@ func (np *Pool) CopyNodes() (list []*Node) {
 
 // CopyNodesMap returns copy of underlying map.
 func (np *Pool) CopyNodesMap() (nodesMap map[string]*Node) {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+
 	nodesMap = make(map[string]*Node, len(np.NodesMap))
 	for i, n := range np.NodesMap {
 		nodesMap[n.GetKey()] = np.NodesMap[i]
@@ -229,6 +245,9 @@ func (np *Pool) HasNode(key string) (ok bool) {
 
 // Keys of all nods of the pool's map.
 func (np *Pool) Keys() (keys []string) {
+	np.mmx.RLock()
+	defer np.mmx.RUnlock()
+
 	for _, n := range np.NodesMap {
 		keys = append(keys, n.GetKey())
 	}
