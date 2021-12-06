@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
@@ -35,4 +36,9 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	}
 
 	m2m.SendAll(ctx, VerificationTicketSender(bvt))
+}
+
+// SendBlock - send the block proposal to the network.
+func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+	mc.sendBlock(ctx, b)
 }

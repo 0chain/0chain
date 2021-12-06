@@ -1,17 +1,20 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
 
 import (
 	"context"
+	"log"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-
+	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
+	"0chain.net/core/common"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {
@@ -157,4 +160,79 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	if len(bad) > 0 {
 		mb.Miners.SendToMultipleNodes(ctx, VerificationTicketSender(badvt), bad)
 	}
+}
+
+// SendBlock - send the block proposal to the network.
+func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+	if mc.isSendingDifferentBlocks(b.Round) {
+		mc.sendDifferentBlocksToMiners(ctx, b)
+		return
+	}
+
+	mc.sendBlock(ctx, b)
+}
+
+func (mc *Chain) sendDifferentBlocksToMiners(ctx context.Context, b *block.Block) {
+	miners := mc.GetMagicBlock(b.Round).Miners.CopyNodes()
+	blocks, err := randomizeBlocks(b, len(miners))
+	if err != nil {
+		log.Panicf("Conductor: SendDifferentBlocksToMiners: error while randomizing blocks: %v", err)
+	}
+	for ind, n := range miners {
+		if n.ID == node.Self.ID {
+			continue
+		}
+
+		b := blocks[ind]
+		handler := VerifyBlockSender(b)
+		ok := handler(ctx, n)
+		if !ok {
+			log.Panicf("Conductor: SendDifferentBlocksToMiners: block is not sent to miner with ID %s.", n.ID)
+		}
+	}
+
+	err = configureSendDifferentBlocksToMiners(
+		&cases.SendDifferentBlocksToMinersConfig{
+			MinersRoundRank: mc.GetRound(b.Round).GetMinerRank(node.Self.Node),
+		},
+	)
+	if err != nil {
+		log.Panicf("Conductor: SendDifferentBlocksToMiners: error while configuring test case: " + err.Error())
+	}
+}
+
+func configureSendDifferentBlocksToMiners(cfg *cases.SendDifferentBlocksToMinersConfig) error {
+	caseCfg, err := cfg.Encode()
+	if err != nil {
+		return err
+	}
+	return crpc.Client().ConfigureTestCase(caseCfg)
+}
+
+func (mc *Chain) isSendingDifferentBlocks(r int64) bool {
+	isFirstGenerator := mc.GetRound(r).GetMinerRank(node.Self.Node) == 0
+	testCfg := crpc.Client().State().SendDifferentBlocksToMiners
+	return testCfg != nil && testCfg.Round == r && isFirstGenerator
+}
+
+func randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
+	blocks := make([]*block.Block, numBlocks)
+	for ind := range blocks {
+		cpBl, err := copyBlock(b)
+		if err != nil {
+			return nil, err
+		}
+		cpBl.CreationDate += common.Timestamp(ind)
+		cpBl.HashBlock()
+		blocks[ind] = cpBl
+	}
+	return blocks, nil
+}
+
+func copyBlock(b *block.Block) (*block.Block, error) {
+	cp := new(block.Block)
+	if err := cp.Decode(b.Encode()); err != nil {
+		return nil, err
+	}
+	return cp, nil
 }

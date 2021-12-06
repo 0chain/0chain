@@ -739,6 +739,24 @@ func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.ExtendNotN
 	return
 }
 
+// ConfigureSendDifferentBlocksToMinersCheck implements config.Executor interface.
+func (r *Runner) ConfigureSendDifferentBlocksToMinersCheck(cfg *config.SendDifferentBlocksToMiners) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"send different blocks to miners\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.SendDifferentBlocksToMiners = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewSendDifferentBlocksToMiners()
+
+	return
+}
+
 // MakeTestCaseCheck implements config.Executor interface.
 func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if r.verbose {

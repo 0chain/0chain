@@ -47,7 +47,8 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
-	ExtendNotNotarisedBlock *config.ExtendNotNotarisedBlock
+	ExtendNotNotarisedBlock     *config.ExtendNotNotarisedBlock
+	SendDifferentBlocksToMiners *config.SendDifferentBlocksToMiners
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

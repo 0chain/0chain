@@ -99,6 +99,11 @@ type (
 		Round  int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
+	// SendDifferentBlocksToMiners represents config for cases.SendDifferentBlocksToMiners.
+	SendDifferentBlocksToMiners struct {
+		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	}
+
 	// TestCaseCheck represents generic configuration for making tests checks.
 	TestCaseCheck struct {
 		WaitTimeStr string `mapstructure:"wait_time"`
@@ -109,6 +114,16 @@ type (
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *ExtendNotNotarisedBlock) Decode(val interface{}) error {
 	var cfg ExtendNotNotarisedBlock
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *SendDifferentBlocksToMiners) Decode(val interface{}) error {
+	var cfg SendDifferentBlocksToMiners
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}

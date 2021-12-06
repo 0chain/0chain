@@ -9,7 +9,7 @@ import (
 )
 
 // SendBlock - send the block proposal to the network.
-func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) sendBlock(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(ctx, VerifyBlockSender(b))
