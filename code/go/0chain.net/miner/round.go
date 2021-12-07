@@ -21,6 +21,7 @@ type Round struct {
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
 	vrfSharesCache        *vrfSharesCache
+	ownVerificationTicket *block.BlockVerificationTicket
 }
 
 type vrfSharesCache struct {
