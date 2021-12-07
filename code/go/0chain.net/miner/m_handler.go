@@ -109,13 +109,14 @@ func SetupM2MRequestors() {
 // VRFShareHandler - handle the vrf share.
 func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
-
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
 		logging.Logger.Info("VRFShare: returning invalid Entity")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
+
+	logging.Logger.Debug("VRFShare: received")
 
 	// skip all VRFS before LFB-ticket (sharders' LFB)
 	var tk = mc.GetLatestLFBTicket(ctx)
@@ -207,10 +208,19 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	vrfs.SetParty(sender)
 	if mr := mc.GetMinerRound(vrfs.Round); mr != nil {
 		if mr.IsVRFComplete() {
+			logging.Logger.Info("Reject VRFShare: VRF is complete for this round",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+				zap.Int("vrfs_sender_index", sender.SetIndex),
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 
 		if mr.VRFShareExist(vrfs) {
+			logging.Logger.Info("Reject VRFShare: VRF is already exist",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+				zap.Int("vrfs_sender_index", sender.SetIndex),
+				zap.String("vrfs_id", vrfs.GetKey()),
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
 	}
