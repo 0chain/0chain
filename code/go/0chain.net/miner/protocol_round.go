@@ -936,6 +936,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
+		r.ownVerificationTicket = bvt
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
 			logging.Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash))
@@ -1433,6 +1434,14 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 			}
 			go mc.SendBlock(context.Background(), b)
 		}
+		if r.ownVerificationTicket != nil {
+			if mc.GetRoundTimeoutCount() <= 10 {
+				logging.Logger.Info("Sending verification ticket in handle NoProgress",
+					zap.Int64("round", r.Number), zap.String("block", b.Hash))
+
+			}
+			go mc.SendVerificationTicket(ctx, b, r.ownVerificationTicket)
+		}
 	}
 
 	if r.vrfShare != nil {
@@ -1443,6 +1452,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Info("handleNoProgress",
