@@ -24,6 +24,18 @@ type Round struct {
 	ownVerificationTicket *block.BlockVerificationTicket
 }
 
+func (r *Round) OwnVerificationTicket() *block.BlockVerificationTicket {
+	r.muVerification.RLock()
+	defer r.muVerification.RUnlock()
+	return r.ownVerificationTicket
+}
+
+func (r *Round) SetOwnVerificationTicket(ownVerificationTicket *block.BlockVerificationTicket) {
+	r.muVerification.Lock()
+	r.ownVerificationTicket = ownVerificationTicket
+	r.muVerification.Unlock()
+}
+
 type vrfSharesCache struct {
 	vrfShares map[string]*round.VRFShare
 	mutex     *sync.Mutex

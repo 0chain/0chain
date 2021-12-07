@@ -944,11 +944,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
-		r.ownVerificationTicket = bvt
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
 			logging.Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 			go mc.SendVerificationTicket(ctx, b, bvt)
+			r.SetOwnVerificationTicket(bvt)
 		}
 		if bnb == nil {
 			r.Block = b
@@ -1453,14 +1453,14 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 			}
 			logging.Logger.Info("Sent proposal in handle NoProgress")
 			go mc.SendBlock(context.Background(), b)
-		}
-		if r.ownVerificationTicket != nil {
-			if mc.GetRoundTimeoutCount() <= 10 {
-				logging.Logger.Info("Sending verification ticket in handle NoProgress",
-					zap.Int64("round", r.Number), zap.String("block", b.Hash))
 
+			if r.OwnVerificationTicket() != nil {
+				if mc.GetRoundTimeoutCount() <= 10 {
+					logging.Logger.Info("Sending verification ticket in handle NoProgress",
+						zap.Int64("round", r.Number), zap.String("block", b.Hash))
+				}
+				go mc.SendVerificationTicket(ctx, b, r.OwnVerificationTicket())
 			}
-			go mc.SendVerificationTicket(ctx, b, r.ownVerificationTicket)
 		}
 	}
 
