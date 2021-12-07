@@ -232,7 +232,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 				zap.Int64("round", b.Round),
 				zap.Int64("block RRS", b.GetRoundRandomSeed()),
 				zap.Int64("round RRS", mr.GetRandomSeed()))
-			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+			//mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 	}
 
