@@ -14,7 +14,7 @@ import (
 /*Round - a round from miner's perspective */
 type Round struct {
 	*round.Round
-	muVerification        sync.RWMutex
+	roundGuard            sync.RWMutex
 	blocksToVerifyChannel chan *block.Block
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
@@ -24,16 +24,28 @@ type Round struct {
 	ownVerificationTicket *block.BlockVerificationTicket
 }
 
+func (r *Round) VrfShare() *round.VRFShare {
+	r.roundGuard.RLock()
+	defer r.roundGuard.RUnlock()
+	return r.vrfShare
+}
+
+func (r *Round) SetVrfShare(vrfShare *round.VRFShare) {
+	r.roundGuard.Lock()
+	defer r.roundGuard.Unlock()
+	r.vrfShare = vrfShare
+}
+
 func (r *Round) OwnVerificationTicket() *block.BlockVerificationTicket {
-	r.muVerification.RLock()
-	defer r.muVerification.RUnlock()
+	r.roundGuard.RLock()
+	defer r.roundGuard.RUnlock()
 	return r.ownVerificationTicket
 }
 
 func (r *Round) SetOwnVerificationTicket(ownVerificationTicket *block.BlockVerificationTicket) {
-	r.muVerification.Lock()
+	r.roundGuard.Lock()
 	r.ownVerificationTicket = ownVerificationTicket
-	r.muVerification.Unlock()
+	r.roundGuard.Unlock()
 }
 
 type vrfSharesCache struct {
@@ -118,8 +130,8 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 
 // AddVerificationTickets - add verification tickets
 func (r *Round) AddVerificationTickets(bvts []*block.BlockVerificationTicket) {
-	r.muVerification.Lock()
-	defer r.muVerification.Unlock()
+	r.roundGuard.Lock()
+	defer r.roundGuard.Unlock()
 	for i, bvt := range bvts {
 		r.verificationTickets[bvt.Signature] = bvts[i]
 	}
@@ -128,8 +140,8 @@ func (r *Round) AddVerificationTickets(bvts []*block.BlockVerificationTicket) {
 /*GetVerificationTickets - get verification tickets for a given block in this round */
 func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
-	r.muVerification.Lock()
-	defer r.muVerification.Unlock()
+	r.roundGuard.Lock()
+	defer r.roundGuard.Unlock()
 	for _, bvt := range r.verificationTickets {
 		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)
@@ -140,10 +152,10 @@ func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTick
 
 // IsTicketCollected checks if the ticket has already verified and collected
 func (r *Round) IsTicketCollected(ticket *block.VerificationTicket) (exist bool) {
-	r.muVerification.Lock()
+	r.roundGuard.Lock()
 	vt, ok := r.verificationTickets[ticket.Signature]
 	exist = ok && vt.VerificationTicket == *ticket
-	r.muVerification.Unlock()
+	r.roundGuard.Unlock()
 	return
 }
 
@@ -163,8 +175,8 @@ func (r *Round) isVerificationComplete() bool {
 
 /*StartVerificationBlockCollection - start collecting blocks for verification */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
-	r.muVerification.Lock()
-	defer r.muVerification.Unlock()
+	r.roundGuard.Lock()
+	defer r.roundGuard.Unlock()
 
 	if r.verificationCancelf != nil {
 		return nil
@@ -179,8 +191,8 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
-	r.muVerification.Lock()
-	defer r.muVerification.Unlock()
+	r.roundGuard.Lock()
+	defer r.roundGuard.Unlock()
 	f := r.verificationCancelf
 	if f == nil {
 		return

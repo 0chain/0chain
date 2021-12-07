@@ -88,7 +88,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 		zap.String("share", vrfs.Share))
 
 	vrfs.SetParty(node.Self.Underlying())
-	r.vrfShare = vrfs
+	r.SetVrfShare(vrfs)
 	// TODO: do we need to check if AddVRFShare is success or not?
 	mc.AddVRFShare(ctx, r, vrfs)
 	go mc.SendVRFShare(context.Background(), vrfs.Clone())
@@ -285,7 +285,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	}
 
 	if pr.HasRandomSeed() {
-		r.vrfShare = nil
+		r.SetVrfShare(nil)
 		logging.Logger.Info("RedoVrfShare after vrfShare is nil",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("round_timeout", r.GetTimeoutCount()))
@@ -1464,10 +1464,10 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 		}
 	}
 
-	if r.vrfShare != nil {
+	if r.VrfShare() != nil {
 		// send VRF share in goroutine, use new context, the old one will be canceled soon
 		// after the function is returned
-		go mc.SendVRFShare(context.Background(), r.vrfShare.Clone())
+		go mc.SendVRFShare(context.Background(), r.VrfShare().Clone())
 		logging.Logger.Info("Sent vrf shares in handle NoProgress")
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
