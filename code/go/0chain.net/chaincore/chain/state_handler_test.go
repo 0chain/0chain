@@ -1239,7 +1239,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Storagesc_/getblobbers_404",
+			name: "Storagesc_/getblobbers_500",
 			chain: func() *chain.Chain {
 				gv := util.SecureSerializableValue{Buffer: []byte("}{")}
 
@@ -1265,7 +1265,7 @@ func TestChain_HandleSCRest_Status(t *testing.T) {
 				}(),
 			},
 			setValidConfig: true,
-			wantStatus:     http.StatusNotFound,
+			wantStatus:     http.StatusInternalServerError,
 		},
 		{
 			name:  "Storagesc_/getBlobber_400",
