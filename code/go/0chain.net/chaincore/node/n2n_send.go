@@ -71,6 +71,12 @@ func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, no
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodes(false)
+	var infos []int
+	for _, n := range nodes {
+		infos = append(infos, n.SetIndex)
+	}
+	logging.Logger.Debug("send at least", zap.Int("number_to_send", numNodes),
+		zap.Int("num_of_nodes", len(nodes)), zap.Ints("indices", infos))
 	return np.sendTo(ctx, numNodes, nodes, handler)
 }
 
