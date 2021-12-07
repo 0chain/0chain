@@ -1,0 +1,137 @@
+name: "0Chain System Tests" 
+
+concurrency:
+  group: "${{ github.ref }}"
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+       system_tests_branch:
+        description: 'system_tests branch. Containing the tests you wish to run'
+        default: 'master'
+        required: true
+       miner_image:
+        description: 'miner DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       sharder_image:
+        description: 'sharder DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       zbox_cli_branch:
+        description: '0Box CLI (branch or commit SHA) which the tests will use'
+        default: 'staging'
+        required: true
+       zwallet_cli_branch:
+        description: '0Wallet CLI (branch or commit SHA) which the tests will use'
+        default: 'staging'
+        required: true
+       blobber_image:
+        description: 'blobber DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       validator_image:
+        description: 'validator DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       zbox_image:
+        description: '0box DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       zblock_image:
+        description: '0block DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       skip_tests:
+        description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
+        default: 'FALSE'
+        required: true
+jobs:
+  system-tests:  
+    runs-on: [ tests-suite ]
+    timeout-minutes: 40
+    steps:
+      
+    - name: "Get current PR"
+      uses: jwalton/gh-find-current-pr@v1
+      id: findPr
+      with:
+        github-token: ${{ github.token }} 
+        
+    - name: "Setup Test Run"
+      run: |
+        echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
+        echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+    
+    - name: "Set PR Status Pending"
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      if: steps.findPr.outputs.number
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "System tests running"
+        state: "pending"
+        repository: ${{ github.repository }}
+        context: ${{ github.workflow }}
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: "Deploy 0Chain"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      uses: 0chain/actions/deploy-0chain@master
+      with:
+        kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+        teardown_condition: "TESTS_PASSED"
+        miner_image:  ${{ github.event.inputs.miner_image }}
+        sharder_image: ${{ github.event.inputs.sharder_image }}
+        blobber_image: ${{ github.event.inputs.blobber_image }}
+        validator_image: ${{ github.event.inputs.validator_image }}
+        zbox_image: ${{ github.event.inputs.zbox_image }}
+        zblock_image: ${{ github.event.inputs.zblock_image }}
+        zdns_image: staging
+        explorer_image: latest
+        zproxy_image: staging
+        zsearch_image: staging
+        blobber_stake_image: latest
+
+    - name: "Run System tests"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      uses: 0chain/actions/run-system-tests@master
+      with:
+        system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
+        network: ${{ env.NETWORK_URL }}
+        zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
+        zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+        smart_contract_owner_wallet_json: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
+        svc_account_secret: ${{ github.token }}
+        deploy_report_page: false
+        archive_results: true
+        run_flaky_tests: false
+        retry_failures: true
+        
+    - name: "Set PR Status Success"
+      if: ${{ success() && steps.findPr.outputs.number }}
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "System tests success"
+        state: ${{ job.status }}
+        repository: ${{ github.repository }}
+        context: ${{ github.workflow }}
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: "Set PR Status Failed"
+      if: ${{ failure() && steps.findPr.outputs.number }}
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "System tests failure"
+        state: ${{ job.status }}
+        repository: ${{ github.repository }}
+        context: ${{ github.workflow }}
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
