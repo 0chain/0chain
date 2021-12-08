@@ -196,8 +196,8 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		er = mc.AddRound(mr).(*Round)
 	)
 
-	if er != mr && mc.isStarted() {
-		logging.Logger.Info("StartNextRound found next round ready. No VRFShares Sent",
+	if er != mr && mc.isStarted() && er.HasRandomSeed() {
+		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
 			zap.Int64("rrs", r.GetRandomSeed()),
 			zap.Bool("is_started", mc.isStarted()))
