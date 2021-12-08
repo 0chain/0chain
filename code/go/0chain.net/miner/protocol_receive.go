@@ -456,11 +456,10 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if mc.GetCurrentRound() <= not.Round && !mc.isAheadOfSharders(ctx, not.Round) {
+	if mc.GetCurrentRound() <= not.Round {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", not.Round+1))
-
-		go mc.StartNextRound(ctx, r)
+		go mc.startNextRoundNotAhead(ctx, r)
 	}
 
 	if !b.IsStateComputed() {
