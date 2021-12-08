@@ -207,7 +207,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 			return nil
 		}
 
-		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+		//mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 
 		mc.AddToRoundVerification(ctx, mr, b)
 		return nil

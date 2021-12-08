@@ -116,8 +116,6 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	}
 	mc := GetMinerChain()
 
-	logging.Logger.Debug("VRFShare: received")
-
 	// skip all VRFS before LFB-ticket (sharders' LFB)
 	var tk = mc.GetLatestLFBTicket(ctx)
 	if tk == nil {
