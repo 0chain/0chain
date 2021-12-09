@@ -14,9 +14,7 @@ import (
 
 /*SendVRFShare - send the round vrf share */
 func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	mb := mc.GetMagicBlock(vrfs.Round)
-	m2m := mb.Miners
-	m2m.SendAll(ctx, RoundVRFSender(vrfs))
+	mc.sendVRFShare(ctx, vrfs)
 }
 
 /*SendVerificationTicket - send the block verification ticket */

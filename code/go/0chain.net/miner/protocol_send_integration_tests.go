@@ -5,16 +5,22 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"strconv"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {
@@ -29,6 +35,29 @@ func withTimeout(vrfs *round.VRFShare, timeout int) (bad *round.VRFShare) {
 	*bad = *vrfs
 	bad.RoundTimeoutCount = timeout
 	return
+}
+
+func (mc *Chain) isTestingSendDifferentBlocks(round int64, timeoutCount int) bool {
+	var (
+		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
+		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.Round == round
+
+		cfgFromAllGen        = crpc.Client().State().SendDifferentBlocksFromAllGenerators
+		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.Round == round
+	)
+	return (shouldTestFromAllGen || shouldTestFromFirstGen) && timeoutCount == 1
+}
+
+func addSendDifferentBlocksResult(roundTimeOutCount int) error {
+	res := &cases.SendDiffBlocksResult{
+		MinerID:      node.Self.ID,
+		TimeoutCount: roundTimeOutCount,
+	}
+	blob, err := res.Encode()
+	if err != nil {
+		return err
+	}
+	return crpc.Client().AddTestCaseResult(blob)
 }
 
 func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
@@ -48,6 +77,15 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
 		good, bad = crpcutils.Split(state, state.RoundTimeout,
 			mb.Miners.CopyNodes())
+
+	case mc.isTestingSendDifferentBlocks(vrfs.Round, vrfs.RoundTimeoutCount):
+		log.Printf("adding tests result")
+		if err := addSendDifferentBlocksResult(vrfs.RoundTimeoutCount); err != nil {
+			log.Panicf("Conductor: error while adding test result: %v", err)
+		}
+		mc.sendVRFShare(ctx, vrfs)
+		return
+
 	default:
 		good = mb.Miners.CopyNodes() // all good
 	}
@@ -164,19 +202,19 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 
 // SendBlock - send the block proposal to the network.
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
-	if mc.isSendingDifferentBlocks(b.Round) {
-		mc.sendDifferentBlocksToMiners(ctx, b)
+	if mc.isSendingDifferentBlocksFromFirstGenerator(b.Round) || mc.isSendingDifferentBlocksFromAllGenerators(b.Round) {
+		mc.sendDifferentBlocks(ctx, b)
 		return
 	}
 
 	mc.sendBlock(ctx, b)
 }
 
-func (mc *Chain) sendDifferentBlocksToMiners(ctx context.Context, b *block.Block) {
+func (mc *Chain) sendDifferentBlocks(ctx context.Context, b *block.Block) {
 	miners := mc.GetMagicBlock(b.Round).Miners.CopyNodes()
-	blocks, err := randomizeBlocks(b, len(miners))
+	blocks, err := mc.randomizeBlocks(b, len(miners))
 	if err != nil {
-		log.Panicf("Conductor: SendDifferentBlocksToMiners: error while randomizing blocks: %v", err)
+		log.Panicf("Conductor: error while randomizing blocks: %v", err)
 	}
 	for ind, n := range miners {
 		if n.ID == node.Self.ID {
@@ -187,52 +225,75 @@ func (mc *Chain) sendDifferentBlocksToMiners(ctx context.Context, b *block.Block
 		handler := VerifyBlockSender(b)
 		ok := handler(ctx, n)
 		if !ok {
-			log.Panicf("Conductor: SendDifferentBlocksToMiners: block is not sent to miner with ID %s.", n.ID)
+			log.Panicf("Conductor: block is not sent to miner with ID %s", n.ID)
 		}
 	}
-
-	err = configureSendDifferentBlocksToMiners(
-		&cases.SendDifferentBlocksToMinersConfig{
-			MinersRoundRank: mc.GetRound(b.Round).GetMinerRank(node.Self.Node),
-		},
-	)
-	if err != nil {
-		log.Panicf("Conductor: SendDifferentBlocksToMiners: error while configuring test case: " + err.Error())
-	}
 }
 
-func configureSendDifferentBlocksToMiners(cfg *cases.SendDifferentBlocksToMinersConfig) error {
-	caseCfg, err := cfg.Encode()
-	if err != nil {
-		return err
-	}
-	return crpc.Client().ConfigureTestCase(caseCfg)
+func (mc *Chain) isSendingDifferentBlocksFromFirstGenerator(r int64) bool {
+	currRound := mc.GetRound(r)
+	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
+	testCfg := crpc.Client().State().SendDifferentBlocksFromFirstGenerator
+	return testCfg != nil && testCfg.Round == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
 }
 
-func (mc *Chain) isSendingDifferentBlocks(r int64) bool {
-	isFirstGenerator := mc.GetRound(r).GetMinerRank(node.Self.Node) == 0
-	testCfg := crpc.Client().State().SendDifferentBlocksToMiners
-	return testCfg != nil && testCfg.Round == r && isFirstGenerator
+func (mc *Chain) isSendingDifferentBlocksFromAllGenerators(r int64) bool {
+	currRound := mc.GetRound(r)
+	isGenerator := mc.IsRoundGenerator(mc.GetRound(r), node.Self.Node)
+	testCfg := crpc.Client().State().SendDifferentBlocksFromAllGenerators
+	return testCfg != nil && testCfg.Round == r && isGenerator && currRound.GetTimeoutCount() == 0
 }
 
-func randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
+func (mc *Chain) randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
 	blocks := make([]*block.Block, numBlocks)
 	for ind := range blocks {
 		cpBl, err := copyBlock(b)
 		if err != nil {
 			return nil, err
 		}
-		cpBl.CreationDate += common.Timestamp(ind)
+
+		txn, err := createDataTxn(encryption.Hash(strconv.Itoa(int(time.Now().UnixNano()))))
+		if err != nil {
+			return nil, err
+		}
+		cpBl.Txns = append(cpBl.Txns, txn)
+
 		cpBl.HashBlock()
+		if cpBl.Signature, err = node.Self.Sign(cpBl.Hash); err != nil {
+			return nil, err
+		}
 		blocks[ind] = cpBl
 	}
 	return blocks, nil
 }
 
 func copyBlock(b *block.Block) (*block.Block, error) {
+	blob, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
 	cp := new(block.Block)
-	if err := cp.Decode(b.Encode()); err != nil {
+	if err := json.Unmarshal(blob, cp); err != nil {
 		return nil, err
 	}
 	return cp, nil
+}
+
+func createDataTxn(data string) (*transaction.Transaction, error) {
+	txn := &transaction.Transaction{
+		VersionField: datastore.VersionField{
+			Version: "1.0",
+		},
+		ClientID:        node.Self.ID,
+		PublicKey:       node.Self.PublicKey,
+		ChainID:         chain.GetServerChain().ID,
+		TransactionData: data,
+		CreationDate:    common.Now(),
+		TransactionType: transaction.TxnTypeData,
+	}
+	txn.OutputHash = txn.ComputeOutputHash()
+	if _, err := txn.Sign(node.Self.GetSignatureScheme()); err != nil {
+		return nil, err
+	}
+	return txn, nil
 }

@@ -21,7 +21,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
@@ -331,21 +330,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg := new(sync.WaitGroup)
+
 	if mc.isTestingNotNotarisedBlockExtension(b.Round) {
 		wg.Add(1)
 		go func() {
 			if err := addNotNotarisedBlockExtensionTestResult(mc.GetRound(b.Round)); err != nil {
 				log.Printf("Conductor: NotNotarisedBlockExtension: error while sending result: %v", err)
-			}
-			wg.Done()
-		}()
-	}
-
-	if mc.isTestingSendDifferentBlocksToMiners(b.Round) {
-		wg.Add(1)
-		go func() {
-			if err := addSendDifferentBlocksToMinersTestResult(b); err != nil {
-				log.Printf("Conductor: SendDifferentBlocksToMiners: error while sending result: %v", err)
 			}
 			wg.Done()
 		}()
@@ -388,29 +378,6 @@ func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
 	}
 
 	// we need to collect all block's verification statuses from the first ranked replica
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
-	replicators := rankedMiners[genNum:]
-	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
-}
-
-func addSendDifferentBlocksToMinersTestResult(b *block.Block) error {
-	res := &cases.SendDifferentBlocksToMinersResult{BlocksRoundRank: b.RoundRank}
-	blob, err := res.Encode()
-	if err != nil {
-		return err
-	}
-	return crpc.Client().AddTestCaseResult(blob)
-}
-
-func (mc *Chain) isTestingSendDifferentBlocksToMiners(round int64) bool {
-	cfg := crpc.Client().State().SendDifferentBlocksToMiners
-	shouldTest := cfg != nil && cfg.Round == round
-	if !shouldTest {
-		return false
-	}
-
-	// we need to collect test's report from the first ranked replica
 	genNum := mc.GetGeneratorsNumOfRound(round)
 	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
 	replicators := rankedMiners[genNum:]

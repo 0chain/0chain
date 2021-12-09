@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 )
 
@@ -63,4 +64,11 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 		m2s := mb.Sharders
 		m2s.SendAll(ctx, FinalizedBlockSender(b))
 	}
+}
+
+/*SendVRFShare - send the round vrf share */
+func (mc *Chain) sendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
+	mb := mc.GetMagicBlock(vrfs.Round)
+	m2m := mb.Miners
+	m2m.SendAll(ctx, RoundVRFSender(vrfs))
 }

@@ -99,8 +99,13 @@ type (
 		Round  int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
-	// SendDifferentBlocksToMiners represents config for cases.SendDifferentBlocksToMiners.
-	SendDifferentBlocksToMiners struct {
+	// SendDifferentBlocksFromFirstGenerator represents config for cases.SendDifferentBlocksFromFirstGenerator.
+	SendDifferentBlocksFromFirstGenerator struct {
+		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	}
+
+	// SendDifferentBlocksFromAllGenerators represents config for cases.SendDifferentBlocksFromAllGenerators.
+	SendDifferentBlocksFromAllGenerators struct {
 		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
@@ -122,8 +127,18 @@ func (c *ExtendNotNotarisedBlock) Decode(val interface{}) error {
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
-func (c *SendDifferentBlocksToMiners) Decode(val interface{}) error {
-	var cfg SendDifferentBlocksToMiners
+func (c *SendDifferentBlocksFromFirstGenerator) Decode(val interface{}) error {
+	var cfg SendDifferentBlocksFromFirstGenerator
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *SendDifferentBlocksFromAllGenerators) Decode(val interface{}) error {
+	var cfg SendDifferentBlocksFromAllGenerators
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}
