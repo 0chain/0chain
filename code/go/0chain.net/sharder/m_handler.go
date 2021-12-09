@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -19,9 +20,9 @@ func SetupM2SReceivers() {
 	options := &node.ReceiveOptions{}
 	options.MessageFilter = sc
 	http.HandleFunc("/v1/_m2s/block/finalized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(FinalizedBlockHandler, options)))
-	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, options)))
+	http.HandleFunc("/v1/_m2s/block/notarized", common.N2NRateLimit(node.RejectDuplicateNotarizedBlockHandler(
+		sc, node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, options))))
 	http.HandleFunc("/v1/_m2s/block/notarized/kick", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockKickHandler, nil)))
-	// http.HandleFunc("/v1/_x2s/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 }
 
 //AcceptMessage - implement the node.MessageFilterI interface
@@ -63,11 +64,13 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 			zap.Int64("lfb round", lfb.Round))
 		return true, nil // doesn't need a not. block for the round
 	}
+
 	_, err := sc.GetBlock(ctx, b.Hash)
 	if err == nil {
 		Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
 		return true, nil
 	}
+
 	select {
 	case sc.GetBlockChannel() <- b:
 	case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
@@ -92,6 +95,39 @@ func NotarizedBlockKickHandler(ctx context.Context, entity datastore.Entity) (in
 	}
 	sc.GetBlockChannel() <- b // even if we have the block
 	return true, nil
+}
+
+// RejectNotarizedBlock returns true if the sharder is being processed or
+// the block is already notarized
+func (sc *Chain) RejectNotarizedBlock(hash string) bool {
+	_, err := sc.processingBlocks.Get(hash)
+	switch err {
+	case cache.ErrKeyNotFound:
+		_, err := sc.GetBlock(context.Background(), hash)
+		if err == nil {
+			// block is already notarized, reject
+			N2n.Debug("reject notarized block", zap.String("hash", hash))
+			return true
+		}
+
+		return false
+	case nil:
+		// find the key in the cache
+		N2n.Debug("reject notarized block", zap.String("hash", hash))
+		return true
+	default:
+		// should not happen here
+		return false
+	}
+}
+
+func (sc *Chain) cacheProcessingBlock(hash string) {
+	sc.processingBlocks.Add(hash, struct{}{})
+}
+
+//
+func (sc *Chain) removeProcessingBlock(hash string) {
+	sc.processingBlocks.Remove(hash)
 }
 
 /*

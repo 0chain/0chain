@@ -207,7 +207,7 @@ func main() {
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
 	common.ConfigRateLimits()
-	initN2NHandlers(mc.Chain)
+	initN2NHandlers(mc)
 
 	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
@@ -410,7 +410,7 @@ func initHandlers() {
 	serverChain.SetupNodeHandlers()
 }
 
-func initN2NHandlers(c *chain.Chain) {
+func initN2NHandlers(c *miner.Chain) {
 	node.SetupN2NHandlers()
 	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
@@ -419,7 +419,7 @@ func initN2NHandlers(c *chain.Chain) {
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
-	chain.SetupX2XResponders(c)
+	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
 }

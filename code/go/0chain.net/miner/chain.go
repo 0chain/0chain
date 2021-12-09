@@ -511,3 +511,7 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	defer mc.muDKG.Unlock()
 	return mc.roundDkg.Put(dkg, startingRound)
 }
+
+func (mc *Chain) RejectNotarizedBlock(hash string) bool {
+	return false
+}

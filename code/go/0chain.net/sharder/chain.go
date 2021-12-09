@@ -43,6 +43,7 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
+	sharderChain.processingBlocks = cache.NewLRUCache(1000)
 	c.RoundF = SharderRoundFactory{}
 }
 
@@ -67,6 +68,9 @@ type Chain struct {
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
 	TieringStats   *MinioStats
+
+	processingBlocks *cache.LRU
+	//nbsMutex         sync.Mutex
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
