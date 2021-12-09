@@ -2,58 +2,62 @@ package blockstore
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"testing"
 
 	"golang.org/x/sys/unix"
 
 	b "0chain.net/chaincore/block"
 	"0chain.net/core/logging"
+	"0chain.net/core/viper"
 )
 
 func Benchmark_DiskTier_removeSelectedVolume(b *testing.B) {
 	// Call it only manually with an adequate number of tests.
-	// Example use:  go test -bench=Benchmark_removeSelectedVolume -benchmem -benchtime=5000x  -tags bn256
+	// Example use:  go test -bench=Benchmark_removeSelectedVolume -benchmem -benchtime=4500x  -tags bn256
 
 	b.Skip()
-	path := b.TempDir()
-	volumes := mockTierVolumes(path, b.N)
-	unableVolumes = make(map[string]*volume)
 
-	d := diskTier{
-		Volumes:    volumes,
-		PrevVolInd: b.N - 1,
-	}
+	logging.InitLogging("")
+	unableVolumes = make(map[string]*volume)
+	cfg := mockConfig(b, map[string]interface{}{
+		"block_movies_in": 720,
+		"strategy":        roundRobin,
+		"volumes":         mockVolumes(b, b.N+1),
+	})
+	dTier := volumeInit("hot", cfg, "start")
+	dTier.PrevVolInd = b.N - 1
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		d.removeSelectedVolume()
+		dTier.removeSelectedVolume()
 	}
 }
 
 func Test_DiskTier_removeSelectedVolume(t *testing.T) {
 	t.Parallel()
 
-	path := t.TempDir()
-	volumes := mockTierVolumes(path, 4)
-	volumeWithoutMiddle := append(volumes[:1], volumes[2:]...)
+	logging.InitLogging("")
+	unableVolumes = make(map[string]*volume)
+	cfg := mockConfig(t, map[string]interface{}{
+		"block_movies_in": 720,
+		"strategy":        roundRobin,
+		"volumes":         mockVolumes(t, 4),
+	})
+	dTier := volumeInit("warm", cfg, "start")
+
+	volumeWithoutMiddle := append(dTier.Volumes[:1], dTier.Volumes[2:]...)
 	volumeWithoutStart := append(volumeWithoutMiddle[1:])
 	volumeWithoutEnd := append(volumeWithoutStart[:1])
 	unableVolumes = make(map[string]*volume)
-	dTier := diskTier{
-		Volumes: volumes,
-	}
 
 	tests := [3]struct {
 		name       string
 		prevVolInd int
-		want       diskTier
 		wantVolume []*volume
 	}{
 		{
@@ -86,15 +90,157 @@ func Test_DiskTier_removeSelectedVolume(t *testing.T) {
 	}
 }
 
-func Benchmark_volumeInit(b *testing.B) {
-	b.Skip()
-	hotCgf := mockHotConfig(b)
-	hCfg := hotCgf.Sub("hot")
+func Benchmark_DiskTier_write(b *testing.B) {
 	logging.InitLogging("")
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = volumeInit("hot", hCfg, "start")
+	block := mockBlock()
+	data, err := json.Marshal(block)
+	if err != nil {
+		b.Error(err)
+	}
+
+	tests := [4]struct {
+		name     string
+		strategy func(t testingT) *viper.Viper
+		dTier    *diskTier
+	}{
+		{
+			name:     "Min Size First",
+			strategy: mockDTierMinSizeFirstConfig,
+		},
+		{
+			name:     "Random",
+			strategy: mockDTierRandomConfig,
+		},
+		{
+			name:     "RoundRobin",
+			strategy: mockDTierRoundRobinConfig,
+		},
+		{
+			name:     "Min Count First",
+			strategy: mockDTierMinCountFirstConfig,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+
+		test.dTier = volumeInit("hot", test.strategy(b), "start")
+
+		b.Run(test.name, func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, err = test.dTier.write(block, data)
+				if err != nil {
+					b.Error(err)
+				}
+			}
+		})
+	}
+}
+
+func Test_DiskTier_write(t *testing.T) {
+	logging.InitLogging("")
+
+	block := mockBlock()
+	data, err := json.Marshal(block)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tests := [5]struct {
+		name      string
+		strategy  func(t testingT) *viper.Viper
+		dTier     *diskTier
+		wantBlock *b.Block
+		wantError bool
+	}{
+		{
+			name:      "Min Size First",
+			strategy:  mockDTierMinSizeFirstConfig,
+			wantBlock: block,
+			wantError: false,
+		},
+		{
+			name:      "Random",
+			strategy:  mockDTierRandomConfig,
+			wantBlock: block,
+			wantError: false,
+		},
+		{
+			name:      "RoundRobin",
+			strategy:  mockDTierRoundRobinConfig,
+			wantBlock: block,
+			wantError: false,
+		},
+		{
+			name:      "Min Count First",
+			strategy:  mockDTierMinCountFirstConfig,
+			wantBlock: block,
+			wantError: false,
+		},
+		{
+			name:      "Nil Volumes",
+			strategy:  mockDTierNilVolumesConfig,
+			wantBlock: nil,
+			wantError: true,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+
+		test.dTier = volumeInit("hot", test.strategy(t), "start")
+
+		t.Run(test.name, func(t *testing.T) {
+			bPath, err := test.dTier.write(block, data)
+			if (err != nil) != test.wantError {
+				t.Fatalf("write() got %v | want %v", err, test.wantError)
+			}
+			if err != nil {
+				return
+			}
+			got, err := test.dTier.Volumes[0].read("", bPath)
+			if !reflect.DeepEqual(got, test.wantBlock) {
+				t.Errorf("write() got %v | want %v", err, test.wantBlock)
+			}
+		})
+	}
+}
+
+func Benchmark_volumeInit(b *testing.B) {
+	logging.InitLogging("")
+
+	tests := [4]struct {
+		name     string
+		strategy func(t testingT) *viper.Viper
+	}{
+		{
+			name:     "Min Size First",
+			strategy: mockDTierMinSizeFirstConfig,
+		},
+		{
+			name:     "Random",
+			strategy: mockDTierRandomConfig,
+		},
+		{
+			name:     "RoundRobin",
+			strategy: mockDTierRoundRobinConfig,
+		},
+		{
+			name:     "Min Count First",
+			strategy: mockDTierMinCountFirstConfig,
+		},
+	}
+
+	for idx := range tests {
+		test := tests[idx]
+		b.Run(test.name, func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_ = volumeInit("hot", test.strategy(b), "start")
+			}
+		})
 	}
 }
 
@@ -102,18 +248,11 @@ func Benchmark_volume_delete(b *testing.B) {
 	// Call it only manually with an adequate number of tests.
 	// Example use:  go test -bench=Benchmark_Volume_delete -benchmem -benchtime=1000x  -tags bn256
 	b.Skip()
-	var path string
-	tmpPath := b.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
-	dcl := 3
-	var files []string
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
-	vol := mockVolume(tmpPath, dcl-1, dcl-1, dcl-1)
-	dTier := &diskTier{
-		DirPrefix: dirPrefix,
-	}
+	var files []string
+	logging.InitLogging("")
+	dTier := volumeInit("hot", mockDTierMinSizeFirstConfig(b), "start")
+	vol := dTier.Volumes[0]
 
 	for i := 0; i < b.N; i++ {
 		block := mockBlock()
@@ -121,7 +260,7 @@ func Benchmark_volume_delete(b *testing.B) {
 		if err != nil {
 			b.Error(err)
 		}
-		path, err = vol.write(block, data, dTier)
+		path, err := dTier.write(block, data)
 		if err != nil {
 			b.Error(err)
 		}
@@ -136,6 +275,7 @@ func Benchmark_volume_delete(b *testing.B) {
 			b.Error(err)
 		}
 	}
+
 }
 
 func Test_volume_delete(t *testing.T) {
@@ -151,11 +291,10 @@ func Test_volume_delete(t *testing.T) {
 	if err := unix.Statfs(tmpPath, &volStat); err != nil {
 		t.Fatal("test volume delete", err)
 	}
-	vol := volume{BlocksCount: 1, BlocksSize: uint64(volStat.Bsize)}
 
 	tests := [2]struct {
 		name      string
-		vol       volume
+		vol       *volume
 		path      string
 		wantCount uint64
 		wantSize  uint64
@@ -163,7 +302,7 @@ func Test_volume_delete(t *testing.T) {
 	}{
 		{
 			name:      "OK",
-			vol:       vol,
+			vol:       &volume{BlocksCount: 1, BlocksSize: uint64(volStat.Bsize)},
 			path:      path,
 			wantCount: 0,
 			wantSize:  0,
@@ -171,7 +310,7 @@ func Test_volume_delete(t *testing.T) {
 		},
 		{
 			name:      "Path Not Exist",
-			vol:       vol,
+			vol:       &volume{BlocksCount: 1, BlocksSize: uint64(volStat.Bsize)},
 			path:      filepath.Join(tmpPath, "2"),
 			wantCount: 1,
 			wantSize:  uint64(volStat.Bsize),
@@ -196,17 +335,15 @@ func Test_volume_delete(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func Benchmark_volume_isAbleToStoreBlock(b *testing.B) {
 	logging.InitLogging("")
 	tmpPath := b.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl-1)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl-1)
 	dTier := &diskTier{
 		DCL:       dcl,
 		DirPrefix: dirPrefix,
@@ -236,8 +373,7 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 
 	logging.InitLogging("")
 	tmpPath := t.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
 	var volStat unix.Statfs_t
@@ -245,18 +381,18 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		t.Fatal("test volume delete", err)
 	}
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl)
 
 	tests := [13]struct {
 		name  string
-		dTier diskTier
-		vol   volume
+		dTier *diskTier
+		vol   *volume
 		want  bool
 	}{
 		{
 			name:  "OK",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:             tmpPath,
 				AllowedBlockSize: 2,
 				BlocksSize:       1,
@@ -269,8 +405,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "AllowedBlockSize == 0",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:             tmpPath,
 				AllowedBlockSize: 0,
 				BlocksSize:       0,
@@ -279,8 +415,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "BlocksSize == AllowedBlockSize",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:             tmpPath,
 				AllowedBlockSize: 1,
 				BlocksSize:       1,
@@ -289,8 +425,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "AllowedBlockNumbers == 0",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -299,8 +435,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "AllowedBlockNumbers == BlocksSize",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    2,
 				BlocksSize:          1,
@@ -311,8 +447,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "AllowedBlockNumbers > BlocksSize",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    2,
 				BlocksSize:          1,
@@ -323,8 +459,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "InodesToMaintain == 0",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -333,8 +469,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "InodesToMaintain < volStat.Ffree",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -344,8 +480,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "InodesToMaintain > volStat.Ffree",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -355,8 +491,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "SizeToMaintain == 0",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -367,8 +503,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "SizeToMaintain != 0",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -379,8 +515,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "SizeToMaintain > availableSize",
-			dTier: diskTier{DCL: dcl},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -391,8 +527,8 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 		},
 		{
 			name:  "selectDir error",
-			dTier: diskTier{DCL: dcl, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl, DirPrefix: dirPrefix},
+			vol: &volume{
 				Path:                tmpPath,
 				AllowedBlockSize:    0,
 				AllowedBlockNumbers: 0,
@@ -411,7 +547,7 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 
 		t.Run(test.name, func(t *testing.T) {
 
-			got := test.vol.isAbleToStoreBlock(&test.dTier)
+			got := test.vol.isAbleToStoreBlock(test.dTier)
 			if got != test.want {
 				t.Errorf("isAbleToStoreBlock() got %v | want %v", got, test.want)
 			}
@@ -420,97 +556,84 @@ func Test_volume_isAbleToStoreBlock(t *testing.T) {
 }
 
 func Benchmark_volume_read(b *testing.B) {
-	var err error
-	tmpPath := b.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
-	dcl := 3
+	logging.InitLogging("")
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
-	dTier := &diskTier{
-		DirPrefix: dirPrefix,
-	}
-	vol := mockVolume(tmpPath, dcl-1, dcl-1, dcl-1)
 	block := mockBlock()
 	data, err := json.Marshal(block)
 	if err != nil {
 		b.Error(err)
 	}
-	path, err := vol.write(block, data, dTier)
+
+	dTier := volumeInit("hot", mockDTierMinSizeFirstConfig(b), "start")
+	blockPath, err := dTier.write(block, data)
 	if err != nil {
 		b.Error(err)
 	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := vol.read("", path); err != nil {
+		if _, err := dTier.Volumes[0].read("", blockPath); err != nil {
 			b.Error(err)
 		}
 	}
-
 }
 
 func Test_volume_read(t *testing.T) {
+	logging.InitLogging("")
 	t.Parallel()
 
-	var err error
-	tmpPath := t.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
-	dcl := 3
-
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
-	dTier := &diskTier{
-		DirPrefix: dirPrefix,
-	}
-	vol := mockVolume(tmpPath, dcl-1, dcl-1, dcl-1)
 	block := mockBlock()
 	data, err := json.Marshal(block)
 	if err != nil {
 		t.Error(err)
 	}
-	blockPath, err := vol.write(block, data, dTier)
+
+	dTier := volumeInit("hot", mockDTierRoundRobinConfig(t), "start")
+	blockPath, err := dTier.write(block, data)
 	if err != nil {
 		t.Error(err)
 	}
-	nilBlockPath := filepath.Join(tmpPath, fmt.Sprintf("%v%v", dirPrefix, 0), "0", fileName+"_1")
-	f, err := os.Create(nilBlockPath)
+	badDataBlockPath := filepath.Join(t.TempDir(), "fileName")
+	f, err := os.Create(badDataBlockPath)
 	if err != nil {
 		t.Fatalf("read() %v", err)
 	}
 	_, _ = f.Write([]byte{})
+	_ = f.Close()
+	nilBlockPath := filepath.Join(t.TempDir(), "fileName")
+	f, err = os.Create(nilBlockPath)
+	if err != nil {
+		t.Fatalf("read() %v", err)
+	}
+	_, _ = f.Write([]byte{})
+	_ = f.Close()
 
 	tests := [4]struct {
 		name      string
-		vol       volume
 		path      string
 		wantBlock *b.Block
 		error     bool
 	}{
 		{
-			name:      "OK",
-			vol:       vol,
+			name:      "OK Min Size First",
 			path:      blockPath,
 			wantBlock: block,
 			error:     false,
 		},
 		{
 			name:      "File Not Exist",
-			vol:       vol,
-			path:      filepath.Join(tmpPath, fmt.Sprintf("%v%v", dirPrefix, 0), strconv.Itoa(dcl), "test.dat"),
+			path:      filepath.Join(t.TempDir(), "test.dat"),
 			wantBlock: nil,
 			error:     true,
 		},
 		{
 			name:      "Bad Data Block",
-			vol:       vol,
-			path:      filepath.Join(tmpPath, fmt.Sprintf("%v%v", dirPrefix, 0), "0", fileName+"_0"),
+			path:      badDataBlockPath,
 			wantBlock: nil,
 			error:     true,
 		},
 		{
 			name:      "Nil Data Block",
-			vol:       vol,
 			path:      nilBlockPath,
 			wantBlock: nil,
 			error:     true,
@@ -523,7 +646,7 @@ func Test_volume_read(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := test.vol.read("", test.path)
+			got, err := dTier.Volumes[0].read("", test.path)
 			if (err != nil) != test.error {
 				t.Errorf("read() error %v | want %v", err, test.error)
 			}
@@ -536,20 +659,19 @@ func Test_volume_read(t *testing.T) {
 
 func Benchmark_volume_selectDir(b *testing.B) {
 	tmpPath := b.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl-1)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl-1)
 
 	tests := [3]struct {
 		name   string
-		volume volume
+		volume *volume
 		dTier  *diskTier
 	}{
 		{
 			name:   "CurDirBlockNums < DCL",
-			volume: mockVolume(tmpPath, dcl-1, 0, dcl-1),
+			volume: &volume{Path: tmpPath, CurKInd: dcl - 1, CurDirInd: 0, CurDirBlockNums: dcl - 1},
 			dTier: &diskTier{
 				DCL:       dcl,
 				DirPrefix: dirPrefix,
@@ -557,7 +679,7 @@ func Benchmark_volume_selectDir(b *testing.B) {
 		},
 		{
 			name:   "CurDirInd < DCL-1",
-			volume: mockVolume(tmpPath, dcl-1, dcl-2, dcl),
+			volume: &volume{Path: tmpPath, CurKInd: dcl - 1, CurDirInd: dcl - 2, CurDirBlockNums: dcl},
 			dTier: &diskTier{
 				DCL:       dcl,
 				DirPrefix: dirPrefix,
@@ -565,7 +687,7 @@ func Benchmark_volume_selectDir(b *testing.B) {
 		},
 		{
 			name:   "CurKInd < DCL-1",
-			volume: mockVolume(tmpPath, dcl-2, dcl-1, dcl),
+			volume: &volume{Path: tmpPath, CurKInd: dcl - 2, CurDirInd: dcl - 1, CurDirBlockNums: dcl - 1},
 			dTier: &diskTier{
 				DCL:       dcl,
 				DirPrefix: dirPrefix,
@@ -592,22 +714,21 @@ func Test_volume_selectDir(t *testing.T) {
 	t.Parallel()
 
 	tmpPath := t.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl)
 
 	tests := [9]struct {
-		name  string
-		dTier diskTier
-		vol   volume
-		want  bool
+		name   string
+		dTier  *diskTier
+		volume *volume
+		want   bool
 	}{
 		{
 			name:  "OK",
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: dcl + 1,
 				CurDirInd:       dcl + 1,
@@ -617,8 +738,8 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurDirBlockNums <  dTier.DCL",
-			dTier: diskTier{DCL: dcl, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: 0,
 				CurDirInd:       dcl - 1,
@@ -628,8 +749,8 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurDirBlockNums <  dTier.DCL Without Path",
-			dTier: diskTier{DCL: dcl, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: 0,
 				CurDirInd:       dcl,
@@ -639,8 +760,8 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurDirInd < dTier.DCL-1 ",
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: dcl + 1,
 				CurDirInd:       dcl - 2,
@@ -650,8 +771,8 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurDirInd < dTier.DCL-1 Without Path",
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: dcl + 1,
 				CurDirInd:       dcl - 2,
@@ -661,8 +782,8 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurDirInd < dTier.DCL-1 && blocksCount >= dTier.DCL ",
-			dTier: diskTier{DCL: dcl, DirPrefix: dirPrefix},
-			vol: volume{
+			dTier: &diskTier{DCL: dcl, DirPrefix: dirPrefix},
+			volume: &volume{
 				Path:            tmpPath,
 				CurDirBlockNums: dcl,
 				CurDirInd:       dcl - 2,
@@ -672,21 +793,36 @@ func Test_volume_selectDir(t *testing.T) {
 		},
 		{
 			name:  "CurKInd < DCL-1",
-			vol:   mockVolume(tmpPath, dcl-2, dcl+1, dcl+1),
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			want:  false,
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
+				Path:            tmpPath,
+				CurDirBlockNums: dcl - 2,
+				CurDirInd:       dcl + 1,
+				CurKInd:         dcl + 1,
+			},
+			want: false,
 		},
 		{
 			name:  "CurKInd < DCL-1 Without Path",
-			vol:   mockVolume(tmpPath, dcl-1, dcl, dcl+1),
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			want:  false,
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
+				Path:            tmpPath,
+				CurDirBlockNums: dcl - 1,
+				CurDirInd:       dcl,
+				CurKInd:         dcl + 1,
+			},
+			want: false,
 		},
 		{
 			name:  "CurKInd < DCL-1 With a Vacant Place",
-			vol:   mockVolume(tmpPath, dcl-1, dcl, dcl+1),
-			dTier: diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
-			want:  false,
+			dTier: &diskTier{DCL: dcl + 1, DirPrefix: dirPrefix},
+			volume: &volume{
+				Path:            tmpPath,
+				CurDirBlockNums: dcl - 1,
+				CurDirInd:       dcl,
+				CurKInd:         dcl + 1,
+			},
+			want: false,
 		},
 	}
 
@@ -696,7 +832,7 @@ func Test_volume_selectDir(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := test.vol.selectDir(&test.dTier)
+			err := test.volume.selectDir(test.dTier)
 			if (err != nil) != test.want {
 				t.Errorf("selectDir() error %v | want %v", err, test.want)
 			}
@@ -705,21 +841,19 @@ func Test_volume_selectDir(t *testing.T) {
 }
 
 func Benchmark_volume_updateCount(b *testing.B) {
-	vol := volume{BlocksCount: uint64(b.N + 1)}
-
-	tests := [3]struct {
+	tests := [2]struct {
 		name   string
-		volume volume
+		volume *volume
 		value  int64
 	}{
 		{
 			name:   "Increase Counter",
-			volume: vol,
+			volume: &volume{BlocksCount: uint64(b.N + 1)},
 			value:  -1,
 		},
 		{
 			name:   "Decrease Counter",
-			volume: vol,
+			volume: &volume{BlocksCount: uint64(b.N + 1)},
 			value:  1,
 		},
 	}
@@ -730,7 +864,7 @@ func Benchmark_volume_updateCount(b *testing.B) {
 
 		b.Run(test.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				vol.updateCount(test.value)
+				test.volume.updateCount(test.value)
 			}
 		})
 	}
@@ -747,31 +881,32 @@ func Test_volume_updateCount(t *testing.T) {
 
 	tests := [4]struct {
 		name   string
-		volume volume
+		volume *volume
 		value  int64
 		want   uint64
 	}{
 		{
 			name:   "N < 0",
-			volume: volume{BlocksCount: 2},
+			volume: &volume{BlocksCount: 2},
 			value:  -1,
 			want:   1,
 		},
 		{
 			name:   "N < 0 && BlocksSize == 0",
-			volume: volume{BlocksCount: 0},
+			volume: &volume{BlocksCount: 0},
 			value:  -1,
 			want:   0,
 		},
 		{
 			name:   "N > 0",
-			volume: volume{BlocksCount: 1},
+			volume: &volume{BlocksCount: 1},
 			value:  1,
 			want:   2,
 		},
 		{
 			name:   "N > 0 && BlocksSize > math.MaxUint64",
-			volume: volume{BlocksCount: math.MaxUint64},
+			volume: &volume{BlocksCount: math.MaxUint64},
+			value:  1,
 			want:   uint64(math.MaxUint64),
 		},
 	}
@@ -791,21 +926,19 @@ func Test_volume_updateCount(t *testing.T) {
 }
 
 func Benchmark_volume_updateSize(b *testing.B) {
-	vol := volume{BlocksSize: uint64(b.N + 1)}
-
-	tests := [3]struct {
+	tests := [2]struct {
 		name   string
-		volume volume
+		volume *volume
 		value  int64
 	}{
 		{
 			name:   "Increase Counter",
-			volume: vol,
+			volume: &volume{BlocksSize: uint64(b.N + 1)},
 			value:  -1,
 		},
 		{
 			name:   "Decrease Counter",
-			volume: vol,
+			volume: &volume{BlocksSize: uint64(b.N + 1)},
 			value:  1,
 		},
 	}
@@ -816,7 +949,7 @@ func Benchmark_volume_updateSize(b *testing.B) {
 
 		b.Run(test.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				vol.updateSize(test.value)
+				test.volume.updateSize(test.value)
 			}
 		})
 	}
@@ -833,31 +966,31 @@ func Test_volume_updateSize(t *testing.T) {
 
 	tests := [4]struct {
 		name   string
-		volume volume
+		volume *volume
 		value  int64
 		want   uint64
 	}{
 		{
 			name:   "N < 0",
-			volume: volume{BlocksSize: uint64(volStat.Bsize), Path: tmpPath},
+			volume: &volume{BlocksSize: uint64(volStat.Bsize), Path: tmpPath},
 			value:  -volStat.Bsize,
 			want:   0,
 		},
 		{
 			name:   "N < 0 && BlocksSize < volStat.Bsize",
-			volume: volume{BlocksSize: uint64(volStat.Bsize) - 1, Path: tmpPath},
+			volume: &volume{BlocksSize: uint64(volStat.Bsize) - 1, Path: tmpPath},
 			value:  -volStat.Bsize,
 			want:   0,
 		},
 		{
 			name:   "N > 0",
-			volume: volume{BlocksSize: uint64(volStat.Bsize), Path: tmpPath},
+			volume: &volume{BlocksSize: uint64(volStat.Bsize), Path: tmpPath},
 			value:  volStat.Bsize,
 			want:   uint64(volStat.Bsize * 2),
 		},
 		{
 			name:   "N > 0 && BlocksSize > volStat.Bsize",
-			volume: volume{BlocksSize: math.MaxUint64 - uint64(volStat.Bsize) + 1, Path: tmpPath},
+			volume: &volume{BlocksSize: math.MaxUint64 - uint64(volStat.Bsize) + 1, Path: tmpPath},
 			value:  volStat.Bsize,
 			want:   uint64(math.MaxUint64),
 		},
@@ -878,17 +1011,18 @@ func Test_volume_updateSize(t *testing.T) {
 }
 
 func Benchmark_volume_write(b *testing.B) {
-	var err error
 	tmpPath := b.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl)
+
 	dTier := &diskTier{
 		DirPrefix: dirPrefix,
 	}
-	vol := mockVolume(tmpPath, dcl-1, dcl-1, dcl-1)
+
+	vol := volume{Path: tmpPath}
+
 	block := mockBlock()
 	data, err := json.Marshal(block)
 	if err != nil {
@@ -904,15 +1038,13 @@ func Benchmark_volume_write(b *testing.B) {
 }
 
 func Test_volume_write(t *testing.T) {
-	t.Parallel()
+	logging.InitLogging("")
 
-	var err error
 	tmpPath := t.TempDir()
-	dirPrefix := "DirPrefix"
-	fileName := "fileName"
+	dirPrefix := HK
 	dcl := 3
 
-	_, _, _ = mockFileSystem(tmpPath, dirPrefix, fileName, dcl)
+	_, _, _ = mockFileSystem(tmpPath, dirPrefix, dcl)
 
 	block := mockBlock()
 	data, err := json.Marshal(block)
@@ -921,38 +1053,25 @@ func Test_volume_write(t *testing.T) {
 	}
 
 	tests := [2]struct {
-		name       string
-		volume     volume
-		dTier      diskTier
-		wantPath   string
-		wantVolume volume
-		wantError  bool
+		name      string
+		volume    *volume
+		dTier     *diskTier
+		wantBlock *b.Block
+		wantError bool
 	}{
 		{
-			name: "OK",
-			volume: volume{
-				Path:      tmpPath,
-				CurKInd:   0,
-				CurDirInd: 0,
-			},
-			dTier: diskTier{DirPrefix: dirPrefix},
-			wantPath: filepath.Join(tmpPath, fmt.Sprintf("%v%v/%v", dirPrefix, 0, 0),
-				fmt.Sprintf("%v%v", block.Hash, fileExt)),
-			wantVolume: volume{Path: tmpPath, BlocksCount: 1, BlocksSize: uint64(len(data)), CurDirBlockNums: 1},
-			wantError:  false,
+			name:      "OK",
+			volume:    &volume{Path: tmpPath},
+			dTier:     &diskTier{DirPrefix: dirPrefix},
+			wantBlock: block,
+			wantError: false,
 		},
 		{
-			name: "Wrong Path",
-			volume: volume{
-				Path:      tmpPath,
-				CurKInd:   5,
-				CurDirInd: 0,
-			},
-			dTier: diskTier{DirPrefix: dirPrefix},
-			wantPath: filepath.Join(tmpPath, fmt.Sprintf("%v%v/%v", dirPrefix, 5, 0),
-				fmt.Sprintf("%v%v", block.Hash, fileExt)),
-			wantVolume: volume{Path: tmpPath, CurKInd: 5},
-			wantError:  true,
+			name:      "Wrong Path",
+			volume:    &volume{Path: tmpPath},
+			dTier:     &diskTier{DirPrefix: "dirPrefix"},
+			wantBlock: nil,
+			wantError: true,
 		},
 	}
 
@@ -960,17 +1079,14 @@ func Test_volume_write(t *testing.T) {
 		test := tests[idx]
 
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 
-			got, err := test.volume.write(block, data, &test.dTier)
+			blockPath, err := test.volume.write(block, data, test.dTier)
 			if (err != nil) != test.wantError {
 				t.Errorf("write() error %v | want %v", err, test.wantError)
 			}
-			if got != test.wantPath {
-				t.Errorf("write() got %v | want %v", got, test.wantPath)
-			}
-			if !reflect.DeepEqual(test.volume, test.wantVolume) {
-				t.Errorf("write() got %v | want %v", test.wantVolume, test.volume)
+			gotBlock, err := test.volume.read("", blockPath)
+			if !reflect.DeepEqual(gotBlock, test.wantBlock) {
+				t.Errorf("write() gotBlock %v | want %v", gotBlock, test.wantBlock)
 			}
 		})
 	}

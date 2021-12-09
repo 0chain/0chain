@@ -18,7 +18,7 @@ import (
 type Tiering uint8
 
 const (
-	//Cache = 1, Warm = 2, Hot = 4 and Cold = 8
+	// Cache = 1, Warm = 2, Hot = 4 and Cold = 8
 	WarmOnly         Tiering = 2
 	HotOnly          Tiering = 4
 	CacheAndWarm     Tiering = 3
@@ -45,7 +45,7 @@ type BlockStore struct {
 	HotTier  *diskTier
 	WarmTier *diskTier
 	ColdTier *coldTier
-	//fields with registered functions as per the config files
+	// fields with registered functions as per the config files
 	write  func(b *block.Block) (string, error)
 	read   func(hash string, round int64) (b *block.Block, err error)
 	delete func(hash string) error
@@ -101,7 +101,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		mode = "start"
 	}
 
-	var bmrPath, qmrPath string = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
+	var bmrPath, qmrPath = DefaultBlockMetaRecordDB, DefaultQueryMetaRecordDB
 	boltConfigMap := sViper.GetStringMapString("bolt")
 	if boltConfigMap == nil {
 		bmrPath = DefaultBlockMetaRecordDB
@@ -110,16 +110,20 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 
 		if boltConfigMap["block_meta_record_path"] == "" {
 			bmrPath = DefaultBlockMetaRecordDB
+		} else {
+			bmrPath = boltConfigMap["block_meta_record_path"]
 		}
 
 		if boltConfigMap["query_meta_record_path"] == "" {
 			qmrPath = DefaultQueryMetaRecordDB
+		} else {
+			qmrPath = boltConfigMap["query_meta_record_path"]
 		}
 	}
 
 	switch mode {
 	case "start", "recover":
-		InitMetaRecordDB(bmrPath, qmrPath, true) //Removes existing metadata and creates new db
+		InitMetaRecordDB(bmrPath, qmrPath, true) // Removes existing metadata and creates new db
 	default:
 		InitMetaRecordDB(bmrPath, qmrPath, false)
 	}
@@ -134,7 +138,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 			panic(ErrHotStorageConfNotProvided)
 		}
 		Store.Tiering = HotOnly
-		Store.HotTier = volumeInit(HOT, hViper, mode) //Will panic if wrong setup is provided
+		Store.HotTier = volumeInit(HOT, hViper, mode) // Will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
@@ -182,7 +186,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.Tiering = WarmOnly
-		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
+		Store.WarmTier = volumeInit(WARM, wViper, mode) // will panic if wrong setup is provided
 
 		Store.write = func(b *block.Block) (string, error) {
 			data, err := getBlockData(b)
@@ -238,7 +242,7 @@ func InitializeStore(sViper *viper.Viper, ctx context.Context) error {
 		}
 
 		Store.Tiering = CacheAndWarm
-		Store.WarmTier = volumeInit(WARM, wViper, mode) //will panic if wrong setup is provided
+		Store.WarmTier = volumeInit(WARM, wViper, mode) // will panic if wrong setup is provided
 
 		cacheInit(cViper)
 
