@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/core/cache"
 	"context"
 	"fmt"
 	"math"
@@ -25,10 +26,12 @@ import (
 
 var blockSaveTimer metrics.Timer
 var bsHistogram metrics.Histogram
+var NotarizedCache *cache.LRU
 
 func init() {
 	blockSaveTimer = metrics.GetOrRegisterTimer("block_save_time", nil)
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
+	NotarizedCache = cache.NewLRUCache(10000)
 }
 
 /*UpdatePendingBlock - update the pending block */
@@ -199,18 +202,23 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	if err = b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round),
+			zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+
+	//if block is valid put it to cache, if it is not valid we can put hash of different block that is not processed but is valid
+	if err := NotarizedCache.Add(b.GetKey(), struct{}{}); err != nil {
+		Logger.Warn("Can't add block to notarized cache", zap.Error(err))
+	}
+
 	err = sc.VerifyBlockNotarization(ctx, b)
 	if err != nil {
 		Logger.Error("notarization verification failed",
 			zap.Error(err),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash))
-		return
-	}
-
-	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round),
-			zap.Any("hash", b.Hash), zap.Error(err))
 		return
 	}
 

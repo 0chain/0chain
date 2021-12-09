@@ -217,6 +217,7 @@ func (r *Round) Restart() {
 	r.Round.Restart()
 	r.vrfSharesCache = newVRFSharesCache()
 	r.CancelVerification()
+	r.SetOwnVerificationTicket(nil)
 
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)

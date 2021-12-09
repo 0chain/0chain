@@ -5,6 +5,8 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
+var KeyNotFound = common.NewError("missing key", "key not found")
+
 //LRU - LRU cache
 type LRU struct {
 	Cache *lru.Cache
@@ -33,7 +35,7 @@ func (c *LRU) Get(key string) (interface{}, error) {
 	value, ok := c.Cache.Get(key)
 	if !ok {
 		c.Miss++
-		return nil, common.NewError("missing key", "key not found")
+		return nil, KeyNotFound
 	}
 	c.Hit++
 	return value, nil

@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/core/cache"
 	"context"
 	"net/http"
 	"time"
@@ -56,6 +57,11 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 
+	_, err := NotarizedCache.Get(b.Hash)
+	if err == cache.KeyNotFound {
+		Logger.Debug("Received notarized block already processed, reject", zap.String("block_hash", b.Hash))
+	}
+
 	var lfb = sc.GetLatestFinalizedBlock()
 	if b.Round <= lfb.Round {
 		Logger.Debug("NotarizedBlockHandler block.Round <= lfb.Round",
@@ -63,7 +69,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 			zap.Int64("lfb round", lfb.Round))
 		return true, nil // doesn't need a not. block for the round
 	}
-	_, err := sc.GetBlock(ctx, b.Hash)
+	_, err = sc.GetBlock(ctx, b.Hash)
 	if err == nil {
 		Logger.Debug("NotarizedBlockHandler block exist", zap.Int64("round", b.Round))
 		return true, nil
