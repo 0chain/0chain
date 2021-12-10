@@ -181,6 +181,7 @@ const (
 	MinBurnAmount      = SmartContract + Zcn + "min_burn_amount"
 	MinStakeAmount     = SmartContract + Zcn + "min_stake_amount"
 	BurnAddress        = SmartContract + Zcn + "burn_address"
+	MaxFee             = SmartContract + Zcn + "max_fee"
 
 	EventDbEnabled         = DbsEvents + "enabled"
 	EventDbName            = DbsEvents + "name"
