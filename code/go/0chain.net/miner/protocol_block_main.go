@@ -39,11 +39,19 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	return
 }
 
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
+	bsh chain.BlockStateHandler, waitOver bool) error {
+
+	return mc.generateBlockWorker.Run(ctx, func() error {
+		return mc.generateBlock(ctx, b, minerChain, waitOver)
+	})
+}
+
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
+func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 
 	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize)
@@ -118,15 +126,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		idx++
 		return true
 	}
-	var roundTimeoutCount = mc.GetRoundTimeoutCount()
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		count++
 		if mc.GetCurrentRound() > b.Round {
 			roundMismatch = true
-			return false
-		}
-		if roundTimeoutCount != mc.GetRoundTimeoutCount() {
-			roundTimeout = true
 			return false
 		}
 		txn, ok := qe.(*transaction.Transaction)

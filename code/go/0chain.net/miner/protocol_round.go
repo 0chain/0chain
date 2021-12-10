@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"0chain.net/core/memorystore"
 	"context"
 	"errors"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/block"
@@ -501,9 +501,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		logging.Logger.Debug("GenerateRoundBlock, state of prior round block not computed",
 			zap.Any("state status", pb.GetStateStatus()))
 	}
-
+	withCancel, cancelFunc := context.WithCancel(common.GetRootContext())
+	r.SetVerificationCancelf(cancelFunc)
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	cctx := memorystore.WithEntityConnection(common.GetRootContext(), txnEntityMetadata)
+	cctx := memorystore.WithEntityConnection(withCancel, txnEntityMetadata)
 	defer memorystore.Close(cctx)
 
 	var (

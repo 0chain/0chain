@@ -77,6 +77,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
 	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -148,6 +149,7 @@ type Chain struct {
 	verifyBlockNotarizationWorker        *common.WithContextFunc
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
+	generateBlockWorker                  *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {

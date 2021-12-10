@@ -17,11 +17,32 @@ type Round struct {
 	roundGuard            sync.RWMutex
 	blocksToVerifyChannel chan *block.Block
 	verificationCancelf   context.CancelFunc
+	generationCancelf     context.CancelFunc
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
 	vrfSharesCache        *vrfSharesCache
 	ownVerificationTicket *block.BlockVerificationTicket
+}
+
+func (r *Round) TryCancelBlockGeneration() {
+	if r.generationCancelf == nil {
+		logging.Logger.Info("Try to cancel block generation that have not been started yet")
+		return
+	}
+	logging.Logger.Info("Cancelling block generation")
+	r.roundGuard.Lock()
+	f := r.verificationCancelf
+	r.verificationCancelf = nil
+	r.roundGuard.Unlock()
+
+	f()
+}
+
+func (r *Round) SetVerificationCancelf(verificationCancelf context.CancelFunc) {
+	r.roundGuard.Lock()
+	r.verificationCancelf = verificationCancelf
+	r.roundGuard.Unlock()
 }
 
 func (r *Round) VrfShare() *round.VRFShare {
@@ -217,6 +238,7 @@ func (r *Round) Restart() {
 	r.Round.Restart()
 	r.vrfSharesCache = newVRFSharesCache()
 	r.CancelVerification()
+	r.TryCancelBlockGeneration()
 
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)
