@@ -64,7 +64,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		ierr             error
 		count            int32
 		roundMismatch    bool
-		roundTimeout     bool
 		failedStateCount int32
 		byteSize         int64
 		txnMap           = make(map[datastore.Key]bool, mc.BlockSize)
@@ -170,10 +169,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	if roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
-	}
-	if roundTimeout {
-		logging.Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
-		return ErrRoundTimeout
 	}
 	if ierr != nil {
 		logging.Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
