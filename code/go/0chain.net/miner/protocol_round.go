@@ -1440,6 +1440,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Info("handleNoProgress",
@@ -1661,12 +1662,20 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		if xrhnb == nil ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed()) {
-			logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+
+			logging.Logger.Debug("restartRound - could not get HNB",
 				zap.Int64("round", xr.GetRoundNumber()),
-				zap.Int64("lfb_round", lfb.Round))
-			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
-			mc.RedoVrfShare(ctx, xr)
+				zap.Int64("lfb_round", lfb.Round),
+				zap.Int("soft_timeout", xr.GetSoftTimeoutCount()))
+
+			if xr.GetSoftTimeoutCount() >= mc.RoundRestartMult {
+				logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+					zap.Int64("round", xr.GetRoundNumber()),
+					zap.Int64("lfb_round", lfb.Round))
+				xr.Restart()
+				xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
+				mc.RedoVrfShare(ctx, xr)
+			}
 			return // the round has restarted <===================== [exit loop]
 		}
 
