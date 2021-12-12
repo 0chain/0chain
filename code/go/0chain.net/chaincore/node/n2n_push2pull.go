@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"sync"
@@ -14,7 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var pushDataCache = cache.NewLRUCache(100)
+var (
+	pushDataCache      = cache.NewLRUCache(100)
+	pullingEntityCache = newPullingCache(1000, 10)
+)
 
 //pushDataCacheEntry - cached push data
 type pushDataCacheEntry struct {
@@ -36,24 +40,6 @@ func getPushToPullTime(n *Node) float64 {
 	return pullRequestTime + sendTime
 }
 
-var pullDataCache = cache.NewLRUCache(100)
-
-type nodeRequest struct {
-	node      *Node
-	requested bool
-}
-
-const (
-	pullStatePulling = 1
-	pullStateFailed  = iota
-	pullStateDone    = iota
-)
-
-type pullDataCacheEntry struct {
-	sentBy []*nodeRequest
-	state  int8
-}
-
 func p2pKey(uri string, id string) string {
 	return uri + ":" + id
 }
@@ -70,8 +56,6 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 	}
 	return pcde, nil
 }
-
-var pullLock sync.Mutex
 
 /*pullEntityHandler - pull an entity that wasn't pushed as it's large and pulling is cheaper */
 func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datastore.JSONEntityReqResponderF, entityName string, entityID datastore.Key) {
@@ -99,7 +83,11 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params.Add("id", datastore.ToString(entityID))
 	rhandler := pullDataRequestor(params, phandler)
 
-	rhandler(ctx, nd)
+	pullKey := fmt.Sprintf("%s:%s", entityName, entityID)
+	// entity with the same key id will be cached till the first request is returned
+	pullingEntityCache.pullOrCacheRequest(ctx, pullKey, func() bool {
+		return rhandler(ctx, nd)
+	})
 }
 
 func isPullRequest(r *http.Request) bool {
@@ -112,4 +100,71 @@ func updatePullStats(sender *Node, uri string, length int, ts time.Time) {
 	timer.UpdateSince(ts)
 	sizer := sender.GetSizeMetric(mkey)
 	sizer.Update(int64(length))
+}
+
+const pullEntityBufferSize = 10
+
+// pullingCache represents the cache for pulling request.
+// the key is the 'entityName:id', and value is a buffered channel
+type pullingCache struct {
+	cache *cache.LRU
+	mutex sync.Mutex
+	// chanSize is the channel buffer size
+	chanSize int
+}
+
+func newPullingCache(cacheSize, chanSize int) *pullingCache {
+	return &pullingCache{
+		cache:    cache.NewLRUCache(cacheSize),
+		chanSize: chanSize,
+	}
+}
+
+type pullHandlerFunc func() bool
+
+// addIfNotExist checks if the entity id is in the cache, add it if not exist, and return false
+// to indicate the entity was not in the cache, otherwise reject it and return true.
+func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullHandler pullHandlerFunc) {
+	c.mutex.Lock()
+	v, err := c.cache.Get(key)
+	switch err {
+	case cache.ErrKeyNotFound:
+		ch := make(chan pullHandlerFunc, c.chanSize)
+		ch <- pullHandler
+		c.cache.Add(key, ch)
+		c.mutex.Unlock()
+
+		go c.runHandler(ctx, key, ch)
+		return
+	case nil:
+		ch, ok := v.(chan pullHandlerFunc)
+		if ok {
+			select {
+			case ch <- pullHandler:
+			default:
+			}
+		}
+	default:
+		logging.Logger.Error("Unexpected error on pulling entity", zap.Error(err))
+	}
+	c.mutex.Unlock()
+}
+
+func (c *pullingCache) runHandler(ctx context.Context, key string, ch chan pullHandlerFunc) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case f := <-ch:
+			if f() {
+				// remove from cache when process successfully
+				c.mutex.Lock()
+				close(ch)
+				ch = nil
+				c.cache.Remove(key)
+				c.mutex.Unlock()
+				return
+			}
+		}
+	}
 }
