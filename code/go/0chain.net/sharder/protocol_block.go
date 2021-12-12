@@ -92,15 +92,22 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	sc.DeleteRoundsBelow(b.Round)
 }
 
-func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-
-	var mb = b.MagicBlock
-
-	if mb == nil {
-		return // no MB, no VC
+func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error {
+	if !config.DevConfiguration.ViewChange {
+		return nil
 	}
 
-	return sc.UpdateMagicBlock(mb)
+	mb := b.MagicBlock
+	if mb == nil {
+		return nil // no MB, no VC
+	}
+
+	if err := sc.UpdateMagicBlock(mb); err != nil {
+		return err
+	}
+
+	sc.SetLatestFinalizedMagicBlock(b)
+	return nil
 }
 
 // The hasRelatedMagicBlock reports true if the Chain has MB related to the
