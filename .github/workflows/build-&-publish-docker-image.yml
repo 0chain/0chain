@@ -102,3 +102,92 @@ jobs:
       env:
         PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
         BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
+  system-tests:
+    if: github.event_name != 'workflow_dispatch'
+    needs: [dockerize_miner, dockerize_sharder]
+    runs-on: [ tests-suite ]
+    steps:
+      - name: "Get current PR"
+        uses: jwalton/gh-find-current-pr@v1
+        id: findPr
+        with:
+          github-token: ${{ github.token }}
+
+      - name: "Set PR Status Pending"
+        uses: niteoweb/pull_request_status_action@v1.0.0
+        if: steps.findPr.outputs.number
+        with:
+          pr_number: ${{ steps.findPr.outputs.pr }}
+          description: "System tests running with default config..."
+          state: "pending"
+          repository: ${{ github.repository }}
+          context: "0Chain System Tests"
+          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: "Setup"
+        run: |
+          echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)" >> $GITHUB_ENV
+          echo "TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+          echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
+          echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+
+      - name: "Deploy 0Chain"
+        uses: 0chain/actions/deploy-0chain@master
+        with:
+          kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+          teardown_condition: "TESTS_PASSED"
+          miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+          blobber_image: staging
+          validator_image: staging
+          zbox_image: staging
+          zblock_image: staging
+          zdns_image: staging
+          explorer_image: latest
+          zproxy_image: staging
+          zsearch_image: staging
+          blobber_stake_image: latest
+
+      - name: "Run System tests"
+        uses: 0chain/actions/run-system-tests@master
+        with:
+          system_tests_branch: master
+          network: ${{ env.NETWORK_URL }}
+          zbox_cli_branch: staging
+          zwallet_cli_branch: staging
+          smart_contract_owner_wallet_json: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
+          svc_account_secret: ${{ github.token }}
+          deploy_report_page: false
+          archive_results: true
+          run_flaky_tests: false
+          retry_failures: true
+
+      - name: "Set PR Status Success"
+        if: ${{ success() && steps.findPr.outputs.number }}
+        uses: niteoweb/pull_request_status_action@v1.0.0
+        with:
+          pr_number: ${{ steps.findPr.outputs.pr }}
+          description: "System tests with default config completed successfully"
+          state: ${{ job.status }}
+          repository: ${{ github.repository }}
+          context: "0Chain System Tests"
+          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: "Set PR Status Failed"
+        if: ${{ failure() && steps.findPr.outputs.number }}
+        uses: niteoweb/pull_request_status_action@v1.0.0
+        with:
+          pr_number: ${{ steps.findPr.outputs.pr }}
+          description: "System tests with default config failed. Try running manually with more specific config"
+          state: ${{ job.status }}
+          repository: ${{ github.repository }}
+          context: "0Chain System Tests"
+          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
