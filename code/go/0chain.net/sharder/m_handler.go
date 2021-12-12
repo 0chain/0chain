@@ -71,6 +71,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return true, nil
 	}
 
+	if err = node.ValidateSenderSignature(ctx); err != nil {
+		return false, err
+	}
+
 	select {
 	case sc.GetBlockChannel() <- b:
 	case <-time.NewTimer(3 * time.Second).C: // TODO: make the timeout configurable
@@ -93,6 +97,11 @@ func NotarizedBlockKickHandler(ctx context.Context, entity datastore.Entity) (in
 	if b.Round <= lfb.Round {
 		return true, nil // doesn't need a not. block for the round
 	}
+
+	if err := node.ValidateSenderSignature(ctx); err != nil {
+		return false, err
+	}
+
 	sc.GetBlockChannel() <- b // even if we have the block
 	return true, nil
 }
