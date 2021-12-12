@@ -72,13 +72,13 @@ jobs:
           else
             if [ -z "${{ steps.findPr.outputs.pr }}" ];
               then
-                echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}] and PR not raised so will not check for PR merge image. Please publish image manually." && exit 1;
+                echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}] and PR not raised so will not check for PR merge image. Please publish image manually. at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again" && exit 1;
             fi
             echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
             git fetch origin pull/${{ steps.findPr.outputs.pr }}/merge:merge && git checkout merge
             MERGE_SHORT_SHA=$(git rev-parse HEAD | head -c 8)
             echo "Checking miner image [merge-$MERGE_SHORT_SHA] is present..."
-            docker pull 0chaindev/miner:merge-$MERGE_SHORT_SHA || { echo "Docker image for miner could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually and try again." && exit 1; }
+            docker pull 0chaindev/miner:merge-$MERGE_SHORT_SHA || { echo "Docker image for miner could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
             echo "miner docker image found for  [merge-$MERGE_SHORT_SHA]"
             echo "MINER_IMAGE=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
