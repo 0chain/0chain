@@ -48,8 +48,8 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		case <-ctx.Done():
 			cancel()
 			return
-		case newRound := <-UpdateNodes:
-			newMB := c.GetMagicBlockNoOffset(newRound)
+		case newStartingRound := <-UpdateNodes:
+			newMB := c.GetMagicBlockNoOffset(newStartingRound)
 			if newMB == nil {
 				continue
 			}

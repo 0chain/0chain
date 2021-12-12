@@ -1653,7 +1653,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 // LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
 func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
+	if lfmb := c.GetLatestFinalizedMagicBlockClone(ctx); lfmb != nil {
 		return lfmb.GetSummary(), nil
 	}
 

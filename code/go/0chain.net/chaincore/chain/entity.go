@@ -80,6 +80,7 @@ type BlockStateHandler interface {
 
 type updateLFMBWithReply struct {
 	block *block.Block
+	clone *block.Block
 	reply chan struct{}
 }
 
@@ -99,7 +100,8 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	getLFMB                      chan *block.Block         `json:"-"`
+	getLFMB                      chan *block.Block `json:"-"`
+	getLFMBClone                 chan *block.Block
 	updateLFMB                   chan *updateLFMBWithReply `json:"-"`
 	lfmbMutex                    sync.RWMutex
 	latestOwnFinalizedBlockRound int64 // finalized by this node
@@ -300,7 +302,6 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	round = mbRoundOffset(round)
 
 	c.mbMutex.RLock()
-	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
 		entity = c.MagicBlockStorage.GetLatest()
@@ -308,6 +309,7 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
+	c.mbMutex.RUnlock()
 	return entity.(*block.MagicBlock)
 }
 
@@ -508,6 +510,7 @@ func Provider() datastore.Entity {
 
 	c.getLFBTicket = make(chan *LFBTicket) // should be unbuffered
 	c.getLFMB = make(chan *block.Block)
+	c.getLFMBClone = make(chan *block.Block)
 	c.updateLFMB = make(chan *updateLFMBWithReply, 100)
 	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
@@ -1522,11 +1525,19 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	}
 }
 
-// GetLatestFinalizedMagicBlock will returns a copy of the latest finalized magic block
-// note: the block will be deep copied, used this carefully.
+// GetLatestFinalizedMagicBlock returns a the latest finalized magic block
 func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Block) {
 	select {
 	case lfb = <-c.getLFMB:
+	case <-ctx.Done():
+	}
+	return
+}
+
+// GetLatestFinalizedMagicBlockClone returns a deep cloned latest finalized magic block
+func (c *Chain) GetLatestFinalizedMagicBlockClone(ctx context.Context) (lfb *block.Block) {
+	select {
+	case lfb = <-c.getLFMBClone:
 	case <-ctx.Done():
 	}
 	return
