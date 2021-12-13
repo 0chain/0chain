@@ -89,6 +89,9 @@ type Executor interface {
 	// cases.SendDifferentBlocksFromAllGenerators test case.
 	ConfigureSendDifferentBlocksFromAllGenerators(*SendDifferentBlocksFromAllGenerators) (err error)
 
+	// ConfigureBreakingSingleBlock prepares state for cases.BreakingSingleBlock test case.
+	ConfigureBreakingSingleBlock(cfg *BreakingSingleBlock) (err error)
+
 	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
 }

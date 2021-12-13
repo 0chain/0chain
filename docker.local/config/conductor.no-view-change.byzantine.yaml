@@ -6,6 +6,7 @@ sets:
       - "not notarised block extension"
       - "send different blocks from first generator"
       - "send different blocks from all generators"
+      - "breaking single block"
 
 tests:
   - name: "not notarised block extension"
@@ -33,6 +34,15 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_all_generators_test_case:
+          round: 30
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "breaking single block"
+    flow:
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - configure_breaking_single_block:
           round: 30
       - make_test_case_check:
           wait_time: 5m

@@ -310,10 +310,8 @@ func (mc *Chain) verifyTicketsWithRetry(ctx context.Context,
 	return common.NewErrorf("verify_tickets_timeout", "ticket timeout with retry, round: %d", r)
 }
 
-// HandleVerificationTicketMessage - handles the verification ticket message.
-func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
-	msg *BlockMessage) {
-
+// handleVerificationTicketMessage - handles the verification ticket message.
+func (mc *Chain) handleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
 	var (
 		bvt = msg.BlockVerificationTicket
 		rn  = bvt.Round

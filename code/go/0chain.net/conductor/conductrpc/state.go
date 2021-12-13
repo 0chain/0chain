@@ -50,6 +50,7 @@ type State struct {
 	ExtendNotNotarisedBlock               *config.ExtendNotNotarisedBlock
 	SendDifferentBlocksFromFirstGenerator *config.SendDifferentBlocksFromFirstGenerator
 	SendDifferentBlocksFromAllGenerators  *config.SendDifferentBlocksFromAllGenerators
+	BreakingSingleBlock                   *config.BreakingSingleBlock
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

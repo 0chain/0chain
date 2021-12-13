@@ -387,6 +387,15 @@ func init() {
 		return ex.ConfigureSendDifferentBlocksFromAllGenerators(cfg)
 	})
 
+	register("configure_breaking_single_block", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &BreakingSingleBlock{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureBreakingSingleBlock(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

@@ -775,6 +775,24 @@ func (r *Runner) ConfigureSendDifferentBlocksFromAllGenerators(cfg *config.SendD
 	return
 }
 
+// ConfigureBreakingSingleBlock implements config.Executor interface.
+func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.BreakingSingleBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"breaking single block\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.BreakingSingleBlock = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewBreakingSingleBlock()
+
+	return
+}
+
 // MakeTestCaseCheck implements config.Executor interface.
 func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if r.verbose {

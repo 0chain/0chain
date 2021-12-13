@@ -212,7 +212,7 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 
 func (mc *Chain) sendDifferentBlocks(ctx context.Context, b *block.Block) {
 	miners := mc.GetMagicBlock(b.Round).Miners.CopyNodes()
-	blocks, err := mc.randomizeBlocks(b, len(miners))
+	blocks, err := randomizeBlocks(b, len(miners))
 	if err != nil {
 		log.Panicf("Conductor: error while randomizing blocks: %v", err)
 	}
@@ -244,27 +244,36 @@ func (mc *Chain) isSendingDifferentBlocksFromAllGenerators(r int64) bool {
 	return testCfg != nil && testCfg.Round == r && isGenerator && currRound.GetTimeoutCount() == 0
 }
 
-func (mc *Chain) randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
+func randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
 	blocks := make([]*block.Block, numBlocks)
 	for ind := range blocks {
-		cpBl, err := copyBlock(b)
+		cpBl, err := randomizeBlock(b)
 		if err != nil {
-			return nil, err
-		}
-
-		txn, err := createDataTxn(encryption.Hash(strconv.Itoa(int(time.Now().UnixNano()))))
-		if err != nil {
-			return nil, err
-		}
-		cpBl.Txns = append(cpBl.Txns, txn)
-
-		cpBl.HashBlock()
-		if cpBl.Signature, err = node.Self.Sign(cpBl.Hash); err != nil {
 			return nil, err
 		}
 		blocks[ind] = cpBl
 	}
 	return blocks, nil
+}
+
+func randomizeBlock(b *block.Block) (*block.Block, error) {
+	cpBl, err := copyBlock(b)
+	if err != nil {
+		return nil, err
+	}
+
+	txn, err := createDataTxn(encryption.Hash(strconv.Itoa(int(time.Now().UnixNano()))))
+	if err != nil {
+		return nil, err
+	}
+	cpBl.Txns = append(cpBl.Txns, txn)
+
+	cpBl.HashBlock()
+	if cpBl.Signature, err = node.Self.Sign(cpBl.Hash); err != nil {
+		return nil, err
+	}
+
+	return cpBl, nil
 }
 
 func copyBlock(b *block.Block) (*block.Block, error) {

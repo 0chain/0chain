@@ -109,6 +109,11 @@ type (
 		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
+	// BreakingSingleBlock represents config for cases.BreakingSingleBlock.
+	BreakingSingleBlock struct {
+		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	}
+
 	// TestCaseCheck represents generic configuration for making tests checks.
 	TestCaseCheck struct {
 		WaitTimeStr string `mapstructure:"wait_time"`
@@ -139,6 +144,16 @@ func (c *SendDifferentBlocksFromFirstGenerator) Decode(val interface{}) error {
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *SendDifferentBlocksFromAllGenerators) Decode(val interface{}) error {
 	var cfg SendDifferentBlocksFromAllGenerators
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *BreakingSingleBlock) Decode(val interface{}) error {
+	var cfg BreakingSingleBlock
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}
