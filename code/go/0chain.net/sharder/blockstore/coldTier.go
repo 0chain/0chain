@@ -13,41 +13,43 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
+	"syscall"
+
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"golang.org/x/sys/unix"
 
 	"0chain.net/chaincore/block"
 	. "0chain.net/core/logging"
 	"0chain.net/core/viper"
-	"github.com/minio/minio-go/v7"
-	"github.com/minio/minio-go/v7/pkg/credentials"
-	"golang.org/x/sys/unix"
+	"0chain.net/sharder/blockstore/options"
 )
 
 const (
 	Timeout             = 5
-	DefaultPollInterval = 720 //Hours
+	DefaultPollInterval = 720 // Hours
 )
 
 // var cTier coldTier
-var coldStoragesMap map[string]*minioClient
+var coldStoragesMap map[string]ColdStorageProvider
 
 type selectedColdStorage struct {
-	coldStorage coldStorageProvider
+	coldStorage ColdStorageProvider
 	prevInd     int
 	err         error
 }
 
-type coldTier struct { //Cold tier
+type coldTier struct { // Cold tier
 	Strategy            string
-	StorageType         string //disk, minio and blobber
-	ColdStorages        []coldStorageProvider
+	StorageType         string // disk, minio and blobber
+	ColdStorages        []ColdStorageProvider
 	SelectedStorageChan <-chan selectedColdStorage
-	SelectNextStorage   func(coldStorageProviders []coldStorageProvider, prevInd int)
+	SelectNextStorage   func(coldStorageProviders []ColdStorageProvider, prevInd int)
 	PrevInd             int
 	DeleteLocal         bool
 
 	Mu           sync.Mutex
-	PollInterval int //in hour
+	PollInterval int // in hour
 }
 
 func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err error) {
@@ -65,7 +67,7 @@ func (ct *coldTier) write(b *block.Block, data []byte) (coldPath string, err err
 
 		ct.PrevInd = sc.prevInd
 
-		if coldPath, err = sc.coldStorage.writeBlock(b, data); err != nil {
+		if coldPath, err = sc.coldStorage.WriteBlock(b, data); err != nil {
 			Logger.Error(err.Error())
 			ct.removeSelectedColdStorage()
 			go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
@@ -85,7 +87,7 @@ func (ct *coldTier) read(coldPath, hash string) (io.ReadCloser, error) {
 			return nil, errors.New(fmt.Sprintf("Invalid cold path %v", coldPath))
 		}
 
-		data, err := mc.getBlock(hash)
+		data, err := mc.GetBlock(hash)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +120,7 @@ func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err err
 
 		ct.PrevInd = sc.prevInd
 
-		if movedPath, err = sc.coldStorage.moveBlock(hash, blockPath); err != nil {
+		if movedPath, err = sc.coldStorage.MoveBlock(hash, blockPath); err != nil {
 			Logger.Error(err.Error())
 			ct.removeSelectedColdStorage()
 			go ct.SelectNextStorage(ct.ColdStorages, ct.PrevInd)
@@ -136,22 +138,29 @@ func (ct *coldTier) moveBlock(hash, blockPath string) (movedPath string, err err
 	}
 }
 
-type coldStorageProvider interface {
-	writeBlock(b *block.Block, data []byte) (string, error)
-	moveBlock(hash, blockPath string) (string, error)
-	getBlock(hash string) ([]byte, error)
-	getBlocks(cfo *coldFilterOptions) ([][]byte, error)
+type ColdStorageProvider interface {
+	WriteBlock(b *block.Block, data []byte) (string, error)
+	MoveBlock(hash, blockPath string) (string, error)
+	GetBlock(hash string) ([]byte, error)
+	GetBlocks(cfo *options.ColdFilterOptions) ([][]byte, error)
 }
 
-type coldFilterOptions struct {
-	prefix    string
-	startDate time.Time
-	endDate   time.Time
+type MinioClientI interface {
+	FPutObject(ctx context.Context, bucketName, objectName, filePath string, opts minio.PutObjectOptions) (info minio.UploadInfo, err error)
+	GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (*minio.Object, error)
+	ListObjects(ctx context.Context, bucketName string, opts minio.ListObjectsOptions) <-chan minio.ObjectInfo
+	PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (info minio.UploadInfo, err error)
+	RemoveBucket(ctx context.Context, bucketName string) error
+	StatObject(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error)
 }
 
-//S3 compatible storage
-type minioClient struct {
-	*minio.Client
+type ObjectI interface {
+	Read(b []byte) (n int, err error)
+}
+
+// MinioClient S3 compatible storage
+type MinioClient struct {
+	Client            MinioClientI
 	storageServiceURL string
 	accessId          string
 	secretAccessKey   string
@@ -164,7 +173,11 @@ type minioClient struct {
 	blocksSize          uint64
 }
 
-func (mc *minioClient) initialize() (err error) {
+var (
+	_ ColdStorageProvider = (*MinioClient)(nil)
+)
+
+func (mc *MinioClient) initialize() (err error) {
 	mc.Client, err = minio.New(mc.storageServiceURL, &minio.Options{
 		Creds:  credentials.NewStaticV4(mc.accessId, mc.secretAccessKey, ""),
 		Secure: mc.useSSL,
@@ -177,7 +190,7 @@ func (mc *minioClient) initialize() (err error) {
 	return
 }
 
-func (mc *minioClient) writeBlock(b *block.Block, data []byte) (coldPath string, err error) {
+func (mc *MinioClient) WriteBlock(b *block.Block, data []byte) (coldPath string, err error) {
 	ctx, ctxCncl := context.WithTimeout(context.Background(), Timeout)
 	defer ctxCncl()
 
@@ -193,7 +206,7 @@ func (mc *minioClient) writeBlock(b *block.Block, data []byte) (coldPath string,
 	return
 }
 
-func (mc *minioClient) moveBlock(hash, blockPath string) (string, error) {
+func (mc *MinioClient) MoveBlock(hash, blockPath string) (string, error) {
 	ctx := context.Background()
 	_, err := mc.Client.FPutObject(ctx, mc.bucketName, hash, blockPath, minio.PutObjectOptions{})
 	if err != nil {
@@ -203,7 +216,7 @@ func (mc *minioClient) moveBlock(hash, blockPath string) (string, error) {
 	return fmt.Sprintf("%v:%v", mc.storageServiceURL, mc.bucketName), nil
 }
 
-func (mc *minioClient) getBlock(hash string) ([]byte, error) {
+func (mc *MinioClient) GetBlock(hash string) ([]byte, error) {
 	var ctx context.Context
 
 	ctx = context.Background()
@@ -237,7 +250,7 @@ func (mc *minioClient) getBlock(hash string) ([]byte, error) {
 	return buffer, nil
 }
 
-func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
+func (mc *MinioClient) GetBlocks(cfo *options.ColdFilterOptions) ([][]byte, error) {
 	return nil, nil
 }
 
@@ -250,15 +263,15 @@ func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
 
 // }
 
-// func (bl *blobber) moveBlock() {
+// func (bl *blobber) MoveBlock() {
 // 	//
 // }
 
-// func (bl *blobber) getBlock() {
+// func (bl *blobber) GetBlock() {
 // 	//
 // }
 
-// func (bl *blobber) getBlocks() {
+// func (bl *blobber) GetBlocks() {
 // 	//
 // }
 // func (bl *blobber) isAbleToStoreBlock() (ableToStore bool) {
@@ -270,7 +283,7 @@ func (mc *minioClient) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
 // 	return nil
 // }
 
-//******************************Disk*******************************************
+// ******************************Disk*******************************************
 const (
 	CDCL        = 10000
 	CK          = "CK"
@@ -296,11 +309,11 @@ type coldDisk struct {
 	InodesToMaintain uint64
 }
 
-func (d *coldDisk) writeBlock(b *block.Block, data []byte) (blockPath string, err error) {
+func (d *coldDisk) WriteBlock(b *block.Block, data []byte) (blockPath string, err error) {
 	return
 }
 
-func (d *coldDisk) moveBlock(hash, oldBlockPath string) (newBlockPath string, err error) {
+func (d *coldDisk) MoveBlock(hash, oldBlockPath string) (newBlockPath string, err error) {
 	r, err := os.Open(oldBlockPath)
 	if err != nil {
 		return
@@ -341,7 +354,11 @@ func (d *coldDisk) moveBlock(hash, oldBlockPath string) (newBlockPath string, er
 
 	if n != rStat.Size() {
 		os.Remove(blockPath)
-		return "", fmt.Errorf("Could not write all data. Data length: %v, write length: %v", rStat.Size(), n)
+		return "", fmt.Errorf(
+			"could not write all data. Data length: %v, write length: %v",
+			rStat.Size(),
+			n,
+		)
 	}
 
 	d.CountMu.Lock()
@@ -354,7 +371,7 @@ func (d *coldDisk) moveBlock(hash, oldBlockPath string) (newBlockPath string, er
 	return blockPath, nil
 }
 
-func (d *coldDisk) getBlock(blockPath string) ([]byte, error) {
+func (d *coldDisk) GetBlock(blockPath string) ([]byte, error) {
 	f, err := os.Open(blockPath)
 	if err != nil {
 		return nil, err
@@ -388,7 +405,7 @@ func (d *coldDisk) updateBlocksSize(s int64) {
 	}
 }
 
-func (d *coldDisk) getBlocks(cfo *coldFilterOptions) ([][]byte, error) {
+func (d *coldDisk) GetBlocks(cfo *options.ColdFilterOptions) ([][]byte, error) {
 	return nil, nil
 }
 
@@ -466,8 +483,8 @@ func (d *coldDisk) selectDir() error {
 }
 
 func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
-	var volStat unix.Statfs_t
-	err := unix.Statfs(d.Path, &volStat)
+	var volStat syscall.Statfs_t
+	err := syscall.Statfs(d.Path, &volStat)
 	if err != nil {
 		Logger.Error(err.Error())
 		return
@@ -496,7 +513,7 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 		}
 	}
 
-	if unix.Access(d.Path, unix.W_OK) != nil {
+	if syscall.Access(d.Path, unix.W_OK) != nil {
 		return
 	}
 
@@ -508,7 +525,7 @@ func (d *coldDisk) isAbleToStoreBlock() (ableToStore bool) {
 	return true
 }
 
-//*****************************Strategy*************************************
+// *****************************Strategy*************************************
 
 func coldInit(cViper *viper.Viper, mode string) *coldTier {
 	storageType := cViper.GetString("storage.type")
@@ -528,7 +545,7 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 	cTier := new(coldTier)
 
 	selectedColdStorageChan := make(chan selectedColdStorage, 1)
-	var f func(coldVolumes []coldStorageProvider, prevInd int)
+	var f func(coldVolumes []ColdStorageProvider, prevInd int)
 
 	switch storageType {
 	default:
@@ -568,9 +585,9 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 			restartColdVolumes(volumesMap, cTier)
 		case "recover":
 			recoverColdVolumeMetaData(volumesMap, cTier)
-		case "repair": //Metadata is present but some disk failed
+		case "repair": // Metadata is present but some disk failed
 			panic("Repair mode not implemented")
-		case "repair_and_recover": //Metadata is lost and some disk failed
+		case "repair_and_recover": // Metadata is lost and some disk failed
 			panic("Repair and recover mode not implemented")
 
 		}
@@ -583,7 +600,7 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 		default:
 			panic(ErrStorageTypeNotSupported(strategy))
 		case RoundRobin:
-			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
+			f = func(coldStorageProviders []ColdStorageProvider, prevInd int) {
 				cTier.Mu.Lock()
 				defer cTier.Mu.Unlock()
 				var selectedVolume *coldDisk
@@ -702,12 +719,12 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 		default:
 			panic(ErrStrategyNotSupported(strategy))
 		case RoundRobin:
-			f = func(coldStorageProviders []coldStorageProvider, prevInd int) {
+			f = func(coldStorageProviders []ColdStorageProvider, prevInd int) {
 				cTier.Mu.Lock()
 
 				defer cTier.Mu.Unlock()
 
-				var selectedCloudStorage *minioClient
+				var selectedCloudStorage *MinioClient
 				var selectedIndex int
 
 				if prevInd < 0 {
@@ -726,7 +743,7 @@ func coldInit(cViper *viper.Viper, mode string) *coldTier {
 						i = 0
 					}
 
-					selectedCloudStorage = coldStorageProviders[i].(*minioClient)
+					selectedCloudStorage = coldStorageProviders[i].(*MinioClient)
 					prevInd = i
 				}
 
@@ -935,9 +952,9 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 					guideChannel <- struct{}{}
 					recoverWG.Add(1)
 
-					//TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
-					//for multi disks? Need some benchmark
-					go func(gPath string) { //gPath Path for goroutine
+					// TODO which is better? To use go routines for multi disk operations on single disk or for multi disk operations
+					// for multi disks? Need some benchmark
+					go func(gPath string) { // gPath Path for goroutine
 						defer recoverWG.Done()
 						defer func() {
 							<-guideChannel
@@ -1005,7 +1022,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 
 				}
 			}
-			recoverWG.Wait() //wait for all goroutine to complete
+			recoverWG.Wait() // wait for all goroutine to complete
 			Logger.Info("Completed meta data recovery")
 		} else {
 			if err := os.RemoveAll(volPath); err != nil {
@@ -1035,7 +1052,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 			Logger.Error(err.Error())
 			continue
 		}
-		//Check available size and inodes and add volume to volume pool
+		// Check available size and inodes and add volume to volume pool
 		availableSize, totalInodes, availableInodes, err := getAvailableSizeAndInodes(volPath)
 		if err != nil {
 			Logger.Error(err.Error())
@@ -1119,7 +1136,7 @@ func recoverColdVolumeMetaData(mVolumes []map[string]interface{}, cTier *coldTie
 }
 
 func startcloudstorages(cloudStorages []map[string]interface{}, cTier *coldTier, shouldDelete bool) {
-	coldStoragesMap = make(map[string]*minioClient)
+	coldStoragesMap = make(map[string]ColdStorageProvider)
 	for _, cloudStorageI := range cloudStorages {
 		servUrlI, ok := cloudStorageI["storage_service_url"]
 		if !ok {
@@ -1177,7 +1194,7 @@ func startcloudstorages(cloudStorages []map[string]interface{}, cTier *coldTier,
 			useSSL = useSSLI.(bool)
 		}
 
-		mc := &minioClient{
+		mc := &MinioClient{
 			storageServiceURL:   servUrl,
 			accessId:            accessId,
 			secretAccessKey:     secretKey,
@@ -1217,7 +1234,7 @@ func restartCloudStorages(cloudStorages []map[string]interface{}, cTier *coldTie
 	startcloudstorages(cloudStorages, cTier, false)
 }
 
-func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTier) { //Can run upto 100 goroutines
+func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTier) { // Can run upto 100 goroutines
 	guideChannel := make(chan struct{}, 10)
 	wg := sync.WaitGroup{}
 	for _, cloudStorageI := range cloudStorages {
@@ -1277,7 +1294,7 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTie
 			useSSL = useSSLI.(bool)
 		}
 
-		mc := &minioClient{
+		mc := &MinioClient{
 			storageServiceURL:   servUrl,
 			accessId:            accessId,
 			secretAccessKey:     secretKey,
@@ -1295,7 +1312,7 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTie
 		guideChannel <- struct{}{}
 		wg.Add(1)
 
-		go func(m *minioClient) {
+		go func(m *MinioClient) {
 			defer func() {
 				<-guideChannel
 				wg.Done()
@@ -1308,7 +1325,7 @@ func recoverCloudMetaData(cloudStorages []map[string]interface{}, cTier *coldTie
 	wg.Wait()
 }
 
-func recoverMetaDataFromCloudStorage(mc *minioClient, cTier *coldTier) {
+func recoverMetaDataFromCloudStorage(mc *MinioClient, cTier *coldTier) {
 	opts := minio.ListObjectsOptions{
 		Recursive: true,
 	}

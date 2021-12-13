@@ -20,23 +20,33 @@ const (
 	fileExt            = ".dat"
 	IndexStateFileName = "index.state"
 
-	//strategies
+	// strategies
 	Random        = "random"
 	RoundRobin    = "round_robin"
 	MinSizeFirst  = "min_size_first"
 	MinCountFirst = "min_count_first"
 
-	//DefaultStrategies
+	// DefaultStrategies
 	DefaultVolumeStrategy = "random"
 	DefaultColdStrategy   = "random"
 	DefaultCacheStrategy  = "random"
 
-	//BlockLimit Limit the number of blocks to store in any tier
+	// BlockLimit Limit the number of blocks to store in any tier
 	BlockLimitNumber = 1000000000 // 10 powered 9
 	GB               = 1024 * 1024 * 1024
 )
 
-//Common errors
+type (
+	CountBlocksInVolumes         func(vPath, dirPrefix string, dcl int) (uint64, uint64)
+	CountFiles                   func(dirPath string) (count int, err error)
+	GetAvailableSizeAndInodes    func(vPath string) (availableSize, totalInodes, availableInodes uint64, err error)
+	GetCurrentDirBlockNums       func(dir string) (int, error)
+	GetCurIndexes                func(fPath string) (curKInd, curDirInd int, err error)
+	GetUint64ValueFromYamlConfig func(v interface{}) (uint64, error)
+	UpdateCurIndexes             func(fPath string, curKInd, curDirInd int) error
+)
+
+// Common errors
 var (
 	ErrInodesLimit = func(vPath string, inodesToMaintain uint64) error {
 		return fmt.Errorf("Volume %v has inodes lesser than inodes to maintain, %v", vPath, inodesToMaintain)
@@ -79,7 +89,7 @@ var (
 	ErrUnableToSelectColdStorage   = errors.New("Unable to select any available cold storage")
 )
 
-func countFiles(dirPath string) (count int, err error) {
+var countFiles CountFiles = func(dirPath string) (count int, err error) {
 	var f *os.File
 	f, err = os.Open(dirPath)
 	if err != nil {
@@ -101,7 +111,7 @@ func countFiles(dirPath string) (count int, err error) {
 	return
 }
 
-func getAvailableSizeAndInodes(vPath string) (availableSize, totalInodes, availableInodes uint64, err error) {
+var getAvailableSizeAndInodes GetAvailableSizeAndInodes = func(vPath string) (availableSize, totalInodes, availableInodes uint64, err error) {
 	var volStat unix.Statfs_t
 	err = unix.Statfs(vPath, &volStat)
 	if err != nil {
@@ -114,7 +124,7 @@ func getAvailableSizeAndInodes(vPath string) (availableSize, totalInodes, availa
 	return
 }
 
-func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
+var getCurIndexes GetCurIndexes = func(fPath string) (curKInd, curDirInd int, err error) {
 	var f *os.File
 	if f, err = os.Open(fPath); err != nil {
 		return
@@ -146,7 +156,7 @@ func getCurIndexes(fPath string) (curKInd, curDirInd int, err error) {
 	return
 }
 
-func getCurrentDirBlockNums(dir string) (int, error) {
+var getCurrentDirBlockNums GetCurrentDirBlockNums = func(dir string) (int, error) {
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return 0, err
@@ -154,7 +164,7 @@ func getCurrentDirBlockNums(dir string) (int, error) {
 	return len(dirEntries), nil
 }
 
-func updateCurIndexes(fPath string, curKInd, curDirInd int) error {
+var updateCurIndexes UpdateCurIndexes = func(fPath string, curKInd, curDirInd int) error {
 	f, err := os.Create(fPath)
 	if err != nil {
 		return err
@@ -165,7 +175,7 @@ func updateCurIndexes(fPath string, curKInd, curDirInd int) error {
 	return err
 }
 
-func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
+var countBlocksInVolumes CountBlocksInVolumes = func(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	grandCount := &struct {
 		totalBlocksSize uint64
 		mu              sync.Mutex
@@ -233,8 +243,8 @@ func countBlocksInVolumes(vPath, dirPrefix string, dcl int) (uint64, uint64) {
 	return grandCount.totalBlocksSize, totalBlocksCount
 }
 
-//Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
-func getUint64ValueFromYamlConfig(v interface{}) (uint64, error) {
+// Converts integer and string representation of number to uint64. 10 * 10 * 10 is returned as uint64(1000); 10^4 is returned as uint64(10000)
+var getUint64ValueFromYamlConfig GetUint64ValueFromYamlConfig = func(v interface{}) (uint64, error) {
 	switch v.(type) {
 	case int:
 		return uint64(v.(int)), nil
