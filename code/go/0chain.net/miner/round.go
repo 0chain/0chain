@@ -25,15 +25,20 @@ type Round struct {
 	ownVerificationTicket *block.BlockVerificationTicket
 }
 
+func (r *Round) SetGenerationCancelf(generationCancelf context.CancelFunc) {
+	r.generationCancelf = generationCancelf
+}
+
 func (r *Round) TryCancelBlockGeneration() {
 	if r.generationCancelf == nil {
-		logging.Logger.Info("Try to cancel block generation that have not been started yet")
+		logging.Logger.Info("Try to cancel block generation that have not been started yet",
+			zap.Int64("round", r.Number))
 		return
 	}
-	logging.Logger.Info("Cancelling block generation")
+	logging.Logger.Info("Cancelling block generation", zap.Int64("round", r.Number))
 	r.roundGuard.Lock()
-	f := r.verificationCancelf
-	r.verificationCancelf = nil
+	f := r.generationCancelf
+	r.generationCancelf = nil
 	r.roundGuard.Unlock()
 
 	f()
@@ -191,7 +196,7 @@ func (r *Round) IsVerificationComplete() bool {
 }
 
 func (r *Round) isVerificationComplete() bool {
-	return r.GetState() >= round.RoundStateVerificationTimedOut
+	return r.GetPhase() >= round.Notarize
 }
 
 /*StartVerificationBlockCollection - start collecting blocks for verification */
@@ -218,6 +223,7 @@ func (r *Round) CancelVerification() {
 	if f == nil {
 		return
 	}
+	logging.Logger.Info("Cancelling verification", zap.Int64("round", r.Number))
 	r.verificationCancelf = nil
 	f()
 }

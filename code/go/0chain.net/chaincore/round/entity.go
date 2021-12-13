@@ -22,13 +22,19 @@ import (
 	"0chain.net/core/viper"
 )
 
+type Phase int32
+
 const (
-	RoundShareVRF = iota
-	RoundVRFComplete
-	RoundGenerating
-	RoundGenerated
-	RoundCollectingBlockProposals
-	RoundStateVerificationTimedOut
+	ShareVRF Phase = iota
+	Propose
+	Notarize
+	Share
+)
+
+type FinalizingState int32
+
+const (
+	NotFinalized FinalizingState = iota
 	RoundStateFinalizing
 	RoundStateFinalized
 )
@@ -188,7 +194,8 @@ type Round struct {
 	VRFOutput string       `json:"vrf_output"` // TODO: VRFOutput == rbooutput?
 
 	minerPerm       []int
-	state           int32
+	phase           Phase
+	finalizingState FinalizingState
 	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
 	mutex           sync.RWMutex
@@ -253,7 +260,7 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	r.mutex.Unlock()
 
 	r.setRandomSeed(seed)
-	r.setState(RoundVRFComplete)
+	r.setPhase(Propose)
 }
 
 func (r *Round) setRandomSeed(seed int64) {
@@ -448,7 +455,7 @@ func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
 func (r *Round) Finalize(b *block.Block) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.setState(RoundStateFinalized)
+	r.setFinalizingPhase(RoundStateFinalized)
 	r.Block = b
 	r.BlockHash = b.Hash
 }
@@ -461,26 +468,32 @@ func (r *Round) SetFinalizing() bool {
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
-	r.setState(RoundStateFinalizing)
+	r.setFinalizingPhase(RoundStateFinalizing)
 	return true
 }
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	return r.isFinalizing()
 }
 
 func (r *Round) isFinalizing() bool {
-	return r.getState() == RoundStateFinalizing
+	return r.getFinalizingState() == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	return r.isFinalized()
 }
 
 func (r *Round) isFinalized() bool {
-	return r.getState() == RoundStateFinalized || r.GetRoundNumber() == 0
+	return r.getFinalizingState() == RoundStateFinalized || r.GetRoundNumber() == 0
 }
 
 /*Provider - entity provider for client object */
@@ -553,7 +566,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
-			r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
+			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
@@ -602,21 +615,7 @@ func (r *Round) Restart() {
 	r.Block = nil
 	r.mutex.Unlock()
 	r.resetSoftTimeoutCount()
-	r.ResetState(RoundShareVRF)
-}
-
-//AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
-func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
-	if _, ok := r.shares[share.party.GetKey()]; ok {
-		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
-		return false
-	}
-	r.setState(RoundShareVRF)
-	r.shares[share.party.GetKey()] = share
-	return true
+	r.ResetPhase(ShareVRF)
 }
 
 // VRFShareExist checks if the VRF share already exist
@@ -640,7 +639,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 		logging.Logger.Info("add_vrf_share share is already there. Returning false.")
 		return false
 	}
-	r.setState(RoundShareVRF)
+	r.setPhase(ShareVRF)
 	r.shares[share.party.GetKey()] = share
 	logging.Logger.Debug("add_vrf_share",
 		zap.Int64("round", r.GetRoundNumber()),
@@ -664,28 +663,28 @@ func (r *Round) getVRFShares() map[string]*VRFShare {
 	return result
 }
 
-//GetState - get the state of the round
-func (r *Round) GetState() int {
+//GetPhase - get the phase of the round
+func (r *Round) GetPhase() Phase {
 	return r.getState()
 }
 
-//SetState - set the state of the round in a progressive order
-func (r *Round) SetState(state int) {
-	r.setState(state)
+//SetPhase - set the phase of the round in a progressive order
+func (r *Round) SetPhase(state Phase) {
+	r.setPhase(state)
 }
 
-//ResetState resets the state to any desired state
-func (r *Round) ResetState(state int) {
-	atomic.StoreInt32(&r.state, int32(state))
+//ResetPhase resets the phase to any desired phase
+func (r *Round) ResetPhase(state Phase) {
+	atomic.StoreInt32((*int32)(&r.phase), int32(state))
 }
 
-func (r *Round) getState() int {
-	return int(atomic.LoadInt32(&r.state))
+func (r *Round) getState() Phase {
+	return Phase(atomic.LoadInt32((*int32)(&r.phase)))
 }
 
-func (r *Round) setState(state int) {
+func (r *Round) setPhase(state Phase) {
 	if state > r.getState() {
-		atomic.StoreInt32(&r.state, int32(state))
+		atomic.StoreInt32((*int32)(&r.phase), int32(state))
 	}
 }
 
@@ -716,4 +715,12 @@ func (r *Round) GetVrfStartTime() time.Time {
 		return time.Time{}
 	}
 	return value.(time.Time)
+}
+
+func (r *Round) setFinalizingPhase(finalized FinalizingState) {
+	r.finalizingState = finalized
+}
+
+func (r *Round) getFinalizingState() FinalizingState {
+	return r.finalizingState
 }

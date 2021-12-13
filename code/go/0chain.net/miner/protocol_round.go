@@ -143,7 +143,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 
 	if tk == nil {
 		logging.Logger.Debug("[wait not ahead] [1] context is done or restart round")
-		return // context is done, can't wait anymore
+		return false // context is done, can't wait anymore
 	}
 
 	if round+1 <= tk.Round+int64(ahead) {
@@ -502,7 +502,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Any("state status", pb.GetStateStatus()))
 	}
 	withCancel, cancelFunc := context.WithCancel(common.GetRootContext())
-	r.SetVerificationCancelf(cancelFunc)
+	r.SetGenerationCancelf(cancelFunc)
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	cctx := memorystore.WithEntityConnection(withCancel, txnEntityMetadata)
 	defer memorystore.Close(cctx)
@@ -991,12 +991,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		sendVerification = true
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
-	r.SetState(round.RoundCollectingBlockProposals)
+	r.SetPhase(round.Propose)
 	var verifiedBlocks []*block.Block
 	for {
 		select {
 		case <-ctx.Done():
-			r.SetState(round.RoundStateVerificationTimedOut)
+			r.SetPhase(round.Notarize)
 			logging.Logger.Info("verification_complete", zap.Int64("round", r.Number),
 				zap.Int("verified_blocks", len(verifiedBlocks)))
 			bRank := -1
@@ -1149,18 +1149,19 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 
 	// start next round if not ahead of sharders
-	go mc.startNextRoundNotAhead(common.GetRootContext(), r)
+	go mc.moveToNextRoundNotAhead(common.GetRootContext(), r)
 	return true
 }
 
-func (mc *Chain) startNextRoundNotAhead(ctx context.Context, r *Round) {
+func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 	var rn = r.GetRoundNumber()
 	if !mc.waitNotAhead(ctx, rn) {
 		logging.Logger.Debug("start next round not ahead -- terminated",
 			zap.Int64("round", rn))
 		return // terminated
 	}
-	mc.StartNextRound(ctx, r)
+	nr := mc.StartNextRound(ctx, r)
+	mc.SetCurrentRound(nr.Number)
 }
 
 // MergeNotarization - merge a notarization.

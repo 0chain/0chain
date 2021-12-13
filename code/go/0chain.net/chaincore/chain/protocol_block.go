@@ -119,11 +119,6 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		zap.String("block", b.Hash),
 		zap.Int("tickets_num", len(bvt)))
 
-	// TODO: tps, question about this
-	if b.Round > c.GetCurrentRound() {
-		c.SetCurrentRound(b.Round)
-	}
-
 	return nil
 }
 

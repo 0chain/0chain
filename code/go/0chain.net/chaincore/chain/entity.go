@@ -1064,10 +1064,6 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 		return false
 	}
 	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
-	roundNumber := r.GetRoundNumber()
-	if roundNumber > c.getCurrentRound() {
-		c.setCurrentRound(roundNumber)
-	}
 	return true
 }
 
@@ -1082,7 +1078,17 @@ func (c *Chain) GetCurrentRound() int64 {
 func (c *Chain) SetCurrentRound(r int64) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	c.setCurrentRound(r)
+	current := c.getCurrentRound()
+	if current > r {
+		logging.Logger.Error("set_current_round trying to sent previous round as current, skipping",
+			zap.Int64("current_round", current), zap.Int64("to_set_round", r))
+		return
+	}
+	if current < r {
+		logging.Logger.Info("Moving to the next round", zap.Int64("next_round", r))
+		c.setCurrentRound(r)
+		return
+	}
 }
 
 func (c *Chain) setCurrentRound(r int64) {
@@ -1116,8 +1122,6 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
-	//TODO: Remove this log
-	logging.Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), b.RoundRank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {

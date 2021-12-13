@@ -27,6 +27,14 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 		zap.Int("vrf_timeout_count", msg.VRFShare.GetRoundTimeoutCount()),
 		zap.Int("sender_index", msg.Sender.SetIndex),
 	)
+
+	if msg.VRFShare.Round > mc.GetCurrentRound() {
+		logging.Logger.Debug("received VRF share for the future round, caching it",
+			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
+		mr.vrfSharesCache.add(msg.VRFShare)
+		return
+	}
+
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
@@ -459,7 +467,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	if mc.GetCurrentRound() <= not.Round {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", not.Round+1))
-		go mc.startNextRoundNotAhead(ctx, r)
+		go mc.moveToNextRoundNotAhead(ctx, r)
 	}
 
 	if !b.IsStateComputed() {
