@@ -274,7 +274,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		inputObj := freeStorageAllocationInput{
 			RecipientPublicKey: mockUserPublicKey,
 			Marker:             string(inputBytes),
-			Blobbers: 			getListOfBlobbers(conf.FreeAllocationSettings.DataShards, conf.FreeAllocationSettings.DataShards),
+			Blobbers: 			mockAllBlobbers.Nodes,
 		}
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
@@ -322,6 +322,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(&Allocations{}, nil).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
+		/*
 		balances.On(
 			"GetTrieNode",
 			mock.MatchedBy(func(key string) bool {
@@ -331,7 +332,13 @@ func TestFreeAllocationRequest(t *testing.T) {
 				balances.TestData()[newSaSaved] = true
 				return key == allocation.GetKey(ssc.ID)
 			}),
-		).Return(nil, util.ErrValueNotPresent).Once()
+		).Return(nil, util.ErrValueNotPresent).Once()*/
+
+		balances.On(
+			"GetTrieNode",
+			mock.Anything,
+			).Return(nil, util.ErrValueNotPresent).Once()
+
 		balances.On(
 			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
 		).Return("", nil).Once()
@@ -384,10 +391,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"GetTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				return balances.TestData()[newSaSaved].(bool) &&
-					key == allocation.GetKey(ssc.ID)
-			}),
+			mock.Anything,
+			//mock.MatchedBy(func(key string) bool {
+			//	return balances.TestData()[newSaSaved].(bool) &&
+			//		key == allocation.GetKey(ssc.ID)
+			//}),
 		).Return(&allocation, nil).Once()
 
 		balances.On(
@@ -401,6 +409,10 @@ func TestFreeAllocationRequest(t *testing.T) {
 				Amount:     state.Balance(readPoolLocked),
 			},
 		).Return(nil).Once()
+
+		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+			mockAllBlobbers, nil,
+		).Once()
 
 		balances.On(
 			"EmitEvent",
@@ -537,6 +549,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
+			println(err.Error())
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
@@ -658,6 +671,9 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
+		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+		//	mockAllBlobbers, nil,
+		//).Once()
 
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,
@@ -703,9 +719,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 			"InsertTrieNode", sa.GetKey(ssc.ID), mock.Anything,
 		).Return("", nil).Once()
 
-		balances.On(
-			"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		).Return("", nil).Once()
+		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
+				mockAllBlobbers, nil, ).Once()
+		//balances.On(
+		//	"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
+		//).Return("", nil).Once()
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
 		).Return(&writePool{}, nil).Once()

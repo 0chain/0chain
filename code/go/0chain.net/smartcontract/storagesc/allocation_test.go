@@ -744,7 +744,7 @@ func getListOfBlobbers(dataShards, parityShards int) []*StorageNode{
 	var blobbers = new(sortedBlobbers)
 	var stake = int64(scYaml.MaxStake)
 	var writePrice = blobberYaml.writePrice
-	for i := 0; i < dataShards+parityShards+4; i++ {
+	for i := 0; i < dataShards+parityShards; i++ {
 		var nextBlobber = goodBlobber
 		nextBlobber.ID = strconv.Itoa(i)
 		nextBlobber.Terms.WritePrice = zcnToBalance(writePrice)
@@ -1071,6 +1071,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
 	tx.Value = 0
+	nar.Blobbers = allBlobbers.Nodes
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg8)
 
@@ -1084,7 +1085,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	tx.Value = 400
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg9)
-
 	// 10. ok
 
 	allBlobbers.Nodes[0].Used = 5 * GB
@@ -1137,7 +1137,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		assert.Zero(t, *aresp.Stats)
 	}
 
-	assert.Nil(t, aresp.Blobbers)
+	//assert.Nil(t, aresp.Blobbers)
 	assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
 	assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
 	assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max

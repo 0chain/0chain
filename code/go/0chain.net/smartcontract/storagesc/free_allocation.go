@@ -250,6 +250,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		ReadPriceRange:             conf.FreeAllocationSettings.ReadPriceRange,
 		WritePriceRange:            conf.FreeAllocationSettings.WritePriceRange,
 		MaxChallengeCompletionTime: conf.FreeAllocationSettings.MaxChallengeCompletionTime,
+		Blobbers: 					inputObj.Blobbers,
 	}
 
 	arBytes, err := request.encode()

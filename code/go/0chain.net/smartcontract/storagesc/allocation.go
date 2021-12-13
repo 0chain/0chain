@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -1027,38 +1026,6 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 	}
 
 	return string(alloc.Encode()), nil
-}
-
-func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
-	blobberMap := make(map[string]*StorageNode)
-	for _, storageNode := range allBlobbers {
-		blobberMap[storageNode.BaseURL] = storageNode
-	}
-	for _, blobberURL := range preferredBlobbers {
-		selectedBlobber, ok := blobberMap[blobberURL]
-		if !ok {
-			err = errors.New("invalid preferred blobber URL")
-			return
-		}
-		selectedBlobbers = append(selectedBlobbers, selectedBlobber)
-	}
-	return
-}
-
-func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []*StorageNode {
-	nOut := minInt(len(in), n)
-	nOut = maxInt(1, nOut)
-	randGen := rand.New(rand.NewSource(seed))
-	for {
-		i := randGen.Intn(len(in))
-		if !checkExists(in[i], out) {
-			out = append(out, in[i])
-		}
-		if len(out) >= nOut {
-			break
-		}
-	}
-	return out
 }
 
 func minInt(x, y int) int {
