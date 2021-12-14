@@ -419,9 +419,6 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set(HeaderRequestEntityName, v.EntityName)
 			buffer = bytes.NewBuffer(v.Data)
 			uri = r.FormValue("_puri")
-			logging.Logger.Debug("push pull",
-				zap.String("uri", uri),
-				zap.String("entity name", v.EntityName))
 		}
 		if options.Compress {
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())

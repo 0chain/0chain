@@ -1,0 +1,182 @@
+name: "0Chain System Tests"
+
+concurrency:
+  group: "${{ github.ref }}"
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+       system_tests_branch:
+        description: 'system_tests branch. Containing the tests you wish to run'
+        default: 'master'
+        required: true
+       zbox_cli_branch:
+        description: '0Box CLI (branch or commit SHA) which the tests will use'
+        default: 'staging'
+        required: true
+       zwallet_cli_branch:
+        description: '0Wallet CLI (branch or commit SHA) which the tests will use'
+        default: 'staging'
+        required: true
+       blobber_image:
+        description: 'blobber DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       validator_image:
+        description: 'validator DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       zbox_image:
+        description: '0box DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       zblock_image:
+        description: '0block DOCKER IMAGE to deploy'
+        default: 'staging'
+        required: true
+       skip_tests:
+        description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
+        default: 'FALSE'
+        required: true
+jobs:
+  system-tests:
+    runs-on: [ tests-suite ]
+    timeout-minutes: 40
+    steps:
+
+    - name: "Get current PR"
+      uses: jwalton/gh-find-current-pr@v1
+      id: findPr
+      with:
+        github-token: ${{ github.token }}
+
+    - name: "Setup Test Run"
+      run: |
+        echo "SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)" >> $GITHUB_ENV
+        echo "TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
+        echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+
+    - name: "Check miner image has been published"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      run: |
+        exit_code=0
+        echo "Checking miner image [${{ env.TAG }}-${{ env.SHORT_SHA }}] is present..."
+        docker pull 0chaindev/miner:${{ env.TAG }}-${{ env.SHORT_SHA }} || exit_code=$?
+
+        if [[ $exit_code == 0 ]];
+          then
+            echo "miner docker image found for  [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
+            echo "MINER_IMAGE=${{ env.TAG }}-${{ env.SHORT_SHA }}" >> $GITHUB_ENV
+          else
+            if [ -z "${{ steps.findPr.outputs.pr }}" ];
+              then
+                echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}] and PR not raised so will not check for PR merge image. Please publish image manually. at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again" && exit 1;
+            fi
+            echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
+            git fetch origin pull/${{ steps.findPr.outputs.pr }}/merge:merge && git checkout merge
+            MERGE_SHORT_SHA=$(git rev-parse HEAD | head -c 8)
+            echo "Checking miner image [merge-$MERGE_SHORT_SHA] is present..."
+            docker pull 0chaindev/miner:merge-$MERGE_SHORT_SHA || { echo "Docker image for miner could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
+            echo "miner docker image found for  [merge-$MERGE_SHORT_SHA]"
+            echo "MINER_IMAGE=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
+        fi
+
+    - name: "Check sharder image has been published"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      run: |
+        exit_code=0
+        echo "Checking sharder image [${{ env.TAG }}-${{ env.SHORT_SHA }}] is present..."
+        docker pull 0chaindev/sharder:${{ env.TAG }}-${{ env.SHORT_SHA }} || exit_code=$?
+
+        if [[ $exit_code == 0 ]];
+          then
+            echo "sharder docker image found for  [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
+            echo "SHARDER_IMAGE=${{ env.TAG }}-${{ env.SHORT_SHA }}" >> $GITHUB_ENV
+          else
+            if [ -z "${{ steps.findPr.outputs.pr }}" ];
+              then
+                echo "sharder docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}] and PR not raised so will not check for PR merge image. Please publish image manually." && exit 1;
+            fi
+            echo "sharder docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
+            git fetch origin pull/${{ steps.findPr.outputs.pr }}/merge:merge && git checkout merge
+            MERGE_SHORT_SHA=$(git rev-parse HEAD | head -c 8)
+            echo "Checking sharder image [merge-$MERGE_SHORT_SHA] is present..."
+            docker pull 0chaindev/sharder:merge-$MERGE_SHORT_SHA || { echo "Docker image for sharder could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge sha [$MERGE_SHORT_SHA]. Please publish image manually and try again." && exit 1; }
+            echo "sharder docker image found for  [merge-$MERGE_SHORT_SHA]"
+            echo "SHARDER_IMAGE=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
+        fi
+
+
+    - name: "Set PR Status Pending"
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      if: steps.findPr.outputs.number
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "Manual system tests running"
+        state: "pending"
+        repository: ${{ github.repository }}
+        context:  "0Chain System Tests"
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: "Deploy 0Chain"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      uses: 0chain/actions/deploy-0chain@master
+      with:
+        kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+        teardown_condition: "TESTS_PASSED"
+        miner_image:  ${{ env.MINER_IMAGE }}
+        sharder_image: ${{ env.SHARDER_IMAGE }}
+        blobber_image: ${{ github.event.inputs.blobber_image }}
+        validator_image: ${{ github.event.inputs.validator_image }}
+        zbox_image: ${{ github.event.inputs.zbox_image }}
+        zblock_image: ${{ github.event.inputs.zblock_image }}
+        zdns_image: staging
+        explorer_image: latest
+        zproxy_image: staging
+        zsearch_image: staging
+        blobber_stake_image: latest
+
+    - name: "Run System tests"
+      if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
+      uses: 0chain/actions/run-system-tests@master
+      with:
+        system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
+        network: ${{ env.NETWORK_URL }}
+        zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
+        zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+        smart_contract_owner_wallet_json: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
+        svc_account_secret: ${{ github.token }}
+        deploy_report_page: false
+        archive_results: true
+        run_flaky_tests: false
+        retry_failures: true
+
+    - name: "Set PR Status Success"
+      if: ${{ success() && steps.findPr.outputs.number }}
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "Manual system tests success"
+        state: ${{ job.status }}
+        repository: ${{ github.repository }}
+        context: "0Chain System Tests"
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: "Set PR Status Failed"
+      if: ${{ failure() && steps.findPr.outputs.number }}
+      uses: niteoweb/pull_request_status_action@v1.0.0
+      with:
+        pr_number: ${{ steps.findPr.outputs.pr }}
+        description: "Manual system tests failure"
+        state: ${{ job.status }}
+        repository: ${{ github.repository }}
+        context: "0Chain System Tests"
+        target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}

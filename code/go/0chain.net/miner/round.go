@@ -38,10 +38,11 @@ func newVRFSharesCache() *vrfSharesCache {
 func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
-	if _, ok := v.vrfShares[vrfShare.GetParty().GetKey()]; ok {
+	k := vrfShare.GetParty().GetKey()
+	if _, ok := v.vrfShares[k]; ok {
 		return
 	}
-	v.vrfShares[vrfShare.Share] = vrfShare
+	v.vrfShares[k] = vrfShare
 }
 
 func (v *vrfSharesCache) getAll() []*round.VRFShare {
@@ -54,10 +55,13 @@ func (v *vrfSharesCache) getAll() []*round.VRFShare {
 	return vrfShares
 }
 
-func (v *vrfSharesCache) clean() {
+// clean deletes shares that has round time out count <= the 'count' value
+func (v *vrfSharesCache) clean(count int) {
 	v.mutex.Lock()
-	for s := range v.vrfShares {
-		delete(v.vrfShares, s)
+	for s, vrf := range v.vrfShares {
+		if vrf.GetRoundTimeoutCount() <= count {
+			delete(v.vrfShares, s)
+		}
 	}
 	v.mutex.Unlock()
 }
@@ -176,4 +180,10 @@ func (r *Round) Clear() {
 //IsVRFComplete - is the VRF process complete?
 func (r *Round) IsVRFComplete() bool {
 	return r.HasRandomSeed()
+}
+
+// Restart resets round and vrf shares cache
+func (r *Round) Restart() {
+	r.Round.Restart()
+	r.vrfSharesCache = newVRFSharesCache()
 }
