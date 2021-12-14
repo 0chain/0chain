@@ -279,13 +279,12 @@ func TestFreeAllocationRequest(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 
-		require.NoError(t, err)
+		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
+
 		balances.On(
 			"GetTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
 		).Return(&p.assigner, nil).Once()
-
-		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil)
 
 		for _, blobber := range mockAllBlobbers.Nodes {
 			balances.On(
@@ -322,22 +321,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 		).Return(&Allocations{}, nil).Once()
 
 		allocation := StorageAllocation{ID: txn.Hash}
-		/*
-		balances.On(
-			"GetTrieNode",
-			mock.MatchedBy(func(key string) bool {
-				if balances.TestData()[newSaSaved].(bool) {
-					return false
-				}
-				balances.TestData()[newSaSaved] = true
-				return key == allocation.GetKey(ssc.ID)
-			}),
-		).Return(nil, util.ErrValueNotPresent).Once()*/
 
 		balances.On(
 			"GetTrieNode",
-			mock.Anything,
-			).Return(nil, util.ErrValueNotPresent).Once()
+			allocation.GetKey(ssc.ID),
+		).Return(nil, util.ErrValueNotPresent).Once()
 
 		balances.On(
 			"InsertTrieNode", ALL_ALLOCATIONS_KEY, mock.Anything,
@@ -391,12 +379,9 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 		balances.On(
 			"GetTrieNode",
-			mock.Anything,
-			//mock.MatchedBy(func(key string) bool {
-			//	return balances.TestData()[newSaSaved].(bool) &&
-			//		key == allocation.GetKey(ssc.ID)
-			//}),
+			allocation.GetKey(ssc.ID),
 		).Return(&allocation, nil).Once()
+
 
 		balances.On(
 			"GetSignatureScheme",
