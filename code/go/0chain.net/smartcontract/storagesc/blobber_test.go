@@ -257,8 +257,6 @@ func Test_flow_reward(t *testing.T) {
 
 		var readPoolFund = int64(len(alloc.BlobberDetails)) * 2 * 1e10
 
-		println(readPoolFund)
-		println("readPoolFund")
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
 		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{

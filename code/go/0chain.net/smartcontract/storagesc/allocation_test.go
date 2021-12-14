@@ -1137,7 +1137,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		assert.Zero(t, *aresp.Stats)
 	}
 
-	//assert.Nil(t, aresp.Blobbers)
 	assert.Equal(t, PriceRange{10, 40}, aresp.ReadPriceRange)
 	assert.Equal(t, PriceRange{100, 400}, aresp.WritePriceRange)
 	assert.Equal(t, 15*time.Second, aresp.ChallengeCompletionTime) // max
@@ -1301,7 +1300,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
-	nar.Blobbers = allBlobbers.Nodes         // not set
+	nar.Blobbers = allBlobbers.Nodes
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)

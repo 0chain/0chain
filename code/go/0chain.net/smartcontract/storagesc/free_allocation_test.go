@@ -534,7 +534,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 
 			_, err := args.ssc.freeAllocationRequest(args.txn, args.input, args.balances)
 
-			println(err.Error())
 			require.EqualValues(t, test.want.err, err != nil)
 			if err != nil {
 				require.EqualValues(t, test.want.errMsg, err.Error())
@@ -656,9 +655,6 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
-		//balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
-		//	mockAllBlobbers, nil,
-		//).Once()
 
 		ca := ClientAllocation{
 			ClientID:    p.marker.Recipient,
@@ -706,9 +702,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 
 		balances.On("GetTrieNode", ALL_BLOBBERS_KEY).Return(
 				mockAllBlobbers, nil, ).Once()
-		//balances.On(
-		//	"InsertTrieNode", ALL_BLOBBERS_KEY, mock.Anything,
-		//).Return("", nil).Once()
+
 		balances.On(
 			"GetTrieNode", writePoolKey(ssc.ID, p.marker.Recipient),
 		).Return(&writePool{}, nil).Once()
