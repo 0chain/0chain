@@ -176,7 +176,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	notarizations := 0
 	proposals := 0
 	rrs := int64(0)
-
+	phase := "N/A"
 	var mb = c.GetMagicBlock(rn)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
@@ -188,6 +188,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 			notarizations = len(cr.GetNotarizedBlocks())
 			proposals = len(cr.GetProposedBlocks())
 			rrs = cr.GetRandomSeed()
+			phase = round.GetPhaseName(cr.GetPhase())
 		}
 
 		vrfThreshold := mb.T
@@ -240,6 +241,15 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", notarizations)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Phase")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", phase)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 

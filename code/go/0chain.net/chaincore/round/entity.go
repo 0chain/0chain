@@ -26,10 +26,24 @@ type Phase int32
 
 const (
 	ShareVRF Phase = iota
-	Propose
+	Verify
 	Notarize
 	Complete
 )
+
+func GetPhaseName(ph Phase) string {
+	name, ok := map[Phase]string{
+		ShareVRF: "ShareVRF",
+		Verify:   "Verify",
+		Notarize: "Notarize",
+		Complete: "Complete",
+	}[ph]
+
+	if !ok {
+		return "N/A"
+	}
+	return name
+}
 
 type FinalizingState int32
 
@@ -260,7 +274,7 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	r.mutex.Unlock()
 
 	r.setRandomSeed(seed)
-	r.setPhase(Propose)
+	//r.setPhase(Verify)
 }
 
 func (r *Round) setRandomSeed(seed int64) {
