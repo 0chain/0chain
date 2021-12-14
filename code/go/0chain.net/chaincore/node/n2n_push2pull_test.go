@@ -48,13 +48,19 @@ func TestPullingEntityCache(t *testing.T) {
 			var value int
 			for i := 0; i < 10; i++ {
 				func(ct int) {
-					cc.pullOrCacheRequest(context.Background(), "key1", func() bool {
-						time.Sleep(100 * time.Millisecond)
+					cc.pullOrCacheRequest(context.Background(), "key1", func(ctx context.Context) bool {
 						if ct < tc.trueIndex {
 							return false
 						}
-						value = 10 + ct
-						return true
+						time.Sleep(100 * time.Duration(1+ct) * time.Millisecond)
+
+						select {
+						case <-ctx.Done():
+							return false
+						default:
+							value = 10 + ct
+							return true
+						}
 					})
 				}(i)
 			}

@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/core/cache"
@@ -70,7 +71,7 @@ type Chain struct {
 	TieringStats   *MinioStats
 
 	processingBlocks *cache.LRU
-	//nbsMutex         sync.Mutex
+	pbMutex          sync.RWMutex
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
