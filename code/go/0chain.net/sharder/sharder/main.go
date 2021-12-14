@@ -278,7 +278,7 @@ func main() {
 	}
 
 	initServer()
-	initHandlers()
+	initHandlers(sc)
 
 	go sc.RegisterClient()
 	if config.DevConfiguration.IsFeeEnabled {
@@ -382,14 +382,14 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, s
 	return h, n2nh, p, path, description, nil
 }
 
-func initHandlers() {
+func initHandlers(c chain.Chainer) {
 	if config.Development() {
 		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
 		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers()
+	chain.SetupHandlers(c)
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()

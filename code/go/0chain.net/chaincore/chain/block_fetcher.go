@@ -311,12 +311,15 @@ type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
 }
 
+//go: generate
+//go:generate mockery -name Chainer --case underscore -inpkg -testonly
 // The Chainer represents Chain.
 type Chainer interface {
 	// LFB tickets work
 	SubLFBTicket() (sub chan *LFBTicket)
 	UnsubLFBTicket(sub chan *LFBTicket)
 	GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket)
+	GetLatestFinalizedMagicBlockClone(ctx context.Context) *block.Block
 	// blocks fetching
 	getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTicket) (
 		fb *block.Block, err error)
@@ -328,7 +331,7 @@ type Chainer interface {
 // the block fetching functions
 //
 
-// The getFinalizedBlockFromSharders - request for a finalized block from all
+// getFinalizedBlockFromSharders - request for a finalized block from all
 // sharders from current magic block.
 func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	ticket *LFBTicket) (fb *block.Block, err error) {
@@ -438,7 +441,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	}
 }
 
-// The getNotarizedBlockFromMiners - get a notarized block for a round from
+// getNotarizedBlockFromMiners - get a notarized block for a round from
 // miners. It verifies and validates block. But it never creates corresponding
 // Chain round, never adds the block to the round, never adds block to the
 // Chain, and never calls NotarizedBlockFetched that should be done after if
