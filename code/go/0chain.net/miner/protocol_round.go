@@ -1149,11 +1149,13 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
 
 	// start next round if not ahead of sharders
+	//TODO implement round centric context, that is cancelled when transition to the next happens
 	go mc.moveToNextRoundNotAhead(common.GetRootContext(), r)
 	return true
 }
 
 func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
+	r.SetPhase(round.Complete)
 	var rn = r.GetRoundNumber()
 	if !mc.waitNotAhead(ctx, rn) {
 		logging.Logger.Debug("start next round not ahead -- terminated",
@@ -1417,7 +1419,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	var r = mc.GetMinerRound(round)
 
-	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
+	if r.GetSoftTimeoutCount() == mc.RoundRestartMult && !r.IsComplete() {
 		logging.Logger.Info("triggering restartRound",
 			zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx, round)
@@ -1433,6 +1435,17 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 	r := mc.GetMinerRound(rn)
 	proposals := r.GetProposedBlocks()
+	if r.IsComplete() && len(r.GetNotarizedBlocks()) > 0 {
+		notb := r.GetNotarizedBlocks()[0]
+		go mc.SendNotarization(common.GetRootContext(), notb)
+		go mc.SendNotarizedBlock(common.GetRootContext(), notb)
+
+		return
+	}
+	if r.IsComplete() {
+		logging.Logger.Error("complete round without notarized block, panic", zap.Int64("current_round", r.Number))
+	}
+
 	if len(proposals) > 0 { // send the best block to the network
 		b := r.Block
 		if b != nil {

@@ -249,3 +249,7 @@ func (r *Round) Restart() {
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 }
+
+func (r *Round) IsComplete() bool {
+	return r.GetPhase() == round.Complete
+}

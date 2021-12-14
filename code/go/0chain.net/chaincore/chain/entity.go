@@ -1080,7 +1080,7 @@ func (c *Chain) SetCurrentRound(r int64) {
 	defer c.roundsMutex.Unlock()
 	current := c.getCurrentRound()
 	if current > r {
-		logging.Logger.Error("set_current_round trying to sent previous round as current, skipping",
+		logging.Logger.Error("set_current_round trying to set previous round as current, skipping",
 			zap.Int64("current_round", current), zap.Int64("to_set_round", r))
 		return
 	}

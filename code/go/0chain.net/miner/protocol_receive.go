@@ -467,7 +467,8 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	if mc.GetCurrentRound() <= not.Round {
 		logging.Logger.Info("process notarization - start next round",
 			zap.Int64("new round", not.Round+1))
-		go mc.moveToNextRoundNotAhead(ctx, r)
+		//TODO implement round centric context, that is cancelled when transition to the next happens
+		go mc.moveToNextRoundNotAhead(common.GetRootContext(), r)
 	}
 
 	if !b.IsStateComputed() {

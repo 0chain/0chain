@@ -28,7 +28,7 @@ const (
 	ShareVRF Phase = iota
 	Propose
 	Notarize
-	Share
+	Complete
 )
 
 type FinalizingState int32
