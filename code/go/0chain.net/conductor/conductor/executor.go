@@ -793,6 +793,24 @@ func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.BreakingSingleBlock) (
 	return
 }
 
+// ConfigureSendInsufficientProposals implements config.Executor interface.
+func (r *Runner) ConfigureSendInsufficientProposals(cfg *config.SendInsufficientProposals) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"send insufficient proposals\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.SendInsufficientProposals = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewSendInsufficientProposals()
+
+	return
+}
+
 // MakeTestCaseCheck implements config.Executor interface.
 func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if r.verbose {

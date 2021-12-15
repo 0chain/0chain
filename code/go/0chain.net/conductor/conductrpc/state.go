@@ -51,6 +51,7 @@ type State struct {
 	SendDifferentBlocksFromFirstGenerator *config.SendDifferentBlocksFromFirstGenerator
 	SendDifferentBlocksFromAllGenerators  *config.SendDifferentBlocksFromAllGenerators
 	BreakingSingleBlock                   *config.BreakingSingleBlock
+	SendInsufficientProposals             *config.SendInsufficientProposals
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
