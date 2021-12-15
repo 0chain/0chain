@@ -16,7 +16,7 @@ import (
 // HandleVRFShare - handles the vrf share.
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 
-	var mr = mc.getOrStartRoundNotAhead(ctx, msg.VRFShare.Round)
+	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
 		return
 	}
@@ -208,7 +208,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
-		mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
+		mr = mc.getOrCreateRound(ctx, b.Round)
 		if mr == nil {
 			logging.Logger.Error("verify block - can't start new round",
 				zap.Int64("round", b.Round))
@@ -434,7 +434,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		if err != nil {
 			return fmt.Errorf("fetch notarized block failed, err: %v", err)
 		}
-		r = mc.GetMinerRound(not.Round)
+		r = mc.getOrCreateRound(ctx, not.Round)
 	}
 
 	if !b.IsBlockNotarized() {
@@ -464,12 +464,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	if mc.GetCurrentRound() <= not.Round {
-		logging.Logger.Info("process notarization - start next round",
-			zap.Int64("new round", not.Round+1))
-		//TODO implement round centric context, that is cancelled when transition to the next happens
-		go mc.moveToNextRoundNotAhead(common.GetRootContext(), r)
-	}
+	mc.ProgressOnNotarization(r)
 
 	if !b.IsStateComputed() {
 		if err := mc.GetBlockStateChange(b); err != nil {
@@ -517,6 +512,15 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	return nil
 }
 
+func (mc *Chain) ProgressOnNotarization(notRound *Round) {
+	if mc.GetCurrentRound() <= notRound.Number {
+		logging.Logger.Info("process notarization - start next round",
+			zap.Int64("new round", notRound.Number+1))
+		//TODO implement round centric context, that is cancelled when transition to the next happens
+		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+	}
+}
+
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
 	mc.processNotarization(ctx, msg.Notarization)
@@ -528,9 +532,9 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 
 	nb := msg.Block
 
-	var mr = mc.getOrStartRoundNotAhead(ctx, nb.Round)
+	var mr = mc.getOrCreateRound(ctx, nb.Round)
 	if mr == nil {
-		logging.Logger.Debug("notarized block handler -- is ahead or no pr",
+		logging.Logger.Debug("can't create round",
 			zap.String("block", nb.Hash), zap.Any("round", nb.Round),
 			zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
 		return // can't handle yet
@@ -554,22 +558,10 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		return
 	}
 
-	if !mr.IsVRFComplete() {
-		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
-	}
-
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}
 
-	if mc.isAheadOfSharders(ctx, nb.Round+1) {
-		logging.Logger.Error("handle notarized block",
-			zap.Error(errors.New("next round ahead of sharders")),
-			zap.Int64("round", nb.Round),
-			zap.Int64("lfb_round", lfb.Round))
-		return
-	}
-
-	mc.StartNextRound(ctx, mr) // start next or skip
+	mc.ProgressOnNotarization(mr)
 }

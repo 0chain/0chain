@@ -297,6 +297,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	mr.AddVRFShare(vrfs, blsThreshold)
 
 	if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
+		mc.TryProposeBlock(ctx, mr)
 		mc.StartVerification(ctx, mr)
 	}
 
@@ -427,16 +428,15 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	return true
 }
 
-func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
+func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) error {
 	Logger.Debug("DKG computeRBO")
 	if mr.IsVRFComplete() {
 		Logger.Info("DKG computeRBO RBO is already completed")
-		return
+		return nil
 	}
 
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
-	mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
-
+	return mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 }
 
 func getVRFShareInfo(mr *Round) ([]string, []string) {
@@ -453,7 +453,7 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 	return recSig, recFrom
 }
 
-func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
+func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
 	var seed int64
 	if config.DevConfiguration.IsDkgEnabled {
@@ -468,8 +468,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 				seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 			}
 		} else {
-			Logger.Error("pr is null! Let go this round...")
-			return
+			return fmt.Errorf("pr is null")
 		}
 	}
 	r.Round.SetVRFOutput(rbo)
@@ -487,6 +486,8 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	} else {
 		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
 	}
-	mc.startRound(ctx, r, seed)
-
+	if !mc.SetRandomSeed(r.Round, seed) {
+		return fmt.Errorf("can't set round random seed for round")
+	}
+	return nil
 }

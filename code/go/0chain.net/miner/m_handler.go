@@ -333,9 +333,9 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 		}
 	}
 
-	var mr = mc.getOrStartRoundNotAhead(ctx, rn)
+	var mr = mc.getOrCreateRound(ctx, rn)
 	if mr == nil {
-		logging.Logger.Error("handle vt. msg -- ahead of sharders or no pr",
+		logging.Logger.Error("handle vt. msg -- can't create round for ticket",
 			zap.Int64("round", rn))
 		return nil, nil
 	}
