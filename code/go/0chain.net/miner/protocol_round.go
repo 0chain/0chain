@@ -1585,7 +1585,8 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		return // skip notarized rounds <=== [continue loop]
 	}
 
-	//if network made progress and current miner is still stuck
+	//if network made progress and current miner is still stuck try to get next to lfb block, which is notarized,
+	//else try to get notarized block for current round
 	if lfb.Round+1 > r.Number {
 		r = mc.getOrCreateRound(ctx, lfb.Round+1)
 	}
