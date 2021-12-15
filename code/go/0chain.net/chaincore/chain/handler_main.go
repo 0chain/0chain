@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 
-	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 )
 
@@ -19,7 +18,7 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 /*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
 func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 	return func(ctx context.Context, r *http.Request) (interface{}, error) {
-		nodeLFMBHash := r.Header.Get(node.HeaderNodeLFMBHash)
+		nodeLFMBHash := r.FormValue("node-lfmb-hash")
 		lfmb := c.GetLatestFinalizedMagicBlockClone(ctx)
 		if lfmb == nil {
 			return nil, errors.New("could not find latest finalized magic block")

@@ -1,13 +1,15 @@
 package chain
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"github.com/stretchr/testify/require"
 )
@@ -21,29 +23,29 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 
 	tt := []struct {
 		name       string
-		headerHash string
+		localLFMB  string
 		retLFMB    *block.Block
 		expectCode int
 	}{
 		{
-			name:       "not modified, set header",
-			headerHash: lfmb.Hash,
+			name:       "not modified, set node lfmb",
+			localLFMB:  lfmb.Hash,
 			retLFMB:    lfmb,
 			expectCode: http.StatusNotModified,
 		},
 		{
-			name:       "not modified, no header",
+			name:       "not modified, no node lfmb",
 			retLFMB:    lfmb,
 			expectCode: http.StatusOK,
 		},
 		{
-			name:       "modified, no header",
+			name:       "modified, no node lfmb",
 			retLFMB:    lfmb2,
 			expectCode: http.StatusOK,
 		},
 		{
-			name:       "modified, set header",
-			headerHash: lfmb.Hash,
+			name:       "modified, set node lfmb",
+			localLFMB:  lfmb.Hash,
 			retLFMB:    lfmb2,
 			expectCode: http.StatusOK,
 		},
@@ -53,10 +55,15 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			c := MockChainer{}
 
-			req := httptest.NewRequest("GET", "/v1/block/get/latest_finalized_magic_block", nil)
-			if len(tc.headerHash) > 0 {
-				req.Header.Set(node.HeaderNodeLFMBHash, tc.headerHash)
+			var data io.Reader
+			if len(tc.localLFMB) > 0 {
+				params := url.Values{}
+				params.Add("node-lfmb-hash", tc.localLFMB)
+				data = strings.NewReader(params.Encode())
 			}
+
+			req := httptest.NewRequest("POST", "/v1/block/get/latest_finalized_magic_block", data)
+			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 			c.On("GetLatestFinalizedMagicBlockClone", req.Context()).Return(tc.retLFMB)
 			handler := common.ToJSONResponse(LatestFinalizedMagicBlockHandler(&c))

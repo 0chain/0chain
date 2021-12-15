@@ -70,8 +70,6 @@ var (
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
 	HeaderNodeRequestSignature = "X-Node-Request-Signature"
-
-	HeaderNodeLFMBHash = "X-Node-LFMB-Hash"
 )
 
 //N2NTimeTolerance - only a message signed within this time is considered valid
