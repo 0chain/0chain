@@ -17,7 +17,7 @@ import (
 
 var (
 	pushDataCache      = cache.NewLRUCache(100)
-	pullingEntityCache = newPullingCache(1000, 10)
+	pullingEntityCache = newPullingCache(1000, 5)
 )
 
 //pushDataCacheEntry - cached push data
@@ -85,7 +85,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 
 	pullKey := fmt.Sprintf("%s:%s", entityName, entityID)
 	// entity with the same key id will be cached till the first request is returned
-	pullingEntityCache.pullOrCacheRequest(ctx, pullKey, func() bool {
+	pullingEntityCache.pullOrCacheRequest(ctx, pullKey, func(ctx context.Context) bool {
 		return rhandler(ctx, nd)
 	})
 }
@@ -120,7 +120,7 @@ func newPullingCache(cacheSize, chanSize int) *pullingCache {
 	}
 }
 
-type pullHandlerFunc func() bool
+type pullHandlerFunc func(ctx context.Context) bool
 
 // addIfNotExist checks if the entity id is in the cache, add it if not exist, and return false
 // to indicate the entity was not in the cache, otherwise reject it and return true.
@@ -151,20 +151,35 @@ func (c *pullingCache) pullOrCacheRequest(ctx context.Context, key string, pullH
 }
 
 func (c *pullingCache) runHandler(ctx context.Context, key string, ch chan pullHandlerFunc) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case f := <-ch:
-			if f() {
-				// remove from cache when process successfully
-				c.mutex.Lock()
-				close(ch)
-				ch = nil
-				c.cache.Remove(key)
-				c.mutex.Unlock()
-				return
+	wg := sync.WaitGroup{}
+	cctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	// have workers to process the pulling requests concurrently
+	for i := 0; i < c.chanSize; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case <-cctx.Done():
+			case f, ok := <-ch:
+				if ok {
+					if f(cctx) {
+						// remove from cache when process successfully
+						c.mutex.Lock()
+						if ch != nil {
+							close(ch)
+							ch = nil
+						}
+
+						c.cache.Remove(key)
+						c.mutex.Unlock()
+						cancel()
+						return
+					}
+				}
 			}
-		}
+		}()
 	}
+
+	wg.Wait()
 }

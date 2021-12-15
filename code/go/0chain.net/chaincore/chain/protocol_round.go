@@ -552,13 +552,27 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		return mb, nil
 	}
 
-	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
+	lfmb := c.GetLatestFinalizedMagicBlock(ctx)
+	var params *url.Values
+	if lfmb != nil {
+		params = &url.Values{}
+		params.Add("node-lfmb-hash", lfmb.Hash)
+	}
+
+	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, params, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
 		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
 	}
 
 	if len(magicBlocks) == 0 {
+		// When sharders return 304 Not Modified code, this magicBlocks will be empty,
+		// return the local lfmb if it's empty is a workaround, we should have
+		// specific code to indicate the 304 Not Modified response here.
+		if lfmb != nil {
+			return lfmb
+		}
+
 		return nil
 	}
 

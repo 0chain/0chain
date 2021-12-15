@@ -266,7 +266,7 @@ func main() {
 		}
 	}
 
-	initHandlers()
+	initHandlers(mc)
 
 	go func() {
 		logging.Logger.Info("Ready to listen to the requests")
@@ -394,11 +394,11 @@ func initEntities() {
 	block.SetupMagicBlockDataDB()
 }
 
-func initHandlers() {
+func initHandlers(c chain.Chainer) {
 	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers()
+	chain.SetupHandlers(c)
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()

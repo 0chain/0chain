@@ -173,9 +173,13 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	Logger.Debug("process notarized block", zap.Int64("round", b.Round))
+	if !sc.cacheProcessingBlock(b.Hash) {
+		return
+	}
 
-	sc.cacheProcessingBlock(b.Hash)
+	Logger.Debug("process notarized block",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
 
 	ts := time.Now()
 	defer func() {

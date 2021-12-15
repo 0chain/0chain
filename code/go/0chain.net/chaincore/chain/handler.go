@@ -37,7 +37,7 @@ import (
 )
 
 /*SetupHandlers sets up the necessary API end points */
-func SetupHandlers() {
+func SetupHandlers(c Chainer) {
 	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
 	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
 
@@ -47,7 +47,7 @@ func SetupHandlers() {
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
 	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
-	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler(c))))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
 	http.HandleFunc("/v1/block/get/fee_stats", common.UserRateLimit(common.ToJSONResponse(LatestBlockFeeStatsHandler)))
 
