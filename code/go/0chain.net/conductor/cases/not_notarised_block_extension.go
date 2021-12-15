@@ -68,8 +68,7 @@ func (n *NotNotarisedBlockExtension) check() (success bool, err error) {
 	for hash, status := range n.result {
 		switch {
 		case hash == n.mockedBlockHashToExtend && status == block.VerificationSuccessful:
-			msg := fmt.Sprintf("block with %s previous block hash have unexpected status: %d", hash, status)
-			return false, errors.New(msg)
+			return false, fmt.Errorf("block with %s previous block hash has unexpected status: %d", hash, status)
 
 		case hash == n.mockedBlockHashToExtend && status == block.VerificationFailed:
 			return true, nil
