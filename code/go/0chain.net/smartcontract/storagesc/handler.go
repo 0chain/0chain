@@ -1,9 +1,12 @@
 package storagesc
 
 import (
+	"0chain.net/smartcontract/dbs/event"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"0chain.net/smartcontract"
@@ -88,6 +91,70 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 	blobbers, err := balances.GetEventDB().GetBlobbers()
+	if err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+
+	var sns StorageNodes
+	for _, blobber := range blobbers {
+		sn, err := blobberTableToStorageNode(blobber)
+		if err != nil {
+			return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+		}
+		sns.Nodes.add(&sn)
+	}
+	return sns, nil
+}
+
+// GetAllocBlobbersHandler returns list of all blobbers alive (e.g. excluding
+// blobbers with zero capacity), filtered for allocation.
+func (ssc *StorageSmartContract) GetAllocBlobbersHandler(
+	ctx context.Context,
+	params url.Values, balances cstate.StateContextI,
+) (interface{}, error) {
+	if balances.GetEventDB() == nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+
+	var err error
+	var expiration, creationDate, capacityUsed, maxChallengeTime, limit int
+
+	if expiration, err = strconv.Atoi(params.Get("expiration")); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	if maxChallengeTime, err = strconv.Atoi(params.Get("max_challenge_time")); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	if creationDate, err = strconv.Atoi(params.Get("creation_date")); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	readRange := &PriceRange{}
+	if err = json.Unmarshal([]byte(params.Get("read_price_range")), readRange); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	writeRange := &PriceRange{}
+	if err = json.Unmarshal([]byte(params.Get("write_price_range")), writeRange); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	if capacityUsed, err = strconv.Atoi(params.Get("capacity_used")); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+	if limit, err = strconv.Atoi(params.Get("limit")); err != nil {
+		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
+	}
+
+	dur := common.ToTime(common.Timestamp(expiration)).Sub(common.ToTime(common.Timestamp(creationDate)))
+
+	builder := event.NewBlobberBuilder().Builder(balances).
+		MaxOfferDuration(dur.String()).
+		ReadPriceRange(*readRange).
+		WritePriceRange(*writeRange).
+		LastHealthCheck(time.Now().UTC().Unix()).
+		CapacityUsed(capacityUsed).
+		MaxChallengeCompletionTime(maxChallengeTime).
+		Limited(limit)
+
+	blobbers, err := balances.GetEventDB().GetBlobbersWithTx(builder.Build())
 	if err != nil {
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}

@@ -1,10 +1,11 @@
 package event
 
 import (
+	cstate "0chain.net/chaincore/chain/state"
 	"fmt"
 
 	"0chain.net/smartcontract/dbs"
-
+	models "0chain.net/smartcontract/storagesc"
 	"gorm.io/gorm"
 )
 
@@ -36,6 +37,65 @@ type Blobber struct {
 	ServiceCharge  float64 `json:"service_charge"`
 }
 
+type blobberFilterBuilder struct {
+	blobberFilter
+}
+
+type blobberFilter struct {
+	tx *gorm.DB
+}
+
+func (bl *blobberFilter) Builder(balances cstate.StateContextI) *blobberFilterBuilder {
+	builder := &blobberFilterBuilder{}
+	result := balances.GetEventDB().Store.Get().
+		Model(&Blobber{})
+	builder.tx = result
+	return builder
+}
+
+func (bl *blobberFilterBuilder) MaxOfferDuration(value string) *blobberFilterBuilder {
+	bl.tx.Where("max_offer_duration < ?", value)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) ReadPriceRange(value models.PriceRange) *blobberFilterBuilder {
+	bl.tx.Where("read_price BETWEEN ? AND ?", value.Min, value.Max)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) WritePriceRange(value models.PriceRange) *blobberFilterBuilder {
+	bl.tx.Where("write_price BETWEEN ? AND ?", value.Min, value.Max)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) CapacityUsed(value int) *blobberFilterBuilder {
+	bl.tx.Where("(capacity-used) < ?", value)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) MaxChallengeCompletionTime(value int) *blobberFilterBuilder {
+	bl.tx.Where("challenge_completion_time > ?", value)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) LastHealthCheck(value int64) *blobberFilterBuilder {
+	bl.tx.Where("last_health_check < ?", value)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) Limited(value int) *blobberFilterBuilder {
+	bl.tx.Limit(value)
+	return bl
+}
+
+func (bl *blobberFilterBuilder) Build() *gorm.DB {
+	return bl.tx
+}
+
+func NewBlobberBuilder() *blobberFilter {
+	return &blobberFilter{}
+}
+
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
 	var blobber Blobber
 	result := edb.Store.Get().
@@ -55,6 +115,12 @@ func (edb *EventDb) GetBlobbers() ([]Blobber, error) {
 	result := edb.Store.Get().
 		Model(&Blobber{}).
 		Find(&blobbers)
+	return blobbers, result.Error
+}
+
+func (edb *EventDb) GetBlobbersWithTx(tx *gorm.DB) ([]Blobber, error) {
+	var blobbers []Blobber
+	result := tx.Find(&blobbers)
 	return blobbers, result.Error
 }
 
