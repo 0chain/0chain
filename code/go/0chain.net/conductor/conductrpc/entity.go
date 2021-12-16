@@ -173,6 +173,16 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 // global
 //
 
+// checks
+
+func (e *Entity) ConfigureTestCase(blob []byte) error {
+	return e.client.configureTestCase(blob)
+}
+
+func (e *Entity) AddTestCaseResult(blob []byte) error {
+	return e.client.addTestCaseResult(blob)
+}
+
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.

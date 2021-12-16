@@ -1,0 +1,19 @@
+enable:
+  - "attack round transfer"
+sets:
+  - name: "attack round transfer"
+    tests:
+      - "not notarised block extension"
+
+tests:
+  - name: "not notarised block extension"
+    flow:
+      - set_monitor: "miner-1"
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - configure_not_notarised_block_extension_test_case:
+          enable: true
+          round: 30
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - make_test_case_check:
+          wait_time: 5m

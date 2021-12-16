@@ -155,3 +155,25 @@ func (c *client) state(me NodeID) (state *State, err error) {
 	}
 	return
 }
+
+func (c *client) configureTestCase(blob []byte) (err error) {
+	err = c.client.Call("Server.ConfigureTestCase", blob, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.ConfigureTestCase", blob, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addTestCaseResult(blob []byte) (err error) {
+	err = c.client.Call("Server.AddTestCaseResult", blob, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddTestCaseResult", blob, &struct{}{})
+	}
+	return
+}

@@ -110,6 +110,8 @@ type Server struct {
 	// it work. E.g. the node has started and waits the conductor to enter BC.
 	onNodeReady chan NodeName
 
+	CurrentTest config.TestCase
+
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
@@ -409,6 +411,18 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 		return ErrShutdown
 	}
 	return
+}
+
+//
+// checks
+//
+
+func (s *Server) ConfigureTestCase(blob []byte, _ *struct{}) error {
+	return s.CurrentTest.Configure(blob)
+}
+
+func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
+	return s.CurrentTest.AddResult(blob)
 }
 
 //

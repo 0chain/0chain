@@ -307,3 +307,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
 }
+
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.updateFinalizedBlock(ctx, b)
+}
