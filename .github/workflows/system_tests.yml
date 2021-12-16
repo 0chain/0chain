@@ -45,6 +45,8 @@ jobs:
     timeout-minutes: 40
     steps:
 
+    - uses: actions/checkout@v2
+
     - name: "Get current PR"
       uses: jwalton/gh-find-current-pr@v1
       id: findPr
@@ -77,10 +79,10 @@ jobs:
             echo "miner docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
             git fetch origin pull/${{ steps.findPr.outputs.pr }}/merge:merge && git checkout merge
             MERGE_SHORT_SHA=$(git rev-parse HEAD | head -c 8)
-            echo "Checking miner image [merge-$MERGE_SHORT_SHA] is present..."
-            docker pull 0chaindev/miner:merge-$MERGE_SHORT_SHA || { echo "Docker image for miner could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
-            echo "miner docker image found for  [merge-$MERGE_SHORT_SHA]"
-            echo "MINER_IMAGE=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
+            echo "Checking miner image [refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA] is present..."
+            docker pull 0chaindev/miner:refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA || { echo "Docker image for miner could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
+            echo "miner docker image found for  [refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA]"
+            echo "MINER_IMAGE=refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
 
     - name: "Check sharder image has been published"
@@ -102,10 +104,10 @@ jobs:
             echo "sharder docker image NOT found for [${{ env.TAG }}-${{ env.SHORT_SHA }}]"
             git fetch origin pull/${{ steps.findPr.outputs.pr }}/merge:merge && git checkout merge
             MERGE_SHORT_SHA=$(git rev-parse HEAD | head -c 8)
-            echo "Checking sharder image [merge-$MERGE_SHORT_SHA] is present..."
-            docker pull 0chaindev/sharder:merge-$MERGE_SHORT_SHA || { echo "Docker image for sharder could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge sha [$MERGE_SHORT_SHA]. Please publish image manually and try again." && exit 1; }
-            echo "sharder docker image found for  [merge-$MERGE_SHORT_SHA]"
-            echo "SHARDER_IMAGE=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
+            echo "Checking sharder image [refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA] is present..."
+            docker pull 0chaindev/sharder:refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA || { echo "Docker image for sharder could not be found for either branch commit sha [${{ env.SHORT_SHA }}] or PR merge sha [$MERGE_SHORT_SHA]. Please publish image manually and try again." && exit 1; }
+            echo "sharder docker image found for  [refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA]"
+            echo "SHARDER_IMAGE=refs-pull-${{ steps.findPr.outputs.pr }}-merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
 
 
