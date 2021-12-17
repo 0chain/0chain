@@ -26,7 +26,6 @@ import (
 const (
 	//ADDRESS address of minersc
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
-	owner   = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	name    = "miner"
 )
 

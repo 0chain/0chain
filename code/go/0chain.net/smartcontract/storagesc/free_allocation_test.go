@@ -52,6 +52,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 	var conf = &scConfig{
 		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
 		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
+		OwnerId:                     owner,
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
@@ -60,6 +61,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
@@ -145,7 +147,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			},
 			want: want{
 				true,
-				"add_free_storage_assigner: unauthorized access - only the owner can update the variables",
+				"add_free_storage_assigner: unauthorized access - only the owner can access",
 			},
 		},
 	}
@@ -260,6 +262,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
@@ -623,6 +626,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
