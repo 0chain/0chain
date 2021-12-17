@@ -568,21 +568,15 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-		logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
-			zap.Int64("round", mr.GetRoundNumber()),
-			zap.Int("roundToc", mr.GetTimeoutCount()),
-			zap.Int("blockToc", b.RoundTimeoutCount),
-			zap.Int64("round_rrs", mr.GetRandomSeed()),
-			zap.Int64("block_rrs", b.GetRoundRandomSeed()))
-		return
-	}
-
-	if !mc.ValidGenerator(mr.Round, b) {
-		logging.Logger.Error("handle verify block - Not a valid generator. Ignoring block",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return
-	}
+	//if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
+	//	logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
+	//		zap.Int64("round", mr.GetRoundNumber()),
+	//		zap.Int("roundToc", mr.GetTimeoutCount()),
+	//		zap.Int("blockToc", b.RoundTimeoutCount),
+	//		zap.Int64("round_rrs", mr.GetRandomSeed()),
+	//		zap.Int64("block_rrs", b.GetRoundRandomSeed()))
+	//	return
+	//}
 
 	logging.Logger.Info("handle verify block - added block for ticket verification",
 		zap.Int64("round", b.Round),
@@ -654,11 +648,11 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	}
 
 	mr.AddProposedBlock(b)
-	if mc.AddRoundBlock(mr, b) != b {
-		logging.Logger.Warn("Add round block, block already exist, merge tickets", zap.Int64("round", b.Round))
-		// block already exist, means the verification collection worker already started.
-		return
-	}
+	//if mc.AddRoundBlock(mr, b) != b {
+	//	logging.Logger.Warn("Add round block, block already exist, merge tickets", zap.Int64("round", b.Round))
+	//	// block already exist, means the verification collection worker already started.
+	//	return
+	//}
 
 	mc.addToRoundVerification(mr, b)
 }
@@ -845,6 +839,14 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
+
+		//don't know why we change rrs and rank inside AddRoundBlock
+		if mc.AddRoundBlock(r, b) != b {
+			logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
+			// block already exist, means the verification collection worker already started.
+			return false
+		}
+
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
 			logging.Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash),
@@ -964,8 +966,12 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 
 	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
 		return nil, common.NewError("seed_mismatch", "block RRS mismatch")
-
 	}
+
+	if !mc.ValidGenerator(r, b) {
+		return nil, common.NewError("verify_round_block", "Not a valid generator")
+	}
+
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
