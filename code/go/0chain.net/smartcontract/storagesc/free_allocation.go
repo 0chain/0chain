@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -129,9 +130,17 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	input []byte,
 	balances cstate.StateContextI,
 ) (string, error) {
-	if t.ClientID != owner {
-		return "", common.NewError("add_free_storage_assigner",
-			"unauthorized access - only the owner can update the variables")
+	var conf *scConfig
+	var err error
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewErrorf("add_free_storage_assigner",
+			"can't get config: %v", err)
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("add_free_storage_assigner", func() bool {
+		return conf.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	var assignerInfo newFreeStorageAssignerInfo
@@ -140,12 +149,6 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 			"can't unmarshal input: %v", err)
 	}
 
-	var conf *scConfig
-	var err error
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewErrorf("add_free_storage_assigner",
-			"can't get config: %v", err)
-	}
 	var newTotalLimit = state.Balance(assignerInfo.TotalLimit * floatToBalance)
 	if newTotalLimit > conf.MaxTotalFreeAllocation {
 		return "", common.NewErrorf("add_free_storage_assigner",

@@ -78,6 +78,7 @@ func TestSelectBlobbers(t *testing.T) {
 	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
@@ -114,6 +115,7 @@ func TestSelectBlobbers(t *testing.T) {
 			TimeUnit:         confTimeUnit,
 			MinAllocSize:     confMinAllocSize,
 			MinAllocDuration: confMinAllocDuration,
+			OwnerId:          owner,
 		}
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
 
@@ -290,6 +292,7 @@ func TestExtendAllocation(t *testing.T) {
 	) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = transaction.Transaction{
@@ -569,6 +572,7 @@ func TestTransferAllocation(t *testing.T) {
 			ClientID: p.curator,
 		}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
