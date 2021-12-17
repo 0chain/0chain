@@ -568,15 +568,15 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-		logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
-			zap.Int64("round", mr.GetRoundNumber()),
-			zap.Int("roundToc", mr.GetTimeoutCount()),
-			zap.Int("blockToc", b.RoundTimeoutCount),
-			zap.Int64("round_rrs", mr.GetRandomSeed()),
-			zap.Int64("block_rrs", b.GetRoundRandomSeed()))
-		return
-	}
+	//if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
+	//	logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
+	//		zap.Int64("round", mr.GetRoundNumber()),
+	//		zap.Int("roundToc", mr.GetTimeoutCount()),
+	//		zap.Int("blockToc", b.RoundTimeoutCount),
+	//		zap.Int64("round_rrs", mr.GetRandomSeed()),
+	//		zap.Int64("block_rrs", b.GetRoundRandomSeed()))
+	//	return
+	//}
 
 	if !mc.ValidGenerator(mr.Round, b) {
 		logging.Logger.Error("handle verify block - Not a valid generator. Ignoring block",
@@ -958,9 +958,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
 		return nil, ErrRoundMismatch
 	}
-	if b.MinerID == node.Self.Underlying().GetKey() {
-		return mc.SignBlock(ctx, b)
-	}
 	if b.GetRoundRandomSeed() == 0 {
 		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
 	}
@@ -969,6 +966,9 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		return nil, common.NewError("seed_mismatch", "block RRS mismatch")
 
 	}
+	if b.MinerID == node.Self.Underlying().GetKey() {
+		return mc.SignBlock(ctx, b)
+	}
 
 	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
@@ -976,6 +976,8 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, err
 	}
+	//TODO check if previous block is notarized
+
 	if !hasPriorBlock && b.PrevBlock != nil {
 		mc.updatePriorBlock(ctx, r, b)
 	}
