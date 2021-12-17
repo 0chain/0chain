@@ -568,15 +568,15 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 
-	//if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-	//	logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
-	//		zap.Int64("round", mr.GetRoundNumber()),
-	//		zap.Int("roundToc", mr.GetTimeoutCount()),
-	//		zap.Int("blockToc", b.RoundTimeoutCount),
-	//		zap.Int64("round_rrs", mr.GetRandomSeed()),
-	//		zap.Int64("block_rrs", b.GetRoundRandomSeed()))
-	//	return
-	//}
+	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
+		logging.Logger.Error("handle verify block - got a block for verification with wrong random seed",
+			zap.Int64("round", mr.GetRoundNumber()),
+			zap.Int("roundToc", mr.GetTimeoutCount()),
+			zap.Int("blockToc", b.RoundTimeoutCount),
+			zap.Int64("round_rrs", mr.GetRandomSeed()),
+			zap.Int64("block_rrs", b.GetRoundRandomSeed()))
+		return
+	}
 
 	if !mc.ValidGenerator(mr.Round, b) {
 		logging.Logger.Error("handle verify block - Not a valid generator. Ignoring block",
@@ -873,7 +873,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		return true
 	}
 	var sendVerification = false
-	var blocks = make([]*block.Block, 0, 8)
+	var blocks = make([]*block.Block, 0, 512)
 	initiateVerification := func() {
 		// Sort the accumulated blocks by the rank and process them
 		blocks = r.GetBlocksByRank(blocks)
