@@ -1,11 +1,9 @@
 package event
 
 import (
-	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/smartcontract/dbs"
 	"fmt"
 
-	"0chain.net/smartcontract/dbs"
-	models "0chain.net/smartcontract/storagesc"
 	"gorm.io/gorm"
 )
 
@@ -42,12 +40,14 @@ type blobberFilterBuilder struct {
 }
 
 type blobberFilter struct {
-	tx *gorm.DB
+	tx  *gorm.DB
+	edb *EventDb
 }
 
-func (bl *blobberFilter) Builder(balances cstate.StateContextI) *blobberFilterBuilder {
+func (bl *blobberFilter) Builder() *blobberFilterBuilder {
 	builder := &blobberFilterBuilder{}
-	result := balances.GetEventDB().Store.Get().
+
+	result := bl.edb.Store.Get().
 		Model(&Blobber{})
 	builder.tx = result
 	return builder
@@ -58,13 +58,13 @@ func (bl *blobberFilterBuilder) MaxOfferDuration(value string) *blobberFilterBui
 	return bl
 }
 
-func (bl *blobberFilterBuilder) ReadPriceRange(value models.PriceRange) *blobberFilterBuilder {
-	bl.tx.Where("read_price BETWEEN ? AND ?", value.Min, value.Max)
+func (bl *blobberFilterBuilder) ReadPriceRange(min, max int) *blobberFilterBuilder {
+	bl.tx.Where("read_price BETWEEN ? AND ?", min, max)
 	return bl
 }
 
-func (bl *blobberFilterBuilder) WritePriceRange(value models.PriceRange) *blobberFilterBuilder {
-	bl.tx.Where("write_price BETWEEN ? AND ?", value.Min, value.Max)
+func (bl *blobberFilterBuilder) WritePriceRange(min, max int) *blobberFilterBuilder {
+	bl.tx.Where("write_price BETWEEN ? AND ?", min, max)
 	return bl
 }
 
@@ -92,8 +92,8 @@ func (bl *blobberFilterBuilder) Build() *gorm.DB {
 	return bl.tx
 }
 
-func NewBlobberBuilder() *blobberFilter {
-	return &blobberFilter{}
+func (edb *EventDb) NewBlobberBuilder() *blobberFilter {
+	return &blobberFilter{edb: edb}
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {

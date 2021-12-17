@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -145,16 +144,17 @@ func (ssc *StorageSmartContract) GetAllocBlobbersHandler(
 
 	dur := common.ToTime(common.Timestamp(expiration)).Sub(common.ToTime(common.Timestamp(creationDate)))
 
-	builder := event.NewBlobberBuilder().Builder(balances).
+	eventDb := balances.GetEventDB()
+	builder := eventDb.NewBlobberBuilder().Builder().
 		MaxOfferDuration(dur.String()).
-		ReadPriceRange(*readRange).
-		WritePriceRange(*writeRange).
+		ReadPriceRange(int(readRange.Min), int(readRange.Max)).
+		WritePriceRange(int(readRange.Min), int(readRange.Max)).
 		LastHealthCheck(time.Now().UTC().Unix()).
 		CapacityUsed(capacityUsed).
 		MaxChallengeCompletionTime(maxChallengeTime).
 		Limited(limit)
 
-	blobbers, err := balances.GetEventDB().GetBlobbersWithTx(builder.Build())
+	blobbers, err := eventDb.GetBlobbersWithTx(builder.Build())
 	if err != nil {
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
