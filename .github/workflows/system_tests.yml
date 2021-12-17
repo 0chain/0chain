@@ -42,7 +42,6 @@ on:
 jobs:
   system-tests:
     runs-on: [ tests-suite ]
-    timeout-minutes: 40
     steps:
 
     - uses: actions/checkout@v2
