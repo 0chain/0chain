@@ -920,6 +920,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		case <-blockTimeTimer.C:
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
+			r.AddProposedBlock(b)
+			mc.AddRoundBlock(r, b)
+
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {

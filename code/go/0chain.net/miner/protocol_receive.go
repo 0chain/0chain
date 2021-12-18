@@ -257,11 +257,11 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
-	if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
-		b = mc.AddRoundBlock(mr, b)
-		mc.checkBlockNotarization(ctx, mr, b, true)
-		return nil
-	}
+	//if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
+	//	b = mc.AddRoundBlock(mr, b)
+	//	mc.checkBlockNotarization(ctx, mr, b, true)
+	//	return nil
+	//}
 
 	/* Since this is a notarized block, we are accepting it. */
 	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)

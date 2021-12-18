@@ -268,6 +268,18 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
+	if mr := mc.GetMinerRound(b.Round); mr != nil {
+		//use proposed blocks as current block hash, since we store blocks there before they are added to the round
+		for _, blocks := range mr.GetProposedBlocks() {
+			if blocks.Hash == b.Hash {
+				logging.Logger.Debug("handle verify block - block already received, ignore",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
+				return nil, nil
+			}
+		}
+	}
+
 	// return if the block already in local chain and its previous block is notarized
 	_, err := mc.GetBlock(ctx, b.Hash)
 	if err == nil { // block already exist in local chain
