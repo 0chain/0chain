@@ -8,26 +8,19 @@ and in reverse order converts from wrapped Ethereum WZCN token to native ZCN tok
 
 ## Convert from ZCN to WZCN token using separate steps
 
-1. Create ethereum wallet account
-```shell
-./zwallet eth-register-account \
-            --mnemonic "coconut moral level thing soldier excess ranch swim balance magnet embrace beef" \
-            --password "password"
-```
-2. List ethereum accounts in key vault
-```shell
-./zwallet eth-list-accounts
-```
-3. Fill ethereum wallet with tokens  
-Must be performed with metamask
-4. Create ZCN wallet and fill it with tokens
+1. Add ethereum wallet configuration  
+// TBD  
+2. Fill ethereum wallet with tokens  
+3. Create ZCN wallet and fill it with tokens
+
 ```shell
 for run in {1..10}
 do
     ./zwallet faucet --methodName pour --input “{Pay day}”
 done
 ```
-5. Burn ZCN tokens
+
+4. Burn ZCN tokens
 
 Using this command burn some tokens in ZCN
 
@@ -45,12 +38,8 @@ Using this command mint some tokens using hash from previous step
 
 ## Convert from WZCN to ZCN token using separate steps
 
-1. Create ethereum wallet account
-```shell
-./zwallet eth-register-account \
-            --mnemonic "coconut moral level thing soldier excess ranch swim balance magnet embrace beef" \
-            --password "password"
-```
+1. Add ethereum wallet configuration  
+   // TBD
 2. Fill ethereum wallet with tokens
 3. Create ZCN wallet and fill it with tokens
 
@@ -134,8 +123,8 @@ The steps for this process are as follows:
    • The nonce value.  
 2. The 0Chain miners accept this transaction if the nonce is valid and the  
    client has sufficient ZCN  
-3. Each authorizer monitors the 0Chain blockchain for a ZCN burn transaction.  
-   Once the transaction is accepted, the authorizer sends the client a  
+3. Each authorizer monitors the 0Chain blockchain for a ZCN burn transac-  
+   tion. Once the transaction is accepted, the authorizer sends the client a  
    proof-of-ZCN-burn ticket, containing similar information as the proof-of-  
    WZCN-burn ticket:  
    • The 0Chain transaction ID.  
