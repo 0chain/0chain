@@ -65,3 +65,9 @@ docker.local/log_dumps
 !**/mocks/.gitkeep
 
 burn_error.txt
+
+code/go/0chain.net/smartcontract/benchmark/main/dbname_dataDir/
+
+code/go/0chain.net/smartcontract/benchmark/main/benchmark
+
+code/go/0chain.net/smartcontract/benchmark/main/main
