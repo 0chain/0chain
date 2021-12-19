@@ -1052,7 +1052,6 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 		return false
 	}
 
-	mc.SetRandomSeed(r, seed)
 	if broadcast {
 		go mc.SendNotarization(context.Background(), b)
 	}
@@ -1101,16 +1100,11 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
-	_, ok, err := r.AddNotarizedBlock(b)
-	if err != nil {
+	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
 		logging.Logger.Error("add notarized block failed",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.String("block", b.Hash),
 			zap.Error(err))
-		return false
-	}
-
-	if !ok {
 		return false
 	}
 
@@ -1613,7 +1607,10 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 			logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
 				zap.Int64("round", r.GetRoundNumber()),
 				zap.Int64("lfb_round", lfb.Round))
-			r.Restart()
+			if err := r.Restart(); err == round.CompleteRoundRestartError {
+				logging.Logger.Warn("Attempt to restart already notarized round, skip this attempt")
+				return
+			}
 			r.IncrementTimeoutCount(mc.getRoundRandomSeed(r.Number-1), mc.GetMiners(r.Number))
 			mc.RedoVrfShare(ctx, r)
 		}

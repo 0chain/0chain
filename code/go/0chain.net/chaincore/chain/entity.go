@@ -723,6 +723,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	if b2 != b {
 		return b2
 	}
+	//TODO very dangerous code, we can break block hash with changing it!!! sort it out
 	b.SetRoundRandomSeed(r.GetRandomSeed())
 	b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)

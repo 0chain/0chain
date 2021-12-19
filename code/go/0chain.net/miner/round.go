@@ -240,14 +240,20 @@ func (r *Round) IsVRFComplete() bool {
 }
 
 // Restart resets round and vrf shares cache
-func (r *Round) Restart() {
-	r.Round.Restart()
-	r.vrfSharesCache = newVRFSharesCache()
+func (r *Round) Restart() error {
+
+	if err := r.Round.Restart(); err != nil {
+		return err
+	}
 	r.CancelVerification()
 	r.TryCancelBlockGeneration()
 
+	r.roundGuard.Lock()
+	r.vrfSharesCache = newVRFSharesCache()
 	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 	r.verificationTickets = make(map[string]*block.BlockVerificationTicket)
+	r.roundGuard.Unlock()
+	return nil
 }
 
 func (r *Round) IsComplete() bool {

@@ -2,6 +2,7 @@ package round
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -28,7 +29,12 @@ const (
 	ShareVRF Phase = iota
 	Verify
 	Notarize
+	Share
 	Complete
+)
+
+var (
+	CompleteRoundRestartError = errors.New("can't restart notarized or complete round")
 )
 
 func GetPhaseName(ph Phase) string {
@@ -36,6 +42,7 @@ func GetPhaseName(ph Phase) string {
 		ShareVRF: "ShareVRF",
 		Verify:   "Verify",
 		Notarize: "Notarize",
+		Share:    "Share",
 		Complete: "Complete",
 	}[ph]
 
@@ -354,6 +361,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	}
 	b.SetBlockNotarized()
 	b.SetBlockState(block.StateNotarized)
+	r.setPhase(Share)
 
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 		r.Block = b
@@ -623,13 +631,18 @@ func (r *Round) Clear() {
 }
 
 //Restart - restart the round
-func (r *Round) Restart() {
+func (r *Round) Restart() error {
 	r.mutex.Lock()
+	if r.getState() >= Share {
+		return CompleteRoundRestartError
+	}
 	r.initialize()
 	r.Block = nil
-	r.mutex.Unlock()
 	r.resetSoftTimeoutCount()
 	r.ResetPhase(ShareVRF)
+
+	r.mutex.Unlock()
+	return nil
 }
 
 // VRFShareExist checks if the VRF share already exist
