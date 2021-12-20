@@ -732,6 +732,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 		if pb == nil || err != nil {
 			return err
 		}
+		b.SetPreviousBlock(pb)
 	}
 
 	// merge the tickets
