@@ -186,11 +186,6 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 	// get previous block notarization tickets, and update local prev block if exist
 	if b.Round > 1 {
-		// TODO: run in gorountine for debug and test purpose
-		// do not run this in goroutine
-		//
-		// put into a goroutine so that tickets verification would not affect the
-		// new round RRS generation
 		go func() {
 			// TODO: check if the block's prev notarized block reached the notarization threshold
 			pr := mc.GetMinerRound(b.Round - 1)
@@ -550,6 +545,11 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
+	isNotarizing, finish := mc.getOrSetBlockNotarizing(nb.Hash)
+	if isNotarizing {
+		return
+	}
+
 	if err := mc.verifyBlockNotarizationWorker.Run(cctx, func() error {
 		return mc.VerifyBlockNotarization(ctx, nb)
 	}); err != nil {
@@ -557,13 +557,16 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 			zap.Error(err),
 			zap.Int64("round", nb.Round),
 			zap.Int64("lfb_round", lfb.Round))
+		finish(false)
 		return
 	}
 
+	//TODO remove it, we do exactly the same logic in VerifyBlockNotarization->
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
+		finish(false)
 		return
 	}
-
+	finish(true)
 	mc.ProgressOnNotarization(mr)
 }

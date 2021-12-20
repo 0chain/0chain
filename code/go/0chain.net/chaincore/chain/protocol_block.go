@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/core/datastore"
 	"context"
 	"fmt"
 	"time"
@@ -69,7 +70,11 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 }
 
 func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) error {
-	if err := c.VerifyNotarization(ctx, b, b.GetVerificationTickets(), b.Round); err != nil {
+	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round); err != nil {
+		return err
+	}
+
+	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
 		return err
 	}
 
@@ -78,7 +83,7 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 }
 
 // VerifyNotarization - verify that the notarization is correct.
-func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
+func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 	bvt []*block.VerificationTicket, round int64) (err error) {
 
 	if bvt == nil {
@@ -86,15 +91,11 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 			"No verification tickets for this block")
 	}
 
-	if err = c.VerifyRelatedMagicBlockPresence(b); err != nil {
-		return
-	}
-
 	var ticketsMap = make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
 		if vt == nil {
 			logging.Logger.Error("verify notarization - null ticket",
-				zap.String("block", b.Hash))
+				zap.String("block", hash))
 			return common.NewError("null_ticket", "Verification ticket is null")
 		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
@@ -104,19 +105,19 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, b.Hash, bvt) {
+	if !c.reachedNotarization(round, hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
 
-	if err := c.VerifyTickets(ctx, b.Hash, bvt, round); err != nil {
+	if err := c.VerifyTickets(ctx, hash, bvt, round); err != nil {
 		return err
 	}
 
 	logging.Logger.Info("reached notarization - verify notarization",
 		zap.Int64("round", round),
 		zap.Int64("current_round", c.GetCurrentRound()),
-		zap.String("block", b.Hash),
+		zap.String("block", hash),
 		zap.Int("tickets_num", len(bvt)))
 
 	return nil

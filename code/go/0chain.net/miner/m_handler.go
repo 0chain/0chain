@@ -269,7 +269,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 
 	if mr := mc.GetMinerRound(b.Round); mr != nil {
-		//use proposed blocks as current block hash, since we store blocks there before they are added to the round
+		//use proposed blocks as current block cache, since we store blocks there before they are added to the round
 		for _, blocks := range mr.GetProposedBlocks() {
 			if blocks.Hash == b.Hash {
 				logging.Logger.Debug("handle verify block - block already received, ignore",
@@ -421,6 +421,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 	mc := GetMinerChain()
 
+	//reject cur_round -2 is a locked round, there can't be new notarization important for us
 	if nb.Round < mc.GetCurrentRound()-1 {
 		logging.Logger.Debug("notarized block handler (round older than the current round)",
 			zap.String("block", nb.Hash), zap.Any("round", nb.Round))
@@ -432,15 +433,17 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return // doesn't need the not. block
 	}
 
+	//TODO in case there is no previous round create it, since notarization can't be rejected
 	if mc.GetMinerRound(nb.Round-1) == nil {
 		logging.Logger.Error("not. block handler -- no previous round (ignore)",
 			zap.Int64("round", nb.Round), zap.Int64("prev_round", nb.Round-1))
 		return // no previous round
 	}
 
-	if mc.isAheadOfSharders(ctx, nb.Round) {
-		return
-	}
+	//this check is not correct, we won't transit to the new round, but should save notarization block
+	//if mc.isAheadOfSharders(ctx, nb.Round) {
+	//	return
+	//}
 
 	mr := mc.GetMinerRound(nb.Round)
 	if mr != nil {
@@ -448,9 +451,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 			return // doesn't need a not. block
 		}
 
-		if mr.IsVerificationComplete() {
-			return // verification for the round complete
-		}
+		//it does not matter, we should add notarization even for complete round
+		//if mr.IsVerificationComplete() {
+		//	return // verification for the round complete
+		//}
 
 		for _, blk := range mr.GetNotarizedBlocks() {
 			if blk.Hash == nb.Hash {

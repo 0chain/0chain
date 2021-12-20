@@ -669,60 +669,80 @@ func convertToBlockVerificationTickets(vts []*block.VerificationTicket, round in
 	return bvts
 }
 
-func (mc *Chain) getOrSetBlockNotarizing(hash string) (isNotarizing bool, clean func()) {
-	clean = func() {}
+func (mc *Chain) getOrSetBlockNotarizing(hash string) (isNotarizing bool, finish func(result bool)) {
+	finish = func(result bool) {}
 
 	mc.nbmMutex.Lock()
-	_, isNotarizing = mc.notarizingBlocksMap[hash]
+	_, isNotarizing = mc.notarizingBlocksTasks[hash]
 	if isNotarizing {
 		mc.nbmMutex.Unlock()
 		return
 	}
 
-	mc.notarizingBlocksMap[hash] = struct{}{}
+	mc.notarizingBlocksTasks[hash] = make(chan struct{})
 	mc.nbmMutex.Unlock()
 
-	clean = func() {
+	finish = func(result bool) {
 		mc.nbmMutex.Lock()
-		delete(mc.notarizingBlocksMap, hash)
+		task := mc.notarizingBlocksTasks[hash]
+		delete(mc.notarizingBlocksTasks, hash)
+		//TODO refactor cache addition
+		mc.notarizingBlocksResults.Add(hash, result)
+		close(task)
 		mc.nbmMutex.Unlock()
 	}
 	return
 }
 
+func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string) bool {
+	mc.nbmMutex.Lock()
+	defer mc.nbmMutex.Unlock()
+
+	c, ok := mc.notarizingBlocksTasks[hash]
+	if ok {
+		select {
+		case <-c:
+			get, err := mc.notarizingBlocksResults.Get(hash)
+			if err != nil {
+				return false
+			}
+			return get.(bool)
+		case <-ctx.Done():
+			{
+				logging.Logger.Warn("waiting for verification result was cancelled", zap.String("block_hash", hash))
+				return false
+			}
+		}
+	}
+	get, err := mc.notarizingBlocksResults.Get(hash)
+	if err != nil {
+		return false
+	}
+	return get.(bool)
+}
+
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	pb, err := mc.GetBlock(ctx, b.PrevHash)
-	if err != nil || pb == nil {
-		logging.Logger.Error("update prev block notarization (prior block does not exist",
-			zap.Int64("round", b.Round),
-			zap.String("prev block", b.PrevHash))
-		return nil
-	}
-
 	// merge the tickets
-	if pb.IsBlockNotarized() {
+	if pb != nil && pb.IsBlockNotarized() {
 		logging.Logger.Debug("update prev block notarization, already notarized",
 			zap.Int64("round", pb.Round),
 			zap.String("block", pb.Hash))
 		return nil
 	}
 
-	isNotarizing, clean := mc.getOrSetBlockNotarizing(b.PrevHash)
-	defer clean()
+	isNotarizing, finish := mc.getOrSetBlockNotarizing(b.PrevHash)
 	if isNotarizing {
 		return nil
 	}
 
-	return mc.verifyBlockNotarizationWorker.Run(ctx, func() error {
-		pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
-		pr.AddVerificationTickets(pbvts)
-
+	err = mc.verifyBlockNotarizationWorker.Run(ctx, func() error {
 		logging.Logger.Debug("update prev block notarization, verify tickets",
-			zap.Int64("round", pb.Round), zap.String("block", pb.Hash))
+			zap.Int64("round", b.Round-1), zap.String("block", b.PrevHash))
 
 		// reset ctx so the timeout of parent ctx would not stop the ticket verification here
 		ctx = context.Background()
-		if err := mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pb.Round); err != nil {
+		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), b.Round-1); err != nil {
 			logging.Logger.Error("update prev block notarization failed",
 				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
 				zap.String("block", b.PrevHash),
@@ -730,12 +750,30 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 				zap.Error(err))
 			return err
 		}
+		return nil
+	})
+
+	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
+	if pb == nil {
+		logging.Logger.Info("update prev block notarization (prior block does not exist)",
+			zap.Int64("round", b.Round),
+			zap.String("prev block", b.PrevHash))
+	}
+
+	if pb != nil && err != nil {
+		pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
+		pr.AddVerificationTickets(pbvts)
 
 		pr.CancelVerification()
 		pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
 		mc.AddNotarizedBlock(ctx, pr, pb)
+
+		finish(true)
 		return nil
-	})
+	}
+
+	finish(err == nil)
+	return err
 }
 
 func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
@@ -844,11 +882,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if mc.AddRoundBlock(r, b) != b {
 			logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
 			// block already exist, means the verification collection worker already started.
+			// TODO do we really need to return false here?
 			return false
 		}
 
 		bnb := r.GetBestRankedNotarizedBlock()
-		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+		if bnb == nil || bnb.Hash == b.Hash {
 			logging.Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash),
 				zap.Int("block_rank", b.RoundRank), zap.Int64("RRS", b.RoundRandomSeed))
 			go mc.SendVerificationTicket(ctx, b, bvt)
@@ -985,11 +1024,16 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, err
 	}
-	//TODO check if previous block is notarized
 
-	if !hasPriorBlock && b.PrevBlock != nil {
+	if hasPriorBlock && b.PrevBlock.IsBlockNotarized() {
 		mc.updatePriorBlock(ctx, r, b)
+		return bvt, nil
 	}
+
+	if !mc.getBlockNotarizationResultSync(ctx, b.PrevHash) {
+		return nil, common.NewError("verify_round_block", "Verification tickets of previous block are not valid")
+	}
+
 	return bvt, nil
 }
 
