@@ -273,7 +273,7 @@ func (bf *BlockFetcher) fetchFromMiners(ctx context.Context,
 
 	defer bf.release(limit)
 
-	var nb, err = chainer.getNotarizedBlockFromMiners(ctx, bfr.hash, bfr.round)
+	var nb, err = chainer.GetNotarizedBlockFromMiners(ctx, bfr.hash, bfr.round, true)
 	if err != nil {
 		bf.gotError(ctx, got, bfr.hash, err)
 		return
@@ -323,7 +323,7 @@ type Chainer interface {
 	// blocks fetching
 	getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTicket) (
 		fb *block.Block, err error)
-	getNotarizedBlockFromMiners(ctx context.Context, hash string, round int64) (
+	GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 		nb *block.Block, err error)
 }
 
@@ -446,7 +446,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 // Chain round, never adds the block to the round, never adds block to the
 // Chain, and never calls NotarizedBlockFetched that should be done after if
 // required.
-func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, round int64) (
+func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, round int64, withVerification bool) (
 	b *block.Block, err error) {
 	params := make(url.Values)
 	params.Add("block", hash)
@@ -511,20 +511,22 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 				continue
 			}
 
-			err = c.VerifyBlockNotarization(ctx, nb)
-			switch err {
-			case nil:
-			case context.Canceled, context.DeadlineExceeded:
-				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
-					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Any("duration", time.Since(ts)),
-					zap.Error(err))
-				return nil, err
-			default:
-				logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
-					zap.Int64("round", nb.Round), zap.String("block", hash),
-					zap.Error(err))
-				continue
+			if withVerification {
+				err = c.VerifyBlockNotarization(ctx, nb)
+				switch err {
+				case nil:
+				case context.Canceled, context.DeadlineExceeded:
+					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets canceled or timeout",
+						zap.Int64("round", nb.Round), zap.String("block", hash),
+						zap.Any("duration", time.Since(ts)),
+						zap.Error(err))
+					return nil, err
+				default:
+					logging.Logger.Error("fetch_nb_from_miners - verify notarization tickets failed",
+						zap.Int64("round", nb.Round), zap.String("block", hash),
+						zap.Error(err))
+					continue
+				}
 			}
 
 			// cancel further requests

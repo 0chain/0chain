@@ -723,8 +723,19 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	pb, err := mc.GetBlock(ctx, b.PrevHash)
+	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
+	if pb == nil {
+		logging.Logger.Info("update prev block notarization (prior block does not exist)",
+			zap.Int64("round", b.Round),
+			zap.String("prev block", b.PrevHash))
+		pb, err = mc.GetNotarizedBlockFromMiners(ctx, b.PrevHash, b.Round-1, false)
+		if pb == nil || err != nil {
+			return err
+		}
+	}
+
 	// merge the tickets
-	if pb != nil && pb.IsBlockNotarized() {
+	if pb.IsBlockNotarized() {
 		logging.Logger.Debug("update prev block notarization, already notarized",
 			zap.Int64("round", pb.Round),
 			zap.String("block", pb.Hash))
@@ -753,14 +764,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 		return nil
 	})
 
-	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
-	if pb == nil {
-		logging.Logger.Info("update prev block notarization (prior block does not exist)",
-			zap.Int64("round", b.Round),
-			zap.String("prev block", b.PrevHash))
-	}
-
-	if pb != nil && err != nil {
+	if err != nil {
 		pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
 		pr.AddVerificationTickets(pbvts)
 

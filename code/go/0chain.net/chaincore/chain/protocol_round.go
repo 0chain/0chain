@@ -438,7 +438,7 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
 	rn := r.GetRoundNumber()
-	nb, err := c.getNotarizedBlockFromMiners(ctx, "", rn)
+	nb, err := c.GetNotarizedBlockFromMiners(ctx, "", rn, true)
 	if err != nil {
 		return nil
 	}
