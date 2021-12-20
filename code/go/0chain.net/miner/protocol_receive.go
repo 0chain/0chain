@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/common/log"
 	"sync"
 	"time"
 
@@ -192,6 +193,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 			cctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			if err := mc.updatePreviousBlockNotarization(cctx, b, pr); err != nil {
+				logging.Logger.Error("error during previous block notarization verification", zap.Error(err))
 				return
 			}
 		}()
