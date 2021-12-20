@@ -547,7 +547,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 
 	if r.IsVerificationComplete() {
-		logging.Logger.Error("generate block - verification complete",
+		logging.Logger.Warn("generate block - verification complete, we are late, cancel block generation",
 			zap.Any("round", roundNumber),
 			zap.Any("notarized", len(r.GetNotarizedBlocks())))
 		return nil, nil
