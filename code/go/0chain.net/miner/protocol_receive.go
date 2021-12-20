@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prometheus/common/log"
 	"sync"
 	"time"
 
