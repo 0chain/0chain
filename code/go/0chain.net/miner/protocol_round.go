@@ -698,28 +698,21 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 	mc.nbmMutex.Lock()
 	c, ok := mc.notarizingBlocksTasks[hash]
 	mc.nbmMutex.Unlock()
-
-	logging.Logger.Debug("getting block task", zap.String("block_hash", hash))
-
 	if ok {
 		select {
 		case <-c:
 			get, err := mc.notarizingBlocksResults.Get(hash)
-			logging.Logger.Debug("getting block result", zap.String("block_hash", hash), zap.Any("result", get), zap.Error(err))
-
 			if err != nil {
 				return false
 			}
 			return get.(bool)
 		case <-ctx.Done():
 			{
-				logging.Logger.Warn("waiting for verification result was cancelled", zap.String("block_hash", hash))
 				return false
 			}
 		}
 	}
 	get, err := mc.notarizingBlocksResults.Get(hash)
-	logging.Logger.Debug("getting block result", zap.String("block_hash", hash), zap.Any("result", get), zap.Error(err))
 
 	if err != nil {
 		return false
@@ -738,8 +731,8 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 		if pb == nil || err != nil {
 			return err
 		}
-		b.SetPreviousBlock(pb)
 	}
+	b.SetPreviousBlock(pb)
 
 	// merge the tickets
 	if pb.IsBlockNotarized() {
@@ -1029,17 +1022,14 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 		return mc.SignBlock(ctx, b)
 	}
 
-	if b.PrevBlock == nil {
-		return nil, common.NewError("verify_round_block", "previous_block is nill")
-	}
-
+	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, err
 	}
 
-	if b.PrevBlock.IsBlockNotarized() {
+	if hasPriorBlock && b.PrevBlock.IsBlockNotarized() {
 		mc.updatePriorBlock(ctx, r, b)
 		return bvt, nil
 	}
