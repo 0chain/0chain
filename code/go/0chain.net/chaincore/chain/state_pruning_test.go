@@ -74,7 +74,8 @@ func Test_pruneClientState_withFailingMutliPutNode(t *testing.T) {
 	}
 	c := NewChainFromConfig()
 	// todo: setup a real-life situation
-	c.PruneStateBelowCount = 0
+	conf := c.Config.(*ConfigImpl)
+	conf.ConfDataForTest().PruneStateBelowCount = 0
 	/*
 		for i := 0; i < c.BlockChain.Len(); i++ {
 			c.BlockChain.Value = &block.BlockSummary{Round: i}
