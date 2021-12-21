@@ -19,12 +19,12 @@ import (
 // Note: this only works for BLS scheme keys
 func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
 	return c.verifyTicketsWithContext.Run(ctx, func() error {
-		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme,
+		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
 		if aggScheme == nil {
 			// TODO: do ticket verification one by one when aggregate signature
 			// does not exist
-			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme))
+			panic(fmt.Sprintf("signature scheme not implemented: %v", c.ClientSignatureScheme()))
 		}
 
 		doneC := make(chan struct{})
@@ -185,7 +185,7 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		threshold = c.GetNotarizationThresholdCount(num)
 	)
 
-	if c.ThresholdByCount > 0 {
+	if c.ThresholdByCount() > 0 {
 		var numSignatures = len(bvt)
 		if numSignatures < threshold {
 			logging.Logger.Info("not reached notarization",
@@ -198,16 +198,16 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 			return false
 		}
 	}
-	if c.ThresholdByStake > 0 {
+	if c.ThresholdByStake() > 0 {
 		verifiersStake := 0
 		for _, ticket := range bvt {
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
-		if verifiersStake < c.ThresholdByStake {
+		if verifiersStake < c.ThresholdByStake() {
 			logging.Logger.Info("not reached notarization - stake < threshold stake",
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Int("verify stake", verifiersStake),
-				zap.Int("threshold", c.ThresholdByStake),
+				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
 				zap.Int("num_signatures", len(bvt)),
 				zap.Int("signature threshold", threshold),
@@ -405,7 +405,7 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount {
+	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount() {
 		return true
 	}
 	return false

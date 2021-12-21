@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -53,6 +54,7 @@ var (
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
+	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
@@ -301,6 +303,9 @@ func (mc *Chain) SaveClients(clients []*client.Client) error {
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	var (
 		mb  = b.MagicBlock
@@ -334,6 +339,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	if err = mc.UpdateMagicBlock(mb); err != nil {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
+
+	mc.SetLatestFinalizedMagicBlock(b)
 
 	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
@@ -400,7 +407,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 				return mc.isStarted()
 			}
 			timeoutCount++
-			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
+			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin()))
 		}
 	}
 	return false

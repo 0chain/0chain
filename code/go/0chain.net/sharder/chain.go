@@ -32,7 +32,7 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
-	transactionCacheSize := int(c.BlockSize) * blockCacheSize
+	transactionCacheSize := int(c.BlockSize()) * blockCacheSize
 	if transactionCacheSize > 5000 {
 		transactionCacheSize = 5000
 	}

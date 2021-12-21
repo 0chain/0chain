@@ -122,8 +122,10 @@ type Config struct {
 	// Commands is list of system commands to perform.
 	Commands map[string]*Command `json:"commands" yaml:"commands" mapstructure:"commands"`
 	// SkipWait nodes waiting (blobbers)
-	SkipWait []NodeName `json:"skip_wait" yaml:"skip_wait" mapstructure:"skip_wait"`
-	Env      map[string]string
+	SkipWait              []NodeName `json:"skip_wait" yaml:"skip_wait" mapstructure:"skip_wait"`
+	StuckWarningThreshold string     `json:"stuck_warning_threshold" yaml:"stuck_warning_threshold" mapstructure:"stuck_warning_threshold"`
+	Env                   map[string]string
+	stuckWarningThreshold *time.Duration
 }
 
 // cleaning up custom environment variables before each test
@@ -139,6 +141,18 @@ func (c *Config) IsSkipWait(name NodeName) (ok bool) {
 		}
 	}
 	return // wait
+}
+
+func (c *Config) GetStuckWarningThreshold() time.Duration {
+	if c.stuckWarningThreshold == nil {
+		if tm, err := time.ParseDuration(c.StuckWarningThreshold); err == nil {
+			c.stuckWarningThreshold = &tm
+		} else {
+			var tm time.Duration = 0
+			c.stuckWarningThreshold = &tm
+		}
+	}
+	return *c.stuckWarningThreshold
 }
 
 // Execute system command by its name.

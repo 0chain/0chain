@@ -20,6 +20,7 @@ const (
 	Boolean
 	String
 	StateBalance
+	Key
 	NumberOfTypes
 )
 

@@ -908,6 +908,9 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	logging.Logger.Info("setup latest and previous fmbs")
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
