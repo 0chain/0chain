@@ -1,5 +1,89 @@
-![Diagram](https://github.com/Dmdv/0chain/blob/zcnsc_latest/code/go/0chain.net/smartcontract/zcnsc/docs/ZCNSC.png?raw=true)
+ZCNSC SC
+==========
 
+ZCNSC SC converts token from native ZCN network to Ethereum wrapped WZCN token
+and in reverse order converts from wrapped Ethereum WZCN token to native ZCN token
+
+# Demo
+
+## Convert from ZCN to WZCN token using separate steps
+
+1. Add ethereum wallet configuration  
+// TBD  
+2. Fill ethereum wallet with tokens  
+3. Create ZCN wallet and fill it with tokens
+
+```shell
+for run in {1..10}
+do
+    ./zwallet faucet --methodName pour --input “{Pay day}”
+done
+```
+
+4. Burn ZCN tokens
+
+Using this command burn some tokens in ZCN
+
+```shell
+./zwallet bridge-burn-zcn --amount 1 
+```
+
+5. Mint WZCN tokens
+
+Using this command mint some tokens using hash from previous step
+
+```shell
+./zwallet bridge-mint-eth --hash "zcn-burn-hash" 
+```
+
+## Convert from WZCN to ZCN token using separate steps
+
+1. Add ethereum wallet configuration  
+   // TBD
+2. Fill ethereum wallet with tokens
+3. Create ZCN wallet and fill it with tokens
+
+```shell
+for run in {1..10}
+do
+    ./zwallet faucet --methodName pour --input “{Pay day}”
+done
+```
+
+4. Burn WZCN tokens
+
+Using this command burn some tokens in Ethereum
+
+```shell
+./zwallet bridge-burn-eth --amount 1 #wei 
+```
+
+5. Mint ZCN tokens
+
+Using this command mint tokens in ZCN using hash from previous step
+
+```shell
+./zwallet bridge-mint-zcn --hash "eth-burn-hash" 
+```
+
+## Convert from ZCN to WZCN with one step
+## Convert from WZCN to ZCN with one step
+## Ethereum's transaction verification
+
+```shell
+./zwallet bridge-verify --hash "eth-transaction-hash"
+```
+
+## List of authorizers
+```shell
+./zwallet bridge-list-auth
+```
+
+## Add authorizer
+
+## Schema
+
+![Diagram](https://github.com/Dmdv/0chain/blob/zcnsc_latest/code/go/0chain.net/smartcontract/zcnsc/docs/ZCNSC.png?raw=true)
 
 ## Converting WZCN to ZCN
 

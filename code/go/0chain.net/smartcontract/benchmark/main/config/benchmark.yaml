@@ -37,6 +37,18 @@ options:
     - "zcnscbridge_rest"
   omitted_tests:
 
+dbs:
+  events:
+    enabled: false
+    name: events_db
+    user: zchain_user
+    password: zchian
+    host: localhost
+    port: 5432
+    max_idle_conns: 100
+    max_open_conns: 200
+    conn_max_lifetime: 20s
+
 smart_contracts:
   minersc:
     min_delegates: 0
@@ -125,6 +137,7 @@ smart_contracts:
     min_authorizers: 1
     min_burn_amount: 1
     min_stake_amount: 0
+    max_fee: 100
     burn_address: "0000000000000000000000000000000000000000000000000000000000000123"
 
 internal:

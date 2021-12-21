@@ -1,10 +1,8 @@
 package cache
 
 import (
-	"sync"
-
 	"0chain.net/core/common"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 //LRU - LRU cache
@@ -12,7 +10,7 @@ type LRU struct {
 	Cache *lru.Cache
 	Hit   int64
 	Miss  int64
-	lock  sync.Mutex
+	//lock  sync.Mutex
 }
 
 //NewLRUCache - create a new LRU cache
@@ -30,8 +28,8 @@ func (c *LRU) Add(key string, value interface{}) error {
 
 //Get - get the value associated with the key
 func (c *LRU) Get(key string) (interface{}, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	//c.lock.Lock()
+	//defer c.lock.Unlock()
 	value, ok := c.Cache.Get(key)
 	if !ok {
 		c.Miss++

@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
+	"0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -31,7 +32,10 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.RoundChannel = make(chan *round.Round, 1)
 	blockCacheSize := 100
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
-	transactionCacheSize := int(c.BlockSize) * blockCacheSize
+	transactionCacheSize := int(c.BlockSize()) * blockCacheSize
+	if transactionCacheSize > 5000 {
+		transactionCacheSize = 5000
+	}
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
@@ -111,7 +115,12 @@ func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block,
 
 /*GetBlockFromStoreBySummary - get the block from the store */
 func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Block, error) {
-	return blockstore.GetStore().ReadWithBlockSummary(bs)
+	b, err := blockstore.GetStore().ReadWithBlockSummary(bs)
+	if err != nil {
+		logging.Logger.Error("get block from store by summary failed", zap.Error(err))
+		return nil, err
+	}
+	return b, nil
 }
 
 /*GetRoundFromStore - get the round from a store*/
@@ -195,8 +204,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
 
 	// check is it notarized
-	err = sc.VerifyNotarization(bl.lfb, bl.lfb.GetVerificationTickets(),
-		bl.r.GetRoundNumber())
+	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {
 		Logger.Error("load_lfb - verify notarization failed",
 			zap.Error(err),
@@ -205,6 +213,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		err = nil // not a real error
 		return    // do nothing, if not notarized
 	}
+	bl.lfb.SetBlockNotarized()
 
 	// add as notarized
 	bl.lfb.SetBlockState(block.StateNotarized)
@@ -257,7 +266,7 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewErrorf("load_lfb",
-			"related magic block not found: %v", err)
+			"related magic block not found: hash: %v, err: %v", lfb.LatestFinalizedMagicBlockHash, err)
 	}
 
 	// with current implementation it's a case
@@ -324,6 +333,7 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
+			Logger.Error("load_lfb, could not get block from store", zap.Error(err))
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 

@@ -82,7 +82,7 @@ func TestUpdateGlobals(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&smartcontract.StringMap{p.inputMap}).Encode(),
-			gn:       &GlobalNode{},
+			gn:       &GlobalNode{OwnerId: owner},
 			balances: balances,
 		}
 	}
@@ -100,20 +100,20 @@ func TestUpdateGlobals(t *testing.T) {
 		{
 			title: "bad_key",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					mockNotASetting: mockNotASetting,
 				},
 			},
 			want: want{
 				error: true,
-				msg:   "update_settings: validation: 'mock not a setting' is not a valid global setting",
+				msg:   "update_globals: validation: 'mock not a setting' is not a valid global setting",
 			},
 		},
 		{
 			title: "all_settings",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"server_chain.block.min_block_size":                  "1",
 					"server_chain.block.max_block_size":                  "10",
@@ -141,14 +141,14 @@ func TestUpdateGlobals(t *testing.T) {
 		{
 			title: "immutable_key",
 			parameters: parameters{
-				client: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+				client: owner,
 				inputMap: map[string]string{
 					"server_chain.health_check.deep_scan.enabled": "true",
 				},
 			},
 			want: want{
 				error: true,
-				msg:   "update_settings: validation: server_chain.health_check.deep_scan.enabled is an immutable setting",
+				msg:   "update_globals: validation: server_chain.health_check.deep_scan.enabled is an immutable setting",
 			},
 		},
 	}

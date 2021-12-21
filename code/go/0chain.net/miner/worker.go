@@ -24,28 +24,33 @@ func SetupWorkers(ctx context.Context) {
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx)      // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
-	go mc.BlockSyncWorker(ctx)
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 	go mc.UpdateMagicBlockWorker(ctx)
 	go mc.MinerHealthCheck(ctx)
+	go mc.NotarizationProcessWorker(ctx)
+	go mc.BlockVerifyWorkers(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case msg := <-mc.GetBlockMessageChannel():
+		case msg := <-mc.blockMessageChannel:
 			if !mc.isStarted() {
 				break
 			}
 			go func(bmsg *BlockMessage) {
+				ts := time.Now()
 				if bmsg.Sender != nil {
-					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+					logging.Logger.Debug("message",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("sender_index", bmsg.Sender.SetIndex),
+						zap.Any("id", bmsg.Sender.GetKey()))
 				} else {
 					logging.Logger.Debug("message", zap.Any("msg", GetMessageLookup(bmsg.Type)))
 				}
@@ -62,12 +67,41 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 					protocol.HandleNotarizedBlockMessage(ctx, bmsg)
 				}
 				if bmsg.Sender != nil {
-					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)), zap.Any("sender_index", bmsg.Sender.SetIndex), zap.Any("id", bmsg.Sender.GetKey()))
+					logging.Logger.Debug("message (done)",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("sender_index", bmsg.Sender.SetIndex),
+						zap.Any("id", bmsg.Sender.GetKey()),
+						zap.Any("duration", time.Since(ts)))
 				} else {
-					logging.Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(bmsg.Type)))
+					logging.Logger.Debug("message (done)",
+						zap.Any("msg", GetMessageLookup(bmsg.Type)),
+						zap.Any("duration", time.Since(ts)))
 				}
 			}(msg)
 		}
+	}
+}
+
+func roundTimeoutProcess(ctx context.Context, proto Protocol, rn int64) {
+	var cancel func()
+	ctx, cancel = context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+	rc := make(chan struct{})
+	ts := time.Now()
+	go func() {
+		proto.HandleRoundTimeout(ctx, rn)
+		close(rc)
+	}()
+
+	select {
+	case <-ctx.Done():
+		logging.Logger.Error("protocol.HandleRoundTimeout timeout",
+			zap.Error(ctx.Err()),
+			zap.Int64("round", rn))
+	case <-rc:
+		logging.Logger.Info("protocol.HandleRoundTimeout finished",
+			zap.Int64("round", rn),
+			zap.Any("duration", time.Since(ts)))
 	}
 }
 
@@ -80,7 +114,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		protocol Protocol = mc
 	)
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -88,39 +122,28 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			if !mc.isStarted() {
 				break
 			}
+
 			if cround == mc.GetCurrentRound() {
 				r := mc.GetMinerRound(cround)
 
 				if r != nil {
-					logging.Logger.Info("Round timeout",
-						zap.Any("round", r.Number),
-						zap.Any("current round", cround),
-						zap.Int("VRF_shares", len(r.GetVRFShares())),
-						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
-						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
-					func(ctx context.Context) {
-						cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
-						defer cancel()
-						rc := make(chan struct{})
-						ts := time.Now()
-						go func() {
-							protocol.HandleRoundTimeout(cctx, cround)
-							close(rc)
-						}()
-
-						select {
-						case <-cctx.Done():
-							logging.Logger.Error("protocol.HandleRoundTimeout timeout",
-								zap.Error(cctx.Err()),
-								zap.Int64("round", cround))
-						case <-rc:
-							logging.Logger.Info("protocol.HandleRoundTimeout finished",
-								zap.Int64("round", cround),
-								zap.Any("duration", time.Since(ts)))
+					if r.IsFinalized() || r.IsFinalizing() {
+						// check next round
+						nr := mc.GetRound(cround + 1)
+						if nr != nil {
+							roundTimeoutProcess(ctx, protocol, cround+1)
 						}
-					}(ctx)
+					} else {
+						logging.Logger.Info("round timeout",
+							zap.Any("round", r.Number),
+							zap.Any("current round", cround),
+							zap.Int("VRF_shares", len(r.GetVRFShares())),
+							zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
+							zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
+						roundTimeoutProcess(ctx, protocol, cround)
+					}
 				} else {
-					// set current round to latet finalized block
+					// set current round to latest finalized block
 					lfbr := mc.GetLatestFinalizedBlock().Round
 					mc.SetCurrentRound(lfbr)
 					logging.Logger.Debug("Round timeout, nil miner round, set current round to lfb round",
@@ -210,40 +233,5 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 		}
 		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
-	}
-}
-
-// BlockSyncWorker pull and sync blocks from remote
-func (mc *Chain) BlockSyncWorker(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case req := <-mc.GetSyncBlocksChan():
-			func() {
-				tm := time.Now()
-				b, _ := mc.GetBlock(ctx, req.Hash)
-				if b == nil {
-					logging.Logger.Warn("[block sync worker] - start block does not exist locally",
-						zap.String("block", req.Hash),
-						zap.Int64("round", req.Round))
-					return
-				}
-				syncNum := req.Num
-				// use half of the PruneStateBelowCount, usually it would be 50,
-				maxSyncNum := int64(mc.PruneStateBelowCount / 2)
-				if syncNum > maxSyncNum {
-					syncNum = maxSyncNum
-				}
-
-				blocks := mc.SyncBlocks(ctx, b, syncNum, req.SaveToDB)
-				logging.Logger.Debug("[block sync worker] - blocks synced",
-					zap.Int64("start round", b.Round-1),
-					zap.Int64("req sync num", syncNum),
-					zap.Int("synced num", len(blocks)),
-					zap.Bool("save to db", req.SaveToDB),
-					zap.Any("duration", time.Since(tm)))
-			}()
-		}
 	}
 }

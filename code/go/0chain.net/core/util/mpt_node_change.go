@@ -60,7 +60,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	delete(cc.Deletes, nhash)
 	if oldNode == nil {
 		change := &NodeChange{}
-		change.New = newNode.Clone()
+		change.New = newNode
 		cc.Changes[nhash] = change
 		return
 	}
@@ -73,14 +73,14 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 				return
 			}
 		}
-		prevChange.New = newNode.Clone()
+		prevChange.New = newNode
 		cc.Changes[nhash] = prevChange
 	} else {
 		change := &NodeChange{}
-		change.New = newNode.Clone()
-		change.Old = oldNode.Clone()
+		change.New = newNode
+		change.Old = oldNode
 		cc.Changes[nhash] = change
-		cc.Deletes[ohash] = oldNode.Clone()
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
@@ -104,7 +104,7 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 				zap.String("stack", string(debug.Stack())),
 			)
 		}
-		cc.Deletes[ohash] = oldNode.Clone()
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
@@ -166,9 +166,12 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 	if len(cc.Changes) == 0 && (!includeDeletes || len(cc.Deletes) == 0) {
 		return nil
 	}
-	if pndb, ok := ndb.(*PNodeDB); ok {
-		pndb.Flush()
-	}
+	// TODO: make the calling of Flush() configurable, and
+	// call it on production env.
+	//if pndb, ok := ndb.(*PNodeDB); ok {
+	//	pndb.Flush()
+	//}
+	//logging.Logger.Debug("update changes - flushed", zap.Duration("duration", time.Since(ts)))
 	return nil
 }
 

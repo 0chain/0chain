@@ -69,7 +69,7 @@ func copyBlock(b *Block) *Block {
 	if b.Txns != nil {
 		copiedB.Txns = make([]*transaction.Transaction, len(b.Txns))
 		for i, v := range b.Txns {
-			copiedB.Txns[i] = copyTxn(v)
+			copiedB.Txns[i] = v.Clone()
 		}
 	}
 
@@ -106,25 +106,13 @@ func copyVerTickets(t []*VerificationTicket) []*VerificationTicket {
 	return copiedT
 }
 
-func copyTxn(txn *transaction.Transaction) *transaction.Transaction {
-	copiedTxn := *txn
-	copiedTxn.CollectionMemberField = datastore.CollectionMemberField{
-		EntityCollection: nil,
-		CollectionScore:  txn.CollectionScore,
-	}
-
-	if txn.EntityCollection != nil {
-		copiedTxn.EntityCollection = &datastore.EntityCollection{
-			CollectionName:     txn.EntityCollection.CollectionName,
-			CollectionSize:     txn.EntityCollection.CollectionSize,
-			CollectionDuration: txn.EntityCollection.CollectionDuration,
-		}
-	}
-
-	return &copiedTxn
-}
-
 func makeTestNode(pbK string) (*node.Node, error) {
+	if pbK == "" {
+		ss := encryption.NewBLS0ChainScheme()
+		ss.GenerateKeys()
+		pbK = ss.GetPublicKey()
+	}
+
 	nc := map[interface{}]interface{}{
 		"type":       int8(1),
 		"public_ip":  "public ip",
@@ -563,12 +551,12 @@ func TestBlock_Validate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	client.SetClientSignatureScheme("ed25519")
 
 	n, err := makeTestNode(pbK)
 	if err != nil {
 		t.Fatal(err)
 	}
-	client.SetClientSignatureScheme("ed25519")
 	node.RegisterNode(n)
 
 	type fields struct {
@@ -1778,7 +1766,7 @@ func TestBlock_AddVerificationTicket(t *testing.T) {
 				MagicBlock:            tt.fields.MagicBlock,
 			}
 			if got := b.AddVerificationTicket(tt.args.vt); got != tt.want {
-				t.Errorf("AddVerificationTicket() = %v, want %v", got, tt.want)
+				t.Errorf("AddVerificationTickets() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -2701,10 +2689,16 @@ func TestBlock_GetBlockState(t *testing.T) {
 
 func TestBlock_GetClients(t *testing.T) {
 	b := NewBlock("", 1)
+	pbK1, _, err := encryption.GenerateKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetClientSignatureScheme("ed25519")
+
 	b.Txns = []*transaction.Transaction{
 		{},
-		{PublicKey: "public key"},
-		{PublicKey: "public key"},
+		{PublicKey: pbK1},
+		{PublicKey: pbK1},
 	}
 
 	type fields struct {
@@ -3027,7 +3021,7 @@ func TestBlock_IsBlockNotarized(t *testing.T) {
 
 			b.SetBlockNotarized()
 			if got := b.IsBlockNotarized(); got != tt.want {
-				t.Errorf("IsBlockNotarized() = %v, want %v", got, tt.want)
+				t.Errorf("UpdateBlockNotarization() = %v, want %v", got, tt.want)
 			}
 		})
 	}

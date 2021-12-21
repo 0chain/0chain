@@ -22,7 +22,6 @@ import (
 
 const (
 	Seperator = smartcontractinterface.Seperator
-	owner     = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
 	ADDRESS   = "cf8d0df9bd8cc637a4ff4e792ffe3686da6220c45f0e1103baa609f3f1751ef4"
 	name      = "interest"
 	YEAR      = time.Duration(time.Hour * 8784)
@@ -34,7 +33,7 @@ type InterestPoolSmartContract struct {
 
 func NewInterestPoolSmartContract() smartcontractinterface.SmartContractInterface {
 	var ipscCopy = &InterestPoolSmartContract{
-		smartcontractinterface.NewSC(ADDRESS),
+		SmartContract: smartcontractinterface.NewSC(ADDRESS),
 	}
 	ipscCopy.setSC(ipscCopy.SmartContract, &smartcontract.BCContext{})
 	return ipscCopy
@@ -174,6 +173,7 @@ func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContext
 	gn.APR = conf.GetFloat64(pfx + "apr")
 	gn.MinLock = state.Balance(conf.GetInt64(pfx + "min_lock"))
 	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
+	gn.OwnerId = conf.GetString(pfx + "owner_id")
 	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
 		balances.InsertTrieNode(gn.getKey(), gn)
 	}

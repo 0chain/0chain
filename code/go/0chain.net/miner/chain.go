@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -53,6 +54,7 @@ var (
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
+	minerChain.Config = c.Config
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
@@ -66,6 +68,16 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
 	minerChain.restartRoundEventChannel = make(chan struct{})
 	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
+	minerChain.nbpMutex = &sync.Mutex{}
+	minerChain.notarizationBlockProcessMap = make(map[string]struct{})
+	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
+	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
+	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
+	minerChain.notarizingBlocksMap = make(map[string]struct{})
+	minerChain.nbmMutex = &sync.Mutex{}
+	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
+	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -127,6 +139,16 @@ type Chain struct {
 	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
 	restartRoundEventChannel             chan struct{}      // trigger rre
 	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
+	nbpMutex                             *sync.Mutex
+	notarizationBlockProcessMap          map[string]struct{}
+	notarizationBlockProcessC            chan *Notarization
+	blockVerifyC                         chan *block.Block
+	validateTxnsWithContext              *common.WithContextFunc
+	notarizingBlocksMap                  map[string]struct{}
+	nbmMutex                             *sync.Mutex
+	verifyBlockNotarizationWorker        *common.WithContextFunc
+	mergeBlockVRFSharesWorker            *common.WithContextFunc
+	verifyCachedVRFSharesWorker          *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
@@ -166,9 +188,16 @@ func (mc *Chain) SetDiscoverClients(b bool) {
 	mc.discoverClients = b
 }
 
-// GetBlockMessageChannel - get the block messages channel.
-func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
-	return mc.blockMessageChannel
+// PushBlockMessageChannel pushes the block message to the process channel
+func (mc *Chain) PushBlockMessageChannel(bm *BlockMessage) {
+	go func() {
+		select {
+		case mc.blockMessageChannel <- bm:
+		case <-time.After(3 * time.Second):
+			logging.Logger.Warn("push block message to channel timeout",
+				zap.Any("message type", bm.Type))
+		}
+	}()
 }
 
 // SetupGenesisBlock - setup the genesis block for this chain.
@@ -193,6 +222,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.GetGeneratorsNumOfRound(r.GetRoundNumber()))
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
+	mr.vrfSharesCache = newVRFSharesCache()
 	return &mr
 }
 
@@ -243,7 +273,7 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 }
 
 // SaveClients - save clients from the block.
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
+func (mc *Chain) SaveClients(clients []*client.Client) error {
 	var err error
 	clientKeys := make([]datastore.Key, len(clients))
 	for idx, c := range clients {
@@ -251,7 +281,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	}
 	clientEntityMetadata := datastore.GetEntityMetadata("client")
 	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
 	defer memorystore.Close(ctx)
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
 	if err != nil {
@@ -273,6 +303,9 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	var (
 		mb  = b.MagicBlock
@@ -306,6 +339,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	if err = mc.UpdateMagicBlock(mb); err != nil {
 		return common.NewErrorf("view_change", "updating MB: %v", err)
 	}
+
+	mc.SetLatestFinalizedMagicBlock(b)
 
 	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
@@ -372,7 +407,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 				return mc.isStarted()
 			}
 			timeoutCount++
-			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
+			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin()))
 		}
 	}
 	return false

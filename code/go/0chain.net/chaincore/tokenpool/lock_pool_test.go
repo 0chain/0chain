@@ -80,7 +80,7 @@ func TestTransferToLockPool(t *testing.T) {
 		t.Errorf("transfer happened before lock expired\n\tstart time: %v\n\ttxn time: %v\n", p0.IsLocked(txn), txn.CreationDate)
 	}
 
-	time.Sleep(LOCKUPTIME90DAYS)
+	time.Sleep(LOCKUPTIME90DAYS + time.Second)
 	txn.CreationDate = common.Now()
 	_, _, err = p0.TransferTo(p1, 9, txn)
 	if err != nil {

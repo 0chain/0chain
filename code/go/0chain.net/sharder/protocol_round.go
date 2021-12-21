@@ -84,6 +84,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 		Logger.Warn("AddNotarizedBlock compute state timeout", zap.Int64("round", b.Round))
 		ret = false
 	}
-	sc.FinalizeRound(r)
+	go sc.FinalizeRound(r)
 	return ret
 }

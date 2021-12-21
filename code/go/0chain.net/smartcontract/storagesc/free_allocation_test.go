@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	cstate "0chain.net/chaincore/chain/state"
 
 	"0chain.net/core/encryption"
@@ -50,6 +52,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 	var conf = &scConfig{
 		MaxIndividualFreeAllocation: zcnToBalance(mockIndividualTokenLimit),
 		MaxTotalFreeAllocation:      zcnToBalance(mockTotalTokenLimit),
+		OwnerId:                     owner,
 	}
 
 	setExpectations := func(t *testing.T, name string, p parameters, want want) args {
@@ -58,6 +61,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			ClientID: p.clientId,
 		}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
@@ -143,7 +147,7 @@ func TestAddFreeStorageAssigner(t *testing.T) {
 			},
 			want: want{
 				true,
-				"add_free_storage_assigner: unauthorized access - only the owner can update the variables",
+				"add_free_storage_assigner: unauthorized access - only the owner can access",
 			},
 		},
 	}
@@ -258,6 +262,7 @@ func TestFreeAllocationRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
@@ -398,6 +403,11 @@ func TestFreeAllocationRequest(t *testing.T) {
 				Amount:     state.Balance(readPoolLocked),
 			},
 		).Return(nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		balances.On(
 			"GetTrieNode", readPoolKey(ssc.ID, p.marker.Recipient),
@@ -616,6 +626,7 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 		}
 		txn.Hash = mockTransactionHash
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 
@@ -744,6 +755,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 					len(pool.Blobbers) == mockNumBlobbers
 			}),
 		).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagUpdateBlobber, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		return args{ssc, txn, input, balances}
 	}

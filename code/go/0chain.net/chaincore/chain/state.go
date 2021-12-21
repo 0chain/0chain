@@ -34,13 +34,15 @@ func init() {
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	return c.computeState(ctx, b)
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+	return c.ComputeBlockStateWithLock(ctx, func() error {
+		return c.computeState(ctx, b)
+	})
 }
 
 // ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.computeState(ctx, b)
+	err := c.ComputeState(ctx, b)
 	if err != nil {
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
@@ -77,7 +79,9 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	return b.SaveChanges(ctx, c)
+	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	return b.SaveChanges(cctx, c)
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -101,7 +105,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout)
+	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
 	defer cancelf()
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
@@ -142,7 +146,9 @@ func (c *Chain) NewStateContext(
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
 		c.GetBlockSharders,
-		c.GetLatestFinalizedMagicBlock,
+		func() *block.Block {
+			return c.GetLatestFinalizedMagicBlock(context.Background())
+		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
 		eventDb,
@@ -276,7 +282,7 @@ func (c *Chain) updateState(
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(b.ClientState, c.OwnerID)
+		os, err = c.getState(b.ClientState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),

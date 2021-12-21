@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
@@ -38,7 +40,7 @@ const (
 	RewardDeclineRate
 	InterestDeclineRate
 	MaxMint
-	NumberOfSettings
+	OwnerId
 )
 
 var (
@@ -63,7 +65,9 @@ var (
 		"reward_decline_rate",
 		"interest_decline_rate",
 		"max_mint",
+		"owner_id",
 	}
+	NumberOfSettings = len(SettingName)
 
 	Settings = map[string]struct {
 		Setting    Setting
@@ -89,10 +93,11 @@ var (
 		"reward_decline_rate":    {RewardDeclineRate, smartcontract.Float64},
 		"interest_decline_rate":  {InterestDeclineRate, smartcontract.Float64},
 		"max_mint":               {MaxMint, smartcontract.StateBalance},
+		"owner_id":               {OwnerId, smartcontract.Key},
 	}
 )
 
-func (gn *GlobalNode) setInt(key string, change int) {
+func (gn *GlobalNode) setInt(key string, change int) error {
 	switch Settings[key].Setting {
 	case MaxN:
 		gn.MaxN = change
@@ -105,11 +110,12 @@ func (gn *GlobalNode) setInt(key string, change int) {
 	case MaxDelegates:
 		gn.MaxDelegates = change
 	default:
-		panic("key: " + key + "not implemented as int")
+		return fmt.Errorf("key: %v not implemented as int", key)
 	}
+	return nil
 }
 
-func (gn *GlobalNode) setBalance(key string, change state.Balance) {
+func (gn *GlobalNode) setBalance(key string, change state.Balance) error {
 	switch Settings[key].Setting {
 	case MaxMint:
 		gn.MaxMint = change
@@ -120,22 +126,24 @@ func (gn *GlobalNode) setBalance(key string, change state.Balance) {
 	case BlockReward:
 		gn.BlockReward = change
 	default:
-		panic("key: " + key + "not implemented as balance")
+		return fmt.Errorf("key: %v not implemented as balance", key)
 	}
+	return nil
 }
 
-func (gn *GlobalNode) setInt64(key string, change int64) {
+func (gn *GlobalNode) setInt64(key string, change int64) error {
 	switch Settings[key].Setting {
 	case RewardRoundFrequency:
 		gn.RewardRoundFrequency = change
 	case Epoch:
 		gn.Epoch = change
 	default:
-		panic("key: " + key + "not implemented as balance")
+		return fmt.Errorf("key: %v not implemented as int64", key)
 	}
+	return nil
 }
 
-func (gn *GlobalNode) setFloat64(key string, change float64) {
+func (gn *GlobalNode) setFloat64(key string, change float64) error {
 	switch Settings[key].Setting {
 	case TPercent:
 		gn.TPercent = change
@@ -156,7 +164,17 @@ func (gn *GlobalNode) setFloat64(key string, change float64) {
 	case InterestDeclineRate:
 		gn.InterestDeclineRate = change
 	default:
-		panic("key: " + key + "not implemented as balance")
+		return fmt.Errorf("key: %v not implemented as float64", key)
+	}
+	return nil
+}
+
+func (gn *GlobalNode) setKey(key string, change string) {
+	switch Settings[key].Setting {
+	case OwnerId:
+		gn.OwnerId = change
+	default:
+		panic("key: " + key + "not implemented as key")
 	}
 }
 
@@ -164,30 +182,43 @@ func (gn *GlobalNode) set(key string, change string) error {
 	switch Settings[key].ConfigType {
 	case smartcontract.Int:
 		if value, err := strconv.Atoi(change); err == nil {
-			gn.setInt(key, value)
+			if err := gn.setInt(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
 	case smartcontract.StateBalance:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			gn.setBalance(key, state.Balance(value*x10))
+			if err := gn.setBalance(key, state.Balance(value*x10)); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to state.balance: %v", key, change, err)
 		}
 	case smartcontract.Int64:
 		if value, err := strconv.ParseInt(change, 10, 64); err == nil {
-			gn.setInt64(key, value)
+			if err := gn.setInt64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to int64: %v", key, change, err)
 		}
 	case smartcontract.Float64:
 		if value, err := strconv.ParseFloat(change, 64); err == nil {
-			gn.setFloat64(key, value)
+			if err := gn.setFloat64(key, value); err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf("cannot convert key %s value %v to float64: %v", key, change, err)
 		}
+	case smartcontract.Key:
+		if _, err := hex.DecodeString(change); err != nil {
+			return fmt.Errorf("%s must be a hes string: %v", key, err)
+		}
+		gn.setKey(key, change)
 	default:
-		panic("unsupported type setting " + smartcontract.ConfigTypeName[Settings[key].ConfigType])
+		return fmt.Errorf("unsupported type setting %v", smartcontract.ConfigTypeName[Settings[key].ConfigType])
 	}
 
 	return nil
@@ -208,10 +239,11 @@ func (msc *MinerSmartContract) updateSettings(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-
-	if t.ClientID != owner {
-		return "", common.NewError("update_settings",
-			"unauthorized access - only the owner can update the variables")
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		get, _ := gn.Get(OwnerId)
+		return get == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	var changes smartcontract.StringMap

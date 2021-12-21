@@ -2,12 +2,13 @@ package common
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 
+	"encoding/json"
+
 	. "0chain.net/core/logging"
-	"github.com/vmihailenco/msgpack"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
 
@@ -19,10 +20,13 @@ const (
 )
 
 /*ToJSON - given an entity, get the json of that entity as a buffer */
-func ToJSON(entity interface{}) *bytes.Buffer {
+func ToJSON(entity interface{}) (*bytes.Buffer, error) {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
-	json.NewEncoder(buffer).Encode(entity)
-	return buffer
+	if err := json.NewEncoder(buffer).Encode(entity); err != nil {
+		return nil, err
+	}
+
+	return buffer, nil
 }
 
 /*WriteJSON - writes the entity json to a stream */
@@ -30,16 +34,22 @@ func WriteJSON(w io.Writer, entity interface{}) error {
 	return json.NewEncoder(w).Encode(entity)
 }
 
+func WriteMsgpack(w io.Writer, entity interface{}) error {
+	return msgpack.NewEncoder(w).Encode(entity)
+}
+
 /*ToMsgpack - msgpack encoding */
 func ToMsgpack(entity interface{}) *bytes.Buffer {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buffer)
-	encoder.UseJSONTag(true)
+	encoder.SetCustomStructTag("json")
 	if impl, ok := entity.(ReadLockable); ok {
 		impl.DoReadLock()
 		defer impl.DoReadUnlock()
 	}
-	encoder.Encode(entity)
+	if err := encoder.Encode(entity); err != nil {
+		Logger.Error("msgpack encode failed", zap.Error(err))
+	}
 	return buffer
 }
 
@@ -79,21 +89,25 @@ func ReadJSON(r io.Reader, entity interface{}) error {
 	return json.NewDecoder(r).Decode(entity)
 }
 
+func ReadMsgpack(r io.Reader, entity interface{}) error {
+	return msgpack.NewDecoder(r).Decode(entity)
+}
+
 /*FromMsgpack - read data into an entity */
 func FromMsgpack(data interface{}, entity interface{}) error {
 	var err error
 	switch jsondata := data.(type) {
 	case []byte:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer(jsondata))
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	case string:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer([]byte(jsondata)))
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	case io.Reader:
 		decoder := msgpack.NewDecoder(jsondata)
-		decoder.UseJSONTag(true)
+		decoder.SetCustomStructTag("json")
 		err = decoder.Decode(entity)
 	default:
 		return NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))

@@ -17,8 +17,8 @@ func makeTestChain(t *testing.T) *Chain {
 	if !ok {
 		t.Fatal("types missmatching")
 	}
+	ch.Config = chain.NewConfigImpl(&chain.ConfigData{BlockSize: 1024})
 	ch.Initialize()
-	ch.BlockSize = 1024
 	SetupSharderChain(ch)
 	chain.SetServerChain(ch)
 	mb := block.NewMagicBlock()

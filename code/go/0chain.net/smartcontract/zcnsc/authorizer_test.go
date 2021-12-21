@@ -24,9 +24,8 @@ var (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
+	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 	logging.Logger = zap.NewNop()
 }
 
@@ -203,7 +202,7 @@ func Test_Should_AddOnlyOneAuthorizerWithSameID(t *testing.T) {
 	require.Equal(t, 4, len(ans.NodeMap))
 }
 
-func Test_Basic_ShouldSaveGlobalNode(t *testing.T){
+func Test_Basic_ShouldSaveGlobalNode(t *testing.T) {
 	ctx := MakeMockStateContext()
 
 	globalNode, err := GetGlobalSavedNode(ctx)

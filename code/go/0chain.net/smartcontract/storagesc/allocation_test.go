@@ -78,6 +78,7 @@ func TestSelectBlobbers(t *testing.T) {
 	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
@@ -114,6 +115,7 @@ func TestSelectBlobbers(t *testing.T) {
 			TimeUnit:         confTimeUnit,
 			MinAllocSize:     confMinAllocSize,
 			MinAllocDuration: confMinAllocDuration,
+			OwnerId:          owner,
 		}
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
 
@@ -283,13 +285,14 @@ func TestExtendAllocation(t *testing.T) {
 		t *testing.T, args args,
 	) (
 		StorageSmartContract,
-		transaction.Transaction,
+		*transaction.Transaction,
 		StorageAllocation,
 		[]*StorageNode,
 		chainState.StateContextI,
 	) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = transaction.Transaction{
@@ -421,7 +424,7 @@ func TestExtendAllocation(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		return ssc, txn, sa, blobbers, balances
+		return ssc, &txn, sa, blobbers, balances
 	}
 
 	testCases := []struct {
@@ -489,7 +492,7 @@ func TestExtendAllocation(t *testing.T) {
 			ssc, txn, sa, aBlobbers, balances := setup(t, tt.args)
 
 			err := ssc.extendAllocation(
-				&txn,
+				txn,
 				&sa,
 				aBlobbers,
 				&tt.args.request,
@@ -569,6 +572,7 @@ func TestTransferAllocation(t *testing.T) {
 			ClientID: p.curator,
 		}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)

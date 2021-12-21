@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -267,7 +268,8 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type GlobalSettings struct {
-	Fields map[string]string `json:"fields"`
+	Version int64             `json:"version"`
+	Fields  map[string]string `json:"fields"`
 }
 
 func newGlobalSettings() *GlobalSettings {
@@ -291,6 +293,7 @@ func (gl *GlobalSettings) Decode(p []byte) error {
 }
 
 func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
+	gl.Version += 1
 	_, err := balances.InsertTrieNode(GLOBALS_KEY, gl)
 	return err
 }
@@ -312,6 +315,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		gl.Fields[key] = value
 	}
+
 	return nil
 }
 
@@ -383,7 +387,7 @@ func (gl *GlobalSettings) GetInt64(field GlobalSetting) (int64, error) {
 	}
 	value, ok := iValue.(int64)
 	if !ok {
-		panic(fmt.Sprintf("cannot convert key %s value %v to type int", key, value))
+		return value, fmt.Errorf("cannot convert key %s value %v to type int", key, value)
 	}
 	return value, nil
 }
@@ -497,14 +501,14 @@ func getGlobalSettings(balances cstate.StateContextI) (*GlobalSettings, error) {
 func (msc *MinerSmartContract) updateGlobals(
 	txn *transaction.Transaction,
 	inputData []byte,
-	_ *GlobalNode,
+	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if txn.ClientID != owner {
-		return "", common.NewError("update_globals",
-			"unauthorized access - only the owner can update the variables")
+	if err := smartcontractinterface.AuthorizeWithOwner("update_globals", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
 	}
-
 	var changes smartcontract.StringMap
 	if err = changes.Decode(inputData); err != nil {
 		return "", common.NewError("update_globals", err.Error())
@@ -522,11 +526,11 @@ func (msc *MinerSmartContract) updateGlobals(
 	}
 
 	if err = globals.update(changes); err != nil {
-		return "", common.NewErrorf("update_settings", "validation: %v", err.Error())
+		return "", common.NewErrorf("update_globals", "validation: %v", err.Error())
 	}
 
 	if err := globals.save(balances); err != nil {
-		return "", common.NewError("update_settings", err.Error())
+		return "", common.NewError("update_globals", err.Error())
 	}
 
 	return "", nil
