@@ -393,7 +393,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		for result := range validChannel {
 			if roundMismatch {
 				logging.Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
-				return common.NewError(RoundMismatch, "current round different from generation round")
+				return ErrRoundMismatch
 			}
 			if !result {
 				return common.NewError("txn_validation_failed", "Transaction validation failed")

@@ -864,7 +864,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			case ErrRoundMismatch:
 				if !r.isVerificationComplete() {
 					b.SetBlockState(block.StateVerificationFailed)
-					logging.Logger.Warn("verify round block failed, round mismatch",
+					logging.Logger.Warn("verify round block failed, verification cancelled (round mismatch)",
 						zap.Any("round", r.Number),
 						zap.Any("block", b.Hash),
 						zap.Any("current_round", mc.GetCurrentRound()))
