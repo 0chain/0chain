@@ -415,8 +415,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	b.ResetTimer()
 	b.Log("start benchmark")
 
-	var valids *ValidatorNodes
-	valids, err = ssc.getValidatorsList(balances)
+	valids, err := getValidatorsList(balances)
 	require.NoError(b, err)
 
 	// 6. add challenge for an allocation and verify it (successive case)

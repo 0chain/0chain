@@ -6,8 +6,6 @@ import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 
-	"0chain.net/smartcontract/zcnsc"
-
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/log"
@@ -183,8 +181,8 @@ func setUpMpt(
 	log.Println("added vesting pools")
 	minersc.AddPhaseNode(balances)
 	log.Println("added miners phase node")
-	zcnsc.Setup(clients, publicKeys, balances)
-	log.Println("added zcnsc")
+	//zcnsc.Setup(clients, publicKeys, balances)
+	//log.Println("added zcnsc")
 	log.Println("added phase node")
 	control.AddControlObjects(balances)
 	log.Println("added control objects")
