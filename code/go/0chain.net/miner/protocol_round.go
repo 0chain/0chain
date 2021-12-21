@@ -766,19 +766,19 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	})
 
 	if err != nil {
-		pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
-		pr.AddVerificationTickets(pbvts)
+		finish(false)
+		return err
 
-		pr.CancelVerification()
-		pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
-		mc.AddNotarizedBlock(ctx, pr, pb)
-
-		finish(true)
-		return nil
 	}
+	pbvts := convertToBlockVerificationTickets(b.GetPrevBlockVerificationTickets(), b.Round-1, b.PrevHash)
+	pr.AddVerificationTickets(pbvts)
 
-	finish(err == nil)
-	return err
+	pr.CancelVerification()
+	pb.MergeVerificationTickets(b.GetPrevBlockVerificationTickets())
+	mc.AddNotarizedBlock(ctx, pr, pb)
+
+	finish(true)
+	return nil
 }
 
 func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
