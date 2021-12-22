@@ -15,6 +15,7 @@ import (
 type Round struct {
 	*round.Round
 	roundGuard            sync.RWMutex
+	vrfThresholdGuard     sync.RWMutex
 	blocksToVerifyChannel chan *block.Block
 	verificationCancelf   context.CancelFunc
 	generationCancelf     context.CancelFunc

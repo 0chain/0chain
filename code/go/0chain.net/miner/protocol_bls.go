@@ -377,6 +377,9 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
 func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) bool {
+	//since we checks RRS is set and set it in the same func this func should be executed atomically to avoid race conditions
+	mr.vrfThresholdGuard.Lock()
+	defer mr.vrfThresholdGuard.Unlock()
 	//we can have threshold shares but still not have RRS
 	if mr.IsVRFComplete() {
 		// BLS has completed already for this round.
