@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package miner
@@ -9,7 +10,6 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-
 	crpc "0chain.net/conductor/conductrpc"
 	crpcutils "0chain.net/conductor/utils"
 )

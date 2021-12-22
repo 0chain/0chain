@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"sync"
 
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
 )
 
@@ -122,6 +123,8 @@ type Server struct {
 
 	// node id -> node name mapping
 	names map[NodeID]NodeName
+
+	NodesServerStatsCollector *stats.NodesServerStats
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -426,8 +429,26 @@ func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
 }
 
 //
+// stats
+//
+
+func (s *Server) AddBlockServerStats(ss *stats.BlockReport, _ *struct{}) error {
+	s.NodesServerStatsCollector.AddBlockStats(ss)
+	return nil
+}
+
+//
 // flow
 //
+
+// EnableServerStatsCollector initializes Server.NodesServerStatsCollector,
+// and updates State.StatsCollectorEnabled for all nodes.
+func (s *Server) EnableServerStatsCollector() error {
+	s.NodesServerStatsCollector = stats.NewNodeServerStats()
+	return s.UpdateAllStates(func(state *State) {
+		state.StatsCollectorEnabled = true
+	})
+}
 
 // Close the server waiting.
 func (s *Server) Close() (err error) {

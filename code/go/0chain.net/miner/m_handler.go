@@ -81,13 +81,33 @@ func SetupM2MReceivers(c node.Chainer) {
 			NotarizedBlockHandler, nil)))
 }
 
-/*SetupX2MResponders - setup responders */
-func SetupX2MResponders() {
-	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
+const (
+	getNotarizedBlockX2MV1Pattern = "/v1/_x2m/block/notarized_block/get"
+)
 
-	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
-	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
-	http.HandleFunc("/v1/_m2m/chain/start", common.N2NRateLimit(node.ToN2NSendEntityHandler(StartChainRequestHandler)))
+func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
+	sendHandlerMap := map[string]common.JSONResponderF{
+		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
+		"/v1/_x2m/state/get":          PartialStateHandler,
+		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
+		"/v1/_m2m/chain/start":        StartChainRequestHandler,
+	}
+
+	x2mRespMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range sendHandlerMap {
+		x2mRespMap[pattern] = common.N2NRateLimit(
+			node.ToN2NSendEntityHandler(
+				handler,
+			),
+		)
+	}
+	return x2mRespMap
+}
+
+func setupHandlers(handlers map[string]func(http.ResponseWriter, *http.Request)) {
+	for pattern, handler := range handlers {
+		http.HandleFunc(pattern, handler)
+	}
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */

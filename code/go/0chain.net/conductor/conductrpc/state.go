@@ -47,12 +47,15 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
-	ExtendNotNotarisedBlock *config.ExtendNotNotarisedBlock
+	ExtendNotNotarisedBlock   *config.ExtendNotNotarisedBlock
+	VerifyingNonExistentBlock *config.VerifyingNonExistentBlock
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses
 	ValidatorProof *config.Bad // blobber sends invalid proof to validators
 	Challenges     *config.Bad // blobber ignores challenges
+
+	StatsCollectorEnabled bool
 }
 
 // Name returns NodeName by given NodeID.

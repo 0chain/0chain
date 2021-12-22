@@ -4,6 +4,7 @@ sets:
   - name: "attack round transfer"
     tests:
       - "not notarised block extension"
+      - "verifying non existent block"
 
 tests:
   - name: "not notarised block extension"
@@ -15,5 +16,19 @@ tests:
           enable: true
           round: 30
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "verifying non existent block"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - configure_verifying_non_existent_block_test_case:
+          round: 30
+          hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - wait_round:
+          round: 50
       - make_test_case_check:
           wait_time: 5m

@@ -2,6 +2,8 @@ package conductrpc
 
 import (
 	"net/rpc"
+
+	"0chain.net/conductor/conductrpc/stats"
 )
 
 // client of the conductor RPC server.
@@ -174,6 +176,17 @@ func (c *client) addTestCaseResult(blob []byte) (err error) {
 			return
 		}
 		err = c.client.Call("Server.AddTestCaseResult", blob, &struct{}{})
+	}
+	return
+}
+
+func (c *client) addBlockServerStats(ss *stats.BlockReport) (err error) {
+	err = c.client.Call("Server.AddBlockServerStats", ss, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddBlockServerStats", ss, &struct{}{})
 	}
 	return
 }

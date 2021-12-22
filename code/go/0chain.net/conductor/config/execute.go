@@ -82,6 +82,9 @@ type Executor interface {
 	// ConfigureNotNotarisedBlockExtensionCheck prepares state for cases.NotNotarisedBlockExtension test case.
 	ConfigureNotNotarisedBlockExtensionCheck(*ExtendNotNotarisedBlock) (err error)
 
+	// ConfigureVerifyingNonExistentBlockTestCase prepares state for cases.VerifyingNonExistentBlock test case.
+	ConfigureVerifyingNonExistentBlockTestCase(*VerifyingNonExistentBlock) (err error)
+
 	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
 }

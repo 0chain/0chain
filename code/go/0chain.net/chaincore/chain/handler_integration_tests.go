@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package chain
@@ -6,7 +7,9 @@ import (
 	"context"
 	"net/http"
 
+	"0chain.net/chaincore/node"
 	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats/middleware"
 )
 
 func revertString(s string) string {
@@ -44,4 +47,19 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
 	}
 
 	return GetServerChain().GetLatestFinalizedMagicBlock(ctx), nil
+}
+
+/*SetupHandlers sets up the necessary API end points */
+func SetupHandlers() {
+	hMap := handlersMap()
+
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		hMap[getBlockV1Pattern] = middleware.BlockStatsMiddleware(
+			hMap[getBlockV1Pattern],
+			"block",
+			getBlockV1Pattern,
+		)
+	}
+
+	setupHandlers(hMap)
 }
