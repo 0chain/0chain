@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
@@ -207,8 +206,8 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes, balances cstate.StateContextI) (err error) {
+	signatureScheme := balances.GetSignatureScheme()
 	toSign := mp.GetStringToSign()
 	for _, v := range mp.Signatures {
 		if v.ID == "" {
