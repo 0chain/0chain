@@ -7,6 +7,7 @@ sets:
       - "send different blocks from first generator"
       - "send different blocks from all generators"
       - "breaking single block"
+      - "verifying non existent block"
 
 tests:
   - name: "not notarised block extension"
@@ -44,5 +45,19 @@ tests:
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_breaking_single_block:
           round: 30
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "verifying non existent block"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: {}
+      - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - configure_verifying_non_existent_block_test_case:
+          round: 30
+          hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
+      - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
+      - wait_round:
+          round: 50
       - make_test_case_check:
           wait_time: 5m

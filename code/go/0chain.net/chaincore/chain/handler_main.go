@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package chain
@@ -20,4 +21,9 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (int
 	}
 
 	return nil, errors.New("could not find latest finalized magic block")
+}
+
+// SetupHandlers sets up the necessary API end points.
+func SetupHandlers() {
+	setupHandlers(handlersMap())
 }

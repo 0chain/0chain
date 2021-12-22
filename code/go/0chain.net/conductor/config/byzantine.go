@@ -114,6 +114,14 @@ type (
 		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
+	// VerifyingNonExistentBlock represents config for cases.VerifyingNonExistentBlock.
+	VerifyingNonExistentBlock struct {
+		Hash  string `json:"hash" yaml:"hash" mapstructure:"hash"`
+		Round int    `json:"round" yaml:"round" mapstructure:"round"`
+
+		IgnoredVerificationTicketsNum int
+	}
+
 	// TestCaseCheck represents generic configuration for making tests checks.
 	TestCaseCheck struct {
 		WaitTimeStr string `mapstructure:"wait_time"`
@@ -154,6 +162,16 @@ func (c *SendDifferentBlocksFromAllGenerators) Decode(val interface{}) error {
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *BreakingSingleBlock) Decode(val interface{}) error {
 	var cfg BreakingSingleBlock
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *VerifyingNonExistentBlock) Decode(val interface{}) error {
+	var cfg VerifyingNonExistentBlock
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}

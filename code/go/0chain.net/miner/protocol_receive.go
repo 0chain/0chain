@@ -30,10 +30,8 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
-// HandleVerifyBlockMessage - handles the verify block message.
-func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
-	msg *BlockMessage) {
-
+// handleVerifyBlockMessage - handles the verify block message.
+func (mc *Chain) handleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
 
 	if err := mc.pushToBlockVerifyWorker(ctx, b); err != nil {
@@ -507,8 +505,8 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	return nil
 }
 
-// HandleNotarizationMessage - handles the block notarization message.
-func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+// handleNotarizationMessage - handles the block notarization message.
+func (mc *Chain) handleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
 	mc.processNotarization(ctx, msg.Notarization)
 }
 

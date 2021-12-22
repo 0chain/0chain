@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/core/viper"
 )
 
@@ -181,6 +182,12 @@ func (e *Entity) ConfigureTestCase(blob []byte) error {
 
 func (e *Entity) AddTestCaseResult(blob []byte) error {
 	return e.client.addTestCaseResult(blob)
+}
+
+// stats
+
+func (e *Entity) AddBlockServerStats(ss *stats.BlockReport) error {
+	return e.client.addBlockServerStats(ss)
 }
 
 var global *Entity

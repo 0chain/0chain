@@ -1,3 +1,4 @@
+//go:build integration_tests
 // +build integration_tests
 
 package sharder
@@ -6,13 +7,25 @@ import (
 	"context"
 	"net/http"
 
+	crpc "0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats/middleware"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
-
-	"0chain.net/core/common"
-
-	crpc "0chain.net/conductor/conductrpc"
 )
+
+// SetupHandlers sets up the necessary API end points.
+func SetupHandlers() {
+	handlers := handlersMap()
+
+	handlers[getBlockV1Pattern] = middleware.BlockStatsMiddleware(
+		handlers[getBlockV1Pattern],
+		"block",
+		getBlockV1Pattern,
+	)
+
+	setupHandlers(handlers)
+}
 
 func revertString(s string) string {
 	r := []rune(s)
