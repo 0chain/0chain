@@ -294,11 +294,12 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		return false
 	}
 
+	//can't return false here even if at threshold, add_my_vrf_share might be at threshold and still should trigger starts
 	mr.AddVRFShare(vrfs, blsThreshold)
 
 	if mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold) {
-		mc.TryProposeBlock(ctx, mr)
-		mc.StartVerification(ctx, mr)
+		mc.TryProposeBlock(common.GetRootContext(), mr)
+		mc.StartVerification(common.GetRootContext(), mr)
 	}
 
 	return true
@@ -376,13 +377,13 @@ func (mc *Chain) verifyCachedVRFShares(ctx context.Context, blsMsg string, r *Ro
 
 // ThresholdNumBLSSigReceived do we've sufficient BLSshares?
 func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) bool {
-
+	//we can have threshold shares but still not have RRS
 	if mr.IsVRFComplete() {
 		// BLS has completed already for this round.
 		// But, received a BLS message from a node now
 		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.",
 			zap.Int64("round", mr.GetRoundNumber()))
-		return true
+		return false
 	}
 
 	var shares = mr.GetVRFShares()

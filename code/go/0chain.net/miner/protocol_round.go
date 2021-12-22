@@ -321,7 +321,7 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 
 	// NOTE: If there are not enough txns, this will not advance further even
 	// though rest of the network is. That's why this is a goroutine.
-	go mc.GenerateRoundBlock(context.Background(), mr)
+	go mc.GenerateRoundBlock(ctx, mr)
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
@@ -793,9 +793,8 @@ func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
 }
 
 func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
-	timeout, _ := context.WithTimeout(context.Background(), time.Minute)
 	//we use one minute timeout here for emergency case. normally context should be cancelled due to network progress
-	vctx := mr.StartVerificationBlockCollection(timeout)
+	vctx := mr.StartVerificationBlockCollection(ctx)
 	gen := mc.GetGenerators(mr)
 
 	if vctx != nil && len(gen) > 0 && mr.IsVRFComplete() {
@@ -1121,6 +1120,7 @@ func (mc *Chain) moveToNextRoundNotAhead(ctx context.Context, r *Round) {
 			zap.Int64("round", rn))
 		return // terminated
 	}
+	//TODO start if not started, atm we  resend vrf share here
 	nr := mc.StartNextRound(ctx, r)
 	mc.SetCurrentRound(nr.Number)
 }

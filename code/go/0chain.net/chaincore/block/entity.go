@@ -783,7 +783,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 
 		if !pb.IsStateComputed() {
-			logging.Logger.Error("compute state - could not get previous block",
+			logging.Logger.Error("compute state - previous state is not computed",
 				zap.Int64("round", b.Round),
 				zap.Int64("prev_round", b.Round-1),
 				zap.String("block", b.Hash))
