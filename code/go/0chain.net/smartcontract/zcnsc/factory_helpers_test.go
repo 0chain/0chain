@@ -1,14 +1,15 @@
 package zcnsc_test
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/json"
+	"fmt"
+
+	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/smartcontract/zcnsc"
-	"encoding/json"
-	"fmt"
 )
 
 const (
@@ -109,36 +110,31 @@ func createBurnPayload() *BurnPayload {
 	}
 }
 
-func CreateMintPayload(receiverId string, authorizers []string) (*MintPayload, string, error) {
-	m := &MintPayload{
+func CreateMintPayload(receiverId string, authorizers []string, ctx *mocks.StateContextI) (m *MintPayload, err error) {
+	m = &MintPayload{
 		EthereumTxnID:     txHash,
 		Amount:            200,
 		Nonce:             1,
 		ReceivingClientID: receiverId,
 	}
 
-	signatures, pk, err := createTransactionSignatures(m, authorizers)
-	if err != nil {
-		return nil, pk, err
-	}
+	m.Signatures, err = createTransactionSignatures(m, authorizers, ctx)
 
-	m.Signatures = signatures
-
-	return m, pk, nil
+	return
 }
 
-func createTransactionSignatures(m *MintPayload, authorizers []string) ([]*AuthorizerSignature, string, error) {
+func createTransactionSignatures(m *MintPayload, authorizers []string, ctx *mocks.StateContextI) ([]*AuthorizerSignature, error) {
 	var sigs []*AuthorizerSignature
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme := ctx.GetSignatureScheme()
 	err := signatureScheme.GenerateKeys()
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	signature, err := signatureScheme.Sign(m.GetStringToSign())
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	for _, id := range authorizers {
@@ -150,7 +146,7 @@ func createTransactionSignatures(m *MintPayload, authorizers []string) ([]*Autho
 			})
 	}
 
-	return sigs, signatureScheme.GetPublicKey(), nil
+	return sigs, nil
 }
 
 func createUserNode(id string, nonce int64) *UserNode {

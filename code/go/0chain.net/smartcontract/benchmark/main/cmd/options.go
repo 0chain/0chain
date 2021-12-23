@@ -25,8 +25,8 @@ func setupOptions(flags *pflag.FlagSet) ([]string, []string) {
 	log.SetVerbose(verbose)
 
 	var testSuites []string
-	if flags.Changed("test_suits") {
-		testSuites, err = flags.GetStringSlice("test_suits")
+	if flags.Changed("tests") {
+		testSuites, err = flags.GetStringSlice("tests")
 		if err != nil {
 			log.Fatal(err)
 		}
