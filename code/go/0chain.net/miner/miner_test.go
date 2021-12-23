@@ -57,7 +57,10 @@ func generateSingleBlock(ctx context.Context, mc *Chain, prevBlock *block.Block,
 		mc.AddGenesisBlock(gb)
 	}
 	b.ChainID = prevBlock.ChainID
-	mc.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: 1024}
+	mc.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -139,6 +142,7 @@ func makeTestMinioClient() (blockstore.MinioClient, error) {
 func setupMinerChain() (*Chain, func()) {
 	mc := GetMinerChain()
 	mc.Chain = chain.Provider().(*chain.Chain)
+	minerChain.Config = chain.NewConfigImpl(&chain.ConfigData{})
 	doneC := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -353,7 +357,10 @@ func setupSelfNodeKeys() {
 
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
-	mc.BlockSize = int32(numOfTransactions)
+	data := &chain.ConfigData{BlockSize: 1024}
+	mc.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
 	mp := node.NewPool(node.NodeTypeMiner)
 	mb := block.NewMagicBlock()
 	mb.Miners = mp
@@ -436,10 +443,15 @@ func SetUpSingleSelf() func() {
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
 	c.SetMagicBlock(mb)
-	c.MinGenerators = 1
-	c.RoundRange = 10000000
-	c.MinBlockSize = 1
-	c.MaxByteSize = 1638400
+	data := &chain.ConfigData{BlockSize: 1024}
+	c.Config = chain.NewConfigImpl(data)
+	data.BlockSize = int32(numOfTransactions)
+
+	data.MinGenerators = 1
+	data.RoundRange = 10000000
+	data.MinBlockSize = 1
+	data.MaxByteSize = 1638400
+
 	c.SetGenerationTimeout(15)
 	chain.SetServerChain(c)
 	SetupMinerChain(c)

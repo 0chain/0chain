@@ -23,6 +23,7 @@ The important details in the config file are the following.
 
 - details of all nodes used
 - custom commands used in tests
+- `stuck_warning_threshold` setting to show additional output when the chain is stuck for more than specified duration
 
 ### Conductor test suite
 
@@ -519,7 +520,7 @@ enable:
 
 #### Custom commands
 
-The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/c93e6022bee40e76eb35c408d8117dfb41b30bf7/docker.local/config/conductor.config.yaml#L117).
+The list is available on [conductor.config.yaml](https://github.com/0chain/0chain/blob/master/docker.local/config/conductor.config.yaml#L146).
 
 ### Adding new command
 

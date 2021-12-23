@@ -1,7 +1,9 @@
 package zcnsc
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/json"
+	"strconv"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
@@ -9,10 +11,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
-	"0chain.net/core/viper"
 	"0chain.net/smartcontract/benchmark"
-	"encoding/json"
-	"strconv"
 )
 
 const (
@@ -27,22 +26,10 @@ var (
 )
 
 func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
-	chainSetup()
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
 	addAuthorizersNode(balances)
 	addCommonAuthorizers(clients, publicKeys, balances)
-}
-
-func chainSetup() {
-	// settings are irrelevant here, it needs only schema
-	ch := chain.NewChainFromConfig()
-	ch.SetSignatureScheme(viper.GetString(benchmark.InternalSignatureScheme))
-	chain.SetServerChain(ch)
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	if signatureScheme == nil {
-		panic(signatureScheme)
-	}
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
@@ -54,6 +41,7 @@ func addMockGlobalNode(balances cstate.StateContextI) {
 	gn.MinBurnAmount = config.SmartContractConfig.GetInt64(benchmark.MinBurnAmount)
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64(benchmark.MinStakeAmount)
 	gn.BurnAddress = config.SmartContractConfig.GetString(benchmark.BurnAddress)
+	gn.MaxFee = config.SmartContractConfig.GetInt64(benchmark.MaxFee)
 
 	_, _ = balances.InsertTrieNode(gn.GetKey(), gn)
 }

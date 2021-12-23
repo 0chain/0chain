@@ -15,8 +15,7 @@ import (
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 
 	logging.Logger = zap.NewNop()
 }
@@ -144,7 +143,7 @@ func Test_UserNodeNonceShouldIncrement(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, node)
 
-	require.Equal(t, node.Nonce, nonce + 1)
+	require.Equal(t, node.Nonce, nonce+1)
 }
 
 func Test_UpdateUserNode(t *testing.T) {
