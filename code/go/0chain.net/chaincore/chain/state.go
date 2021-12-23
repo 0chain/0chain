@@ -181,15 +181,28 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		var output string
 		t := time.Now()
 		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
-		if err != nil {
+		switch err {
+		case ErrSmartContractContext:
 			sctx.EmitError(err)
-			logging.Logger.Error("Error executing the SC",
+			logging.Logger.Error("Error executing the SC, context error",
 				zap.Error(err),
 				zap.String("block", b.Hash),
 				zap.String("begin client state", util.ToHex(startRoot)),
 				zap.String("prev block", b.PrevBlock.Hash),
 				zap.Any("txn", txn))
-			return
+			//return original error, to handle upwards
+			return events, context.DeadlineExceeded
+		default:
+			if err != nil {
+				sctx.EmitError(err)
+				logging.Logger.Error("Error executing the SC",
+					zap.Error(err),
+					zap.String("block", b.Hash),
+					zap.String("begin client state", util.ToHex(startRoot)),
+					zap.String("prev block", b.PrevBlock.Hash),
+					zap.Any("txn", txn))
+				return
+			}
 		}
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
