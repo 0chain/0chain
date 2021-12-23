@@ -596,12 +596,19 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 // block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
 // finalized magic block of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
-	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, c.getLatestFinalizedMagicBlock(ctx))
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		return nil
+	}
+	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, magicBlock)
 }
 
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
-	lfmb := c.GetLatestFinalizedMagicBlock(context.Background())
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
+	if lfmb == nil {
+		return nil
+	}
 	// TODO: improve this lfmbMutex
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
@@ -621,7 +628,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 }
 
 func getMagicBlockBrief(b *block.Block) *MagicBlockBrief {
-	if b == nil || b.MagicBlock == nil {
+	if b.MagicBlock == nil {
 		return nil
 	}
 	return &MagicBlockBrief{

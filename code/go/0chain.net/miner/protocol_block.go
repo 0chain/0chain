@@ -151,6 +151,10 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 		nextVCRound = mc.NextViewChange()
 	)
 
+	if lfmbr == nil {
+		return common.NewError("verify_block_mb_reference", "can't get lfmbr")
+	}
+
 	if nextVCRound > 0 && offsetRound >= nextVCRound && lfmbr.StartingRound < nextVCRound {
 		// TODO: offsetRound could >= nextVCRound on start when the nextVCRound was not updated correctly.
 		logging.Logger.Warn("verify_block_mb_reference - required MB missing or still not finalized")

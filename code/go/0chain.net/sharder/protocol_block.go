@@ -210,6 +210,12 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	if err = b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round),
+			zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+
 	err = sc.VerifyBlockNotarization(ctx, b)
 	if err != nil {
 		Logger.Error("notarization verification failed",
@@ -219,12 +225,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round),
-			zap.Any("hash", b.Hash), zap.Error(err))
-		return
-	}
-
+	//TODO remove it since verify block adds this block to round
 	_, _, err = sc.AddNotarizedBlockToRound(er, b)
 	if err != nil {
 		Logger.Error("process block failed",

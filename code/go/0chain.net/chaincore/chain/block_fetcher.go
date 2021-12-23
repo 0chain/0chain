@@ -544,12 +544,22 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 
 // RequestEntityFromMiners requests entity from miners in latest finalized magic block
 func (c *Chain) RequestEntityFromMiners(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.RequestEntityFromMinersOnMB(ctx, c.getLatestFinalizedMagicBlock(ctx), requestor, params, handler)
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		logging.Logger.Error("can't request entity")
+		return
+	}
+	c.RequestEntityFromMinersOnMB(ctx, magicBlock, requestor, params, handler)
 }
 
 // RequestEntityFromSharders requests entity from sharders in latest finalized magic block
 func (c *Chain) RequestEntityFromSharders(ctx context.Context, requestor node.EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
-	c.RequestEntityFromShardersOnMB(ctx, c.getLatestFinalizedMagicBlock(ctx), requestor, params, handler)
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		logging.Logger.Error("can't request entity")
+		return
+	}
+	c.RequestEntityFromShardersOnMB(ctx, magicBlock, requestor, params, handler)
 }
 
 // RequestEntityFromMinersOnMB requests entity from miners on given magic block

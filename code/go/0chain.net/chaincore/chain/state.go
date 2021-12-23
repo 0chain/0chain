@@ -36,6 +36,10 @@ var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance no
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
 	return c.ComputeBlockStateWithLock(ctx, func() error {
+		//check whether we already computed it
+		if b.IsStateComputed() {
+			return nil
+		}
 		return c.computeState(ctx, b)
 	})
 }
@@ -128,9 +132,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(
-	ctx context.Context, b *block.Block, txn *transaction.Transaction,
-) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, txn)
@@ -155,9 +157,7 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(
-	ctx context.Context, b *block.Block, txn *transaction.Transaction,
-) (events []event.Event, err error) {
+func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (events []event.Event, err error) {
 
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())

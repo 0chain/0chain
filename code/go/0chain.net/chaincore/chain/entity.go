@@ -576,7 +576,9 @@ func SetupStateDB() {
 
 // CloseStateDB closes the state db (rocksdb)
 func CloseStateDB() {
+	logging.Logger.Info("Closing StateDB")
 	stateDB.Close()
+	logging.Logger.Info("StateDB closed")
 }
 
 func (c *Chain) GetStateDB() util.NodeDB { return c.stateDB }
@@ -691,7 +693,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
 		r.GetTimeoutCount() < b.RoundTimeoutCount {
 
-		logging.Logger.Info("AddNotarizedBlockToRound round and block random seed different",
+		logging.Logger.Debug("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()),
@@ -701,6 +703,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
 
+	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
@@ -837,7 +840,11 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
-	var mb = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
+	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
+	if mb == nil {
+		logging.Logger.Error("can't get lfmb`")
+		return false
+	}
 	return b.LatestFinalizedMagicBlockHash == mb.Hash
 }
 
@@ -1393,8 +1400,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
 	var (
 		self = node.Self.Underlying().GetKey()
-		lfmb = c.GetLatestFinalizedMagicBlock(context.Background())
 	)
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 
 	if lfmb != nil && newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) &&
 		lfmb.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
@@ -1501,7 +1508,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
-	var latest = c.GetLatestFinalizedMagicBlock(context.Background())
+	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
 		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
@@ -1680,7 +1687,7 @@ type AfterFetcher interface {
 }
 
 func (c *Chain) LoadMinersPublicKeys() error {
-	mb := c.GetLatestFinalizedMagicBlock(context.Background())
+	mb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if mb == nil {
 		return nil
 	}

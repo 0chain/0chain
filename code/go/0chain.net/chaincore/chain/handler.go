@@ -336,16 +336,20 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	var (
-		mb  = c.GetMagicBlock(rn)
-		fmb = c.GetLatestFinalizedMagicBlockRound(rn)
+		mb            = c.GetMagicBlock(rn)
+		fmb           = c.GetLatestFinalizedMagicBlockRound(rn)
+		startingRound int64
 	)
+	if fmb != nil {
+		startingRound = fmb.StartingRound
+	}
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Related MB / finalized MB")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v / %v", mb.StartingRound, fmb.StartingRound)
+	fmt.Fprintf(w, "%v / %v", mb.StartingRound, startingRound)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 

@@ -340,6 +340,9 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	params := &url.Values{}
 	params.Add("block", b.Hash)
 	mb := c.GetLatestFinalizedMagicBlock(cctx)
+	if mb == nil {
+		return nil, errors.New("can't get mb")
+	}
 	stateChangesC := make(chan *block.StateChange, mb.Miners.Size())
 
 	var handler = func(_ context.Context, entity datastore.Entity) (

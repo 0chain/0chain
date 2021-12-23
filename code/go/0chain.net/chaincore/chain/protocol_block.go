@@ -419,7 +419,7 @@ func (c *Chain) GetLocalPreviousBlock(ctx context.Context, b *block.Block) (
 	return
 }
 
-// GetPreviousBlock gets or sync the previous block from the network and compute its state.
+// GetPreviousBlock gets or sync the previous block from the network and fetches partial state change from the network.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
 	// check if the previous block points to itself
 	if b.PrevBlock == b || b.PrevHash == b.Hash {
@@ -468,6 +468,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	// of one block previous
 	if syncNum <= 0 {
 		//blocks := c.SyncPreviousBlocks(ctx, b, 1, false)
+		//will load partial state here
 		pb = c.SyncPreviousBlocks(ctx, b, 1)
 		if pb == nil {
 			logging.Logger.Error("get_previous_block - could not fetch block",
@@ -637,7 +638,8 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 
 	logging.Logger.Debug("sync_block - previous block not computed",
 		zap.Int64("round", pb.Round),
-		zap.String("block", pb.Hash))
+		zap.String("block", pb.Hash),
+		zap.Int8("state_status", pb.GetStateStatus()))
 
 	var ppb *block.Block
 	if opt.Num-1 > 0 {

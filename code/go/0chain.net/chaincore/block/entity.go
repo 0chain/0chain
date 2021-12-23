@@ -72,6 +72,7 @@ const (
 const (
 	StatePending    = 0
 	StateComputing  = iota
+	StateCancelled  = iota
 	StateFailed     = iota
 	StateSuccessful = iota
 	StateSynched    = iota
@@ -756,6 +757,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	select {
 	case <-ctx.Done():
 		logging.Logger.Warn("computeState context done", zap.Error(ctx.Err()))
+		b.SetStateStatus(StateCancelled)
 		return ctx.Err()
 	default:
 	}
@@ -833,16 +835,29 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		}
 		events, err := c.UpdateState(ctx, b, txn)
 		b.Events = append(b.Events, events...)
-		if err != nil {
-			b.SetStateStatus(StateFailed)
-			logging.Logger.Error("compute state - update state failed",
+		switch err {
+		case context.Canceled, context.DeadlineExceeded:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state - cancelled",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.String("client_state", util.ToHex(b.ClientStateHash)),
 				zap.String("prev_block", b.PrevHash),
 				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
 				zap.Error(err))
-			return common.NewError("state_update_error", err.Error())
+			return err
+		default:
+			if err != nil {
+				b.SetStateStatus(StateFailed)
+				logging.Logger.Error("compute state - update state failed",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("client_state", util.ToHex(b.ClientStateHash)),
+					zap.String("prev_block", b.PrevHash),
+					zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
+					zap.Error(err))
+				return common.NewError("state_update_error", err.Error())
+			}
 		}
 	}
 
@@ -904,9 +919,10 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 		events, err := c.UpdateState(ctx, b, txn)
 		b.Events = append(b.Events, events...)
-		if err != nil {
-			b.SetStateStatus(StateFailed)
-			logging.Logger.Error("compute state local - update state failed",
+		switch err {
+		case context.Canceled, context.DeadlineExceeded:
+			b.SetStateStatus(StateCancelled)
+			logging.Logger.Error("compute state local - cancelled",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.String("client_state", util.ToHex(b.ClientStateHash)),
@@ -914,6 +930,18 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
 				zap.Error(err))
 			return common.NewError("state_update_error", err.Error())
+		default:
+			if err != nil {
+				b.SetStateStatus(StateFailed)
+				logging.Logger.Error("compute state local - update state failed",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("client_state", util.ToHex(b.ClientStateHash)),
+					zap.String("prev_block", b.PrevHash),
+					zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
+					zap.Error(err))
+				return common.NewError("state_update_error", err.Error())
+			}
 		}
 	}
 

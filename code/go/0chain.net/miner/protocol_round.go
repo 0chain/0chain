@@ -3,6 +3,7 @@ package miner
 import (
 	"0chain.net/core/memorystore"
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -408,13 +409,16 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	defer memorystore.Close(cctx)
 
 	var (
-		rn    = r.GetRoundNumber()                       //
-		b     = block.NewBlock(mc.GetKey(), rn)          //
-		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
+		rn = r.GetRoundNumber()              //
+		b  = block.NewBlock(mc.GetKey(), rn) //
 
 		rnoff = mbRoundOffset(rn)   //
 		nvc   = mc.NextViewChange() // we can use LFB because there is VC offset
 	)
+	lfmbr := mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
+	if lfmbr == nil {
+		return nil, errors.New("can't get lfmbr")
+	}
 
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		logging.Logger.Error("gen_block",
@@ -729,6 +733,12 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 			zap.String("prev block", b.PrevHash))
 		pb, err = mc.GetNotarizedBlockFromMiners(ctx, b.PrevHash, b.Round-1, false)
 		if pb == nil || err != nil {
+			return err
+		}
+	}
+
+	if !pb.IsStateComputed() {
+		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
 			return err
 		}
 	}
@@ -1188,6 +1198,10 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
 	mb := mc.GetLatestFinalizedMagicBlockBrief()
+	if mb == nil {
+		return
+	}
+
 	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
 	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
 
@@ -1398,6 +1412,10 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					zap.Int("rank", b.RoundRank))
 			}
 			lfmbr := mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
+			if lfmbr == nil {
+				logging.Logger.Error("can't get lfmb")
+				return
+			}
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
 					zap.Any("lfmbr hash", lfmbr.Hash),

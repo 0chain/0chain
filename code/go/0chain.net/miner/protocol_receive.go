@@ -431,6 +431,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 			return fmt.Errorf("fetch notarized block failed, err: %v", err)
 		}
 		r = mc.getOrCreateRound(ctx, not.Round)
+		//mc.AddNotarizedBlock(ctx, r, b)
 	}
 
 	if !b.IsBlockNotarized() {
@@ -460,13 +461,12 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		}
 	}
 
-	mc.ProgressOnNotarization(r)
-
 	if !b.IsStateComputed() {
 		if err := mc.GetBlockStateChange(b); err != nil {
 			return fmt.Errorf("process notarization - sync state changes failed, round: %d, err: %v", b.Round, err)
 		}
 	}
+	mc.ProgressOnNotarization(r)
 
 	// update LFB if the LFB is far away behind the LFB ticket(fetch from sharder)
 	lfb := mc.GetLatestFinalizedBlock()

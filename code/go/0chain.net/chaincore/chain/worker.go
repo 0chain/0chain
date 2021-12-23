@@ -77,6 +77,9 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			cancel = startStatusMonitor(newMB, ctx)
 		case <-newMagicBlockCheckTk.C:
 			cmb := c.getLatestFinalizedMagicBlock(ctx)
+			if cmb == nil {
+				continue
+			}
 			if cmb == mb {
 				continue
 			}
@@ -209,6 +212,9 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	saveFunc MagicBlockSaveFunc) (err error) {
 
 	lfmb := c.GetLatestFinalizedMagicBlockBrief()
+	if lfmb == nil {
+		return common.NewError("repair_mb_chain", "can't get lfmb")
+	}
 
 	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
 		return common.NewError("repair_mb_chain", "already have such MB")
@@ -485,7 +491,9 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			isSynching = false
 		case <-ctx.Done():
 			Logger.Info("Context done, stop SyncLFBStateWorker")
-			cancel()
+			if cancel != nil {
+				cancel()
+			}
 			return
 		}
 	}
@@ -541,10 +549,13 @@ func (c *Chain) VerifyChainHistoryAndRepairOn(ctx context.Context,
 	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
-		currentLFMB = c.GetLatestFinalizedMagicBlock(ctx)
-		sharders    = cmb.Sharders.N2NURLs()
-		magicBlock  *block.Block
+		sharders   = cmb.Sharders.N2NURLs()
+		magicBlock *block.Block
 	)
+	currentLFMB := c.GetLatestFinalizedMagicBlock(ctx)
+	if currentLFMB == nil {
+		return errors.New("can't get currentLFMB")
+	}
 
 	// until we have got all MB from our from store to latest given
 	for currentLFMB.Hash != latestMagicBlock.Hash {
@@ -652,6 +663,9 @@ func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
 	}
 
 	cmb := c.GetLatestFinalizedMagicBlock(ctx)
+	if cmb == nil {
+		return errors.New("can't get cmb")
+	}
 	if lfmb.Hash == cmb.Hash {
 		return nil
 	}
