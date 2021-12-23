@@ -216,7 +216,6 @@ func (c *Chain) SetupEventDatabase() error {
 
 	var err error
 	const timeout = 10
-
 	for i := 0; i < timeout; i++ {
 		time.Sleep(time.Second * 1)
 		c.EventDb, err = event.NewEventDb(c.Config.DbsEvents())
