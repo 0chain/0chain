@@ -33,6 +33,8 @@ options:
     - "vesting"
     - "vesting_rest"
     - "multi_sig"
+    - "zcnscbridge"
+    - "zcnscbridge_rest"
   omitted_tests:
 
 dbs:

@@ -3,10 +3,10 @@ package cmd
 import (
 	"encoding/hex"
 
-	"0chain.net/smartcontract/zcnsc"
-
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+
+	"0chain.net/smartcontract/zcnsc"
 
 	"0chain.net/smartcontract/benchmark/main/cmd/control"
 
