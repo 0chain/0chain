@@ -200,7 +200,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 
 	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
-		logging.Logger.Error("verify block - got block proposal before starting round",
+		logging.Logger.Info("verify block - got block proposal before starting round",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
@@ -434,6 +434,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		//mc.AddNotarizedBlock(ctx, r, b)
 	}
 
+	//todo synchronize this block
 	if !b.IsBlockNotarized() {
 		var vts = b.UnknownTickets(not.VerificationTickets)
 		if len(vts) == 0 {
