@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -373,7 +375,7 @@ func setConfig(t testing.TB, balances chainState.StateContextI) (
 
 func genChall(t testing.TB, ssc *StorageSmartContract,
 	blobberID string, now int64, prevID, challID string, seed int64,
-	valids []*ValidationNode, allocID string, blobber *StorageNode,
+	valids partitions.RandPartition, allocID string, blobber *StorageNode,
 	allocRoot string, balances chainState.StateContextI) {
 
 	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
@@ -388,7 +390,13 @@ func genChall(t testing.TB, ssc *StorageSmartContract,
 	storChall.Created = common.Timestamp(now)
 	storChall.ID = challID
 	storChall.PrevID = prevID
-	storChall.Validators = valids
+	valSlice, err := valids.GetRandomSlice(rand.New(rand.NewSource(seed)), balances)
+	for _, val := range valSlice {
+		storChall.Validators = append(storChall.Validators, &ValidationNode{
+			ID:      val.Name(),
+			BaseURL: val.Data(),
+		})
+	}
 	storChall.RandomNumber = seed
 	storChall.AllocationID = allocID
 	storChall.Blobber = blobber
