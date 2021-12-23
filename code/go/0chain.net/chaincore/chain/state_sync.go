@@ -380,6 +380,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 				"block state root calculation error")
 		}
 
+		cancel()
 		select {
 		case stateChangesC <- rsc:
 		default:
@@ -387,39 +388,32 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 
-	ts := time.Now()
-	doneC := make(chan struct{})
-	go func() {
-		c.RequestEntityFromMiners(cctx, MinerNotarizedBlockRequestor, params, handler)
-		close(doneC)
-		close(stateChangesC)
-	}()
-
-	for {
+	c.RequestEntityFromMiners(cctx, BlockStateChangeRequestor, params, handler)
+	var bsc *block.StateChange
+	select {
+	case bsc = <-stateChangesC:
+	default:
+	}
+	if bsc == nil {
+		c.RequestEntityFromSharders(cctx, BlockStateChangeRequestor, params, handler)
 		select {
-		case bsc, ok := <-stateChangesC:
-			if !ok {
-				logging.Logger.Error("get_block_state_change - could not get state changes from miners",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash))
-				return nil, common.NewError("block_state_change_error",
-					"error getting the block state change")
-			}
-
-			//TODO validate partial changes
-
-			// stop requesting on first block accepted
-			cancel()
-			<-doneC
-
-			logging.Logger.Debug("get_block_state_change - success with root",
+		case bsc = <-stateChangesC:
+		default:
+		}
+		if bsc == nil {
+			logging.Logger.Error("get_block_state_change - could not get state changes from miners",
 				zap.Int64("round", b.Round),
-				zap.String("bsc root", bsc.GetRoot().GetHash()),
-				zap.String("block state hash", util.ToHex(b.ClientStateHash)),
-				zap.Any("duration", time.Since(ts)))
-			return bsc, nil
+				zap.String("block", b.Hash))
+			return nil, common.NewError("block_state_change_error",
+				"error getting the block state change")
 		}
 	}
+
+	logging.Logger.Debug("get_block_state_change - success with root",
+		zap.Int64("round", b.Round),
+		zap.String("bsc root", bsc.GetRoot().GetHash()),
+		zap.String("block state hash", util.ToHex(b.ClientStateHash)))
+	return bsc, nil
 }
 
 // ApplyBlockStateChange - applies the state chagnes to the block state.
