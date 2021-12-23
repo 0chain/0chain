@@ -1,47 +1,65 @@
 package storagesc
 
 import (
-	"encoding/json"
-	"sort"
-
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/partitions"
 )
 
-func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI) (*ValidatorNodes, error) {
-	allValidatorsList := &ValidatorNodes{}
-	allValidatorsBytes, err := balances.GetTrieNode(ALL_VALIDATORS_KEY)
-	if allValidatorsBytes == nil {
-		return allValidatorsList, nil
-	}
-	err = json.Unmarshal(allValidatorsBytes.Encode(), allValidatorsList)
+const allValidatorsPartitionSize = 50
+
+func getValidatorsList(balances c_state.StateContextI) (partitions.RandPartition, error) {
+	all, err := partitions.GetRandomSelector(ALL_VALIDATORS_KEY, balances)
 	if err != nil {
-		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+		all = partitions.NewRandomSelector(
+			ALL_VALIDATORS_KEY,
+			allValidatorsPartitionSize,
+			nil,
+			partitions.ItemValidator,
+		)
 	}
-	sort.SliceStable(allValidatorsList.Nodes, func(i, j int) bool {
-		return allValidatorsList.Nodes[i].ID < allValidatorsList.Nodes[j].ID
-	})
-	return allValidatorsList, nil
+	all.SetCallback(nil)
+	return all, nil
 }
 
 func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
-	allValidatorsList, err := sc.getValidatorsList(balances)
-	if err != nil {
-		return "", common.NewError("add_validator_failed", "Failed to get validator list."+err.Error())
-	}
 	newValidator := &ValidationNode{}
-	err = newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
+	err := newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
 	if err != nil {
 		return "", err
 	}
 	newValidator.ID = t.ClientID
 	newValidator.PublicKey = t.PublicKey
-	blobberBytes, _ := balances.GetTrieNode(newValidator.GetKey(sc.ID))
-	if blobberBytes == nil {
-		allValidatorsList.Nodes = append(allValidatorsList.Nodes, newValidator)
-		// allValidatorsBytes, _ := json.Marshal(allValidatorsList)
-		balances.InsertTrieNode(ALL_VALIDATORS_KEY, allValidatorsList)
+	_, err = balances.GetTrieNode(newValidator.GetKey(sc.ID))
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewError("add_validator_failed",
+				"Failed to get validator."+err.Error())
+		}
+		allValidatorsList, err := getValidatorsList(balances)
+		if err != nil {
+			return "", common.NewError("add_validator_failed",
+				"Failed to get validator list."+err.Error())
+		}
+		_, err = allValidatorsList.Add(
+			&partitions.ValidationNode{
+				Id:  t.ClientID,
+				Url: newValidator.BaseURL,
+			}, balances,
+		)
+		if err != nil {
+			return "", err
+		}
+		err = allValidatorsList.Save(balances)
+		if err != nil {
+			return "", err
+		}
+
 		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
 
 		sc.statIncr(statAddValidator)
