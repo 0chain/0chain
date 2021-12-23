@@ -214,14 +214,17 @@ func (c *Chain) SetupEventDatabase() error {
 		return nil
 	}
 
-	time.Sleep(time.Second * 2)
-
 	var err error
-	c.EventDb, err = event.NewEventDb(c.Config.DbsEvents())
-	if err != nil {
-		return err
+	const timeout = 10
+	for i := 0; i < timeout; i++ {
+		time.Sleep(time.Second * 1)
+		c.EventDb, err = event.NewEventDb(c.Config.DbsEvents())
+		if err != nil {
+			continue
+		}
+		return nil
 	}
-	return nil
+	return err
 }
 
 func (c *Chain) GetEventDb() *event.EventDb {

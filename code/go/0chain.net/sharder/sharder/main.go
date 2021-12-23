@@ -134,7 +134,7 @@ func main() {
 	reader.Close()
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
-		logging.Logger.Panic("Error setting up events database")
+		logging.Logger.Panic("Error setting up events database: " + err.Error())
 	}
 
 	sharder.SetupSharderChain(serverChain)
