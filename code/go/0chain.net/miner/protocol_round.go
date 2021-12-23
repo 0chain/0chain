@@ -738,7 +738,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	}
 
 	if !pb.IsStateComputed() {
-		if err := mc.ComputeOrSyncState(ctx, b); err != nil {
+		if err := mc.SyncStateOrComputeLocal(ctx, b); err != nil {
 			return err
 		}
 	}
