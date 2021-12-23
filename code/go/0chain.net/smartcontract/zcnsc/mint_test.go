@@ -1,14 +1,15 @@
 package zcnsc_test
 
 import (
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -20,7 +21,8 @@ func init() {
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	expected, _, err := CreateMintPayload("client0", []string{"1", "2", "3"})
+	ctx := MakeMockStateContext()
+	expected, err := CreateMintPayload("client0", []string{"1", "2", "3"}, ctx)
 	require.NoError(t, err)
 	actual := &MintPayload{}
 	err = actual.Decode(expected.Encode())
@@ -37,10 +39,10 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 }
 
 func Test_FuzzyMintTest(t *testing.T) {
-	ctx := MakeMockStateContext()
 	contract := CreateZCNSmartContract()
+	ctx := MakeMockStateContext()
 
-	payload, _, err := CreateMintPayload("client0", authorizers)
+	payload, err := CreateMintPayload("client0", authorizers, ctx)
 	require.NoError(t, err)
 
 	for _, authorizer := range authorizers {
@@ -56,12 +58,12 @@ func Test_FuzzyMintTest(t *testing.T) {
 
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
-	payload, _, err := CreateMintPayload(clientId, authorizers)
+	ctx := MakeMockStateContext()
+	payload, err := CreateMintPayload(clientId, authorizers, ctx)
 	require.NoError(t, err)
 
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
-	ctx := MakeMockStateContext()
 
 	payload.Nonce = 1
 	node, err := GetUserNode(clientId, ctx)
@@ -73,12 +75,4 @@ func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	resp, err := contract.Mint(tr, payload.Encode(), ctx)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-}
-
-func Test_Chain_Prerequisite_test(t *testing.T) {
-	ch := chain.GetServerChain()
-	require.NotNil(t, ch)
-	require.NotNil(t, ch.ClientSignatureScheme)
-	require.NotEmpty(t, ch.ClientSignatureScheme)
-	require.NotNil(t, ch.GetSignatureScheme())
 }

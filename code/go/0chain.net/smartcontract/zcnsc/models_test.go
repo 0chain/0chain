@@ -1,18 +1,19 @@
 package zcnsc_test
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func init() {
@@ -77,11 +78,11 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 }
 
 func Test_ShouldVerifySignature(t *testing.T) {
-	mp, pk, err := CreateMintPayload("client0", []string{"p1", "p2"})
+	ctx := MakeMockStateContext()
+	mp, err := CreateMintPayload("client0", []string{"p1", "p2"}, ctx)
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	err = signatureScheme.SetPublicKey(pk)
+	signatureScheme := ctx.GetSignatureScheme()
 	require.NoError(t, err)
 
 	toSign := mp.GetStringToSign()

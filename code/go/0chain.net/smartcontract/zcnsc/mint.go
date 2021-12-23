@@ -69,7 +69,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// verify signatures of authorizers
-	err = payload.verifySignatures(ans)
+	err = payload.verifySignatures(ans, balances)
 	if err != nil {
 		err = common.NewError("failed to mint", "failed to verify signatures with error: "+err.Error())
 		return
