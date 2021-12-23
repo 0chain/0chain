@@ -32,6 +32,7 @@ func init() {
 }
 
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
+var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
@@ -117,7 +118,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	}()
 	select {
 	case <-cctx.Done():
-		return "", common.NewError("smart_contract_execution_ctx_err", cctx.Err().Error())
+		return "", ErrSmartContractContext
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err

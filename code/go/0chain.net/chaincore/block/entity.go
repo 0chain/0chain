@@ -1,6 +1,7 @@
 package block
 
 import (
+	"0chain.net/chaincore/chain"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -836,7 +837,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		events, err := c.UpdateState(ctx, b, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
-		case context.Canceled, context.DeadlineExceeded:
+		case context.Canceled, context.DeadlineExceeded, chain.ErrSmartContractContext:
 			b.SetStateStatus(StateCancelled)
 			logging.Logger.Error("compute state - cancelled",
 				zap.Int64("round", b.Round),
@@ -923,7 +924,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		events, err := c.UpdateState(ctx, b, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
-		case context.Canceled, context.DeadlineExceeded:
+		case context.Canceled, context.DeadlineExceeded, chain.ErrSmartContractContext:
 			b.SetStateStatus(StateCancelled)
 			logging.Logger.Error("compute state local - cancelled",
 				zap.Int64("round", b.Round),
