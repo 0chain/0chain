@@ -414,6 +414,15 @@ func init() {
 		return ex.ConfigureVerifyingNonExistentBlockTestCase(cfg)
 	})
 
+	register("configure_notarising_non_existent_block_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &NotarisingNonExistentBlock{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureNotarisingNonExistentBlockTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

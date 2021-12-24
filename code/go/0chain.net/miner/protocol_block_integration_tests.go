@@ -5,7 +5,6 @@ package miner
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -332,31 +331,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg := new(sync.WaitGroup)
 
-	if mc.isTestingNotNotarisedBlockExtension(b.Round) {
-		wg.Add(1)
-		go func() {
-			if err := addNotNotarisedBlockExtensionTestResult(mc.GetRound(b.Round)); err != nil {
-				log.Printf("Conductor: NotNotarisedBlockExtension: error while sending result: %v", err)
-			}
-			wg.Done()
-		}()
-	}
+	if mc.isTestingNotNotarisedBlockExtension(b.Round) ||
+		mc.isTestingSendBreakingBlock(b.Round) ||
+		mc.isTestingNotarisingNonExistentBlock(b.Round) ||
+		mc.isTestingSendInsufficientProposals(b.Round) {
 
-	if mc.isTestingSendBreakingBlock(b.Round) {
 		wg.Add(1)
 		go func() {
-			if err := mc.addSendBreakingBlockResult(b.Hash, mc.GetRound(b.Round)); err != nil {
-				log.Printf("Conductor: error while sending result: %v", err)
-			}
-			wg.Done()
-		}()
-	}
-
-	if mc.isTestingSendInsufficientProposals(b.Round) {
-		wg.Add(1)
-		go func() {
-			if err := addSendInsufficientProposalsResult(mc.GetRoundBlocks(b.Round)); err != nil {
-				log.Panicf("Conductor: error while sending test result: %v", err)
+			if err := mc.addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
+				log.Panicf("Conductor: error while sending round info result: %v", err)
 			}
 			wg.Done()
 		}()
@@ -371,26 +354,6 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg.Wait()
 }
 
-func addNotNotarisedBlockExtensionTestResult(r round.RoundI) error {
-	testRes := collectVerificationStatuses(r)
-	blob, err := json.Marshal(testRes)
-	if err != nil {
-		return err
-	}
-	return crpc.Client().AddTestCaseResult(blob)
-}
-
-func collectVerificationStatuses(r round.RoundI) map[string]int {
-	res := make(map[string]int)
-	for _, b := range r.GetProposedBlocks() {
-		res[b.PrevHash] = b.GetVerificationStatus()
-	}
-	for _, b := range r.GetNotarizedBlocks() {
-		res[b.PrevHash] = b.GetVerificationStatus()
-	}
-	return res
-}
-
 func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
 	cfg := crpc.Client().State().ExtendNotNotarisedBlock
 	shouldTest := cfg != nil && cfg.Enable && cfg.Round+1 == round
@@ -399,35 +362,8 @@ func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
 	}
 
 	// we need to collect all block's verification statuses from the first ranked replica
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
-	replicators := rankedMiners[genNum:]
-	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
-}
-
-func (mc *Chain) addSendBreakingBlockResult(finalisedBlockHash string, r round.RoundI) error {
-	rBlocks := mc.GetRoundBlocks(r.GetRoundNumber())
-	res := &cases.BreakingSingleBlockResult{
-		FinalisedBlockHash: finalisedBlockHash,
-		RoundBlocksInfo:    collectBlocksInfo(rBlocks),
-	}
-	blob, err := res.Encode()
-	if err != nil {
-		return err
-	}
-	return crpc.Client().AddTestCaseResult(blob)
-}
-
-func collectBlocksInfo(blocks []*block.Block) []*cases.BlockInfo {
-	blocksInfo := make([]*cases.BlockInfo, 0, len(blocks))
-	for _, bl := range blocks {
-		blocksInfo = append(blocksInfo, &cases.BlockInfo{
-			Hash:               bl.Hash,
-			Notarised:          bl.IsBlockNotarized(),
-			VerificationStatus: bl.GetVerificationStatus(),
-		})
-	}
-	return blocksInfo
+	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	return nodeType == replica && typeRank == 0
 }
 
 func (mc *Chain) isTestingSendBreakingBlock(round int64) bool {
@@ -438,10 +374,20 @@ func (mc *Chain) isTestingSendBreakingBlock(round int64) bool {
 	}
 
 	// we need to collect test's report from the first ranked replica
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
-	replicators := rankedMiners[genNum:]
-	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
+	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	return nodeType == replica && typeRank == 0
+}
+
+func (mc *Chain) isTestingNotarisingNonExistentBlock(round int64) bool {
+	cfg := crpc.Client().State().NotarisingNonExistentBlock
+	shouldTest := cfg != nil && int64(cfg.Round) == round
+	if !shouldTest {
+		return false
+	}
+
+	// we need to collect test's report from the first ranked replica
+	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	return nodeType == replica && typeRank == 1
 }
 
 func (mc *Chain) isTestingSendInsufficientProposals(round int64) bool {
@@ -458,11 +404,42 @@ func (mc *Chain) isTestingSendInsufficientProposals(round int64) bool {
 	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
 }
 
-func addSendInsufficientProposalsResult(roundBlocks []*block.Block) error {
-	res := cases.SendInsufficientProposalsResult(collectBlocksInfo(roundBlocks))
+func (mc *Chain) addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {
+	res := mc.roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
 	if err != nil {
 		return err
 	}
 	return crpc.Client().AddTestCaseResult(blob)
+}
+
+func (mc *Chain) roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
+	rankedMiners := make([]string, 0)
+	roundI := mc.GetRound(round)
+	for _, miner := range roundI.GetMinersByRank(mc.GetMiners(round).CopyNodes()) {
+		rankedMiners = append(rankedMiners, miner.ID)
+	}
+
+	blocks := make([]*cases.BlockInfo, 0)
+	for _, b := range mc.GetRoundBlocks(round) {
+		blocks = append(blocks, getBlockInfo(b))
+	}
+
+	return &cases.RoundInfo{
+		Num:                round,
+		GeneratorsNum:      mc.GetGeneratorsNum(),
+		RankedMiners:       rankedMiners,
+		FinalisedBlockHash: finalisedBlockHash,
+		Blocks:             blocks,
+	}
+}
+
+func getBlockInfo(b *block.Block) *cases.BlockInfo {
+	return &cases.BlockInfo{
+		Hash:               b.Hash,
+		PrevHash:           b.PrevHash,
+		Notarised:          b.IsBlockNotarized(),
+		VerificationStatus: b.GetVerificationStatus(),
+		Rank:               b.RoundRank,
+	}
 }

@@ -483,6 +483,6 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	} else {
 		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
 	}
-	mc.startRound(ctx, r, seed)
+	mc.StartRound(ctx, r, seed)
 
 }

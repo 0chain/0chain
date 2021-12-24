@@ -5,102 +5,148 @@ import (
 	"testing"
 )
 
-func TestBlockInfos_ContainsHashOrRound(t *testing.T) {
-	hash, round, path := "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc", 5, "path"
+func TestBlockRequests_GetByHash(t *testing.T) {
+	blockRequest := mockBlockRequest()
+	blockRequests := NewBlockRequests()
+	blockRequests.Add(blockRequest)
 
-	hashBI := BlockInfo{
-		Hash: hash,
+	type args struct {
+		hash string
 	}
-	roundBI := BlockInfo{
-		Round: round,
+	tests := []struct {
+		name string
+		br   *BlockRequests
+		args args
+		want *BlockRequest
+	}{
+		{
+			name: "OK",
+			br:   blockRequests,
+			args: args{
+				hash: blockRequest.Hash,
+			},
+			want: blockRequest,
+		},
+		{
+			name: "Not_Found_NIL",
+			br:   blockRequests,
+			args: args{
+				hash: "unknown hash",
+			},
+		},
 	}
-	hashAndRoundBI := BlockInfo{
-		Hash:  hash,
-		Round: round,
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.br.GetByHash(tt.args.hash); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetByHash() = %v, want %v", got, tt.want)
+			}
+		})
 	}
+}
+
+func TestBlockRequests_GetByHashOrRound(t *testing.T) {
+	onlyHashList := NewBlockRequests()
+	onlyHashRequest := mockBlockRequest()
+	onlyHashRequest.Round = 0
+	onlyHashList.Add(onlyHashRequest)
+
+	onlyRoundList := NewBlockRequests()
+	onlyRoundRequest := mockBlockRequest()
+	onlyRoundRequest.Hash = ""
+	onlyRoundList.Add(onlyRoundRequest)
+
+	hashAndRoundList := NewBlockRequests()
+	hashAndRoundRequest := mockBlockRequest()
+	hashAndRoundList.Add(hashAndRoundRequest)
 
 	type args struct {
 		hash  string
 		round int
 	}
 	tests := []struct {
-		name  string
-		bi    BlockInfos
-		args  args
-		want  bool
-		want1 BlockReport
+		name string
+		br   *BlockRequests
+		args args
+		want *BlockRequest
 	}{
 		{
-			name: "ContainsHash_TRUE",
-			bi: BlockInfos{
-				path: map[BlockInfo]int{
-					hashBI: 1,
-				},
-			},
+			name: "Only_Hash_OK",
+			br:   onlyHashList,
 			args: args{
-				hash: hash,
+				hash: onlyHashRequest.Hash,
 			},
-			want: true,
-			want1: BlockReport{
-				BlockInfo: hashBI,
-				Handler:   path,
-			},
+			want: onlyHashRequest,
 		},
 		{
-			name: "ContainsRound_TRUE",
-			bi: BlockInfos{
-				path: map[BlockInfo]int{
-					roundBI: 1,
-				},
-			},
+			name: "Only_Round_OK",
+			br:   onlyRoundList,
 			args: args{
-				round: round,
+				round: onlyRoundRequest.Round,
 			},
-			want: true,
-			want1: BlockReport{
-				BlockInfo: roundBI,
-				Handler:   path,
-			},
+			want: onlyRoundRequest,
 		},
 		{
-			name: "ContainsHashAndRound_TRUE",
-			bi: BlockInfos{
-				path: map[BlockInfo]int{
-					hashAndRoundBI: 1,
-				},
-			},
+			name: "Hash_And_Round_OK",
+			br:   hashAndRoundList,
 			args: args{
-				hash:  hash,
-				round: round,
+				hash:  hashAndRoundRequest.Hash,
+				round: hashAndRoundRequest.Round,
 			},
-			want: true,
-			want1: BlockReport{
-				BlockInfo: hashAndRoundBI,
-				Handler:   path,
-			},
+			want: hashAndRoundRequest,
 		},
 		{
-			name: "FALSE",
-			bi: BlockInfos{
-				path: map[BlockInfo]int{
-					hashAndRoundBI: 1,
-				},
-			},
+			name: "Not_Found_NIL",
+			br:   NewBlockRequests(),
 			args: args{
-				hash:  "unknown hash",
-				round: round + 1,
+				hash: "unknown hash",
 			},
-			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := tt.bi.ContainsHashOrRound(tt.args.hash, tt.args.round)
-			if got != tt.want {
-				t.Errorf("ContainsHashOrRound() got = %v, want %v", got, tt.want)
+			if got := tt.br.GetByHashOrRound(tt.args.hash, tt.args.round); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetByHashOrRound() = %v, want %v", got, tt.want)
 			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("ContainsHashOrRound() got1 = %v, want %v", got1, tt.want1)
+		})
+	}
+}
+
+func TestBlockRequests_GetBySenderIDAndHash(t *testing.T) {
+	blockRequest := mockBlockRequest()
+	blockRequests := NewBlockRequests()
+	blockRequests.Add(blockRequest)
+
+	type args struct {
+		senderID string
+		hash     string
+	}
+	tests := []struct {
+		name string
+		br   *BlockRequests
+		args args
+		want *BlockRequest
+	}{
+		{
+			name: "OK",
+			br:   blockRequests,
+			args: args{
+				senderID: blockRequest.SenderID,
+				hash:     blockRequest.Hash,
+			},
+			want: blockRequest,
+		},
+		{
+			name: "Not_Found_NIL",
+			br:   blockRequests,
+			args: args{
+				hash: "unknown hash",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.br.GetBySenderIDAndHash(tt.args.senderID, tt.args.hash); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetBySenderIDAndHash() = %v, want %v", got, tt.want)
 			}
 		})
 	}

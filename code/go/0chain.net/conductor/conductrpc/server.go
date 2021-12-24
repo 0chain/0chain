@@ -444,7 +444,7 @@ func (s *Server) GetMinersNum() int {
 // stats
 //
 
-func (s *Server) AddBlockServerStats(ss *stats.BlockReport, _ *struct{}) error {
+func (s *Server) AddBlockServerStats(ss *stats.BlockRequest, _ *struct{}) error {
 	s.NodesServerStatsCollector.AddBlockStats(ss)
 	return nil
 }

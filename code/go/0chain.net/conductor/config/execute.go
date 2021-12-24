@@ -99,6 +99,9 @@ type Executor interface {
 	// ConfigureVerifyingNonExistentBlockTestCase prepares state for cases.VerifyingNonExistentBlock test case.
 	ConfigureVerifyingNonExistentBlockTestCase(*VerifyingNonExistentBlock) (err error)
 
+	// ConfigureNotarisingNonExistentBlockTestCase prepares state for cases.NotarisingNonExistentBlock test case.
+	ConfigureNotarisingNonExistentBlockTestCase(block *NotarisingNonExistentBlock) (err error)
+
 	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
 }

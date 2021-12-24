@@ -2,8 +2,6 @@ package stats
 
 import (
 	"encoding/json"
-	"fmt"
-	"strconv"
 	"sync"
 )
 
@@ -14,114 +12,113 @@ type (
 		blockMu sync.Mutex
 
 		// Block represents map or storing fetching block stats.
-		// minerID -> BlockInfos
-		Block map[string]BlockInfos
+		// minerID -> BlockRequests
+		Block map[string]*BlockRequests
 	}
 
-	// BlockInfos represents a map:
-	// 	handler -> BlockInfo -> counter (number of requests with BlockInfo parameters)
-	BlockInfos map[string]map[BlockInfo]int
-
-	// BlockInfo contains individual parameters of block's requests.
-	BlockInfo struct {
-		Hash  string `json:"hash"`
-		Round int    `json:"round"`
+	BlockRequests struct {
+		listMu sync.Mutex
+		list   []*BlockRequest
 	}
 
-	// BlockReport represents struct for collecting reports from the nodes
+	// BlockRequest represents struct for collecting reports from the nodes
 	// about handled block's requests.
-	BlockReport struct {
-		NodeID    string    `json:"miner_id"`
-		BlockInfo BlockInfo `json:"block_info"`
-		Handler   string    `json:"path"`
+	BlockRequest struct {
+		NodeID  string `json:"miner_id"`
+		Hash    string `json:"hash"`
+		Round   int    `json:"round"`
+		Handler string `json:"path"`
+
+		// optional field
+		SenderID string `json:"sender_id,omitempty"`
 	}
 )
 
-// NewNodeServerStats creates initialized NodesServerStats.
+// NewNodeServerStats creates initialised NodesServerStats.
 func NewNodeServerStats() *NodesServerStats {
 	return &NodesServerStats{
-		Block: make(map[string]BlockInfos),
+		Block: make(map[string]*BlockRequests),
 	}
 }
 
-// AddBlockStats takes needed info from the BlockReport and inserts it to the NodesServerStats.Block map.
-func (nss *NodesServerStats) AddBlockStats(rep *BlockReport) {
+// AddBlockStats takes needed info from the BlockRequest and inserts it to the NodesServerStats.Block map.
+func (nss *NodesServerStats) AddBlockStats(rep *BlockRequest) {
 	nss.blockMu.Lock()
 	defer nss.blockMu.Unlock()
 
 	_, ok := nss.Block[rep.NodeID]
 	if !ok {
-		nss.Block[rep.NodeID] = make(BlockInfos)
+		nss.Block[rep.NodeID] = NewBlockRequests()
 	}
-	_, ok = nss.Block[rep.NodeID][rep.Handler]
-	if !ok {
-		nss.Block[rep.NodeID][rep.Handler] = make(map[BlockInfo]int)
-	}
-	nss.Block[rep.NodeID][rep.Handler][rep.BlockInfo]++
+	nss.Block[rep.NodeID].Add(rep)
 }
 
-// ContainsHashOrRound looks for BlockInfo with provided hash and round or individually hash or round.
-// Return BlockReport with found hash, round and handler.
-func (bi BlockInfos) ContainsHashOrRound(hash string, round int) (bool, BlockReport) {
-	for path, stats := range bi {
-		var (
-			hashAndRoundBI = BlockInfo{
-				Hash:  hash,
-				Round: round,
-			}
-			hashBI = BlockInfo{
-				Hash: hash,
-			}
-			roundBI = BlockInfo{
-				Round: round,
-			}
-		)
-		_, containsHR := stats[hashAndRoundBI]
-		_, containsH := stats[hashBI]
-		_, containsR := stats[roundBI]
+// NewBlockRequests creates initialised BlockRequests.
+func NewBlockRequests() *BlockRequests {
+	return &BlockRequests{
+		list: make([]*BlockRequest, 0),
+	}
+}
 
-		switch {
-		case containsHR:
-			return true, BlockReport{BlockInfo: hashAndRoundBI, Handler: path}
+// Add adds BlockRequest to the list.
+func (bi *BlockRequests) Add(rep *BlockRequest) {
+	bi.listMu.Lock()
+	defer bi.listMu.Unlock()
 
-		case containsH:
-			return true, BlockReport{BlockInfo: hashBI, Handler: path}
+	bi.list = append(bi.list, rep)
+}
 
-		case containsR:
-			return true, BlockReport{BlockInfo: roundBI, Handler: path}
+// GetByHashOrRound looks for BlockRequest with provided hash or round or hash and round both.
+// Returns nil if BlockRequest was not found.
+func (bi *BlockRequests) GetByHashOrRound(hash string, round int) *BlockRequest {
+	bi.listMu.Lock()
+	defer bi.listMu.Unlock()
+
+	for _, stats := range bi.list {
+		onlyHash := stats.Hash == hash && stats.Round == 0
+		onlyRound := stats.Round == round && stats.Hash == ""
+		hashAndRound := stats.Hash == hash && stats.Round == round
+		if onlyHash || onlyRound || hashAndRound {
+			return stats
 		}
 	}
-
-	return false, BlockReport{}
+	return nil
 }
 
-// String return BlockReport as readable string.
-func (br *BlockReport) String() string {
-	round := "empty"
-	if br.BlockInfo.Round != 0 {
-		round = strconv.Itoa(br.BlockInfo.Round)
+// GetByHash looks for BlockRequest with provided hash.
+// Returns nil if BlockRequest was not found.
+func (bi *BlockRequests) GetByHash(hash string) *BlockRequest {
+	bi.listMu.Lock()
+	defer bi.listMu.Unlock()
+
+	for _, stats := range bi.list {
+		if stats.Hash == hash {
+			return stats
+		}
 	}
-	hash := "empty"
-	if br.BlockInfo.Hash != "" {
-		hash = br.BlockInfo.Hash
-	}
-	nodeID := "empty"
-	if br.NodeID != "" {
-		nodeID = br.NodeID
-	}
-	path := "empty"
-	if br.Handler != "" {
-		path = br.Handler
-	}
-	return fmt.Sprintf("round: %s; hash: %s; path: %s; nodeID: %s", round, hash, path, nodeID)
+	return nil
 }
 
-// Encode encodes BlockReport to the bytes.
-func (br *BlockReport) Encode() ([]byte, error) {
+// GetBySenderIDAndHash looks for BlockRequest with provided senderID and hash.
+// Returns nil if BlockRequest was not found.
+func (bi *BlockRequests) GetBySenderIDAndHash(senderID, hash string) *BlockRequest {
+	bi.listMu.Lock()
+	defer bi.listMu.Unlock()
+
+	for _, stats := range bi.list {
+		if stats.SenderID == senderID && stats.Hash == hash {
+			return stats
+		}
+	}
+	return nil
+}
+
+// Encode encodes BlockRequest to the bytes.
+func (br *BlockRequest) Encode() ([]byte, error) {
 	return json.Marshal(br)
 }
 
-// Decode decodes BlockReport from the bytes.
-func (br *BlockReport) Decode(blob []byte) error {
+// Decode decodes BlockRequest from the bytes.
+func (br *BlockRequest) Decode(blob []byte) error {
 	return json.Unmarshal(blob, br)
 }

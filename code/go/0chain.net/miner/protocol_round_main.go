@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package miner
@@ -11,4 +12,8 @@ import (
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	return mc.getBlockToExtend(ctx, r)
+}
+
+func (mc *Chain) StartRound(ctx context.Context, r *Round, seed int64) {
+	mc.startRound(ctx, r, seed)
 }

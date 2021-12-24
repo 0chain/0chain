@@ -20,7 +20,7 @@ type (
 	SendInsufficientProposals struct {
 		firstGenBlockHash string
 
-		res SendInsufficientProposalsResult
+		res *RoundInfo
 
 		wg *sync.WaitGroup
 	}
@@ -60,7 +60,7 @@ func (n *SendInsufficientProposals) Check(ctx context.Context) (success bool, er
 }
 
 func (n *SendInsufficientProposals) check() (success bool, err error) {
-	for _, bl := range n.res {
+	for _, bl := range n.res.Blocks {
 		if bl.Hash == n.firstGenBlockHash {
 			if !bl.Notarised {
 				err = errors.New("first generator's block was not notarised")
@@ -81,8 +81,8 @@ func (n *SendInsufficientProposals) Configure(blob []byte) error {
 // AddResult implements config.TestCase interface.
 func (n *SendInsufficientProposals) AddResult(blob []byte) error {
 	defer n.wg.Done()
-	n.res = make(SendInsufficientProposalsResult, 0)
-	return json.Unmarshal(blob, &n.res)
+	n.res = new(RoundInfo)
+	return n.res.Decode(blob)
 }
 
 // Encode encodes SendInsufficientProposalsResult to bytes.

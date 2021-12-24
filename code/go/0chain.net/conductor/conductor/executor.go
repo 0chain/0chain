@@ -832,6 +832,27 @@ func (r *Runner) ConfigureVerifyingNonExistentBlockTestCase(cfg *config.Verifyin
 	return
 }
 
+// ConfigureNotarisingNonExistentBlockTestCase implements config.Executor interface.
+func (r *Runner) ConfigureNotarisingNonExistentBlockTestCase(cfg *config.NotarisingNonExistentBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"notarising non existent block\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.NotarisingNonExistentBlock = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring \"notarising non existent block\" test case: %v", err)
+	}
+
+	if err := r.server.EnableServerStatsCollector(); err != nil {
+		return fmt.Errorf("error while enabling server stats collector: %v", err)
+	}
+	r.server.CurrentTest = cases.NewNotarisingNonExistentBlock(r.server.NodesServerStatsCollector)
+
+	return
+}
+
 // MakeTestCaseCheck implements config.Executor interface.
 func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if r.verbose {

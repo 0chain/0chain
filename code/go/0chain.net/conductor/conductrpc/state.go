@@ -47,12 +47,13 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
-	ExtendNotNotarisedBlock					*config.ExtendNotNotarisedBlock
-	SendDifferentBlocksFromFirstGenerator	*config.SendDifferentBlocksFromFirstGenerator
-	SendDifferentBlocksFromAllGenerators  	*config.SendDifferentBlocksFromAllGenerators
-	BreakingSingleBlock                   	*config.BreakingSingleBlock
-	SendInsufficientProposals             	*config.SendInsufficientProposals
-	VerifyingNonExistentBlock 				*config.VerifyingNonExistentBlock
+	ExtendNotNotarisedBlock               *config.ExtendNotNotarisedBlock
+	SendDifferentBlocksFromFirstGenerator *config.SendDifferentBlocksFromFirstGenerator
+	SendDifferentBlocksFromAllGenerators  *config.SendDifferentBlocksFromAllGenerators
+	BreakingSingleBlock                   *config.BreakingSingleBlock
+	SendInsufficientProposals             *config.SendInsufficientProposals
+	VerifyingNonExistentBlock             *config.VerifyingNonExistentBlock
+	NotarisingNonExistentBlock            *config.NotarisingNonExistentBlock
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

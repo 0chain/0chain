@@ -2,7 +2,7 @@ package cases
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"sync"
 
 	"0chain.net/conductor/conductrpc/stats"
@@ -28,7 +28,7 @@ type (
 )
 
 var (
-	// Ensure NotNotarisedBlockExtension implements config.TestCase interface.
+	// Ensure VerifyingNonExistentBlock implements config.TestCase interface.
 	_ config.TestCase = (*VerifyingNonExistentBlock)(nil)
 )
 
@@ -65,10 +65,9 @@ func (n *VerifyingNonExistentBlock) check() (success bool, err error) {
 	n.serverStatsMu.Lock()
 	defer n.serverStatsMu.Unlock()
 
-	for minerID, blockInfoMap := range n.serverStats.Block {
-		if contains, br := blockInfoMap.ContainsHashOrRound(n.nonExistentBlockHash, n.round); contains {
-			br.NodeID = minerID
-			return false, errors.New("non existent block was fetched from the network; block info: " + br.String())
+	for _, requests := range n.serverStats.Block {
+		if br := requests.GetByHashOrRound(n.nonExistentBlockHash, n.round); br != nil {
+			return false, fmt.Errorf("non existent block was fetched from the network; block info: %#v", br)
 		}
 	}
 
@@ -85,5 +84,4 @@ func (n *VerifyingNonExistentBlock) Configure(_ []byte) error {
 // AddResult implements config.TestCase interface.
 func (n *VerifyingNonExistentBlock) AddResult(_ []byte) error {
 	panic("adding result for test case is not allowed")
-	return nil
 }

@@ -186,7 +186,7 @@ func (e *Entity) AddTestCaseResult(blob []byte) error {
 
 // stats
 
-func (e *Entity) AddBlockServerStats(ss *stats.BlockReport) error {
+func (e *Entity) AddBlockServerStats(ss *stats.BlockRequest) error {
 	return e.client.addBlockServerStats(ss)
 }
 

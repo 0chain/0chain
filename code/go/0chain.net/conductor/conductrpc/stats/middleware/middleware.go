@@ -10,25 +10,38 @@ import (
 	"0chain.net/conductor/conductrpc/stats"
 )
 
-// BlockStatsMiddleware represents middleware for collecting nodes blocks servers stats.
-func BlockStatsMiddleware(handler func(http.ResponseWriter, *http.Request), hashKey, path string) func(http.ResponseWriter, *http.Request) {
+type (
+	// BlockStatsConfigurator contains needed for the BlockStats middleware information.
+	BlockStatsConfigurator struct {
+		HashKey      string
+		Handler      string
+		SenderHeader string
+	}
+)
+
+// BlockStats represents middleware for collecting nodes blocks servers stats.
+func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStatsConfigurator) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !crpc.Client().State().StatsCollectorEnabled {
 			handler(w, r)
 			return
 		}
 
-		round, err := strconv.Atoi(r.FormValue("round"))
-		if err != nil {
-			log.Panicf("Conductor: error while converting round from string: %v", err)
+		roundStr := r.FormValue("round")
+		round := 0
+		if roundStr != "" {
+			var err error
+			round, err = strconv.Atoi(roundStr)
+			if err != nil {
+				log.Panicf("Conductor: error while converting round from string: %v", err)
+			}
 		}
-		ss := &stats.BlockReport{
-			NodeID: node.Self.ID,
-			BlockInfo: stats.BlockInfo{
-				Hash:  r.FormValue(hashKey),
-				Round: round,
-			},
-			Handler: path,
+		ss := &stats.BlockRequest{
+			NodeID:   node.Self.ID,
+			Hash:     r.FormValue(cfg.HashKey),
+			Round:    round,
+			Handler:  cfg.Handler,
+			SenderID: r.Header.Get(cfg.SenderHeader),
 		}
 		if err := crpc.Client().AddBlockServerStats(ss); err != nil {
 			log.Panicf("Conductor: error while adding server stats: %v", err)

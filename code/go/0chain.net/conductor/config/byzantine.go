@@ -127,6 +127,12 @@ type (
 		IgnoredVerificationTicketsNum int
 	}
 
+	// NotarisingNonExistentBlock represents config for cases.NotarisingNonExistentBlock.
+	NotarisingNonExistentBlock struct {
+		Hash  string `json:"hash" yaml:"hash" mapstructure:"hash"`
+		Round int    `json:"round" yaml:"round" mapstructure:"round"`
+	}
+
 	// TestCaseCheck represents generic configuration for making tests checks.
 	TestCaseCheck struct {
 		WaitTimeStr string `mapstructure:"wait_time"`
@@ -187,6 +193,16 @@ func (c *SendInsufficientProposals) Decode(val interface{}) error {
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *VerifyingNonExistentBlock) Decode(val interface{}) error {
 	var cfg VerifyingNonExistentBlock
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *NotarisingNonExistentBlock) Decode(val interface{}) error {
+	var cfg NotarisingNonExistentBlock
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}

@@ -54,10 +54,12 @@ func SetupHandlers() {
 	hMap := handlersMap()
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		hMap[getBlockV1Pattern] = middleware.BlockStatsMiddleware(
+		hMap[getBlockV1Pattern] = middleware.BlockStats(
 			hMap[getBlockV1Pattern],
-			"block",
-			getBlockV1Pattern,
+			middleware.BlockStatsConfigurator{
+				HashKey: "block",
+				Handler: getBlockV1Pattern,
+			},
 		)
 	}
 

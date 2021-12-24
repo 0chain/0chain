@@ -180,7 +180,7 @@ func (c *client) addTestCaseResult(blob []byte) (err error) {
 	return
 }
 
-func (c *client) addBlockServerStats(ss *stats.BlockReport) (err error) {
+func (c *client) addBlockServerStats(ss *stats.BlockRequest) (err error) {
 	err = c.client.Call("Server.AddBlockServerStats", ss, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {

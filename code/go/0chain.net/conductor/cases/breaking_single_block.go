@@ -22,7 +22,7 @@ type (
 	BreakingSingleBlock struct {
 		cfg *BreakingSingleBlockCfg
 
-		res *BreakingSingleBlockResult
+		res *RoundInfo
 
 		wg *sync.WaitGroup
 	}
@@ -30,17 +30,6 @@ type (
 	BreakingSingleBlockCfg struct {
 		FirstSentBlockHash  string `json:"first_sent_block_hash"`
 		SecondSentBlockHash string `json:"second_sent_block_hash"`
-	}
-
-	BreakingSingleBlockResult struct {
-		FinalisedBlockHash string       `json:"finalised_block_hash"`
-		RoundBlocksInfo    []*BlockInfo `json:"round_blocks_info"`
-	}
-
-	BlockInfo struct {
-		Hash               string `json:"hash"`
-		Notarised          bool   `json:"notarised"`
-		VerificationStatus int    `json:"verification_status"`
 	}
 )
 
@@ -80,14 +69,14 @@ func (n *BreakingSingleBlock) check() (success bool, err error) {
 		return false, errors.New("unexpected finalised block hash")
 	}
 
-	for _, bi := range n.res.RoundBlocksInfo {
+	for _, bi := range n.res.Blocks {
 		if bi.Hash == n.cfg.SecondSentBlockHash {
 			switch {
 			case bi.Notarised:
 				return false, errors.New("second sent block must be not notarised")
 
 			case bi.VerificationStatus != block.VerificationFailed:
-				return false, errors.New("second sent block must be not notarised")
+				return false, errors.New("second sent block verification must be failed")
 			}
 		}
 	}
@@ -105,24 +94,8 @@ func (n *BreakingSingleBlock) Configure(blob []byte) error {
 // AddResult implements config.TestCase interface.
 func (n *BreakingSingleBlock) AddResult(blob []byte) error {
 	defer n.wg.Done()
-	n.res = newBreakingSingleBlockResult()
+	n.res = new(RoundInfo)
 	return n.res.Decode(blob)
-}
-
-func newBreakingSingleBlockResult() *BreakingSingleBlockResult {
-	return &BreakingSingleBlockResult{
-		RoundBlocksInfo: make([]*BlockInfo, 0),
-	}
-}
-
-// Encode encodes BreakingSingleBlockResult to bytes.
-func (r *BreakingSingleBlockResult) Encode() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-// Decode decodes BreakingSingleBlockResult from bytes.
-func (r *BreakingSingleBlockResult) Decode(blob []byte) error {
-	return json.Unmarshal(blob, r)
 }
 
 // Encode encodes BreakingSingleBlockCfg to bytes.

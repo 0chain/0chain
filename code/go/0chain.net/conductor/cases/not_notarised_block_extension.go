@@ -2,7 +2,6 @@ package cases
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -22,7 +21,7 @@ type (
 	NotNotarisedBlockExtension struct {
 		mockedBlockHashToExtend string
 
-		result map[string]int // key - previous block's hash; value - verification status
+		result *RoundInfo
 
 		wg *sync.WaitGroup
 	}
@@ -38,8 +37,7 @@ func NewNotNotarisedBlockExtension() *NotNotarisedBlockExtension {
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
 	return &NotNotarisedBlockExtension{
-		result: make(map[string]int),
-		wg:     wg,
+		wg: wg,
 	}
 }
 
@@ -65,15 +63,16 @@ func (n *NotNotarisedBlockExtension) check() (success bool, err error) {
 		return false, errors.New("mocked block is nil")
 	}
 
-	for hash, status := range n.result {
+	for _, b := range n.result.Blocks {
+		prevBlockHash, status := b.PrevHash, b.VerificationStatus
 		switch {
-		case hash == n.mockedBlockHashToExtend && status == block.VerificationSuccessful:
-			return false, fmt.Errorf("block with %s previous block hash has unexpected status: %d", hash, status)
+		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationSuccessful:
+			return false, fmt.Errorf("block with %s previous block hash has unexpected status: %d", prevBlockHash, status)
 
-		case hash == n.mockedBlockHashToExtend && status == block.VerificationFailed:
+		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationFailed:
 			return true, nil
 
-		case hash == n.mockedBlockHashToExtend && status == block.VerificationPending:
+		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationPending:
 			return false, errors.New("checked block has verification pending status")
 		}
 	}
@@ -90,5 +89,6 @@ func (n *NotNotarisedBlockExtension) Configure(blob []byte) error {
 // AddResult implements config.TestCase interface.
 func (n *NotNotarisedBlockExtension) AddResult(blob []byte) error {
 	defer n.wg.Done()
-	return json.Unmarshal(blob, &n.result)
+	n.result = new(RoundInfo)
+	return n.result.Decode(blob)
 }

@@ -18,10 +18,12 @@ import (
 func SetupHandlers() {
 	handlers := handlersMap()
 
-	handlers[getBlockV1Pattern] = middleware.BlockStatsMiddleware(
+	handlers[getBlockV1Pattern] = middleware.BlockStats(
 		handlers[getBlockV1Pattern],
-		"block",
-		getBlockV1Pattern,
+		middleware.BlockStatsConfigurator{
+			HashKey: "block",
+			Handler: getBlockV1Pattern,
+		},
 	)
 
 	setupHandlers(handlers)

@@ -205,7 +205,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 			return nil
 		}
 
-		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+		mc.StartRound(ctx, mr, b.GetRoundRandomSeed())
 
 		mc.AddToRoundVerification(ctx, mr, b)
 		return nil
@@ -230,7 +230,7 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 				zap.Int64("round", b.Round),
 				zap.Int64("block RRS", b.GetRoundRandomSeed()),
 				zap.Int64("round RRS", mr.GetRandomSeed()))
-			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+			mc.StartRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 	}
 
@@ -543,7 +543,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	}
 
 	if !mr.IsVRFComplete() {
-		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
+		mc.StartRound(ctx, mr, nb.GetRoundRandomSeed())
 	}
 
 	var b = mc.AddRoundBlock(mr, nb)
