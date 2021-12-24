@@ -259,6 +259,13 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 	//	return nil
 	//}
 
+	//don't know why we change rrs and rank inside AddRoundBlock
+	if mc.AddRoundBlock(mr, b) != b {
+		logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
+		// block already exist, means the verification collection worker already started.
+		return nil
+	}
+
 	/* Since this is a notarized block, we are accepting it. */
 	b1, r1, err := mc.AddNotarizedBlockToRound(mr, b)
 	if err != nil {
@@ -459,12 +466,6 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 				return fmt.Errorf("block is not notarized after merging tickets, "+
 					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))
 			}
-		}
-	}
-
-	if !b.IsStateComputed() {
-		if err := mc.GetBlockStateChange(b); err != nil {
-			return fmt.Errorf("process notarization - sync state changes failed, round: %d, err: %v", b.Round, err)
 		}
 	}
 	mc.ProgressOnNotarization(r)
