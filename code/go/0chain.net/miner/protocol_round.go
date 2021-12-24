@@ -860,6 +860,14 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		minerStats := miner.ProtocolStats.(*chain.MinerStats)
+		//don't know why we change rrs and rank inside AddRoundBlock
+		if mc.AddRoundBlock(r, b) != b {
+			logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
+			// block already exist, means the verification collection worker already started.
+			// TODO do we really need to return false here?
+			return false
+		}
+
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			switch err {
@@ -890,14 +898,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
-
-		//don't know why we change rrs and rank inside AddRoundBlock
-		if mc.AddRoundBlock(r, b) != b {
-			logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
-			// block already exist, means the verification collection worker already started.
-			// TODO do we really need to return false here?
-			return false
-		}
 
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || bnb.Hash == b.Hash {
@@ -1528,7 +1528,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		var mr = mc.GetMinerRound(s)
 		// send block to sharders again, if missing sharders side
 		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() &&
-			mr.Block.GetStateStatus() == block.StateSuccessful {
+			(mr.Block.GetStateStatus() == block.StateSuccessful || mr.Block.GetStateStatus() == block.StateSynched) {
 
 			logging.Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))

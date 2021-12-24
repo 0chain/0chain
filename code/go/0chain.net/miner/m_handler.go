@@ -155,7 +155,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 		}
 		// var hnb = mr.GetHeaviestNotarizedBlock()
 		var hnb = mr.Block
-		if hnb.GetStateStatus() != block.StateSuccessful {
+		if hnb.GetStateStatus() != block.StateSuccessful && hnb.GetStateStatus() != block.StateSynched {
 			logging.Logger.Info("Reject VRFShare: HNB state is not successful",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 				zap.String("hash", hnb.Hash))
