@@ -134,6 +134,7 @@ jobs:
 
       - name: "Setup"
         run: |
+          sudo npm install -g bats || truw
           echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
           echo "SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)" >> $GITHUB_ENV
           echo "TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')" >> $GITHUB_ENV
