@@ -455,6 +455,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.Int("unknown tickets num", len(vts)),
+					zap.Int("notarized tickets num", len(not.VerificationTickets)),
 					zap.Int("block tickets", len(b.GetVerificationTickets())))
 				return fmt.Errorf("block is not notarized after merging tickets, "+
 					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))

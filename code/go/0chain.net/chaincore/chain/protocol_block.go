@@ -1,10 +1,11 @@
 package chain
 
 import (
-	"0chain.net/core/datastore"
 	"context"
 	"fmt"
 	"time"
+
+	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -266,18 +267,15 @@ func (c *Chain) AddVerificationTicket(b *block.Block, bvt *block.VerificationTic
 	return false
 }
 
-/*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
+// MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
 func (c *Chain) MergeVerificationTickets(b *block.Block, vts []*block.VerificationTicket) {
-	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
-	if b.VerificationTicketsSize() != vtlen {
-		if c.UpdateBlockNotarization(b) {
-			logging.Logger.Info("reached notarization - merging tickets",
-				zap.Int64("round", b.Round),
-				zap.Int64("current_round", c.GetCurrentRound()),
-				zap.String("block", b.Hash),
-				zap.Int("tickets_num", len(b.GetVerificationTickets())))
-		}
+	if c.UpdateBlockNotarization(b) {
+		logging.Logger.Info("reached notarization - merging tickets",
+			zap.Int64("round", b.Round),
+			zap.Int64("current_round", c.GetCurrentRound()),
+			zap.String("block", b.Hash),
+			zap.Int("tickets_num", len(b.GetVerificationTickets())))
 	}
 }
 
