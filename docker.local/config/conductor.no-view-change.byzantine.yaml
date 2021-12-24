@@ -3,10 +3,10 @@ enable:
 sets:
   - name: "attack round transfer"
     tests:
-#      - "not notarised block extension"
-#      - "send different blocks from first generator"
-#      - "send different blocks from all generators"
-#      - "breaking single block"
+      - "not notarised block extension"
+      - "send different blocks from first generator"
+      - "send different blocks from all generators"
+      - "breaking single block"
       - "send insufficient proposals"
 
 tests:
