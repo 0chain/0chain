@@ -7,6 +7,7 @@ sets:
       - "send different blocks from first generator"
       - "send different blocks from all generators"
       - "breaking single block"
+      - "send insufficient proposals"
       - "verifying non existent block"
 
 tests:
@@ -44,6 +45,19 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_breaking_single_block:
+          round: 30
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "send insufficient proposals"
+    flow:
+      - cleanup_bc: { }
+      - env:
+          CONFIG_SUBPATH: "/test.generators_failure"
+          CLI_ARGS: "--magic_block_file config/test.generators_failure/b0magicBlock_7_miners_1_sharder.json"
+          DKG_AFFIX: "7_miners_1_sharder_"
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6",  "miner-7", "sharder-1"]
+      - configure_send_insufficient_proposals_test_case:
           round: 30
       - make_test_case_check:
           wait_time: 5m

@@ -396,6 +396,15 @@ func init() {
 		return ex.ConfigureBreakingSingleBlock(cfg)
 	})
 
+	register("configure_send_insufficient_proposals_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &SendInsufficientProposals{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureSendInsufficientProposals(cfg)
+	})
+
 	register("configure_verifying_non_existent_block_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &VerifyingNonExistentBlock{}

@@ -114,6 +114,11 @@ type (
 		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
+	// SendInsufficientProposals represents config for cases.SendInsufficientProposals.
+	SendInsufficientProposals struct {
+		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	}
+
 	// VerifyingNonExistentBlock represents config for cases.VerifyingNonExistentBlock.
 	VerifyingNonExistentBlock struct {
 		Hash  string `json:"hash" yaml:"hash" mapstructure:"hash"`
@@ -162,6 +167,16 @@ func (c *SendDifferentBlocksFromAllGenerators) Decode(val interface{}) error {
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *BreakingSingleBlock) Decode(val interface{}) error {
 	var cfg BreakingSingleBlock
+	if err := mapstructure.Decode(val, &cfg); err != nil {
+		return err
+	}
+	*c = cfg
+	return nil
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *SendInsufficientProposals) Decode(val interface{}) error {
+	var cfg SendInsufficientProposals
 	if err := mapstructure.Decode(val, &cfg); err != nil {
 		return err
 	}

@@ -13,7 +13,8 @@ import (
 type (
 	// BreakingSingleBlock represents implementation of the config.TestCase interface.
 	//
-	//	check that proposer can’t break single block
+	//	Flow of this test case:
+	//		check that proposer can’t break single block
 	//		(T0) Leader_0:  send Proposal0_0
 	//		(T0 + δ + Δ) Replica_i: send Verification_0
 	//		(T0 + 2δ + Δ) Leader_0: send Proposal0_1

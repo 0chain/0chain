@@ -352,6 +352,16 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}()
 	}
 
+	if mc.isTestingSendInsufficientProposals(b.Round) {
+		wg.Add(1)
+		go func() {
+			if err := addSendInsufficientProposalsResult(mc.GetRoundBlocks(b.Round)); err != nil {
+				log.Panicf("Conductor: error while sending test result: %v", err)
+			}
+			wg.Done()
+		}()
+	}
+
 	wg.Add(1)
 	go func() {
 		mc.updateFinalizedBlock(ctx, b)
@@ -399,21 +409,25 @@ func (mc *Chain) addSendBreakingBlockResult(finalisedBlockHash string, r round.R
 	rBlocks := mc.GetRoundBlocks(r.GetRoundNumber())
 	res := &cases.BreakingSingleBlockResult{
 		FinalisedBlockHash: finalisedBlockHash,
-		RoundBlocksInfo:    make([]*cases.BlockInfo, 0, len(rBlocks)),
+		RoundBlocksInfo:    collectBlocksInfo(rBlocks),
 	}
-	for _, bl := range rBlocks {
-		res.RoundBlocksInfo = append(res.RoundBlocksInfo, &cases.BlockInfo{
-			Hash:               bl.Hash,
-			Notarised:          bl.IsBlockNotarized(),
-			VerificationStatus: bl.GetVerificationStatus(),
-		})
-	}
-
 	blob, err := res.Encode()
 	if err != nil {
 		return err
 	}
 	return crpc.Client().AddTestCaseResult(blob)
+}
+
+func collectBlocksInfo(blocks []*block.Block) []*cases.BlockInfo {
+	blocksInfo := make([]*cases.BlockInfo, 0, len(blocks))
+	for _, bl := range blocks {
+		blocksInfo = append(blocksInfo, &cases.BlockInfo{
+			Hash:               bl.Hash,
+			Notarised:          bl.IsBlockNotarized(),
+			VerificationStatus: bl.GetVerificationStatus(),
+		})
+	}
+	return blocksInfo
 }
 
 func (mc *Chain) isTestingSendBreakingBlock(round int64) bool {
@@ -428,4 +442,27 @@ func (mc *Chain) isTestingSendBreakingBlock(round int64) bool {
 	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
 	replicators := rankedMiners[genNum:]
 	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
+}
+
+func (mc *Chain) isTestingSendInsufficientProposals(round int64) bool {
+	cfg := crpc.Client().State().SendInsufficientProposals
+	shouldTest := cfg != nil && cfg.Round == round
+	if !shouldTest {
+		return false
+	}
+
+	// we need to collect reports from the first ranked replica
+	genNum := mc.GetGeneratorsNumOfRound(round)
+	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
+	replicators := rankedMiners[genNum:]
+	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
+}
+
+func addSendInsufficientProposalsResult(roundBlocks []*block.Block) error {
+	res := cases.SendInsufficientProposalsResult(collectBlocksInfo(roundBlocks))
+	blob, err := res.Encode()
+	if err != nil {
+		return err
+	}
+	return crpc.Client().AddTestCaseResult(blob)
 }

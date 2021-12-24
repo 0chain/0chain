@@ -92,6 +92,10 @@ type Executor interface {
 	// ConfigureBreakingSingleBlock prepares state for cases.BreakingSingleBlock test case.
 	ConfigureBreakingSingleBlock(cfg *BreakingSingleBlock) (err error)
 
+	// ConfigureSendInsufficientProposals prepares state for
+	// cases.SendInsufficientProposals test case.
+	ConfigureSendInsufficientProposals(*SendInsufficientProposals) (err error)
+
 	// ConfigureVerifyingNonExistentBlockTestCase prepares state for cases.VerifyingNonExistentBlock test case.
 	ConfigureVerifyingNonExistentBlockTestCase(*VerifyingNonExistentBlock) (err error)
 

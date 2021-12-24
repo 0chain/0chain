@@ -207,6 +207,15 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	if mc.isSendingInsufficientProposals(b.Round) {
+		mc.sendInsufficientProposals(ctx, b)
+
+		if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
+			log.Panicf("Condutor: error while configuring test case: %v", err)
+		}
+		return
+	}
+
 	mc.sendBlock(ctx, b)
 }
 
@@ -305,4 +314,41 @@ func createDataTxn(data string) (*transaction.Transaction, error) {
 		return nil, err
 	}
 	return txn, nil
+}
+
+func (mc *Chain) isSendingInsufficientProposals(r int64) bool {
+	currRound := mc.GetRound(r)
+	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
+	testCfg := crpc.Client().State().SendInsufficientProposals
+	return testCfg != nil && testCfg.Round == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
+}
+
+func (mc *Chain) sendInsufficientProposals(ctx context.Context, b *block.Block) {
+	var (
+		currRound    = mc.GetRound(b.Round)
+		miners       = mc.GetMagicBlock(b.Round).Miners.CopyNodes()
+		sendCount    = len(miners) / 3
+		minersToSend = make([]*node.Node, 0, sendCount)
+	)
+	for ind := 0; len(minersToSend) < sendCount && ind < len(miners); ind++ {
+		miner := miners[ind]
+		if !mc.IsRoundGenerator(currRound, miner) && miner.ID != node.Self.ID {
+			minersToSend = append(minersToSend, miner)
+		}
+	}
+
+	for _, miner := range minersToSend {
+		handler := VerifyBlockSender(b)
+		ok := handler(ctx, miner)
+		if !ok {
+			log.Panicf("Conductor: block is not sent to miner with ID %s", miner.ID)
+		}
+	}
+}
+
+func (mc *Chain) isConfiguringSendInsufficientProposals(r int64) bool {
+	currRound := mc.GetRound(r)
+	isSecondGenerator := currRound.GetMinerRank(node.Self.Node) == 1 && mc.IsRoundGenerator(currRound, node.Self.Node)
+	cfg := crpc.Client().State().SendInsufficientProposals
+	return cfg != nil && cfg.Round == r && isSecondGenerator && currRound.GetTimeoutCount() == 0
 }
