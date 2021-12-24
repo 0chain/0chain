@@ -141,21 +141,24 @@ jobs:
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@master
+        uses: Wandalen/wretry.action@v1.0.11
         with:
-          kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
-          teardown_condition: "TESTS_PASSED"
-          miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          blobber_image: staging
-          validator_image: staging
-          zbox_image: staging
-          zblock_image: staging
-          zdns_image: staging
-          explorer_image: latest
-          zproxy_image: staging
-          zsearch_image: staging
-          blobber_stake_image: latest
+          action: 0chain/actions/deploy-0chain@master
+          attempt_limit: 3
+          with: |
+            kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+            teardown_condition: "TESTS_PASSED"
+            miner_image:  ${{ env.TAG }}-${{ env.SHORT_SHA }}
+            sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+            blobber_image: staging
+            validator_image: staging
+            zbox_image: staging
+            zblock_image: staging
+            zdns_image: staging
+            explorer_image: latest
+            zproxy_image: staging
+            zsearch_image: staging
+            blobber_stake_image: latest
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
