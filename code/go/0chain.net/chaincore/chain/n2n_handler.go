@@ -169,6 +169,7 @@ func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*bloc
 		if b.IsBlockNotarized() {
 			return b, nil
 		}
+		logging.Logger.Debug("requested block is not notarized yet")
 		return nil, errBlockNotAvailable
 	}
 

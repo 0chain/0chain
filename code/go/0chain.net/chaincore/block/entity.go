@@ -1023,7 +1023,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		if pb != nil && pb.IsStateComputed() {
 			b.SetStateDB(pb, c.GetStateDB())
 		} else {
-			b.CreateState(c.GetStateDB(), root.GetHashBytes())
+			return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
 		}
 	}
 
@@ -1031,7 +1031,14 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		//redo changes
+		b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return err
+	}
+
+	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+		b.SetStateDB(b.PrevBlock, c.GetStateDB())
+		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 
 	logging.Logger.Info("sync state - apply block state changes success",
