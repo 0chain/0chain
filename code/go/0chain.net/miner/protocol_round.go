@@ -725,6 +725,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 }
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
+	ctx = common.GetRootContext()
 	pb, err := mc.GetBlock(ctx, b.PrevHash)
 	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
 	if pb == nil {
@@ -860,13 +861,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		minerStats := miner.ProtocolStats.(*chain.MinerStats)
-		//don't know why we change rrs and rank inside AddRoundBlock
-		if mc.AddRoundBlock(r, b) != b {
-			logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
-			// block already exist, means the verification collection worker already started.
-			// TODO do we really need to return false here?
-			return false
-		}
 
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
@@ -1158,6 +1152,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
+	ctx = common.GetRootContext()
 	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
 		logging.Logger.Error("add notarized block failed",
 			zap.Int64("round", r.GetRoundNumber()),
