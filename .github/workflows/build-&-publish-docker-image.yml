@@ -59,7 +59,7 @@ jobs:
       run: |
         if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $MINER_REGISTRY:latest
-         elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
+         elif [[ "$BRANCH" == "staging" ]]; then
            docker push $MINER_REGISTRY:staging
         fi
       env:
@@ -101,7 +101,7 @@ jobs:
       run: |
         if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $SHARDER_REGISTRY:latest
-        elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
+        elif [[ "$BRANCH" == "staging" ]]; then
           docker push $SHARDER_REGISTRY:staging
         fi
       env:
