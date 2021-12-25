@@ -253,11 +253,11 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
-	//if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
-	//	b = mc.AddRoundBlock(mr, b)
-	//	mc.checkBlockNotarization(ctx, mr, b, true)
-	//	return nil
-	//}
+	if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
+		b = mc.AddRoundBlock(mr, b)
+		mc.checkBlockNotarization(ctx, mr, b, true)
+		return nil
+	}
 
 	//don't know why we change rrs and rank inside AddRoundBlock
 	if mc.AddRoundBlock(mr, b) != b {
@@ -462,6 +462,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.Int("unknown tickets num", len(vts)),
+					zap.Int("notarized tickets num", len(not.VerificationTickets)),
 					zap.Int("block tickets", len(b.GetVerificationTickets())))
 				return fmt.Errorf("block is not notarized after merging tickets, "+
 					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))
