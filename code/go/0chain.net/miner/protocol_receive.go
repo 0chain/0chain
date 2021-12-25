@@ -253,16 +253,9 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
-	//if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
-	//	b = mc.AddRoundBlock(mr, b)
-	//	mc.checkBlockNotarization(ctx, mr, b, true)
-	//	return nil
-	//}
-
-	//don't know why we change rrs and rank inside AddRoundBlock
-	if mc.AddRoundBlock(mr, b) != b {
-		logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
-		// block already exist, means the verification collection worker already started.
+	if mr.GetRandomSeed() == b.GetRoundRandomSeed() {
+		b = mc.AddRoundBlock(mr, b)
+		mc.checkBlockNotarization(ctx, mr, b, true)
 		return nil
 	}
 
