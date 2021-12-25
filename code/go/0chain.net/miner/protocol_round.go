@@ -737,13 +737,13 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 			return err
 		}
 	}
+	b.SetPreviousBlock(pb)
 
 	if !pb.IsStateComputed() {
 		if err := mc.SyncStateOrComputeLocal(ctx, pb); err != nil {
 			return err
 		}
 	}
-	b.SetPreviousBlock(pb)
 
 	// merge the tickets
 	if pb.IsBlockNotarized() {
