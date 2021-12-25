@@ -739,7 +739,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	}
 
 	if !pb.IsStateComputed() {
-		if err := mc.SyncStateOrComputeLocal(ctx, b); err != nil {
+		if err := mc.SyncStateOrComputeLocal(ctx, pb); err != nil {
 			return err
 		}
 	}
@@ -925,6 +925,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	initiateVerification := func() {
 		// Sort the accumulated blocks by the rank and process them
 		blocks = r.GetBlocksByRank(blocks)
+		for _, b := range blocks {
+			//don't know why we change rrs and rank inside AddRoundBlock
+			r.AddProposedBlock(b)
+			if mc.AddRoundBlock(r, b) != b {
+				logging.Logger.Warn("Add round block, block already exist", zap.Int64("round", b.Round))
+				// block already exist, means the verification collection worker already started.
+				// TODO do we really need to return false here?
+			}
+		}
+
 		// Keep verifying all the blocks collected so far in the best rank order
 		// till the first successful verification.
 		for _, b := range blocks {
