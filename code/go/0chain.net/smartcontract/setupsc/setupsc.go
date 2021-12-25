@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/core/logging"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
@@ -13,6 +14,7 @@ import (
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
+	"go.uber.org/zap"
 )
 
 type SCName int
@@ -51,11 +53,27 @@ var (
 
 //SetupSmartContracts initializes smart contract addresses
 func SetupSmartContracts() {
+	scs := smartcontract.NewSmartContracts()
+
 	for _, name := range SCNames {
 		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", name)) {
 			var contract = newSmartContract(name)
-			smartcontract.ContractMap[contract.GetAddress()] = contract
+
+			if err := scs.Register(contract.GetAddress(), contract); err != nil {
+				logging.Logger.Panic("register smart contract failed",
+					zap.Error(err),
+					zap.String("name", name))
+				return
+			}
 		}
+	}
+
+	// register the current smart contract as version 1.0.0
+	if err := smartcontract.RegisterSmartContracts("1.0.0", scs); err != nil {
+		logging.Logger.Panic("register smart contracts failed",
+			zap.String("version", "1.0.0"),
+			zap.Error(err))
+		return
 	}
 }
 

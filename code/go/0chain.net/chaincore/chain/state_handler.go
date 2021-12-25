@@ -12,6 +12,8 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -135,13 +137,20 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td><td>RestAPIs</td></tr>")
 	re := regexp.MustCompile(`\*.*\.`)
-	keys := make([]string, 0, len(smartcontract.ContractMap))
-	for k := range smartcontract.ContractMap {
+	scs, err := smartcontract.GetSmartContractsMap()
+	if err != nil {
+		logging.Logger.Error("failed to get smart contracts", zap.Error(err))
+		fmt.Fprintf(w, "failed to get smart contracts")
+		return
+	}
+
+	keys := make([]string, 0, len(scs))
+	for k := range scs {
 		keys = append(keys, k)
 	}
 	sort.SliceStable(keys, func(i, j int) bool { return keys[i] < keys[j] })
 	for _, k := range keys {
-		sc := smartcontract.ContractMap[k]
+		sc := scs[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
 		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/screst/"+k, "/v1/screst/*key*")
 	}
@@ -155,7 +164,14 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := pathParams[1]
-	scInt, ok := smartcontract.ContractMap[key]
+	scs, err := smartcontract.GetSmartContractsMap()
+	if err != nil {
+		logging.Logger.Error("failed to get smart contracts", zap.Error(err))
+		fmt.Fprint(w, "failed to get smart contracts")
+		return
+	}
+
+	scInt, ok := scs[key]
 	if !ok {
 		return
 	}

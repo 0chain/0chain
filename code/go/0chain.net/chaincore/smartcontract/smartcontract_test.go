@@ -249,7 +249,8 @@ func TestGetSmartContract(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := GetSmartContract(tt.address)
+			got, err := GetSmartContract(tt.address)
+			require.NoError(t, err)
 			require.True(t, tt.null == (got == nil))
 			if got == nil {
 				return
