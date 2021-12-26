@@ -2,6 +2,7 @@ package smartcontract
 
 import (
 	"errors"
+	"sync"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"github.com/blang/semver/v4"
@@ -18,8 +19,15 @@ var (
 var (
 	// scVersion is the cached smart contract version on MPT '/sc_version' node
 	scVersion              semver.Version
+	vLock                  sync.RWMutex
 	smartContractsVersions = NewSmartContractsWithVersion()
 )
+
+func setSCVersion(v semver.Version) {
+	vLock.Lock()
+	scVersion = v
+	vLock.Unlock()
+}
 
 func init() {
 	// TODO: move the version initialization work to the package user
@@ -27,7 +35,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	scVersion = v
+	setSCVersion(v)
 }
 
 // SetSCVersion sets the sc version
@@ -37,8 +45,16 @@ func SetSCVersion(version string) error {
 		return err
 	}
 
-	scVersion = v
+	setSCVersion(v)
 	return nil
+}
+
+// GetSCVersion returns the current running smart contract version
+func GetSCVersion() semver.Version {
+	vLock.RLock()
+	v := scVersion
+	vLock.RUnlock()
+	return v
 }
 
 // RegisterSmartContracts register the smart contracts with version
