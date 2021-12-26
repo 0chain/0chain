@@ -7,6 +7,7 @@ concurrency:
 on:
   push:
     branches: [ staging ]
+    tags: [ "*" ]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -25,19 +26,20 @@ jobs:
   dockerize_miner:
     runs-on: [self-hosted, build]
     steps:
+    
+    - name: Get info
+      id: get_info
+      run: |
+        echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+        echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g' )" >> $GITHUB_ENV
+
     - uses: actions/checkout@v2
 
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-    - name: Get info
-      id: get_info
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -47,41 +49,41 @@ jobs:
     - name: Build & Push Miner Docker Image
       run: |
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $MINER_REGISTRY:$TAG -f "$DOCKERFILE_MINER" .
-        docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:latest
-        docker tag $MINER_REGISTRY:$TAG $MINER_REGISTRY:staging
-        docker push $MINER_REGISTRY:$TAG
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+        
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG
+        docker push ${MINER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA  
+
       env:
-        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
     - name: Push Miner Docker Image With latest Tag
+      if: ${{ github.event.inputs.latest_tag == 'yes' || "$BRANCH" == "master" }}
       run: |
-        if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $MINER_REGISTRY:latest
-         elif [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "staging" ]]; then
-           docker push $MINER_REGISTRY:staging
-        fi
-      env:
-        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
 
   dockerize_sharder:
     runs-on: [self-hosted, build]
     steps:
+
+    - name: Get info
+      id: get_info
+      run: |
+        echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+        echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g' )" >> $GITHUB_ENV
+
     - uses: actions/checkout@v1
 
     - name: Build base images
       run: |
         docker build -f docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
         docker build -f docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-    - name: Get info
-      id: get_info
-      run: |
-        BRANCH=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-        echo ::set-output name=BRANCH::${BRANCH}
-        echo ::set-output name=IMAGE_TAG::${BRANCH}-${SHORT_SHA}
+
     - name: Login to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -90,23 +92,23 @@ jobs:
 
     - name: Build & Push Sharder Docker Image
       run: |
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t $SHARDER_REGISTRY:$TAG -f docker.local/build.sharder/Dockerfile .
-        docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:latest
-        docker tag $SHARDER_REGISTRY:$TAG $SHARDER_REGISTRY:staging
-        docker push $SHARDER_REGISTRY:$TAG
+        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
+        docker push ${SHARDER_REGISTRY}:$TAG
+
+        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
+
       env:
         TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push Sharder Docker Image With latest Tag
+      if: ${{ github.event.inputs.latest_tag == 'yes' || "$BRANCH" == "master" }}
       run: |
-        if [[ "$PUSH_LATEST" == "yes" ]] && [[ "$BRANCH" == "master" ]]; then
           docker push $SHARDER_REGISTRY:latest
-        elif [[ "$BRANCH" == "staging" ]]; then
-          docker push $SHARDER_REGISTRY:staging
-        fi
-      env:
-        PUSH_LATEST: ${{ github.event.inputs.latest_tag }}
-        BRANCH: ${{ steps.get_info.outputs.BRANCH }}
+
 
   system-tests:
     if: github.event_name != 'workflow_dispatch'
