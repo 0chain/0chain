@@ -816,7 +816,9 @@ func (mc *Chain) getPreviousNotarizedBlock(ctx context.Context, b *block.Block) 
 		logging.Logger.Info("update prev block notarization (prior block does not exist)",
 			zap.Int64("round", b.Round),
 			zap.String("prev block", b.PrevHash))
-		pb, err := mc.GetNotarizedBlockFromMiners(ctx, b.PrevHash, b.Round-1, false)
+		var err error
+		pb, err = mc.GetNotarizedBlockFromMiners(ctx, b.PrevHash, b.Round-1, false)
+
 		if pb == nil || err != nil {
 			return nil, err
 		}
