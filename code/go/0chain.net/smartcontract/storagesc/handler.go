@@ -56,6 +56,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 	params url.Values, balances cstate.StateContextI,
 ) (interface{}, error) {
 	if balances.GetEventDB() == nil {
+		logging.Logger.Error("no event_db error")
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(
 			util.ErrValueNotPresent, true, "cannot find event database",
 		)
