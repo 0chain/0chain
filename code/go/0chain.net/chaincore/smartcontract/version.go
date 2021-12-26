@@ -16,7 +16,7 @@ var (
 )
 
 var (
-	// scVersion is the cached smart contract version on MPT '/sc_vrsion' node
+	// scVersion is the cached smart contract version on MPT '/sc_version' node
 	scVersion              semver.Version
 	smartContractsVersions = NewSmartContractsWithVersion()
 )

@@ -203,6 +203,7 @@ func TestGetSmartContract(t *testing.T) {
 		address    string
 		restpoints int
 		null       bool
+		err        error
 	}{
 		{
 			name:       "faucet",
@@ -242,6 +243,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:    "Nil_OK",
 			address: "not an address",
+			err:     ErrSmartContractNotFound,
 			null:    true,
 		},
 	}
@@ -250,7 +252,7 @@ func TestGetSmartContract(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got, err := GetSmartContract(tt.address)
-			require.NoError(t, err)
+			require.Equal(t, err, tt.err)
 			require.True(t, tt.null == (got == nil))
 			if got == nil {
 				return

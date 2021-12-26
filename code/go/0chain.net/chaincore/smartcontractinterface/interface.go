@@ -33,6 +33,7 @@ type SmartContractTransactionData struct {
 	InputData    json.RawMessage `json:"input"`
 }
 
+//go:generate mockery -name SmartContractInterface --case underscore --output ./mocks
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
 	GetRestPoints() map[string]SmartContractRestHandler

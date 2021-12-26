@@ -25,7 +25,10 @@ cd $BASEDIR/code/go/0chain.net/sharder || exit
 generate_mock "../sharder/mocks"
 
 cd $BASEDIR/code/go/0chain.net/smartcontract || exit
-generate_mock "../smartcontract/mocks"
+go generate
+
+cd $BASEDIR/code/go/0chain.net/chaincore/smartcontractinterface || exit
+go generate
 
 cd $BASEDIR/code/go/0chain.net/chaincore/chain/state || exit
 mockery --case underscore --name=StateContextI --output=../../../mocks

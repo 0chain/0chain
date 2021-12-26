@@ -6,6 +6,7 @@ import (
 	sci "0chain.net/chaincore/smartcontractinterface"
 )
 
+//go:generate mockery -name SmartContractors --case underscore --output ./mocks
 // SmartContractors is the interface that wraps the methods for accessing smart contracts
 type SmartContractors interface {
 	// Get returns registered smart contract by name
@@ -37,7 +38,7 @@ func (scs *SmartContracts) Get(scAddress string) (sc sci.SmartContractInterface,
 	return
 }
 
-// Register reigsters smart contract
+// Register registers a smart contract
 func (scs *SmartContracts) Register(scAddress string, sc sci.SmartContractInterface) error {
 	scs.mutex.Lock()
 	defer scs.mutex.Unlock()
