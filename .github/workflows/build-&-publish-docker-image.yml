@@ -110,7 +110,7 @@ jobs:
 
   system-tests:
     if: github.event_name != 'workflow_dispatch'
-    needs: [dockerize_miner, dockerize_sharder]
+    needs: [dockerize-miner, dockerize-sharder]
     runs-on: [ tests-suite ]
     steps:
       - name: "Get current PR"
