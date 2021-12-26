@@ -738,7 +738,25 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 		}
 	}
 	b.SetPreviousBlock(pb)
-
+	if pb.PrevBlock == nil {
+		ppb, err := mc.GetBlock(ctx, pb.PrevHash)
+		//actually this block is in lock-set and MUST be present locally,
+		//the only reason it is not present is that current miner were delayed for a long and have big gap in bc
+		if err != nil || ppb == nil {
+			logging.Logger.Error("Can't get previous block of previous block, it is abnormal", zap.Error(err))
+			ppb, err = mc.GetNotarizedBlockFromMiners(ctx, pb.PrevHash, pb.Round-1, false)
+			if ppb == nil || err != nil {
+				return err
+			}
+		}
+		pb.SetPreviousBlock(ppb)
+		if !ppb.IsStateComputed() {
+			//todo think should we remove it when state update problem will be solved, since it is excessive and we can't not to have this block since it is int the locked setby protocol
+			if err := mc.SyncStateOrComputeLocal(ctx, ppb); err != nil {
+				logging.Logger.Info("Previous block of previous block does not have state computed", zap.Error(err))
+			}
+		}
+	}
 	if !pb.IsStateComputed() {
 		if err := mc.SyncStateOrComputeLocal(ctx, pb); err != nil {
 			return err

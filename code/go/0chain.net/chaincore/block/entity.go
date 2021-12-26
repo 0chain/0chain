@@ -1023,7 +1023,8 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		if pb != nil && pb.IsStateComputed() {
 			b.SetStateDB(pb, c.GetStateDB())
 		} else {
-			return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
+			b.CreateState(c.GetStateDB(), root.GetHashBytes())
+			//return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
 		}
 	}
 

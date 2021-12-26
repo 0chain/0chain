@@ -29,6 +29,7 @@ func (ssc *StorageSmartContract) GetBlobberHandler(
 		return nil, common.NewErrBadRequest("missing 'blobber_id' URL query parameter")
 	}
 	if balances.GetEventDB() == nil {
+		logging.Logger.Error("no event_db error")
 		return nil, smartcontract.NewErrNoResourceOrErrInternal(
 			util.ErrValueNotPresent,
 			true,
