@@ -170,8 +170,8 @@ type Chain struct {
 
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
-	EventDb *event.EventDb
-
+	EventDb    *event.EventDb
+	eventMutex *sync.RWMutex
 	// LFB tickets channels
 	getLFBTicket          chan *LFBTicket          // check out (any time)
 	updateLFBTicket       chan *LFBTicket          // receive
@@ -207,6 +207,8 @@ type SyncBlockReq struct {
 }
 
 func (c *Chain) SetupEventDatabase() error {
+	c.eventMutex.Lock()
+	defer c.eventMutex.Unlock()
 	if c.EventDb != nil {
 		c.EventDb.Close()
 		c.EventDb = nil
@@ -226,6 +228,8 @@ func (c *Chain) SetupEventDatabase() error {
 }
 
 func (c *Chain) GetEventDb() *event.EventDb {
+	c.eventMutex.RLock()
+	defer c.eventMutex.RUnlock()
 	return c.EventDb
 }
 
@@ -493,6 +497,7 @@ func Provider() datastore.Entity {
 
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.RWMutex{}
+	c.eventMutex = &sync.RWMutex{}
 
 	c.retry_wait_mutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
