@@ -7,7 +7,7 @@ concurrency:
 on:
   push:
     branches: [ staging ]
-    tags: [ "*" ]
+    tags:
   pull_request:
   workflow_dispatch:
     inputs:
@@ -23,7 +23,7 @@ env:
   MINER_REGISTRY: ${{ secrets.MINER_REGISTRY }}
 
 jobs:
-  dockerize_miner:
+  dockerize-miner:
     runs-on: [self-hosted, build]
     steps:
     
@@ -67,7 +67,7 @@ jobs:
           docker push $MINER_REGISTRY:latest
 
 
-  dockerize_sharder:
+  dockerize-sharder:
     runs-on: [self-hosted, build]
     steps:
 
@@ -101,8 +101,6 @@ jobs:
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
 
-      env:
-        TAG: ${{ steps.get_info.outputs.IMAGE_TAG }}
 
     - name: Push Sharder Docker Image With latest Tag
       if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
