@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -38,7 +40,7 @@ func TestAddChallenge(t *testing.T) {
 
 	type args struct {
 		alloc         *StorageAllocation
-		validators    *ValidatorNodes
+		validators    partitions.RandPartition
 		challengeID   string
 		creationDate  common.Timestamp
 		r             *rand.Rand
@@ -65,11 +67,23 @@ func TestAddChallenge(t *testing.T) {
 				Stats:          &StorageAllocationStats{},
 			}
 		}
-		var validators = ValidatorNodes{}
+		validators := partitions.NewRandomSelector(
+			ALL_VALIDATORS_KEY,
+			allValidatorsPartitionSize,
+			nil,
+			partitions.ItemValidator,
+		)
+		balances := &mockStateContext{
+			store: make(map[datastore.Key]util.Serializable),
+		}
 		for i := 0; i < p.numValidators; i++ {
-			validators.Nodes = append(validators.Nodes, &ValidationNode{
-				ID: strconv.Itoa(i),
-			})
+			_, err := validators.Add(
+				&partitions.ValidationNode{
+					Id:  strconv.Itoa(i),
+					Url: strconv.Itoa(i) + ".com",
+				}, balances,
+			)
+			require.NoError(t, err)
 		}
 		return args{
 			alloc: &StorageAllocation{
@@ -78,7 +92,7 @@ func TestAddChallenge(t *testing.T) {
 				DataShards: p.dataShards,
 				Stats:      &StorageAllocationStats{},
 			},
-			validators: &validators,
+			validators: validators,
 			r:          rand.New(rand.NewSource(int64(p.randomSeed))),
 			balances: &mockStateContext{
 				store: make(map[datastore.Key]util.Serializable),
@@ -99,9 +113,7 @@ func TestAddChallenge(t *testing.T) {
 		} else {
 			require.EqualValues(t, len(challenge.Validators), p.numValidators-1)
 		}
-		for i, v := range want.validators {
-			require.EqualValues(t, strconv.Itoa(v), challenge.Validators[i].ID)
-		}
+		require.EqualValues(t, len(want.validators), len(challenge.Validators))
 	}
 
 	tests := []struct {

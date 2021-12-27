@@ -268,7 +268,8 @@ func scConfigKey(scKey string) datastore.Key {
 }
 
 type GlobalSettings struct {
-	Fields map[string]string `json:"fields"`
+	Version int64             `json:"version"`
+	Fields  map[string]string `json:"fields"`
 }
 
 func newGlobalSettings() *GlobalSettings {
@@ -292,6 +293,7 @@ func (gl *GlobalSettings) Decode(p []byte) error {
 }
 
 func (gl *GlobalSettings) save(balances cstate.StateContextI) error {
+	gl.Version += 1
 	_, err := balances.InsertTrieNode(GLOBALS_KEY, gl)
 	return err
 }
@@ -313,6 +315,7 @@ func (gl *GlobalSettings) update(inputMap smartcontract.StringMap) error {
 		}
 		gl.Fields[key] = value
 	}
+
 	return nil
 }
 

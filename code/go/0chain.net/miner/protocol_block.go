@@ -308,14 +308,14 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	return mc.validateTxnsWithContext.Run(ctx, func() error {
 		var roundMismatch bool
 		var cancel bool
-		numWorkers := len(b.Txns) / mc.ValidationBatchSize
-		if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
+		numWorkers := len(b.Txns) / mc.ValidationBatchSize()
+		if numWorkers*mc.ValidationBatchSize() < len(b.Txns) {
 			numWorkers++
 		}
 		aggregate := true
 		var aggregateSignatureScheme encryption.AggregateSignatureScheme
 		if aggregate {
-			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme, len(b.Txns), mc.ValidationBatchSize)
+			aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme(), len(b.Txns), mc.ValidationBatchSize())
 		}
 		if aggregateSignatureScheme == nil {
 			aggregate = false
@@ -382,8 +382,8 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			validChannel <- true
 		}
 		ts := time.Now()
-		for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
-			end := start + mc.ValidationBatchSize
+		for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize() {
+			end := start + mc.ValidationBatchSize()
 			if end > len(b.Txns) {
 				end = len(b.Txns)
 			}

@@ -62,16 +62,16 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 /*WriteConfiguration - write summary information */
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table width='100%%'>")
-	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators)
-	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
+	fmt.Fprintf(w, "<tr><td class='tname'>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.GetGeneratorsNum(), c.NumReplicators())
+	fmt.Fprintf(w, "<tr><td class='tname'>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize(), c.BlockSize())
 	fmt.Fprintf(w, "<tr><td class='tname'>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
-	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
+	if c.BlockProposalWaitMode() == chain.BlockProposalWaitStatic {
 		proposalMode = "static"
 	}
-	fmt.Fprintf(w, "<tr><td class='tname'>Block Proposal Wait Time</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+	fmt.Fprintf(w, "<tr><td class='tname'>Block Proposal Wait Time</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime(), proposalMode)
 
-	fmt.Fprintf(w, "<tr><td class='tname'>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
+	fmt.Fprintf(w, "<tr><td class='tname'>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize())
 	fmt.Fprintf(w, "</table>")
 }
 

@@ -55,6 +55,7 @@ services:
       - CASSANDRA_CLUSTER=cassandra
     depends_on:
       - cassandra-init
+      - postgres
     links:
       - cassandra-init:cassandra-init
     volumes:
