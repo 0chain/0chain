@@ -1,13 +1,14 @@
 package zcnsc
 
 import (
+	"context"
+	"net/url"
+	"testing"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/benchmark"
-	"context"
-	"net/url"
-	"testing"
 )
 
 type restBenchTest struct {
@@ -35,8 +36,8 @@ func BenchmarkRestTests(_ benchmark.BenchData, _ benchmark.SignatureScheme) benc
 	return createRestTestSuite(
 		[]restBenchTest{
 			{
-				name:     "zcnsc_rest.getAuthorizerNodes",
-				endpoint: sc.getAuthorizerNodes,
+				name:     "zcnsc_rest.getAuthorizerNode",
+				endpoint: sc.getAuthorizerNode,
 			},
 		},
 	)
