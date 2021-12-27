@@ -58,7 +58,7 @@ jobs:
       with:
         state: "pending"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-        github_token: ${{ github.token }}
+        github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Sleep"
       run: sleep 60
@@ -69,7 +69,7 @@ jobs:
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-        github_token: ${{ github.token }}
+        github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Set PR Status Failed"
       if: ${{ failure() }}
@@ -77,5 +77,5 @@ jobs:
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-        github_token: ${{ github.token }}
+        github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
