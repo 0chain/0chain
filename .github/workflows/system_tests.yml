@@ -55,6 +55,7 @@ jobs:
 
     - name: "Set PR Status Pending"
       uses: 0chain/actions/notify-pull-request@feature/notify-PR-convenience
+      continue-on-error: true
       with:
         state: "pending"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
@@ -66,6 +67,7 @@ jobs:
     - name: "Set PR Status Success"
       if: ${{ success() }}
       uses: 0chain/actions/notify-pull-request@feature/notify-PR-convenience
+      continue-on-error: true
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
@@ -74,6 +76,7 @@ jobs:
     - name: "Set PR Status Failed"
       if: ${{ failure() }}
       uses: 0chain/actions/notify-pull-request@feature/notify-PR-convenience
+      continue-on-error: true
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
