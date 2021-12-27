@@ -76,5 +76,5 @@ jobs:
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-        token: ${{ github.token }}
+        token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
