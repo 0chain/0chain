@@ -57,6 +57,13 @@ func GetSCVersion() semver.Version {
 	return v
 }
 
+// CanSCVersionUpdate checks if we can update the smart contract version
+// return the allowed version
+func CanSCVersionUpdate() (*semver.Version, bool) {
+	// TODO: implement this
+	return nil, false
+}
+
 // RegisterSmartContracts register the smart contracts with version
 func RegisterSmartContracts(version string, scs SmartContractors) error {
 	return smartContractsVersions.Register(version, scs)

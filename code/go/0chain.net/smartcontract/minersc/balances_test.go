@@ -186,3 +186,7 @@ func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
 func (tb *testBalances) GetSCVersion() semver.Version {
 	return smartcontract.GetSCVersion()
 }
+
+func (tb *testBalances) CanUpdateSCVersion() (*semver.Version, bool) {
+	return nil, false
+}

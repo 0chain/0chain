@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -47,7 +46,7 @@ func (tb *mockStateContext) GetEventDB() *event.EventDb                         
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
-func (sc *mockStateContext) GetSCVersion() semver.Version { return smartcontract.GetSCVersion() }
+func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool) { return nil, false }
 
 func (sc *mockStateContext) GetMints() []*state.Mint {
 	return sc.ctx.GetMints()

@@ -5,7 +5,7 @@ import (
 
 	"0chain.net/smartcontract"
 
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"

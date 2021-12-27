@@ -7,9 +7,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/logging"
 	"github.com/blang/semver/v4"
-	"go.uber.org/zap"
 )
 
 // SCVersionNode represents the smart contract version node stores in MPT
@@ -82,6 +80,12 @@ func (msc *MinerSmartContract) updateSCVersion(
 			"only the owner can update the smart contract version")
 	}
 
+	allowedV, ok := balances.CanUpdateSCVersion()
+	if !ok {
+		return "", common.NewError("update_sc_version_not_allowed",
+			"smart contract version cannot be updated yet")
+	}
+
 	var scv UpdateSCVersionTxn
 	if err = scv.Decode(inputData); err != nil {
 		return "", common.NewError("update_sc_version_invalid_txn_input", err.Error())
@@ -94,21 +98,9 @@ func (msc *MinerSmartContract) updateSCVersion(
 			fmt.Sprintf("parse smart contract version failed, %v", err.Error()))
 	}
 
-	// get current running smart contract
-	cv := balances.GetSCVersion()
-
-	if newSCV.LE(cv) {
-		logging.Logger.Error("new version is <= current running version",
-			zap.String("new version", newSCV.String()),
-			zap.String("current version", cv.String()))
-		return "", common.NewError("update_sc_version_le_current",
-			"smart contract version is <= current version")
-	}
-
-	// Must not skip major version, i.e, the new major version must be currnet's major version + 1
-	if newSCV.Major != cv.Major+1 {
-		return "", common.NewError("update_sc_version_skip_major",
-			"new major version must be current major version + 1")
+	if !newSCV.Equals(*allowedV) {
+		return "", common.NewError("update_sc_version_not_allowed",
+			"smart contract version is not allowed")
 	}
 
 	// switch to the new smart contract version

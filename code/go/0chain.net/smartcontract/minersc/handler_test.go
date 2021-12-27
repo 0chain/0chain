@@ -17,7 +17,7 @@ import (
 	"context"
 
 	chainstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/mocks"
+	"0chain.net/chaincore/chain/state/mocks"
 	. "0chain.net/smartcontract/minersc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

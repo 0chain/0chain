@@ -61,8 +61,8 @@ type StateContextI interface {
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 
-	// return the current running smart contract version
-	GetSCVersion() semver.Version
+	// CanSCVersionUpdate checks if smart contract version can be updated now
+	CanUpdateSCVersion() (*semver.Version, bool)
 }
 
 //StateContext - a context object used to manipulate global state
@@ -78,8 +78,8 @@ type StateContext struct {
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
-	getSCVersion                  func() semver.Version
 	getSignature                  func() encryption.SignatureScheme
+	canSCVersionUpdate            func() (*semver.Version, bool)
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 }
@@ -94,7 +94,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
-	getSCVersion func() semver.Version,
+	canSCVersionUpdate func() (*semver.Version, bool),
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -108,7 +108,7 @@ func NewStateContext(
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
-		getSCVersion:                  getSCVersion,
+		canSCVersionUpdate:            canSCVersionUpdate,
 		eventDb:                       eventDb,
 		mutex:                         new(sync.Mutex),
 	}
@@ -316,9 +316,9 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 	return s.SetTxnHash(sc.txn.Hash)
 }
 
-// GetSCVersion returns the current running smart contract version
-func (sc *StateContext) GetSCVersion() semver.Version {
-	return sc.getSCVersion()
+// CanSCVersionUpdate checks if we can update the smart contract
+func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool) {
+	return sc.canSCVersionUpdate()
 }
 
 func InsertTrieNode(state util.MerklePatriciaTrieI, key datastore.Key, node util.Serializable) (datastore.Key, error) {

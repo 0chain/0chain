@@ -41,6 +41,28 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 	txnDataV2, err := updateSCVersionReqV2.Encode()
 	require.NoError(t, err)
 
+	prepareStateContext := func() state.StateContextI {
+		stateCtx := &mockStateContextI{}
+		scV, err := semver.Make("1.0.0")
+		require.NoError(t, err)
+		stateCtx.On("GetSCVersion").Return(scV)
+
+		scV2, err := semver.Make("2.0.0")
+		require.NoError(t, err)
+		stateCtx.On("CanUpdateSCVersion").Return(&scV2, true)
+		return stateCtx
+	}
+
+	prepareNotAllowedStateContext := func() state.StateContextI {
+		stateCtx := &mockStateContextI{}
+		scV, err := semver.Make("1.0.0")
+		require.NoError(t, err)
+		stateCtx.On("GetSCVersion").Return(scV)
+
+		stateCtx.On("CanUpdateSCVersion").Return(nil, false)
+		return stateCtx
+	}
+
 	type args struct {
 		t         *transaction.Transaction
 		inputData []byte
@@ -58,75 +80,37 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 				t: &transaction.Transaction{
 					ClientID: owner,
 				},
-				inputData: txnDataV1,
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("0.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				inputData: txnDataV2,
+				balances:  prepareStateContext,
 			},
-			wantResp: "1.0.0",
+			wantResp: "2.0.0",
 			wantErr:  assert.NoError,
 		},
 		{
-			name: "sc version == current version",
+			name: "not allowed update yet",
 			args: args{
 				t: &transaction.Transaction{
 					ClientID: owner,
 				},
 				inputData: txnDataV1,
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				balances:  prepareNotAllowedStateContext,
 			},
 			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
-				assert.ErrorIs(t, common.NewError("update_sc_version_le_current", ""), err, msg...)
+				assert.ErrorIs(t, common.NewError("update_sc_version_not_allowed", ""), err, msg...)
 				return false
 			},
 		},
 		{
-			name: "sc version < current version",
+			name: "not allowed, incorrect version",
 			args: args{
 				t: &transaction.Transaction{
 					ClientID: owner,
 				},
 				inputData: txnDataV1,
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("2.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				balances:  prepareStateContext,
 			},
 			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
-				assert.ErrorIs(t, common.NewError("update_sc_version_le_current", ""), err, msg...)
-				return false
-			},
-		},
-		{
-			name: "sc version skip major version",
-			args: args{
-				t: &transaction.Transaction{
-					ClientID: owner,
-				},
-				inputData: txnDataV2,
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("0.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
-			},
-			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
-				assert.ErrorIs(t, common.NewError("update_sc_version_skip_major", ""), err, msg...)
+				assert.ErrorIs(t, common.NewError("update_sc_version_not_allowed", ""), err, msg...)
 				return false
 			},
 		},
@@ -137,13 +121,7 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 					ClientID: "not_owner_id",
 				},
 				inputData: txnDataV2,
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				balances:  prepareStateContext,
 			},
 			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
 				assert.ErrorIs(t, common.NewError("update_sc_version_unauthorized_access", ""), err, msg...)
@@ -157,13 +135,7 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 					ClientID: owner,
 				},
 				inputData: []byte("invalid txn data"),
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				balances:  prepareStateContext,
 			},
 			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
 				assert.ErrorIs(t, common.NewError("update_sc_version_invalid_txn_input", ""), err, msg...)
@@ -171,59 +143,13 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid version 0.0",
+			name: "invalid version data",
 			args: args{
 				t: &transaction.Transaction{
 					ClientID: owner,
 				},
-				inputData: []byte(`{"version": "0.0"}`),
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
-			},
-			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
-				assert.ErrorIs(t, common.NewError("update_sc_version_invalid_version", ""), err, msg...)
-				return false
-			},
-		},
-		{
-			name: "invalid version 0",
-			args: args{
-				t: &transaction.Transaction{
-					ClientID: owner,
-				},
-				inputData: []byte(`{"version": "0"}`),
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
-			},
-			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
-				assert.ErrorIs(t, common.NewError("update_sc_version_invalid_version", ""), err, msg...)
-				return false
-			},
-		},
-		{
-			name: "invalid version a.b.c",
-			args: args{
-				t: &transaction.Transaction{
-					ClientID: owner,
-				},
-				inputData: []byte(`{"version": "a.b.c"}`),
-				balances: func() state.StateContextI {
-					stateCtx := &mockStateContextI{}
-					scV, err := semver.Make("1.0.0")
-					require.NoError(t, err)
-					stateCtx.On("GetSCVersion").Return(scV)
-					return stateCtx
-				},
+				inputData: []byte(`{"version": "abc"}`),
+				balances:  prepareStateContext,
 			},
 			wantErr: func(t assert.TestingT, err error, msg ...interface{}) bool {
 				assert.ErrorIs(t, common.NewError("update_sc_version_invalid_version", ""), err, msg...)
@@ -242,6 +168,11 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 					scV, err := semver.Make("1.0.0")
 					require.NoError(t, err)
 					stateCtx.On("GetSCVersion").Return(scV)
+
+					scV2, err := semver.Make("2.0.0")
+					require.NoError(t, err)
+					stateCtx.On("CanUpdateSCVersion").Return(&scV2, true)
+
 					return stateCtx
 				},
 			},
@@ -262,7 +193,7 @@ func TestMinerSmartContract_updateSCVersion(t *testing.T) {
 			assert.Equalf(t, tt.wantResp, gotResp, "updateSCVersion(%v, %v, %v, %v)", tt.args.t, tt.args.inputData, nil, sctx)
 			ss, ok := sctx.(*mockStateContextI)
 			require.True(t, ok)
-			require.Equal(t, updateSCVersionReqV1.Version, ss.scVersion)
+			require.Equal(t, tt.wantResp, ss.scVersion)
 		})
 	}
 }
