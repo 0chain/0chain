@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -11,6 +12,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -179,4 +181,8 @@ func (tb *testBalances) AddMint(mint *state.Mint) error {
 
 func (tb *testBalances) GetChainCurrentMagicBlock() *block.MagicBlock {
 	return nil
+}
+
+func (tb *testBalances) GetSCVersion() semver.Version {
+	return smartcontract.GetSCVersion()
 }

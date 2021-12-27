@@ -1,3 +1,4 @@
+//go:build !integration_tests
 // +build !integration_tests
 
 package minersc
@@ -55,4 +56,6 @@ func (msc *MinerSmartContract) InitSmartContractFunctions() {
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
 
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
+
+	msc.smartContractFunctions["update_sc_version"] = msc.updateSCVersion
 }

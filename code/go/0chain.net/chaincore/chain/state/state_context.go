@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+//go:generate mockery -name StateContextI --case underscore --output ./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 // todo this needs to be split up into different interfaces
 type StateContextI interface {
@@ -58,6 +60,9 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
+
+	// return the current running smart contract version
+	GetSCVersion() semver.Version
 }
 
 //StateContext - a context object used to manipulate global state
@@ -73,6 +78,7 @@ type StateContext struct {
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
+	getSCVersion                  func() semver.Version
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
@@ -88,6 +94,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
+	getSCVersion func() semver.Version,
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -101,6 +108,7 @@ func NewStateContext(
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+		getSCVersion:                  getSCVersion,
 		eventDb:                       eventDb,
 		mutex:                         new(sync.Mutex),
 	}
@@ -306,4 +314,15 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)
+}
+
+// GetSCVersion returns the current running smart contract version
+func (sc *StateContext) GetSCVersion() semver.Version {
+	return sc.getSCVersion()
+}
+
+func InsertTrieNode(state util.MerklePatriciaTrieI, key datastore.Key, node util.Serializable) (datastore.Key, error) {
+	key_hash := encryption.Hash(key)
+	byteKey, err := state.Insert(util.Path(key_hash), node)
+	return datastore.Key(byteKey), err
 }

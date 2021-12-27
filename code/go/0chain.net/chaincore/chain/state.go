@@ -161,6 +161,7 @@ func (c *Chain) NewStateContext(
 		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
+		smartcontract.GetSCVersion,
 		eventDb,
 	)
 }

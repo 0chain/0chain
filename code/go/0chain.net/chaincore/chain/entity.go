@@ -16,11 +16,13 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -548,6 +550,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
+
+	scVersion := minersc.SCVersionNode("1.0.0")
+	cstate.InsertTrieNode(pmt, minersc.SCVersionKey, &scVersion)
+
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
 	}

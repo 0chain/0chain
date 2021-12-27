@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -17,6 +18,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,6 +47,7 @@ func (tb *mockStateContext) GetEventDB() *event.EventDb                         
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
+func (sc *mockStateContext) GetSCVersion() semver.Version { return smartcontract.GetSCVersion() }
 
 func (sc *mockStateContext) GetMints() []*state.Mint {
 	return sc.ctx.GetMints()

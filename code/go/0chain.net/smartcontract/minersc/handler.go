@@ -271,3 +271,21 @@ func (msc *MinerSmartContract) configHandler(
 	}
 	return gn.getConfigMap()
 }
+
+func (msc *MinerSmartContract) scVersionHandler(
+	_ context.Context,
+	_ url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	scv, err := GetSCVersion(balances)
+	if err != nil {
+		return nil, common.NewErrInternal(err.Error())
+	}
+
+	rsp := struct {
+		Version string
+	}{
+		Version: scv.String(),
+	}
+	return rsp, nil
+}
