@@ -15,11 +15,6 @@ import (
 	"0chain.net/smartcontract/benchmark"
 )
 
-const (
-	addingAuthorizer    = 0
-	removableAuthorizer = 1
-)
-
 var (
 	burnNonce   = int64(0)
 	mintNonce   = int64(0)
@@ -30,7 +25,7 @@ func Setup(clients, publicKeys []string, balances cstate.StateContextI) {
 	fmt.Printf("Setting up benchmarks with %d clients\n", len(clients))
 	addMockGlobalNode(balances)
 	addMockUserNodes(clients, balances)
-	addMockAuthorizers(clients, publicKeys, balances, 10, 100)
+	addMockAuthorizers(clients, publicKeys, balances, 0, 200)
 }
 
 func addMockGlobalNode(balances cstate.StateContextI) {
