@@ -68,7 +68,7 @@ jobs:
       with:
         state: ${{ job.status }}
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-        token: ${{ secrets.SVC_ACCOUNT_SECRET }}
+        github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Set PR Status Failed"
       if: ${{ failure() }}
