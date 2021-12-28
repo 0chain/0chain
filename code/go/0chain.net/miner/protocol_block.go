@@ -250,7 +250,7 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 // VerifyBlock - given a set of transaction ids within a block, validate the block.
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	bvt *block.BlockVerificationTicket, err error) {
-	//ctx = common.GetRootContext()
+	ctx = common.GetRootContext()
 
 	var start = time.Now()
 	if err = b.Validate(ctx); err != nil {

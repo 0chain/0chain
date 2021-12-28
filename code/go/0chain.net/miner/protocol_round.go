@@ -725,7 +725,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 }
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
-	//ctx = common.GetRootContext()
+	ctx = common.GetRootContext()
 	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
 	pb := mc.GetPreviousBlock(ctx, b)
 
