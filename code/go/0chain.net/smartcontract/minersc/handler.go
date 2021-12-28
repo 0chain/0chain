@@ -283,7 +283,7 @@ func (msc *MinerSmartContract) scVersionHandler(
 	}
 
 	rsp := struct {
-		Version string
+		Version string `json:"version"`
 	}{
 		Version: scv.String(),
 	}

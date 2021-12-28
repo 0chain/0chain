@@ -33,11 +33,11 @@ func (s *mockStateContextI) InsertTrieNode(key datastore.Key, node util.Serializ
 }
 
 func TestMinerSmartContract_updateSCVersion(t *testing.T) {
-	updateSCVersionReqV1 := UpdateSCVersionTxn{Version: "1.0.0"}
+	updateSCVersionReqV1 := UpdateSCVersionTxnInput{Version: "1.0.0"}
 	txnDataV1, err := updateSCVersionReqV1.Encode()
 	require.NoError(t, err)
 
-	updateSCVersionReqV2 := UpdateSCVersionTxn{Version: "2.0.0"}
+	updateSCVersionReqV2 := UpdateSCVersionTxnInput{Version: "2.0.0"}
 	txnDataV2, err := updateSCVersionReqV2.Encode()
 	require.NoError(t, err)
 

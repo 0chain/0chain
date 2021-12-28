@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	cstate "0chain.net/chaincore/chain/state"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/logging"
 	"github.com/blang/semver/v4"
 )
 
@@ -50,19 +52,32 @@ func updateSCVersion(state cstate.StateContextI, version string) error {
 	return nil
 }
 
-// UpdateSCVersionTxn represents the transaction data struct for
+// NewUpdateSCVersionTxnData creates the transaction data for updating sc version
+func NewUpdateSCVersionTxnData(version string) (*sci.SmartContractTransactionData, error) {
+	txnInput := &UpdateSCVersionTxnInput{Version: version}
+	inputData, err := txnInput.Encode()
+	if err != nil {
+		return nil, err
+	}
+	return &sci.SmartContractTransactionData{
+		FunctionName: "update_sc_version",
+		InputData:    inputData,
+	}, nil
+}
+
+// UpdateSCVersionTxnInput represents the transaction data struct for
 // updating the smart contract version
-type UpdateSCVersionTxn struct {
+type UpdateSCVersionTxnInput struct {
 	Version string `json:"version"`
 }
 
 // Decode implements the mpt node decode interface
-func (v *UpdateSCVersionTxn) Decode(b []byte) error {
+func (v *UpdateSCVersionTxnInput) Decode(b []byte) error {
 	return json.Unmarshal(b, v)
 }
 
 // Encode implements the mpt node encode interface
-func (v *UpdateSCVersionTxn) Encode() ([]byte, error) {
+func (v *UpdateSCVersionTxnInput) Encode() ([]byte, error) {
 	b, err := json.Marshal(v)
 	return b, err
 }
@@ -75,6 +90,8 @@ func (msc *MinerSmartContract) updateSCVersion(
 	balances cstate.StateContextI,
 ) (resp string, err error) {
 
+	logging.Logger.Debug("update sc version")
+
 	if t.ClientID != owner {
 		return "", common.NewError("update_sc_version_unauthorized_access",
 			"only the owner can update the smart contract version")
@@ -86,7 +103,7 @@ func (msc *MinerSmartContract) updateSCVersion(
 			"smart contract version cannot be updated yet")
 	}
 
-	var scv UpdateSCVersionTxn
+	var scv UpdateSCVersionTxnInput
 	if err = scv.Decode(inputData); err != nil {
 		return "", common.NewError("update_sc_version_invalid_txn_input", err.Error())
 	}

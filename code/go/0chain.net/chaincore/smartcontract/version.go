@@ -61,7 +61,11 @@ func GetSCVersion() semver.Version {
 // return the allowed version
 func CanSCVersionUpdate() (*semver.Version, bool) {
 	// TODO: implement this
-	return nil, false
+	v2, err := semver.New("2.0.0")
+	if err != nil {
+		panic(err)
+	}
+	return v2, true
 }
 
 // RegisterSmartContracts register the smart contracts with version
