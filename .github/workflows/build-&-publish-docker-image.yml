@@ -30,8 +30,8 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$([ -z \"$GITHUB_HEAD_REF\" ] && echo ghref ${GITHUB_REF#refs/*/} || echo ghhead $GITHUB_HEAD_REF)" >> $GITHUB_ENV
-        echo "TAG=$(([ -z \"$GITHUB_HEAD_REF\" ] && echo ghref ${GITHUB_REF#refs/*/} || echo ghhead $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}'] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
@@ -75,8 +75,8 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$([ -z \"$GITHUB_HEAD_REF\" ] && echo ghref ${GITHUB_REF#refs/*/} || echo ghhead $GITHUB_HEAD_REF)" >> $GITHUB_ENV
-        echo "TAG=$(([ -z \"$GITHUB_HEAD_REF\" ] && echo ghref ${GITHUB_REF#refs/*/} || echo ghhead $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}'] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v1
@@ -136,9 +136,9 @@ jobs:
 
       - name: "Setup"
         run: |
-          echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
+          echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}'] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
           echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
-          echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
+          echo "TAG=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
