@@ -122,7 +122,7 @@ func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (i
 		return nil, err
 	}
 
-	if b.GetStateStatus() != block.StateSuccessful {
+	if b.GetStateStatus() != block.StateSuccessful && b.GetStateStatus() != block.StateSynched {
 		return nil, common.NewError("state_not_verified",
 			"state is not computed and validated locally")
 	}
