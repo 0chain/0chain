@@ -50,6 +50,7 @@ jobs:
       run: |
         echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
         echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+        echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
 
         echo '#!/bin/bash
         exit_code=0
@@ -82,8 +83,8 @@ jobs:
     - name: "Check images have been published"
       if: ${{ github.event.inputs.skip_tests == 'FALSE' }}
       run: |
-        ./get_tag.sh 0chain ${GITHUB_REF##*/} miner
-        ./get_tag.sh 0chain ${GITHUB_REF##*/} sharder
+        ./get_tag.sh 0chain ${{ env.BRANCH }} miner
+        ./get_tag.sh 0chain ${{ env.BRANCH }} sharder
         ./get_tag.sh blobber ${{ github.event.inputs.blobber_branch }} blobber
         ./get_tag.sh blobber ${{ github.event.inputs.validator_branch }} validator
         ./get_tag.sh 0box ${{ github.event.inputs.zbox_branch }} 0box
@@ -98,7 +99,7 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        zerochain_branch: ${{ env.MINER_IMAGE }}
+        zerochain_branch: ${{ env.BRANCH }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
@@ -108,12 +109,12 @@ jobs:
       with:
         kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
         teardown_condition: "TESTS_PASSED"
-        miner_image:  ${{ env.MINER_IMAGE }}
-        sharder_image: ${{ env.SHARDER_IMAGE }}
-        blobber_image: ${{ github.event.inputs.blobber_image }}
-        validator_image: ${{ github.event.inputs.validator_image }}
-        zbox_image: ${{ github.event.inputs.zbox_image }}
-        zblock_image: ${{ github.event.inputs.zblock_image }}
+        miner_image:  ${{ env.IMAGE_MINER }}
+        sharder_image: ${{ env.IMAGE_SHARDER }}
+        blobber_image: ${{ env.IMAGE_BLOBBER }}
+        validator_image: ${{ env.IMAGE_VALIDATOR }}
+        zbox_image: ${{ env.IMAGE_0BOX }}
+        zblock_image: ${{ env.IMAGE_0BLOCK }}
         zdns_image: staging
         explorer_image: latest
         zproxy_image: staging
@@ -145,7 +146,7 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        zerochain_branch: ${{ env.MINER_IMAGE }}
+        zerochain_branch: ${{ env.BRANCH }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
@@ -159,6 +160,6 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        zerochain_branch: ${{ env.MINER_IMAGE }}
+        zerochain_branch: ${{ env.BRANCH }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
