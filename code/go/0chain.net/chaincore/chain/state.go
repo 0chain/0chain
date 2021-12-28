@@ -208,7 +208,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		logging.Logger.Info("SC executed with output",
 			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash),
-			zap.Any("txn_exec_time", time.Since(t)))
+			zap.Any("txn_exec_time", time.Since(t)),
+			zap.Any("current_root", sctx.GetState().GetRoot()))
 
 	case transaction.TxnTypeData:
 
@@ -220,7 +221,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 				zap.Any("txn type", txn.TransactionType),
 				zap.Any("transaction_ClientID", txn.ClientID),
 				zap.Any("minersc_address", minersc.ADDRESS),
-				zap.Any("state_Balance", state.Balance(txn.Fee)))
+				zap.Any("state_Balance", state.Balance(txn.Fee)),
+				zap.Any("current_root", sctx.GetState().GetRoot()))
 			return
 		}
 	default:
