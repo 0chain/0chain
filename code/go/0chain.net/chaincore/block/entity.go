@@ -341,7 +341,7 @@ func (b *Block) SetStateDB(prevBlock *Block, stateDB util.NodeDB) {
 		pndb = prevBlock.ClientState.GetNodeDB()
 	}
 	rootHash = prevBlock.ClientStateHash
-	logging.Logger.Debug("set state db",
+	logging.Logger.Warn("set state db",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("prev_block", prevBlock.Hash),
