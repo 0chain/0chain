@@ -58,7 +58,13 @@ jobs:
       continue-on-error: true
       with:
         state: "pending"
+        message: "manual tests running"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
+        zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
+        zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+        gosdk_branch: staging
+        zerochain_branch: ${{ env.SHORT_SHA }}
+        blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Sleep"
@@ -70,7 +76,13 @@ jobs:
       continue-on-error: true
       with:
         state: ${{ job.status }}
+        message: "manual tests failed"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
+        zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
+        zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+        gosdk_branch: staging
+        zerochain_branch: ${{ env.SHORT_SHA }}
+        blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Set PR Status Failed"
@@ -79,6 +91,12 @@ jobs:
       continue-on-error: true
       with:
         state: ${{ job.status }}
+        message: "manual tests success"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
+        zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
+        zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
+        gosdk_branch: staging
+        zerochain_branch: ${{ env.SHORT_SHA }}
+        blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
