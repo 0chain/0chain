@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ staging ]
+    branches: [ staging, feature/notify-pr ]
     tags:
   pull_request:
   workflow_dispatch:
@@ -30,8 +30,18 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-        echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g' )" >> $GITHUB_ENV
+
+#        //if pr then ${GITHUB_HEAD_REF} else ${GITHUB_REF##*/}
+#        echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
+        echo "GITHUB_HEAD_REF [${GITHUB_HEAD_REF}]"
+        echo "GITHUB_REF [${GITHUB_REF}]"
+        echo "github.event.pull_request.head.sh [${{ github.event.pull_request.head.sha }}]"
+
+        echo "BRANCH=$(echo $(([ ${{ github.event_name }} == 'pull_request' ] && (echo ${GITHUB_HEAD_REF#refs/*/}) || echo '${GITHUB_REF##*/}')" >> $GITHUB_ENV
+
+#        //if pr then ${{ github.event.pull_request.head.sha }} else ${GITHUB_REF##*/}
+#        echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g' )" >> $GITHUB_ENV
+        echo "TAG=$(echo $(([ -z '${{ github.event.pull_request.head.sha }}' ] && (echo ${GITHUB_REF#refs/*/}) || echo '${{ github.event.pull_request.head.sha }}') | sed 's/\//-/g'))" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
