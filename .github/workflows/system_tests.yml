@@ -50,7 +50,7 @@ jobs:
       run: |
         echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
         echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
-        echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+        echo "BRANCH=${GITHUB_REF}" >> $GITHUB_ENV
 
         echo '#!/bin/bash
         exit_code=0
@@ -77,6 +77,11 @@ jobs:
             echo "docker image found for [merge-$MERGE_SHORT_SHA]"
             echo "IMAGE_$(echo $3 | awk '"'"'{ print toupper($0) }'"'"')=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
+        unset SHORT_SHA
+        unset PR_ID
+        unset TAG
+        unset MERGE_SHORT_SHA
+
         ' > ./get_tag.sh;
         chmod 777 ./get_tag.sh;
 
