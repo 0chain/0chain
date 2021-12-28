@@ -34,9 +34,8 @@ jobs:
         echo "GITHUB_REF [${GITHUB_REF}]"
         echo "github.event.pull_request.head.sh [${{ github.event.pull_request.head.sha }}]"
 
-        echo "BRANCH=$(echo $(([ ${{ github.event_name }} == 'pull_request' ] && (echo ${GITHUB_HEAD_REF#refs/*/}) || echo '${GITHUB_REF##*/}')" >> $GITHUB_ENV
-
-        echo "TAG=$(echo $(([ -z '${{ github.event.pull_request.head.sha }}' ] && (echo ${GITHUB_REF#refs/*/}) || echo '${{ github.event.pull_request.head.sha }}') | sed 's/\//-/g'))" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo '${GITHUB_REF##*/}' || echo ${GITHUB_HEAD_REF#refs/*/})" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo '${{ github.event.pull_request.head.sha }}') | sed 's/\//-/g')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
