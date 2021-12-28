@@ -727,39 +727,7 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
 	ctx = common.GetRootContext()
 	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
-	pb, err := mc.getPreviousNotarizedBlock(ctx, b)
-	if err != nil {
-		return err
-	}
-
-	if pb.PrevBlock == nil {
-		//actually this block is in lock-set and MUST be present locally,
-		//the only reason it is not present is that current miner were delayed for a long and have big gap in bc
-		ppb, err := mc.getPreviousNotarizedBlock(ctx, pb)
-		if err != nil {
-			return err
-		}
-		//get previous round, if miner was offline it can not have this round, so create it
-		pbRound := mc.getOrCreateRound(ctx, ppb.Round)
-		//this block is in locked set and must be notarized, if not, previous block must extend not notarized block which is impossible by protocol
-		_, _, err = mc.AddNotarizedBlockToRound(pbRound, ppb)
-		if err != nil {
-			logging.Logger.Debug("Can't add notarized block")
-			return err
-		}
-
-		if !ppb.IsStateComputed() {
-			//todo think should we remove it when state update problem will be solved, since it is excessive and we can't not to have this block since it is int the locked setby protocol
-			if err := mc.SyncStateOrComputeLocal(ctx, ppb); err != nil {
-				logging.Logger.Info("Previous block of previous block does not have state computed", zap.Error(err))
-			}
-		}
-	}
-	if !pb.IsStateComputed() {
-		if err := mc.SyncStateOrComputeLocal(ctx, pb); err != nil {
-			return err
-		}
-	}
+	pb := mc.GetPreviousBlock(ctx, b)
 
 	// merge the tickets
 	if pb.IsBlockNotarized() {
@@ -774,7 +742,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 		return nil
 	}
 
-	err = mc.verifyBlockNotarizationWorker.Run(ctx, func() error {
+	err := mc.verifyBlockNotarizationWorker.Run(ctx, func() error {
 		logging.Logger.Debug("update prev block notarization, verify tickets",
 			zap.Int64("round", b.Round-1), zap.String("block", b.PrevHash))
 
@@ -808,23 +776,6 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 	finish(true)
 	return nil
-}
-
-func (mc *Chain) getPreviousNotarizedBlock(ctx context.Context, b *block.Block) (*block.Block, error) {
-	pb, _ := mc.GetBlock(ctx, b.PrevHash)
-	if pb == nil {
-		logging.Logger.Info("update prev block notarization (prior block does not exist)",
-			zap.Int64("round", b.Round),
-			zap.String("prev block", b.PrevHash))
-		var err error
-		pb, err = mc.GetNotarizedBlockFromMiners(ctx, b.PrevHash, b.Round-1, false)
-
-		if pb == nil || err != nil {
-			return nil, err
-		}
-	}
-	b.SetPreviousBlock(pb)
-	return pb, nil
 }
 
 func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
