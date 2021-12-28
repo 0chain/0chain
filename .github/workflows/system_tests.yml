@@ -62,13 +62,9 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        gosdk_branch: staging
         zerochain_branch: ${{ env.SHORT_SHA }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
-
-    - name: "Sleep"
-      run: sleep 60
 
     - name: "Set PR Status Success"
       if: ${{ success() }}
@@ -80,7 +76,6 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        gosdk_branch: staging
         zerochain_branch: ${{ env.SHORT_SHA }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
@@ -95,7 +90,6 @@ jobs:
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
-        gosdk_branch: staging
         zerochain_branch: ${{ env.SHORT_SHA }}
         blobber_branch: ${{ github.event.inputs.blobber_image }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
