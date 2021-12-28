@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ staging, feature/notify-pr ]
+    branches: [ staging ]
     tags:
   pull_request:
   workflow_dispatch:
