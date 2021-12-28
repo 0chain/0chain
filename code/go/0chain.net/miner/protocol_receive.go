@@ -426,15 +426,17 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 	if b == nil {
 		// fetch from remote
 		var err error
-		b, err = mc.GetNotarizedBlock(ctx, not.BlockID, not.Round)
+		b, err = mc.GetNotarizedBlockForce(ctx, not.BlockID, not.Round)
 		if err != nil {
 			return fmt.Errorf("fetch notarized block failed, err: %v", err)
 		}
 		r = mc.getOrCreateRound(ctx, not.Round)
-		//mc.AddNotarizedBlock(ctx, r, b)
+		err = mc.ComputeOrSyncState(ctx, b)
+		if err != nil {
+			return fmt.Errorf("compute state of notarized block failed, err: %v", err)
+		}
 	}
 
-	//todo synchronize this block
 	if !b.IsBlockNotarized() {
 		var vts = b.UnknownTickets(not.VerificationTickets)
 		if len(vts) == 0 {
@@ -461,6 +463,11 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 					"block tickets num: %v, unknown tickets num: %v", len(b.GetVerificationTickets()), len(vts))
 			}
 		}
+	}
+
+	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
+		logging.Logger.Error("process notarization - not added to round")
+		return fmt.Errorf("can't add already notarized block to round: %v", err)
 	}
 	mc.ProgressOnNotarization(r)
 
