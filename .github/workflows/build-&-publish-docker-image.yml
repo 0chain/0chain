@@ -30,16 +30,9 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "GITHUB_HEAD_REF            [${GITHUB_HEAD_REF}]"
-        echo "GITHUB_HEAD_REF STRIPPED   [${GITHUB_HEAD_REF#refs/*/}]"
-        echo "GITHUB_REF                 [${GITHUB_REF}]"
-        echo "GITHUB_REF STRIPPED BRANCH [${GITHUB_REF##*/}]"
-        echo "GITHUB_REF STRIPPED TAG    [${GITHUB_REF#refs/*/}]"
-        echo "github.event.pull_request.head.sha [${{ github.event.pull_request.head.sha }}]"
-        echo "GITHUB_SHA [$GITHUB_SHA]"
-
         echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
         echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
 
@@ -60,19 +53,19 @@ jobs:
         docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
         
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
-        echo ${MINER_REGISTRY}:$TAG
+        docker push ${MINER_REGISTRY}:$TAG
 
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker tag miner:latest ${MINER_REGISTRY}:$TAG-$SHORT_SHA
-        echo ${MINER_REGISTRY}:$TAG-$SHORT_SHA
+        docker push ${MINER_REGISTRY}:$TAG-$SHORT_SHA
 
       env:
         DOCKERFILE_MINER: "docker.local/build.miner/Dockerfile"
 
-#    - name: Push Miner Docker Image With latest Tag
-#      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
-#      run: |
-#          docker push $MINER_REGISTRY:latest
+    - name: Push Miner Docker Image With latest Tag
+      if: ${{ github.event.inputs.latest_tag == 'yes' || github.ref == 'refs/heads/master' }}
+      run: |
+          docker push $MINER_REGISTRY:latest
 
 
   dockerize-sharder:
@@ -82,8 +75,9 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-        echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g' )" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v1
 
@@ -105,7 +99,7 @@ jobs:
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
         docker push ${SHARDER_REGISTRY}:$TAG
 
-        SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
+        SHORT_SHA=$(echo ${{ env.SHA }} | head -c 8)
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA
         docker push ${SHARDER_REGISTRY}:$TAG-$SHORT_SHA  
 
@@ -142,9 +136,9 @@ jobs:
 
       - name: "Setup"
         run: |
-          echo "BRANCH=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
-          echo "SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)" >> $GITHUB_ENV
-          echo "TAG=$(echo ${GITHUB_REF##*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+          echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
+          echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
+          echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
           echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
           echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
 
