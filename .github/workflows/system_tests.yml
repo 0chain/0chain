@@ -64,7 +64,7 @@ jobs:
         if [[ $exit_code == 0 ]];
           then
             echo "docker image found for  [${TAG}-${SHORT_SHA}]"
-            echo "IMAGE_$(echo $3 | awk '"'"'{ print toupper($0) }'"'"')=${TAG}-${SHORT_SHA}" >> $GITHUB_ENV
+            echo "$(echo $3 | tr 0 Z | awk '"'"'{ print toupper($0) }'"'"')_TAG=${TAG}-${SHORT_SHA}" >> $GITHUB_ENV
           else
             if [ -z "$PR_ID" ];
               then
@@ -75,7 +75,7 @@ jobs:
             echo "Checking image [merge-$MERGE_SHORT_SHA] is present..."
             docker pull 0chaindev/$3:merge-$MERGE_SHORT_SHA || { echo "Docker image could not be found for either branch commit sha [${SHORT_SHA}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/$1/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
             echo "docker image found for [merge-$MERGE_SHORT_SHA]"
-            echo "IMAGE_$(echo $3 | awk '"'"'{ print toupper($0) }'"'"')=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
+            echo "$(echo $3 | tr 0 Z | awk '"'"'{ print toupper($0) }'"'"')_TAG=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
         unset SHORT_SHA
         unset PR_ID
