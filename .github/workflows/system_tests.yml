@@ -105,7 +105,7 @@ jobs:
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
         zerochain_branch: ${{ env.BRANCH }}
-        blobber_branch: ${{ github.event.inputs.blobber_image }}
+        blobber_branch: ${{ github.event.inputs.blobber_branch }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Deploy 0Chain"
@@ -152,7 +152,7 @@ jobs:
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
         zerochain_branch: ${{ env.BRANCH }}
-        blobber_branch: ${{ github.event.inputs.blobber_image }}
+        blobber_branch: ${{ github.event.inputs.blobber_branch }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
 
     - name: "Set PR Status Failed"
@@ -166,5 +166,5 @@ jobs:
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
         zerochain_branch: ${{ env.BRANCH }}
-        blobber_branch: ${{ github.event.inputs.blobber_image }}
+        blobber_branch: ${{ github.event.inputs.blobber_branch }}
         github_token: ${{ secrets.SVC_ACCOUNT_SECRET }}
