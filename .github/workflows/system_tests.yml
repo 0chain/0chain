@@ -50,7 +50,7 @@ jobs:
       run: |
         echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
         echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
-        echo "BRANCH=${GITHUB_REF}" >> $GITHUB_ENV
+        echo "BRANCH=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
         echo '#!/bin/bash
         exit_code=0
