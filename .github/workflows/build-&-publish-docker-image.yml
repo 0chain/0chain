@@ -30,8 +30,8 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
-        echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v2
@@ -75,8 +75,8 @@ jobs:
     - name: Get info
       id: get_info
       run: |
-        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF')" >> $GITHUB_ENV
-        echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo '$GITHUB_HEAD_REF') | sed 's/\//-/g')" >> $GITHUB_ENV
+        echo "BRANCH=$([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+        echo "TAG=$(([ -z '$GITHUB_HEAD_REF' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF) | sed 's/\//-/g')" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v1
