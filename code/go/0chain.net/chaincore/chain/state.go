@@ -170,7 +170,7 @@ func (c *Chain) updateState(
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		startRoot   = clientState.GetRoot()
-		sctx        = c.NewStateContext(b, clientState, txn, nil)
+		sctx        = c.NewStateContext(b, clientState, txn, c.EventDb)
 	)
 	defer func() { events = sctx.GetEvents() }()
 

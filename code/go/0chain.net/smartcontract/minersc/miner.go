@@ -133,22 +133,29 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
-		if err = updateMinersList(balances, allMiners); err != nil {
+		//if err = updateMinersList(balances, allMiners); err != nil {
+		//	return "", common.NewErrorf("add_miner",
+		//		"saving all miners list: %v", err)
+		//}
+
+		err = emitAddMiner(newMiner, balances)
+		if err != nil {
 			return "", common.NewErrorf("add_miner",
-				"saving all miners list: %v", err)
+				"insert new miner: %v", err)
 		}
+
 		update = true
 	}
 
-	if !msc.doesMinerExist(newMiner.GetKey(), balances) {
-		if err = newMiner.save(balances); err != nil {
-			return "", common.NewError("add_miner", err.Error())
-		}
-
-		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
-
-		update = true
-	}
+	//if !msc.doesMinerExist(newMiner.GetKey(), balances) {
+	//	if err = newMiner.save(balances); err != nil {
+	//		return "", common.NewError("add_miner", err.Error())
+	//	}
+	//
+	//	msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
+	//
+	//	update = true
+	//}
 
 	if !update {
 		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
