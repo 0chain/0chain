@@ -470,7 +470,7 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 		return nil
 	}
 
-	if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK != nil && lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount/3) {
+	if lfbTK := mc.GetLatestLFBTicket(ctx); lfbTK != nil && lfbTK.Round-lfb.Round >= int64(mc.PruneStateBelowCount()/3) {
 		if b.Round >= lfbTK.Round {
 			// try to get LFB ticket block from local
 			lfb, err := mc.GetBlock(ctx, lfbTK.LFBHash)

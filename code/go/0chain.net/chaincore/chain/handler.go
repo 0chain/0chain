@@ -1223,9 +1223,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	sc := GetServerChain()
-	if sc.TxnMaxPayload > 0 {
-		if len(txn.TransactionData) > sc.TxnMaxPayload {
-			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
+	if sc.TxnMaxPayload() > 0 {
+		if len(txn.TransactionData) > sc.TxnMaxPayload() {
+			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
 	}

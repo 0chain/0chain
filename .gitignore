@@ -61,6 +61,7 @@ docker.local/log_dumps
 
 **/mocks/*
 !**/mocks/mocks.go
+!**/mocks/custom.go
 !**/mocks/.gitkeep
 
 mock_*.go

@@ -110,7 +110,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout)
+	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
 	defer cancelf()
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
@@ -296,7 +296,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(b.ClientState, c.OwnerID)
+		os, err = c.getState(b.ClientState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),

@@ -136,6 +136,7 @@ smart_contracts:
 					"reward_decline_rate":    "0.1",
 					"interest_decline_rate":  "0.1",
 					"max_mint":               "1.5e+06",
+					"owner_id":               "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
 				},
 			},
 		},

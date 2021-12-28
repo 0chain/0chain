@@ -1,25 +1,25 @@
 package zcnsc_test
 
 import (
+	"encoding/hex"
+	"encoding/json"
+	"math/rand"
+	"testing"
+	"time"
+
 	"0chain.net/chaincore/chain"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
-	"encoding/hex"
-	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = new(chain.Config)
-	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
 
 	logging.Logger = zap.NewNop()
 }
@@ -78,11 +78,11 @@ func Test_ShouldSignAndVerifyUsingPublicKey(t *testing.T) {
 }
 
 func Test_ShouldVerifySignature(t *testing.T) {
-	mp, pk, err := CreateMintPayload("client0", []string{"p1", "p2"})
+	ctx := MakeMockStateContext()
+	mp, err := CreateMintPayload("client0", []string{"p1", "p2"}, ctx)
 	require.NoError(t, err)
 
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
-	err = signatureScheme.SetPublicKey(pk)
+	signatureScheme := ctx.GetSignatureScheme()
 	require.NoError(t, err)
 
 	toSign := mp.GetStringToSign()
@@ -246,7 +246,7 @@ func Test_AuthorizersTreeShouldBeSerialized(t *testing.T) {
 	require.Equal(t, targetNode.Staking.Balance, node.Staking.Balance)
 }
 
-func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing (t *testing.T) {
+func Test_Authorizers_NodeMap_ShouldBeInitializedAfterDeserializing(t *testing.T) {
 	// Create authorizers nodes tree
 	balances := MakeMockStateContext()
 	tree, err := GetAuthorizerNodes(balances)

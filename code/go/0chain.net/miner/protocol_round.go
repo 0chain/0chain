@@ -860,10 +860,10 @@ func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
 
 /*GetBlockProposalWaitTime - get the time to wait for the block proposals of the given round */
 func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
-	if mc.BlockProposalWaitMode == chain.BlockProposalWaitDynamic {
+	if mc.BlockProposalWaitMode() == chain.BlockProposalWaitDynamic {
 		return mc.computeBlockProposalDynamicWaitTime(r)
 	}
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
@@ -881,7 +881,7 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 		if medianTimeMS > mc.BlockProposalMaxWaitTime {
 			return medianTimeMS
 		}*/
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -1054,6 +1054,9 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 	if mc.GetCurrentRound() != r.GetRoundNumber() {
 		return nil, ErrRoundMismatch
+	}
+	if b.MinerID == node.Self.Underlying().GetKey() {
+		return mc.SignBlock(ctx, b)
 	}
 	if b.GetRoundRandomSeed() == 0 {
 		return nil, common.NewErrorf("verify_round_block", "block with no RRS, %d, %s", b.Round, b.Hash)
@@ -1407,9 +1410,9 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
 	ssft := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
-	tick := mc.RoundTimeoutSofttoMin
-	if tick < mc.RoundTimeoutSofttoMult*ssft {
-		tick = mc.RoundTimeoutSofttoMult * ssft
+	tick := mc.RoundTimeoutSofttoMin()
+	if tick < mc.RoundTimeoutSofttoMult()*ssft {
+		tick = mc.RoundTimeoutSofttoMult() * ssft
 	}
 	logging.Logger.Info("nextTimeout", zap.Int("tick", tick))
 	return tick
@@ -1433,7 +1436,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	var r = mc.GetMinerRound(round)
 
-	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
+	if r.GetSoftTimeoutCount() == mc.RoundRestartMult() {
 		logging.Logger.Info("triggering restartRound",
 			zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx, round)
@@ -1494,6 +1497,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Info("handleNoProgress",

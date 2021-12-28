@@ -78,6 +78,7 @@ func TestSelectBlobbers(t *testing.T) {
 	) (StorageSmartContract, StorageAllocation, StorageNodes, chainState.StateContextI) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var sa = StorageAllocation{
@@ -114,6 +115,7 @@ func TestSelectBlobbers(t *testing.T) {
 			TimeUnit:         confTimeUnit,
 			MinAllocSize:     confMinAllocSize,
 			MinAllocDuration: confMinAllocDuration,
+			OwnerId:          owner,
 		}
 		balances.On("GetTrieNode", scConfigKey(ssc.ID)).Return(conf, nil).Once()
 
@@ -290,6 +292,7 @@ func TestExtendAllocation(t *testing.T) {
 	) {
 		var balances = &mocks.StateContextI{}
 		var ssc = StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		var txn = transaction.Transaction{
@@ -569,6 +572,7 @@ func TestTransferAllocation(t *testing.T) {
 			ClientID: p.curator,
 		}
 		var ssc = &StorageSmartContract{
+
 			SmartContract: sci.NewSC(ADDRESS),
 		}
 		input, err := json.Marshal(p.info)
@@ -1640,8 +1644,7 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// load validators
-	var validators *ValidatorNodes
-	validators, err = ssc.getValidatorsList(balances)
+	validators, err := getValidatorsList(balances)
 	require.NoError(t, err)
 
 	// load blobber
@@ -1660,7 +1663,7 @@ func Test_finalize_allocation(t *testing.T) {
 		tp += step / 2
 
 		challID = fmt.Sprintf("chall-%d", i)
-		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators.Nodes,
+		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators,
 			alloc.ID, blobber, allocRoot, balances)
 
 		var chall = new(ChallengeResponse)

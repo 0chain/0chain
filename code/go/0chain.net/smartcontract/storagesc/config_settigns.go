@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/smartcontractinterface"
 	"fmt"
 	"strconv"
 	"time"
@@ -583,9 +584,16 @@ func (ssc *StorageSmartContract) updateSettings(
 	input []byte,
 	balances chainState.StateContextI,
 ) (resp string, err error) {
-	if t.ClientID != owner {
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
 		return "", common.NewError("update_settings",
-			"unauthorized access - only the owner can update the variables")
+			"can't get config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_settings", func() bool {
+		return conf.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
 	}
 
 	var newChanges smartcontract.StringMap
