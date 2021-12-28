@@ -268,6 +268,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
+	//if mr := mc.getOrCreateRound(ctx, b.Round); mr != nil {
 	if mr := mc.GetMinerRound(b.Round); mr != nil {
 		//use proposed blocks as current block cache, since we store blocks there before they are added to the round
 		for _, blocks := range mr.GetProposedBlocks() {
