@@ -54,8 +54,8 @@ jobs:
 
         echo '#!/bin/bash
         exit_code=0
-        SHORT_SHA=$(curl --silent https://api.github.com/repos/0chain/$1/git/refs/heads/$2 | jq --raw-output .object.sha | head -c 8)
-        PR_ID=$(curl --silent https://api.github.com/search/issues?q=sha:$SHORT_SHA | jq --raw-output .items[0].number)
+        SHORT_SHA=$(curl --silent -u ${{ secrets.SVC_ACCOUNT_SECRET }}:x-oauth-basic https://api.github.com/repos/0chain/$1/git/refs/heads/$2 | jq --raw-output .object.sha | head -c 8)
+        PR_ID=$(curl --silent -u ${{ secrets.SVC_ACCOUNT_SECRET }}:x-oauth-basic https://api.github.com/search/issues?q=sha:$SHORT_SHA | jq --raw-output .items[0].number)
         TAG=$(echo $2 | sed '"'"'s/\//-/g'"'"')
 
         echo "Checking [$3] image [${TAG}-${SHORT_SHA}] is present..."
@@ -71,7 +71,7 @@ jobs:
                 echo "docker image NOT found for [${TAG}-${SHORT_SHA}] and PR not raised so will not check for PR merge image. Please publish image manually. at https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml and try again" && exit 1;
             fi
             echo "miner docker image NOT found for [${TAG}-${SHORT_SHA}]"
-            MERGE_SHORT_SHA=$(curl --silent https://api.github.com/repos/0chain/$1/pulls/$PR_ID | jq --raw-output .merge_commit_sha | head -c 8)
+            MERGE_SHORT_SHA=$(curl --silent -u ${{ secrets.SVC_ACCOUNT_SECRET }}:x-oauth-basic https://api.github.com/repos/0chain/$1/pulls/$PR_ID | jq --raw-output .merge_commit_sha | head -c 8)
             echo "Checking image [merge-$MERGE_SHORT_SHA] is present..."
             docker pull 0chaindev/$3:merge-$MERGE_SHORT_SHA || { echo "Docker image could not be found for either branch commit sha [${SHORT_SHA}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/$1/actions/workflows/build-&-publish-docker-image.yml and try again." && exit 1; }
             echo "docker image found for [merge-$MERGE_SHORT_SHA]"
