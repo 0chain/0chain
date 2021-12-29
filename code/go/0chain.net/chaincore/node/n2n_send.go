@@ -141,7 +141,12 @@ func (np *Pool) sendTo(ctx context.Context, numNodes int, nodes []*Node, handler
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				logging.N2n.Info("send message (done)", zap.Int("all_nodes", len(nodes)), zap.Int("requested", numNodes), zap.Int("active", activeCount), zap.Int("sent_to", len(sentTo)), zap.Duration("time", time.Since(start)))
+				logging.N2n.Info("send message (done)",
+					zap.Int("all_nodes", len(nodes)),
+					zap.Int("requested", numNodes),
+					zap.Int("active", activeCount),
+					zap.Int("sent_to", len(sentTo)),
+					zap.Duration("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
@@ -286,6 +291,8 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				selfNode *Node
 				resp     *http.Response
 				ts       = time.Now()
+				cctx     context.Context
+				cancel   func()
 			)
 
 			func() {
@@ -296,12 +303,12 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				selfNode.SetLastActiveTime(ts)
 				selfNode.InduceDelay(receiver)
 
-				cctx, cancel := context.WithTimeout(ctx, timeout)
-				defer cancel()
+				cctx, cancel = context.WithTimeout(ctx, timeout)
 				req = req.WithContext(cctx)
-				//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 				resp, err = httpClient.Do(req)
 			}()
+
+			defer cancel()
 
 			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 			switch err {
