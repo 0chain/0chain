@@ -31,15 +31,15 @@ on:
         description: '0block branch to deploy'
         default: 'staging'
         required: true
-      zdns_branch:
+       zdns_branch:
         description: '0dns branch to deploy'
         default: 'staging'
         required: true
-      explorer_branch:
+       explorer_branch:
         description: 'explorer branch to deploy'
         default: 'staging'
         required: true
-      skip_tests:
+       skip_tests:
         description: '(LAST RESORT ONLY) Skip system tests. This will allow a PR to merge without requiring a green test run.  *By using you certify that the code being merged is not causing system tests to fail*'
         default: 'FALSE'
         required: true
