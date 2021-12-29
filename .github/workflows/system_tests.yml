@@ -58,6 +58,8 @@ jobs:
       zblock_branch: ${{ github.event.inputs.zblock_branch }}
       zdns_branch: ${{ github.event.inputs.zdns_branch }}
       explorer_branch: ${{ github.event.inputs.explorer_branch }}
+      zproxy_branch: staging
+      zsearch_branch: staging
       skip_tests: ${{ github.event.inputs.skip_tests }}
     secrets:
       SVC_ACCOUNT_SECRET: ${{ secrets.SVC_ACCOUNT_SECRET }}
