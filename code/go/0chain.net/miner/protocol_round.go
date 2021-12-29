@@ -725,7 +725,8 @@ func (mc *Chain) getBlockNotarizationResultSync(ctx context.Context, hash string
 }
 
 func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.Block, pr *Round) error {
-	//ctx = common.GetRootContext()
+	//we don't want to cancel previous notarization too early, previous block should be notarized often
+	ctx, _ = context.WithTimeout(common.GetRootContext(), 5*time.Second)
 	//TODO think about loading this block, it is possible not to load this block and use partial state to compute state, not sure what is better
 	pb := mc.GetPreviousBlock(ctx, b)
 	if pb == nil {
