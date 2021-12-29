@@ -59,27 +59,26 @@ jobs:
         TAG=$(echo $2 | sed '"'"'s/\//-/g'"'"')
 
         echo
-        echo "======================================================"
-        echo "Checking [$3] image [${TAG}-${SHORT_SHA}] is present..."
-        echo "======================================================"
-        echo
-
+        echo "================================================================="
+        echo "Finding [$3] docker image for [$2]..."
+        echo "================================================================="
+        echo "Searching for image [${TAG}-${SHORT_SHA}]..."
         docker pull 0chaindev/$3:${TAG}-${SHORT_SHA} > /dev/null || exit_code=$?
 
         if [[ $exit_code == 0 ]];
           then
-            echo "docker image found for [${TAG}-${SHORT_SHA}]"
+            echo "Image found for [${TAG}-${SHORT_SHA}]"
             echo "$(echo $3 | tr 0 Z | awk '"'"'{ print toupper($0) }'"'"')_TAG=${TAG}-${SHORT_SHA}" >> $GITHUB_ENV
           else
             if [ -z "$PR_ID" ];
               then
                 echo "::error title=$3 docker image not found::Docker image NOT found for [${TAG}-${SHORT_SHA}] and PR not raised so will not check for PR merge image. Please publish image manually. at https://github.com/0chain/$1/actions/workflows/build-&-publish-docker-image.yml and try again"
             fi
-            echo "miner docker image NOT found for [${TAG}-${SHORT_SHA}]"
+            echo "Docker image NOT found for [${TAG}-${SHORT_SHA}]"
             MERGE_SHORT_SHA=$(curl --silent -u ${{ secrets.SVC_ACCOUNT_SECRET }}:x-oauth-basic https://api.github.com/repos/0chain/$1/pulls/$PR_ID | jq --raw-output .merge_commit_sha | head -c 8)
-            echo "Checking image [merge-$MERGE_SHORT_SHA] is present..."
+            echo "Searching for image [merge-$MERGE_SHORT_SHA]..."
             docker pull 0chaindev/$3:merge-$MERGE_SHORT_SHA > /dev/null || { echo "::error title=$3 docker image not found::Docker image could not be found for either branch commit sha [${SHORT_SHA}] or PR merge commit sha [$MERGE_SHORT_SHA]. Please publish image manually at https://github.com/0chain/$1/actions/workflows/build-&-publish-docker-image.yml and try again" && exit 1; }
-            echo "docker image found for [merge-$MERGE_SHORT_SHA]"
+            echo "Docker image found for [merge-$MERGE_SHORT_SHA]"
             echo "$(echo $3 | tr 0 Z | awk '"'"'{ print toupper($0) }'"'"')_TAG=merge-$MERGE_SHORT_SHA" >> $GITHUB_ENV
         fi
         unset SHORT_SHA
