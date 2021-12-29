@@ -8,15 +8,15 @@ on:
   workflow_dispatch:
     inputs:
        system_tests_branch:
-        description: 'system_tests branch. Containing the tests you wish to run'
+        description: 'system_tests branch containing the tests you wish to run'
         default: 'master'
         required: true
        zbox_cli_branch:
-        description: '0Box CLI (branch or commit SHA) which the tests will use'
+        description: '0Box CLI branch which the tests will use'
         default: 'staging'
         required: true
        zwallet_cli_branch:
-        description: '0Wallet CLI (branch or commit SHA) which the tests will use'
+        description: '0Wallet CLI branch which the tests will use'
         default: 'staging'
         required: true
        blobber_branch:
@@ -24,15 +24,15 @@ on:
         default: 'staging'
         required: true
        validator_branch:
-        description: 'validator DOCKER IMAGE to deploy'
+        description: 'validator branch to deploy'
         default: 'staging'
         required: true
        zbox_branch:
-        description: '0box DOCKER IMAGE to deploy'
+        description: '0box branch to deploy'
         default: 'staging'
         required: true
        zblock_branch:
-        description: '0block DOCKER IMAGE to deploy'
+        description: '0block branch to deploy'
         default: 'staging'
         required: true
        skip_tests:
@@ -147,7 +147,7 @@ jobs:
       continue-on-error: true
       with:
         state: ${{ job.status }}
-        message: "manual tests failed"
+        message: "manual tests success"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
@@ -161,7 +161,7 @@ jobs:
       continue-on-error: true
       with:
         state: ${{ job.status }}
-        message: "manual tests success"
+        message: "manual tests failed"
         system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
         zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
         zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
