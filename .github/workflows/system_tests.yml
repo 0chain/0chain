@@ -48,8 +48,8 @@ jobs:
     uses: 0chain/actions/.github/workflows/manual_system_tests.yml@feature/notify-PR-convenience
     with:
       system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
-      miner_branch: ${{ github.ref }}
-      sharder_branch: ${{ github.ref }}
+      miner_branch: ${{ github.ref_name }}
+      sharder_branch: ${{ github.ref_name }}
       zbox_cli_branch: ${{ github.event.inputs.zbox_cli_branch }}
       zwallet_cli_branch: ${{ github.event.inputs.zwallet_cli_branch }}
       blobber_branch: ${{ github.event.inputs.blobber_branch }}
