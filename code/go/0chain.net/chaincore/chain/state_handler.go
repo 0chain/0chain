@@ -100,8 +100,8 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	return retObj, nil
 }
 
-/*GetBalanceHandler - get the balance of a client */
-func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+/*Deprecated_GetBalanceHandler - get the balance of a client without eventDB */
+func (c *Chain) Deprecated_GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
@@ -112,6 +112,26 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 		return nil, err
 	}
 	state.ComputeProperties()
+	return state, nil
+}
+
+/*GetBalanceHandler - get the balance of a client */
+func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	clientID := r.FormValue("client_id")
+
+	evnetDb := c.GetEventDb()
+	if evnetDb == nil {
+		return c.Deprecated_GetBalanceHandler(ctx, r)
+	}
+
+	user, err := evnetDb.GetUser(clientID)
+	if err != nil {
+		return c.Deprecated_GetBalanceHandler(ctx, r)
+	}
+
+	// Create State Object from user's transiction hash?
+	// or just use the user's state and build funs to handle user state in smart contract itself?
+
 	return state, nil
 }
 
