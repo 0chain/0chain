@@ -73,15 +73,24 @@ func (edb *EventDb) exists(event Event) (bool, error) {
 }
 
 func (edb *EventDb) removeDuplicate(events []Event) []Event {
+	checkedBlock := make(map[int64]bool)
 	for i := len(events) - 1; i >= 0; i-- {
-		exists, err := edb.exists(events[i])
+		var err error
+		var exists bool
+		var ok bool
+
+		if exists, ok = checkedBlock[events[i].BlockNumber]; !ok {
+			exists, err = edb.exists(events[i])
+		}
 		if err != nil {
 			logging.Logger.Error("error process event",
 				zap.Any("event", events[i]),
 				zap.Error(err),
 			)
 		}
-		if exists || err != nil {
+		isDuplicate := exists || err != nil
+		checkedBlock[events[i].BlockNumber] = isDuplicate
+		if isDuplicate {
 			events[i] = events[len(events)-1]
 			events = events[:len(events)-1]
 		}
