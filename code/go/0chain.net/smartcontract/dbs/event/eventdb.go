@@ -25,7 +25,7 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}); err != nil {
+	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &Miner{}); err != nil {
 		return err
 	}
 	return nil

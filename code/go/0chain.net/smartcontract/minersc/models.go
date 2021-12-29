@@ -1244,7 +1244,7 @@ func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 	}
 
 	for _, edbMiner := range edbMinersList {
-		finalMinersList = append(finalMinersList, minerTableToMinerNode(edbMiner))
+		finalMinersList = append(finalMinersList, *minerTableToMinerNode(&edbMiner))
 	}
 
 	if len(finalMinersList) == 0 {

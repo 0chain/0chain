@@ -3,14 +3,13 @@ package minersc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
 	"gorm.io/gorm"
 )
 
-func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
+func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 
 	var isMinerActive = node.NodeStatusActive
 	if !edbMiner.Active {
@@ -41,7 +40,7 @@ func minerTableToMinerNode(edbMiner event.Miner) MinerNode {
 		Active:          isMinerActive,
 	}
 
-	return MinerNode{
+	return &MinerNode{
 		SimpleNode: &msn,
 	}
 
@@ -69,7 +68,6 @@ func minerNodeToMinerTable(m *MinerNode) event.Miner {
 		LastHealthCheck:   m.LastHealthCheck,
 		Rewards:           m.Stat.GeneratorRewards,
 		Fees:              m.Stat.GeneratorFees,
-		TotalStake:        state.Balance(m.TotalStaked),
 		Active:            m.SimpleNode.Active == node.NodeStatusActive,
 		Longitude:         0,
 		Latitude:          0,
@@ -84,6 +82,18 @@ func emitAddMiner(m *MinerNode, balances cstate.StateContextI) error {
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, m.ID, string(data))
+
+	return nil
+}
+
+func emitAddOrOverwriteMiner(m *MinerNode, balances cstate.StateContextI) error {
+
+	data, err := json.Marshal(minerNodeToMinerTable(m))
+	if err != nil {
+		return fmt.Errorf("marshalling miner: %v", err)
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, m.ID, string(data))
 
 	return nil
 }
