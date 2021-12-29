@@ -29,6 +29,7 @@ const (
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
+	edb.addEventMutex.Lock()
 	newEvents := edb.removeDuplicate(events)
 
 	edb.addEvents(newEvents)
@@ -47,6 +48,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 			)
 		}
 	}
+	edb.addEventMutex.Unlock()
 }
 
 func (edb *EventDb) addStat(event Event) error {

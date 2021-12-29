@@ -1,6 +1,8 @@
 package event
 
 import (
+	"sync"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
 )
@@ -11,7 +13,8 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 		return nil, err
 	}
 	eventDb := &EventDb{
-		Store: db,
+		Store:         db,
+		addEventMutex: &sync.Mutex{},
 	}
 
 	if err := eventDb.AutoMigrate(); err != nil {
@@ -22,6 +25,7 @@ func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 
 type EventDb struct {
 	dbs.Store
+	addEventMutex *sync.Mutex
 }
 
 func (edb *EventDb) AutoMigrate() error {
