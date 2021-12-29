@@ -3,6 +3,7 @@ package event
 import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/dbs"
 	"fmt"
 	"gorm.io/gorm"
 )
@@ -90,7 +91,6 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 			"last_health_check":   miner.LastHealthCheck,
 			"rewards":             miner.Rewards,
 			"fees":                miner.Fees,
-			"active":              miner.Active,
 			"longitude":           miner.Longitude,
 			"latitude":            miner.Latitude,
 		})
@@ -121,4 +121,23 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 			mn.MinerID, result.Error)
 	}
 	return count > 0, nil
+}
+
+func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
+	var miner = Miner{MinerID: updates.Id}
+	exists, err := miner.exists(edb)
+
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("miner %v not in database cannot update",
+			miner.MinerID)
+	}
+
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(&Miner{MinerID: miner.MinerID}).
+		Updates(updates.Updates)
+	return result.Error
 }

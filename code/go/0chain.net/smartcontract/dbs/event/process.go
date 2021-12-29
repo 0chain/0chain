@@ -28,6 +28,7 @@ const (
 	TagDeleteBlobber
 	TagAddMiner
 	TagAddOrOverwriteMiner
+	TagUpdateMiner
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
@@ -83,6 +84,13 @@ func (edb *EventDb) addStat(event Event) error {
 			return err
 		}
 		return edb.addOrOverwriteMiner(miner)
+	case TagUpdateMiner:
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateMiner(updates)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

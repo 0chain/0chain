@@ -3,6 +3,7 @@ package minersc
 import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
@@ -40,53 +41,86 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 
 }
 
-func minerNodeToMinerTable(m *MinerNode) event.Miner {
+func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 
 	return event.Miner{
 		Model:             gorm.Model{},
-		MinerID:           m.ID,
-		N2NHost:           m.N2NHost,
-		Host:              m.Host,
-		Port:              m.Port,
-		Path:              m.Path,
-		PublicKey:         m.PublicKey,
-		ShortName:         m.ShortName,
-		BuildTag:          m.BuildTag,
-		TotalStaked:       state.Balance(m.TotalStaked),
-		Delete:            m.Delete,
-		DelegateWallet:    m.DelegateWallet,
-		ServiceCharge:     m.ServiceCharge,
-		NumberOfDelegates: m.NumberOfDelegates,
-		MinStake:          m.MinStake,
-		MaxStake:          m.MaxStake,
-		LastHealthCheck:   m.LastHealthCheck,
-		Rewards:           m.Stat.GeneratorRewards,
-		Fees:              m.Stat.GeneratorFees,
+		MinerID:           mn.ID,
+		N2NHost:           mn.N2NHost,
+		Host:              mn.Host,
+		Port:              mn.Port,
+		Path:              mn.Path,
+		PublicKey:         mn.PublicKey,
+		ShortName:         mn.ShortName,
+		BuildTag:          mn.BuildTag,
+		TotalStaked:       state.Balance(mn.TotalStaked),
+		Delete:            mn.Delete,
+		DelegateWallet:    mn.DelegateWallet,
+		ServiceCharge:     mn.ServiceCharge,
+		NumberOfDelegates: mn.NumberOfDelegates,
+		MinStake:          mn.MinStake,
+		MaxStake:          mn.MaxStake,
+		LastHealthCheck:   mn.LastHealthCheck,
+		Rewards:           mn.Stat.GeneratorRewards,
+		Fees:              mn.Stat.GeneratorFees,
 		Longitude:         0,
 		Latitude:          0,
 	}
 }
 
-func emitAddMiner(m *MinerNode, balances cstate.StateContextI) error {
+func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(minerNodeToMinerTable(m))
+	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {
 		return fmt.Errorf("marshalling miner: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddMiner, m.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, string(data))
 
 	return nil
 }
 
-func emitAddOrOverwriteMiner(m *MinerNode, balances cstate.StateContextI) error {
+func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(minerNodeToMinerTable(m))
+	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {
 		return fmt.Errorf("marshalling miner: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, m.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteMiner, mn.ID, string(data))
 
+	return nil
+}
+
+func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI) error {
+
+	data, err := json.Marshal(dbs.DbUpdates{
+		Id: mn.ID,
+		Updates: map[string]interface{}{
+			"n2n_host":            mn.N2NHost,
+			"host":                mn.Host,
+			"port":                mn.Port,
+			"path":                mn.Path,
+			"public_key":          mn.PublicKey,
+			"short_name":          mn.ShortName,
+			"build_tag":           mn.BuildTag,
+			"total_staked":        mn.TotalStaked,
+			"delete":              mn.Delete,
+			"delegate_wallet":     mn.DelegateWallet,
+			"service_charge":      mn.ServiceCharge,
+			"number_of_delegates": mn.NumberOfDelegates,
+			"min_stake":           mn.MinStake,
+			"max_stake":           mn.MaxStake,
+			"last_health_check":   mn.LastHealthCheck,
+			"rewards":             mn.SimpleNode.Stat.GeneratorRewards,
+			"fees":                mn.SimpleNode.Stat.GeneratorFees,
+			"longitude":           0,
+			"latitude":            0,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshalling update: %v", err)
+	}
+	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, string(data))
 	return nil
 }

@@ -356,7 +356,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
-	if err = emitAddOrOverwriteMiner(mn, balances); err != nil {
+	if err = emitUpdateMiner(mn, balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
 	}
 
