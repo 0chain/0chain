@@ -63,3 +63,9 @@ jobs:
       skip_tests: ${{ github.event.inputs.skip_tests }}
     secrets:
       SVC_ACCOUNT_SECRET: ${{ secrets.SVC_ACCOUNT_SECRET }}
+      DEV1KC: ${{ secrets.DEV1KC }}
+      DEV2KC: ${{ secrets.DEV2KC }}
+      DEV3KC: ${{ secrets.DEV3KC }}
+      DEV4KC: ${{ secrets.DEV4KC }}
+      DEV5KC: ${{ secrets.DEV5KC }}
+      SMART_CONTRACT_OWNER_WALLET_JSON: ${{ secrets.SMART_CONTRACT_OWNER_WALLET_JSON }}
