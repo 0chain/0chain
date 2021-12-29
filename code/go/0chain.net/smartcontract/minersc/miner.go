@@ -133,10 +133,10 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	if _, ok := allMap[newMiner.GetKey()]; !ok {
 		allMiners.Nodes = append(allMiners.Nodes, newMiner)
 
-		//if err = updateMinersList(balances, allMiners); err != nil {
-		//	return "", common.NewErrorf("add_miner",
-		//		"saving all miners list: %v", err)
-		//}
+		if err = updateMinersList(balances, allMiners); err != nil {
+			return "", common.NewErrorf("add_miner",
+				"saving all miners list: %v", err)
+		}
 
 		err = emitAddMiner(newMiner, balances)
 		if err != nil {
@@ -147,15 +147,15 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		update = true
 	}
 
-	//if !msc.doesMinerExist(newMiner.GetKey(), balances) {
-	//	if err = newMiner.save(balances); err != nil {
-	//		return "", common.NewError("add_miner", err.Error())
-	//	}
-	//
-	//	msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
-	//
-	//	update = true
-	//}
+	if !msc.doesMinerExist(newMiner.GetKey(), balances) {
+		if err = newMiner.save(balances); err != nil {
+			return "", common.NewError("add_miner", err.Error())
+		}
+
+		msc.verifyMinerState(balances, "add_miner: Checking all miners list afterInsert")
+
+		update = true
+	}
 
 	if !update {
 		logging.Logger.Debug("Add miner already exists", zap.String("ID", newMiner.ID))
@@ -352,9 +352,9 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 	mn.MinStake = update.MinStake
 	mn.MaxStake = update.MaxStake
 
-	//if err = mn.save(balances); err != nil {
-	//	return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
-	//}
+	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
+	}
 
 	if err = emitAddOrOverwriteMiner(mn, balances); err != nil {
 		return "", common.NewErrorf("update_miner_settings", "saving: %v", err)
@@ -390,31 +390,16 @@ func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (
 // getMinerNode
 func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 
-	// Getting miner node from event db
-	miner, err := state.GetEventDB().GetMiner(id)
-	if err != nil {
-		logging.Logger.Error("error getting miner from table:",
-			zap.Error(err))
-	} else {
-		mn := minerTableToMinerNode(miner)
-		return mn, err
-	}
-
-	// Getting miner from MPT
-	// todo: to be removed once the entire system is shifted to eventdb
 	mn := NewMinerNode()
 	mn.ID = id
 	ms, err := state.GetTrieNode(mn.GetKey())
 	if err != nil {
-		logging.Logger.Error("error getting miner from trie :",
-			zap.Error(err))
-	} else {
-		if err := mn.Decode(ms.Encode()); err != nil {
-			return nil, err
-		}
-		return mn, nil
+		return nil, err
 	}
 
-	return nil, common.NewErrorf("get_miner_node", "unable to get miner: %v", id)
+	if err := mn.Decode(ms.Encode()); err != nil {
+		return nil, err
+	}
 
+	return mn, nil
 }

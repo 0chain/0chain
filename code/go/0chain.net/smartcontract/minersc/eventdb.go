@@ -2,7 +2,7 @@ package minersc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
@@ -10,11 +10,6 @@ import (
 )
 
 func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
-
-	var isMinerActive = node.NodeStatusActive
-	if !edbMiner.Active {
-		isMinerActive = node.NodeStatusInactive
-	}
 
 	msn := SimpleNode{
 		ID:                edbMiner.MinerID,
@@ -25,7 +20,7 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 		PublicKey:         edbMiner.PublicKey,
 		ShortName:         edbMiner.ShortName,
 		BuildTag:          edbMiner.BuildTag,
-		TotalStaked:       edbMiner.TotalStaked,
+		TotalStaked:       int64(edbMiner.TotalStaked),
 		Delete:            edbMiner.Delete,
 		DelegateWallet:    edbMiner.DelegateWallet,
 		ServiceCharge:     edbMiner.ServiceCharge,
@@ -37,7 +32,6 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 			GeneratorFees:    edbMiner.Fees,
 		},
 		LastHealthCheck: edbMiner.LastHealthCheck,
-		Active:          isMinerActive,
 	}
 
 	return &MinerNode{
@@ -58,7 +52,7 @@ func minerNodeToMinerTable(m *MinerNode) event.Miner {
 		PublicKey:         m.PublicKey,
 		ShortName:         m.ShortName,
 		BuildTag:          m.BuildTag,
-		TotalStaked:       m.TotalStaked,
+		TotalStaked:       state.Balance(m.TotalStaked),
 		Delete:            m.Delete,
 		DelegateWallet:    m.DelegateWallet,
 		ServiceCharge:     m.ServiceCharge,
@@ -68,7 +62,6 @@ func minerNodeToMinerTable(m *MinerNode) event.Miner {
 		LastHealthCheck:   m.LastHealthCheck,
 		Rewards:           m.Stat.GeneratorRewards,
 		Fees:              m.Stat.GeneratorFees,
-		Active:            m.SimpleNode.Active == node.NodeStatusActive,
 		Longitude:         0,
 		Latitude:          0,
 	}

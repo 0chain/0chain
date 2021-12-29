@@ -17,7 +17,7 @@ type Miner struct {
 	PublicKey         string
 	ShortName         string
 	BuildTag          string
-	TotalStaked       int64
+	TotalStaked       state.Balance
 	Delete            bool
 	DelegateWallet    string
 	ServiceCharge     float64

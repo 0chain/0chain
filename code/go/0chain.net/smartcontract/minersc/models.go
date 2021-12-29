@@ -821,9 +821,6 @@ type SimpleNode struct {
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
-
-	//Active keeps status of Node - active(node.NodeStatusActive) or inactive(node.NodeStatusInactive)
-	Active int `json:"active"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -1221,34 +1218,13 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 
 // getMinersList returns miners list
 func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
-
-	edbMinersList, err := state.GetEventDB().GetMiners()
-	if err != nil {
-		logging.Logger.Error("no miners found from miners event db")
-		// todo: once MPT based getNodesList is deprected return nil, err here
-	}
-
 	minerNodes, err := getNodesList(state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
-			logging.Logger.Error(err.Error())
-			//return nil, err
+			return nil, err
 		}
 
-		//return &MinerNodes{}, nil
-	}
-
-	var finalMinersList []MinerNode
-	for _, miner := range minerNodes.Nodes {
-		finalMinersList = append(finalMinersList, *miner)
-	}
-
-	for _, edbMiner := range edbMinersList {
-		finalMinersList = append(finalMinersList, *minerTableToMinerNode(&edbMiner))
-	}
-
-	if len(finalMinersList) == 0 {
-		return nil, fmt.Errorf("miners list is empty")
+		return &MinerNodes{}, nil
 	}
 
 	return minerNodes, nil
