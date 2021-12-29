@@ -121,7 +121,7 @@ jobs:
         with:
           github-token: ${{ github.token }}
 
-      - name: "Set PR Status Pending"
+      - name: "Set PR status as pending"
         uses: niteoweb/pull_request_status_action@v1.0.0
         if: steps.findPr.outputs.number
         with:
@@ -173,25 +173,12 @@ jobs:
           run_flaky_tests: false
           retry_failures: true
 
-      - name: "Set PR Status Success"
-        if: ${{ success() && steps.findPr.outputs.number }}
+      - name: "Set PR status as ${{ job.status }}"
+        if: ${{ (success() || failure() || cancelled()) && steps.findPr.outputs.number }}
         uses: niteoweb/pull_request_status_action@v1.0.0
         with:
           pr_number: ${{ steps.findPr.outputs.pr }}
           description: "System tests with default config completed successfully"
-          state: ${{ job.status }}
-          repository: ${{ github.repository }}
-          context: "0Chain System Tests"
-          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: "Set PR Status Failed"
-        if: ${{ failure() && steps.findPr.outputs.number }}
-        uses: niteoweb/pull_request_status_action@v1.0.0
-        with:
-          pr_number: ${{ steps.findPr.outputs.pr }}
-          description: "System tests with default config failed. Try running manually with more specific config"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
           context: "0Chain System Tests"
