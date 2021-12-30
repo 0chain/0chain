@@ -440,6 +440,10 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil && lfb.Round == b.Round-1 && lfb.IsStateComputed() {
 		// previous round is latest finalized round
+		if b.PrevHash != lfb.Hash {
+			logging.Logger.Error("get_previous_block - can't set lfb as previous block, hash mismatch")
+			return nil
+		}
 		b.SetPreviousBlock(lfb)
 		logging.Logger.Info("get_previous_block - previous block is lfb",
 			zap.Int64("round", b.Round),
