@@ -38,6 +38,10 @@ const (
 	TagAddOrOverwriteMiner
 	TagUpdateMiner
 	TagDeleteMiner
+	TagAddSharder
+	TagAddOrOverwriteSharder
+	TagUpdateSharder
+	TagDeleteSharder
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -141,6 +145,29 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateMiner(updates)
 	case TagDeleteMiner:
 		return edb.deleteMiner(event.Data)
+	case TagAddSharder:
+		var sharder Sharder
+		err := json.Unmarshal([]byte(event.Data), &sharder)
+		if err != nil {
+			return err
+		}
+		return edb.addSharder(sharder)
+	case TagAddOrOverwriteSharder:
+		var sharder Sharder
+		err := json.Unmarshal([]byte(event.Data), &sharder)
+		if err != nil {
+			return err
+		}
+		return edb.addOrOverwriteSharder(sharder)
+	case TagUpdateSharder:
+		var updates dbs.DbUpdates
+		err := json.Unmarshal([]byte(event.Data), &updates)
+		if err != nil {
+			return err
+		}
+		return edb.updateSharder(updates)
+	case TagDeleteSharder:
+		return edb.deleteSharder(event.Data)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
