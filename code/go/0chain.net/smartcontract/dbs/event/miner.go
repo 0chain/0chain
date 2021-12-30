@@ -70,6 +70,7 @@ func (edb *EventDb) addMiner(miner Miner) error {
 }
 
 func (edb *EventDb) overwriteMiner(miner Miner) error {
+
 	result := edb.Store.Get().
 		Model(&Miner{}).
 		Where(&Miner{MinerID: miner.MinerID}).
@@ -94,10 +95,12 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 			"longitude":           miner.Longitude,
 			"latitude":            miner.Latitude,
 		})
+
 	return result.Error
 }
 
 func (edb *EventDb) addOrOverwriteMiner(miner Miner) error {
+
 	exists, err := miner.exists(edb)
 	if err != nil {
 		return err
@@ -107,11 +110,14 @@ func (edb *EventDb) addOrOverwriteMiner(miner Miner) error {
 	}
 
 	err = edb.addMiner(miner)
+
 	return err
 }
 
 func (mn *Miner) exists(edb *EventDb) (bool, error) {
+
 	var count int64
+
 	result := edb.Get().
 		Model(&Miner{}).
 		Where(&Miner{MinerID: mn.MinerID}).
@@ -120,10 +126,12 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 		return false, fmt.Errorf("error searching for miner %v, error %v",
 			mn.MinerID, result.Error)
 	}
+
 	return count > 0, nil
 }
 
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
+
 	var miner = Miner{MinerID: updates.Id}
 	exists, err := miner.exists(edb)
 
@@ -139,5 +147,15 @@ func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 		Model(&Miner{}).
 		Where(&Miner{MinerID: miner.MinerID}).
 		Updates(updates.Updates)
+
+	return result.Error
+}
+
+func (edb *EventDb) deleteMiner(id string) error {
+
+	result := edb.Store.Get().
+		Where(&Miner{MinerID: id}).
+		Delete(&Miner{})
+
 	return result.Error
 }

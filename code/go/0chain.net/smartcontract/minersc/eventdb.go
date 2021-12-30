@@ -124,3 +124,15 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI) error {
 	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, string(data))
 	return nil
 }
+
+func emitDeleteMiner(id string, balances cstate.StateContextI) error {
+
+	data, err := json.Marshal(event.Miner{MinerID: id})
+	if err != nil {
+		return fmt.Errorf("marshalling miner: %v", err)
+	}
+
+	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, string(data))
+
+	return nil
+}

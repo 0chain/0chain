@@ -276,6 +276,11 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
+			if err != nil {
+				return
+			}
+
+			err = emitDeleteMiner(mn.ID, balances)
 		}
 	} else {
 		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
