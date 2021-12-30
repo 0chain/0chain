@@ -312,7 +312,7 @@ type FetchedNotarizedBlockHandler interface {
 }
 
 //go: generate
-//go:generate mockery -name Chainer --case underscore -inpkg -testonly
+//go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {
 	// LFB tickets work

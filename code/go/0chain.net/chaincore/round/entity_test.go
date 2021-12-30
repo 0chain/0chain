@@ -290,7 +290,7 @@ func TestRound_SetRandomSeed(t *testing.T) {
 	)
 	atomic.StoreInt64(&r.RandomSeed, seed)
 	atomic.StoreUint32(&r.hasRandomSeed, 1)
-	r.phase = 1
+	r.phase = ShareVRF
 
 	settedSeedR := NewRound(2)
 	settedSeedR.hasRandomSeed = 1

@@ -606,9 +606,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
-	if lfmb == nil {
-		return nil
-	}
 	// TODO: improve this lfmbMutex
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()

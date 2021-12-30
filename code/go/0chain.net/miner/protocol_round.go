@@ -1022,7 +1022,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	if !mc.ValidGenerator(r, b) {
-		return nil, common.NewError("verify_round_block", "Not a valid generator")
+		return nil, common.NewError("verify_round_block", "not a valid generator")
 	}
 
 	if b.MinerID == node.Self.Underlying().GetKey() {
