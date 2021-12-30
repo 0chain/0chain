@@ -442,7 +442,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	if err = emitUpdateMiner(mn, balances); err != nil {
+	if err = emitUpdateMiner(mn, balances, false); err != nil {
 		return "", common.NewErrorf("pay_fees", "saving generator node to db: %v", err)
 	}
 
