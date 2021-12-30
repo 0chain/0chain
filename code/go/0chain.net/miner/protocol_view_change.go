@@ -194,7 +194,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		logging.Logger.Debug("dkg process: run phase function",
 			zap.Any("name", getFunctionName(phaseFunc)))
 
-		lfmb := mc.GetLatestFinalizedMagicBlock()
+		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
@@ -334,10 +334,7 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 			return new(minersc.DKGMinerNodes)
 		}, func(val util.Serializable) bool {
 			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
-				if dmn.StartRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return dmn.StartRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {
@@ -388,7 +385,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
-		n.PublicKey = v.PublicKey
+		n.SetPublicKey(v.PublicKey)
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
@@ -566,10 +563,7 @@ func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *
 			return block.NewMagicBlock()
 		}, func(val util.Serializable) bool {
 			if mx, ok := val.(*block.MagicBlock); ok {
-				if mx.StartingRound < cmb.StartingRound {
-					return true // reject
-				}
-				return false // keep
+				return mx.StartingRound < cmb.StartingRound
 			}
 			return true // reject
 		}, func(val util.Serializable) (high int64) {
@@ -914,10 +908,13 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 // previous MB and corresponding DKG. The previous MB can be useless in
 // some cases but this method just makes sure it is.
 func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
 
 	logging.Logger.Info("setup latest and previous fmbs")
-	lfmb := mc.GetLatestFinalizedMagicBlock()
-	if lfmb.Sharders == nil || lfmb.Miners == nil {
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb == nil || lfmb.Sharders == nil || lfmb.Miners == nil {
 		return
 	}
 

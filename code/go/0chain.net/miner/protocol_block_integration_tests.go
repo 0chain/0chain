@@ -140,7 +140,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				return false
 			}
 		}
-		if err := mc.UpdateState(ctx, b, txn); err != nil {
+		events, err := mc.UpdateState(ctx, b, txn)
+		b.Events = append(b.Events, events...)
+		if err != nil {
 			if debugTxn {
 				logging.Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}

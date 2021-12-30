@@ -61,7 +61,9 @@ func BLS0GenerateThresholdKeyShares(t, n int, originalKey SignatureScheme) ([]Th
 
 		share := &BLS0ChainThresholdScheme{}
 		share.privateKey = sk.GetLittleEndian()
-		share.publicKey = sk.GetPublicKey().Serialize()
+		share.secKey = &sk
+		share.pubKey = sk.GetPublicKey()
+		share.publicKey = share.pubKey.Serialize()
 		share.id = id
 
 		shares = append(shares, share)

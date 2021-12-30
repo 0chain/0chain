@@ -241,6 +241,9 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 		// don't replace if blobber has removed from the all blobbers list;
 		// for example, if the blobber has removed, then it shouldn't be
 		// in the all blobbers list
+		if err := emitUpdateBlobber(b, balances); err != nil {
+			return fmt.Errorf("emmiting blobber %v: %v", b, err)
+		}
 	}
 
 	// save
@@ -1462,6 +1465,10 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 		// update the blobber in all (replace with existing one)
 		allb.Nodes.update(b)
+		if err := emitUpdateBlobber(b, balances); err != nil {
+			return common.NewError("fini_alloc_failed",
+				"emitting blobber "+b.ID+": "+err.Error())
+		}
 	}
 	cp.Balance -= passPayments
 	// move challenge pool rest to write pool

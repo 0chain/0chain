@@ -7,6 +7,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/mock"
@@ -27,10 +28,18 @@ func zcnToBalance(token float64) state.Balance {
 func MakeMockStateContext() *mocks.StateContextI {
 	ctx := mocks.StateContextI{}
 
+	// GetSignatureScheme
+
+	ctx.On(
+		"GetSignatureScheme",
+	).Return(encryption.NewBLS0ChainScheme())
+
 	// Global Node
+
 	globalNode := &GlobalNode{ID: ADDRESS, MinStakeAmount: 11}
 
 	// User Node
+
 	userNodes := make(map[string]*UserNode)
 	for _, client := range authorizers {
 		userNode := createUserNode(client, int64(0))
@@ -38,6 +47,7 @@ func MakeMockStateContext() *mocks.StateContextI {
 	}
 
 	// AuthorizerNodes
+
 	ans := &AuthorizerNodes{}
 	ans.NodeMap = make(map[string]*AuthorizerNode)
 	for _, authorizer := range authorizers {
@@ -48,6 +58,7 @@ func MakeMockStateContext() *mocks.StateContextI {
 	}
 
 	// Transfers
+
 	var transfers []*state.Transfer
 
 	/// GetClientBalance
@@ -169,7 +180,7 @@ func MakeMockStateContext() *mocks.StateContextI {
 
 	for _, authorizer := range authorizers {
 		client := authorizer
-		mintPayload, _, _ := CreateMintPayload(client, authorizers)
+		mintPayload, _ := CreateMintPayload(client, authorizers, &ctx)
 
 		mint := &state.Mint{
 			Minter:     globalNode.ID,

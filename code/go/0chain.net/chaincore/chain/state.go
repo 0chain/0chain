@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"errors"
 
 	"0chain.net/chaincore/block"
@@ -32,13 +34,15 @@ func init() {
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
 
 /*ComputeState - compute the state for the block */
-func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	return c.computeState(ctx, b)
+func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
+	return c.ComputeBlockStateWithLock(ctx, func() error {
+		return c.computeState(ctx, b)
+	})
 }
 
 // ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.computeState(ctx, b)
+	err := c.ComputeState(ctx, b)
 	if err != nil {
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
@@ -75,7 +79,9 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 			zap.String("hash", b.Hash))
 		return err
 	}
-	return b.SaveChanges(ctx, c)
+	cctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+	defer cancel()
+	return b.SaveChanges(cctx, c)
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -99,7 +105,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	var err error
 	ts := time.Now()
 	done := make(chan bool, 1)
-	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout)
+	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
 	defer cancelf()
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
@@ -122,31 +128,41 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) error {
+func (c *Chain) UpdateState(
+	ctx context.Context, b *block.Block, txn *transaction.Transaction,
+) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	return c.updateState(ctx, b, txn)
 }
 
 // NewStateContext creation helper.
-func (c *Chain) NewStateContext(b *block.Block, s util.MerklePatriciaTrieI,
-	txn *transaction.Transaction) (balances *bcstate.StateContext) {
-
+func (c *Chain) NewStateContext(
+	b *block.Block,
+	s util.MerklePatriciaTrieI,
+	txn *transaction.Transaction,
+	eventDb *event.EventDb,
+) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
 		c.GetBlockSharders,
-		c.GetLatestFinalizedMagicBlock,
+		func() *block.Block {
+			return c.GetLatestFinalizedMagicBlock(context.Background())
+		},
 		c.GetCurrentMagicBlock,
-		c.GetSignatureScheme)
+		c.GetSignatureScheme,
+		eventDb,
+	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (
-	err error) {
+func (c *Chain) updateState(
+	ctx context.Context, b *block.Block, txn *transaction.Transaction,
+) (events []event.Event, err error) {
 
 	// check if the block's ClientState has root value
 	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
 	if err != nil {
-		return common.NewErrorf("update_state_failed",
+		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
 			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
 	}
@@ -154,15 +170,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction
 		startRoot   = clientState.GetRoot()
-		sctx        = c.NewStateContext(b, clientState, txn)
+		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
+	defer func() { events = sctx.GetEvents() }()
 
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
 		var output string
 		t := time.Now()
-		if output, err = c.ExecuteSmartContract(ctx, txn, sctx); err != nil {
+		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
+		if err != nil {
+			sctx.EmitError(err)
 			logging.Logger.Error("Error executing the SC",
 				zap.Error(err),
 				zap.String("block", b.Hash),
@@ -192,7 +211,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 	default:
 		logging.Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+		return nil, fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -263,7 +282,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(b.ClientState, c.OwnerID)
+		os, err = c.getState(b.ClientState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),

@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -8,8 +10,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type testBalances struct {
@@ -100,14 +102,17 @@ func (tb *testBalances) GetBlockSharders(*block.Block) []string {
 }
 
 // stubs
-func (tb *testBalances) GetState() util.MerklePatriciaTrieI       { return nil }
-func (tb *testBalances) GetTransaction() *transaction.Transaction { return nil }
-func (tb *testBalances) Validate() error                          { return nil }
-func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
-func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
-func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
-func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
-}
+func (tb *testBalances) GetState() util.MerklePatriciaTrieI                        { return nil }
+func (tb *testBalances) GetTransaction() *transaction.Transaction                  { return nil }
+func (tb *testBalances) Validate() error                                           { return nil }
+func (tb *testBalances) GetMints() []*state.Mint                                   { return nil }
+func (tb *testBalances) SetStateContext(*state.State) error                        { return nil }
+func (tb *testBalances) GetTransfers() []*state.Transfer                           { return nil }
+func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer)                {}
+func (tb *testBalances) GetEventDB() *event.EventDb                                { return nil }
+func (tb *testBalances) EmitEvent(event.EventType, event.EventTag, string, string) {}
+func (tb *testBalances) EmitError(error)                                           {}
+func (tb *testBalances) GetEvents() []event.Event                                  { return nil }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }

@@ -191,7 +191,8 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	bss := sc.BlockSyncStats
 
 	// Get the configuration
-	config := &sc.HCCycleScan[scanMode]
+	h := sc.HCCycleScan()[scanMode]
+	config := &h
 
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
@@ -353,7 +354,8 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		zap.Int64("SweepRate", bc.SweepRate))
 
 	// End of the cycle. Sleep between cycles.
-	config := &sc.HCCycleScan[scanMode]
+	scan := sc.HCCycleScan()[scanMode]
+	config := &scan
 
 	sleepTime := config.RepeatInterval
 	wakeToReport := config.ReportStatus
@@ -401,7 +403,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	defer sc.hcUpdateBlockStatus(scanMode, &hcStatus)
 
 	bss := sc.BlockSyncStats
-	config := &sc.HCCycleScan[scanMode]
+	scan := sc.HCCycleScan()
+	config := &scan[scanMode]
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
 

@@ -151,8 +151,11 @@ type Runner struct {
 
 	// state
 
-	lastVC    *VCInfo // last view change
-	lastRound Round   // last accepted round
+	lastVC            *VCInfo // last view change
+	lastAcceptedRound struct {
+		Round     // last accepted round
+		time.Time // timestamp of acceptance
+	}
 
 	// wait for
 	waitPhase              config.WaitPhase              //
@@ -562,8 +565,18 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
+	if r.lastAcceptedRound.Round > 0 && re.Round > r.lastAcceptedRound.Round {
+		threshold := r.conf.GetStuckWarningThreshold()
+		if threshold > 0 {
+			duration := time.Since(r.lastAcceptedRound.Time)
+			if duration > threshold {
+				log.Print("[WARN] chain was stuck for ", duration)
+			}
+		}
+	}
+
 	if !r.waitNoProgress.IsZero() {
-		if r.lastRound < re.Round && time.Now().After(r.waitNoProgress.Start) {
+		if r.lastAcceptedRound.Round < re.Round && time.Now().After(r.waitNoProgress.Start) {
 			return fmt.Errorf("got round %d, but 'no progress' is expected", re.Round)
 		}
 	}
@@ -590,7 +603,13 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	}
 
 	// set last round
-	r.lastRound = re.Round
+	r.lastAcceptedRound = struct {
+		Round
+		time.Time
+	}{
+		re.Round,
+		time.Now(),
+	}
 
 	if r.waitRound.IsZero() {
 		return // doesn't wait for a round
@@ -814,7 +833,7 @@ func (r *Runner) resetWaiters() {
 }
 
 func (r *Runner) resetRounds() {
-	r.lastRound = 0
+	r.lastAcceptedRound.Round = 0
 	r.lastVC = nil
 }
 

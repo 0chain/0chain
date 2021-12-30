@@ -4,6 +4,10 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/smartcontract/partitions"
+
+	"0chain.net/smartcontract/dbs/event"
+
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/core/encryption"
 	sc "0chain.net/smartcontract/benchmark"
@@ -256,6 +260,7 @@ func setupMockChallenges(
 }
 
 func AddMockBlobbers(
+	eventDb *event.EventDb,
 	balances cstate.StateContextI,
 ) []*StorageNode {
 	var sscId = StorageSmartContract{
@@ -290,6 +295,31 @@ func AddMockBlobbers(
 		if err != nil {
 			panic(err)
 		}
+		if viper.GetBool(sc.EventDbEnabled) {
+			blobberDb := event.Blobber{
+				BlobberID:               blobber.ID,
+				BaseURL:                 blobber.BaseURL,
+				Latitude:                blobber.Geolocation.Latitude,
+				Longitude:               blobber.Geolocation.Longitude,
+				ReadPrice:               int64(blobber.Terms.ReadPrice),
+				WritePrice:              int64(blobber.Terms.WritePrice),
+				MinLockDemand:           blobber.Terms.MinLockDemand,
+				MaxOfferDuration:        blobber.Terms.MaxOfferDuration.String(),
+				ChallengeCompletionTime: blobber.Terms.ChallengeCompletionTime.String(),
+				Capacity:                blobber.Capacity,
+				Used:                    blobber.Used,
+				LastHealthCheck:         int64(blobber.LastHealthCheck),
+				DelegateWallet:          blobber.StakePoolSettings.DelegateWallet,
+				MinStake:                int64(blobber.StakePoolSettings.MaxStake),
+				MaxStake:                int64(blobber.StakePoolSettings.MaxStake),
+				NumDelegates:            blobber.StakePoolSettings.NumDelegates,
+				ServiceCharge:           blobber.StakePoolSettings.ServiceCharge,
+			}
+			result := eventDb.Store.Get().Create(&blobberDb)
+			if result.Error != nil {
+				panic(result.Error)
+			}
+		}
 	}
 	_, err := balances.InsertTrieNode(ALL_BLOBBERS_KEY, &blobbers)
 	if err != nil {
@@ -305,7 +335,8 @@ func AddMockValidators(
 	var sscId = StorageSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),
 	}.ID
-	var validators ValidatorNodes
+	var validatornodes []*ValidationNode
+	var validators []partitions.ValidationNode
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		id := getMockValidatorId(i)
 		validator := &ValidationNode{
@@ -314,17 +345,25 @@ func AddMockValidators(
 			PublicKey:         publicKeys[i],
 			StakePoolSettings: getMockStakePoolSettings(id),
 		}
-		validators.Nodes = append(validators.Nodes, validator)
 		_, err := balances.InsertTrieNode(validator.GetKey(sscId), validator)
 		if err != nil {
 			panic(err)
 		}
+		validatornodes = append(validatornodes, validator)
+		validators = append(validators, partitions.ValidationNode{
+			Id:  id,
+			Url: id + ".com",
+		})
 	}
-	_, err := balances.InsertTrieNode(ALL_VALIDATORS_KEY, &validators)
+	all := partitions.NewPopulatedValidatorSelector(
+		ALL_VALIDATORS_KEY, allValidatorsPartitionSize, validators,
+	)
+
+	err := all.Save(balances)
 	if err != nil {
 		panic(err)
 	}
-	return validators.Nodes
+	return validatornodes
 }
 
 func GetMockStakePools(

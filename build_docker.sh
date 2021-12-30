@@ -28,25 +28,25 @@ fi
 echo -e "${ZCM}: Docker image build is started.. \n"
 sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
 sudo docker build --build-arg GIT_COMMIT=$GIT_COMMIT -t ${REGISTRY_MINER}:${TAG} -f "$DOCKERFILE_MINER" .
-sudo docker pull ${REGISTRY_MINER}:latest
-sudo docker tag ${REGISTRY_MINER}:latest ${REGISTRY_MINER}:stable_latest
-echo "Re-tagging the remote latest tag to stable_latest"
-sudo docker push ${REGISTRY_MINER}:stable_latest
-sudo docker tag ${REGISTRY_MINER}:${TAG} ${REGISTRY_MINER}:latest
-echo "Pushing the new latest tag to dockerhub"
-sudo docker push ${REGISTRY_MINER}:latest
+# sudo docker pull ${REGISTRY_MINER}:latest
+# sudo docker tag ${REGISTRY_MINER}:latest ${REGISTRY_MINER}:stable_latest
+# echo "Re-tagging the remote latest tag to stable_latest"
+# sudo docker push ${REGISTRY_MINER}:stable_latest
+# sudo docker tag ${REGISTRY_MINER}:${TAG} ${REGISTRY_MINER}:latest
+# echo "Pushing the new latest tag to dockerhub"
+# sudo docker push ${REGISTRY_MINER}:latest
 echo "Pushing the new tag to dockerhub tagged as ${REGISTRY_MINER}:${TAG}"
 sudo docker push ${REGISTRY_MINER}:${TAG}
 
 echo -e "${ZCS}: Docker image build is started.. \n"
 sudo docker build --build-arg GIT_COMMIT=$GIT_COMMIT -t ${REGISTRY_SHARDER}:${TAG} -f "$DOCKERFILE_SHARDER" .
-sudo docker pull ${REGISTRY_SHARDER}:latest
-sudo docker tag ${REGISTRY_SHARDER}:latest ${REGISTRY_SHARDER}:stable_latest
-echo "Re-tagging the remote latest tag to stable_latest"
-sudo docker push ${REGISTRY_SHARDER}:stable_latest
-sudo docker tag ${REGISTRY_SHARDER}:${TAG} ${REGISTRY_SHARDER}:latest
-echo "Pushing the new latest tag to dockerhub"
-sudo docker push ${REGISTRY_SHARDER}:latest
+# sudo docker pull ${REGISTRY_SHARDER}:latest
+# sudo docker tag ${REGISTRY_SHARDER}:latest ${REGISTRY_SHARDER}:stable_latest
+# echo "Re-tagging the remote latest tag to stable_latest"
+# sudo docker push ${REGISTRY_SHARDER}:stable_latest
+# sudo docker tag ${REGISTRY_SHARDER}:${TAG} ${REGISTRY_SHARDER}:latest
+# echo "Pushing the new latest tag to dockerhub"
+# sudo docker push ${REGISTRY_SHARDER}:latest
 echo "Pushing the new tag to dockerhub tagged as ${REGISTRY_SHARDER}:${TAG}"
 sudo docker push ${REGISTRY_SHARDER}:${TAG}
 fi

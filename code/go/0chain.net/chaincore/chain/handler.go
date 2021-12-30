@@ -1207,9 +1207,11 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
-	if GetServerChain().TxnMaxPayload > 0 {
-		if len(txn.TransactionData) > GetServerChain().TxnMaxPayload {
-			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
+
+	sc := GetServerChain()
+	if sc.TxnMaxPayload() > 0 {
+		if len(txn.TransactionData) > sc.TxnMaxPayload() {
+			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload())
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
 	}
@@ -1217,6 +1219,11 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	// Calculate and update fee
 	if err := txn.ValidateFee(); err != nil {
 		return nil, err
+	}
+
+	// save validated transactions to cache for miners only
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
+		return transaction.PutTransaction(ctx, txn)
 	}
 
 	return transaction.PutTransaction(ctx, txn)
@@ -1611,7 +1618,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 			logging.Logger.Error("Dump state failed", zap.Error(err))
 			return
 		}
-		fmt.Fprintf(w, string(out))
+		fmt.Fprint(w, string(out))
 		return
 	}
 
@@ -1646,7 +1653,7 @@ func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
 // LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
 func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetServerChain()
-	if lfmb := c.GetLatestFinalizedMagicBlock(); lfmb != nil {
+	if lfmb := c.GetLatestFinalizedMagicBlock(ctx); lfmb != nil {
 		return lfmb.GetSummary(), nil
 	}
 

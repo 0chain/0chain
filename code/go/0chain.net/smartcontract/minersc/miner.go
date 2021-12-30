@@ -366,14 +366,6 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 		logging.Logger.Info(msg + " allminerslist is empty")
 		return
 	}
-
-	logging.Logger.Info(msg)
-	for _, miner := range allMinersList.Nodes {
-		logging.Logger.Info("allminerslist",
-			zap.String("url", miner.N2NHost),
-			zap.String("ID", miner.ID))
-	}
-
 }
 
 func (msc *MinerSmartContract) GetMinersList(balances cstate.StateContextI) (

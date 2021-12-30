@@ -71,7 +71,11 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	if sc.IsBlockSharder(b, self.Underlying()) {
 		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
-		blockstore.GetStore().Write(b)
+		if err := blockstore.GetStore().Write(b); err != nil {
+			Logger.Error("store block failed",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+		}
 		duration := time.Since(ts)
 		blockSaveTimer.UpdateSince(ts)
 		p95 := blockSaveTimer.Percentile(.95)
@@ -88,15 +92,22 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	sc.DeleteRoundsBelow(b.Round)
 }
 
-func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-
-	var mb = b.MagicBlock
-
-	if mb == nil {
-		return // no MB, no VC
+func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error {
+	if !config.DevConfiguration.ViewChange {
+		return nil
 	}
 
-	return sc.UpdateMagicBlock(mb)
+	mb := b.MagicBlock
+	if mb == nil {
+		return nil // no MB, no VC
+	}
+
+	if err := sc.UpdateMagicBlock(mb); err != nil {
+		return err
+	}
+
+	sc.SetLatestFinalizedMagicBlock(b)
+	return nil
 }
 
 // The hasRelatedMagicBlock reports true if the Chain has MB related to the
@@ -188,8 +199,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	err = sc.VerifyNotarization(b, b.GetVerificationTickets(),
-		er.GetRoundNumber())
+	err = sc.VerifyBlockNotarization(ctx, b)
 	if err != nil {
 		Logger.Error("notarization verification failed",
 			zap.Error(err),
@@ -213,7 +223,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 	sc.SetRoundRank(er, b)
-	Logger.Info("received block", zap.Int64("round", b.Round),
+	Logger.Info("received notarized block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
 		zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
@@ -662,6 +672,9 @@ func (sc *Chain) storeBlock(b *block.Block) error {
 	if err == nil {
 		sc.SharderStats.RepairBlocksCount++
 	} else {
+		Logger.Error("save block failed",
+			zap.Int64("round", b.Round),
+			zap.Error(err))
 		sc.SharderStats.RepairBlocksFailure++
 	}
 	if b.MagicBlock != nil {

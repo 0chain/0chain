@@ -96,14 +96,13 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
-		wps, err = ssc.getWritePool(clientID, balances)
 		nrps     = new(writePool)
+		_, err   = ssc.getWritePool(clientID, balances)
 	)
 
 	requireErrMsg(t, err, errMsg1)
-	nrps = new(writePool)
 	require.NoError(t, nrps.save(ssc.ID, clientID, balances))
-	wps, err = ssc.getWritePool(clientID, balances)
+	wps, err := ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
 	require.EqualValues(t, nrps, wps)
 }
@@ -211,7 +210,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation
 	lr.Duration = 15 * time.Second
-	resp, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	require.Error(t, err)
 
 	balances.balances[client.id] = 200e10

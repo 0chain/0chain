@@ -159,7 +159,7 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 			want: testGlobalNode(
 				ADDRESS,
 				0, 0, 0,
-				0, 0,
+				0, 0, "",
 			),
 		},
 	}

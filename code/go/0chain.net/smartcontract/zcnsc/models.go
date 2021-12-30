@@ -1,16 +1,16 @@
 package zcnsc
 
 import (
-	"0chain.net/chaincore/chain"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -33,6 +33,7 @@ type GlobalNode struct {
 	MinStakeAmount     int64         `json:"min_stake_amount"`
 	BurnAddress        string        `json:"burn_address"`
 	MinAuthorizers     int64         `json:"min_authorizers"`
+	MaxFee             int64         `json:"max_fee"`
 }
 
 func (gn *GlobalNode) GetKey() datastore.Key {
@@ -95,6 +96,7 @@ func GetGlobalNode(balances cstate.StateContextI) (*GlobalNode, error) {
 	gn.MinBurnAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_burn_amount")
 	gn.MinStakeAmount = config.SmartContractConfig.GetInt64("smart_contracts.zcn.min_stake_amount")
 	gn.BurnAddress = config.SmartContractConfig.GetString("smart_contracts.zcn.burn_address")
+	gn.MaxFee = config.SmartContractConfig.GetInt64("smart_contracts.zcn.max_fee")
 
 	return gn, nil
 }
@@ -204,8 +206,8 @@ func (mp *MintPayload) GetStringToSign() string {
 	return encryption.Hash(fmt.Sprintf("%v:%v:%v:%v", mp.EthereumTxnID, mp.Amount, mp.Nonce, mp.ReceivingClientID))
 }
 
-func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
-	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes, balances cstate.StateContextI) (err error) {
+	signatureScheme := balances.GetSignatureScheme()
 	toSign := mp.GetStringToSign()
 	for _, v := range mp.Signatures {
 		if v.ID == "" {
@@ -213,7 +215,7 @@ func (mp *MintPayload) verifySignatures(ans *AuthorizerNodes) (err error) {
 		}
 
 		if ans.NodeMap[v.ID] == nil {
-			return errors.New(fmt.Sprintf("authorizer %s not found in authorizers", v.ID))
+			return fmt.Errorf("authorizer %s not found in authorizers", v.ID)
 		}
 
 		key := ans.NodeMap[v.ID].PublicKey
@@ -479,7 +481,7 @@ func (an *AuthorizerNodes) updateAuthorizer(node *AuthorizerNode) (err error) {
 
 func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error) {
 	authNodes := &AuthorizerNodes{}
-	authNodesBytes, err := balances.GetTrieNode(AllAuthorizerKey)
+	authNodesBytes, _ := balances.GetTrieNode(AllAuthorizerKey)
 	if authNodesBytes == nil {
 		authNodes.NodeMap = make(map[string]*AuthorizerNode)
 		return authNodes, nil
@@ -488,7 +490,7 @@ func GetAuthorizerNodes(balances cstate.StateContextI) (*AuthorizerNodes, error)
 	encoded := authNodesBytes.Encode()
 	logging.Logger.Info("get authorizer nodes", zap.String("hash", string(encoded)))
 
-	err = authNodes.Decode(encoded)
+	err := authNodes.Decode(encoded)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", common.ErrDecoding, err)
 	}

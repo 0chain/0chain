@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	globalNodeJson0       = "{\"min_lock_period\":\"0s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0}}"
-	globalNodeJson10      = "{\"min_lock_period\":\"10s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0}}"
-	wrongGlobalNodeJson10 = "{\"min_lock_period\":\"10\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0}}"
+	globalNodeJson0       = "{\"min_lock_period\":\"0s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
+	globalNodeJson10      = "{\"min_lock_period\":\"10s\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
+	wrongGlobalNodeJson10 = "{\"min_lock_period\":\"10\",\"simple_global_node\":{\"max_mint\":0,\"total_minted\":0,\"min_lock\":0,\"apr\":0,\"owner_id\":\"\"}}"
 )
 
 var (
@@ -300,32 +300,32 @@ func TestGlobalNode_canMint(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "can't mint",
+			name: "can't mint",
 			fields: fields{
-				ID:               "",
+				ID: "",
 				SimpleGlobalNode: &SimpleGlobalNode{
 					MaxMint:     15,
 					TotalMinted: 10,
 					MinLock:     0,
 					APR:         0,
 				},
-				MinLockPeriod:    0,
+				MinLockPeriod: 0,
 			},
-			want:   true,
+			want: true,
 		},
 		{
-			name:   "can mint",
+			name: "can mint",
 			fields: fields{
-				ID:               "",
+				ID: "",
 				SimpleGlobalNode: &SimpleGlobalNode{
 					MaxMint:     10,
 					TotalMinted: 51,
 					MinLock:     0,
 					APR:         0,
 				},
-				MinLockPeriod:    0,
+				MinLockPeriod: 0,
 			},
-			want:   false,
+			want: false,
 		},
 	}
 	for _, tt := range tests {
