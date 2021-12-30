@@ -361,7 +361,7 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 	return nil
 }
 
-//CreateState - create the state from the prior state db
+// CreateState - create the state from the prior state db
 func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
@@ -765,8 +765,8 @@ type Chainer interface {
 	GetEventDb() *event.EventDb
 }
 
-// CreateState creates block client state with previous block
-func CreateState(prevBlock *Block, stateDB util.NodeDB, round int64) util.MerklePatriciaTrieI {
+// CreateStateWithPreviousBlock creates block client state with previous block
+func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round int64) util.MerklePatriciaTrieI {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
@@ -782,6 +782,14 @@ func CreateState(prevBlock *Block, stateDB util.NodeDB, round int64) util.Merkle
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), rootHash)
+}
+
+// CreateStateWithPartialState creates state with state db and
+// partial state root
+func CreateStateWithPartialState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
+	mndb := util.NewMemoryNodeDB()
+	ndb := util.NewLevelNodeDB(mndb, stateDB, false)
+	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root)
 }
 
 // ComputeState computes block client state
@@ -859,7 +867,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	}
 	//b.SetStateDB(pb, c.GetStateDB())
 
-	bState := CreateState(pb, c.GetStateDB(), b.Round)
+	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
 
 	beginStateRoot := bState.GetRoot()
 
@@ -947,10 +955,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		return common.NewError("state_update_force_error", "previous block is nil")
 	}
 
-	//if b.ClientState == nil {
-	//	b.CreateState(c.GetStateDB(), b.PrevBlock.ClientStateHash)
-	//}
-	bState := CreateState(b.PrevBlock, c.GetStateDB(), b.Round)
+	bState := CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
 
 	beginState := b.ClientState.GetRoot()
 	for _, txn := range b.Txns {
@@ -1057,34 +1062,44 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		}
 		return common.NewError("state_root_error", "state root not correct")
 	}
-	if b.ClientState == nil {
-		pb := b.PrevBlock
-		if pb != nil && pb.IsStateComputed() {
-			b.SetStateDB(pb, c.GetStateDB())
-		} else {
-			b.CreateState(c.GetStateDB(), root.GetHashBytes())
-			//return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
-		}
+	//if b.ClientState == nil {
+	//	pb := b.PrevBlock
+	//	if pb != nil && pb.IsStateComputed() {
+	//		b.SetStateDB(pb, c.GetStateDB())
+	//	} else {
+	//		b.CreateState(c.GetStateDB(), root.GetHashBytes())
+	//		//return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
+	//	}
+	//}
+
+	pb := b.PrevBlock
+	var clientState util.MerklePatriciaTrieI
+	if pb != nil && pb.IsStateComputed() {
+		clientState = CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
+	} else {
+		clientState = CreateStateWithPartialState(c.GetStateDB(), b.Round, root.GetHashBytes())
 	}
 
-	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		//redo changes
-		b.SetStateDB(b.PrevBlock, c.GetStateDB())
+		//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return err
 	}
 
-	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
-		b.SetStateDB(b.PrevBlock, c.GetStateDB())
+	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
+		//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
+
+	b.SetClientState(clientState)
+	b.SetStateStatus(StateSynched)
 
 	logging.Logger.Info("sync state - apply block state changes success",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
-	b.SetStateStatus(StateSynched)
 	return nil
 }
 

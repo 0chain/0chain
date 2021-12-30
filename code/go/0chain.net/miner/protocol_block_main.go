@@ -188,7 +188,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	var (
 		iterInfo       = newTxnIterInfo(mc.BlockSize())
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
-		blockState     = block.CreateState(b.PrevBlock, mc.GetStateDB(), b.Round)
+		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		txnIterHandler = txnIterHandlerFunc(mc, b, blockState, txnProcessor, iterInfo)
 	)
 

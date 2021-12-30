@@ -656,7 +656,7 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 
 	if ppb != nil {
 		pb.SetPreviousBlock(ppb)
-		pb.SetStateDB(ppb, c.GetStateDB())
+		//pb.SetStateDB(ppb, c.GetStateDB())
 	}
 
 	if err := c.GetBlockStateChange(pb); err != nil {
