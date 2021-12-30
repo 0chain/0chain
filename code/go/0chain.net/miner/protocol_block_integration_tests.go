@@ -22,6 +22,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
+	cfg "0chain.net/conductor/config"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -331,14 +332,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg := new(sync.WaitGroup)
 
-	if mc.isTestingNotNotarisedBlockExtension(b.Round) ||
-		mc.isTestingSendBreakingBlock(b.Round) ||
-		mc.isTestingNotarisingNonExistentBlock(b.Round) ||
-		mc.isTestingSendInsufficientProposals(b.Round) {
-
+	if isTestingOnUpdateFinalizedBlock(b.Round) {
 		wg.Add(1)
 		go func() {
-			if err := mc.addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
+			if err := addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
 				log.Panicf("Conductor: error while sending round info result: %v", err)
 			}
 			wg.Done()
@@ -354,58 +351,35 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg.Wait()
 }
 
-func (mc *Chain) isTestingNotNotarisedBlockExtension(round int64) bool {
-	cfg := crpc.Client().State().ExtendNotNotarisedBlock
-	shouldTest := cfg != nil && cfg.Enable && cfg.Round+1 == round
-	if !shouldTest {
+func isTestingOnUpdateFinalizedBlock(round int64) bool {
+	s := crpc.Client().State()
+	var configurator cfg.TestCaseConfigurator
+	switch {
+	case s.ExtendNotNotarisedBlock != nil:
+		configurator = s.ExtendNotNotarisedBlock
+
+	case s.BreakingSingleBlock != nil:
+		configurator = s.BreakingSingleBlock
+
+	case s.SendInsufficientProposals != nil:
+		configurator = s.SendInsufficientProposals
+
+	case s.NotarisingNonExistentBlock != nil:
+		configurator = s.NotarisingNonExistentBlock
+
+	case s.ResendProposedBlock != nil:
+		configurator = s.ResendProposedBlock
+
+	default:
 		return false
 	}
 
-	// we need to collect all block's verification statuses from the first ranked replica
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
-	return nodeType == replica && typeRank == 0
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return configurator.IsTesting(round, nodeType == generator, typeRank)
 }
 
-func (mc *Chain) isTestingSendBreakingBlock(round int64) bool {
-	cfg := crpc.Client().State().BreakingSingleBlock
-	shouldTest := cfg != nil && cfg.Round == round
-	if !shouldTest {
-		return false
-	}
-
-	// we need to collect test's report from the first ranked replica
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
-	return nodeType == replica && typeRank == 0
-}
-
-func (mc *Chain) isTestingNotarisingNonExistentBlock(round int64) bool {
-	cfg := crpc.Client().State().NotarisingNonExistentBlock
-	shouldTest := cfg != nil && int64(cfg.Round) == round
-	if !shouldTest {
-		return false
-	}
-
-	// we need to collect test's report from the first ranked replica
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
-	return nodeType == replica && typeRank == 1
-}
-
-func (mc *Chain) isTestingSendInsufficientProposals(round int64) bool {
-	cfg := crpc.Client().State().SendInsufficientProposals
-	shouldTest := cfg != nil && cfg.Round == round
-	if !shouldTest {
-		return false
-	}
-
-	// we need to collect reports from the first ranked replica
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
-	replicators := rankedMiners[genNum:]
-	return len(replicators) != 0 && replicators[0].ID == node.Self.ID
-}
-
-func (mc *Chain) addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {
-	res := mc.roundInfo(r.GetRoundNumber(), finalisedBlockHash)
+func addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {
+	res := roundInfo(r.GetRoundNumber(), finalisedBlockHash)
 	blob, err := res.Encode()
 	if err != nil {
 		return err
@@ -413,16 +387,25 @@ func (mc *Chain) addRoundInfoResult(finalisedBlockHash string, r round.RoundI) e
 	return crpc.Client().AddTestCaseResult(blob)
 }
 
-func (mc *Chain) roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
-	rankedMiners := make([]string, 0)
+func roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
+	mc := GetMinerChain()
+
+	miners := mc.GetMiners(round).CopyNodes()
+	rankedMiners := make([]string, len(miners))
 	roundI := mc.GetRound(round)
-	for _, miner := range roundI.GetMinersByRank(mc.GetMiners(round).CopyNodes()) {
-		rankedMiners = append(rankedMiners, miner.ID)
+	for _, miner := range miners {
+		rankedMiners[roundI.GetMinerRank(miner)] = miner.ID
 	}
 
-	blocks := make([]*cases.BlockInfo, 0)
-	for _, b := range mc.GetRoundBlocks(round) {
-		blocks = append(blocks, getBlockInfo(b))
+	propBlocks := roundI.GetProposedBlocks()
+	propBlocksInfo := make([]*cases.BlockInfo, 0, len(propBlocks))
+	for _, b := range propBlocks {
+		propBlocksInfo = append(propBlocksInfo, getBlockInfo(b))
+	}
+	notBlocks := roundI.GetNotarizedBlocks()
+	notBlocksInfo := make([]*cases.BlockInfo, 0, len(notBlocks))
+	for _, b := range notBlocks {
+		notBlocksInfo = append(notBlocksInfo, getBlockInfo(b))
 	}
 
 	return &cases.RoundInfo{
@@ -430,16 +413,28 @@ func (mc *Chain) roundInfo(round int64, finalisedBlockHash string) *cases.RoundI
 		GeneratorsNum:      mc.GetGeneratorsNum(),
 		RankedMiners:       rankedMiners,
 		FinalisedBlockHash: finalisedBlockHash,
-		Blocks:             blocks,
+		ProposedBlocks:     propBlocksInfo,
+		NotarisedBlocks:    notBlocksInfo,
 	}
 }
 
 func getBlockInfo(b *block.Block) *cases.BlockInfo {
 	return &cases.BlockInfo{
-		Hash:               b.Hash,
-		PrevHash:           b.PrevHash,
-		Notarised:          b.IsBlockNotarized(),
-		VerificationStatus: b.GetVerificationStatus(),
-		Rank:               b.RoundRank,
+		Hash:                b.Hash,
+		PrevHash:            b.PrevHash,
+		Notarised:           b.IsBlockNotarized(),
+		VerificationStatus:  b.GetVerificationStatus(),
+		Rank:                b.RoundRank,
+		VerificationTickets: getVerificationTicketsInfo(b.VerificationTickets),
 	}
+}
+
+func getVerificationTicketsInfo(tickets []*block.VerificationTicket) []*cases.VerificationTicketInfo {
+	tickInfo := make([]*cases.VerificationTicketInfo, 0, len(tickets))
+	for _, ticket := range tickets {
+		tickInfo = append(tickInfo, &cases.VerificationTicketInfo{
+			VerifierID: ticket.VerifierID,
+		})
+	}
+	return tickInfo
 }

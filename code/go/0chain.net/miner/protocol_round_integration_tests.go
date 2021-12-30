@@ -15,8 +15,7 @@ import (
 )
 
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
-	nextRound := mc.GetRound(r.GetRoundNumber() + 1)
-	if rank := nextRound.GetMinerRank(node.Self.Node); rank == 0 && isMockingNotNotarisedBlockExtension(r.GetRoundNumber()) {
+	if isMockingNotNotarisedBlockExtension(r.GetRoundNumber()) {
 		if bl, err := configureNotNotarisedBlockExtensionTest(r); err != nil {
 			log.Printf("Conductor: NotNotarisedBlockExtension: error while configuring test case: %v", err)
 		} else {
@@ -25,6 +24,17 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 	}
 
 	return mc.getBlockToExtend(ctx, r)
+}
+
+func isMockingNotNotarisedBlockExtension(round int64) bool {
+	cfg := crpc.Client().State().ExtendNotNotarisedBlock
+	isConfigured := cfg != nil && cfg.OnRound == round
+	if !isConfigured {
+		return false
+	}
+
+	nodeType, typeRank := getNodeTypeAndTypeRank(round + 1)
+	return nodeType == generator && typeRank == 0
 }
 
 func configureNotNotarisedBlockExtensionTest(r round.RoundI) (*block.Block, error) {
@@ -56,16 +66,11 @@ func getNotNotarisedBlock(r round.RoundI) *block.Block {
 	return bl
 }
 
-func isMockingNotNotarisedBlockExtension(round int64) bool {
-	cfg := crpc.Client().State().ExtendNotNotarisedBlock
-	return cfg != nil && cfg.Enable && cfg.Round == round
-}
-
 func (mc *Chain) StartRound(ctx context.Context, r *Round, seed int64) {
 	mc.startRound(ctx, r, seed)
 
 	rNum := r.GetRoundNumber()
-	if mc.isSendingBadVerificationTicket(rNum) {
+	if isSendingBadVerificationTicket(rNum) {
 		sendBadVerificationTicket(ctx, rNum, mc.GetMagicBlock(rNum))
 		// just notifying conductor that bad verification tickets is sent
 		if err := crpc.Client().ConfigureTestCase(nil); err != nil {
@@ -74,14 +79,46 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round, seed int64) {
 	}
 }
 
-func (mc *Chain) isSendingBadVerificationTicket(round int64) bool {
+func isSendingBadVerificationTicket(round int64) bool {
 	cfg := crpc.Client().State().VerifyingNonExistentBlock
-	isConfigured := cfg != nil && round == int64(cfg.Round)
+	isConfigured := cfg != nil && round == cfg.OnRound
 	if !isConfigured {
 		return false
 	}
 
 	// we need to ignore msg by the first ranked replica
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	return nodeType == replica && typeRank == 0
+}
+
+func sendBadVerificationTicket(ctx context.Context, round int64, magicBlock *block.MagicBlock) {
+	badVT := getBadBVTWithCustomHash(round)
+	magicBlock.Miners.SendAll(ctx, VerificationTicketSender(badVT))
+}
+
+func getBadBVTWithCustomHash(round int64) *block.BlockVerificationTicket {
+	mockedHash, state := "", crpc.Client().State()
+	switch {
+	case state.VerifyingNonExistentBlock != nil:
+		mockedHash = state.VerifyingNonExistentBlock.Hash
+
+	case state.NotarisingNonExistentBlock != nil:
+		mockedHash = state.NotarisingNonExistentBlock.Hash
+
+	default:
+		log.Panicf("Conductor: getBadBVTWithCustomHash call is unexpected")
+	}
+
+	sign, err := node.Self.Sign(mockedHash)
+	if err != nil {
+		log.Panicf("Conductor: error while signing bad verification ticket: %v", err)
+	}
+	return &block.BlockVerificationTicket{
+		VerificationTicket: block.VerificationTicket{
+			VerifierID: node.Self.Underlying().GetKey(),
+			Signature:  sign,
+		},
+		Round:   round,
+		BlockID: mockedHash,
+	}
 }

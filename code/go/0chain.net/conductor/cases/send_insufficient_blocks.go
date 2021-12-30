@@ -60,7 +60,7 @@ func (n *SendInsufficientProposals) Check(ctx context.Context) (success bool, er
 }
 
 func (n *SendInsufficientProposals) check() (success bool, err error) {
-	for _, bl := range n.res.Blocks {
+	for _, bl := range n.res.blocks() {
 		if bl.Hash == n.firstGenBlockHash {
 			if !bl.Notarised {
 				err = errors.New("first generator's block was not notarised")

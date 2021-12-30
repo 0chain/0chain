@@ -40,10 +40,10 @@ func withTimeout(vrfs *round.VRFShare, timeout int) (bad *round.VRFShare) {
 func (mc *Chain) isTestingSendDifferentBlocks(round int64, timeoutCount int) bool {
 	var (
 		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
-		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.Round == round
+		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.OnRound == round
 
 		cfgFromAllGen        = crpc.Client().State().SendDifferentBlocksFromAllGenerators
-		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.Round == round
+		shouldTestFromAllGen = cfgFromAllGen != nil && cfgFromAllGen.OnRound == round
 	)
 	return (shouldTestFromAllGen || shouldTestFromFirstGen) && timeoutCount == 1
 }
@@ -200,15 +200,17 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	}
 }
 
+var delayedBlock = make(chan *block.Block)
+
 // SendBlock - send the block proposal to the network.
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
-	if mc.isSendingDifferentBlocksFromFirstGenerator(b.Round) || mc.isSendingDifferentBlocksFromAllGenerators(b.Round) {
-		mc.sendDifferentBlocks(ctx, b)
+	if isSendingDifferentBlocksFromFirstGenerator(b.Round) || isSendingDifferentBlocksFromAllGenerators(b.Round) {
+		sendDifferentBlocks(ctx, b)
 		return
 	}
 
-	if mc.isSendingInsufficientProposals(b.Round) {
-		mc.sendInsufficientProposals(ctx, b)
+	if isSendingInsufficientProposals(b.Round) {
+		sendInsufficientProposals(ctx, b)
 
 		if err := crpc.Client().ConfigureTestCase([]byte(b.Hash)); err != nil {
 			log.Panicf("Condutor: error while configuring test case: %v", err)
@@ -216,10 +218,35 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	if isDelayingBlock(b.Round) {
+		delayedBlock <- b
+		return
+	}
+
 	mc.sendBlock(ctx, b)
 }
 
-func (mc *Chain) sendDifferentBlocks(ctx context.Context, b *block.Block) {
+func isSendingDifferentBlocksFromFirstGenerator(r int64) bool {
+	mc := GetMinerChain()
+
+	currRound := mc.GetRound(r)
+	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
+	testCfg := crpc.Client().State().SendDifferentBlocksFromFirstGenerator
+	return testCfg != nil && testCfg.OnRound == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
+}
+
+func isSendingDifferentBlocksFromAllGenerators(r int64) bool {
+	mc := GetMinerChain()
+
+	currRound := mc.GetRound(r)
+	isGenerator := mc.IsRoundGenerator(mc.GetRound(r), node.Self.Node)
+	testCfg := crpc.Client().State().SendDifferentBlocksFromAllGenerators
+	return testCfg != nil && testCfg.OnRound == r && isGenerator && currRound.GetTimeoutCount() == 0
+}
+
+func sendDifferentBlocks(ctx context.Context, b *block.Block) {
+	mc := GetMinerChain()
+
 	miners := mc.GetMagicBlock(b.Round).Miners.CopyNodes()
 	blocks, err := randomizeBlocks(b, len(miners))
 	if err != nil {
@@ -237,20 +264,6 @@ func (mc *Chain) sendDifferentBlocks(ctx context.Context, b *block.Block) {
 			log.Panicf("Conductor: block is not sent to miner with ID %s", n.ID)
 		}
 	}
-}
-
-func (mc *Chain) isSendingDifferentBlocksFromFirstGenerator(r int64) bool {
-	currRound := mc.GetRound(r)
-	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
-	testCfg := crpc.Client().State().SendDifferentBlocksFromFirstGenerator
-	return testCfg != nil && testCfg.Round == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
-}
-
-func (mc *Chain) isSendingDifferentBlocksFromAllGenerators(r int64) bool {
-	currRound := mc.GetRound(r)
-	isGenerator := mc.IsRoundGenerator(mc.GetRound(r), node.Self.Node)
-	testCfg := crpc.Client().State().SendDifferentBlocksFromAllGenerators
-	return testCfg != nil && testCfg.Round == r && isGenerator && currRound.GetTimeoutCount() == 0
 }
 
 func randomizeBlocks(b *block.Block, numBlocks int) ([]*block.Block, error) {
@@ -316,14 +329,18 @@ func createDataTxn(data string) (*transaction.Transaction, error) {
 	return txn, nil
 }
 
-func (mc *Chain) isSendingInsufficientProposals(r int64) bool {
+func isSendingInsufficientProposals(r int64) bool {
+	mc := GetMinerChain()
+
 	currRound := mc.GetRound(r)
 	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
 	testCfg := crpc.Client().State().SendInsufficientProposals
-	return testCfg != nil && testCfg.Round == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
+	return testCfg != nil && testCfg.OnRound == r && isFirstGenerator && currRound.GetTimeoutCount() == 0
 }
 
-func (mc *Chain) sendInsufficientProposals(ctx context.Context, b *block.Block) {
+func sendInsufficientProposals(ctx context.Context, b *block.Block) {
+	mc := GetMinerChain()
+
 	var (
 		currRound    = mc.GetRound(b.Round)
 		miners       = mc.GetMagicBlock(b.Round).Miners.CopyNodes()
@@ -346,9 +363,8 @@ func (mc *Chain) sendInsufficientProposals(ctx context.Context, b *block.Block) 
 	}
 }
 
-func (mc *Chain) isConfiguringSendInsufficientProposals(r int64) bool {
-	currRound := mc.GetRound(r)
-	isSecondGenerator := currRound.GetMinerRank(node.Self.Node) == 1 && mc.IsRoundGenerator(currRound, node.Self.Node)
-	cfg := crpc.Client().State().SendInsufficientProposals
-	return cfg != nil && cfg.Round == r && isSecondGenerator && currRound.GetTimeoutCount() == 0
+func isDelayingBlock(round int64) bool {
+	cfg := crpc.Client().State().ResendProposedBlock
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return cfg != nil && cfg.OnRound == round && nodeType == generator && typeRank == 0
 }

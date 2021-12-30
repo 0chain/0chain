@@ -722,7 +722,7 @@ func (r *Runner) verbosePrintByGoodBad(label string, bad *config.Bad) {
 //
 
 // ConfigureNotNotarisedBlockExtensionCheck implements config.Executor interface.
-func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.ExtendNotNotarisedBlock) (err error) {
+func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.DefaultTestCase) (err error) {
 	if r.verbose {
 		log.Print(" [INF] configure \"not notarised block extension check\"")
 	}
@@ -740,7 +740,7 @@ func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.ExtendNotN
 }
 
 // ConfigureSendDifferentBlocksFromFirstGenerator implements config.Executor interface.
-func (r *Runner) ConfigureSendDifferentBlocksFromFirstGenerator(cfg *config.SendDifferentBlocksFromFirstGenerator) (err error) {
+func (r *Runner) ConfigureSendDifferentBlocksFromFirstGenerator(cfg *config.DefaultTestCase) (err error) {
 	if r.verbose {
 		log.Print(" [INF] configure \"send different blocks from first generator\"")
 	}
@@ -758,7 +758,7 @@ func (r *Runner) ConfigureSendDifferentBlocksFromFirstGenerator(cfg *config.Send
 }
 
 // ConfigureSendDifferentBlocksFromAllGenerators implements config.Executor interface.
-func (r *Runner) ConfigureSendDifferentBlocksFromAllGenerators(cfg *config.SendDifferentBlocksFromAllGenerators) (err error) {
+func (r *Runner) ConfigureSendDifferentBlocksFromAllGenerators(cfg *config.DefaultTestCase) (err error) {
 	if r.verbose {
 		log.Print(" [INF] configure \"send different blocks from all generators\"")
 	}
@@ -776,7 +776,7 @@ func (r *Runner) ConfigureSendDifferentBlocksFromAllGenerators(cfg *config.SendD
 }
 
 // ConfigureBreakingSingleBlock implements config.Executor interface.
-func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.BreakingSingleBlock) (err error) {
+func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.DefaultTestCase) (err error) {
 	if r.verbose {
 		log.Print(" [INF] configure \"breaking single block\"")
 	}
@@ -794,7 +794,7 @@ func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.BreakingSingleBlock) (
 }
 
 // ConfigureSendInsufficientProposals implements config.Executor interface.
-func (r *Runner) ConfigureSendInsufficientProposals(cfg *config.SendInsufficientProposals) (err error) {
+func (r *Runner) ConfigureSendInsufficientProposals(cfg *config.DefaultTestCase) (err error) {
 	if r.verbose {
 		log.Print(" [INF] configure \"send insufficient proposals\"")
 	}
@@ -827,7 +827,7 @@ func (r *Runner) ConfigureVerifyingNonExistentBlockTestCase(cfg *config.Verifyin
 	if err := r.server.EnableServerStatsCollector(); err != nil {
 		return fmt.Errorf("error while enabling server stats collector: %v", err)
 	}
-	r.server.CurrentTest = cases.NewVerifyingNonExistentBlock(cfg.Hash, cfg.Round, r.server.NodesServerStatsCollector)
+	r.server.CurrentTest = cases.NewVerifyingNonExistentBlock(cfg.Hash, int(cfg.OnRound), r.server.NodesServerStatsCollector)
 
 	return
 }
@@ -849,6 +849,24 @@ func (r *Runner) ConfigureNotarisingNonExistentBlockTestCase(cfg *config.Notaris
 		return fmt.Errorf("error while enabling server stats collector: %v", err)
 	}
 	r.server.CurrentTest = cases.NewNotarisingNonExistentBlock(r.server.NodesServerStatsCollector)
+
+	return
+}
+
+// ConfigureResendProposedBlock implements config.Executor interface.
+func (r *Runner) ConfigureResendProposedBlock(cfg *config.ResendProposedBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"resend proposed block\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.ResendProposedBlock = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring \"resend proposed block\" test case: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewResendProposedBlock()
 
 	return
 }

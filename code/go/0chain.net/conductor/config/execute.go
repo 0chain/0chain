@@ -80,27 +80,30 @@ type Executor interface {
 	Challenges(cs *Bad) (err error)
 
 	// ConfigureNotNotarisedBlockExtensionCheck prepares state for cases.NotNotarisedBlockExtension test case.
-	ConfigureNotNotarisedBlockExtensionCheck(*ExtendNotNotarisedBlock) (err error)
+	ConfigureNotNotarisedBlockExtensionCheck(*DefaultTestCase) (err error)
 
 	// ConfigureSendDifferentBlocksFromFirstGenerator prepares state for cases.SendDifferentBlocksFromFirstGenerator test case.
-	ConfigureSendDifferentBlocksFromFirstGenerator(*SendDifferentBlocksFromFirstGenerator) (err error)
+	ConfigureSendDifferentBlocksFromFirstGenerator(*DefaultTestCase) (err error)
 
 	// ConfigureSendDifferentBlocksFromAllGenerators prepares state for
 	// cases.SendDifferentBlocksFromAllGenerators test case.
-	ConfigureSendDifferentBlocksFromAllGenerators(*SendDifferentBlocksFromAllGenerators) (err error)
+	ConfigureSendDifferentBlocksFromAllGenerators(*DefaultTestCase) (err error)
 
 	// ConfigureBreakingSingleBlock prepares state for cases.BreakingSingleBlock test case.
-	ConfigureBreakingSingleBlock(cfg *BreakingSingleBlock) (err error)
+	ConfigureBreakingSingleBlock(cfg *DefaultTestCase) (err error)
 
 	// ConfigureSendInsufficientProposals prepares state for
 	// cases.SendInsufficientProposals test case.
-	ConfigureSendInsufficientProposals(*SendInsufficientProposals) (err error)
+	ConfigureSendInsufficientProposals(*DefaultTestCase) (err error)
 
 	// ConfigureVerifyingNonExistentBlockTestCase prepares state for cases.VerifyingNonExistentBlock test case.
 	ConfigureVerifyingNonExistentBlockTestCase(*VerifyingNonExistentBlock) (err error)
 
 	// ConfigureNotarisingNonExistentBlockTestCase prepares state for cases.NotarisingNonExistentBlock test case.
-	ConfigureNotarisingNonExistentBlockTestCase(block *NotarisingNonExistentBlock) (err error)
+	ConfigureNotarisingNonExistentBlockTestCase(*NotarisingNonExistentBlock) (err error)
+
+	// ConfigureResendProposedBlock prepares state for cases.ResendProposedBlock test case.
+	ConfigureResendProposedBlock(*ResendProposedBlock) (err error)
 
 	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error

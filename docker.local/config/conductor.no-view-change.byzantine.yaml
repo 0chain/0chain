@@ -1,5 +1,6 @@
 enable:
   - "attack round transfer"
+  - "resend past messages"
 sets:
   - name: "attack round transfer"
     tests:
@@ -10,6 +11,9 @@ sets:
       - "send insufficient proposals"
       - "verifying non existent block"
       - "notarising non existent block"
+  - name: "resend past messages"
+    tests:
+      - "resend proposed block"
 
 tests:
   - name: "not notarised block extension"
@@ -18,8 +22,10 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_not_notarised_block_extension_test_case:
-          enable: true
-          round: 30
+          test_report:
+            round: 30
+            by_generator: false
+            by_node_with_type_rank: 0
       - make_test_case_check:
           wait_time: 5m
 
@@ -28,7 +34,8 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_first_generator_test_case:
-          round: 30
+          test_report:
+            round: 30
       - make_test_case_check:
           wait_time: 5m
 
@@ -37,7 +44,8 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_send_different_blocks_from_all_generators_test_case:
-          round: 30
+          test_report:
+            round: 30
       - make_test_case_check:
           wait_time: 5m
 
@@ -46,7 +54,10 @@ tests:
       - cleanup_bc: { }
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_breaking_single_block:
-          round: 30
+          test_report:
+            round: 30
+            by_generator: false
+            by_node_with_type_rank: 0
       - make_test_case_check:
           wait_time: 5m
 
@@ -59,7 +70,10 @@ tests:
           DKG_AFFIX: "7_miners_1_sharder_"
       - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "miner-5", "miner-6",  "miner-7", "sharder-1"]
       - configure_send_insufficient_proposals_test_case:
-          round: 30
+          test_report:
+            round: 30
+            by_generator: false
+            by_node_with_type_rank: 0
       - make_test_case_check:
           wait_time: 5m
 
@@ -69,7 +83,8 @@ tests:
       - cleanup_bc: {}
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - configure_verifying_non_existent_block_test_case:
-          round: 30
+          test_report:
+            round: 30
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2"]
       - wait_round:
@@ -83,10 +98,26 @@ tests:
       - cleanup_bc: { }
       - start_lock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - configure_notarising_non_existent_block_test_case:
-          round: 30
+          test_report:
+            round: 30
+            by_generator: false
+            by_node_with_type_rank: 1
           hash: "d0cab02dd0f094eaa2d136fa335d4fbb7858832caebc416982187b2c9b58cecc"
       - unlock: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
       - wait_round:
           round: 50
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "resend proposed block"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - configure_resend_proposed_block_test_case:
+          test_report:
+            round: 30
+            by_generator: true
+            by_node_with_type_rank: 1
       - make_test_case_check:
           wait_time: 5m

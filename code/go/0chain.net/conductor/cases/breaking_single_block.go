@@ -69,7 +69,7 @@ func (n *BreakingSingleBlock) check() (success bool, err error) {
 		return false, errors.New("unexpected finalised block hash")
 	}
 
-	for _, bi := range n.res.Blocks {
+	for _, bi := range n.res.blocks() {
 		if bi.Hash == n.cfg.SecondSentBlockHash {
 			switch {
 			case bi.Notarised:

@@ -63,7 +63,7 @@ func (n *NotNotarisedBlockExtension) check() (success bool, err error) {
 		return false, errors.New("mocked block is nil")
 	}
 
-	for _, b := range n.result.Blocks {
+	for _, b := range n.result.blocks() {
 		prevBlockHash, status := b.PrevHash, b.VerificationStatus
 		switch {
 		case prevBlockHash == n.mockedBlockHashToExtend && status == block.VerificationSuccessful:

@@ -59,7 +59,7 @@ func (n *NotarisingNonExistentBlock) Check(ctx context.Context) (success bool, e
 }
 
 func (n *NotarisingNonExistentBlock) check() (success bool, err error) {
-	notBlocks := n.res.getNotarisedBlocks()
+	notBlocks := n.res.NotarisedBlocks
 	if len(notBlocks) != 1 || notBlocks[0].Rank != 0 {
 		return false, errors.New("notarised block is unexpected, expected 1 block from the first ranked leader")
 	}

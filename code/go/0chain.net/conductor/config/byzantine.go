@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -93,44 +94,43 @@ func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 }
 
 type (
-	// ExtendNotNotarisedBlock represents config for cases.NotNotarisedBlockExtension.
-	ExtendNotNotarisedBlock struct {
-		Enable bool  `json:"enable" yaml:"enable" mapstructure:"enable"`
-		Round  int64 `json:"round" yaml:"round" mapstructure:"round"`
+	// TestCaseConfigurator represents interface for test cases configuration.
+	TestCaseConfigurator interface {
+		IsTesting(round int64, generator bool, typeRank int) bool
 	}
 
-	// SendDifferentBlocksFromFirstGenerator represents config for cases.SendDifferentBlocksFromFirstGenerator.
-	SendDifferentBlocksFromFirstGenerator struct {
-		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
-	}
-
-	// SendDifferentBlocksFromAllGenerators represents config for cases.SendDifferentBlocksFromAllGenerators.
-	SendDifferentBlocksFromAllGenerators struct {
-		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
-	}
-
-	// BreakingSingleBlock represents config for cases.BreakingSingleBlock.
-	BreakingSingleBlock struct {
-		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
-	}
-
-	// SendInsufficientProposals represents config for cases.SendInsufficientProposals.
-	SendInsufficientProposals struct {
-		Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	// DefaultTestCase represents default configuration for test cases.
+	DefaultTestCase struct {
+		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
 	}
 
 	// VerifyingNonExistentBlock represents config for cases.VerifyingNonExistentBlock.
 	VerifyingNonExistentBlock struct {
-		Hash  string `json:"hash" yaml:"hash" mapstructure:"hash"`
-		Round int    `json:"round" yaml:"round" mapstructure:"round"`
+		Hash       string `json:"hash" yaml:"hash" mapstructure:"hash"`
+		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
 
 		IgnoredVerificationTicketsNum int
 	}
 
 	// NotarisingNonExistentBlock represents config for cases.NotarisingNonExistentBlock.
 	NotarisingNonExistentBlock struct {
-		Hash  string `json:"hash" yaml:"hash" mapstructure:"hash"`
-		Round int    `json:"round" yaml:"round" mapstructure:"round"`
+		Hash       string `json:"hash" yaml:"hash" mapstructure:"hash"`
+		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
+	}
+
+	// ResendProposedBlock represents config for cases.ResendProposedBlock.
+	ResendProposedBlock struct {
+		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
+
+		Resent bool
+
+		mutex sync.Mutex
+	}
+
+	TestReport struct {
+		ByGenerator        bool  `json:"by_generator" yaml:"by_generator" mapstructure:"by_generator"`
+		ByNodeWithTypeRank int   `json:"by_node_with_type_rank" yaml:"by_node_with_type_rank" mapstructure:"by_node_with_type_rank"`
+		OnRound            int64 `json:"round" yaml:"round" mapstructure:"round"`
 	}
 
 	// TestCaseCheck represents generic configuration for making tests checks.
@@ -140,85 +140,78 @@ type (
 	}
 )
 
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *ExtendNotNotarisedBlock) Decode(val interface{}) error {
-	var cfg ExtendNotNotarisedBlock
-	if err := mapstructure.Decode(val, &cfg); err != nil {
-		return err
-	}
-	*c = cfg
-	return nil
+var (
+	// Ensure DefaultTestCase implements TestCaseConfigurator interface.
+	_ TestCaseConfigurator = (*DefaultTestCase)(nil)
+
+	// Ensure VerifyingNonExistentBlock implements TestCaseConfigurator interface.
+	_ TestCaseConfigurator = (*VerifyingNonExistentBlock)(nil)
+
+	// Ensure NotarisingNonExistentBlock implements TestCaseConfigurator interface.
+	_ TestCaseConfigurator = (*NotarisingNonExistentBlock)(nil)
+
+	// Ensure ResendProposedBlock implements TestCaseConfigurator interface.
+	_ TestCaseConfigurator = (*ResendProposedBlock)(nil)
+)
+
+// IsTesting implements TestCaseConfigurator interface.
+func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
+	return b.OnRound == round && b.ByGenerator == generator && nodeTypeRank == b.ByNodeWithTypeRank
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
-func (c *SendDifferentBlocksFromFirstGenerator) Decode(val interface{}) error {
-	var cfg SendDifferentBlocksFromFirstGenerator
-	if err := mapstructure.Decode(val, &cfg); err != nil {
+func (c *DefaultTestCase) Decode(val interface{}) error {
+	if err := mapstructure.Decode(val, c); err != nil {
 		return err
 	}
-	*c = cfg
-	return nil
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *SendDifferentBlocksFromAllGenerators) Decode(val interface{}) error {
-	var cfg SendDifferentBlocksFromAllGenerators
-	if err := mapstructure.Decode(val, &cfg); err != nil {
-		return err
-	}
-	*c = cfg
-	return nil
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *BreakingSingleBlock) Decode(val interface{}) error {
-	var cfg BreakingSingleBlock
-	if err := mapstructure.Decode(val, &cfg); err != nil {
-		return err
-	}
-	*c = cfg
-	return nil
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *SendInsufficientProposals) Decode(val interface{}) error {
-	var cfg SendInsufficientProposals
-	if err := mapstructure.Decode(val, &cfg); err != nil {
-		return err
-	}
-	*c = cfg
 	return nil
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *VerifyingNonExistentBlock) Decode(val interface{}) error {
-	var cfg VerifyingNonExistentBlock
-	if err := mapstructure.Decode(val, &cfg); err != nil {
+	if err := mapstructure.Decode(val, c); err != nil {
 		return err
 	}
-	*c = cfg
 	return nil
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *NotarisingNonExistentBlock) Decode(val interface{}) error {
-	var cfg NotarisingNonExistentBlock
-	if err := mapstructure.Decode(val, &cfg); err != nil {
+	if err := mapstructure.Decode(val, c); err != nil {
 		return err
 	}
-	*c = cfg
+	return nil
+}
+
+func (c *ResendProposedBlock) Lock() {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+}
+
+func (c *ResendProposedBlock) Unlock() {
+	if c == nil {
+		return
+	}
+	c.mutex.Unlock()
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *ResendProposedBlock) Decode(val interface{}) error {
+	if err := mapstructure.Decode(val, c); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *TestCaseCheck) Decode(val interface{}) (err error) {
-	var cfg TestCaseCheck
-	if err := mapstructure.Decode(val, &cfg); err != nil {
+	if err := mapstructure.Decode(val, c); err != nil {
 		return err
 	}
-	if cfg.WaitTime, err = time.ParseDuration(cfg.WaitTimeStr); err != nil {
+	if c.WaitTime, err = time.ParseDuration(c.WaitTimeStr); err != nil {
 		return err
 	}
-	*c = cfg
 	return nil
 }

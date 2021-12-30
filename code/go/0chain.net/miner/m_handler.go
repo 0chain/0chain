@@ -371,11 +371,9 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	return nil, nil
 }
 
-// NotarizationReceiptHandler - handles the receipt of a notarization
+// notarizationReceiptHandler - handles the receipt of a notarization
 // for a block.
-func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
-	interface{}, error) {
-
+func notarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	var notarization, ok = entity.(*Notarization)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")

@@ -12,27 +12,35 @@ type (
 		GeneratorsNum      int          `json:"generators_num"`
 		RankedMiners       []string     `json:"ranked_miners"`
 		FinalisedBlockHash string       `json:"finalised_block_hash"`
-		Blocks             []*BlockInfo `json:"blocks"`
+		ProposedBlocks     []*BlockInfo `json:"proposed_blocks"`
+		NotarisedBlocks    []*BlockInfo `json:"notarised_blocks"`
 	}
 
 	// BlockInfo represents simple struct for reports containing round's information
 	// needed for making tests checks.
 	BlockInfo struct {
-		Hash               string `json:"hash"`
-		PrevHash           string `json:"prev_hash"`
-		Notarised          bool   `json:"notarised"`
-		VerificationStatus int    `json:"verification_status"`
-		Rank               int    `json:"rank"`
+		Hash                string                    `json:"hash"`
+		PrevHash            string                    `json:"prev_hash"`
+		Notarised           bool                      `json:"notarised"`
+		VerificationStatus  int                       `json:"verification_status"`
+		Rank                int                       `json:"rank"`
+		VerificationTickets []*VerificationTicketInfo `json:"verification_tickets"`
+	}
+
+	// VerificationTicketInfo represents simple struct for reports containing verification ticket's information
+	// needed for making tests checks.
+	VerificationTicketInfo struct {
+		VerifierID string `json:"verifier_id"`
 	}
 )
 
-// getNotarisedBlocks looks for notarising blocks in the RoundInfo.Blocks.
-func (r *RoundInfo) getNotarisedBlocks() []*BlockInfo {
-	blocks := make([]*BlockInfo, 0)
-	for _, bl := range r.Blocks {
-		if bl.Notarised {
-			blocks = append(blocks, bl)
-		}
+func (r *RoundInfo) blocks() map[string]*BlockInfo {
+	blocks := make(map[string]*BlockInfo)
+	for _, bl := range r.ProposedBlocks {
+		blocks[bl.Hash] = bl
+	}
+	for _, bl := range r.NotarisedBlocks {
+		blocks[bl.Hash] = bl
 	}
 	return blocks
 }
@@ -66,7 +74,7 @@ func (r *RoundInfo) getNodeID(generator bool, typeRank int) string {
 // getBlockWithRank returns BlockInfo for the block with provided rank.
 // If node with provided parameters is not found, returns nil.
 func (r *RoundInfo) getBlockWithRank(rank int) *BlockInfo {
-	for _, bi := range r.Blocks {
+	for _, bi := range r.blocks() {
 		if bi.Rank == rank {
 			return bi
 		}

@@ -16,17 +16,17 @@ import (
 )
 
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
-	if mc.isIgnoringVerificationTicket(msg.BlockVerificationTicket.Round) {
+	if isIgnoringVerificationTicket(msg.BlockVerificationTicket.Round) {
 		crpc.Client().State().VerifyingNonExistentBlock.IgnoredVerificationTicketsNum++
 		return
 	}
 
 	wg := new(sync.WaitGroup)
-	if mc.isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.VerifierID) {
+	if isBreakingSingleBlock(msg.BlockVerificationTicket.Round, msg.BlockVerificationTicket.VerifierID) {
 		wg.Add(1)
 
 		go func() {
-			secondSentBlockHash, err := mc.sendBreakingBlock(msg.BlockVerificationTicket.BlockID)
+			secondSentBlockHash, err := sendBreakingBlock(msg.BlockVerificationTicket.BlockID)
 			if err != nil {
 				log.Panicf("Conductor: SendBreakingBlock: error while sending block: %v", err)
 			}
@@ -43,26 +43,29 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	wg.Wait()
 }
 
-func (mc *Chain) isIgnoringVerificationTicket(round int64) bool {
+func isIgnoringVerificationTicket(round int64) bool {
 	cfg := crpc.Client().State().VerifyingNonExistentBlock
-	if cfg == nil || round != int64(cfg.Round) {
+	if cfg == nil || round != cfg.OnRound {
 		return false
 	}
 
 	// we need to ignore msg by the first ranked replica and for the 1/3 (of miners count) tickets
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	mc := GetMinerChain()
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	isFirstRankedReplica := nodeType == replica && typeRank == 0
 	return isFirstRankedReplica && cfg.IgnoredVerificationTicketsNum < mc.GetMiners(round).Size()/3
 }
 
-func (mc *Chain) isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
+func isBreakingSingleBlock(roundNum int64, verTicketFromMiner string) bool {
+	mc := GetMinerChain()
+
 	currRound := mc.GetRound(roundNum)
 	if !currRound.IsRanksComputed() {
 		return false
 	}
 	isFirstGenerator := currRound.GetMinerRank(node.Self.Node) == 0
 	cfg := crpc.Client().State().BreakingSingleBlock
-	shouldTest := cfg != nil && cfg.Round == roundNum && isFirstGenerator
+	shouldTest := cfg != nil && cfg.OnRound == roundNum && isFirstGenerator
 	if !shouldTest {
 		return false
 	}
@@ -73,7 +76,9 @@ func (mc *Chain) isBreakingSingleBlock(roundNum int64, verTicketFromMiner string
 	return len(replicators) != 0 && replicators[0].ID == verTicketFromMiner
 }
 
-func (mc *Chain) sendBreakingBlock(blockHash string) (sentBlockHash string, err error) {
+func sendBreakingBlock(blockHash string) (sentBlockHash string, err error) {
+	mc := GetMinerChain()
+
 	bl, err := mc.GetBlock(context.Background(), blockHash)
 	if err != nil {
 		return "", err
@@ -104,66 +109,62 @@ func configureBreakingSingleBlock(firstBlockHash, secondBlockHash string) error 
 
 // HandleVerifyBlockMessage - handles the verify block message.
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	if mc.isIgnoringProposalOrNotarisation(msg.Block.Round) {
+	if isIgnoringProposalOrNotarisation(msg.Block.Round) {
 		return
 	}
+
+	crpc.Client().State().ResendProposedBlock.Lock()
+	if isResendingProposedBlock(msg.Block.Round) {
+		resendProposedBlock(msg.Block)
+		if err := crpc.Client().ConfigureTestCase([]byte(msg.Block.Hash)); err != nil {
+			log.Panicf("Conductor: error while configuring test case: %#v", err)
+		}
+	}
+	crpc.Client().State().ResendProposedBlock.Unlock()
 
 	mc.handleVerifyBlockMessage(ctx, msg)
 }
 
-func sendBadVerificationTicket(ctx context.Context, round int64, magicBlock *block.MagicBlock) {
-	badVT := getBadBVTWithCustomHash(round)
-	magicBlock.Miners.SendAll(ctx, VerificationTicketSender(badVT))
-}
-
-func getBadBVTWithCustomHash(round int64) *block.BlockVerificationTicket {
-	mockedHash, state := "", crpc.Client().State()
-	switch {
-	case state.VerifyingNonExistentBlock != nil:
-		mockedHash = state.VerifyingNonExistentBlock.Hash
-
-	case state.NotarisingNonExistentBlock != nil:
-		mockedHash = state.NotarisingNonExistentBlock.Hash
-
-	default:
-		log.Panicf("Conductor: getBadBVTWithCustomHash call is unexpected")
-	}
-
-	sign, err := node.Self.Sign(mockedHash)
-	if err != nil {
-		log.Panicf("Conductor: error while signing bad verification ticket: %v", err)
-	}
-	return &block.BlockVerificationTicket{
-		VerificationTicket: block.VerificationTicket{
-			VerifierID: node.Self.Underlying().GetKey(),
-			Signature:  sign,
-		},
-		Round:   round,
-		BlockID: mockedHash,
-	}
-}
-
-// HandleNotarizationMessage - handles the block notarization message.
-func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	if mc.isIgnoringProposalOrNotarisation(msg.Notarization.Round) {
-		return
-	}
-
-	mc.handleNotarizationMessage(ctx, msg)
-}
-
-func (mc *Chain) isIgnoringProposalOrNotarisation(round int64) bool {
+func isIgnoringProposalOrNotarisation(round int64) bool {
 	vnebCfg := crpc.Client().State().VerifyingNonExistentBlock
-	isVerifyingNonExistentBlock := vnebCfg != nil && round == int64(vnebCfg.Round)
+	isVerifyingNonExistentBlock := vnebCfg != nil && round == vnebCfg.OnRound
 	nnebCfg := crpc.Client().State().NotarisingNonExistentBlock
-	isNotarisingNonExistentBlock := nnebCfg != nil && round == int64(nnebCfg.Round)
+	isNotarisingNonExistentBlock := nnebCfg != nil && round == nnebCfg.OnRound
 	if !isVerifyingNonExistentBlock && !isNotarisingNonExistentBlock {
 		return false
 	}
 
 	// we need to ignore msg by the first ranked replica
-	nodeType, typeRank := mc.getNodeTypeAndTypeRank(round)
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
 	return nodeType == replica && typeRank == 0
+}
+
+func isResendingProposedBlock(round int64) (resending bool) {
+	cfg := crpc.Client().State().ResendProposedBlock
+	resending = cfg != nil && round == cfg.OnRound && !cfg.Resent
+	if !resending {
+		return
+	}
+
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return nodeType == generator && typeRank == 1
+}
+
+func resendProposedBlock(bl *block.Block) {
+	miners := GetMinerChain().GetMiners(bl.Round)
+	miners.SendAll(context.Background(), VerifyBlockSender(bl))
+
+	crpc.Client().State().ResendProposedBlock.Resent = true
+	return
+}
+
+// HandleNotarizationMessage - handles the block notarization message.
+func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+	if isIgnoringProposalOrNotarisation(msg.Notarization.Round) {
+		return
+	}
+
+	mc.handleNotarizationMessage(ctx, msg)
 }
 
 const (
@@ -172,7 +173,7 @@ const (
 )
 
 // getNodeTypeAndTypeRank returns node type and type rank.
-// If node with provided parameters is not found, returns -1;-1.
+// If round is not started or rank is not computed, returns -1;-1.
 //
 // 	Explaining type rank example:
 //		Generators num = 2
@@ -181,18 +182,20 @@ const (
 // 		Generator1:	rank = 1; typeRank = 1.
 // 		Replica0:	rank = 2; typeRank = 0.
 // 		Replica0:	rank = 3; typeRank = 1.
-func (mc *Chain) getNodeTypeAndTypeRank(round int64) (nodeType, typeRank int) {
-	genNum := mc.GetGeneratorsNumOfRound(round)
-	rankedMiners := mc.GetRound(round).GetMinersByRank(mc.GetMiners(round).CopyNodes())
-	for rank, rankedMiner := range rankedMiners {
-		if rankedMiner.ID == node.Self.ID {
-			nodeType, typeRank = generator, rank
-			if rank >= genNum {
-				nodeType = replica
-				typeRank = rank - genNum
-			}
-			return
-		}
+func getNodeTypeAndTypeRank(round int64) (nodeType, typeRank int) {
+	mc := GetMinerChain()
+
+	roundI := mc.GetRound(round)
+	if roundI == nil || !roundI.IsRanksComputed() {
+		return -1, -1
 	}
-	return -1, -1
+
+	genNum := mc.GetGeneratorsNumOfRound(round)
+	isGenerator := mc.IsRoundGenerator(roundI, node.Self.Node)
+	nodeType, typeRank = generator, roundI.GetMinerRank(node.Self.Node)
+	if !isGenerator {
+		nodeType = replica
+		typeRank = typeRank - genNum
+	}
+	return nodeType, typeRank
 }
