@@ -2,6 +2,7 @@ package minersc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
@@ -11,6 +12,10 @@ import (
 
 func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 
+	var status = node.NodeStatusInactive
+	if edbMiner.Active {
+		status = node.NodeStatusActive
+	}
 	msn := SimpleNode{
 		ID:                edbMiner.MinerID,
 		N2NHost:           edbMiner.N2NHost,
@@ -32,6 +37,7 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 			GeneratorFees:    edbMiner.Fees,
 		},
 		LastHealthCheck: edbMiner.LastHealthCheck,
+		Status:          status,
 	}
 
 	return &MinerNode{
@@ -61,6 +67,7 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 		LastHealthCheck:   mn.LastHealthCheck,
 		Rewards:           mn.Stat.GeneratorRewards,
 		Fees:              mn.Stat.GeneratorFees,
+		Active:            mn.Status == node.NodeStatusActive,
 		Longitude:         0,
 		Latitude:          0,
 	}
@@ -78,7 +85,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 	return nil
 }
 
-func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
+func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI, active bool) error {
 
 	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {
@@ -90,9 +97,9 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 	return nil
 }
 
-func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI) error {
+func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
 
-	data, err := json.Marshal(dbs.DbUpdates{
+	dbUpdates := dbs.DbUpdates{
 		Id: mn.ID,
 		Updates: map[string]interface{}{
 			"n2n_host":            mn.N2NHost,
@@ -115,7 +122,13 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI) error {
 			"longitude":           0,
 			"latitude":            0,
 		},
-	})
+	}
+
+	if updateStatus {
+		dbUpdates.Updates["active"] = mn.Status == node.NodeStatusActive
+	}
+
+	data, err := json.Marshal(dbUpdates)
 	if err != nil {
 		return fmt.Errorf("marshalling update: %v", err)
 	}

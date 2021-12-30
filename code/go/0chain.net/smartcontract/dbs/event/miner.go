@@ -92,6 +92,7 @@ func (edb *EventDb) overwriteMiner(miner Miner) error {
 			"last_health_check":   miner.LastHealthCheck,
 			"rewards":             miner.Rewards,
 			"fees":                miner.Fees,
+			"active":              miner.Active,
 			"longitude":           miner.Longitude,
 			"latitude":            miner.Latitude,
 		})
