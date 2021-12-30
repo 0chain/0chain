@@ -322,9 +322,6 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		txn.ClientID = datastore.EmptyKey
 	}
 
-	// TODO: updates this within the state mutex protection
-	//b.ClientState = blockState
-	//b.ClientStateHash = blockState.GetRoot()
 	b.SetClientState(blockState)
 	bgTimer.UpdateSince(start)
 	logging.Logger.Debug("generate block (assemble+update)",

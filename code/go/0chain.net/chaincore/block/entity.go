@@ -372,13 +372,13 @@ func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 // note: must be called with b.stateMutex protection
 func (b *Block) setClientState(s util.MerklePatriciaTrieI) {
 	b.ClientState = s
+	b.ClientStateHash = s.GetRoot()
 }
 
 // SetClientState - set the block client state and update its ClientStateHash
 func (b *Block) SetClientState(s util.MerklePatriciaTrieI) {
 	b.stateMutex.Lock()
-	b.ClientState = s
-	b.ClientStateHash = s.GetRoot()
+	b.setClientState(s)
 	b.stateMutex.Unlock()
 }
 
@@ -998,7 +998,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
 			zap.Int64("round", b.Round),
@@ -1094,7 +1094,7 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 
-	b.SetClientState(clientState)
+	b.setClientState(clientState)
 	b.SetStateStatus(StateSynched)
 
 	logging.Logger.Info("sync state - apply block state changes success",
