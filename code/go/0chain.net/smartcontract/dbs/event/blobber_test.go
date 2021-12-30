@@ -124,7 +124,6 @@ func TestBlobbers(t *testing.T) {
 	data, err := json.Marshal(&SnBlobber)
 	require.NoError(t, err)
 
-	require.NoError(t, err)
 	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",

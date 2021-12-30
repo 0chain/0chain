@@ -7,7 +7,6 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
-	"gorm.io/gorm"
 )
 
 func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
@@ -44,7 +43,6 @@ func minerTableToMinerNode(edbMiner *event.Miner) *MinerNode {
 func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 
 	return event.Miner{
-		Model:             gorm.Model{},
 		MinerID:           mn.ID,
 		N2NHost:           mn.N2NHost,
 		Host:              mn.Host,
@@ -127,12 +125,6 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
 func emitDeleteMiner(id string, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(event.Miner{MinerID: id})
-	if err != nil {
-		return fmt.Errorf("marshalling miner: %v", err)
-	}
-
-	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, string(data))
-
+	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
 	return nil
 }
