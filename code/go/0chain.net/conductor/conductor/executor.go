@@ -871,6 +871,24 @@ func (r *Runner) ConfigureResendProposedBlock(cfg *config.ResendProposedBlock) (
 	return
 }
 
+// ConfigureResendNotarisation implements config.Executor interface.
+func (r *Runner) ConfigureResendNotarisation(cfg *config.ResendNotarisation) (err error) {
+	if r.verbose {
+		log.Print(" [INF] configure \"resend notarisation\"")
+	}
+
+	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
+		state.ResendNotarisation = cfg
+	})
+	if err != nil {
+		return fmt.Errorf("error while configuring \"resend notarisation\" test case: %v", err)
+	}
+
+	r.server.CurrentTest = cases.NewResendNotarisation()
+
+	return
+}
+
 // MakeTestCaseCheck implements config.Executor interface.
 func (r *Runner) MakeTestCaseCheck(cfg *config.TestCaseCheck) error {
 	if r.verbose {

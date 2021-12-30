@@ -5,6 +5,7 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"sync"
 
@@ -164,7 +165,42 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 
+	resendNotarisationCfg := crpc.Client().State().ResendNotarisation
+	resendNotarisationCfg.Lock()
+	if isObtainingNotarisation(msg.Notarization.Round) {
+		blob, err := json.Marshal(msg.Notarization)
+		if err != nil {
+			log.Panicf("Conductor: error while obtaining notarisation: %v", err)
+		}
+		crpc.Client().State().ResendNotarisation.Notarisation = blob
+	}
+	if isResendingNotarisation(msg.Notarization.Round) {
+		not := new(Notarization)
+		if err := json.Unmarshal(crpc.Client().State().ResendNotarisation.Notarisation, not); err != nil {
+			log.Panicf("Conductor: error while resending notarisation: %v", err)
+		}
+		miners := mc.GetMagicBlock(msg.Notarization.Round).Miners
+		miners.SendAll(context.Background(), BlockNotarizationSender(not))
+
+		resendNotarisationCfg.Resent = true
+	}
+	resendNotarisationCfg.Unlock()
+
 	mc.handleNotarizationMessage(ctx, msg)
+}
+
+func isObtainingNotarisation(round int64) bool {
+	cfg := crpc.Client().State().ResendNotarisation
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return cfg != nil && round == cfg.OnRound-2 && !cfg.Resent &&
+		((nodeType == generator) == cfg.ByGenerator) && cfg.ByNodeWithTypeRank == typeRank
+}
+
+func isResendingNotarisation(round int64) bool {
+	cfg := crpc.Client().State().ResendNotarisation
+	nodeType, typeRank := getNodeTypeAndTypeRank(round)
+	return cfg != nil && round == cfg.OnRound-1 &&
+		((nodeType == generator) == cfg.ByGenerator) && cfg.ByNodeWithTypeRank == typeRank
 }
 
 const (

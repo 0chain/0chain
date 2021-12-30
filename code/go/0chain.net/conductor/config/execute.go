@@ -105,6 +105,9 @@ type Executor interface {
 	// ConfigureResendProposedBlock prepares state for cases.ResendProposedBlock test case.
 	ConfigureResendProposedBlock(*ResendProposedBlock) (err error)
 
+	// ConfigureResendNotarisation prepares state for cases.ResendNotarisation test case.
+	ConfigureResendNotarisation(*ResendNotarisation) (err error)
+
 	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
 }

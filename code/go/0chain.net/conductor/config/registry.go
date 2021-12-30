@@ -432,6 +432,15 @@ func init() {
 		return ex.ConfigureResendProposedBlock(cfg)
 	})
 
+	register("configure_resend_notarisation_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &ResendNotarisation{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureResendNotarisation(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

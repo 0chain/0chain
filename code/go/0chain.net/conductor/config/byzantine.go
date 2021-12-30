@@ -127,6 +127,16 @@ type (
 		mutex sync.Mutex
 	}
 
+	// ResendNotarisation represents config for cases.ResendNotarisation.
+	ResendNotarisation struct {
+		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
+
+		Notarisation []byte
+		Resent       bool
+
+		mutex sync.Mutex
+	}
+
 	TestReport struct {
 		ByGenerator        bool  `json:"by_generator" yaml:"by_generator" mapstructure:"by_generator"`
 		ByNodeWithTypeRank int   `json:"by_node_with_type_rank" yaml:"by_node_with_type_rank" mapstructure:"by_node_with_type_rank"`
@@ -161,26 +171,17 @@ func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bo
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *DefaultTestCase) Decode(val interface{}) error {
-	if err := mapstructure.Decode(val, c); err != nil {
-		return err
-	}
-	return nil
+	return mapstructure.Decode(val, c)
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *VerifyingNonExistentBlock) Decode(val interface{}) error {
-	if err := mapstructure.Decode(val, c); err != nil {
-		return err
-	}
-	return nil
+	return mapstructure.Decode(val, c)
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *NotarisingNonExistentBlock) Decode(val interface{}) error {
-	if err := mapstructure.Decode(val, c); err != nil {
-		return err
-	}
-	return nil
+	return mapstructure.Decode(val, c)
 }
 
 func (c *ResendProposedBlock) Lock() {
@@ -199,10 +200,26 @@ func (c *ResendProposedBlock) Unlock() {
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *ResendProposedBlock) Decode(val interface{}) error {
-	if err := mapstructure.Decode(val, c); err != nil {
-		return err
+	return mapstructure.Decode(val, c)
+}
+
+func (c *ResendNotarisation) Lock() {
+	if c == nil {
+		return
 	}
-	return nil
+	c.mutex.Lock()
+}
+
+func (c *ResendNotarisation) Unlock() {
+	if c == nil {
+		return
+	}
+	c.mutex.Unlock()
+}
+
+// Decode decodes provided interface by executing mapstructure.Decode.
+func (c *ResendNotarisation) Decode(val interface{}) error {
+	return mapstructure.Decode(val, c)
 }
 
 // Decode decodes provided interface by executing mapstructure.Decode.

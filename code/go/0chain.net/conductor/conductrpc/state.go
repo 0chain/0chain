@@ -55,6 +55,7 @@ type State struct {
 	VerifyingNonExistentBlock             *config.VerifyingNonExistentBlock
 	NotarisingNonExistentBlock            *config.NotarisingNonExistentBlock
 	ResendProposedBlock                   *config.ResendProposedBlock
+	ResendNotarisation                    *config.ResendNotarisation
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

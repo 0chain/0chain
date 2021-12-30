@@ -10,7 +10,6 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -330,25 +329,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	wg := new(sync.WaitGroup)
+	mc.updateFinalizedBlock(ctx, b)
 
 	if isTestingOnUpdateFinalizedBlock(b.Round) {
-		wg.Add(1)
-		go func() {
-			if err := addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
-				log.Panicf("Conductor: error while sending round info result: %v", err)
-			}
-			wg.Done()
-		}()
+		if err := addRoundInfoResult(b.Hash, mc.GetRound(b.Round)); err != nil {
+			log.Panicf("Conductor: error while sending round info result: %v", err)
+		}
 	}
-
-	wg.Add(1)
-	go func() {
-		mc.updateFinalizedBlock(ctx, b)
-		wg.Done()
-	}()
-
-	wg.Wait()
 }
 
 func isTestingOnUpdateFinalizedBlock(round int64) bool {
@@ -369,6 +356,9 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 
 	case s.ResendProposedBlock != nil:
 		configurator = s.ResendProposedBlock
+
+	case s.ResendNotarisation != nil:
+		configurator = s.ResendNotarisation
 
 	default:
 		return false
@@ -415,6 +405,7 @@ func roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
 		FinalisedBlockHash: finalisedBlockHash,
 		ProposedBlocks:     propBlocksInfo,
 		NotarisedBlocks:    notBlocksInfo,
+		IsFinalised:        roundI.IsFinalized(),
 	}
 }
 

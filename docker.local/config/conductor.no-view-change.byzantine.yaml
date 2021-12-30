@@ -14,6 +14,7 @@ sets:
   - name: "resend past messages"
     tests:
       - "resend proposed block"
+      - "resend notarisation"
 
 tests:
   - name: "not notarised block extension"
@@ -119,5 +120,18 @@ tests:
             round: 30
             by_generator: true
             by_node_with_type_rank: 1
+      - make_test_case_check:
+          wait_time: 5m
+
+  - name: "resend notarisation"
+    flow:
+      - set_monitor: "sharder-1"
+      - cleanup_bc: { }
+      - start: [ "miner-1", "miner-2", "miner-3", "miner-4", "sharder-1", "sharder-2" ]
+      - configure_resend_notarisation_test_case:
+          test_report:
+            round: 30
+            by_generator: false
+            by_node_with_type_rank: 0
       - make_test_case_check:
           wait_time: 5m
