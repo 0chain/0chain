@@ -779,14 +779,12 @@ func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round i
 		pndb = prevBlock.ClientState.GetNodeDB()
 	}
 	rootHash = prevBlock.ClientStateHash
-	mndb := util.NewMemoryNodeDB()
-	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), rootHash)
+
+	return CreateState(pndb, round, rootHash)
 }
 
-// CreateStateWithPartialState creates state with state db and
-// partial state root
-func CreateStateWithPartialState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
+// CreateState creates state with state db and root
+func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, stateDB, false)
 	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root)
@@ -1062,35 +1060,23 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		}
 		return common.NewError("state_root_error", "state root not correct")
 	}
-	//if b.ClientState == nil {
-	//	pb := b.PrevBlock
-	//	if pb != nil && pb.IsStateComputed() {
-	//		b.SetStateDB(pb, c.GetStateDB())
-	//	} else {
-	//		b.CreateState(c.GetStateDB(), root.GetHashBytes())
-	//		//return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
-	//	}
-	//}
 
 	pb := b.PrevBlock
 	var clientState util.MerklePatriciaTrieI
 	if pb != nil && pb.IsStateComputed() {
 		clientState = CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
 	} else {
-		clientState = CreateStateWithPartialState(c.GetStateDB(), b.Round, root.GetHashBytes())
+		clientState = CreateState(c.GetStateDB(), b.Round, root.GetHashBytes())
 	}
 
 	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		//redo changes
-		//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return err
 	}
 
 	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
-		//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
 
