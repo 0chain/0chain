@@ -847,6 +847,9 @@ type SimpleNode struct {
 
 	// LastHealthCheck used to check for active node
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
+
+	// Status will be set either node.NodeStatusActive or node.NodeStatusInactive
+	Status int `json:"status"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

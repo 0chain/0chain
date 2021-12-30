@@ -798,6 +798,13 @@ func (msc *MinerSmartContract) createMagicBlock(
 		n.Status = node.NodeStatusActive
 		n.InPrevMB = pmb.Miners.HasNode(v.ID)
 		magicBlock.Miners.AddNode(n)
+
+		mn := NewMinerNode()
+		mn.SimpleNode = v
+		mn.Status = n.Status
+		if err := emitUpdateMiner(mn, balances, true); err != nil {
+			return nil, err
+		}
 	}
 
 	for _, v := range sharders.Nodes {
