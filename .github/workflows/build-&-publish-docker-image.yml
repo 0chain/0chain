@@ -7,7 +7,7 @@ concurrency:
 on:
   push:
     branches: [ master,staging ]
-    tags:
+    tags: [ "v*.*.*" ]
   pull_request:
   workflow_dispatch:
     inputs:
