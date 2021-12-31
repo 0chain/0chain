@@ -917,9 +917,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
-			zap.Int("changes", b.ClientState.GetChangeCount()),
+			zap.Int("changes", bState.GetChangeCount()),
 			zap.String("begin_client_state", util.ToHex(beginStateRoot)),
-			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
+			zap.String("computed_state_hash", util.ToHex(bState.GetRoot())),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
