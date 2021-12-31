@@ -16,16 +16,14 @@ func init() {
 	logging.Logger = zap.NewNop()
 }
 
-func TestMiners(t *testing.T) {
+func TestSharders(t *testing.T) {
 	t.Skip("only for local debugging, requires local postgresql")
 
 	type Stat struct {
-		// for miner (totals)
 		GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
 		GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
-		// for sharder (totals)
-		SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-		SharderFees    state.Balance `json:"sharder_fees,omitempty"`
+		SharderRewards   state.Balance `json:"sharder_rewards,omitempty"`
+		SharderFees      state.Balance `json:"sharder_fees,omitempty"`
 	}
 
 	type NodeType int
@@ -67,30 +65,30 @@ func TestMiners(t *testing.T) {
 		LastHealthCheck common.Timestamp `json:"last_health_check"`
 	}
 
-	type MinerNode struct {
+	type SharderNode struct {
 		*SimpleNode
 	}
 
-	convertMn := func(mn MinerNode) Miner {
-		return Miner{
-			MinerID:           mn.ID,
-			N2NHost:           mn.N2NHost,
-			Host:              mn.Host,
-			Port:              mn.Port,
-			Path:              mn.Path,
-			PublicKey:         mn.PublicKey,
-			ShortName:         mn.ShortName,
-			BuildTag:          mn.BuildTag,
-			TotalStaked:       state.Balance(mn.TotalStaked),
-			Delete:            mn.Delete,
-			DelegateWallet:    mn.DelegateWallet,
-			ServiceCharge:     mn.ServiceCharge,
-			NumberOfDelegates: mn.NumberOfDelegates,
-			MinStake:          mn.MinStake,
-			MaxStake:          mn.MaxStake,
-			LastHealthCheck:   mn.LastHealthCheck,
-			Rewards:           mn.Stat.GeneratorRewards,
-			Fees:              mn.Stat.GeneratorFees,
+	convertSn := func(sn SharderNode) Sharder {
+		return Sharder{
+			SharderID:         sn.ID,
+			N2NHost:           sn.N2NHost,
+			Host:              sn.Host,
+			Port:              sn.Port,
+			Path:              sn.Path,
+			PublicKey:         sn.PublicKey,
+			ShortName:         sn.ShortName,
+			BuildTag:          sn.BuildTag,
+			TotalStaked:       state.Balance(sn.TotalStaked),
+			Delete:            sn.Delete,
+			DelegateWallet:    sn.DelegateWallet,
+			ServiceCharge:     sn.ServiceCharge,
+			NumberOfDelegates: sn.NumberOfDelegates,
+			MinStake:          sn.MinStake,
+			MaxStake:          sn.MaxStake,
+			LastHealthCheck:   sn.LastHealthCheck,
+			Rewards:           sn.Stat.GeneratorRewards,
+			Fees:              sn.Stat.GeneratorFees,
 			Longitude:         0,
 			Latitude:          0,
 		}
@@ -116,14 +114,14 @@ func TestMiners(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	// Miner - Add Event
-	mn := MinerNode{
+	// Sharder - Add Event
+	sn := SharderNode{
 		&SimpleNode{
-			ID:                "miner one",
+			ID:                "sharder one",
 			N2NHost:           "n2n one host",
-			Host:              "miner one host",
+			Host:              "sharder one host",
 			Port:              1999,
-			Path:              "path miner one",
+			Path:              "path sharder one",
 			PublicKey:         "pub key",
 			ShortName:         "mo",
 			BuildTag:          "build tag",
@@ -145,47 +143,47 @@ func TestMiners(t *testing.T) {
 		},
 	}
 
-	mnMiner := convertMn(mn)
-	data, err := json.Marshal(&mnMiner)
+	snSharder := convertSn(sn)
+	data, err := json.Marshal(&snSharder)
 	require.NoError(t, err)
 
-	eventAddMn := Event{
+	eventAddSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddMiner),
+		Tag:         int(TagAddSharder),
 		Data:        string(data),
 	}
-	events := []Event{eventAddMn}
+	events := []Event{eventAddSn}
 	eventDb.AddEvents(events)
 
-	miner, err := eventDb.GetMiner(mn.ID)
+	sharder, err := eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, miner.Path, mn.Path)
+	require.EqualValues(t, sharder.Path, sn.Path)
 
-	// Miner - Overwrite event
-	mn.SimpleNode.Path = "path miner one - overwrite"
+	// Sharder - Overwrite event
+	sn.SimpleNode.Path = "path sharder one - overwrite"
 
-	mnMiner2 := convertMn(mn)
-	data, err = json.Marshal(&mnMiner2)
+	snSharder2 := convertSn(sn)
+	data, err = json.Marshal(&snSharder2)
 	require.NoError(t, err)
 
-	eventAddOrOverwriteMn := Event{
+	eventAddOrOverwriteSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash2",
 		Type:        int(TypeStats),
-		Tag:         int(TagAddOrOverwriteMiner),
+		Tag:         int(TagAddOrOverwriteSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventAddOrOverwriteMn})
+	eventDb.AddEvents([]Event{eventAddOrOverwriteSn})
 
-	miner, err = eventDb.GetMiner(mn.ID)
+	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, miner.Path, mn.Path)
+	require.EqualValues(t, sharder.Path, sn.Path)
 
-	// Miner - Update event
+	// Sharder - Update event
 	update := dbs.DbUpdates{
-		Id: mn.ID,
+		Id: sn.ID,
 		Updates: map[string]interface{}{
 			"path":       "new path",
 			"short_name": "new short name",
@@ -194,31 +192,31 @@ func TestMiners(t *testing.T) {
 	data, err = json.Marshal(&update)
 	require.NoError(t, err)
 
-	eventUpdateMn := Event{
+	eventUpdateSn := Event{
 		BlockNumber: 2,
 		TxHash:      "tx hash3",
 		Type:        int(TypeStats),
-		Tag:         int(TagUpdateMiner),
+		Tag:         int(TagUpdateSharder),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventUpdateMn})
+	eventDb.AddEvents([]Event{eventUpdateSn})
 
-	miner, err = eventDb.GetMiner(mn.ID)
+	sharder, err = eventDb.GetSharder(sn.ID)
 	require.NoError(t, err)
-	require.EqualValues(t, miner.Path, update.Updates["path"])
-	require.EqualValues(t, miner.ShortName, update.Updates["short_name"])
+	require.EqualValues(t, sharder.Path, update.Updates["path"])
+	require.EqualValues(t, sharder.ShortName, update.Updates["short_name"])
 
-	// Miner - Delete Event
+	// Sharder - Delete Event
 	deleteEvent := Event{
 		BlockNumber: 3,
 		TxHash:      "tx hash4",
 		Type:        int(TypeStats),
-		Tag:         int(TagDeleteMiner),
-		Data:        mn.ID,
+		Tag:         int(TagDeleteSharder),
+		Data:        sn.ID,
 	}
 	eventDb.AddEvents([]Event{deleteEvent})
 
-	miner, err = eventDb.GetMiner(mn.ID)
+	sharder, err = eventDb.GetSharder(sn.ID)
 	require.Error(t, err)
 
 }
