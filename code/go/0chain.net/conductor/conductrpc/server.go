@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"strings"
 	"sync"
 
 	"0chain.net/conductor/config"
@@ -423,6 +424,17 @@ func (s *Server) ConfigureTestCase(blob []byte, _ *struct{}) error {
 
 func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
 	return s.CurrentTest.AddResult(blob)
+}
+
+// GetMinersNum returns current miners number.
+func (s *Server) GetMinersNum() int {
+	var minersNum int
+	for nodeName, _ := range s.nodes {
+		if strings.Contains(string(nodeName), "miner") {
+			minersNum++
+		}
+	}
+	return minersNum
 }
 
 //

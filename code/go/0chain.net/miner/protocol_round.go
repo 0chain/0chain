@@ -10,13 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/minersc"
-
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
-	metrics "github.com/rcrowley/go-metrics"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
@@ -26,8 +19,12 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
+	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-
+	"0chain.net/smartcontract/minersc"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -1431,7 +1428,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					zap.Any("lfmbr hash", lfmbr.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
-			go mc.SendBlock(context.Background(), b)
+			go mc.sendBlock(context.Background(), b)
 		}
 	}
 

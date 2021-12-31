@@ -21,14 +21,13 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
+	crpc "0chain.net/conductor/conductrpc"
+	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
-
-	crpc "0chain.net/conductor/conductrpc"
-	crpcutils "0chain.net/conductor/utils"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -331,10 +330,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg := new(sync.WaitGroup)
+
 	if mc.isTestingNotNotarisedBlockExtension(b.Round) {
 		wg.Add(1)
 		go func() {
-			if err := sendNotNotarisedBlockExtensionTestResult(mc.GetRound(b.Round)); err != nil {
+			if err := addNotNotarisedBlockExtensionTestResult(mc.GetRound(b.Round)); err != nil {
 				log.Printf("Conductor: NotNotarisedBlockExtension: error while sending result: %v", err)
 			}
 			wg.Done()
@@ -350,7 +350,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	wg.Wait()
 }
 
-func sendNotNotarisedBlockExtensionTestResult(r round.RoundI) error {
+func addNotNotarisedBlockExtensionTestResult(r round.RoundI) error {
 	testRes := collectVerificationStatuses(r)
 	blob, err := json.Marshal(testRes)
 	if err != nil {

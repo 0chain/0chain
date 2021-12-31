@@ -369,6 +369,24 @@ func init() {
 		return ex.ConfigureNotNotarisedBlockExtensionCheck(cfg)
 	})
 
+	register("configure_send_different_blocks_from_first_generator_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &SendDifferentBlocksFromFirstGenerator{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureSendDifferentBlocksFromFirstGenerator(cfg)
+	})
+
+	register("configure_send_different_blocks_from_all_generators_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		cfg := &SendDifferentBlocksFromAllGenerators{}
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureSendDifferentBlocksFromAllGenerators(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {
