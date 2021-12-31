@@ -60,37 +60,25 @@ func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
 }
 
 func (edb *EventDb) exists(event Event) (bool, error) {
-	var count int64
-	result := edb.Store.Get().
-		Model(&Event{}).
-		Where("tx_hash = ? AND index = ?", event.TxHash, event.Index).
-		Count(&count)
+	var exists bool
+	result := edb.Get().Raw("select exists(select 1 from events where tx_hash = ? AND index = ? limit 1) as ex", event.TxHash, event.Index).Scan(&exists)
 	if result.Error != nil {
 		return false, fmt.Errorf("error counting events matching %v, error %v",
 			event, result.Error)
 	}
-	return count > 0, nil
+	return exists, nil
 }
 
 func (edb *EventDb) removeDuplicate(events []Event) []Event {
-	checkedBlock := make(map[int64]bool)
 	for i := len(events) - 1; i >= 0; i-- {
-		var err error
-		var exists bool
-		var ok bool
-
-		if exists, ok = checkedBlock[events[i].BlockNumber]; !ok {
-			exists, err = edb.exists(events[i])
-		}
+		exists, err := edb.exists(events[i])
 		if err != nil {
 			logging.Logger.Error("error process event",
 				zap.Any("event", events[i]),
 				zap.Error(err),
 			)
 		}
-		isDuplicate := exists || err != nil
-		checkedBlock[events[i].BlockNumber] = isDuplicate
-		if isDuplicate {
+		if exists || err != nil {
 			events[i] = events[len(events)-1]
 			events = events[:len(events)-1]
 		}

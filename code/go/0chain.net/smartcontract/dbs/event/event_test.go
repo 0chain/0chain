@@ -1,6 +1,7 @@
 package event
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -49,4 +50,61 @@ func (edb *EventDb) drop() error {
 		return err
 	}
 	return nil
+}
+
+func TestEventExists(t *testing.T) {
+	t.Skip("only for local debugging, requires local postgresql")
+	access := dbs.DbAccess{
+		Enabled:         true,
+		Name:            "events_db",
+		User:            os.Getenv("POSTGRES_USER"),
+		Password:        os.Getenv("POSTGRES_PASSWORD"),
+		Host:            os.Getenv("POSTGRES_HOST"),
+		Port:            os.Getenv("POSTGRES_PORT"),
+		MaxIdleConns:    100,
+		MaxOpenConns:    200,
+		ConnMaxLifetime: 20 * time.Second,
+	}
+	eventDb, err := NewEventDb(access)
+	require.NoError(t, err)
+	defer eventDb.Close()
+
+	err = eventDb.AutoMigrate()
+	require.NoError(t, err)
+
+	eventDb.AddEvents([]Event{
+		{
+			BlockNumber: 1,
+			TxHash:      "someHash",
+			Type:        int(TypeStats),
+			Tag:         0,
+			Index:       "someIndex",
+			Data:        "some random data",
+		},
+	})
+	gotExists, err := eventDb.exists(Event{
+		BlockNumber: 1,
+		TxHash:      "someHash",
+		Type:        int(TypeStats),
+		Tag:         0,
+		Index:       "someIndex",
+		Data:        "some random data",
+	})
+	if !gotExists || err != nil {
+		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
+	}
+	gotExists, err = eventDb.exists(Event{
+		BlockNumber: 1,
+		TxHash:      "someHash",
+		Type:        int(TypeStats),
+		Tag:         0,
+		Index:       "some1Index",
+		Data:        "some random data",
+	})
+	if gotExists || err != nil {
+		t.Errorf("Exists function did not work want false got %v and err was %v", gotExists, err)
+	}
+
+	err = eventDb.drop()
+	require.NoError(t, err)
 }
