@@ -51,6 +51,18 @@ func (edb *EventDb) GetSharder(id string) (*Sharder, error) {
 
 }
 
+func (edb *EventDb) GetShardersFromQuery(query *Sharder) ([]Sharder, error) {
+
+	var sharders []Sharder
+
+	result := edb.Store.Get().
+		Model(&Sharder{}).
+		Where(query).
+		Find(&sharders)
+
+	return sharders, result.Error
+}
+
 func (edb *EventDb) GetSharders() ([]Sharder, error) {
 
 	var sharders []Sharder

@@ -21,6 +21,8 @@ import (
 
 const (
 	cantGetMinerNodeMsg = "can't get miner node"
+	inactiveNodes       = -1
+	activeNodes         = 1
 )
 
 // user oriented pools requests handler
@@ -79,21 +81,88 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 }
 
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allMinersList, err := msc.GetMinersList(balances)
-	if err != nil {
-		return "", common.NewErrInternal("can't get miners list", err.Error())
+
+	activeString := params.Get("active")
+
+	if activeString != "" && activeString != "0" {
+		active, err := strconv.Atoi(activeString)
+		if err != nil {
+			return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+		}
+
+		var minerQuery event.Miner
+
+		switch active {
+		case activeNodes:
+			minerQuery = event.Miner{Active: true}
+		case inactiveNodes:
+			minerQuery = event.Miner{Active: false}
+		default:
+			return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+		}
+
+		miners, err := balances.GetEventDB().GetMinersFromQuery(&minerQuery)
+		if err != nil {
+			return "", err
+		}
+
+		allMinersList := new(MinerNodes)
+		for _, miner := range miners {
+			allMinersList.Nodes = append(allMinersList.Nodes, minerTableToMinerNode(&miner))
+		}
+		return allMinersList, nil
+
+	} else {
+
+		allMinersList, err := msc.GetMinersList(balances)
+		if err != nil {
+			return "", common.NewErrInternal("can't get miners list", err.Error())
+		}
+		return allMinersList, nil
 	}
-	return allMinersList, nil
 }
 
 const cantGetShardersListMsg = "can't get sharders list"
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	allShardersList, err := getAllShardersList(balances)
-	if err != nil {
-		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
+
+	activeString := params.Get("active")
+
+	if activeString != "" && activeString != "0" {
+		active, err := strconv.Atoi(activeString)
+		if err != nil {
+			return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+		}
+
+		var sharderQuery event.Sharder
+
+		switch active {
+		case activeNodes:
+			sharderQuery = event.Sharder{Active: true}
+		case inactiveNodes:
+			sharderQuery = event.Sharder{Active: false}
+		default:
+			return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+		}
+
+		sharders, err := balances.GetEventDB().GetShardersFromQuery(&sharderQuery)
+		if err != nil {
+			return "", err
+		}
+
+		allShardersList := new(MinerNodes)
+		for _, sharder := range sharders {
+			allShardersList.Nodes = append(allShardersList.Nodes, sharderTableToSharderNode(&sharder))
+		}
+		return allShardersList, nil
+
+	} else {
+		allShardersList, err := getAllShardersList(balances)
+		if err != nil {
+			return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
+		}
+		return allShardersList, nil
 	}
-	return allShardersList, nil
 }
 
 func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {

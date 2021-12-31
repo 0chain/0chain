@@ -51,6 +51,18 @@ func (edb *EventDb) GetMiner(id string) (*Miner, error) {
 
 }
 
+func (edb *EventDb) GetMinersFromQuery(query interface{}) ([]Miner, error) {
+
+	var miners []Miner
+
+	result := edb.Store.Get().
+		Model(&Miner{}).
+		Where(query).
+		Find(&miners)
+
+	return miners, result.Error
+}
+
 func (edb *EventDb) GetMiners() ([]Miner, error) {
 
 	var miners []Miner
