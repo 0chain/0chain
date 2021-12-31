@@ -45,7 +45,7 @@ func init() {
 	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
-func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, clients map[string]*client.Client) error {
+func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b *block.Block, bState util.MerklePatriciaTrieI, clients map[string]*client.Client) error {
 	clients[txn.ClientID] = nil
 	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 		if err != nil {
@@ -53,7 +53,7 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	events, err := mc.UpdateState(ctx, b, txn)
+	events, err := mc.UpdateState(ctx, b, bState, txn)
 	b.Events = append(b.Events, events...)
 	if err != nil {
 		logging.Logger.Error("processTxn", zap.String("txn", txn.Hash),

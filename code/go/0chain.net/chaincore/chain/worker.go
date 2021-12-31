@@ -318,7 +318,7 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 			zap.String("block", fb.Hash),
 			zap.String("prev block", fb.PrevHash))
 
-		fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
+		//fb.SetStateDB(fb.PrevBlock, c.GetStateDB())
 
 		if err := c.GetBlockStateChange(fb); err != nil {
 			Logger.Error("finalize block failed, compute state failed",

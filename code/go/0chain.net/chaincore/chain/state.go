@@ -133,10 +133,10 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 // processed into a block, the state gets updated. If a state can't be updated
 // (e.g low balance), then a false is returned so that the transaction will not
 // make it into the block.
-func (c *Chain) UpdateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) ([]event.Event, error) {
+func (c *Chain) UpdateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(ctx, b, txn)
+	return c.updateState(ctx, b, bState, txn)
 }
 
 // NewStateContext creation helper.
@@ -158,18 +158,17 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transaction.Transaction) (events []event.Event, err error) {
-
+func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
-	_, err = b.ClientState.GetNodeDB().GetNode(b.ClientState.GetRoot())
+	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
 		return nil, common.NewErrorf("update_state_failed",
 			"block state root is incorrect, block hash: %v, state hash: %v, root: %v, round: %d",
-			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(b.ClientState.GetRoot()), b.Round)
+			b.Hash, util.ToHex(b.ClientStateHash), util.ToHex(bState.GetRoot()), b.Round)
 	}
 
 	var (
-		clientState = CreateTxnMPT(b.ClientState) // begin transaction
+		clientState = CreateTxnMPT(bState) // begin transaction
 		startRoot   = clientState.GetRoot()
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
 	)
@@ -206,10 +205,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 		}
 		txn.TransactionOutput = output
 		logging.Logger.Info("SC executed with output",
+			zap.String("block", b.Hash),
+			zap.Int64("round", b.Round),
 			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash),
 			zap.Any("txn_exec_time", time.Since(t)),
-			zap.Any("current_root", sctx.GetState().GetRoot()))
+			zap.String("begin client state", util.ToHex(startRoot)),
+			zap.Any("current_root", util.ToHex(sctx.GetState().GetRoot())))
 
 	case transaction.TxnTypeData:
 
@@ -281,7 +283,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	}
 
 	// commit transaction
-	if err = b.ClientState.MergeMPTChanges(clientState); err != nil {
+	if err = bState.MergeMPTChanges(clientState); err != nil {
 		if state.DebugTxn() {
 			logging.Logger.DPanic("update state - merge mpt error",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -293,12 +295,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, txn *transactio
 	}
 
 	if state.DebugTxn() {
+		// TODO: fix me, the b does not has the state changes
 		if err = block.ValidateState(context.TODO(), b, startRoot); err != nil {
 			logging.Logger.DPanic("update state - state validation failure",
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(b.ClientState, c.OwnerID())
+		os, err = c.getState(bState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),

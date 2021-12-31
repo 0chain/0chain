@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/core/cache"
 	"context"
 	"fmt"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"0chain.net/core/cache"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"

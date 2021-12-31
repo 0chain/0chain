@@ -12,8 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/smartcontract/dbs/event"
-
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -23,6 +21,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -362,11 +361,25 @@ func (b *Block) InitStateDB(ndb util.NodeDB) error {
 	return nil
 }
 
-//CreateState - create the state from the prior state db
+// CreateState - create the state from the prior state db
 func (b *Block) CreateState(pndb util.NodeDB, root util.Key) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round), root)
+}
+
+// setClientState sets the block client state
+// note: must be called with b.stateMutex protection
+func (b *Block) setClientState(s util.MerklePatriciaTrieI) {
+	b.ClientState = s
+	b.ClientStateHash = s.GetRoot()
+}
+
+// SetClientState - set the block client state and update its ClientStateHash
+func (b *Block) SetClientState(s util.MerklePatriciaTrieI) {
+	b.stateMutex.Lock()
+	b.setClientState(s)
+	b.stateMutex.Unlock()
 }
 
 /*AddTransaction - add a transaction to the block */
@@ -748,8 +761,33 @@ type Chainer interface {
 	GetBlockStateChange(b *Block) error
 	ComputeState(ctx context.Context, pb *Block) error
 	GetStateDB() util.NodeDB
-	UpdateState(ctx context.Context, b *Block, txn *transaction.Transaction) ([]event.Event, error)
+	UpdateState(ctx context.Context, b *Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) ([]event.Event, error)
 	GetEventDb() *event.EventDb
+}
+
+// CreateStateWithPreviousBlock creates block client state with previous block
+func CreateStateWithPreviousBlock(prevBlock *Block, stateDB util.NodeDB, round int64) util.MerklePatriciaTrieI {
+	var pndb util.NodeDB
+	var rootHash util.Key
+	if prevBlock.ClientState == nil {
+		logging.Logger.Error("create state db - prior state not available",
+			zap.Int64("round", round),
+			zap.Int64("previous round", prevBlock.Round),
+			zap.String("previous block", prevBlock.Hash))
+		pndb = stateDB
+	} else {
+		pndb = prevBlock.ClientState.GetNodeDB()
+	}
+	rootHash = prevBlock.ClientStateHash
+
+	return CreateState(pndb, round, rootHash)
+}
+
+// CreateState creates state with state db and root
+func CreateState(stateDB util.NodeDB, round int64, root util.Key) util.MerklePatriciaTrieI {
+	mndb := util.NewMemoryNodeDB()
+	ndb := util.NewLevelNodeDB(mndb, stateDB, false)
+	return util.NewMerklePatriciaTrie(ndb, util.Sequence(round), root)
 }
 
 // ComputeState computes block client state
@@ -825,15 +863,17 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 			zap.Any("state status", pb.GetStateStatus()))
 		return ErrPreviousStateNotComputed
 	}
-	b.SetStateDB(pb, c.GetStateDB())
+	//b.SetStateDB(pb, c.GetStateDB())
 
-	beginState := b.ClientState.GetRoot()
+	bState := CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
+
+	beginStateRoot := bState.GetRoot()
 
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, txn)
+		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
@@ -846,7 +886,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 				zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)),
 				zap.Error(err))
 			//rollback changes for the next attempt
-			b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 			b.Events = nil
 			return err
 		default:
@@ -871,20 +911,22 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),
 			zap.Int("changes", b.ClientState.GetChangeCount()),
-			zap.String("begin_client_state", util.ToHex(beginState)),
+			zap.String("begin_client_state", util.ToHex(beginStateRoot)),
 			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
 			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
 		return ErrStateMismatch
 	}
+
+	b.setClientState(bState)
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
 
@@ -893,7 +935,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		zap.String("block", b.Hash),
 		zap.Int("block_size", len(b.Txns)),
 		zap.Int("changes", b.ClientState.GetChangeCount()),
-		zap.String("begin_client_state", util.ToHex(beginState)),
+		zap.String("begin_client_state", util.ToHex(beginStateRoot)),
 		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("prev_block", b.PrevHash),
@@ -903,7 +945,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 
 // ComputeStateLocal computes the block state without fetching
 // previous blocks from network. Please make sure that the previous
-// previous block does exist.
+// block does exist.
 func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	if b.IsStateComputed() {
 		return nil
@@ -913,16 +955,14 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		return common.NewError("state_update_force_error", "previous block is nil")
 	}
 
-	if b.ClientState == nil {
-		b.CreateState(c.GetStateDB(), b.PrevBlock.ClientStateHash)
-	}
+	bState := CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
 
 	beginState := b.ClientState.GetRoot()
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		events, err := c.UpdateState(ctx, b, txn)
+		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
@@ -935,7 +975,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 				zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
 				zap.Error(err))
 			//rollback changes for the next attempt
-			b.SetStateDB(b.PrevBlock, c.GetStateDB())
+			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
 			b.Events = nil
 			return common.NewError("state_update_error", err.Error())
 		default:
@@ -960,7 +1000,7 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state local - state hash mismatch",
 			zap.Int64("round", b.Round),
@@ -974,6 +1014,8 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 			zap.String("prev_block_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
 		return ErrStateMismatch
 	}
+
+	b.setClientState(bState)
 	StateSanityCheck(ctx, b)
 	b.SetStateStatus(StateSuccessful)
 
@@ -1022,34 +1064,32 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		}
 		return common.NewError("state_root_error", "state root not correct")
 	}
-	if b.ClientState == nil {
-		pb := b.PrevBlock
-		if pb != nil && pb.IsStateComputed() {
-			b.SetStateDB(pb, c.GetStateDB())
-		} else {
-			b.CreateState(c.GetStateDB(), root.GetHashBytes())
-			//return common.NewError("apply_block_state_change", "block state is nil, previous block is nil")
-		}
+
+	pb := b.PrevBlock
+	var clientState util.MerklePatriciaTrieI
+	if pb != nil && pb.IsStateComputed() {
+		clientState = CreateStateWithPreviousBlock(pb, c.GetStateDB(), b.Round)
+	} else {
+		clientState = CreateState(c.GetStateDB(), b.Round, root.GetHashBytes())
 	}
 
-	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	err := clientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		logging.Logger.Error("apply block state changes - error merging",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		//redo changes
-		b.SetStateDB(b.PrevBlock, c.GetStateDB())
 		return err
 	}
 
-	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
-		b.SetStateDB(b.PrevBlock, c.GetStateDB())
+	if bytes.Compare(b.ClientStateHash, clientState.GetRoot()) != 0 {
 		return common.NewError("state_mismatch", "Computed state hash doesn't match with the state hash of the block")
 	}
+
+	b.setClientState(clientState)
+	b.SetStateStatus(StateSynched)
 
 	logging.Logger.Info("sync state - apply block state changes success",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash))
-	b.SetStateStatus(StateSynched)
 	return nil
 }
 

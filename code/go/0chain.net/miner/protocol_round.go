@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"0chain.net/core/memorystore"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"0chain.net/core/memorystore"
 
 	"0chain.net/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
@@ -482,7 +483,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Any("prior_block_state", pb.GetStateStatus()))
 		}
 
-		b.SetStateDB(pb, mc.GetStateDB())
+		//b.SetStateDB(pb, mc.GetStateDB())
 
 		err := mc.GenerateBlock(cctx, b, mc, makeBlock)
 		if err != nil {
