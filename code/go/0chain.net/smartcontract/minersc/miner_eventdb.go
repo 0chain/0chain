@@ -85,7 +85,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 	return nil
 }
 
-func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI, active bool) error {
+func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
 	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {

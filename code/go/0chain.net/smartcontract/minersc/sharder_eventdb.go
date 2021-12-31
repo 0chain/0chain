@@ -46,93 +46,93 @@ func sharderTableToSharderNode(edbSharder *event.Sharder) *MinerNode {
 
 }
 
-func sharderNodeToSharderTable(sh *MinerNode) event.Sharder {
+func sharderNodeToSharderTable(sn *MinerNode) event.Sharder {
 
 	return event.Sharder{
-		SharderID:         sh.ID,
-		N2NHost:           sh.N2NHost,
-		Host:              sh.Host,
-		Port:              sh.Port,
-		Path:              sh.Path,
-		PublicKey:         sh.PublicKey,
-		ShortName:         sh.ShortName,
-		BuildTag:          sh.BuildTag,
-		TotalStaked:       state.Balance(sh.TotalStaked),
-		Delete:            sh.Delete,
-		DelegateWallet:    sh.DelegateWallet,
-		ServiceCharge:     sh.ServiceCharge,
-		NumberOfDelegates: sh.NumberOfDelegates,
-		MinStake:          sh.MinStake,
-		MaxStake:          sh.MaxStake,
-		LastHealthCheck:   sh.LastHealthCheck,
-		Rewards:           sh.Stat.GeneratorRewards,
-		Fees:              sh.Stat.GeneratorFees,
-		Active:            sh.Status == node.NodeStatusActive,
+		SharderID:         sn.ID,
+		N2NHost:           sn.N2NHost,
+		Host:              sn.Host,
+		Port:              sn.Port,
+		Path:              sn.Path,
+		PublicKey:         sn.PublicKey,
+		ShortName:         sn.ShortName,
+		BuildTag:          sn.BuildTag,
+		TotalStaked:       state.Balance(sn.TotalStaked),
+		Delete:            sn.Delete,
+		DelegateWallet:    sn.DelegateWallet,
+		ServiceCharge:     sn.ServiceCharge,
+		NumberOfDelegates: sn.NumberOfDelegates,
+		MinStake:          sn.MinStake,
+		MaxStake:          sn.MaxStake,
+		LastHealthCheck:   sn.LastHealthCheck,
+		Rewards:           sn.Stat.GeneratorRewards,
+		Fees:              sn.Stat.GeneratorFees,
+		Active:            sn.Status == node.NodeStatusActive,
 		Longitude:         0,
 		Latitude:          0,
 	}
 }
 
-func emitAddSharder(sh *MinerNode, balances cstate.StateContextI) error {
+func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(sharderNodeToSharderTable(sh))
+	data, err := json.Marshal(sharderNodeToSharderTable(sn))
 	if err != nil {
 		return fmt.Errorf("marshalling sharder: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sh.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, string(data))
 
 	return nil
 }
 
-func emitAddOrOverwriteSharder(sh *MinerNode, balances cstate.StateContextI, active bool) error {
+func emitAddOrOverwriteSharder(sn *MinerNode, balances cstate.StateContextI) error {
 
-	data, err := json.Marshal(sharderNodeToSharderTable(sh))
+	data, err := json.Marshal(sharderNodeToSharderTable(sn))
 	if err != nil {
 		return fmt.Errorf("marshalling sharder: %v", err)
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sh.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteSharder, sn.ID, string(data))
 
 	return nil
 }
 
-func emitUpdateSharder(sh *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
+func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
 
 	dbUpdates := dbs.DbUpdates{
-		Id: sh.ID,
+		Id: sn.ID,
 		Updates: map[string]interface{}{
-			"n2n_host":            sh.N2NHost,
-			"host":                sh.Host,
-			"port":                sh.Port,
-			"path":                sh.Path,
-			"public_key":          sh.PublicKey,
-			"short_name":          sh.ShortName,
-			"build_tag":           sh.BuildTag,
-			"total_staked":        sh.TotalStaked,
-			"delete":              sh.Delete,
-			"delegate_wallet":     sh.DelegateWallet,
-			"service_charge":      sh.ServiceCharge,
-			"number_of_delegates": sh.NumberOfDelegates,
-			"min_stake":           sh.MinStake,
-			"max_stake":           sh.MaxStake,
-			"last_health_check":   sh.LastHealthCheck,
-			"rewards":             sh.SimpleNode.Stat.GeneratorRewards,
-			"fees":                sh.SimpleNode.Stat.GeneratorFees,
+			"n2n_host":            sn.N2NHost,
+			"host":                sn.Host,
+			"port":                sn.Port,
+			"path":                sn.Path,
+			"public_key":          sn.PublicKey,
+			"short_name":          sn.ShortName,
+			"build_tag":           sn.BuildTag,
+			"total_staked":        sn.TotalStaked,
+			"delete":              sn.Delete,
+			"delegate_wallet":     sn.DelegateWallet,
+			"service_charge":      sn.ServiceCharge,
+			"number_of_delegates": sn.NumberOfDelegates,
+			"min_stake":           sn.MinStake,
+			"max_stake":           sn.MaxStake,
+			"last_health_check":   sn.LastHealthCheck,
+			"rewards":             sn.SimpleNode.Stat.GeneratorRewards,
+			"fees":                sn.SimpleNode.Stat.GeneratorFees,
 			"longitude":           0,
 			"latitude":            0,
 		},
 	}
 
 	if updateStatus {
-		dbUpdates.Updates["active"] = sh.Status == node.NodeStatusActive
+		dbUpdates.Updates["active"] = sn.Status == node.NodeStatusActive
 	}
 
 	data, err := json.Marshal(dbUpdates)
 	if err != nil {
 		return fmt.Errorf("marshalling update: %v", err)
 	}
-	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sh.ID, string(data))
+	balances.EmitEvent(event.TypeStats, event.TagUpdateSharder, sn.ID, string(data))
 	return nil
 }
 
