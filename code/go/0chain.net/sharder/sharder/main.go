@@ -42,43 +42,38 @@ import (
 
 func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error) {
 	var (
-		mConf   blockstore.MinioConfiguration
-		scanner = bufio.NewScanner(reader)
-		more    = scanner.Scan()
+		mConf  blockstore.MinioConfiguration
+		config = viper.New()
 	)
-
-	if more == false {
-		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
-	}
-	mConf.StorageServiceURL = scanner.Text()
-	more = scanner.Scan()
-	if more == false {
+	config.SetConfigType("yaml")
+	config.ReadConfig(reader)
+	if config.GetString("storage_service_url") == "" {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	mConf.AccessKeyID = scanner.Text()
-	more = scanner.Scan()
-	if more == false {
+	mConf.StorageServiceURL = config.GetString("storage_service_url")
+	if config.GetString("access_key_id") == "" {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	mConf.SecretAccessKey = scanner.Text()
-	more = scanner.Scan()
-	if more == false {
+	mConf.AccessKeyID = config.GetString("access_key_id")
+	if config.GetString("secret_access_key") == "" {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	mConf.BucketName = scanner.Text()
-	more = scanner.Scan()
-	if more == false {
+	mConf.SecretAccessKey = config.GetString("secret_access_key")
+	if config.GetString("bucket_name") == "" {
 		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	mConf.BucketLocation = scanner.Text()
+	mConf.BucketName = config.GetString("bucket_name")
+	if config.GetString("bucket_location") == "" {
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
 
+	mConf.BucketLocation = config.GetString("bucket_location")
 	mConf.DeleteLocal = viper.GetBool("minio.delete_local_copy")
 	mConf.Secure = viper.GetBool("minio.use_ssl")
-
 	return mConf, nil
 }
 
