@@ -1,14 +1,11 @@
 package event
 
 import (
+	"errors"
+	"fmt"
+
 	"gorm.io/gorm"
 )
-
-type Model interface {
-	Create(interface{}) (int64, error)
-	Get(string) (interface{}, error)
-	Delete(string) error
-}
 
 type Authorizer struct {
 	gorm.Model
@@ -32,16 +29,67 @@ type Authorizer struct {
 }
 
 func (edb *EventDb) AddAuthorizer(a *Authorizer) error {
-	//TODO implement me
-	panic("implement me")
+	exists, err := a.exists(edb)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return errors.New("authorizer already exists")
+	}
+
+	result := edb.Store.Get().Create(a)
+
+	return result.Error
 }
 
-func (edb *EventDb) GetAuthorizer(id string) (interface{}, error) {
-	//TODO implement me
-	panic("implement me")
+func (edb *EventDb) GetAuthorizer(id string) (*Authorizer, error) {
+	var auth Authorizer
+
+	result := edb.Store.Get().
+		Model(&Authorizer{}).
+		Where(&Authorizer{AuthorizerID: id}).
+		First(&auth)
+
+	if result.Error != nil {
+		return nil, fmt.Errorf(
+			"error retrieving authorizer %v, error %v",
+			id, result.Error,
+		)
+	}
+
+	return &auth, nil
+}
+
+func (edb *EventDb) GetAuthorizers() ([]Authorizer, error) {
+	var authorizers []Authorizer
+	result := edb.Store.Get().
+		Model(&Authorizer{}).
+		Find(&authorizers)
+	return authorizers, result.Error
 }
 
 func (edb *EventDb) DeleteAuthorizer(id string) error {
-	//TODO implement me
-	panic("implement me")
+	result := edb.Store.Get().
+		Where("authorizer_id = ?", id).
+		Delete(&Authorizer{})
+	return result.Error
+}
+
+func (a *Authorizer) exists(edb *EventDb) (bool, error) {
+	var count int64
+
+	result := edb.Get().
+		Model(&Authorizer{}).
+		Where(&Authorizer{AuthorizerID: a.AuthorizerID}).
+		Count(&count)
+
+	if result.Error != nil {
+		return false,
+			fmt.Errorf(
+				"error searching for authorizer %v, error %v",
+				a.AuthorizerID, result.Error,
+			)
+	}
+	return count > 0, nil
 }
