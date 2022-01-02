@@ -22,10 +22,10 @@ import (
 // ToClient is an SC address
 func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (string, error) {
 	var (
-		//publicKey    = tran.PublicKey  // authorizer public key
+		publicKey    = tran.PublicKey  // authorizer public key
 		authorizerID = tran.ClientID   // sender address
 		recipientID  = tran.ToClientID // smart contract address
-		node         *AuthorizerNode
+		authorizer   *AuthorizerNode
 		err          error
 		errorCode    = "failed to add authorizer"
 	)
@@ -37,7 +37,26 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	node, err = GetAuthorizerNode(authorizerID, ctx)
+	// Decode input
+
+	params := AuthorizerParameter{}
+	err = params.Decode(inputData)
+	if err != nil {
+		err = common.NewError(errorCode, "failed to decode AuthorizerParameter")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+
+	if params.PublicKey == "" {
+		err = common.NewError(errorCode, "public key was not included with transaction")
+		Logger.Error("public key error", zap.Error(err))
+		return "", err
+	}
+	publicKey = params.PublicKey
+
+	// Check existing Authorizer
+
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err == nil {
 		msg := fmt.Sprintf("authorizer(authorizerID: %v) already exists: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
@@ -45,7 +64,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		return "", err
 	}
 
-	gn, err := GetGlobalNode(ctx)
+	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node, authorizer(authorizerID: %v), err: %v", authorizerID, err)
 		err := common.NewError(errorCode, msg)
@@ -54,42 +73,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	}
 
 	// compare the global min of authorizerNode Authorizer to that of the transaction amount
-	if gn.MinStakeAmount > tran.Value {
-		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", gn.MinStakeAmount, tran.Value)
+	if globalNode.MinStakeAmount > tran.Value {
+		msg := fmt.Sprintf("min stake amount '(%d)' > transaction value '(%d)'", globalNode.MinStakeAmount, tran.Value)
 		err = common.NewError(errorCode, msg)
 		Logger.Error("min stake amount > transaction value", zap.Error(err))
 		return "", err
 	}
 
-	authParam := AuthorizerParameter{}
-	err = authParam.Decode(inputData)
-	if err != nil {
-		err = common.NewError(errorCode, "failed to decode AuthorizerParameter")
-		Logger.Error("public key error", zap.Error(err))
-		return "", err
-	}
+	// Create Authorizer instance
 
-	if authParam.PublicKey == "" {
-		err = common.NewError(errorCode, "public key was not included with transaction")
-		Logger.Error("public key error", zap.Error(err))
-		return "", err
-	}
-
-	// Save authorizer
-	// authorizerID = tran.ClientID
-	node = CreateAuthorizer(authorizerID, authParam.PublicKey, authParam.URL)
-
-	err = node.Save(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
-		err = common.NewError(errorCode, msg)
-		Logger.Error("saving authorizer node", zap.Error(err))
-		return "", err
-	}
+	authorizer = CreateAuthorizer(authorizerID, publicKey, params.URL)
 
 	//Dig pool for authorizer
 
-	transfer, response, err := node.Staking.DigPool(tran.Hash, tran)
+	transfer, response, err := authorizer.Staking.DigPool(tran.Hash, tran)
 	if err != nil {
 		err = common.NewError(errorCode, fmt.Sprintf("error digging pool, err: (%v)", err))
 		return "", err
@@ -101,6 +98,15 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		err = common.NewError(errorCode, fmt.Sprintf(msg, err, authorizerID, recipientID, transfer.ClientID, transfer.ToClientID))
 		return "", err
 	}
+	err = authorizer.Save(ctx)
+	if err != nil {
+		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
+		err = common.NewError(errorCode, msg)
+		Logger.Error("saving authorizer node", zap.Error(err))
+		return "", err
+	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagAddAuthorizer, authorizerID, string(authorizer.Encode()))
 
 	return response, err
 }
