@@ -3,6 +3,8 @@ package zcnsc
 import (
 	"fmt"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -128,7 +130,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	gn, err := GetGlobalNode(ctx)
+	globalNode, err := GetGlobalNode(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get global node (authorizerID: %v), err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
@@ -145,7 +147,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	transfer, response, err = pool.EmptyPool(gn.ID, tran.ClientID, tran)
+	transfer, response, err = pool.EmptyPool(globalNode.ID, tran.ClientID, tran)
 	if err != nil {
 		msg := fmt.Sprintf("error emptying pool, err: (%v)", err)
 		err = common.NewError(errorCode, msg)
@@ -170,6 +172,8 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		Logger.Error("delete trie node", zap.Error(err))
 		return "", err
 	}
+
+	ctx.EmitEvent(event.TypeStats, event.TagDeleteAuthorizer, authorizerID, authorizerID)
 
 	Logger.Info(
 		"deleted authorizer",
