@@ -52,6 +52,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 		Logger.Error("public key error", zap.Error(err))
 		return "", err
 	}
+
 	publicKey = params.PublicKey
 
 	// Check existing Authorizer
@@ -95,9 +96,20 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 	err = ctx.AddTransfer(transfer)
 	if err != nil {
 		msg := "Error: '%v', transaction.ClientId: '%s', transaction.ToClientId: '%s', transfer.ClientID: '%s', transfer.ToClientID: '%s'"
-		err = common.NewError(errorCode, fmt.Sprintf(msg, err, authorizerID, recipientID, transfer.ClientID, transfer.ToClientID))
+		err = common.NewError(
+			errorCode,
+			fmt.Sprintf(
+				msg,
+				err,
+				authorizerID,
+				recipientID,
+				transfer.ClientID,
+				transfer.ToClientID,
+			),
+		)
 		return "", err
 	}
+
 	err = authorizer.Save(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("error saving authorizer(authorizerID: %v), err: %v", authorizerID, err)
@@ -114,14 +126,14 @@ func (zcn *ZCNSmartContract) AddAuthorizer(tran *transaction.Transaction, inputD
 func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ []byte, ctx cstate.StateContextI) (string, error) {
 	var (
 		authorizerID = tran.ClientID
-		node         *AuthorizerNode
+		authorizer   *AuthorizerNode
 		transfer     *state.Transfer
 		response     string
 		err          error
 		errorCode    = "failed to delete authorizer"
 	)
 
-	node, err = GetAuthorizerNode(authorizerID, ctx)
+	authorizer, err = GetAuthorizerNode(authorizerID, ctx)
 	if err != nil {
 		msg := fmt.Sprintf("failed to get authorizer (authorizerID: %v), err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
@@ -129,7 +141,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 		return "", err
 	}
 
-	if node == nil {
+	if authorizer == nil {
 		msg := fmt.Sprintf("authorizer (authorizerID: %v) not found, err: %v", authorizerID, err)
 		err = common.NewError(errorCode, msg)
 		Logger.Error("authorizer node not found", zap.Error(err))
@@ -145,7 +157,7 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// empty the authorizer's pool
-	pool := node.Staking
+	pool := authorizer.Staking
 	if pool == nil {
 		msg := "pool is not created"
 		err := common.NewError(errorCode, msg)
@@ -171,9 +183,14 @@ func (zcn *ZCNSmartContract) DeleteAuthorizer(tran *transaction.Transaction, _ [
 	}
 
 	// delete authorizer node
-	_, err = ctx.DeleteTrieNode(node.GetKey())
+	_, err = ctx.DeleteTrieNode(authorizer.GetKey())
 	if err != nil {
-		msg := fmt.Sprintf("failed to delete authorizerID: (%v), node key: (%v), err: %v", authorizerID, node.GetKey(), err)
+		msg := fmt.Sprintf(
+			"failed to delete authorizerID: (%v), node key: (%v), err: %v",
+			authorizerID,
+			authorizer.GetKey(),
+			err,
+		)
 		err = common.NewError(errorCode, msg)
 		Logger.Error("delete trie node", zap.Error(err))
 		return "", err
