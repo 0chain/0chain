@@ -26,6 +26,9 @@ const (
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagDeleteBlobber
+
+	TagAddAuthorizer
+	TagDeleteAuthorizer
 )
 
 func (edb *EventDb) AddEvents(events []Event) {
@@ -51,6 +54,7 @@ func (edb *EventDb) AddEvents(events []Event) {
 
 func (edb *EventDb) addStat(event Event) error {
 	switch EventTag(event.Tag) {
+	// blobber
 	case TagAddOrOverwriteBlobber:
 		var blobber Blobber
 		err := json.Unmarshal([]byte(event.Data), &blobber)
@@ -67,6 +71,18 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
 		return edb.deleteBlobber(event.Data)
+
+	// authorizer
+	case TagAddAuthorizer:
+		var auth *Authorizer
+		err := json.Unmarshal([]byte(event.Data), &auth)
+		if err != nil {
+			return err
+		}
+		return edb.AddAuthorizer(auth)
+	case TagDeleteAuthorizer:
+		return edb.DeleteAuthorizer(event.Data)
+
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
