@@ -319,6 +319,8 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 		if err == nil {
 			return sharderTableToSharderNode(nodeS), nil
 		}
+	} else {
+		err = errors.New("event db is not initialized")
 	}
 
 	return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
