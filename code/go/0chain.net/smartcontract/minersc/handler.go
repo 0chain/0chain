@@ -309,14 +309,16 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 
 	var id = params.Get("id")
 
-	nodeM, err := balances.GetEventDB().GetMiner(id)
-	if err == nil {
-		return minerTableToMinerNode(nodeM), nil
-	}
+	if balances.GetEventDB() != nil {
+		nodeM, err := balances.GetEventDB().GetMiner(id)
+		if err == nil {
+			return minerTableToMinerNode(nodeM), nil
+		}
 
-	nodeS, err := balances.GetEventDB().GetSharder(id)
-	if err == nil {
-		return sharderTableToSharderNode(nodeS), nil
+		nodeS, err := balances.GetEventDB().GetSharder(id)
+		if err == nil {
+			return sharderTableToSharderNode(nodeS), nil
+		}
 	}
 
 	return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
