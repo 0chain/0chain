@@ -137,29 +137,34 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 		err             error
 	)
 
-	if activeString != "" && activeString != "0" {
-		active, err := strconv.Atoi(activeString)
-		if err != nil {
-			return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+	if balances.GetEventDB() != nil {
+		if activeString != "" && activeString != "0" {
+			active, err := strconv.Atoi(activeString)
+			if err != nil {
+				return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+			}
+
+			switch active {
+			case activeNodes:
+				sharderQuery = event.Sharder{Active: true}
+			case inactiveNodes:
+				sharderQuery = event.Sharder{Active: false}
+			default:
+				return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+			}
+			hasQuery = true
+
 		}
 
-		switch active {
-		case activeNodes:
-			sharderQuery = event.Sharder{Active: true}
-		case inactiveNodes:
-			sharderQuery = event.Sharder{Active: false}
-		default:
-			return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+		if hasQuery {
+			sharders, err = balances.GetEventDB().GetShardersFromQuery(&sharderQuery)
+		} else {
+			sharders, err = balances.GetEventDB().GetSharders()
 		}
-		hasQuery = true
-
-	}
-
-	if hasQuery {
-		sharders, err = balances.GetEventDB().GetShardersFromQuery(&sharderQuery)
 	} else {
-		sharders, err = balances.GetEventDB().GetSharders()
+		err = errors.New("event db is not initialized")
 	}
+
 	if err != nil {
 		return "", common.NewErrInternal("can't get sharders list", err.Error())
 	}

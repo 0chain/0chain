@@ -17,7 +17,7 @@ func init() {
 }
 
 func TestMiners(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
+	//t.Skip("only for local debugging, requires local postgresql")
 
 	type Stat struct {
 		// for miner (totals)
@@ -96,12 +96,24 @@ func TestMiners(t *testing.T) {
 		}
 	}
 
+	//access := dbs.DbAccess{
+	//	Enabled:         true,
+	//	Name:            "events_db",
+	//	User:            "zchain_user",
+	//	Password:        "zchian",
+	//	Host:            "localhost",
+	//	Port:            "5432",
+	//	MaxIdleConns:    100,
+	//	MaxOpenConns:    200,
+	//	ConnMaxLifetime: 20 * time.Second,
+	//}
+
 	access := dbs.DbAccess{
 		Enabled:         true,
-		Name:            "events_db",
-		User:            "zchain_user",
-		Password:        "zchian",
-		Host:            "localhost",
+		Name:            "test_db",
+		User:            "root",
+		Password:        "root",
+		Host:            "168.119.148.67",
 		Port:            "5432",
 		MaxIdleConns:    100,
 		MaxOpenConns:    200,
