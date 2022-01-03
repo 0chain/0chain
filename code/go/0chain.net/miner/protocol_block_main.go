@@ -189,6 +189,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		iterInfo       = newTxnIterInfo(mc.BlockSize())
 		txnProcessor   = txnProcessorHandlerFunc(mc, b)
 		blockState     = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
+		beginState     = blockState.GetRoot()
 		txnIterHandler = txnIterHandlerFunc(mc, b, blockState, txnProcessor, iterInfo)
 	)
 
@@ -343,7 +344,10 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 		zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash),
 		zap.String("prev_block", b.PrevHash),
-		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+		zap.String("begin_state_hash", util.ToHex(beginState)),
+		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
+		zap.String("computed_state_hash", util.ToHex(blockState.GetRoot())),
+		zap.Int("changes", blockState.GetChangeCount()),
 		zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
 		zap.Int32("iteration_count", iterInfo.count))

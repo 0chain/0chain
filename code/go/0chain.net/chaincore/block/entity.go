@@ -914,6 +914,7 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
+			zap.String("minerID", b.MinerID),
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Int("block_size", len(b.Txns)),

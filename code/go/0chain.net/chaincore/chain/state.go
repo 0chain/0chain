@@ -169,8 +169,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	var (
 		clientState = CreateTxnMPT(bState) // begin transaction
-		startRoot   = clientState.GetRoot()
 		sctx        = c.NewStateContext(b, clientState, txn, nil)
+		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
 
@@ -207,6 +207,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		logging.Logger.Info("SC executed with output",
 			zap.String("block", b.Hash),
 			zap.Int64("round", b.Round),
+			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
+			zap.Any("txn_data", txn.TransactionData),
 			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash),
 			zap.Any("txn_exec_time", time.Since(t)),
@@ -293,6 +295,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		logging.Logger.Error("error committing txn", zap.Any("error", err))
 		return
 	}
+
+	//logging.Logger.Debug("update state - root",
+	//	zap.String("block", b.Hash),
+	//	zap.String("txn", txn.Hash),
+	//	zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
+	//	zap.String("begin", util.ToHex(startRoot)),
+	//	zap.String("root", util.ToHex(clientState.GetRoot())))
 
 	if state.DebugTxn() {
 		// TODO: fix me, the b does not has the state changes
