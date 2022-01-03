@@ -91,29 +91,34 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 		err           error
 	)
 
-	if activeString != "" && activeString != "0" {
-		active, err := strconv.Atoi(activeString)
-		if err != nil {
-			return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+	if balances.GetEventDB() != nil {
+		if activeString != "" && activeString != "0" {
+			active, err := strconv.Atoi(activeString)
+			if err != nil {
+				return "", fmt.Errorf("cannot parse active param (%v): %v", activeString, err)
+			}
+
+			switch active {
+			case activeNodes:
+				minerQuery = event.Miner{Active: true}
+			case inactiveNodes:
+				minerQuery = event.Miner{Active: false}
+			default:
+				return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+			}
+			hasQuery = true
+
 		}
 
-		switch active {
-		case activeNodes:
-			minerQuery = event.Miner{Active: true}
-		case inactiveNodes:
-			minerQuery = event.Miner{Active: false}
-		default:
-			return "", fmt.Errorf("invalid active param: %v. Possible values (-1, 1)", active)
+		if hasQuery {
+			miners, err = balances.GetEventDB().GetMinersFromQuery(&minerQuery)
+		} else {
+			miners, err = balances.GetEventDB().GetMiners()
 		}
-		hasQuery = true
-
-	}
-
-	if hasQuery {
-		miners, err = balances.GetEventDB().GetMinersFromQuery(&minerQuery)
 	} else {
-		miners, err = balances.GetEventDB().GetMiners()
+		err = errors.New("event db is not initialized")
 	}
+
 	if err != nil {
 		return "", common.NewErrInternal("can't get miners list", err.Error())
 	}
