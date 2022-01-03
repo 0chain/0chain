@@ -445,11 +445,8 @@ func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) err
 
 	if !b.IsStateComputed() {
 		logging.Logger.Debug("Computing state for block we received notarization for")
-		if err := mc.GetBlockStateChange(b); err != nil {
-			logging.Logger.Warn("Can't get block state change for notarization", zap.Error(err))
-			if err := mc.ComputeState(ctx, b); err != nil {
-				return fmt.Errorf("compute state of notarized block failed, err: %v", err)
-			}
+		if err := mc.GetBlockStateChangeForce(ctx, b); err != nil {
+			return fmt.Errorf("can't get block state change for notarization, err: %v", err)
 		}
 	}
 
