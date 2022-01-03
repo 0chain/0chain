@@ -2,9 +2,11 @@ package chain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
 
 	"errors"
@@ -105,7 +107,12 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, balances bcstate.StateContextI) (string, error) {
+func (c *Chain) ExecuteSmartContract(
+	ctx context.Context,
+	t *transaction.Transaction,
+	scData *sci.SmartContractTransactionData,
+	balances bcstate.StateContextI) (string, error) {
+
 	var output string
 	var err error
 	ts := time.Now()
@@ -113,7 +120,7 @@ func (c *Chain) ExecuteSmartContract(ctx context.Context, t *transaction.Transac
 	cctx, cancelf := context.WithTimeout(ctx, c.SmartContractTimeout())
 	defer cancelf()
 	go func() {
-		output, err = smartcontract.ExecuteSmartContract(cctx, t, balances)
+		output, err = smartcontract.ExecuteSmartContract(t, scData, balances)
 		done <- true
 	}()
 	select {
@@ -178,8 +185,18 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 
 	case transaction.TxnTypeSmartContract:
 		var output string
+
+		var scData sci.SmartContractTransactionData
+		dataBytes := []byte(txn.TransactionData)
+		err = json.Unmarshal(dataBytes, &scData)
+		if err != nil {
+			logging.Logger.Error("Error while decoding the JSON from transaction",
+				zap.Any("input", txn.TransactionData), zap.Any("error", err))
+			return nil, err
+		}
+
 		t := time.Now()
-		output, err = c.ExecuteSmartContract(ctx, txn, sctx)
+		output, err = c.ExecuteSmartContract(ctx, txn, &scData, sctx)
 		switch err {
 		case ErrSmartContractContext:
 			sctx.EmitError(err)
@@ -204,13 +221,12 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			}
 		}
 		txn.TransactionOutput = output
-		logging.Logger.Info("SC executed with output",
+		logging.Logger.Info("SC executed",
 			zap.String("block", b.Hash),
 			zap.Int64("round", b.Round),
 			zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)),
-			zap.Any("txn_data", txn.TransactionData),
-			zap.Any("txn_output", txn.TransactionOutput),
 			zap.Any("txn_hash", txn.Hash),
+			zap.String("txn_func", scData.FunctionName),
 			zap.Any("txn_exec_time", time.Since(t)),
 			zap.String("begin client state", util.ToHex(startRoot)),
 			zap.Any("current_root", util.ToHex(sctx.GetState().GetRoot())))
