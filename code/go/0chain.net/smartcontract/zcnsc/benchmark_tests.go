@@ -50,18 +50,21 @@ func (bt benchTest) Run(state cstate.StateContextI, b *testing.B) error {
 func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) benchmark.TestSuite {
 	sc := createSmartContract()
 
+	authToDelete := authorizers[0]
+	indexOfNewAuth := len(authorizers)
+
 	return createTestSuite(
 		[]benchTest{
 			{
 				name:     benchmark.Zcn + AddAuthorizerFunc,
 				endpoint: sc.AddAuthorizer,
-				txn:      createTransaction(data.Clients[addingAuthorizer], data.PublicKeys[addingAuthorizer]),
-				input:    createAuthorizerPayload(data, addingAuthorizer),
+				txn:      createTransaction(data.Clients[indexOfNewAuth], data.PublicKeys[indexOfNewAuth]),
+				input:    createAuthorizerPayload(data, indexOfNewAuth),
 			},
 			{
 				name:     benchmark.Zcn + DeleteAuthorizerFunc,
 				endpoint: sc.DeleteAuthorizer,
-				txn:      createTransaction(data.Clients[removableAuthorizer], data.PublicKeys[removableAuthorizer]),
+				txn:      createTransaction(authToDelete.ID, authToDelete.PublicKey),
 				input:    nil,
 			},
 			{
@@ -73,19 +76,19 @@ func BenchmarkTests(data benchmark.BenchData, scheme benchmark.SignatureScheme) 
 			{
 				name:     benchmark.Zcn + MintFunc + ".1Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 0, 1),
 			},
 			{
 				name:     benchmark.Zcn + MintFunc + ".10Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 1, 10),
 			},
 			{
 				name:     benchmark.Zcn + MintFunc + "100Confirmation",
 				endpoint: sc.Mint,
-				txn:      createRandomTransaction(data.Clients, data.PublicKeys),
+				txn:      createRandomTransaction(),
 				input:    createMintPayloadForZCNSCMint(scheme, data, 10, 110),
 			},
 		},
@@ -96,9 +99,11 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 	var sigs []*AuthorizerSignature
 
 	client := data.Clients[1]
+	lim := len(authorizers)
 
-	for i := from; i < to; i++ {
-		index := randomIndex(len(data.PublicKeys))
+	for i := from; i < to && i < lim; i++ {
+
+		auth := authorizers[i]
 
 		pb := &proofOfBurn{
 			TxnID:             encryption.Hash(strconv.Itoa(i)),
@@ -108,17 +113,17 @@ func createMintPayloadForZCNSCMint(scheme benchmark.SignatureScheme, data benchm
 			Scheme:            scheme,
 		}
 
-		err := pb.sign(data.PrivateKeys[index])
+		err := pb.sign(data.PrivateKeys[i])
 		if err != nil {
 			panic(err)
 		}
 
 		sig := &AuthorizerSignature{
-			ID:        data.Clients[index],
+			ID:        auth.ID,
 			Signature: pb.Signature,
 		}
 
-		err = pb.verifySignature(data.PublicKeys[index])
+		err = pb.verifySignature(auth.PublicKey)
 		if err != nil {
 			panic(err)
 		}
@@ -157,9 +162,10 @@ func createAuthorizerPayload(data benchmark.BenchData, index int) []byte {
 	return an.Encode()
 }
 
-func createRandomTransaction(clients, publicKey []string) *transaction.Transaction {
-	index := randomIndex(len(clients))
-	return createTransaction(clients[index], publicKey[index])
+func createRandomTransaction() *transaction.Transaction {
+	index := randomIndex(len(authorizers))
+	auth := authorizers[index]
+	return createTransaction(auth.ID, auth.PublicKey)
 }
 
 func createRandomBurnTransaction(clients, publicKey []string) *transaction.Transaction {
