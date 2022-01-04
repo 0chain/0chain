@@ -715,14 +715,17 @@ func (mn *MinerNode) Decode(input []byte) error {
 	}
 
 	mn.SimpleNode = n.SimpleNode
+	mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
 	for k, pl := range n.Pending {
 		mn.Pending[k] = pl.ToDelegatePool()
 	}
 
+	mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
 	for k, pl := range n.Active {
 		mn.Active[k] = pl.ToDelegatePool()
 	}
 
+	mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
 	for k, pl := range n.Deleting {
 		mn.Deleting[k] = pl.ToDelegatePool()
 	}
