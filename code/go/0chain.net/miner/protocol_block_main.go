@@ -48,10 +48,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	})
 }
 
-type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *txnIterInfo) bool
+type txnProcessorHandler func(context.Context, util.MerklePatriciaTrieI, *transaction.Transaction, *TxnIterInfo) bool
 
 func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
-	return func(ctx context.Context, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, tii *txnIterInfo) bool {
+	return func(ctx context.Context, bState util.MerklePatriciaTrieI, txn *transaction.Transaction, tii *TxnIterInfo) bool {
 		if _, ok := tii.txnMap[txn.GetKey()]; ok {
 			return false
 		}
@@ -109,7 +109,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 	}
 }
 
-type txnIterInfo struct {
+type TxnIterInfo struct {
 	clients     map[string]*client.Client
 	eTxns       []datastore.Entity
 	invalidTxns []datastore.Entity
@@ -130,8 +130,8 @@ type txnIterInfo struct {
 	byteSize int64
 }
 
-func newTxnIterInfo(blockSize int32) *txnIterInfo {
-	return &txnIterInfo{
+func newTxnIterInfo(blockSize int32) *TxnIterInfo {
+	return &TxnIterInfo{
 		clients: make(map[string]*client.Client),
 		eTxns:   make([]datastore.Entity, 0, blockSize),
 		txnMap:  make(map[datastore.Key]struct{}, blockSize),
@@ -142,7 +142,7 @@ func txnIterHandlerFunc(mc *Chain,
 	b *block.Block,
 	bState util.MerklePatriciaTrieI,
 	txnProcessor txnProcessorHandler,
-	tii *txnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
+	tii *TxnIterInfo) func(context.Context, datastore.CollectionEntity) bool {
 	return func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		tii.count++
 		if mc.GetCurrentRound() > b.Round {
