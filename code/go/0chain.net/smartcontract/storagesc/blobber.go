@@ -564,11 +564,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"malformed input: "+err.Error())
 	}
 
-	if commitConnection.WriteMarker == nil {
-		return "", common.NewError("commit_connection_failed",
-			"invalid input: missing write_marker")
-	}
-
 	if !commitConnection.Verify() {
 		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}
