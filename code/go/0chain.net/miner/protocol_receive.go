@@ -419,21 +419,34 @@ func (mc *Chain) NotarizationProcessWorker(ctx context.Context) {
 
 func (mc *Chain) notarizationProcess(ctx context.Context, not *Notarization) error {
 	var (
-		r    = mc.GetMinerRound(not.Round)
+		r    = mc.getOrCreateRound(ctx, not.Round)
 		b, _ = mc.GetBlock(ctx, not.BlockID)
 	)
 
 	if b == nil {
+		logging.Logger.Debug("Block we received notarization for is not found locally, fetching it")
 		// fetch from remote
 		var err error
 		b, err = mc.GetNotarizedBlockForce(ctx, not.BlockID, not.Round)
 		if err != nil {
 			return fmt.Errorf("fetch notarized block failed, err: %v", err)
 		}
-		r = mc.getOrCreateRound(ctx, not.Round)
-		err = mc.ComputeOrSyncState(ctx, b)
+		//err = mc.ComputeOrSyncState(ctx, b)
+		prevBlock, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil {
-			return fmt.Errorf("compute state of notarized block failed, err: %v", err)
+			logging.Logger.Debug("No previous block for notarization is found locally, fetching it", zap.Error(err))
+			prevBlock = mc.GetPreviousBlock(ctx, b)
+			if prevBlock == nil {
+				return fmt.Errorf("can't fetch previous block of notarization")
+			}
+		}
+		b.SetPreviousBlock(prevBlock)
+	}
+
+	if !b.IsStateComputed() {
+		logging.Logger.Debug("Computing state for block we received notarization for")
+		if err := mc.GetBlockStateChangeForce(ctx, b); err != nil {
+			return fmt.Errorf("can't get block state change for notarization, err: %v", err)
 		}
 	}
 
