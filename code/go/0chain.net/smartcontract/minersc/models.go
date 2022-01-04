@@ -664,7 +664,7 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 	mn.ID = params.Get("id")
 
 	if mn.N2NHost == "" || mn.ID == "" {
-		return errors.New("BaseURL or ID is not specified")
+		return errors.New("URL or ID is not specified")
 	}
 	return nil
 

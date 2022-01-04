@@ -11,7 +11,7 @@ type Authorizer struct {
 	gorm.Model
 
 	AuthorizerID string `json:"id" gorm:"uniqueIndex"`
-	BaseURL      string `json:"url"`
+	URL          string `json:"url"`
 
 	// Geolocation
 	Latitude  float64 `json:"latitude"`
