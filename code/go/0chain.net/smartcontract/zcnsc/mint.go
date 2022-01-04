@@ -10,8 +10,8 @@ import (
 )
 
 // Mint inputData - is a MintPayload
-func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, balances cstate.StateContextI) (resp string, err error) {
-	gn, err := GetGlobalNode(balances)
+func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []byte, ctx cstate.StateContextI) (resp string, err error) {
+	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		return "", common.NewError("failed to burn", fmt.Sprintf("failed to get global node error: %s, Client ID: %s", err.Error(), trans.Hash))
 	}
@@ -29,7 +29,7 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	}
 
 	// get user node
-	un, err := GetUserNode(trans.ClientID, balances)
+	un, err := GetUserNode(trans.ClientID, ctx)
 	if err != nil && payload.Nonce != 1 {
 		err = common.NewError("failed to mint", fmt.Sprintf("get user node error (%v)", err.Error()))
 		return
@@ -55,21 +55,8 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 		return
 	}
 
-	// get the authorizers
-	ans, err := GetAuthorizerNodes(balances)
-	if err != nil {
-		return
-	}
-
-	// check number of authorizers
-	signaturesNeeded := int(gn.PercentAuthorizers * float64(len(ans.NodeMap)))
-	if signaturesNeeded > len(payload.Signatures) {
-		err = common.NewError("failed to mint", fmt.Sprintf("number of authorizers(%v) is lower than need signatures (%v)", len(payload.Signatures), signaturesNeeded))
-		return
-	}
-
 	// verify signatures of authorizers
-	err = payload.verifySignatures(ans, balances)
+	err = payload.verifySignatures(ctx)
 	if err != nil {
 		err = common.NewError("failed to mint", "failed to verify signatures with error: "+err.Error())
 		return
@@ -79,19 +66,17 @@ func (zcn *ZCNSmartContract) Mint(trans *transaction.Transaction, inputData []by
 	un.Nonce++
 
 	// mint the tokens
-	err = balances.AddMint(
-		&state.Mint{
-			Minter:     gn.ID,
-			ToClientID: trans.ClientID,
-			Amount:     payload.Amount,
-		})
-
+	err = ctx.AddMint(&state.Mint{
+		Minter:     gn.ID,
+		ToClientID: trans.ClientID,
+		Amount:     payload.Amount,
+	})
 	if err != nil {
 		return
 	}
 
 	// Save the user node
-	err = un.Save(balances)
+	err = un.Save(ctx)
 	if err != nil {
 		return
 	}

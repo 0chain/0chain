@@ -3,8 +3,9 @@ package zcnsc
 import (
 	"context"
 	"fmt"
-	"github.com/rcrowley/go-metrics"
 	"net/url"
+
+	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
@@ -41,7 +42,7 @@ func (zcn *ZCNSmartContract) InitSC() {}
 // SetSC ...
 func (zcn *ZCNSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	zcn.SmartContract = sc
-	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.getAuthorizerNodes
+	zcn.SmartContract.RestHandlers["/getAuthorizerNodes"] = zcn.getAuthorizerNode
 	zcn.SmartContractExecutionStats[AddAuthorizerFunc] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zcn.ID, AddAuthorizerFunc), nil)
 }
 
