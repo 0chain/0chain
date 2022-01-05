@@ -485,15 +485,6 @@ func confirmFinalizeAllocation(
 	var minted = f.scYaml.Minted
 	require.EqualValues(t, 0, challengePool.Balance)
 
-	var delegateMints = [][]bool{}
-	for i := range f.bStakes {
-		if len(f.bStakes[i]) > 0 {
-			delegateMints = append(delegateMints, []bool{})
-			for range f.bStakes[i] {
-				delegateMints[i] = append(delegateMints[i], false)
-			}
-		}
-	}
 	for _, mint := range ctx.GetMints() {
 		require.EqualValues(t, storageScId, mint.Minter)
 		var wSplit = strings.Split(mint.ToClientID, " ")
@@ -501,20 +492,10 @@ func confirmFinalizeAllocation(
 		require.EqualValues(t, wSplit[0], "delegate")
 		dIndex, err := strconv.Atoi(wSplit[2])
 		require.NoError(t, err)
-		bIndex, err := strconv.Atoi(wSplit[1])
-		require.False(t, delegateMints[bIndex][dIndex])
 		require.InDelta(t, f.delegateInterest(wSplit[1], dIndex), int64(mint.Amount), errDelta)
 		minted += mint.Amount
-		delegateMints[bIndex][dIndex] = true
 	}
 	require.EqualValues(t, minted, scYaml.Minted)
-	for i := range delegateMints {
-		for j, minted := range delegateMints[i] {
-			if !minted {
-				require.InDelta(t, f.delegateInterest(strconv.Itoa(i), j), 0, errDelta)
-			}
-		}
-	}
 
 	var rewardTransfers = []bool{}
 	var minLockTransfers = []bool{}
@@ -725,10 +706,6 @@ func setupMocksFinishAllocation(
 			delegatePool.MintAt = stake.MintAt
 			sp.Pools["paula "+id+" "+jd] = delegatePool
 			sp.Pools["paula "+id+" "+jd] = delegatePool
-		}
-		sp.Offers[sAllocation.ID] = &offerPool{
-			Expire: thisExpires,
-			Lock:   state.Balance(blobberOffer),
 		}
 		sp.Settings.DelegateWallet = blobberId + " " + id + " wallet"
 		require.NoError(t, sp.save(ssc.ID, blobber.ID, ctx))
@@ -1110,15 +1087,4 @@ func confirmTestNewAllocation(t *testing.T, f formulaeCommitNewAllocation,
 	for _, blobber := range blobbers2 {
 		require.EqualValues(t, f.capacityUsedBlobber(t, blobber.ID), blobber.Used)
 	}
-
-	var countOffers = 0
-	for i, stake := range stakes {
-		offer, ok := stake.Offers[transactionHash]
-		if ok {
-			require.EqualValues(t, f.offerBlobber(i), int64(offer.Lock))
-			require.EqualValues(t, f.offerExpiration(), offer.Expire)
-			countOffers++
-		}
-	}
-	require.EqualValues(t, f.blobbersUsed(), countOffers)
 }

@@ -161,9 +161,7 @@ func addMockAllocation(
 	var (
 		now    = common.Timestamp(time.Now().Unix())
 		expire = common.Timestamp(viper.GetDuration(sc.StorageMinAllocDuration).Seconds()) + common.Now()
-		lock   = state.Balance(float64(getMockBlobberTerms().WritePrice) *
-			sizeInGB(viper.GetInt64(sc.StorageMinAllocSize)))
-		id = getMockAllocationId(i)
+		id     = getMockAllocationId(i)
 	)
 
 	sa := &StorageAllocation{
@@ -215,10 +213,6 @@ func addMockAllocation(
 			MinLockDemand:  mockMinLockDemand,
 			AllocationRoot: encryption.Hash("allocation root"),
 		})
-		sps[startBlobbers+j].Offers[sa.ID] = &offerPool{
-			Lock:   lock,
-			Expire: expire,
-		}
 		sa.Blobbers = append(sa.Blobbers, &StorageNode{
 			ID:                bId,
 			BaseURL:           bId + ".com",
@@ -375,8 +369,7 @@ func GetMockStakePools(
 	for i := 0; i < viper.GetInt(sc.NumBlobbers); i++ {
 		bId := getMockBlobberId(i)
 		sp := &stakePool{
-			Pools:  make(map[string]*delegatePool),
-			Offers: make(map[string]*offerPool),
+			Pools: make(map[string]*delegatePool),
 			Rewards: stakePoolRewards{
 				Charge:    0,
 				Blobber:   0,
@@ -428,8 +421,7 @@ func GetMockValidatorStakePools(
 	for i := 0; i < viper.GetInt(sc.NumValidators); i++ {
 		bId := getMockValidatorId(i)
 		sp := &stakePool{
-			Pools:  make(map[string]*delegatePool),
-			Offers: make(map[string]*offerPool),
+			Pools: make(map[string]*delegatePool),
 			Rewards: stakePoolRewards{
 				Charge:    0,
 				Blobber:   0,

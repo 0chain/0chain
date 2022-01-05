@@ -24,7 +24,6 @@ import (
 func Test_newStakePool(t *testing.T) {
 	var sp = newStakePool()
 	assert.NotNil(t, sp.Pools)
-	assert.NotNil(t, sp.Offers)
 }
 
 func Test_stakePoolKey(t *testing.T) {
@@ -35,20 +34,6 @@ func Test_stakePool_Encode_Decode(t *testing.T) {
 	var spe, spd = newStakePool(), new(stakePool)
 	require.NoError(t, spd.Decode(spe.Encode()))
 	assert.EqualValues(t, spe, spd)
-}
-
-func Test_stakePool_offersStake(t *testing.T) {
-	var (
-		sp  = newStakePool()
-		now = common.Now()
-	)
-	assert.Zero(t, sp.offersStake(now, false))
-	sp.Offers["alloc_id"] = &offerPool{
-		Lock:   90,
-		Expire: now,
-	}
-	assert.Equal(t, state.Balance(90), sp.offersStake(now-1, false))
-	assert.Equal(t, state.Balance(0), sp.offersStake(now, false))
 }
 
 func Test_stakePool_save(t *testing.T) {
@@ -133,8 +118,7 @@ func TestStakePoolLock(t *testing.T) {
 			{5, 0},
 			{3, creationDate - period},
 		}
-		var offers = []common.Timestamp{creationDate + 1, creationDate - 1, creationDate}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
+		err = testStakePoolLock(t, value, value+1, delegates)
 		require.NoError(t, err)
 	})
 
@@ -144,31 +128,28 @@ func TestStakePoolLock(t *testing.T) {
 		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
 		creationDate = period * 2
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
+		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
 		require.EqualValues(t, err.Error(), errStakePoolLock+errStakeTooSmall)
 	})
 
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
-		var value = 10 * scYaml.StakePool.MinLock
+		var value = scYaml.StakePool.MinLock - 1
 		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
 		creationDate = period * 2
 		var delegates = []mockStakePool{{5, 0}}
-		var offers = []common.Timestamp{}
-		err = testStakePoolLock(t, value, value+1, delegates, offers)
+		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), errStakePoolLock))
 	})
 }
 
-func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool, offers []common.Timestamp) error {
+func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []mockStakePool) error {
 	var f = formulaeStakePoolLock{
 		value:         value,
 		clientBalance: clientBalance,
 		delegates:     delegates,
-		offers:        offers,
 		scYaml:        *scYaml,
 		now:           creationDate,
 	}
@@ -225,14 +206,6 @@ func testStakePoolLock(t *testing.T, value, clientBalance int64, delegates []moc
 			MintAt: stake.MintAt,
 		}
 	}
-	for i, expires := range offers {
-		var id = strconv.Itoa(i)
-		stakePool.Offers[offerId+id] = &offerPool{
-			//Lock:   zcnToBalance(offer.zcn),
-			Expire: expires,
-		}
-	}
-
 	var usp = newUserStakePools()
 	require.NoError(t, usp.save(ssc.ID, txn.ClientID, ctx))
 	require.NoError(t, stakePool.save(ssc.ID, blobberId, ctx))
@@ -276,17 +249,6 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, storageScId, mint.Minter)
 		minted[index] = true
 	}
-	for delegate, wasMinted := range minted {
-		if !wasMinted {
-			require.EqualValues(t, f.delegateInterest(delegate), 0, errDelta)
-		}
-	}
-
-	for offer, expires := range f.offers {
-		var key = offerId + strconv.Itoa(offer)
-		_, ok := newStakePool.Offers[key]
-		require.EqualValues(t, expires > f.now, ok)
-	}
 	pools, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
 	require.Len(t, pools, 1)
@@ -304,7 +266,6 @@ type formulaeStakePoolLock struct {
 	value         int64
 	clientBalance int64
 	delegates     []mockStakePool
-	offers        []common.Timestamp
 	scYaml        scConfig
 	now           common.Timestamp
 }
