@@ -10,17 +10,26 @@ type WriteMarker struct {
 
 	// foreign keys
 	// todo: as user(ID), allocation(ID) and transaction(ID) tables are created, enable it
-	ClientID      string
-	BlobberID     string
-	AllocationID  string
-	TransactionID string
+	ClientID      string `json:"client_id"`
+	BlobberID     string `json:"blobber_id"`
+	AllocationID  string `json:"allocation_id"`
+	TransactionID string `json:"transaction_id"`
 
-	AllocationRoot         string
-	PreviousAllocationRoot string
-	Size                   int64
-	Timestamp              int64
-	Signature              string
-	BlockNumber            int64
+	AllocationRoot         string `json:"allocation_root"`
+	PreviousAllocationRoot string `json:"previous_allocation_root"`
+	Size                   int64  `json:"size"`
+	Timestamp              int64  `json:"timestamp"`
+	Signature              string `json:"signature"`
+	BlockNumber            int64  `json:"block_number"`
+}
+
+func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
+	var wm []WriteMarker
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(&WriteMarker{AllocationID: allocationID}).
+		Find(&wm)
+	return &wm, result.Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
