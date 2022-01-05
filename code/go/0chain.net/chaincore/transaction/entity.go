@@ -55,6 +55,7 @@ type Transaction struct {
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
 	Fee             int64            `json:"transaction_fee" msgpack:"f"`
+	Nonce           int64            `json:"nonce" msgpack:"n"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
@@ -250,7 +251,7 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
+	hashdata := common.TimeToString(t.CreationDate) + ":" + strconv.FormatInt(t.Nonce, 10) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
 	return hashdata
 }
 
@@ -418,6 +419,7 @@ func (t *Transaction) Clone() *Transaction {
 		Signature:         t.Signature,
 		CreationDate:      t.CreationDate,
 		Fee:               t.Fee,
+		Nonce:             t.Nonce,
 		TransactionType:   t.TransactionType,
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
