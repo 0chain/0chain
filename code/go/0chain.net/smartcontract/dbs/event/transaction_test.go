@@ -56,6 +56,7 @@ func TestFindTransaction(t *testing.T) {
 	require.NoError(t, err)
 	defer eventDb.Close()
 	err = eventDb.AutoMigrate()
+	defer eventDb.drop()
 	require.NoError(t, err)
 
 	tr := Transaction{
@@ -70,6 +71,7 @@ func TestFindTransaction(t *testing.T) {
 	tr.CreatedAt = gotTr.CreatedAt
 	tr.UpdatedAt = gotTr.UpdatedAt
 	require.Equal(t, tr, gotTr, "Transaction not getting inserted")
-	err = eventDb.drop()
-	require.NoError(t, err)
+
+	gotTr, err = eventDb.GetTransactionByHash("some")
+	require.Error(t, err, "issue while getting the transaction by hash")
 }

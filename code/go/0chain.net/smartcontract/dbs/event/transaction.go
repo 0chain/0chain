@@ -32,6 +32,6 @@ func (edb *EventDb) AddTransaction(transaction Transaction) error {
 // GetTransactionByHash finds the transaction record by hash
 func (edb *EventDb) GetTransactionByHash(hash string) (Transaction, error) {
 	tr := Transaction{}
-	res := edb.Store.Get().Table("transactions").Where("hash = ?", hash).Scan(&tr)
+	res := edb.Store.Get().Table("transactions").Where("hash = ?", hash).First(&tr)
 	return tr, res.Error
 }
