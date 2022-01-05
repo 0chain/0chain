@@ -192,6 +192,7 @@ func main() {
 		server = &http.Server{
 			Addr:           address,
 			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
 			MaxHeaderBytes: 1 << 20,
 		}
 	} else {
