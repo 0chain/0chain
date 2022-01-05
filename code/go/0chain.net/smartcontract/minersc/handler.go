@@ -80,6 +80,14 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 	return npi, nil
 }
 
+func (msc *MinerSmartContract) GetMinerListHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	allMinersList, err := msc.GetMinersList(balances)
+	if err != nil {
+		return "", common.NewErrInternal("can't get miners list", err.Error())
+	}
+	return allMinersList, nil
+}
+
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	var (
@@ -116,7 +124,7 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 			miners, err = balances.GetEventDB().GetMiners()
 		}
 	} else {
-		err = errors.New("event db is not initialized")
+		return msc.GetMinerListHandlerDeprecated(ctx, params, balances)
 	}
 
 	if err != nil {
@@ -130,6 +138,14 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 }
 
 const cantGetShardersListMsg = "can't get sharders list"
+
+func (msc *MinerSmartContract) GetSharderListHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	allShardersList, err := getAllShardersList(balances)
+	if err != nil {
+		return "", common.NewErrInternal(cantGetShardersListMsg, err.Error())
+	}
+	return allShardersList, nil
+}
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
@@ -167,7 +183,7 @@ func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params
 			sharders, err = balances.GetEventDB().GetSharders()
 		}
 	} else {
-		err = errors.New("event db is not initialized")
+		return msc.GetSharderListHandlerDeprecated(ctx, params, balances)
 	}
 
 	if err != nil {
@@ -303,6 +319,22 @@ func (msc *MinerSmartContract) GetEventsHandler(
 	}, nil
 }
 
+func (msc *MinerSmartContract) nodeStatHandlerDeprecated(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		id = params.Get("id")
+		sn *MinerNode
+	)
+
+	if sn, err = getMinerNode(id, balances); err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)
+	}
+
+	return sn, nil
+}
+
 func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
@@ -320,7 +352,7 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 			return sharderTableToSharderNode(nodeS), nil
 		}
 	} else {
-		err = errors.New("event db is not initialized")
+		return msc.nodeStatHandlerDeprecated(ctx, params, balances)
 	}
 
 	return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetMinerNodeMsg)

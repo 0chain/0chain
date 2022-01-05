@@ -4,6 +4,7 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
@@ -75,6 +76,8 @@ func minerNodeToMinerTable(mn *MinerNode) event.Miner {
 
 func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
+	logging.Logger.Info("emitting add miner event")
+
 	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {
 		return fmt.Errorf("marshalling miner: %v", err)
@@ -87,6 +90,8 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
 func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error {
 
+	logging.Logger.Info("emitting add or overwrite miner event")
+
 	data, err := json.Marshal(minerNodeToMinerTable(mn))
 	if err != nil {
 		return fmt.Errorf("marshalling miner: %v", err)
@@ -98,6 +103,8 @@ func emitAddOrOverwriteMiner(mn *MinerNode, balances cstate.StateContextI) error
 }
 
 func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus bool) error {
+
+	logging.Logger.Info("emitting update miner event")
 
 	dbUpdates := dbs.DbUpdates{
 		Id: mn.ID,
@@ -137,6 +144,8 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 }
 
 func emitDeleteMiner(id string, balances cstate.StateContextI) error {
+
+	logging.Logger.Info("emitting delete miner event")
 
 	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
 	return nil
