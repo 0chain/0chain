@@ -340,6 +340,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			receiver.SetLastActiveTime(time.Now())
 			receiver.SetErrorCount(receiver.GetSendErrors())
 
+			//TODO may be we don't need to close here, since defer Body.close() is added
 			readAndClose(resp.Body)
 			if push {
 				timer.UpdateSince(ts)
@@ -477,6 +478,8 @@ func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandl
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)
@@ -501,7 +504,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 
 		buf := bytes.Buffer{}
 		buf.ReadFrom(r.Body)
-		r.Body.Close()
 
 		go func() {
 			senderValidateFunc := func() error {
