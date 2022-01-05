@@ -20,7 +20,7 @@ type Transaction struct {
 	TransactionType   int
 	TransactionOutput string
 	OutputHash        string
-	Status            string
+	Status            int
 }
 
 // AddTransaction Saves the transaction to the event db

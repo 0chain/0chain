@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
+	"gorm.io/gorm"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -851,6 +852,10 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
+	if len(b.Txns) > 0 && c.GetEventDb() != nil {
+		go b.addTransactions(c)
+	}
+
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
@@ -879,6 +884,29 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
 	return nil
+}
+
+func (b *Block) addTransactions(c Chainer) {
+	blockHash := b.GetHash()
+	for _, transaction := range b.Txns {
+		c.GetEventDb().AddTransaction(event.Transaction{
+			Hash:              transaction.Hash,
+			BlockHash:         blockHash,
+			Version:           transaction.Version,
+			ClientId:          transaction.ClientID,
+			ToClientId:        transaction.ToClientID,
+			TransactionData:   transaction.TransactionData,
+			Value:             transaction.Value,
+			Signature:         transaction.Signature,
+			CreationDate:      int64(transaction.CreationDate.Duration()),
+			Fee:               transaction.Fee,
+			TransactionType:   transaction.TransactionType,
+			TransactionOutput: transaction.TransactionOutput,
+			OutputHash:        transaction.OutputHash,
+			Status:            transaction.Status,
+			Model:             gorm.Model{CreatedAt: time.Unix(int64(transaction.CreationDate.Duration()), 0)},
+		})
+	}
 }
 
 // ComputeStateLocal computes the block state without fetching
