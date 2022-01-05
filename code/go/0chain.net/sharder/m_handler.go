@@ -103,6 +103,9 @@ func NotarizedBlockKickHandler(ctx context.Context, entity datastore.Entity) (in
 	}
 
 	sc.GetBlockChannel() <- b // even if we have the block
+
+	// force notify block finalization process
+	sc.ForceFinalizeRound()
 	return true, nil
 }
 

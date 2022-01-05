@@ -316,7 +316,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 			defer cancel()
 
-			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
+			logging.N2n.Info("sending",
+				zap.Int("from", selfNode.SetIndex),
+				zap.Int("to", receiver.SetIndex),
+				zap.String("handler", uri),
+				zap.Duration("duration", time.Since(ts)),
+				zap.String("entity", entity.GetEntityMetadata().GetName()),
+				zap.Any("id", entity.GetKey()),
+				zap.Any("err", err))
 			switch err {
 			case nil:
 			default:
