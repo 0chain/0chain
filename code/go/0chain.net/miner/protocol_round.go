@@ -1532,7 +1532,7 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 
 			logging.Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))
-			go mc.ForcePushNotarizedBlock(ctx, mr.Block)
+			go mc.ForcePushNotarizedBlock(common.GetRootContext(), mr.Block)
 		}
 	}
 }
