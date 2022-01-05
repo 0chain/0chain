@@ -652,6 +652,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving allocation object: %v", err)
 	}
 
+	err = emitAddOrOverwriteWriteMarker(commitConnection.WriteMarker, balances, t)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"emitting write marker event: %v", err)
+	}
+
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
 	sc.newWrite(balances, commitConnection.WriteMarker.Size)
 	return string(detailsBytes), err
