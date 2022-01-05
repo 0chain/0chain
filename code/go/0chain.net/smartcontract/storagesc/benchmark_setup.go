@@ -634,9 +634,7 @@ func SetMockConfig(
 	}
 
 	conf.StakePool = &stakePoolConfig{
-		MinLock:          int64(viper.GetFloat64(sc.StorageStakePoolMinLock) * 1e10),
-		InterestRate:     0.01,
-		InterestInterval: 5 * time.Second,
+		MinLock: int64(viper.GetFloat64(sc.StorageStakePoolMinLock) * 1e10),
 	}
 	conf.FreeAllocationSettings = freeAllocationSettings{
 		DataShards:   viper.GetInt(sc.StorageFasDataShards),

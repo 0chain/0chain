@@ -101,32 +101,13 @@ func TestStakePoolLock(t *testing.T) {
 		MaxMint:      zcnToBalance(4000000.0),
 
 		StakePool: &stakePoolConfig{
-			InterestRate:     0.0000334,
-			InterestInterval: 1 * time.Minute,
-			MinLock:          int64(zcnToBalance(0.1)),
+			MinLock: int64(zcnToBalance(0.1)),
 		},
 	}
 
-	t.Run("stake pool lock", func(t *testing.T) {
-		var value = 10 * scYaml.StakePool.MinLock
-
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
-		var delegates = []mockStakePool{
-			{2, creationDate - period - 1},
-			{3, creationDate - period + 1},
-			{5, 0},
-			{3, creationDate - period},
-		}
-		err = testStakePoolLock(t, value, value+1, delegates)
-		require.NoError(t, err)
-	})
-
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		var value = scYaml.StakePool.MinLock - 1
-
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
+		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
@@ -136,8 +117,7 @@ func TestStakePoolLock(t *testing.T) {
 	t.Run(errStakeTooSmall, func(t *testing.T) {
 		scYaml.Minted = scYaml.MaxMint
 		var value = scYaml.StakePool.MinLock - 1
-		var period = common.Timestamp(scYaml.StakePool.InterestInterval.Seconds())
-		creationDate = period * 2
+		creationDate = common.Timestamp(time.Second * 120)
 		var delegates = []mockStakePool{{5, 0}}
 		err = testStakePoolLock(t, value, value+1, delegates)
 		require.Error(t, err)
@@ -238,17 +218,6 @@ func confirmPoolLockResult(t *testing.T, f formulaeStakePoolLock, resp string, n
 		require.EqualValues(t, f.now, txPool.MintAt)
 	}
 
-	var minted = []bool{}
-	for range f.delegates {
-		minted = append(minted, false)
-	}
-	for _, mint := range ctx.GetMints() {
-		index, err := strconv.Atoi(mint.ToClientID)
-		require.NoError(t, err)
-		require.InDelta(t, f.delegateInterest(index), int64(mint.Amount), errDelta)
-		require.EqualValues(t, storageScId, mint.Minter)
-		minted[index] = true
-	}
 	pools, ok := newUsp.Pools[blobberId]
 	require.True(t, ok)
 	require.Len(t, pools, 1)
@@ -268,29 +237,4 @@ type formulaeStakePoolLock struct {
 	delegates     []mockStakePool
 	scYaml        scConfig
 	now           common.Timestamp
-}
-
-func (f formulaeStakePoolLock) delegateInterest(delegate int) int64 {
-	var interestRate = scYaml.StakePool.InterestRate
-	var numberOfPayments = float64(f.numberOfInterestPayments(delegate))
-	var stake = float64(zcnToInt64(f.delegates[delegate].zcnAmount))
-
-	return int64(stake * numberOfPayments * interestRate)
-}
-
-func (f formulaeStakePoolLock) numberOfInterestPayments(delegate int) int64 {
-	var activeTime = int64(f.now - f.delegates[delegate].MintAt)
-	var period = int64(f.scYaml.StakePool.InterestInterval.Seconds())
-	var periods = activeTime / period
-
-	// round down to previous integer
-	if activeTime%period == 0 {
-		if periods-1 >= 0 {
-			return periods - 1
-		} else {
-			return 0
-		}
-	} else {
-		return periods
-	}
 }
