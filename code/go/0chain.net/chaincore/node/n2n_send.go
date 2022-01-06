@@ -565,7 +565,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			sender.AddReceived(1)
 
 		}()
-		common.Respond(w, r, "", nil)
+		common.Respond(w, r, nil, nil)
 	}
 }
 
