@@ -518,7 +518,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				})
 			}
 			// TODO:
-			ctx := WithSenderValidateFunc(context.Background(), senderValidateFunc)
+			root, _ := context.WithTimeout(common.GetRootContext(), 5*time.Second)
+			ctx := WithSenderValidateFunc(root, senderValidateFunc)
 			initialNodeID := r.Header.Get(HeaderInitialNodeID)
 			if initialNodeID != "" {
 				initSender := GetNode(initialNodeID)
