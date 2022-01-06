@@ -26,7 +26,7 @@ func emitAddOrOverwriteWriteMarker(wm *WriteMarker, balances cstate.StateContext
 
 	data, err := json.Marshal(writeMarkerToWriteMarkerTable(wm))
 	if err != nil {
-		return fmt.Errorf("marshalling writemarker: %v", err)
+		return fmt.Errorf("failed to marshal writemarker: %v", err)
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteWriteMarker, t.Hash, string(data))
