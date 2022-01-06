@@ -268,9 +268,17 @@ func (sp *stakePool) empty(sscID, poolID, clientID string,
 		return "", 0, errors.New("trying to unlock not by delegate pool owner")
 	}
 
+	// If insufficient funds in stake pool left after unlock,
+	// we can't do an immediate unlock.
+	// Instead we mark as unstake to prevent being used for further allocations.
 	if info.stake-info.offers-dp.Balance < 0 {
+		sp.TotalUnStake += dp.Balance
 		dp.UnStake = true
 		return // no errors here, handle in caller
+	}
+
+	if dp.UnStake {
+		sp.TotalUnStake -= dp.Balance
 	}
 
 	var transfer *state.Transfer
@@ -314,38 +322,6 @@ func minBalance(a, b state.Balance) state.Balance {
 type stakePoolUpdateInfo struct {
 	stake  state.Balance // stake of all delegate pools
 	offers state.Balance // offers stake
-}
-
-// mintPool for a period
-func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
-	now common.Timestamp, rate float64, period common.Timestamp,
-	balances chainstate.StateContextI) (mint state.Balance, err error) {
-
-	var at = dp.MintAt // last periodic mint
-
-	var floatMint = 0.0
-	for ; at+period < now; at += period {
-		floatMint += rate * float64(dp.Balance)
-	}
-	mint = state.Balance(floatMint)
-	dp.MintAt = at // update last minting time
-
-	if mint == 0 {
-		return // no mints for the pool
-	}
-
-	err = balances.AddMint(&state.Mint{
-		Minter:     sscID,         // storage SC
-		ToClientID: dp.DelegateID, // delegate wallet
-		Amount:     mint,          // move total mints at once
-	})
-
-	if err != nil {
-		return mint, fmt.Errorf("adding mint: %v", err)
-	}
-
-	dp.Interests += mint
-	return
 }
 
 func (sp *stakePool) orderedPools() (dps []*delegatePool) {
