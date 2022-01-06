@@ -75,6 +75,44 @@ func TestWriteMarkers(t *testing.T) {
 	}
 
 	eWriteMarker := convertSwm(swm, "t_hash", 1)
-	_, err = json.Marshal(&eWriteMarker)
+	data, err := json.Marshal(&eWriteMarker)
 	require.NoError(t, err)
+
+	eventAddOrOverwriteWm := Event{
+		BlockNumber: eWriteMarker.BlockNumber,
+		TxHash:      eWriteMarker.TransactionID,
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteWriteMarker),
+		Data:        string(data),
+	}
+	events := []Event{eventAddOrOverwriteWm}
+	eventDb.AddEvents(events)
+
+	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
+	require.NoError(t, err)
+	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
+
+	eWriteMarker.BlockNumber = 10
+
+	data, err = json.Marshal(&eWriteMarker)
+	require.NoError(t, err)
+
+	eventAddOrOverwriteWm = Event{
+		BlockNumber: eWriteMarker.BlockNumber,
+		TxHash:      eWriteMarker.TransactionID,
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteWriteMarker),
+		Data:        string(data),
+	}
+	events = []Event{eventAddOrOverwriteWm}
+	eventDb.AddEvents(events)
+
+	wm, err = eventDb.GetWriteMarker(eWriteMarker.TransactionID)
+	require.NoError(t, err)
+	require.EqualValues(t, wm.BlockNumber, eWriteMarker.BlockNumber)
+
+	wms, err := eventDb.GetWriteMarkersForAllocationID(eWriteMarker.AllocationID)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, len(*wms))
+	require.EqualValues(t, eWriteMarker.BlockNumber, (*wms)[0].BlockNumber)
 }

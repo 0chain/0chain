@@ -23,13 +23,28 @@ type WriteMarker struct {
 	BlockNumber            int64  `json:"block_number"`
 }
 
+func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {
+	var wm WriteMarker
+
+	result := edb.Store.Get().
+		Model(&WriteMarker{}).
+		Where(&WriteMarker{TransactionID: txnID}).
+		First(&wm)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving write marker (txn)%v, error %v",
+			txnID, result.Error)
+	}
+
+	return &wm, nil
+}
+
 func (edb *EventDb) GetWriteMarkersForAllocationID(allocationID string) (*[]WriteMarker, error) {
-	var wm []WriteMarker
+	var wms []WriteMarker
 	result := edb.Store.Get().
 		Model(&WriteMarker{}).
 		Where(&WriteMarker{AllocationID: allocationID}).
-		Find(&wm)
-	return &wm, result.Error
+		Find(&wms)
+	return &wms, result.Error
 }
 
 func (edb *EventDb) overwriteWriteMarker(wm WriteMarker) error {
