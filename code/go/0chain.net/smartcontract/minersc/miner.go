@@ -315,7 +315,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 			update.MinStake, gn.MinStake)
 	}
 
-	if update.MaxStake < gn.MaxStake {
+	if update.MaxStake > gn.MaxStake {
 		return "", common.NewErrorf("update_miner_settings",
 			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
