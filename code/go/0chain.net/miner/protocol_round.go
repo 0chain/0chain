@@ -1156,7 +1156,8 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
-	ctx = common.GetRootContext()
+	//TODO Sort this context
+	ctx, _ = context.WithTimeout(common.GetRootContext(), 30*time.Second)
 	if _, _, err := mc.AddNotarizedBlockToRound(r, b); err != nil {
 		logging.Logger.Error("add notarized block failed",
 			zap.Int64("round", r.GetRoundNumber()),
