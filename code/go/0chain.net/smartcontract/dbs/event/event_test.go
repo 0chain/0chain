@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -72,7 +73,7 @@ func TestEventExists(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	eventDb.AddEvents([]Event{
+	eventDb.AddEvents(context.Background(), []Event{
 		{
 			BlockNumber: 1,
 			TxHash:      "someHash",
@@ -82,7 +83,7 @@ func TestEventExists(t *testing.T) {
 			Data:        "some random data",
 		},
 	})
-	gotExists, err := eventDb.exists(Event{
+	gotExists, err := eventDb.exists(context.Background(), Event{
 		BlockNumber: 1,
 		TxHash:      "someHash",
 		Type:        int(TypeStats),
@@ -93,7 +94,7 @@ func TestEventExists(t *testing.T) {
 	if !gotExists || err != nil {
 		t.Errorf("Exists function did not work want true got %v and err was %v", gotExists, err)
 	}
-	gotExists, err = eventDb.exists(Event{
+	gotExists, err = eventDb.exists(context.Background(), Event{
 		BlockNumber: 1,
 		TxHash:      "someHash",
 		Type:        int(TypeStats),
