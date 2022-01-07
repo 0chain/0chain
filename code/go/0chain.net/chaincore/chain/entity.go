@@ -1303,11 +1303,11 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
-func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
-	if pb == nil || pb.ClientState == nil {
-		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
+func (mc *Chain) getClientState(b *block.Block) (util.MerklePatriciaTrieI, error) {
+	if b == nil || b.ClientState == nil {
+		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", b)
 	}
-	return pb.ClientState, nil
+	return b.ClientState, nil
 }
 
 func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
@@ -1331,8 +1331,8 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 	return gl, nil
 }
 
-func (mc *Chain) updateConfig(pb *block.Block) {
-	clientState, err := mc.getClientState(pb)
+func (mc *Chain) updateConfig(b *block.Block) {
+	clientState, err := mc.getClientState(b)
 	if err != nil {
 		// This might happen after stopping and starting the miners
 		// and the MPT has not been setup yet.
@@ -1345,7 +1345,7 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
 		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", pb.Round),
+			zap.Int64("start of round", b.Round),
 			zap.Error(err),
 		)
 		return
@@ -1354,12 +1354,16 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 	err = mc.Config.Update(configMap)
 	if err != nil {
 		logging.Logger.Error("cannot update global settings",
-			zap.Int64("start of round", pb.Round),
+			zap.Int64("start of round", b.Round),
 			zap.Error(err),
 		)
 	}
 	logging.Logger.Info("config has been updated successfully",
-		zap.Int64("start of round", pb.Round))
+		zap.Int64("start of round", b.Round))
+
+}
+
+func (mc *Chain) updateSCVersion(b *block.Block) {
 
 }
 
