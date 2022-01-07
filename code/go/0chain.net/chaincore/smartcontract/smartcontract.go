@@ -68,7 +68,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, t *transaction.Transacti
 }
 
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(t *transaction.Transaction, scData *sci.SmartContractTransactionData, balances c_state.StateContextI) (string, error) {
 	contractObj, err := GetSmartContract(t.ToClientID)
 	if err != nil {
 		return "", common.NewError("invalid_smart_contract_address", err.Error())

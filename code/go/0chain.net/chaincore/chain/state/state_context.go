@@ -321,8 +321,15 @@ func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool) {
 	return sc.canSCVersionUpdate()
 }
 
+// InsertTrieNode inserts a node into MPT
 func InsertTrieNode(state util.MerklePatriciaTrieI, key datastore.Key, node util.Serializable) (datastore.Key, error) {
 	key_hash := encryption.Hash(key)
 	byteKey, err := state.Insert(util.Path(key_hash), node)
 	return datastore.Key(byteKey), err
+}
+
+// GetTrieNode gets a node from MPT
+func GetTrieNode(state util.MerklePatriciaTrieI, key datastore.Key) (util.Serializable, error) {
+	keyHash := encryption.Hash(key)
+	return state.GetNodeValue(util.Path(keyHash))
 }

@@ -125,5 +125,7 @@ func (msc *MinerSmartContract) updateSCVersion(
 		return "", common.NewError("update_sc_version_save_error", err.Error())
 	}
 
+	// TODO: switch sc version on smartcontract package on block finalization
+
 	return scv.Version, nil
 }

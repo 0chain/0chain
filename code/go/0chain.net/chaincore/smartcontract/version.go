@@ -17,25 +17,58 @@ var (
 )
 
 var (
-	// scVersion is the cached smart contract version on MPT '/sc_version' node
-	scVersion              semver.Version
-	vLock                  sync.RWMutex
+	// scVersion is the cached smart contract version on MPT 'sc_version' node
+	initOnce               sync.Once
+	scVersion              scVersionWithLock
+	emptySC                semver.Version
 	smartContractsVersions = NewSmartContractsWithVersion()
 )
 
-func setSCVersion(v semver.Version) {
-	vLock.Lock()
-	scVersion = v
-	vLock.Unlock()
+// scVersionWithLock
+type scVersionWithLock struct {
+	v    semver.Version
+	lock sync.RWMutex
 }
 
-func init() {
-	// TODO: move the version initialization work to the package user
-	v, err := semver.Make("1.0.0")
-	if err != nil {
-		panic(err)
-	}
-	setSCVersion(v)
+func (scv *scVersionWithLock) Set(v semver.Version) {
+	scv.lock.Lock()
+	scv.v = v
+	scv.lock.Unlock()
+}
+
+func (scv *scVersionWithLock) Get() semver.Version {
+	scv.lock.RLock()
+	v := scv.v
+	scv.lock.RUnlock()
+	return v
+}
+
+func (scv *scVersionWithLock) String() string {
+	scv.lock.RLock()
+	s := scv.v.String()
+	scv.lock.RUnlock()
+	return s
+}
+
+func setSCVersion(v semver.Version) {
+	scVersion.Set(v)
+}
+
+// InitSCVersionOnceOrDie initialize sc version once, panic if the version
+// is invalid
+func InitSCVersionOnceOrDie(version string) {
+	initOnce.Do(func() {
+		v, err := semver.Make(version)
+		if err != nil {
+			panic(err)
+		}
+		setSCVersion(v)
+	})
+}
+
+// IsSCVersionReady returns true if the scVersion is not empty
+func IsSCVersionReady() bool {
+	return !scVersion.Get().Equals(emptySC)
 }
 
 // SetSCVersion sets the sc version
@@ -51,10 +84,7 @@ func SetSCVersion(version string) error {
 
 // GetSCVersion returns the current running smart contract version
 func GetSCVersion() semver.Version {
-	vLock.RLock()
-	v := scVersion
-	vLock.RUnlock()
-	return v
+	return scVersion.Get()
 }
 
 // CanSCVersionUpdate checks if we can update the smart contract version

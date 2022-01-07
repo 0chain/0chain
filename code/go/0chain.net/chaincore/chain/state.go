@@ -47,32 +47,6 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
 	})
 }
 
-// ComputeOrSyncState - try to compute state and if there is an error, just sync it
-func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.ComputeState(ctx, b)
-	if err != nil {
-		bsc, err := c.getBlockStateChange(b)
-		if err != nil {
-			return err
-		}
-		if bsc != nil {
-			if err = c.ApplyBlockStateChange(b, bsc); err != nil {
-				logging.Logger.Error("compute state - applying state change",
-					zap.Any("round", b.Round), zap.Any("block", b.Hash),
-					zap.Error(err))
-				return err
-			}
-		}
-		if !b.IsStateComputed() {
-			logging.Logger.Error("compute state - state change error",
-				zap.Any("round", b.Round), zap.Any("block", b.Hash),
-				zap.Error(err))
-			return err
-		}
-	}
-	return nil
-}
-
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	return b.ComputeState(ctx, c)
 }
@@ -166,7 +140,45 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
+func (c *Chain) initSCVersion(clientState util.MerklePatriciaTrieI, round int64) error {
+	var (
+		fromLFB bool
+		cs      = clientState
+		lfb     = c.GetLatestFinalizedBlock()
+	)
+
+	if lfb != nil && lfb.ClientState != nil {
+		// should not use lfb if it's too far away from current round
+		if n := int(round - lfb.Round); n > 0 && n <= 2*config.GetLFBTicketAhead() {
+			cs = lfb.ClientState
+			fromLFB = true
+		}
+	}
+	vn, err := bcstate.GetTrieNode(cs, minersc.SCVersionKey)
+	if err != nil {
+		return err
+	}
+
+	var vnode minersc.SCVersionNode
+	if err := vnode.Decode(vn.Encode()); err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("get sc version",
+		zap.String("version", vnode.String()),
+		zap.Int64("lfb round", lfb.Round),
+		zap.Int64("round", round),
+		zap.Bool("from LFB", fromLFB))
+
+	smartcontract.InitSCVersionOnceOrDie(vnode.String())
+
+	return nil
+}
+
+func (c *Chain) updateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -181,6 +193,15 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
+
+	if !smartcontract.IsSCVersionReady() {
+		if err := c.initSCVersion(clientState, b.Round); err != nil {
+			logging.Logger.Error("could not init sc version",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+			return nil, fmt.Errorf("could not get sc version node, err: %v", err)
+		}
+	}
 
 	switch txn.TransactionType {
 
