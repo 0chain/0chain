@@ -560,7 +560,11 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 		got util.Serializable
 	)
 
-	shardersN2NURLs := c.GetLatestFinalizedMagicBlockBrief().ShardersN2NURLs
+	brief := c.GetLatestFinalizedMagicBlockBrief()
+	if brief == nil {
+		return
+	}
+	shardersN2NURLs := brief.ShardersN2NURLs
 	got = GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetPhase,
 		shardersN2NURLs, func() util.Serializable {
 			return new(minersc.PhaseNode)

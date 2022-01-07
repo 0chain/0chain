@@ -173,9 +173,20 @@ func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	Logger.Debug("process notarized block", zap.Int64("round", b.Round))
+	if !sc.cacheProcessingBlock(b.Hash) {
+		return
+	}
+
+	Logger.Debug("process notarized block",
+		zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
+
+	ts := time.Now()
 	defer func() {
-		Logger.Debug("process notarized block end", zap.Int64("round", b.Round))
+		sc.removeProcessingBlock(b.Hash)
+		Logger.Debug("process notarized block end",
+			zap.Int64("round", b.Round),
+			zap.Duration("duration", time.Since(ts)))
 	}()
 	var er = sc.GetRound(b.Round)
 	if er == nil {
@@ -199,6 +210,12 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	if err = b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round),
+			zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+
 	err = sc.VerifyBlockNotarization(ctx, b)
 	if err != nil {
 		Logger.Error("notarization verification failed",
@@ -208,12 +225,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	if err = b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round),
-			zap.Any("hash", b.Hash), zap.Error(err))
-		return
-	}
-
+	//TODO remove it since verify block adds this block to round
 	_, _, err = sc.AddNotarizedBlockToRound(er, b)
 	if err != nil {
 		Logger.Error("process block failed",

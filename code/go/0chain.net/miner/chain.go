@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/core/cache"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
@@ -73,11 +75,13 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.notarizationBlockProcessC = make(chan *Notarization, 10)
 	minerChain.blockVerifyC = make(chan *block.Block, 10) // the channel buffer size need to be adjusted
 	minerChain.validateTxnsWithContext = common.NewWithContextFunc(1)
-	minerChain.notarizingBlocksMap = make(map[string]struct{})
+	minerChain.notarizingBlocksTasks = make(map[string]chan struct{})
+	minerChain.notarizingBlocksResults = cache.NewLRUCache(1000)
 	minerChain.nbmMutex = &sync.Mutex{}
 	minerChain.verifyBlockNotarizationWorker = common.NewWithContextFunc(4)
 	minerChain.mergeBlockVRFSharesWorker = common.NewWithContextFunc(1)
 	minerChain.verifyCachedVRFSharesWorker = common.NewWithContextFunc(1)
+	minerChain.generateBlockWorker = common.NewWithContextFunc(1)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -144,11 +148,13 @@ type Chain struct {
 	notarizationBlockProcessC            chan *Notarization
 	blockVerifyC                         chan *block.Block
 	validateTxnsWithContext              *common.WithContextFunc
-	notarizingBlocksMap                  map[string]struct{}
+	notarizingBlocksTasks                map[string]chan struct{}
+	notarizingBlocksResults              *cache.LRU
 	nbmMutex                             *sync.Mutex
 	verifyBlockNotarizationWorker        *common.WithContextFunc
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
+	generateBlockWorker                  *common.WithContextFunc
 }
 
 func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
@@ -511,4 +517,8 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	return mc.roundDkg.Put(dkg, startingRound)
+}
+
+func (mc *Chain) RejectNotarizedBlock(hash string) bool {
+	return false
 }

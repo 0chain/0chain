@@ -4,6 +4,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	crpc "0chain.net/conductor/conductrpc"
@@ -38,7 +39,10 @@ func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (
 
 	var state = crpc.Client().State()
 	if state.MagicBlock != nil {
-		var lfmb = GetServerChain().GetLatestFinalizedMagicBlock(ctx)
+		lfmb := GetServerChain().GetLatestFinalizedMagicBlock(ctx)
+		if lfmb == nil {
+			return nil, errors.New("can't get lfmb")
+		}
 		lfmb.Hash = revertString(lfmb.Hash)
 		return lfmb, nil
 	}
