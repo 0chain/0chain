@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
@@ -134,7 +136,7 @@ func TestBlobbers(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddSn}
-	eventDb.AddEvents(events)
+	eventDb.AddEvents(context.TODO(), events)
 
 	blobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -160,7 +162,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagUpdateBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventUpdateSn})
+	eventDb.AddEvents(context.TODO(), []Event{eventUpdateSn})
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
@@ -202,7 +204,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagAddOrOverwriteBlobber),
 		Data:        string(data),
 	}
-	eventDb.AddEvents([]Event{eventOverwrite})
+	eventDb.AddEvents(context.TODO(), []Event{eventOverwrite})
 	overWrittenBlobber, err := eventDb.GetBlobber(sn.ID)
 	require.NoError(t, err)
 	require.EqualValues(t, sn2.BaseURL, overWrittenBlobber.BaseURL)
@@ -214,7 +216,7 @@ func TestBlobbers(t *testing.T) {
 		Tag:         int(TagDeleteBlobber),
 		Data:        blobber.BlobberID,
 	}
-	eventDb.AddEvents([]Event{deleteEvent})
+	eventDb.AddEvents(context.TODO(), []Event{deleteEvent})
 
 	blobber, err = eventDb.GetBlobber(sn.ID)
 	require.Error(t, err)

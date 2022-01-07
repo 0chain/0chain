@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/core/common"
 	"context"
 	"strconv"
 	"testing"
@@ -16,6 +17,9 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 	lfmb := &block.Block{
 		HashIDField: datastore.HashIDField{Hash: "lfmb"},
 	}
+	cancel, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+	common.SetupRootContext(cancel)
 	cases := []struct {
 		Name        string
 		MagicBlocks []int64
@@ -81,7 +85,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 				got := chain.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 				require.NotNil(t, got)
 				if checkRound.WantRound == -1 {
-					assert.Equal(t, lfmb.Clone(), got)
+					assert.Equal(t, lfmb, got)
 				} else {
 					assert.Equal(t, chain.magicBlockStartingRounds[checkRound.WantRound].Hash, got.Hash)
 				}

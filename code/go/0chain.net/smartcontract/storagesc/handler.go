@@ -88,7 +88,7 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 	blobbers, err := balances.GetEventDB().GetBlobbers()
-	if err != nil {
+	if err != nil || len(blobbers) == 0 {
 		return ssc.GetBlobbersHandlerDeprecated(ctx, params, balances)
 	}
 
