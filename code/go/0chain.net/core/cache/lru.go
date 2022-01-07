@@ -1,15 +1,19 @@
 package cache
 
 import (
+	"sync/atomic"
+
 	"0chain.net/core/common"
 	lru "github.com/hashicorp/golang-lru"
 )
 
+var ErrKeyNotFound = common.NewError("missing key", "key not found")
+
 //LRU - LRU cache
 type LRU struct {
 	Cache *lru.Cache
-	Hit   int64
-	Miss  int64
+	hit   int64
+	miss  int64
 	//lock  sync.Mutex
 }
 
@@ -17,6 +21,7 @@ type LRU struct {
 func NewLRUCache(size int) *LRU {
 	c := &LRU{}
 	c.Cache, _ = lru.New(size)
+
 	return c
 }
 
@@ -32,17 +37,22 @@ func (c *LRU) Get(key string) (interface{}, error) {
 	//defer c.lock.Unlock()
 	value, ok := c.Cache.Get(key)
 	if !ok {
-		c.Miss++
-		return nil, common.NewError("missing key", "key not found")
+		atomic.AddInt64(&c.miss, 1)
+		return nil, ErrKeyNotFound
 	}
-	c.Hit++
+	atomic.AddInt64(&c.hit, 1)
 	return value, nil
 }
 
+// Remove removes the entity of given key from cache
+func (c *LRU) Remove(key string) {
+	c.Cache.Remove(key)
+}
+
 func (c *LRU) GetHit() int64 {
-	return c.Hit
+	return atomic.LoadInt64(&c.hit)
 }
 
 func (c *LRU) GetMiss() int64 {
-	return c.Miss
+	return atomic.LoadInt64(&c.miss)
 }

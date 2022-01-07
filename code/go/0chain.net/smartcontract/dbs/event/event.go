@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -20,7 +21,7 @@ type Event struct {
 	Data        string `json:"data"`
 }
 
-func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
+func (edb *EventDb) FindEvents(ctx context.Context, search Event) ([]Event, error) {
 	if edb.Store == nil {
 		return nil, errors.New("cannot find event database")
 	}
@@ -46,22 +47,22 @@ func (edb *EventDb) FindEvents(search Event) ([]Event, error) {
 	}
 
 	var events []Event
-	db.Find(&events)
+	db.WithContext(ctx).Find(&events)
 	return events, nil
 }
 
-func (edb *EventDb) GetEvents(block int64) ([]Event, error) {
+func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error) {
 	var events []Event
 	if edb.Store == nil {
 		return events, errors.New("event database is nil")
 	}
-	result := edb.Store.Get().Find(&events)
+	result := edb.Store.Get().WithContext(ctx).Find(&events)
 	return events, result.Error
 }
 
-func (edb *EventDb) exists(event Event) (bool, error) {
+func (edb *EventDb) exists(ctx context.Context, event Event) (bool, error) {
 	var count int64
-	result := edb.Store.Get().
+	result := edb.Store.Get().WithContext(ctx).
 		Model(&Event{}).
 		Where("tx_hash = ? AND index = ?", event.TxHash, event.Index).
 		Count(&count)
@@ -72,9 +73,9 @@ func (edb *EventDb) exists(event Event) (bool, error) {
 	return count > 0, nil
 }
 
-func (edb *EventDb) removeDuplicate(events []Event) []Event {
+func (edb *EventDb) removeDuplicate(ctx context.Context, events []Event) []Event {
 	for i := len(events) - 1; i >= 0; i-- {
-		exists, err := edb.exists(events[i])
+		exists, err := edb.exists(ctx, events[i])
 		if err != nil {
 			logging.Logger.Error("error process event",
 				zap.Any("event", events[i]),
@@ -89,8 +90,8 @@ func (edb *EventDb) removeDuplicate(events []Event) []Event {
 	return events
 }
 
-func (edb *EventDb) addEvents(events []Event) {
+func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
 	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().Create(&events)
+		edb.Store.Get().WithContext(ctx).Create(&events)
 	}
 }

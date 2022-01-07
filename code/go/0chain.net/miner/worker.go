@@ -139,6 +139,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 							zap.Any("current round", cround),
 							zap.Int("VRF_shares", len(r.GetVRFShares())),
 							zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
+							zap.Int("verificationTickets", len(r.verificationTickets)),
 							zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
 						roundTimeoutProcess(ctx, protocol, cround)
 					}

@@ -50,7 +50,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))

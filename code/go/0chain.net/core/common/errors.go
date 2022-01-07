@@ -19,6 +19,8 @@ var (
 	ErrInternal = NewError(ErrInternalCode, "internal server error")
 
 	ErrDecoding = errors.New("decoding error")
+
+	ErrNotModified = errors.New("not modified")
 )
 
 const (
