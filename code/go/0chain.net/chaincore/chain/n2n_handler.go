@@ -122,7 +122,7 @@ func (c *Chain) BlockStateChangeHandler(ctx context.Context, r *http.Request) (i
 		return nil, err
 	}
 
-	if b.GetStateStatus() != block.StateSuccessful {
+	if b.GetStateStatus() != block.StateSuccessful && b.GetStateStatus() != block.StateSynched {
 		return nil, common.NewError("state_not_verified",
 			"state is not computed and validated locally")
 	}
@@ -169,6 +169,7 @@ func (c *Chain) getNotarizedBlock(ctx context.Context, req *http.Request) (*bloc
 		if b.IsBlockNotarized() {
 			return b, nil
 		}
+		logging.Logger.Debug("requested block is not notarized yet")
 		return nil, errBlockNotAvailable
 	}
 

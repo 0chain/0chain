@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
 
@@ -28,12 +29,12 @@ const (
 	TagDeleteBlobber
 )
 
-func (edb *EventDb) AddEvents(events []Event) {
-	edb.addEventMutex.Lock()
+func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
+  edb.addEventMutex.Lock()
 	defer edb.addEventMutex.Unlock()
-	newEvents := edb.removeDuplicate(events)
+	newEvents := edb.removeDuplicate(ctx, events)
 
-	edb.addEvents(newEvents)
+	edb.addEvents(ctx, newEvents)
 	for _, event := range newEvents {
 		var err error = nil
 		switch EventType(event.Type) {

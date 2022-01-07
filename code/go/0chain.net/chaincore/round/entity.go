@@ -2,6 +2,7 @@ package round
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -22,13 +23,39 @@ import (
 	"0chain.net/core/viper"
 )
 
+type Phase int32
+
 const (
-	RoundShareVRF = iota
-	RoundVRFComplete
-	RoundGenerating
-	RoundGenerated
-	RoundCollectingBlockProposals
-	RoundStateVerificationTimedOut
+	ShareVRF Phase = iota
+	Verify
+	Notarize
+	Share
+	Complete
+)
+
+var (
+	CompleteRoundRestartError = errors.New("can't restart notarized or complete round")
+)
+
+func GetPhaseName(ph Phase) string {
+	name, ok := map[Phase]string{
+		ShareVRF: "ShareVRF",
+		Verify:   "Verify",
+		Notarize: "Notarize",
+		Share:    "Share",
+		Complete: "Complete",
+	}[ph]
+
+	if !ok {
+		return "N/A"
+	}
+	return name
+}
+
+type FinalizingState int32
+
+const (
+	NotFinalized FinalizingState = iota
 	RoundStateFinalizing
 	RoundStateFinalized
 )
@@ -160,24 +187,13 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 
 func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
 	return tc.GetTimeoutCount()
-	// tc.mutex.Lock()
-	// defer tc.mutex.Unlock()
-	// tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
-	// if tolerance <= 1 {
-	// 	return tc.count
-	// }
-	// if tc.count%tolerance == 0 {
-	// 	return tc.count
-	// }
-	// return tolerance * (1 + tc.count/tolerance)
 }
 
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	Number        int64 `json:"number"`
-	RandomSeed    int64 `json:"round_random_seed"`
-	hasRandomSeed uint32
+	Number     int64 `json:"number"`
+	RandomSeed int64 `json:"round_random_seed"`
 
 	// For generator, this is the block the miner is generating till a
 	// notarization is received. For a verifier, this is the block that is
@@ -188,7 +204,8 @@ type Round struct {
 	VRFOutput string       `json:"vrf_output"` // TODO: VRFOutput == rbooutput?
 
 	minerPerm       []int
-	state           int32
+	phase           Phase
+	finalizingState FinalizingState
 	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
 	mutex           sync.RWMutex
@@ -231,8 +248,6 @@ func (r *Round) GetRoundNumber() int64 {
 
 // SetRandomSeedForNotarizedBlock - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
-	r.setHasRandomSeed(seed)
-
 	r.mutex.Lock()
 	r.minerPerm = computeMinerRanks(seed, minersNum)
 	r.mutex.Unlock()
@@ -242,36 +257,20 @@ func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 
 // SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64, minersNum int) {
-	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
+	if r.HasRandomSeed() {
 		return
 	}
-
-	r.setHasRandomSeed(seed)
 
 	r.mutex.Lock()
 	r.minerPerm = computeMinerRanks(seed, minersNum)
 	r.mutex.Unlock()
 
 	r.setRandomSeed(seed)
-	r.setState(RoundVRFComplete)
+	//r.setPhase(Verify)
 }
 
 func (r *Round) setRandomSeed(seed int64) {
 	atomic.StoreInt64(&r.RandomSeed, seed)
-
-	if seed == 0 {
-		// reset hasRandomSeed if the seed is 0
-		atomic.StoreUint32(&r.hasRandomSeed, uint32(0))
-	}
-}
-
-func (r *Round) setHasRandomSeed(seed int64) {
-	value := uint32(0)
-	if seed != 0 {
-		value = 1
-	}
-
-	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
 // GetRandomSeed - returns the random seed of the round.
@@ -333,6 +332,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool, error) {
 	}
 	b.SetBlockNotarized()
 	b.SetBlockState(block.StateNotarized)
+	r.setPhase(Share)
 
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 		r.Block = b
@@ -448,7 +448,7 @@ func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
 func (r *Round) Finalize(b *block.Block) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.setState(RoundStateFinalized)
+	r.setFinalizingPhase(RoundStateFinalized)
 	r.Block = b
 	r.BlockHash = b.Hash
 }
@@ -461,26 +461,32 @@ func (r *Round) SetFinalizing() bool {
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
-	r.setState(RoundStateFinalizing)
+	r.setFinalizingPhase(RoundStateFinalizing)
 	return true
 }
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	return r.isFinalizing()
 }
 
 func (r *Round) isFinalizing() bool {
-	return r.getState() == RoundStateFinalizing
+	return r.getFinalizingState() == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
 	return r.isFinalized()
 }
 
 func (r *Round) isFinalized() bool {
-	return r.getState() == RoundStateFinalized || r.GetRoundNumber() == 0
+	return r.getFinalizingState() == RoundStateFinalized || r.GetRoundNumber() == 0
 }
 
 /*Provider - entity provider for client object */
@@ -553,7 +559,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
-			r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
+			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
@@ -596,27 +602,18 @@ func (r *Round) Clear() {
 }
 
 //Restart - restart the round
-func (r *Round) Restart() {
+func (r *Round) Restart() error {
 	r.mutex.Lock()
+	if r.getState() >= Share {
+		return CompleteRoundRestartError
+	}
 	r.initialize()
 	r.Block = nil
-	r.mutex.Unlock()
 	r.resetSoftTimeoutCount()
-	r.ResetState(RoundShareVRF)
-}
+	r.ResetPhase(ShareVRF)
 
-//AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
-func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
-	if _, ok := r.shares[share.party.GetKey()]; ok {
-		logging.Logger.Info("AddVRFShare Share is already there. Returning false.")
-		return false
-	}
-	r.setState(RoundShareVRF)
-	r.shares[share.party.GetKey()] = share
-	return true
+	r.mutex.Unlock()
+	return nil
 }
 
 // VRFShareExist checks if the VRF share already exist
@@ -640,7 +637,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 		logging.Logger.Info("add_vrf_share share is already there. Returning false.")
 		return false
 	}
-	r.setState(RoundShareVRF)
+	r.setPhase(ShareVRF)
 	r.shares[share.party.GetKey()] = share
 	logging.Logger.Debug("add_vrf_share",
 		zap.Int64("round", r.GetRoundNumber()),
@@ -664,28 +661,28 @@ func (r *Round) getVRFShares() map[string]*VRFShare {
 	return result
 }
 
-//GetState - get the state of the round
-func (r *Round) GetState() int {
+//GetPhase - get the phase of the round
+func (r *Round) GetPhase() Phase {
 	return r.getState()
 }
 
-//SetState - set the state of the round in a progressive order
-func (r *Round) SetState(state int) {
-	r.setState(state)
+//SetPhase - set the phase of the round in a progressive order
+func (r *Round) SetPhase(state Phase) {
+	r.setPhase(state)
 }
 
-//ResetState resets the state to any desired state
-func (r *Round) ResetState(state int) {
-	atomic.StoreInt32(&r.state, int32(state))
+//ResetPhase resets the phase to any desired phase
+func (r *Round) ResetPhase(state Phase) {
+	atomic.StoreInt32((*int32)(&r.phase), int32(state))
 }
 
-func (r *Round) getState() int {
-	return int(atomic.LoadInt32(&r.state))
+func (r *Round) getState() Phase {
+	return Phase(atomic.LoadInt32((*int32)(&r.phase)))
 }
 
-func (r *Round) setState(state int) {
+func (r *Round) setPhase(state Phase) {
 	if state > r.getState() {
-		atomic.StoreInt32(&r.state, int32(state))
+		atomic.StoreInt32((*int32)(&r.phase), int32(state))
 	}
 }
 
@@ -716,4 +713,12 @@ func (r *Round) GetVrfStartTime() time.Time {
 		return time.Time{}
 	}
 	return value.(time.Time)
+}
+
+func (r *Round) setFinalizingPhase(finalized FinalizingState) {
+	r.finalizingState = finalized
+}
+
+func (r *Round) getFinalizingState() FinalizingState {
+	return r.finalizingState
 }

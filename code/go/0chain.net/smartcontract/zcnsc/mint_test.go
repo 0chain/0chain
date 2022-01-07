@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	"0chain.net/core/logging"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/require"
@@ -14,15 +13,12 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
-	chain.ServerChain = new(chain.Chain)
-	chain.ServerChain.Config = chain.NewConfigImpl(&chain.ConfigData{ClientSignatureScheme: "bls0chain"})
-
 	logging.Logger = zap.NewNop()
 }
 
 func Test_MintPayload_Encode_Decode(t *testing.T) {
-	ctx := MakeMockStateContext()
-	expected, err := CreateMintPayload("client0", []string{"1", "2", "3"}, ctx)
+	MakeMockStateContext()
+	expected, err := CreateMintPayload(defaultClient)
 	require.NoError(t, err)
 	actual := &MintPayload{}
 	err = actual.Decode(expected.Encode())
@@ -39,18 +35,17 @@ func Test_MintPayload_Encode_Decode(t *testing.T) {
 }
 
 func Test_FuzzyMintTest(t *testing.T) {
-	contract := CreateZCNSmartContract()
 	ctx := MakeMockStateContext()
-
-	payload, err := CreateMintPayload("client0", authorizers, ctx)
+	contract := CreateZCNSmartContract()
+	payload, err := CreateMintPayload(defaultAuthorizer)
 	require.NoError(t, err)
 
-	for _, authorizer := range authorizers {
-		transaction := CreateTransactionToZcnsc(authorizer, tokens)
+	for _, client := range clients {
+		transaction := CreateAddAuthorizerTransaction(client, ctx, tokens)
 
 		response, err := contract.Mint(transaction, payload.Encode(), ctx)
 
-		require.NoError(t, err, "Testing authorizer: '%s'", authorizer)
+		require.NoError(t, err, "Testing authorizer: '%s'", client)
 		require.NotNil(t, response)
 		require.NotEmpty(t, response)
 	}
@@ -59,14 +54,14 @@ func Test_FuzzyMintTest(t *testing.T) {
 // TBD
 func Test_MintPayloadNonceShouldBeHigherByOneThanUserNonce(t *testing.T) {
 	ctx := MakeMockStateContext()
-	payload, err := CreateMintPayload(clientId, authorizers, ctx)
+	payload, err := CreateMintPayload(defaultClient)
 	require.NoError(t, err)
 
 	tr := CreateDefaultTransactionToZcnsc()
 	contract := CreateZCNSmartContract()
 
 	payload.Nonce = 1
-	node, err := GetUserNode(clientId, ctx)
+	node, err := GetUserNode(defaultClient, ctx)
 	require.NoError(t, err)
 	require.NotNil(t, node)
 	node.Nonce = payload.Nonce - 1
