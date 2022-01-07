@@ -221,7 +221,6 @@ func TestBlobbers(t *testing.T) {
 }
 
 func TestBlobberExists(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -234,7 +233,10 @@ func TestBlobberExists(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	eventDb, err := NewEventDb(access)
-	require.NoError(t, err)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+		return
+	}
 	defer eventDb.Close()
 
 	err = eventDb.AutoMigrate()

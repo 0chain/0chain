@@ -121,25 +121,12 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 	return result.Error
 }
 
-func (bl *Blobber) existsV2(edb *EventDb) (bool, error) {
+func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 	var exists bool
-	result := edb.Get().Raw("select exists(select 1 from blobbers where blobber_id = ? limit 1) as ex", bl.BlobberID).Scan(&exists)
+	result := edb.Get().Raw("select exists(select 1 from blobbers where blobber_id = ? limit 1) as ex", bl.BlobberID).Take(&exists)
 	if result.Error != nil {
 		return false, fmt.Errorf("error counting blobbers matching %v, error %v",
 			bl, result.Error)
 	}
 	return exists, nil
-}
-
-func (bl *Blobber) exists(edb *EventDb) (bool, error) {
-	var count int64
-	result := edb.Get().
-		Model(&Blobber{}).
-		Where(&Blobber{BlobberID: bl.BlobberID}).
-		Count(&count)
-	if result.Error != nil {
-		return false, fmt.Errorf("error searching for blobber %v, error %v",
-			bl.BlobberID, result.Error)
-	}
-	return count > 0, nil
 }
