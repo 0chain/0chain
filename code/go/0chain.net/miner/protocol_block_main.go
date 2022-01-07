@@ -131,30 +131,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			tii.clients[txn.ClientID] = nil
 		}
 		tii.idx++
-
-		//check whether we can execute future transactions
-		futures := tii.futureTxns[txn.ClientID]
-		currentNonce := txn.Nonce
-		for i := 0; i < len(futures)-1; i++ {
-			if futures[i].Nonce-currentNonce > 1 {
-				tii.futureTxns[txn.ClientID] = futures[i+1:]
-				break
-			}
-			//we can have several transactions with the same nonce execute first and skip others
-			// included n=0 in the list 1, 1, 2. take first 1 and skip the second
-			if futures[i].Nonce-currentNonce < 1 {
-				continue
-			}
-
-			currentNonce = futures[i].Nonce
-			tii.currentTxns = append(tii.currentTxns)
-			//will not sorted by fee here but at least will be sorted by nonce correctly, can improve it
-			sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[i].Nonce })
-		}
-
-		if len(futures) > 0 && futures[0].Nonce-txn.Nonce == 1 {
-			tii.futureTxns[txn.ClientID] = futures[1:]
-		}
+		tii.checkForCurrent(txn)
 
 		return true
 	}
@@ -219,9 +196,10 @@ func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
 
 func newTxnIterInfo(blockSize int32) *TxnIterInfo {
 	return &TxnIterInfo{
-		clients: make(map[string]*client.Client),
-		eTxns:   make([]datastore.Entity, 0, blockSize),
-		txnMap:  make(map[datastore.Key]struct{}, blockSize),
+		clients:    make(map[string]*client.Client),
+		eTxns:      make([]datastore.Entity, 0, blockSize),
+		futureTxns: make(map[datastore.Key][]*transaction.Transaction),
+		txnMap:     make(map[datastore.Key]struct{}, blockSize),
 	}
 }
 
@@ -314,6 +292,18 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	blockSize := iterInfo.idx
 	var reusedTxns int32
 
+	rcount := 0
+	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && len(iterInfo.currentTxns) > 0 {
+		for _, txn := range iterInfo.currentTxns {
+			if txnProcessor(ctx, blockState, txn, iterInfo) {
+				rcount++
+				if iterInfo.idx == mc.BlockSize() || iterInfo.byteSize >= mc.MaxByteSize() {
+					break
+				}
+			}
+		}
+		logging.Logger.Debug("Processed current transactions", zap.Int("count", rcount))
+	}
 	//reuse current transactions here
 	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() {
 		blocks := mc.GetUnrelatedBlocks(10, b)
