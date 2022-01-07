@@ -140,21 +140,23 @@ func (c *Chain) NewStateContext(
 	)
 }
 
-func (c *Chain) initSCVersion(clientState util.MerklePatriciaTrieI, round int64) error {
-	var (
-		fromLFB bool
-		cs      = clientState
-		lfb     = c.GetLatestFinalizedBlock()
-	)
+func (c *Chain) initSCVersion(round int64) error {
+	lfb := c.GetLatestFinalizedBlock()
 
-	if lfb != nil && lfb.ClientState != nil {
-		// should not use lfb if it's too far away from current round
-		if n := int(round - lfb.Round); n > 0 && n <= 2*config.GetLFBTicketAhead() {
-			cs = lfb.ClientState
-			fromLFB = true
-		}
+	if lfb == nil {
+		return errors.New("LFB not ready for sc version, lfb is nil")
 	}
-	vn, err := bcstate.GetTrieNode(cs, minersc.SCVersionKey)
+
+	if lfb.ClientState == nil {
+		return fmt.Errorf("LFB not ready for sc version, lfb client state is nil, lfb round: %d", lfb.Round)
+	}
+
+	if int(round-lfb.Round) > 2*config.GetLFBTicketAhead() {
+		return fmt.Errorf("LFB not ready for sc version, "+
+			"lfb is too far away from current round, lfb round: %d, round: %d", lfb.Round, round)
+	}
+
+	vn, err := bcstate.GetTrieNode(lfb.ClientState, minersc.SCVersionKey)
 	if err != nil {
 		return err
 	}
@@ -164,11 +166,10 @@ func (c *Chain) initSCVersion(clientState util.MerklePatriciaTrieI, round int64)
 		return err
 	}
 
-	logging.Logger.Debug("get sc version",
+	logging.Logger.Debug("init sc version",
 		zap.String("version", vnode.String()),
 		zap.Int64("lfb round", lfb.Round),
-		zap.Int64("round", round),
-		zap.Bool("from LFB", fromLFB))
+		zap.Int64("round", round))
 
 	smartcontract.InitSCVersionOnceOrDie(vnode.String())
 
@@ -195,7 +196,7 @@ func (c *Chain) updateState(ctx context.Context,
 	defer func() { events = sctx.GetEvents() }()
 
 	if !smartcontract.IsSCVersionReady() {
-		if err := c.initSCVersion(clientState, b.Round); err != nil {
+		if err := c.initSCVersion(b.Round); err != nil {
 			logging.Logger.Error("could not init sc version",
 				zap.Int64("round", b.Round),
 				zap.Error(err))
