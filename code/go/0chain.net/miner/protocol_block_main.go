@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"0chain.net/chaincore/chain"
@@ -56,7 +57,30 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			return false
 		}
 		var debugTxn = txn.DebugTxn()
-		if !mc.validateTransaction(b, txn) {
+
+		err := mc.validateTransaction(b, bState, txn)
+		switch err {
+		case PastTransaction:
+			tii.invalidTxns = append(tii.invalidTxns, txn)
+			if debugTxn {
+				logging.Logger.Info("generate block (debug transaction) error, transaction hash old nonce",
+					zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
+					zap.Any("now", common.Now()), zap.Int64("nonce", txn.Nonce))
+			}
+			return false
+		case FutureTransaction:
+			list := tii.futureTxns[txn.ClientID]
+			list = append(list, txn)
+			sort.SliceStable(list, func(i, j int) bool {
+				if list[i].Nonce == list[i].Nonce {
+					//if the same nonce order by fee
+					return list[i].Fee > list[i].Fee
+				}
+				return list[i].Nonce < list[i].Nonce
+			})
+			tii.futureTxns[txn.ClientID] = list
+			return false
+		case ErrNotTimeTolerant:
 			tii.invalidTxns = append(tii.invalidTxns, txn)
 			if debugTxn {
 				logging.Logger.Info("generate block (debug transaction) error - "+
@@ -66,6 +90,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			}
 			return false
 		}
+
 		if debugTxn {
 			logging.Logger.Info("generate block (debug transaction)",
 				zap.String("txn", txn.Hash), zap.Int32("idx", tii.idx),
@@ -77,6 +102,7 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			}
 			return false
 		}
+
 		events, err := mc.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
 		if err != nil {
@@ -105,6 +131,31 @@ func txnProcessorHandlerFunc(mc *Chain, b *block.Block) txnProcessorHandler {
 			tii.clients[txn.ClientID] = nil
 		}
 		tii.idx++
+
+		//check whether we can execute future transactions
+		futures := tii.futureTxns[txn.ClientID]
+		currentNonce := txn.Nonce
+		for i := 0; i < len(futures)-1; i++ {
+			if futures[i].Nonce-currentNonce > 1 {
+				tii.futureTxns[txn.ClientID] = futures[i+1:]
+				break
+			}
+			//we can have several transactions with the same nonce execute first and skip others
+			// included n=0 in the list 1, 1, 2. take first 1 and skip the second
+			if futures[i].Nonce-currentNonce < 1 {
+				continue
+			}
+
+			currentNonce = futures[i].Nonce
+			tii.currentTxns = append(tii.currentTxns)
+			//will not sorted by fee here but at least will be sorted by nonce correctly, can improve it
+			sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[i].Nonce })
+		}
+
+		if len(futures) > 0 && futures[0].Nonce-txn.Nonce == 1 {
+			tii.futureTxns[txn.ClientID] = futures[1:]
+		}
+
 		return true
 	}
 }
@@ -113,7 +164,10 @@ type TxnIterInfo struct {
 	clients     map[string]*client.Client
 	eTxns       []datastore.Entity
 	invalidTxns []datastore.Entity
-	txnMap      map[datastore.Key]struct{}
+	futureTxns  map[datastore.Key][]*transaction.Transaction
+	currentTxns []*transaction.Transaction
+
+	txnMap map[datastore.Key]struct{}
 
 	roundMismatch     bool
 	roundTimeout      bool
@@ -128,6 +182,39 @@ type TxnIterInfo struct {
 	idx int32
 	// included transaction data size
 	byteSize int64
+}
+
+func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
+	if tii.futureTxns == nil {
+		return
+	}
+	//check whether we can execute future transactions
+	futures := tii.futureTxns[txn.ClientID]
+	if len(futures) == 0 {
+		return
+	}
+	currentNonce := txn.Nonce
+	i := 0
+	for ; i < len(futures); i++ {
+		if futures[i].Nonce-currentNonce > 1 {
+			break
+		}
+		//we can have several transactions with the same nonce execute first and skip others
+		// included n=0 in the list 1, 1, 2. take first 1 and skip the second
+		if futures[i].Nonce-currentNonce < 1 {
+			tii.invalidTxns = append(tii.invalidTxns, futures[i])
+			continue
+		}
+
+		currentNonce = futures[i].Nonce
+		tii.currentTxns = append(tii.currentTxns, futures[i])
+		//will not sorted by fee here but at least will be sorted by nonce correctly, can improve it
+		sort.SliceStable(tii.currentTxns, func(i, j int) bool { return tii.currentTxns[i].Nonce < tii.currentTxns[i].Nonce })
+	}
+
+	if i > -1 {
+		tii.futureTxns[txn.ClientID] = futures[i:]
+	}
 }
 
 func newTxnIterInfo(blockSize int32) *TxnIterInfo {
@@ -206,7 +293,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	logging.Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if len(iterInfo.invalidTxns) > 0 {
-		logging.Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
+		logging.Logger.Info("generate block (found invalid transactions)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)))
 		go mc.deleteTxns(iterInfo.invalidTxns) // OK to do in background
 	}
 	if iterInfo.roundMismatch {
@@ -226,6 +313,8 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 	blockSize := iterInfo.idx
 	var reusedTxns int32
+
+	//reuse current transactions here
 	if blockSize < mc.BlockSize() && iterInfo.byteSize < mc.MaxByteSize() && mc.ReuseTransactions() {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0

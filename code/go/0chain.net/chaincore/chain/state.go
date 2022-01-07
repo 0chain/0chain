@@ -326,7 +326,7 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.Any("txn", txn), zap.Error(err))
 		}
 		var os *state.State
-		os, err = c.getState(bState, c.OwnerID())
+		os, err = c.GetStateById(bState, c.OwnerID())
 		if err != nil || os == nil || os.Balance == 0 {
 			logging.Logger.DPanic("update state - owner account",
 				zap.Int64("round", b.Round), zap.String("block", b.Hash),
@@ -353,7 +353,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	fs, err := c.getState(clientState, fromClient)
+	fs, err := c.GetStateById(clientState, fromClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -372,7 +372,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if fs.Balance < amount {
 		return ErrInsufficientBalance
 	}
-	ts, err := c.getState(clientState, toClient)
+	ts, err := c.GetStateById(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -431,7 +431,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
-	ts, err := c.getState(clientState, toClient)
+	ts, err := c.GetStateById(clientState, toClient)
 	if !isValid(err) {
 		if state.DebugTxn() {
 			logging.Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
@@ -482,9 +482,9 @@ func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	return tmpt
 }
 
-func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+func (c *Chain) GetStateById(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
-		return nil, common.NewError("getState", "client state does not exist")
+		return nil, common.NewError("GetStateById", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)

@@ -32,6 +32,11 @@ import (
 const InsufficientTxns = "insufficient_txns"
 
 var (
+	ErrNotTimeTolerant = common.NewError("not_time_tolerant", "Transaction is behind time tolerance")
+	FutureTransaction  = common.NewError("future_transaction", "Transaction has future nonce")
+	PastTransaction    = common.NewError("past_transaction", "Transaction has past nonce")
+)
+var (
 	bgTimer     metrics.Timer // block generation timer
 	bpTimer     metrics.Timer // block processing timer (includes block verification)
 	btvTimer    metrics.Timer // block verification timer
@@ -108,8 +113,24 @@ func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transacti
 	return ctxn
 }
 
-func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
-	return common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE)
+func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) error {
+	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+		return ErrNotTimeTolerant
+	}
+	state, err := mc.GetStateById(bState, txn.ClientID)
+	if err != nil {
+		return err
+	}
+
+	if txn.Nonce-state.Nonce > 1 {
+		return FutureTransaction
+	}
+
+	if txn.Nonce-state.Nonce < 1 {
+		return PastTransaction
+	}
+
+	return nil
 }
 
 // UpdatePendingBlock - updates the block that is generated and pending
