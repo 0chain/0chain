@@ -33,7 +33,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	pvals := timer.Percentiles(percentiles)
 	stats := make(map[string]interface{})
 	stats["delta"] = chain.DELTA
-	stats["block_size"] = c.BlockSize
+	stats["block_size"] = c.BlockSize()
 	stats["current_round"] = c.GetCurrentRound()
 	lfb := c.GetLatestFinalizedBlock()
 	stats["latest_finalized_round"] = lfb.Round

@@ -47,27 +47,31 @@ func Done() {
 }
 
 /*HandleShutdown - handles various shutdown signals */
-func HandleShutdown(server *http.Server) {
+func HandleShutdown(server *http.Server, closers []func()) chan struct{} {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGQUIT)
+	done := make(chan struct{})
+	signal.Notify(c, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 	go func() {
 		for sig := range c {
 			switch sig {
-			case syscall.SIGINT:
+			case syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM:
 				Done()
-				ctx, cancelf := context.WithTimeout(context.Background(), 5*time.Second)
+				ctx, cancelf := context.WithTimeout(context.Background(), 3*time.Second)
+				Logger.Info("Shutting down http server")
 				server.Shutdown(ctx)
+				Logger.Info("Http server shut down")
+
+				for _, c := range closers {
+					c()
+				}
 				cancelf()
-			case syscall.SIGQUIT:
-				Done()
-				ctx, cancelf := context.WithTimeout(context.Background(), 5*time.Second)
-				server.Shutdown(ctx)
-				cancelf()
+				done <- struct{}{}
 			default:
 				Logger.Info("unhandled signal", zap.Any("signal", sig))
 			}
 		}
 	}()
+	return done
 }
 
 // WithContextFunc provides the capacity for canceling a function by context

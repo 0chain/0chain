@@ -35,8 +35,8 @@ type RoundI interface {
 	IsFinalized() bool
 	Clear()
 
-	GetState() int
-	SetState(state int)
+	GetPhase() Phase
+	SetPhase(state Phase)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
 }
