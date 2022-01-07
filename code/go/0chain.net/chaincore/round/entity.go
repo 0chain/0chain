@@ -187,24 +187,13 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 
 func (tc *timeoutCounter) GetNormalizedTimeoutCount() int {
 	return tc.GetTimeoutCount()
-	// tc.mutex.Lock()
-	// defer tc.mutex.Unlock()
-	// tolerance := viper.GetInt("server_chain.round_timeouts.vrfs_timeout_mismatch_tolerance")
-	// if tolerance <= 1 {
-	// 	return tc.count
-	// }
-	// if tc.count%tolerance == 0 {
-	// 	return tc.count
-	// }
-	// return tolerance * (1 + tc.count/tolerance)
 }
 
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	Number        int64 `json:"number"`
-	RandomSeed    int64 `json:"round_random_seed"`
-	hasRandomSeed uint32
+	Number     int64 `json:"number"`
+	RandomSeed int64 `json:"round_random_seed"`
 
 	// For generator, this is the block the miner is generating till a
 	// notarization is received. For a verifier, this is the block that is
@@ -259,8 +248,6 @@ func (r *Round) GetRoundNumber() int64 {
 
 // SetRandomSeedForNotarizedBlock - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
-	r.setHasRandomSeed(seed)
-
 	r.mutex.Lock()
 	r.minerPerm = computeMinerRanks(seed, minersNum)
 	r.mutex.Unlock()
@@ -270,11 +257,9 @@ func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 
 // SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64, minersNum int) {
-	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
+	if r.HasRandomSeed() {
 		return
 	}
-
-	r.setHasRandomSeed(seed)
 
 	r.mutex.Lock()
 	r.minerPerm = computeMinerRanks(seed, minersNum)
@@ -286,20 +271,6 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 
 func (r *Round) setRandomSeed(seed int64) {
 	atomic.StoreInt64(&r.RandomSeed, seed)
-
-	if seed == 0 {
-		// reset hasRandomSeed if the seed is 0
-		atomic.StoreUint32(&r.hasRandomSeed, uint32(0))
-	}
-}
-
-func (r *Round) setHasRandomSeed(seed int64) {
-	value := uint32(0)
-	if seed != 0 {
-		value = 1
-	}
-
-	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
 // GetRandomSeed - returns the random seed of the round.
