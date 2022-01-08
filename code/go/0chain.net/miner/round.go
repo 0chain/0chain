@@ -27,17 +27,20 @@ type Round struct {
 }
 
 func (r *Round) SetGenerationCancelf(generationCancelf context.CancelFunc) {
+	r.roundGuard.Lock()
 	r.generationCancelf = generationCancelf
+	r.roundGuard.Unlock()
 }
 
 func (r *Round) TryCancelBlockGeneration() {
+	r.roundGuard.Lock()
 	if r.generationCancelf == nil {
 		logging.Logger.Info("Try to cancel block generation that have not been started yet",
 			zap.Int64("round", r.Number))
+		r.roundGuard.Unlock()
 		return
 	}
 	logging.Logger.Info("Cancelling block generation", zap.Int64("round", r.Number))
-	r.roundGuard.Lock()
 	f := r.generationCancelf
 	r.generationCancelf = nil
 	r.roundGuard.Unlock()
