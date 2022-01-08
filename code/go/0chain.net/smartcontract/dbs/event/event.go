@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
@@ -61,13 +62,16 @@ func (edb *EventDb) GetEvents(ctx context.Context, block int64) ([]Event, error)
 }
 
 func (edb *EventDb) exists(ctx context.Context, event Event) (bool, error) {
-	var exists bool
-	result := edb.Store.Get().WithContext(ctx).Raw("select exists(select 1 from events where tx_hash = ? AND index = ? limit 1) as ex", event.TxHash, event.Index).Scan(&exists)
-  if result.Error != nil {
-		return false, fmt.Errorf("error counting events matching %v, error %v",
+	var ev Event
+	result := edb.Store.Get().WithContext(ctx).Model(&Event{}).Where(&Event{TxHash: event.TxHash, Index: event.Index}).Take(&ev)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, nil
+	}
+	if result.Error != nil {
+		return false, fmt.Errorf("failed to check events existence %v, error %v",
 			event, result.Error)
 	}
-	return exists, nil
+	return true, nil
 }
 
 func (edb *EventDb) removeDuplicate(ctx context.Context, events []Event) []Event {

@@ -54,7 +54,6 @@ func (edb *EventDb) drop() error {
 }
 
 func TestEventExists(t *testing.T) {
-	t.Skip("only for local debugging, requires local postgresql")
 	access := dbs.DbAccess{
 		Enabled:         true,
 		Name:            "events_db",
@@ -67,7 +66,9 @@ func TestEventExists(t *testing.T) {
 		ConnMaxLifetime: 20 * time.Second,
 	}
 	eventDb, err := NewEventDb(access)
-	require.NoError(t, err)
+	if err != nil {
+		t.Skip("only for local debugging, requires local postgresql")
+	}
 	defer eventDb.Close()
 
 	err = eventDb.AutoMigrate()
