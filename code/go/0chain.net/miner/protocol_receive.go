@@ -537,14 +537,13 @@ func (mc *Chain) ProgressOnNotarization(notRound *Round) {
 		//notRound.CancelVerification()
 		//notRound.TryCancelBlockGeneration()
 		//TODO implement round centric context, that is cancelled when transition to the next happens
-		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
 		curRound := mc.GetMinerRound(curNumber)
-		if curRound == nil {
-			logging.Logger.Warn("Starting next round without current")
-			return
+		go mc.moveToNextRoundNotAhead(common.GetRootContext(), notRound)
+
+		if curRound != nil {
+			curRound.CancelVerification()
+			curRound.TryCancelBlockGeneration()
 		}
-		curRound.CancelVerification()
-		curRound.TryCancelBlockGeneration()
 	}
 }
 

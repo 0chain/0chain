@@ -19,6 +19,7 @@ type Round struct {
 	blocksToVerifyChannel chan *block.Block
 	verificationCancelf   context.CancelFunc
 	generationCancelf     context.CancelFunc
+	cancelGuard           sync.RWMutex
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
@@ -27,31 +28,30 @@ type Round struct {
 }
 
 func (r *Round) SetGenerationCancelf(generationCancelf context.CancelFunc) {
-	r.roundGuard.Lock()
+	r.cancelGuard.Lock()
 	r.generationCancelf = generationCancelf
-	r.roundGuard.Unlock()
+	r.cancelGuard.Unlock()
 }
 
 func (r *Round) TryCancelBlockGeneration() {
-	r.roundGuard.Lock()
+	r.cancelGuard.Lock()
+	defer r.cancelGuard.Unlock()
 	if r.generationCancelf == nil {
 		logging.Logger.Info("Try to cancel block generation that have not been started yet",
 			zap.Int64("round", r.Number))
-		r.roundGuard.Unlock()
 		return
 	}
 	logging.Logger.Info("Cancelling block generation", zap.Int64("round", r.Number))
 	f := r.generationCancelf
 	r.generationCancelf = nil
-	r.roundGuard.Unlock()
 
 	f()
 }
 
 func (r *Round) SetVerificationCancelf(verificationCancelf context.CancelFunc) {
-	r.roundGuard.Lock()
+	r.cancelGuard.Lock()
 	r.verificationCancelf = verificationCancelf
-	r.roundGuard.Unlock()
+	r.cancelGuard.Unlock()
 }
 
 func (r *Round) VrfShare() *round.VRFShare {
@@ -205,8 +205,8 @@ func (r *Round) isVerificationComplete() bool {
 
 /*StartVerificationBlockCollection - start collecting blocks for verification */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
-	r.roundGuard.Lock()
-	defer r.roundGuard.Unlock()
+	r.cancelGuard.Lock()
+	defer r.cancelGuard.Unlock()
 
 	if r.verificationCancelf != nil {
 		return nil
@@ -221,9 +221,9 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
-	r.roundGuard.Lock()
+	r.cancelGuard.Lock()
 	r.SetPhase(round.Notarize)
-	defer r.roundGuard.Unlock()
+	defer r.cancelGuard.Unlock()
 	f := r.verificationCancelf
 	if f == nil {
 		return
