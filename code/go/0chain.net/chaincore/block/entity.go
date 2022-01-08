@@ -914,10 +914,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		b.Events = nil
 	}
 
-	if len(b.Txns) > 0 && c.GetEventDb() != nil {
-		go b.addTransactions(c)
-	}
-
 	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
 		b.SetStateStatus(StateFailed)
 		logging.Logger.Error("compute state - state hash mismatch",
@@ -951,29 +947,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	return nil
 }
 
-func (b *Block) addTransactions(c Chainer) {
-	blockHash := b.GetHash()
-	for _, transaction := range b.Txns {
-		c.GetEventDb().AddTransaction(event.Transaction{
-			Hash:              transaction.Hash,
-			BlockHash:         blockHash,
-			Version:           transaction.Version,
-			ClientId:          transaction.ClientID,
-			ToClientId:        transaction.ToClientID,
-			TransactionData:   transaction.TransactionData,
-			Value:             transaction.Value,
-			Signature:         transaction.Signature,
-			CreationDate:      int64(transaction.CreationDate.Duration()),
-			Fee:               transaction.Fee,
-			TransactionType:   transaction.TransactionType,
-			TransactionOutput: transaction.TransactionOutput,
-			OutputHash:        transaction.OutputHash,
-			Status:            transaction.Status,
-			Model:             gorm.Model{CreatedAt: time.Unix(int64(transaction.CreationDate.Duration()), 0)},
-		})
-	}
-}
-
 // ComputeStateLocal computes the block state without fetching
 // previous blocks from network. Please make sure that the previous
 // block does exist.
@@ -995,6 +968,23 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
+		c.GetEventDb().AddTransaction(event.Transaction{
+			Hash:              txn.Hash,
+			BlockHash:         b.GetHash(),
+			Version:           txn.Version,
+			ClientId:          txn.ClientID,
+			ToClientId:        txn.ToClientID,
+			TransactionData:   txn.TransactionData,
+			Value:             txn.Value,
+			Signature:         txn.Signature,
+			CreationDate:      int64(txn.CreationDate.Duration()),
+			Fee:               txn.Fee,
+			TransactionType:   txn.TransactionType,
+			TransactionOutput: txn.TransactionOutput,
+			OutputHash:        txn.OutputHash,
+			Status:            txn.Status,
+			Model:             gorm.Model{CreatedAt: time.Unix(int64(txn.CreationDate.Duration()), 0)},
+		})
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
 			b.SetStateStatus(StateCancelled)
