@@ -3,7 +3,10 @@ package event
 import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"time"
 )
+
+const DefaultQueryTimeout = 5 * time.Second
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)

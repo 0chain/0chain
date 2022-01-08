@@ -33,6 +33,11 @@ type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (i
 /*Respond - respond either data or error as a response */
 func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
 	if err != nil {
+		if errors.Is(err, ErrNotModified) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		data := make(map[string]interface{}, 2)
 		data["error"] = err.Error()
@@ -127,6 +132,7 @@ func SetupCORSResponse(w http.ResponseWriter, r *http.Request) {
 * which takes a request object, processes and returns an object or an error
 * and converts into a standard request/response handler
  */
+
 func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !CheckCrossOrigin(w, r) {

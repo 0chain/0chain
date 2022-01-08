@@ -65,8 +65,8 @@ func TestLRU_Add(t *testing.T) {
 			name: "Test_LRU_Add_OK",
 			fields: fields{
 				Cache: c.Cache,
-				Hit:   c.Hit,
-				Miss:  c.Miss,
+				Hit:   c.hit,
+				Miss:  c.miss,
 			},
 			args: args{
 				key:   "key",
@@ -82,8 +82,8 @@ func TestLRU_Add(t *testing.T) {
 
 			c := &LRU{
 				Cache: tt.fields.Cache,
-				Hit:   tt.fields.Hit,
-				Miss:  tt.fields.Miss,
+				hit:   tt.fields.Hit,
+				miss:  tt.fields.Miss,
 			}
 			if err := c.Add(tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
 				t.Errorf("Add() error = %v, wantErr %v", err, tt.wantErr)
@@ -125,8 +125,8 @@ func TestLRU_Get(t *testing.T) {
 			name: "Test_LRU_Get_OK",
 			fields: fields{
 				Cache: c.Cache,
-				Hit:   c.Hit,
-				Miss:  c.Miss,
+				Hit:   c.hit,
+				Miss:  c.miss,
 			},
 			args: args{
 				key: "key",
@@ -139,8 +139,8 @@ func TestLRU_Get(t *testing.T) {
 			name: "Test_LRU_Get_ERR",
 			fields: fields{
 				Cache: c.Cache,
-				Hit:   c.Hit,
-				Miss:  c.Miss,
+				Hit:   c.hit,
+				Miss:  c.miss,
 			},
 			args: args{
 				key: "key_with_err",
@@ -157,8 +157,8 @@ func TestLRU_Get(t *testing.T) {
 
 			c := &LRU{
 				Cache: tt.fields.Cache,
-				Hit:   tt.fields.Hit,
-				Miss:  tt.fields.Miss,
+				hit:   tt.fields.Hit,
+				miss:  tt.fields.Miss,
 			}
 			if tt.saveBefore {
 				if err := c.Add(tt.args.key, tt.want); err != nil {
@@ -166,7 +166,7 @@ func TestLRU_Get(t *testing.T) {
 				}
 			}
 
-			var hit, miss int64 = c.Hit, c.Miss
+			var hit, miss int64 = c.hit, c.miss
 
 			got, err := c.Get(tt.args.key)
 			if (err != nil) != tt.wantErr {
@@ -177,11 +177,11 @@ func TestLRU_Get(t *testing.T) {
 			}
 
 			if !tt.wantErr {
-				if hit != c.Hit-1 {
+				if hit != c.hit-1 {
 					t.Fatal("Expected incrementing hit, but it not happened")
 				}
 			} else {
-				if miss != c.Miss-1 {
+				if miss != c.miss-1 {
 					t.Fatal("Expected incrementing miss, but it not happened")
 				}
 			}
@@ -208,8 +208,8 @@ func TestLRU_GetHit(t *testing.T) {
 			name: "Test_LRU_GetHit_OK",
 			fields: fields{
 				Cache: c.Cache,
-				Hit:   c.Hit,
-				Miss:  c.Miss,
+				Hit:   c.hit,
+				Miss:  c.miss,
 			},
 			want: 0,
 		},
@@ -221,8 +221,8 @@ func TestLRU_GetHit(t *testing.T) {
 
 			c := &LRU{
 				Cache: tt.fields.Cache,
-				Hit:   tt.fields.Hit,
-				Miss:  tt.fields.Miss,
+				hit:   tt.fields.Hit,
+				miss:  tt.fields.Miss,
 			}
 			if got := c.GetHit(); got != tt.want {
 				t.Errorf("GetHit() = %v, want %v", got, tt.want)
@@ -250,8 +250,8 @@ func TestLRU_GetMiss(t *testing.T) {
 			name: "Test_LRU_GetMiss_OK",
 			fields: fields{
 				Cache: c.Cache,
-				Hit:   c.Hit,
-				Miss:  c.Miss,
+				Hit:   c.hit,
+				Miss:  c.miss,
 			},
 			want: 0,
 		},
@@ -263,8 +263,8 @@ func TestLRU_GetMiss(t *testing.T) {
 
 			c := &LRU{
 				Cache: tt.fields.Cache,
-				Hit:   tt.fields.Hit,
-				Miss:  tt.fields.Miss,
+				hit:   tt.fields.Hit,
+				miss:  tt.fields.Miss,
 			}
 			if got := c.GetMiss(); got != tt.want {
 				t.Errorf("GetMiss() = %v, want %v", got, tt.want)

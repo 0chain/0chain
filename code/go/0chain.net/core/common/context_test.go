@@ -25,12 +25,12 @@ func TestSetupRootContext(t *testing.T) {
 		t.Errorf("expected setted = %v, but got = %v", wantRootCtx, rootContext)
 	}
 
-	HandleShutdown(&http.Server{})
+	HandleShutdown(&http.Server{}, []func(){func() {}})
 	if err := syscall.Kill(syscall.Getpid(), syscall.SIGINT); err != nil {
 		t.Error(err)
 	}
 
-	HandleShutdown(&http.Server{})
+	HandleShutdown(&http.Server{}, []func(){func() {}})
 	if err := syscall.Kill(syscall.Getpid(), syscall.SIGQUIT); err != nil {
 		t.Error(err)
 	}

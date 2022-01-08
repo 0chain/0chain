@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -142,6 +143,29 @@ func (c *Chain) FinalizeRound(r round.RoundI) {
 
 	logging.Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+	select {
+	case c.finalizedRoundsChannel <- r:
+	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
+		logging.Logger.Info("finalize round - push round to finalizedRoundsChannel timeout",
+			zap.Int64("round", r.GetRoundNumber()))
+	}
+}
+
+// ForceFinalizeRound force trigger the round finalization process
+// to avoid sharders stop finalizing blocks. This could happen if
+// one block continually timeout on block finalization due to the limited
+// cpu resources.
+func (c *Chain) ForceFinalizeRound() {
+	rn := c.GetCurrentRound()
+	r := c.GetRound(rn)
+	if r == nil {
+		logging.Logger.Error("force finalize round",
+			zap.Error(errors.New("can not get current round")),
+			zap.Int64("round", rn))
+		return
+	}
+
+	logging.Logger.Debug("force finalize round", zap.Int64("round", rn))
 	select {
 	case c.finalizedRoundsChannel <- r:
 	case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
@@ -322,23 +346,29 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 					zap.Int64("round", roundNumber))
 				return
 			case c.finalizedBlocksChannel <- fbWithReply:
-				err := <-fbWithReply.resultC
-				if err != nil {
-					logging.Logger.Error("finalize round - finalize block failed",
+				select {
+				case <-ctx.Done():
+					logging.Logger.Error("finalize round - context done",
+						zap.Error(ctx.Err()),
+						zap.Int64("round", roundNumber))
+				case err := <-fbWithReply.resultC:
+					if err != nil {
+						logging.Logger.Error("finalize round - finalize block failed",
+							zap.Int64("round", fb.Round),
+							zap.String("block", fb.Hash),
+							zap.Error(err))
+						return
+					}
+					logging.Logger.Info("finalize round - finalize block success",
 						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash),
-						zap.Error(err))
-					return
-				}
-				logging.Logger.Info("finalize round - finalize block success",
-					zap.Int64("round", fb.Round),
-					zap.String("block", fb.Hash))
+						zap.String("block", fb.Hash))
 
-				du := time.Since(ts)
-				if du > 3*time.Second {
-					logging.Logger.Debug("finalize round slow",
-						zap.Int64("round", roundNumber),
-						zap.Any("duration", time.Since(ts)))
+					du := time.Since(ts)
+					if du > 3*time.Second {
+						logging.Logger.Debug("finalize round slow",
+							zap.Int64("round", roundNumber),
+							zap.Any("duration", time.Since(ts)))
+					}
 				}
 			case <-time.NewTimer(500 * time.Millisecond).C: // TODO: make the timeout configurable
 				logging.Logger.Error("finalize round - push fb to finalizedBlocksChannel timeout",
@@ -438,7 +468,7 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
 	rn := r.GetRoundNumber()
-	nb, err := c.getNotarizedBlockFromMiners(ctx, "", rn)
+	nb, err := c.GetNotarizedBlockFromMiners(ctx, "", rn, true)
 	if err != nil {
 		return nil
 	}
@@ -552,13 +582,27 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 		return mb, nil
 	}
 
-	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
+	lfmb := c.GetLatestFinalizedMagicBlock(ctx)
+	var params *url.Values
+	if lfmb != nil {
+		params = &url.Values{}
+		params.Add("node-lfmb-hash", lfmb.Hash)
+	}
+
+	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, params, handler)
 
 	if len(magicBlocks) == 0 && len(errs) > 0 {
 		logging.Logger.Error("Get latest finalized magic block from sharders failed", zap.Errors("errors", errs))
 	}
 
 	if len(magicBlocks) == 0 {
+		// When sharders return 304 Not Modified code, this magicBlocks will be empty,
+		// return the local lfmb if it's empty is a workaround, we should have
+		// specific code to indicate the 304 Not Modified response here.
+		if lfmb != nil {
+			return lfmb
+		}
+
 		return nil
 	}
 
@@ -582,12 +626,16 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
 // block from all the sharders. It uses GetLatestFinalizedMagicBlock to get latest
 // finalized magic block of sharders to request data from.
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *block.Block {
-	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, c.getLatestFinalizedMagicBlock(ctx))
+	magicBlock := c.getLatestFinalizedMagicBlock(ctx)
+	if magicBlock == nil {
+		return nil
+	}
+	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, magicBlock)
 }
 
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
-	lfmb := c.GetLatestFinalizedMagicBlock(context.Background())
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	// TODO: improve this lfmbMutex
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
@@ -607,7 +655,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 }
 
 func getMagicBlockBrief(b *block.Block) *MagicBlockBrief {
-	if b == nil || b.MagicBlock == nil {
+	if b.MagicBlock == nil {
 		return nil
 	}
 	return &MagicBlockBrief{
