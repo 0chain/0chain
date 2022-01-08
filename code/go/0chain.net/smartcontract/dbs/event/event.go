@@ -3,6 +3,7 @@ package event
 import (
 	"errors"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/core/logging"
@@ -90,8 +91,9 @@ func (edb *EventDb) removeDuplicate(ctx context.Context, events []Event) []Event
 	return events
 }
 
-func (edb *EventDb) addEvents(ctx context.Context, events []Event) {
+func (edb *EventDb) addEvents(ctx context.Context, events []Event) error {
 	if edb.Store != nil && len(events) > 0 {
-		edb.Store.Get().WithContext(ctx).Create(&events)
+		return edb.Store.Get().WithContext(ctx).Create(&events).Error
 	}
+	return fmt.Errorf("error while adding events edb.Store edb.Store is nil:%v len(events):%v", edb.Store == nil, len(events))
 }

@@ -3,12 +3,10 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
-
-	"0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 type (
@@ -30,27 +28,10 @@ const (
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
-  edb.addEventMutex.Lock()
-	defer edb.addEventMutex.Unlock()
-	newEvents := edb.removeDuplicate(ctx, events)
-
-	edb.addEvents(ctx, newEvents)
-	for _, event := range newEvents {
-		var err error = nil
-		switch EventType(event.Type) {
-		case TypeStats:
-			err = edb.addStat(event)
-		default:
-		}
-		if err != nil {
-			logging.Logger.Error(
-				"event could not be processed",
-				zap.Any("event", event),
-				zap.Error(err),
-			)
-		}
+	edb.eBufferChannel <- eventCtx{
+		ctx:    ctx,
+		events: events,
 	}
-
 }
 
 func (edb *EventDb) addStat(event Event) error {
