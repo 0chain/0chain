@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
-	"gorm.io/gorm"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -968,22 +967,17 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		}
 		events, err := c.UpdateState(ctx, b, bState, txn)
 		b.Events = append(b.Events, events...)
-		c.GetEventDb().AddTransaction(event.Transaction{
-			Hash:              txn.Hash,
-			BlockHash:         b.GetHash(),
-			Version:           txn.Version,
-			ClientId:          txn.ClientID,
-			ToClientId:        txn.ToClientID,
-			TransactionData:   txn.TransactionData,
-			Value:             txn.Value,
-			Signature:         txn.Signature,
-			CreationDate:      int64(txn.CreationDate.Duration()),
-			Fee:               txn.Fee,
-			TransactionType:   txn.TransactionType,
-			TransactionOutput: txn.TransactionOutput,
-			OutputHash:        txn.OutputHash,
-			Status:            txn.Status,
-			Model:             gorm.Model{CreatedAt: time.Unix(int64(txn.CreationDate.Duration()), 0)},
+		data, err := json.Marshal(transactionNodeToEventTransaction(txn, b.GetHash()))
+		if err != nil {
+			return fmt.Errorf("marshalling transactions in block: %v", err)
+		}
+		b.Events = append(b.Events, event.Event{
+			BlockNumber: b.Round,
+			TxHash:      txn.Hash,
+			Type:        int(event.TypeStats),
+			Tag:         int(event.TagAddTransaction),
+			Index:       txn.Hash,
+			Data:        string(data),
 		})
 		switch err {
 		case context.Canceled, context.DeadlineExceeded:
