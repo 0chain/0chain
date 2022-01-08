@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/smartcontract/dbs/event"
+	"gorm.io/gorm"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -23,6 +23,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/dbs/event"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -1044,6 +1045,26 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
 	return nil
+}
+
+func transactionNodeToEventTransaction(tr *transaction.Transaction, blockHash string) event.Transaction {
+	return event.Transaction{
+		Hash:              tr.Hash,
+		BlockHash:         blockHash,
+		Version:           tr.Version,
+		ClientId:          tr.ClientID,
+		ToClientId:        tr.ToClientID,
+		TransactionData:   tr.TransactionData,
+		Value:             tr.Value,
+		Signature:         tr.Signature,
+		CreationDate:      int64(tr.CreationDate.Duration()),
+		Fee:               tr.Fee,
+		TransactionType:   tr.TransactionType,
+		TransactionOutput: tr.TransactionOutput,
+		OutputHash:        tr.OutputHash,
+		Status:            tr.Status,
+		Model:             gorm.Model{CreatedAt: time.Unix(int64(tr.CreationDate.Duration()), 0)},
+	}
 }
 
 // ApplyBlockStateChange apply and merge the state changes
