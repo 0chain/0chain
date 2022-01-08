@@ -112,7 +112,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			newMiner.MinStake, gn.MinStake)
 	}
 
-	if newMiner.MaxStake < gn.MaxStake {
+	if newMiner.MaxStake > gn.MaxStake {
 		return "", common.NewErrorf("add_miner",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newMiner.MaxStake, gn.MaxStake)
