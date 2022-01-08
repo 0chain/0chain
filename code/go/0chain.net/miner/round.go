@@ -246,12 +246,12 @@ func (r *Round) IsVRFComplete() bool {
 
 // Restart resets round and vrf shares cache
 func (r *Round) Restart() error {
-
+	r.CancelVerification()
+	r.TryCancelBlockGeneration()
+	//we want all logic like cancelling to executed before, since they can trigger phase change, round should restart from vrf
 	if err := r.Round.Restart(); err != nil {
 		return err
 	}
-	r.CancelVerification()
-	r.TryCancelBlockGeneration()
 
 	r.roundGuard.Lock()
 	r.vrfSharesCache = newVRFSharesCache()
