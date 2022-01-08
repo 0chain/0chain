@@ -124,7 +124,7 @@ func (edb *EventDb) addOrOverwriteBlobber(blobber Blobber) error {
 func (bl *Blobber) exists(edb *EventDb) (bool, error) {
 	var blobber Blobber
 	
-	result := edb.Store.Get().Model(&Blobber).Where(&Blobber{BlobberID: bl.BlobberID}).Take(&blobber)
+	result := edb.Store.Get().Model(&Blobber{}).Where(&Blobber{BlobberID: bl.BlobberID}).Take(&blobber)
 	if result.Error != nil {
 		return false, fmt.Errorf("failed to check Blobber existence %v, error %v",
 			bl, result.Error)
