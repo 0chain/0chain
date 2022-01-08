@@ -683,6 +683,7 @@ func (mc *Chain) getOrSetBlockNotarizing(hash string) (isNotarizing bool, finish
 		mc.nbmMutex.Unlock()
 		return
 	}
+	logging.Logger.Debug("notarizing block", zap.Int("current task size", len(mc.notarizingBlocksTasks)))
 
 	mc.notarizingBlocksTasks[hash] = make(chan struct{})
 	mc.nbmMutex.Unlock()
@@ -1179,10 +1180,10 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 		}
 	}
 
-	if !r.IsVerificationComplete() {
-		logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
-		mc.CancelRoundVerification(ctx, r)
-	}
+	//if !r.IsVerificationComplete() {
+	//	logging.Logger.Debug("AddNotarizedBlock - cancel round verification")
+	//	mc.CancelRoundVerification(ctx, r)
+	//}
 	b.SetBlockState(block.StateNotarized)
 	return true
 }
@@ -1190,6 +1191,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 /*CancelRoundVerification - cancel verifications happening within a round */
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
+	r.TryCancelBlockGeneration()
 }
 
 type BlockConsensus struct {
