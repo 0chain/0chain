@@ -222,7 +222,6 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
 	r.cancelGuard.Lock()
-	r.SetPhase(round.Notarize)
 	defer r.cancelGuard.Unlock()
 	f := r.verificationCancelf
 	if f == nil {
