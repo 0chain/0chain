@@ -1,6 +1,7 @@
 package state
 
 import (
+	"0chain.net/core/common"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -133,6 +134,10 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
+	err := sc.emitHandleAddTransfer(t)
+	if err != nil {
+		return common.NewErrorf("add transfer", "error emitting event: %v", err)
+	}
 	return nil
 }
 
@@ -150,6 +155,10 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
+	err := sc.emitHandleAddMint(m)
+	if err != nil {
+		return common.NewErrorf("add mint", "error emitting event: %v", err)
+	}
 	return nil
 }
 

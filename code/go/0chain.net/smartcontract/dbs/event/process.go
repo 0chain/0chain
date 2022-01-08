@@ -27,6 +27,8 @@ const (
 	TagAddOrOverwriteBlobber
 	TagUpdateBlobber
 	TagDeleteBlobber
+	TagIncreaseUserBalanceByAmount
+	TagDecreaseUserBalanceByAmount
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -68,6 +70,20 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
 		return edb.deleteBlobber(event.Data)
+	case TagIncreaseUserBalanceByAmount:
+		var user User
+		err := json.Unmarshal([]byte(event.Data), &user)
+		if err != nil {
+			return err
+		}
+		return edb.updateIncreaseUserBalanceByAmount(user)
+	case TagDecreaseUserBalanceByAmount:
+		var user User
+		err := json.Unmarshal([]byte(event.Data), &user)
+		if err != nil {
+			return err
+		}
+		return edb.updateDecreaseUserBalanceByAmount(user)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}
