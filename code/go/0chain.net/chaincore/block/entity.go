@@ -23,7 +23,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/dbs/event"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
