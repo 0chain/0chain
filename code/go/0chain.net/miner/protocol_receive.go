@@ -217,6 +217,11 @@ func (mc *Chain) processVerifyBlock(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 
+	if mr.IsVerificationComplete() {
+		logging.Logger.Debug("verify block - received block for round with finished verification phase")
+		return nil
+	}
+
 	if !mr.IsVRFComplete() {
 		logging.Logger.Info("verify block - got block proposal before VRF is complete",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),

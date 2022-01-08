@@ -219,6 +219,7 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
 	r.roundGuard.Lock()
+	r.SetPhase(round.Notarize)
 	defer r.roundGuard.Unlock()
 	f := r.verificationCancelf
 	if f == nil {
@@ -227,6 +228,7 @@ func (r *Round) CancelVerification() {
 	logging.Logger.Info("Cancelling verification", zap.Int64("round", r.Number))
 	r.verificationCancelf = nil
 	f()
+	r.blocksToVerifyChannel = make(chan *block.Block, cap(r.blocksToVerifyChannel))
 }
 
 /*Clear - clear any pending state before deleting this round */
