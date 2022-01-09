@@ -649,7 +649,7 @@ func (mn *MinerNode) save(balances cstate.StateContextI) error {
 	}
 
 	//Logger.Debug("MinerNode save successfully",
-	//	zap.String("path", encryption.Hash(mn.getKey())),
+	//	zap.String("path", encryption.Hash(mn.GetKey())),
 	//	zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return nil
 }
@@ -667,43 +667,69 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 		return errors.New("URL or ID is not specified")
 	}
 	return nil
-
 }
 
+// nodeWithVCPoolLock represents a MinerNode that use ViewChangeLock as tokenLockInterface
+// it is for decoding MinerNode bytes
+type nodeWithVCPoolLock struct {
+	*SimpleNode `json:"simple_miner"`
+	Pending     map[string]*DelegatePoolWithVCPoolLock `json:"pending,omitempty"`
+	Active      map[string]*DelegatePoolWithVCPoolLock `json:"active,omitempty"`
+	Deleting    map[string]*DelegatePoolWithVCPoolLock `json:"deleting,omitempty"`
+}
+
+func newNodeWithVCPoolLock() *nodeWithVCPoolLock {
+	mn := &nodeWithVCPoolLock{SimpleNode: &SimpleNode{}}
+	mn.Pending = make(map[string]*DelegatePoolWithVCPoolLock)
+	mn.Active = make(map[string]*DelegatePoolWithVCPoolLock)
+	mn.Deleting = make(map[string]*DelegatePoolWithVCPoolLock)
+	return mn
+}
+
+// DelegatePoolWithVCPoolLock is for decoding delegate pool with ViewChangeLock as the TokenLockInterface
+type DelegatePoolWithVCPoolLock struct {
+	*sci.PoolStats              `json:"stats"`
+	*ZcnTokenPoolWithVCPoolLock `json:"pool"`
+}
+
+// ToDelegatePool converts the pool struct to *DelegatePool
+func (dpl *DelegatePoolWithVCPoolLock) ToDelegatePool() *sci.DelegatePool {
+	dp := sci.NewDelegatePool()
+	dp.PoolStats = dpl.PoolStats
+	dp.ZcnPool = dpl.ZcnPool
+	dp.TokenLockInterface = dpl.ViewChangeLock
+	return dp
+}
+
+// ZcnTokenPoolWithVCPoolLock represents the struct for decoding pool in DelegatePool
+type ZcnTokenPoolWithVCPoolLock struct {
+	tokenpool.ZcnPool `json:"pool"`
+	*ViewChangeLock   `json:"lock"`
+}
+
+// Decode decodes the miner node from bytes
 func (mn *MinerNode) Decode(input []byte) error {
-	var objMap map[string]json.RawMessage
-	err := json.Unmarshal(input, &objMap)
-	if err != nil {
+	n := newNodeWithVCPoolLock()
+	if err := json.Unmarshal(input, n); err != nil {
 		return err
 	}
-	sm, ok := objMap["simple_miner"]
-	if ok {
-		err = mn.SimpleNode.Decode(sm)
-		if err != nil {
-			return err
-		}
+
+	mn.SimpleNode = n.SimpleNode
+	mn.Pending = make(map[string]*sci.DelegatePool, len(n.Pending))
+	for k, pl := range n.Pending {
+		mn.Pending[k] = pl.ToDelegatePool()
 	}
-	pending, ok := objMap["pending"]
-	if ok {
-		err = DecodeDelegatePools(mn.Pending, pending, &ViewChangeLock{})
-		if err != nil {
-			return err
-		}
+
+	mn.Active = make(map[string]*sci.DelegatePool, len(n.Active))
+	for k, pl := range n.Active {
+		mn.Active[k] = pl.ToDelegatePool()
 	}
-	active, ok := objMap["active"]
-	if ok {
-		err = DecodeDelegatePools(mn.Active, active, &ViewChangeLock{})
-		if err != nil {
-			return err
-		}
+
+	mn.Deleting = make(map[string]*sci.DelegatePool, len(n.Deleting))
+	for k, pl := range n.Deleting {
+		mn.Deleting[k] = pl.ToDelegatePool()
 	}
-	deleting, ok := objMap["deleting"]
-	if ok {
-		err = DecodeDelegatePools(mn.Deleting, deleting, &ViewChangeLock{})
-		if err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
 

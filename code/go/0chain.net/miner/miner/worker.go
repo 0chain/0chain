@@ -52,7 +52,7 @@ func TransactionGenerator(c *chain.Chain) {
 
 	GenerateClients(c, numClients)
 
-	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
+	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize())
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
 	if blockSize <= 0 {
 		return

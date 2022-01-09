@@ -261,6 +261,21 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					tm.Stop()
 					close(closeTmC)
 				}
+
+				if resp.StatusCode == http.StatusNotModified {
+					provider.SetStatus(NodeStatusActive)
+					provider.SetLastActiveTime(time.Now())
+					provider.SetErrorCount(provider.GetSendErrors())
+					logging.N2n.Debug("requesting - not modified",
+						zap.Int("from", selfNode.SetIndex),
+						zap.Int("to", provider.SetIndex),
+						zap.Duration("duration", duration),
+						zap.String("handler", uri),
+						zap.String("entity", eName),
+						zap.Any("params", params))
+					return true
+				}
+
 				defer resp.Body.Close()
 				// reset context timeout so that the
 				// following data reading would not be canceled due to timeout
