@@ -4,10 +4,14 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
 func (sc *StateContext) emitHandleAddTransfer(t *state.Transfer) error {
+	if sc.GetEventDB() == nil {
+		return errors.New(event.ErrNoEventDb)
+	}
 	toUser := event.User{
 		UserID:        t.ToClientID,
 		Amount:        t.Amount,
@@ -34,6 +38,9 @@ func (sc *StateContext) emitHandleAddTransfer(t *state.Transfer) error {
 }
 
 func (sc *StateContext) emitHandleAddMint(m *state.Mint) error {
+	if sc.GetEventDB() == nil {
+		return errors.New(event.ErrNoEventDb)
+	}
 	toUser := event.User{
 		UserID:        m.ToClientID,
 		Amount:        m.Amount,

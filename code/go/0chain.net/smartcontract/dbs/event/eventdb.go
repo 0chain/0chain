@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const DefaultQueryTimeout = 5 * time.Second
+const (
+	DefaultQueryTimeout = 5 * time.Second
+	ErrNoEventDb        = "event db is not initialized"
+)
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)
