@@ -292,7 +292,7 @@ func (msc *MinerSmartContract) scVersionHandler(
 		Version: scv.String(),
 	}
 
-	v, allow := balances.CanUpdateSCVersion()
+	v, allow, _ := balances.CanUpdateSCVersion()
 	if allow {
 		rsp.Upgrade.Allow = true
 		rsp.Upgrade.Version = v.String()

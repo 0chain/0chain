@@ -62,8 +62,12 @@ type StateContextI interface {
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 
 	// CanSCVersionUpdate checks if smart contract version can be updated now
-	CanUpdateSCVersion() (*semver.Version, bool)
+	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
 }
+
+// SwitchAdapter represents the adapter function signature
+// the adapter function will be called when executing SC switching transaction
+type SwitchAdapter func(util.MerklePatriciaTrieI) error
 
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
@@ -79,7 +83,7 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
-	canSCVersionUpdate            func() (*semver.Version, bool)
+	canSCVersionUpdate            func() (*semver.Version, bool, SwitchAdapter)
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 }
@@ -94,7 +98,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
-	canSCVersionUpdate func() (*semver.Version, bool),
+	canSCVersionUpdate func() (*semver.Version, bool, SwitchAdapter),
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -317,7 +321,7 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 }
 
 // CanSCVersionUpdate checks if we can update the smart contract
-func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool) {
+func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
 	return sc.canSCVersionUpdate()
 }
 

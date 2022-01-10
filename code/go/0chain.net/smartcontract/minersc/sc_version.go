@@ -97,10 +97,16 @@ func (msc *MinerSmartContract) updateSCVersion(
 			"only the owner can update the smart contract version")
 	}
 
-	allowedV, ok := balances.CanUpdateSCVersion()
+	allowedV, ok, switchAdapterFunc := balances.CanUpdateSCVersion()
 	if !ok {
 		return "", common.NewError("update_sc_version_not_allowed",
 			"smart contract version cannot be updated yet")
+	}
+
+	if switchAdapterFunc != nil {
+		if err := switchAdapterFunc(balances.GetState()); err != nil {
+			return "", common.NewError("update_sc_version_invalid_adapter", err.Error())
+		}
 	}
 
 	var scv UpdateSCVersionTxnInput
