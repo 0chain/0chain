@@ -4,6 +4,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -86,7 +87,7 @@ func TestWriteMarkers(t *testing.T) {
 		Data:        string(data),
 	}
 	events := []Event{eventAddOrOverwriteWm}
-	eventDb.AddEvents(events)
+	eventDb.AddEvents(context.TODO(), events)
 
 	wm, err := eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)
@@ -105,7 +106,7 @@ func TestWriteMarkers(t *testing.T) {
 		Data:        string(data),
 	}
 	events = []Event{eventAddOrOverwriteWm}
-	eventDb.AddEvents(events)
+	eventDb.AddEvents(context.TODO(), events)
 
 	wm, err = eventDb.GetWriteMarker(eWriteMarker.TransactionID)
 	require.NoError(t, err)
