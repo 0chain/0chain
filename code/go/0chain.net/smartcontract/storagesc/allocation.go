@@ -164,6 +164,12 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"saving new allocation: %v", err)
 	}
 
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"saving new allocation in db: %v", err)
+	}
+
 	buff := alloc.Encode()
 	return string(buff), nil
 }
