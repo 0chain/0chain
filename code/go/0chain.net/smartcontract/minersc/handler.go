@@ -207,7 +207,7 @@ func (msc *MinerSmartContract) GetEventsHandler(
 		Tag:         eventTag,
 	}
 
-	events, err := balances.GetEventDB().FindEvents(filter)
+	events, err := balances.GetEventDB().FindEvents(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

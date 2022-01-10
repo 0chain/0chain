@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -186,7 +185,6 @@ func main() {
 	logging.Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
 	initIntegrationsTests(node.Self.Underlying().GetKey())
-	defer shutdownIntegrationTests()
 
 	var server *http.Server
 	if config.Development() {
@@ -204,10 +202,9 @@ func main() {
 			MaxHeaderBytes: 1 << 20,
 		}
 	}
-	common.HandleShutdown(server)
 	memorystore.GetInfo()
 	common.ConfigRateLimits()
-	initN2NHandlers(mc.Chain)
+	initN2NHandlers(mc)
 
 	initWorkers(ctx)
 	// Load previous MB and related DKG if any. Don't load the latest, since
@@ -266,11 +263,12 @@ func main() {
 		}
 	}
 
-	initHandlers()
+	initHandlers(mc)
 
 	go func() {
 		logging.Logger.Info("Ready to listen to the requests")
-		log.Fatal(server.ListenAndServe())
+		err2 := server.ListenAndServe()
+		logging.Logger.Info("Http server shut down", zap.Error(err2))
 	}()
 
 	go mc.RegisterClient()
@@ -303,12 +301,13 @@ func main() {
 		}
 	}
 
-	defer done(ctx)
-	<-ctx.Done()
-	time.Sleep(time.Second * 5)
+	shutdown := common.HandleShutdown(server, []func(){shutdownIntegrationTests, done, chain.CloseStateDB})
+	<-shutdown
+	time.Sleep(2 * time.Second)
+	logging.Logger.Info("0chain miner shut down gracefully")
 }
 
-func done(ctx context.Context) {
+func done() {
 	mc := miner.GetMinerChain()
 	mc.Stop()
 }
@@ -394,11 +393,11 @@ func initEntities() {
 	block.SetupMagicBlockDataDB()
 }
 
-func initHandlers() {
+func initHandlers(c chain.Chainer) {
 	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
-	chain.SetupHandlers()
+	chain.SetupHandlers(c)
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()
@@ -410,7 +409,7 @@ func initHandlers() {
 	serverChain.SetupNodeHandlers()
 }
 
-func initN2NHandlers(c *chain.Chain) {
+func initN2NHandlers(c *miner.Chain) {
 	node.SetupN2NHandlers()
 	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
@@ -419,7 +418,7 @@ func initN2NHandlers(c *chain.Chain) {
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
-	chain.SetupX2XResponders(c)
+	chain.SetupX2XResponders(c.Chain)
 	chain.SetupX2MRequestors()
 	chain.SetupX2SRequestors()
 }

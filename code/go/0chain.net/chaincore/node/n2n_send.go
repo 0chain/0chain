@@ -71,6 +71,12 @@ func (np *Pool) SendToMultipleNodes(ctx context.Context, handler SendHandler, no
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(ctx context.Context, numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodes(false)
+	var infos []int
+	for _, n := range nodes {
+		infos = append(infos, n.SetIndex)
+	}
+	logging.Logger.Debug("send at least", zap.Int("number_to_send", numNodes),
+		zap.Int("num_of_nodes", len(nodes)), zap.Ints("indices", infos))
 	return np.sendTo(ctx, numNodes, nodes, handler)
 }
 
@@ -310,7 +316,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 
 			defer cancel()
 
-			logging.N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
+			logging.N2n.Info("sending",
+				zap.Int("from", selfNode.SetIndex),
+				zap.Int("to", receiver.SetIndex),
+				zap.String("handler", uri),
+				zap.Duration("duration", time.Since(ts)),
+				zap.String("entity", entity.GetEntityMetadata().GetName()),
+				zap.Any("id", entity.GetKey()),
+				zap.Any("err", err))
 			switch err {
 			case nil:
 			default:
@@ -428,6 +441,9 @@ type Chainer interface {
 	// IsBlockSyncing checks if the miner is struggling on syncing
 	// previous blocks
 	IsBlockSyncing() bool
+	// RejectNotarizedBlock returns notarized block if the sharder is processing the block
+	// or the block has notarized already
+	RejectNotarizedBlock(hash string) bool
 }
 
 // StopOnBlockSyncingHandler check if the miner is struggling on syncing blocks,
@@ -438,6 +454,21 @@ func StopOnBlockSyncingHandler(c Chainer, handler common.ReqRespHandlerf) common
 		if c.IsBlockSyncing() {
 			return
 		}
+
+		handler(writer, request)
+	}
+}
+
+func RejectDuplicateNotarizedBlockHandler(c Chainer, handler common.ReqRespHandlerf) common.ReqRespHandlerf {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		entityID := request.Header.Get(HeaderRequestEntityID)
+
+		// check if the sharder is processing the block or
+		// return if the block is cached
+		if c.RejectNotarizedBlock(entityID) {
+			return
+		}
+
 		handler(writer, request)
 	}
 }
@@ -458,6 +489,16 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 			return
 		}
+
+		entityName := r.Header.Get(HeaderRequestEntityName)
+		entityID := r.Header.Get(HeaderRequestEntityID)
+		entityMetadata := datastore.GetEntityMetadata(entityName)
+		if options != nil && options.MessageFilter != nil {
+			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
+				return
+			}
+		}
+
 		buf := bytes.Buffer{}
 		buf.ReadFrom(r.Body)
 		r.Body.Close()
@@ -474,16 +515,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 					return nil
 				})
 			}
+			// TODO:
 			ctx := WithSenderValidateFunc(context.Background(), senderValidateFunc)
-			entityName := r.Header.Get(HeaderRequestEntityName)
-			entityID := r.Header.Get(HeaderRequestEntityID)
-			entityMetadata := datastore.GetEntityMetadata(entityName)
-			if options != nil && options.MessageFilter != nil {
-				if !options.MessageFilter.AcceptMessage(entityName, entityID) {
-					return
-				}
-			}
-
 			initialNodeID := r.Header.Get(HeaderInitialNodeID)
 			if initialNodeID != "" {
 				initSender := GetNode(initialNodeID)
@@ -505,6 +538,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			if err != nil {
 				return
 			}
+
 			if entity.GetKey() != entityID {
 				logging.N2n.Error("message received - entity id doesn't match with signed id",
 					zap.Int("from", sender.SetIndex),
@@ -514,6 +548,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 					zap.String("entity.id", entity.GetKey()))
 				return
 			}
+
 			start := time.Now()
 			_, err = handler(ctx, entity)
 			duration := time.Since(start)

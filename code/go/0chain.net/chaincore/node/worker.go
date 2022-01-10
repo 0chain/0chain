@@ -177,26 +177,6 @@ func (np *Pool) statusMonitor(ctx context.Context, startRound int64) {
 	np.ComputeNetworkStats()
 }
 
-/*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
-func (np *Pool) DownloadNodeData(node *Node) bool {
-	url := fmt.Sprintf("%v/_nh/list/%v", node.GetN2NURLBase(), node.GetNodeType())
-	client := &http.Client{Timeout: TimeoutLargeMessage}
-	resp, err := client.Get(url)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	dnp := NewPool(NodeTypeMiner)
-	ReadNodes(resp.Body, dnp, dnp)
-	for _, node := range dnp.Nodes {
-		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.SetStatus(NodeStatusActive)
-			np.AddNode(node)
-		}
-	}
-	return true
-}
-
 func (n *Node) MemoryUsage() {
 	ticker := time.NewTicker(5 * time.Minute)
 	for true {
