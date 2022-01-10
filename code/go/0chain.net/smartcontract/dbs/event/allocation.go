@@ -2,6 +2,7 @@ package event
 
 import (
 	"0chain.net/chaincore/state"
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"time"
@@ -93,7 +94,7 @@ func (alloc *Allocation) exists(edb *EventDb) (bool, error) {
 		Where(&Allocation{AllocationID: alloc.AllocationID}).
 		Take(&data)
 
-	if result.Error == gorm.ErrRecordNotFound {
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return false, nil
 	} else if result.Error != nil {
 		return false, fmt.Errorf("error searching for allocation %v, error %v",
