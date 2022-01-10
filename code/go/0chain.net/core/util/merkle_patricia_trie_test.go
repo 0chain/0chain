@@ -2313,3 +2313,25 @@ func TestMPTFullToLeafNodeDelete(t *testing.T) {
 
 	doDelete(t, mpt2, "1245", nil)
 }
+
+func TestHashBytesNotIncludeVersions(t *testing.T) {
+	nd := NewFullNode(&Txn{Data: "123"})
+	h := nd.GetHashBytes()
+
+	nd.SetVersion(2022)
+	h2 := nd.GetHashBytes()
+	require.Equal(t, h, h2)
+
+	nd2 := NewLeafNode(Path("p"), Path("ath"), 2022, &Txn{Data: "123"})
+	h3 := nd2.GetHashBytes()
+
+	nd2.SetVersion(2023)
+	h4 := nd2.GetHashBytes()
+	require.Equal(t, h3, h4)
+
+	nd3 := NewExtensionNode(Path("path"), Key("123"))
+	h5 := nd3.GetHashBytes()
+	nd3.SetVersion(2022)
+	h6 := nd3.GetHashBytes()
+	require.Equal(t, h5, h6)
+}

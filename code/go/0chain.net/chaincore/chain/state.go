@@ -8,6 +8,7 @@ import (
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 
 	"errors"
 
@@ -135,7 +136,7 @@ func (c *Chain) NewStateContext(
 		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
-		smartcontract.CanSCVersionUpdate,
+		smartcontract.CanUpdateSCVersion,
 		eventDb,
 	)
 }
@@ -156,24 +157,33 @@ func (c *Chain) initSCVersion(round int64) error {
 			"lfb is too far away from current round, lfb round: %d, round: %d", lfb.Round, round)
 	}
 
-	vn, err := bcstate.GetTrieNode(lfb.ClientState, minersc.SCVersionKey)
+	v, err := getSCVersion(lfb.ClientState)
 	if err != nil {
 		return err
 	}
 
-	var vnode minersc.SCVersionNode
-	if err := vnode.Decode(vn.Encode()); err != nil {
-		return err
-	}
-
 	logging.Logger.Debug("init sc version",
-		zap.String("version", vnode.String()),
+		zap.String("version", v.String()),
 		zap.Int64("lfb round", lfb.Round),
 		zap.Int64("round", round))
 
-	smartcontract.InitSCVersionOnceOrDie(vnode.String())
+	smartcontract.InitSCVersionOnce(v)
 
 	return nil
+}
+
+func getSCVersion(state util.MerklePatriciaTrieI) (*semver.Version, error) {
+	vn, err := bcstate.GetTrieNode(state, minersc.SCVersionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var vnode minersc.SCVersionNode
+	if err := vnode.Decode(vn.Encode()); err != nil {
+		return nil, err
+	}
+
+	return semver.New(vnode.String())
 }
 
 func (c *Chain) updateState(ctx context.Context,
@@ -296,7 +306,8 @@ func (c *Chain) updateState(ctx context.Context,
 			logging.Logger.Error("Failed to transfer amount",
 				zap.Any("transfer_ClientID", transfer.ClientID),
 				zap.Any("to_ClientID", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount))
+				zap.Any("amount", transfer.Amount),
+				zap.Error(err))
 			return
 		}
 	}

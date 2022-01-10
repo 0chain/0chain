@@ -50,19 +50,10 @@ func (scv *scVersionWithLock) String() string {
 	return s
 }
 
-func setSCVersion(v semver.Version) {
-	scVersion.Set(v)
-}
-
-// InitSCVersionOnceOrDie initialize sc version once, panic if the version
-// is invalid
-func InitSCVersionOnceOrDie(version string) {
+// InitSCVersionOnce initialize sc version once
+func InitSCVersionOnce(version *semver.Version) {
 	initOnce.Do(func() {
-		v, err := semver.Make(version)
-		if err != nil {
-			panic(err)
-		}
-		setSCVersion(v)
+		SetSCVersion(*version)
 	})
 }
 
@@ -71,25 +62,19 @@ func IsSCVersionReady() bool {
 	return !scVersion.Get().Equals(emptySC)
 }
 
-// SetSCVersion sets the sc version
-func SetSCVersion(version string) error {
-	v, err := semver.Make(version)
-	if err != nil {
-		return err
-	}
-
-	setSCVersion(v)
-	return nil
-}
-
 // GetSCVersion returns the current running smart contract version
 func GetSCVersion() semver.Version {
 	return scVersion.Get()
 }
 
-// CanSCVersionUpdate checks if we can update the smart contract version
+// SetSCVersion sets the sc version
+func SetSCVersion(v semver.Version) {
+	scVersion.Set(v)
+}
+
+// CanUpdateSCVersion checks if we can update the smart contract version
 // return the allowed version
-func CanSCVersionUpdate() (*semver.Version, bool) {
+func CanUpdateSCVersion() (*semver.Version, bool) {
 	// TODO: implement this
 	v2, err := semver.New("2.0.0")
 	if err != nil {
