@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/config/cases"
 )
 
 //
@@ -717,176 +718,71 @@ func (r *Runner) verbosePrintByGoodBad(label string, bad *config.Bad) {
 	}
 }
 
+// MinersNum implements config.Executor interface.
+func (r *Runner) MinersNum() int {
+	return r.server.GetMinersNum()
+}
+
+// EnableServerStatsCollector implements config.Executor interface.
+func (r *Runner) EnableServerStatsCollector() error {
+	return r.server.EnableServerStatsCollector()
+}
+
+// GetServerStatsCollector implements config.Executor interface.
+func (r *Runner) GetServerStatsCollector() *stats.NodesServerStats {
+	return r.server.NodesServerStatsCollector
+}
+
 //
 // Checks
 //
 
-// ConfigureNotNotarisedBlockExtensionCheck implements config.Executor interface.
-func (r *Runner) ConfigureNotNotarisedBlockExtensionCheck(cfg *config.DefaultTestCase) (err error) {
+// ConfigureTestCase implements config.Executor interface.
+func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) error {
 	if r.verbose {
-		log.Print(" [INF] configure \"not notarised block extension check\"")
+		log.Printf(" [INF] configuring \"%s\" test case", configurator.Name())
 	}
 
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.ExtendNotNotarisedBlock = cfg
+	err := r.server.UpdateAllStates(func(state *conductrpc.State) {
+		switch cfg := configurator.(type) {
+		case *cases.NotNotarisedBlockExtension:
+			state.ExtendNotNotarisedBlock = cfg
+
+		case *cases.SendDifferentBlocksFromFirstGenerator:
+			state.SendDifferentBlocksFromFirstGenerator = cfg
+
+		case *cases.SendDifferentBlocksFromAllGenerators:
+			state.SendDifferentBlocksFromAllGenerators = cfg
+
+		case *cases.BreakingSingleBlock:
+			state.BreakingSingleBlock = cfg
+
+		case *cases.SendInsufficientProposals:
+			state.SendInsufficientProposals = cfg
+
+		case *cases.VerifyingNonExistentBlock:
+			state.VerifyingNonExistentBlock = cfg
+
+		case *cases.NotarisingNonExistentBlock:
+			state.NotarisingNonExistentBlock = cfg
+
+		case *cases.ResendProposedBlock:
+			state.ResendProposedBlock = cfg
+
+		case *cases.ResendNotarisation:
+			state.ResendNotarisation = cfg
+
+		default:
+			log.Panicf("unknown test case name: %s", configurator.Name())
+		}
 	})
 	if err != nil {
-		return fmt.Errorf("error while configuring not notarising extending: %v", err)
+		return fmt.Errorf("error while updating all states on \"%s\" test case: %v", configurator.Name(), err)
 	}
 
-	r.server.CurrentTest = cases.NewNotNotarisedBlockExtension()
+	r.server.CurrentTest = configurator.TestCase()
 
-	return
-}
-
-// ConfigureSendDifferentBlocksFromFirstGenerator implements config.Executor interface.
-func (r *Runner) ConfigureSendDifferentBlocksFromFirstGenerator(cfg *config.DefaultTestCase) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"send different blocks from first generator\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.SendDifferentBlocksFromFirstGenerator = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewSendDifferentBlocksFromFirstGenerator(r.server.GetMinersNum())
-
-	return
-}
-
-// ConfigureSendDifferentBlocksFromAllGenerators implements config.Executor interface.
-func (r *Runner) ConfigureSendDifferentBlocksFromAllGenerators(cfg *config.DefaultTestCase) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"send different blocks from all generators\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.SendDifferentBlocksFromAllGenerators = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewSendDifferentBlocksFromAllGenerators(r.server.GetMinersNum())
-
-	return
-}
-
-// ConfigureBreakingSingleBlock implements config.Executor interface.
-func (r *Runner) ConfigureBreakingSingleBlock(cfg *config.DefaultTestCase) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"breaking single block\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.BreakingSingleBlock = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewBreakingSingleBlock()
-
-	return
-}
-
-// ConfigureSendInsufficientProposals implements config.Executor interface.
-func (r *Runner) ConfigureSendInsufficientProposals(cfg *config.DefaultTestCase) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"send insufficient proposals\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.SendInsufficientProposals = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewSendInsufficientProposals()
-
-	return
-}
-
-// ConfigureVerifyingNonExistentBlockTestCase implements config.Executor interface.
-func (r *Runner) ConfigureVerifyingNonExistentBlockTestCase(cfg *config.VerifyingNonExistentBlock) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"verifying non existent block\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.VerifyingNonExistentBlock = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring \"verifying non existent block\" test case: %v", err)
-	}
-
-	if err := r.server.EnableServerStatsCollector(); err != nil {
-		return fmt.Errorf("error while enabling server stats collector: %v", err)
-	}
-	r.server.CurrentTest = cases.NewVerifyingNonExistentBlock(cfg.Hash, int(cfg.OnRound), r.server.NodesServerStatsCollector)
-
-	return
-}
-
-// ConfigureNotarisingNonExistentBlockTestCase implements config.Executor interface.
-func (r *Runner) ConfigureNotarisingNonExistentBlockTestCase(cfg *config.NotarisingNonExistentBlock) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"notarising non existent block\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.NotarisingNonExistentBlock = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring \"notarising non existent block\" test case: %v", err)
-	}
-
-	if err := r.server.EnableServerStatsCollector(); err != nil {
-		return fmt.Errorf("error while enabling server stats collector: %v", err)
-	}
-	r.server.CurrentTest = cases.NewNotarisingNonExistentBlock(r.server.NodesServerStatsCollector)
-
-	return
-}
-
-// ConfigureResendProposedBlock implements config.Executor interface.
-func (r *Runner) ConfigureResendProposedBlock(cfg *config.ResendProposedBlock) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"resend proposed block\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.ResendProposedBlock = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring \"resend proposed block\" test case: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewResendProposedBlock()
-
-	return
-}
-
-// ConfigureResendNotarisation implements config.Executor interface.
-func (r *Runner) ConfigureResendNotarisation(cfg *config.ResendNotarisation) (err error) {
-	if r.verbose {
-		log.Print(" [INF] configure \"resend notarisation\"")
-	}
-
-	err = r.server.UpdateAllStates(func(state *conductrpc.State) {
-		state.ResendNotarisation = cfg
-	})
-	if err != nil {
-		return fmt.Errorf("error while configuring \"resend notarisation\" test case: %v", err)
-	}
-
-	r.server.CurrentTest = cases.NewResendNotarisation()
-
-	return
+	return nil
 }
 
 // MakeTestCaseCheck implements config.Executor interface.

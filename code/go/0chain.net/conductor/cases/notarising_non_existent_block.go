@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"0chain.net/conductor/conductrpc/stats"
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -28,7 +27,7 @@ type (
 
 var (
 	// Ensure NotarisingNonExistentBlock implements config.TestCase interface.
-	_ config.TestCase = (*NotarisingNonExistentBlock)(nil)
+	_ TestCase = (*NotarisingNonExistentBlock)(nil)
 )
 
 // NewNotarisingNonExistentBlock creates initialised NotarisingNonExistentBlock.

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -94,133 +93,12 @@ func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 }
 
 type (
-	// TestCaseConfigurator represents interface for test cases configuration.
-	TestCaseConfigurator interface {
-		IsTesting(round int64, generator bool, typeRank int) bool
-	}
-
-	// DefaultTestCase represents default configuration for test cases.
-	DefaultTestCase struct {
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
-	}
-
-	// VerifyingNonExistentBlock represents config for cases.VerifyingNonExistentBlock.
-	VerifyingNonExistentBlock struct {
-		Hash       string `json:"hash" yaml:"hash" mapstructure:"hash"`
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
-
-		IgnoredVerificationTicketsNum int
-	}
-
-	// NotarisingNonExistentBlock represents config for cases.NotarisingNonExistentBlock.
-	NotarisingNonExistentBlock struct {
-		Hash       string `json:"hash" yaml:"hash" mapstructure:"hash"`
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
-	}
-
-	// ResendProposedBlock represents config for cases.ResendProposedBlock.
-	ResendProposedBlock struct {
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
-
-		Resent bool
-
-		mutex sync.Mutex
-	}
-
-	// ResendNotarisation represents config for cases.ResendNotarisation.
-	ResendNotarisation struct {
-		TestReport `json:"test_report" yaml:"test_report" mapstructure:"test_report"`
-
-		Notarisation []byte
-		Resent       bool
-
-		mutex sync.Mutex
-	}
-
-	TestReport struct {
-		ByGenerator        bool  `json:"by_generator" yaml:"by_generator" mapstructure:"by_generator"`
-		ByNodeWithTypeRank int   `json:"by_node_with_type_rank" yaml:"by_node_with_type_rank" mapstructure:"by_node_with_type_rank"`
-		OnRound            int64 `json:"round" yaml:"round" mapstructure:"round"`
-	}
-
 	// TestCaseCheck represents generic configuration for making tests checks.
 	TestCaseCheck struct {
 		WaitTimeStr string `mapstructure:"wait_time"`
 		WaitTime    time.Duration
 	}
 )
-
-var (
-	// Ensure DefaultTestCase implements TestCaseConfigurator interface.
-	_ TestCaseConfigurator = (*DefaultTestCase)(nil)
-
-	// Ensure VerifyingNonExistentBlock implements TestCaseConfigurator interface.
-	_ TestCaseConfigurator = (*VerifyingNonExistentBlock)(nil)
-
-	// Ensure NotarisingNonExistentBlock implements TestCaseConfigurator interface.
-	_ TestCaseConfigurator = (*NotarisingNonExistentBlock)(nil)
-
-	// Ensure ResendProposedBlock implements TestCaseConfigurator interface.
-	_ TestCaseConfigurator = (*ResendProposedBlock)(nil)
-)
-
-// IsTesting implements TestCaseConfigurator interface.
-func (b *TestReport) IsTesting(round int64, generator bool, nodeTypeRank int) bool {
-	return b.OnRound == round && b.ByGenerator == generator && nodeTypeRank == b.ByNodeWithTypeRank
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *DefaultTestCase) Decode(val interface{}) error {
-	return mapstructure.Decode(val, c)
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *VerifyingNonExistentBlock) Decode(val interface{}) error {
-	return mapstructure.Decode(val, c)
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *NotarisingNonExistentBlock) Decode(val interface{}) error {
-	return mapstructure.Decode(val, c)
-}
-
-func (c *ResendProposedBlock) Lock() {
-	if c == nil {
-		return
-	}
-	c.mutex.Lock()
-}
-
-func (c *ResendProposedBlock) Unlock() {
-	if c == nil {
-		return
-	}
-	c.mutex.Unlock()
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *ResendProposedBlock) Decode(val interface{}) error {
-	return mapstructure.Decode(val, c)
-}
-
-func (c *ResendNotarisation) Lock() {
-	if c == nil {
-		return
-	}
-	c.mutex.Lock()
-}
-
-func (c *ResendNotarisation) Unlock() {
-	if c == nil {
-		return
-	}
-	c.mutex.Unlock()
-}
-
-// Decode decodes provided interface by executing mapstructure.Decode.
-func (c *ResendNotarisation) Decode(val interface{}) error {
-	return mapstructure.Decode(val, c)
-}
 
 // Decode decodes provided interface by executing mapstructure.Decode.
 func (c *TestCaseCheck) Decode(val interface{}) (err error) {

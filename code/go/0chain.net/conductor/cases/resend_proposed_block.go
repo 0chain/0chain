@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -30,7 +28,7 @@ type (
 
 var (
 	// Ensure NotNotarisedBlockExtension implements config.TestCase interface.
-	_ config.TestCase = (*ResendProposedBlock)(nil)
+	_ TestCase = (*ResendProposedBlock)(nil)
 )
 
 // NewResendProposedBlock creates initialised ResendProposedBlock.

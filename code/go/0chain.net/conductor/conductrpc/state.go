@@ -2,6 +2,7 @@ package conductrpc
 
 import (
 	"0chain.net/conductor/config"
+	"0chain.net/conductor/config/cases"
 )
 
 //
@@ -47,15 +48,15 @@ type State struct {
 	Signatures *config.Bad
 	Publish    *config.Bad
 
-	ExtendNotNotarisedBlock               *config.DefaultTestCase
-	SendDifferentBlocksFromFirstGenerator *config.DefaultTestCase
-	SendDifferentBlocksFromAllGenerators  *config.DefaultTestCase
-	BreakingSingleBlock                   *config.DefaultTestCase
-	SendInsufficientProposals             *config.DefaultTestCase
-	VerifyingNonExistentBlock             *config.VerifyingNonExistentBlock
-	NotarisingNonExistentBlock            *config.NotarisingNonExistentBlock
-	ResendProposedBlock                   *config.ResendProposedBlock
-	ResendNotarisation                    *config.ResendNotarisation
+	ExtendNotNotarisedBlock               *cases.NotNotarisedBlockExtension
+	SendDifferentBlocksFromFirstGenerator *cases.SendDifferentBlocksFromFirstGenerator
+	SendDifferentBlocksFromAllGenerators  *cases.SendDifferentBlocksFromAllGenerators
+	BreakingSingleBlock                   *cases.BreakingSingleBlock
+	SendInsufficientProposals             *cases.SendInsufficientProposals
+	VerifyingNonExistentBlock             *cases.VerifyingNonExistentBlock
+	NotarisingNonExistentBlock            *cases.NotarisingNonExistentBlock
+	ResendProposedBlock                   *cases.ResendProposedBlock
+	ResendNotarisation                    *cases.ResendNotarisation
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

@@ -1,4 +1,4 @@
-package config
+package cases
 
 import (
 	"context"

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/conductor/config/cases"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -79,36 +81,19 @@ type Executor interface {
 	ValidatorProof(vp *Bad) (err error)
 	Challenges(cs *Bad) (err error)
 
-	// ConfigureNotNotarisedBlockExtensionCheck prepares state for cases.NotNotarisedBlockExtension test case.
-	ConfigureNotNotarisedBlockExtensionCheck(*DefaultTestCase) (err error)
+	// MinersNum returns number of miner nodes.
+	MinersNum() int
 
-	// ConfigureSendDifferentBlocksFromFirstGenerator prepares state for cases.SendDifferentBlocksFromFirstGenerator test case.
-	ConfigureSendDifferentBlocksFromFirstGenerator(*DefaultTestCase) (err error)
+	// EnableServerStatsCollector enables server stats collecting.
+	EnableServerStatsCollector() error
 
-	// ConfigureSendDifferentBlocksFromAllGenerators prepares state for
-	// cases.SendDifferentBlocksFromAllGenerators test case.
-	ConfigureSendDifferentBlocksFromAllGenerators(*DefaultTestCase) (err error)
+	// GetServerStatsCollector returns current server stats collector.
+	GetServerStatsCollector() *stats.NodesServerStats
 
-	// ConfigureBreakingSingleBlock prepares state for cases.BreakingSingleBlock test case.
-	ConfigureBreakingSingleBlock(cfg *DefaultTestCase) (err error)
+	// ConfigureTestCase runs cases.TestCase's configuring with cases.TestCaseConfigurator configuration.
+	ConfigureTestCase(cases.TestCaseConfigurator) error
 
-	// ConfigureSendInsufficientProposals prepares state for
-	// cases.SendInsufficientProposals test case.
-	ConfigureSendInsufficientProposals(*DefaultTestCase) (err error)
-
-	// ConfigureVerifyingNonExistentBlockTestCase prepares state for cases.VerifyingNonExistentBlock test case.
-	ConfigureVerifyingNonExistentBlockTestCase(*VerifyingNonExistentBlock) (err error)
-
-	// ConfigureNotarisingNonExistentBlockTestCase prepares state for cases.NotarisingNonExistentBlock test case.
-	ConfigureNotarisingNonExistentBlockTestCase(*NotarisingNonExistentBlock) (err error)
-
-	// ConfigureResendProposedBlock prepares state for cases.ResendProposedBlock test case.
-	ConfigureResendProposedBlock(*ResendProposedBlock) (err error)
-
-	// ConfigureResendNotarisation prepares state for cases.ResendNotarisation test case.
-	ConfigureResendNotarisation(*ResendNotarisation) (err error)
-
-	// MakeTestCaseCheck runs config.TestCase final check with TestCaseCheck configuration.
+	// MakeTestCaseCheck runs cases.TestCase's final check with TestCaseCheck configuration.
 	MakeTestCaseCheck(*TestCaseCheck) error
 }
 

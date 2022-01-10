@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -28,7 +26,7 @@ type (
 
 var (
 	// Ensure ResendNotarisation implements config.TestCase interface.
-	_ config.TestCase = (*ResendNotarisation)(nil)
+	_ TestCase = (*ResendNotarisation)(nil)
 )
 
 // NewResendNotarisation creates initialised ResendNotarisation.
@@ -65,9 +63,8 @@ func (n *ResendNotarisation) check() (success bool, err error) {
 }
 
 // Configure implements config.TestCase interface.
-func (n *ResendNotarisation) Configure(blob []byte) error {
+func (n *ResendNotarisation) Configure(_ []byte) error {
 	panic("configuration for this test case is not allowed")
-	return nil
 }
 
 // AddResult implements config.TestCase interface.

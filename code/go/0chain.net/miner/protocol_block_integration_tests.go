@@ -21,7 +21,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/conductor/cases"
 	crpc "0chain.net/conductor/conductrpc"
-	cfg "0chain.net/conductor/config"
 	crpcutils "0chain.net/conductor/utils"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -340,32 +339,32 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	s := crpc.Client().State()
-	var configurator cfg.TestCaseConfigurator
+	var isTestingFunc func(round int64, generator bool, typeRank int) bool
 	switch {
 	case s.ExtendNotNotarisedBlock != nil:
-		configurator = s.ExtendNotNotarisedBlock
+		isTestingFunc = s.ExtendNotNotarisedBlock.IsTesting
 
 	case s.BreakingSingleBlock != nil:
-		configurator = s.BreakingSingleBlock
+		isTestingFunc = s.BreakingSingleBlock.IsTesting
 
 	case s.SendInsufficientProposals != nil:
-		configurator = s.SendInsufficientProposals
+		isTestingFunc = s.SendInsufficientProposals.IsTesting
 
 	case s.NotarisingNonExistentBlock != nil:
-		configurator = s.NotarisingNonExistentBlock
+		isTestingFunc = s.NotarisingNonExistentBlock.IsTesting
 
 	case s.ResendProposedBlock != nil:
-		configurator = s.ResendProposedBlock
+		isTestingFunc = s.ResendProposedBlock.IsTesting
 
 	case s.ResendNotarisation != nil:
-		configurator = s.ResendNotarisation
+		isTestingFunc = s.ResendNotarisation.IsTesting
 
 	default:
 		return false
 	}
 
 	nodeType, typeRank := getNodeTypeAndTypeRank(round)
-	return configurator.IsTesting(round, nodeType == generator, typeRank)
+	return isTestingFunc(round, nodeType == generator, typeRank)
 }
 
 func addRoundInfoResult(finalisedBlockHash string, r round.RoundI) error {

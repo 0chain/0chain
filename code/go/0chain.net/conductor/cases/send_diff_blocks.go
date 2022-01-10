@@ -6,8 +6,6 @@ import (
 	"errors"
 	"strconv"
 	"sync"
-
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -50,10 +48,10 @@ type (
 
 var (
 	// Ensure SendDifferentBlocksFromAllGenerators implements config.TestCase interface.
-	_ config.TestCase = (*SendDifferentBlocksFromAllGenerators)(nil)
+	_ TestCase = (*SendDifferentBlocksFromAllGenerators)(nil)
 
 	// Ensure SendDifferentBlocksFromFirstGenerator implements config.TestCase interface.
-	_ config.TestCase = (*SendDifferentBlocksFromFirstGenerator)(nil)
+	_ TestCase = (*SendDifferentBlocksFromFirstGenerator)(nil)
 )
 
 // NewSendDifferentBlocksFromAllGenerators creates initialised SendDifferentBlocksFromAllGenerators.

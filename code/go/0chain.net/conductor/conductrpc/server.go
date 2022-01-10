@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"0chain.net/conductor/cases"
 	"0chain.net/conductor/conductrpc/stats"
 	"0chain.net/conductor/config"
 )
@@ -112,7 +113,7 @@ type Server struct {
 	// it work. E.g. the node has started and waits the conductor to enter BC.
 	onNodeReady chan NodeName
 
-	CurrentTest config.TestCase
+	CurrentTest cases.TestCase
 
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent

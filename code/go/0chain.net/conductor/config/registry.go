@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/conductor/config/cases"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -362,83 +363,101 @@ func init() {
 
 	register("configure_not_notarised_block_extension_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &DefaultTestCase{}
+
+		cfg := cases.NewNotNotarisedBlockExtension()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureNotNotarisedBlockExtensionCheck(cfg)
+
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_send_different_blocks_from_first_generator_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &DefaultTestCase{}
+
+		cfg := cases.NewSendDifferentBlocksFromFirstGenerator(ex.MinersNum())
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureSendDifferentBlocksFromFirstGenerator(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_send_different_blocks_from_all_generators_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &DefaultTestCase{}
+
+		cfg := cases.NewSendDifferentBlocksFromAllGenerators(ex.MinersNum())
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureSendDifferentBlocksFromAllGenerators(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_breaking_single_block", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &DefaultTestCase{}
+
+		cfg := cases.NewBreakingSingleBlock()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureBreakingSingleBlock(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_send_insufficient_proposals_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &DefaultTestCase{}
+
+		cfg := cases.NewSendInsufficientProposals()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureSendInsufficientProposals(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_verifying_non_existent_block_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &VerifyingNonExistentBlock{}
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewVerifyingNonExistentBlock(ex.GetServerStatsCollector())
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureVerifyingNonExistentBlockTestCase(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_notarising_non_existent_block_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &NotarisingNonExistentBlock{}
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewNotarisingNonExistentBlock(ex.GetServerStatsCollector())
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureNotarisingNonExistentBlockTestCase(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_resend_proposed_block_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &ResendProposedBlock{}
+
+		cfg := cases.NewResendProposedBlock()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureResendProposedBlock(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("configure_resend_notarisation_test_case", func(name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		cfg := &ResendNotarisation{}
+
+		cfg := cases.NewResendNotarisation()
 		if err := cfg.Decode(val); err != nil {
 			return err
 		}
-		return ex.ConfigureResendNotarisation(cfg)
+		return ex.ConfigureTestCase(cfg)
 	})
 
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {

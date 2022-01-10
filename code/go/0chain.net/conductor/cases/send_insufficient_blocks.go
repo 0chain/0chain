@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
-
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -30,7 +28,7 @@ type (
 
 var (
 	// Ensure SendInsufficientProposals implements config.TestCase interface.
-	_ config.TestCase = (*SendInsufficientProposals)(nil)
+	_ TestCase = (*SendInsufficientProposals)(nil)
 )
 
 // NewSendInsufficientProposals creates initialised SendInsufficientProposals.

@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -35,7 +34,7 @@ type (
 
 var (
 	// Ensure BreakingSingleBlock implements config.TestCase interface.
-	_ config.TestCase = (*BreakingSingleBlock)(nil)
+	_ TestCase = (*BreakingSingleBlock)(nil)
 )
 
 // NewBreakingSingleBlock creates initialised BreakingSingleBlock.

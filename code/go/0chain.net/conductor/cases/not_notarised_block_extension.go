@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -29,7 +28,7 @@ type (
 
 var (
 	// Ensure NotNotarisedBlockExtension implements config.TestCase interface.
-	_ config.TestCase = (*NotNotarisedBlockExtension)(nil)
+	_ TestCase = (*NotNotarisedBlockExtension)(nil)
 )
 
 // NewNotNotarisedBlockExtension creates initialised NotNotarisedBlockExtension.

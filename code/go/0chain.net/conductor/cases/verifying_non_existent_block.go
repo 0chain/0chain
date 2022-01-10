@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"0chain.net/conductor/conductrpc/stats"
-	"0chain.net/conductor/config"
 )
 
 type (
@@ -29,7 +28,7 @@ type (
 
 var (
 	// Ensure VerifyingNonExistentBlock implements config.TestCase interface.
-	_ config.TestCase = (*VerifyingNonExistentBlock)(nil)
+	_ TestCase = (*VerifyingNonExistentBlock)(nil)
 )
 
 // NewVerifyingNonExistentBlock creates initialised VerifyingNonExistentBlock.
