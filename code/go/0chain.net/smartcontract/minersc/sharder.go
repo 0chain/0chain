@@ -51,7 +51,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 			update.MinStake, gn.MinStake)
 	}
 
-	if update.MaxStake < gn.MaxStake {
+	if update.MaxStake > gn.MaxStake {
 		return "", common.NewErrorf("update_sharder_settings",
 			"max_stake is greater than allowed by SC: %v > %v",
 			update.MaxStake, gn.MaxStake)
@@ -146,7 +146,7 @@ func (msc *MinerSmartContract) AddSharder(
 			newSharder.MinStake, gn.MinStake)
 	}
 
-	if newSharder.MaxStake < gn.MaxStake {
+	if newSharder.MaxStake > gn.MaxStake {
 		return "", common.NewErrorf("add_sharder",
 			"max_stake is greater than allowed by SC: %v > %v",
 			newSharder.MaxStake, gn.MaxStake)
