@@ -75,7 +75,7 @@ func (edb *EventDb) addStat(event Event) error {
 		if err != nil {
 			return err
 		}
-		return edb.AddTransaction(transaction)
+		return edb.addTransaction(transaction)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

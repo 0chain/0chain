@@ -23,8 +23,7 @@ type Transaction struct {
 	Status            int
 }
 
-// AddTransaction Saves the transaction to the event db
-func (edb *EventDb) AddTransaction(transaction Transaction) error {
+func (edb *EventDb) addTransaction(transaction Transaction) error {
 	res := edb.Store.Get().Create(&transaction)
 	return res.Error
 }

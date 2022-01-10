@@ -30,7 +30,7 @@ func TestAddTransaction(t *testing.T) {
 	require.NoError(t, err)
 
 	tr := Transaction{}
-	err = eventDb.AddTransaction(tr)
+	err = eventDb.addTransaction(tr)
 	require.NoError(t, err, "Error while inserting Transaction to event Database")
 	var count int64
 	eventDb.Get().Table("transactions").Count(&count)
@@ -63,7 +63,7 @@ func TestFindTransaction(t *testing.T) {
 		Model: gorm.Model{ID: 1},
 		Hash:  "something",
 	}
-	err = eventDb.AddTransaction(tr)
+	err = eventDb.addTransaction(tr)
 	require.NoError(t, err, "Error while inserting Transaction to event Database")
 	gotTr, err := eventDb.GetTransactionByHash("something")
 
