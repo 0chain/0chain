@@ -284,8 +284,19 @@ func (msc *MinerSmartContract) scVersionHandler(
 
 	rsp := struct {
 		Version string `json:"version"`
+		Upgrade struct {
+			Allow   bool   `json:"allow"`
+			Version string `json:"version"`
+		} `json:"upgrade"`
 	}{
 		Version: scv.String(),
 	}
+
+	v, allow := balances.CanUpdateSCVersion()
+	if allow {
+		rsp.Upgrade.Allow = true
+		rsp.Upgrade.Version = v.String()
+	}
+
 	return rsp, nil
 }
