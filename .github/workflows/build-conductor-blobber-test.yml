@@ -55,13 +55,13 @@ jobs:
     
     - name: Install 0dns
       run: |
-        # cd 0dns && git apply --check ../0chain/0chain/docker.local/bin/conductor/0dns-local.patch
-        cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && git apply --check ../0chain/0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch || true
     
     - name: Blobbers Patching
       run: |
-        # cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
-        cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
+        cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
+        cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
     
     - name: Add ZCN config
       run: |
@@ -83,7 +83,7 @@ jobs:
     - name: Starting blobber Tests.
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
     
     - name: Clean up job.
       if: ${{ always() }}
