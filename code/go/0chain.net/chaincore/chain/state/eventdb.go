@@ -9,9 +9,7 @@ import (
 )
 
 func (sc *StateContext) addTransferToDb(t *state.Transfer) error {
-	if sc.GetEventDB() == nil {
-		return event.ErrNoEventDb
-	}
+
 	var events []event.Event
 	toUser := event.User{
 		UserID:        t.ToClientID,
@@ -56,10 +54,6 @@ func (sc *StateContext) addTransferToDb(t *state.Transfer) error {
 }
 
 func (sc *StateContext) addMintToDb(m *state.Mint) error {
-
-	if sc.GetEventDB() == nil {
-		return event.ErrNoEventDb
-	}
 
 	toUser := event.User{
 		UserID:        m.ToClientID,

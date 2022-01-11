@@ -134,9 +134,12 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 		return state.ErrInvalidTransfer
 	}
 	sc.transfers = append(sc.transfers, t)
-	err := sc.addTransferToDb(t)
-	if err != nil {
-		return common.NewErrorf("add transfer", "error emitting event: %v", err)
+
+	if sc.GetEventDB() != nil {
+		err := sc.addTransferToDb(t)
+		if err != nil {
+			return common.NewErrorf("add transfer", "error emitting event: %v", err)
+		}
 	}
 	return nil
 }
@@ -155,10 +158,14 @@ func (sc *StateContext) AddMint(m *state.Mint) error {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
-	err := sc.addMintToDb(m)
-	if err != nil {
-		return common.NewErrorf("add mint", "error emitting event: %v", err)
+
+	if sc.GetEventDB() != nil {
+		err := sc.addMintToDb(m)
+		if err != nil {
+			return common.NewErrorf("add mint", "error emitting event: %v", err)
+		}
 	}
+
 	return nil
 }
 
