@@ -35,6 +35,7 @@ func init() {
 
 var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance not sufficient for transfer")
 var ErrSmartContractContext = common.NewError("smart_contract_execution_ctx_err", "context deadline")
+var ErrWrongNonce = common.NewError("wrong_nonce", "Nonce of sender is not valid")
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
@@ -181,6 +182,10 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 	)
 	defer func() { events = sctx.GetEvents() }()
 
+	if err := c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
+		return nil, err
+	}
+
 	switch txn.TransactionType {
 
 	case transaction.TxnTypeSmartContract:
@@ -298,6 +303,13 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 				zap.String("to clientID", mint.ToClientID))
 			return
 		}
+	}
+
+	if err = c.incrementNonce(sctx, txn.ClientID); err != nil {
+		logging.Logger.Error("update nonce error", zap.Any("error", err),
+			zap.Any("transaction", txn.Hash),
+			zap.String("clientID", txn.ClientID))
+		return
 	}
 
 	// commit transaction
@@ -473,6 +485,41 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return common.NewError("mint_amount - insert", err.Error())
 	}
+	return nil
+}
+
+func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
+	s, err := c.GetStateById(sctx.GetState(), fromClient)
+	if err != nil {
+		return err
+	}
+	if s.Nonce+1 != txnNonce {
+		if state.Debug() {
+			b := sctx.GetBlock()
+			logging.Logger.Error("validate nonce - error",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
+				zap.Any("local_nonce", s.Nonce), zap.Error(err))
+		}
+		return ErrWrongNonce
+	}
+
+	return nil
+}
+
+func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) error {
+	sc := sctx.GetState()
+	s, err := c.GetStateById(sc, fromClient)
+	if err != nil {
+		return err
+	}
+	if err := sctx.SetStateContext(s); err != nil {
+		return err
+	}
+	s.Nonce += 1
+	if _, err := sc.Insert(util.Path(fromClient), s); err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -89,6 +89,7 @@ func TestTransaction_ComputeHashAndSign(t *testing.T) {
 		Signature         string
 		CreationDate      common.Timestamp
 		Fee               int64
+		Nonce             int64
 		TransactionType   int
 		TransactionOutput string
 		OutputHash        string
@@ -1082,8 +1083,33 @@ func TestSendSmartContractTxn(t *testing.T) {
 	if err := scheme.GenerateKeys(); err != nil {
 		t.Fatal(err)
 	}
-	node.Self.SetSignatureScheme(scheme)
+	nonce := int64(5)
+	makeValidServer := func() string {
+		validServer := httptest.NewServer(
+			http.HandlerFunc(
+				func(rw http.ResponseWriter, r *http.Request) {
+					s := state.State{
+						TxnHash:      "",
+						TxnHashBytes: nil,
+						Round:        1,
+						Balance:      10,
+						Nonce:        nonce,
+					}
+					blob, err := json.Marshal(s)
+					if err != nil {
+						t.Fatal(err)
+					}
 
+					if _, err := rw.Write(blob); err != nil {
+						t.Fatal(err)
+					}
+				},
+			),
+		)
+		return validServer.URL
+	}
+
+	node.Self.SetSignatureScheme(scheme)
 	type args struct {
 		txn       *Transaction
 		address   string
@@ -1100,7 +1126,8 @@ func TestSendSmartContractTxn(t *testing.T) {
 		{
 			name: "OK",
 			args: args{
-				txn: &Transaction{},
+				txn:       &Transaction{},
+				minerUrls: []string{makeValidServer()},
 			},
 			wantErr: false,
 		},
@@ -1112,6 +1139,7 @@ func TestSendSmartContractTxn(t *testing.T) {
 			if err := SendSmartContractTxn(tt.args.txn, tt.args.address, tt.args.value, tt.args.fee, tt.args.scData, tt.args.minerUrls); (err != nil) != tt.wantErr {
 				t.Errorf("SendSmartContractTxn() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			assert.Equal(t, nonce+2, node.Self.GetNextNonce())
 		})
 	}
 }
