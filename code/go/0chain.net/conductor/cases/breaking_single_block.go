@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	// BreakingSingleBlock represents implementation of the config.TestCase interface.
+	// BreakingSingleBlock represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
 	//		check that proposer can’t break single block
@@ -33,7 +33,7 @@ type (
 )
 
 var (
-	// Ensure BreakingSingleBlock implements config.TestCase interface.
+	// Ensure BreakingSingleBlock implements TestCase interface.
 	_ TestCase = (*BreakingSingleBlock)(nil)
 )
 
@@ -46,7 +46,7 @@ func NewBreakingSingleBlock() *BreakingSingleBlock {
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *BreakingSingleBlock) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -83,14 +83,14 @@ func (n *BreakingSingleBlock) check() (success bool, err error) {
 	return true, nil
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *BreakingSingleBlock) Configure(blob []byte) error {
 	defer n.wg.Done()
 	n.cfg = new(BreakingSingleBlockCfg)
 	return n.cfg.Decode(blob)
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *BreakingSingleBlock) AddResult(blob []byte) error {
 	defer n.wg.Done()
 	n.res = new(RoundInfo)

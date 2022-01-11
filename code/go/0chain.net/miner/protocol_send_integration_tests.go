@@ -37,7 +37,48 @@ func withTimeout(vrfs *round.VRFShare, timeout int) (bad *round.VRFShare) {
 	return
 }
 
-func (mc *Chain) isTestingSendDifferentBlocks(round int64, timeoutCount int) bool {
+func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
+	var (
+		mb        = mc.GetMagicBlock(vrfs.Round)
+		state     = crpc.Client().State()
+		badVRFS   *round.VRFShare
+		good, bad []*node.Node
+	)
+
+	// not possible to send bad VRFS and bad round timeout at the same time
+	switch {
+	case state.VRFS != nil:
+		badVRFS = getBadVRFS(vrfs)
+		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
+	case state.RoundTimeout != nil:
+		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
+		good, bad = crpcutils.Split(state, state.RoundTimeout,
+			mb.Miners.CopyNodes())
+
+	case isTestingSendDifferentBlocks(vrfs.Round, vrfs.RoundTimeoutCount):
+		if err := addSendDifferentBlocksResult(vrfs.RoundTimeoutCount); err != nil {
+			log.Panicf("Conductor: error while adding test result: %v", err)
+		}
+		mc.sendVRFShare(ctx, vrfs)
+		return
+
+	case isSendingBadTimeoutVRFS(vrfs.Round):
+		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1)
+		bad = getMinersByRatio(mb, 0.33)
+
+	default:
+		good = mb.Miners.CopyNodes() // all good
+	}
+
+	if len(good) > 0 {
+		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(vrfs), good)
+	}
+	if len(bad) > 0 {
+		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(badVRFS), bad)
+	}
+}
+
+func isTestingSendDifferentBlocks(round int64, timeoutCount int) bool {
 	var (
 		cfgFromFirstGen        = crpc.Client().State().SendDifferentBlocksFromFirstGenerator
 		shouldTestFromFirstGen = cfgFromFirstGen != nil && cfgFromFirstGen.OnRound == round
@@ -60,42 +101,26 @@ func addSendDifferentBlocksResult(roundTimeOutCount int) error {
 	return crpc.Client().AddTestCaseResult(blob)
 }
 
-func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	var (
-		mb        = mc.GetMagicBlock(vrfs.Round)
-		state     = crpc.Client().State()
-		badVRFS   *round.VRFShare
-		good, bad []*node.Node
-	)
+func isSendingBadTimeoutVRFS(round int64) bool {
+	state := crpc.Client().State()
+	cfg := state.BadTimeoutVRFS
+	return cfg != nil && cfg.OnRound == round && state.IsMonitor
+}
 
-	// not possible to send bad VRFS and bad round timeout at the same time
-	switch {
-	case state.VRFS != nil:
-		badVRFS = getBadVRFS(vrfs)
-		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
-	case state.RoundTimeout != nil:
-		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
-		good, bad = crpcutils.Split(state, state.RoundTimeout,
-			mb.Miners.CopyNodes())
-
-	case mc.isTestingSendDifferentBlocks(vrfs.Round, vrfs.RoundTimeoutCount):
-		log.Printf("adding tests result")
-		if err := addSendDifferentBlocksResult(vrfs.RoundTimeoutCount); err != nil {
-			log.Panicf("Conductor: error while adding test result: %v", err)
+func getMinersByRatio(mb *block.MagicBlock, ratio float64) []*node.Node {
+	nodes := mb.Miners.CopyNodes()
+	res := make([]*node.Node, 0)
+	addedCount := 0
+	for _, n := range nodes {
+		if addedCount >= int(float64(len(nodes))*ratio) {
+			break
 		}
-		mc.sendVRFShare(ctx, vrfs)
-		return
 
-	default:
-		good = mb.Miners.CopyNodes() // all good
+		res = append(res, n)
+		addedCount++
 	}
 
-	if len(good) > 0 {
-		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(vrfs), good)
-	}
-	if len(bad) > 0 {
-		mb.Miners.SendToMultipleNodes(ctx, RoundVRFSender(badVRFS), bad)
-	}
+	return res
 }
 
 func getBadBVTHash(ctx context.Context, b *block.Block) (

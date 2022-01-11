@@ -14,6 +14,7 @@ type (
 		FinalisedBlockHash string       `json:"finalised_block_hash"`
 		ProposedBlocks     []*BlockInfo `json:"proposed_blocks"`
 		NotarisedBlocks    []*BlockInfo `json:"notarised_blocks"`
+		TimeoutCount       int          `json:"timeout_count"`
 		IsFinalised        bool         `json:"is_finalised"`
 	}
 

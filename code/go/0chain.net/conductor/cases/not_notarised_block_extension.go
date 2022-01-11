@@ -10,7 +10,7 @@ import (
 )
 
 type (
-	// NotNotarisedBlockExtension represents implementation of the config.TestCase interface.
+	// NotNotarisedBlockExtension represents implementation of the TestCase interface.
 	//
 	// 	Flow of this test case:
 	//		Leader extends not notarized prev_block
@@ -27,7 +27,7 @@ type (
 )
 
 var (
-	// Ensure NotNotarisedBlockExtension implements config.TestCase interface.
+	// Ensure NotNotarisedBlockExtension implements TestCase interface.
 	_ TestCase = (*NotNotarisedBlockExtension)(nil)
 )
 
@@ -40,7 +40,7 @@ func NewNotNotarisedBlockExtension() *NotNotarisedBlockExtension {
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *NotNotarisedBlockExtension) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -78,14 +78,14 @@ func (n *NotNotarisedBlockExtension) check() (success bool, err error) {
 	return true, nil
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *NotNotarisedBlockExtension) Configure(blob []byte) error {
 	defer n.wg.Done()
 	n.mockedBlockHashToExtend = string(blob)
 	return nil
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *NotNotarisedBlockExtension) AddResult(blob []byte) error {
 	defer n.wg.Done()
 	n.result = new(RoundInfo)

@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// ResendProposedBlock represents implementation of the config.TestCase interface.
+	// ResendProposedBlock represents implementation of the TestCase interface.
 	//
 	// 	Flow of this test case:
 	//		Miner sends previous proposed block used in notarized round with one/several blocks notarized in it to propose in new round
@@ -27,7 +27,7 @@ type (
 )
 
 var (
-	// Ensure NotNotarisedBlockExtension implements config.TestCase interface.
+	// Ensure NotNotarisedBlockExtension implements TestCase interface.
 	_ TestCase = (*ResendProposedBlock)(nil)
 )
 
@@ -40,7 +40,7 @@ func NewResendProposedBlock() *ResendProposedBlock {
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *ResendProposedBlock) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -79,14 +79,14 @@ func (n *ResendProposedBlock) check() (success bool, err error) {
 	return true, nil
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *ResendProposedBlock) Configure(blob []byte) error {
 	defer n.wg.Done()
 	n.resentBlockHash = string(blob)
 	return nil
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *ResendProposedBlock) AddResult(blob []byte) error {
 	defer n.wg.Done()
 	n.result = new(RoundInfo)

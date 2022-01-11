@@ -1,13 +1,16 @@
 package middleware
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strconv"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	crpc "0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/conductrpc/stats"
+	"0chain.net/core/datastore"
 )
 
 type (
@@ -28,10 +31,10 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 		}
 
 		roundStr := r.FormValue("round")
-		round := 0
+		roundNum := 0
 		if roundStr != "" {
 			var err error
-			round, err = strconv.Atoi(roundStr)
+			roundNum, err = strconv.Atoi(roundStr)
 			if err != nil {
 				log.Panicf("Conductor: error while converting round from string: %v", err)
 			}
@@ -39,7 +42,7 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 		ss := &stats.BlockRequest{
 			NodeID:   node.Self.ID,
 			Hash:     r.FormValue(cfg.HashKey),
-			Round:    round,
+			Round:    roundNum,
 			Handler:  cfg.Handler,
 			SenderID: r.Header.Get(cfg.SenderHeader),
 		}
@@ -48,5 +51,31 @@ func BlockStats(handler func(http.ResponseWriter, *http.Request), cfg BlockStats
 		}
 
 		handler(w, r)
+	}
+}
+
+// VRFSStats represents middleware for datastore.JSONEntityReqResponderF handlers.
+// Collects vrfs requests stats.
+func VRFSStats(handler datastore.JSONEntityReqResponderF) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		if !crpc.Client().State().StatsCollectorEnabled {
+			return handler(ctx, entity)
+		}
+
+		vrfs, ok := entity.(*round.VRFShare)
+		if !ok {
+			log.Panicf("Conductor: unexpected entity type is provided")
+		}
+
+		ss := &stats.VRFSRequest{
+			NodeID:   node.Self.ID,
+			Round:    vrfs.Round,
+			SenderID: node.GetSender(ctx).GetKey(),
+		}
+		if err := crpc.Client().AddVRFSServerStats(ss); err != nil {
+			log.Panicf("Conductor: error while adding server stats: %v", err)
+		}
+
+		return handler(ctx, entity)
 	}
 }

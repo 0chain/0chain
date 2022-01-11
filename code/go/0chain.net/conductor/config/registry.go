@@ -460,6 +460,20 @@ func init() {
 		return ex.ConfigureTestCase(cfg)
 	})
 
+	register("configure_bad_timeout_vrfs_test_case", func(name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+
+		if err := ex.EnableServerStatsCollector(); err != nil {
+			return fmt.Errorf("error while enabling server stats collector: %v", err)
+		}
+
+		cfg := cases.NewBadTimeoutVRFS(ex.GetServerStatsCollector(), ex.GetMonitorID())
+		if err := cfg.Decode(val); err != nil {
+			return err
+		}
+		return ex.ConfigureTestCase(cfg)
+	})
+
 	register("make_test_case_check", func(name string, ex Executor, val interface{}, tm time.Duration) (err error) {
 		cfg := &TestCaseCheck{}
 		if err := cfg.Decode(val); err != nil {

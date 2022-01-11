@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	// NotarisingNonExistentBlock represents implementation of the config.TestCase interface.
+	// NotarisingNonExistentBlock represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
 	//		Notarize not existent block and fetch it
@@ -26,7 +26,7 @@ type (
 )
 
 var (
-	// Ensure NotarisingNonExistentBlock implements config.TestCase interface.
+	// Ensure NotarisingNonExistentBlock implements TestCase interface.
 	_ TestCase = (*NotarisingNonExistentBlock)(nil)
 )
 
@@ -40,7 +40,7 @@ func NewNotarisingNonExistentBlock(serverStats *stats.NodesServerStats) *Notaris
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *NotarisingNonExistentBlock) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {

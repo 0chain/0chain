@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	// SendDifferentBlocksFromAllGenerators represents implementation of the config.TestCase interface.
+	// SendDifferentBlocksFromAllGenerators represents implementation of the TestCase interface.
 	//
 	// 	Flow of this test case:
 	//		check no depletion, all first j leaders are adversarial, they send different blocks to different replicas but not enough for notarization
@@ -19,7 +19,7 @@ type (
 		*sendDiffBlocksBase
 	}
 
-	// SendDifferentBlocksFromFirstGenerator represents implementation of the config.TestCase interface.
+	// SendDifferentBlocksFromFirstGenerator represents implementation of the TestCase interface.
 	//
 	// 	Flow of this test case:
 	//		Protocol tells to verify all messages on the same rank, alas we don’t follow protocol and vote for only one top ranked block.
@@ -47,10 +47,10 @@ type (
 )
 
 var (
-	// Ensure SendDifferentBlocksFromAllGenerators implements config.TestCase interface.
+	// Ensure SendDifferentBlocksFromAllGenerators implements TestCase interface.
 	_ TestCase = (*SendDifferentBlocksFromAllGenerators)(nil)
 
-	// Ensure SendDifferentBlocksFromFirstGenerator implements config.TestCase interface.
+	// Ensure SendDifferentBlocksFromFirstGenerator implements TestCase interface.
 	_ TestCase = (*SendDifferentBlocksFromFirstGenerator)(nil)
 )
 
@@ -78,12 +78,12 @@ func newSendDiffBlocksBase(minersNum int) *sendDiffBlocksBase {
 	}
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (s *sendDiffBlocksBase) Configure(_ []byte) error {
 	return errors.New("configuration for this test is not allowed")
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (s *sendDiffBlocksBase) AddResult(blob []byte) error {
 	defer s.wg.Done()
 	res := new(SendDiffBlocksResult)
@@ -96,7 +96,7 @@ func (s *sendDiffBlocksBase) AddResult(blob []byte) error {
 	return nil
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (s *sendDiffBlocksBase) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {

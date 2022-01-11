@@ -433,7 +433,7 @@ func (s *Server) AddTestCaseResult(blob []byte, _ *struct{}) error {
 // GetMinersNum returns current miners number.
 func (s *Server) GetMinersNum() int {
 	var minersNum int
-	for nodeName, _ := range s.nodes {
+	for nodeName := range s.nodes {
 		if strings.Contains(string(nodeName), "miner") {
 			minersNum++
 		}
@@ -447,6 +447,11 @@ func (s *Server) GetMinersNum() int {
 
 func (s *Server) AddBlockServerStats(ss *stats.BlockRequest, _ *struct{}) error {
 	s.NodesServerStatsCollector.AddBlockStats(ss)
+	return nil
+}
+
+func (s *Server) AddVRFSServerStats(ss *stats.VRFSRequest, _ *struct{}) error {
+	s.NodesServerStatsCollector.AddVRFSStats(ss)
 	return nil
 }
 

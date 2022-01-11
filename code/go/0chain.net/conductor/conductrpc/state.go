@@ -57,6 +57,7 @@ type State struct {
 	NotarisingNonExistentBlock            *cases.NotarisingNonExistentBlock
 	ResendProposedBlock                   *cases.ResendProposedBlock
 	ResendNotarisation                    *cases.ResendNotarisation
+	BadTimeoutVRFS                        *cases.BadTimeoutVRFS
 
 	// Blobbers related states
 	StorageTree    *config.Bad // blobber sends bad files/tree responses

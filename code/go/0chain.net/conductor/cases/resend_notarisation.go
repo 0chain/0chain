@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// ResendNotarisation represents implementation of the config.TestCase interface.
+	// ResendNotarisation represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
 	//		Miner sends previous notarization used in notarized/finalized round in new round
@@ -25,7 +25,7 @@ type (
 )
 
 var (
-	// Ensure ResendNotarisation implements config.TestCase interface.
+	// Ensure ResendNotarisation implements TestCase interface.
 	_ TestCase = (*ResendNotarisation)(nil)
 )
 
@@ -38,7 +38,7 @@ func NewResendNotarisation() *ResendNotarisation {
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *ResendNotarisation) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -62,12 +62,12 @@ func (n *ResendNotarisation) check() (success bool, err error) {
 	return n.result.IsFinalised, err
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *ResendNotarisation) Configure(_ []byte) error {
 	panic("configuration for this test case is not allowed")
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *ResendNotarisation) AddResult(blob []byte) error {
 	defer n.wg.Done()
 	n.result = new(RoundInfo)

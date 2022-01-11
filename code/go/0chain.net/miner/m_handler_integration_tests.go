@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chaincore/node"
 	"0chain.net/conductor/conductrpc/stats/middleware"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
 
@@ -22,6 +23,18 @@ func SetupX2MResponders() {
 			Handler:      getNotarizedBlockX2MV1Pattern,
 			SenderHeader: node.HeaderNodeID,
 		},
+	)
+	setupHandlers(handlers)
+}
+
+// SetupM2MReceivers - setup receivers for miner to miner communication.
+func SetupM2MReceivers(c node.Chainer) {
+	handlers := x2mReceiversMap(c)
+	handlers[vrfsShareRoundM2MV1Pattern] = common.N2NRateLimit(
+		node.ToN2NReceiveEntityHandler(
+			middleware.VRFSStats(VRFShareHandler),
+			nil,
+		),
 	)
 	setupHandlers(handlers)
 }

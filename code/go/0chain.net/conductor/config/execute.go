@@ -84,6 +84,9 @@ type Executor interface {
 	// MinersNum returns number of miner nodes.
 	MinersNum() int
 
+	// GetMonitorID returns ID of the Monitor.
+	GetMonitorID() string
+
 	// EnableServerStatsCollector enables server stats collecting.
 	EnableServerStatsCollector() error
 

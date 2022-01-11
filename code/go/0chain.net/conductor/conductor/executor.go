@@ -723,6 +723,17 @@ func (r *Runner) MinersNum() int {
 	return r.server.GetMinersNum()
 }
 
+// GetMonitorID implements config.Executor interface.
+func (r *Runner) GetMonitorID() string {
+	monitorName := r.monitor
+	for _, node := range r.conf.Nodes {
+		if node.Name == monitorName {
+			return string(node.ID)
+		}
+	}
+	return ""
+}
+
 // EnableServerStatsCollector implements config.Executor interface.
 func (r *Runner) EnableServerStatsCollector() error {
 	return r.server.EnableServerStatsCollector()
@@ -771,6 +782,11 @@ func (r *Runner) ConfigureTestCase(configurator cases.TestCaseConfigurator) erro
 
 		case *cases.ResendNotarisation:
 			state.ResendNotarisation = cfg
+
+		case *cases.BadTimeoutVRFS:
+			if state.IsMonitor {
+				state.BadTimeoutVRFS = cfg
+			}
 
 		default:
 			log.Panicf("unknown test case name: %s", configurator.Name())

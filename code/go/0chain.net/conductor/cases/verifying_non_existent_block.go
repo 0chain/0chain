@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	// VerifyingNonExistentBlock represents implementation of the config.TestCase interface.
+	// VerifyingNonExistentBlock represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
 	//		Verify not existent block, this should work fine, since we only formally verify verification_tickets
@@ -27,7 +27,7 @@ type (
 )
 
 var (
-	// Ensure VerifyingNonExistentBlock implements config.TestCase interface.
+	// Ensure VerifyingNonExistentBlock implements TestCase interface.
 	_ TestCase = (*VerifyingNonExistentBlock)(nil)
 )
 
@@ -43,7 +43,7 @@ func NewVerifyingNonExistentBlock(nonExistentBlockHash string, round int, server
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *VerifyingNonExistentBlock) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -73,14 +73,14 @@ func (n *VerifyingNonExistentBlock) check() (success bool, err error) {
 	return true, nil
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *VerifyingNonExistentBlock) Configure(_ []byte) error {
 	n.wg.Done()
 	// configuring should be called after sending bad verification ticket, so just checking that it was happened.
 	return nil
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *VerifyingNonExistentBlock) AddResult(_ []byte) error {
 	panic("adding result for test case is not allowed")
 }

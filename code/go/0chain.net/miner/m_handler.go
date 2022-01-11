@@ -63,22 +63,43 @@ func SetupM2MSenders() {
 
 }
 
-/*SetupM2MReceivers - setup receivers for miner to miner communication */
-func SetupM2MReceivers(c node.Chainer) {
-	http.HandleFunc("/v1/_m2m/round/vrf_share",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket",
-		common.N2NRateLimit(node.StopOnBlockSyncingHandler(c,
+const (
+	vrfsShareRoundM2MV1Pattern = "/v1/_m2m/round/vrf_share"
+)
+
+func x2mReceiversMap(c node.Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	reqRespHandlerfMap := map[string]common.ReqRespHandlerf{
+		vrfsShareRoundM2MV1Pattern: node.ToN2NReceiveEntityHandler(
+			VRFShareHandler,
+			nil,
+		),
+		"/v1/_m2m/block/verification_ticket": node.StopOnBlockSyncingHandler(c,
 			node.ToN2NReceiveEntityHandler(
-				VerificationTicketReceiptHandler, nil))))
-	http.HandleFunc("/v1/_m2m/block/verify",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(
-			VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
-	http.HandleFunc("/v1/_m2m/block/notarization",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
-	http.HandleFunc("/v1/_m2m/block/notarized_block",
-		common.N2NRateLimit(node.ToN2NReceiveEntityHandler(
-			NotarizedBlockHandler, nil)))
+				VerificationTicketReceiptHandler,
+				nil,
+			),
+		),
+		"/v1/_m2m/block/verify": node.ToN2NReceiveEntityHandler(
+			memorystore.WithConnectionEntityJSONHandler(
+				VerifyBlockHandler,
+				datastore.GetEntityMetadata("block")),
+			nil,
+		),
+		"/v1/_m2m/block/notarization": node.ToN2NReceiveEntityHandler(
+			NotarizationReceiptHandler,
+			nil,
+		),
+		"/v1/_m2m/block/notarized_block": node.ToN2NReceiveEntityHandler(
+			NotarizedBlockHandler,
+			nil,
+		),
+	}
+
+	handlersMap := make(map[string]func(http.ResponseWriter, *http.Request))
+	for pattern, handler := range reqRespHandlerfMap {
+		handlersMap[pattern] = common.N2NRateLimit(handler)
+	}
+	return handlersMap
 }
 
 const (

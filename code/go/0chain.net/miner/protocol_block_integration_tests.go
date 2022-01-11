@@ -359,6 +359,9 @@ func isTestingOnUpdateFinalizedBlock(round int64) bool {
 	case s.ResendNotarisation != nil:
 		isTestingFunc = s.ResendNotarisation.IsTesting
 
+	case s.BadTimeoutVRFS != nil:
+		isTestingFunc = s.BadTimeoutVRFS.IsTesting
+
 	default:
 		return false
 	}
@@ -404,6 +407,7 @@ func roundInfo(round int64, finalisedBlockHash string) *cases.RoundInfo {
 		FinalisedBlockHash: finalisedBlockHash,
 		ProposedBlocks:     propBlocksInfo,
 		NotarisedBlocks:    notBlocksInfo,
+		TimeoutCount:       roundI.GetTimeoutCount(),
 		IsFinalised:        roundI.IsFinalized(),
 	}
 }

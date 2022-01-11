@@ -8,7 +8,7 @@ import (
 )
 
 type (
-	// SendInsufficientProposals represents implementation of the config.TestCase interface.
+	// SendInsufficientProposals represents implementation of the TestCase interface.
 	//
 	//	Flow of this test case:
 	//		Check make progress for adversarial leader
@@ -27,7 +27,7 @@ type (
 )
 
 var (
-	// Ensure SendInsufficientProposals implements config.TestCase interface.
+	// Ensure SendInsufficientProposals implements TestCase interface.
 	_ TestCase = (*SendInsufficientProposals)(nil)
 )
 
@@ -40,7 +40,7 @@ func NewSendInsufficientProposals() *SendInsufficientProposals {
 	}
 }
 
-// Check implements config.TestCase interface.
+// Check implements TestCase interface.
 func (n *SendInsufficientProposals) Check(ctx context.Context) (success bool, err error) {
 	prepared := make(chan struct{})
 	go func() {
@@ -69,14 +69,14 @@ func (n *SendInsufficientProposals) check() (success bool, err error) {
 	return false, errors.New("first generator's block is not found in reports")
 }
 
-// Configure implements config.TestCase interface.
+// Configure implements TestCase interface.
 func (n *SendInsufficientProposals) Configure(blob []byte) error {
 	defer n.wg.Done()
 	n.firstGenBlockHash = string(blob)
 	return nil
 }
 
-// AddResult implements config.TestCase interface.
+// AddResult implements TestCase interface.
 func (n *SendInsufficientProposals) AddResult(blob []byte) error {
 	defer n.wg.Done()
 	n.res = new(RoundInfo)
