@@ -140,7 +140,7 @@ func TestRound_GetKey(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -167,12 +167,11 @@ func TestRound_GetKey(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -196,7 +195,6 @@ func TestRound_SetRandomSeedForNotarizedBlock(t *testing.T) {
 		seed = int64(4)
 	)
 	atomic.StoreInt64(&r.RandomSeed, seed)
-	atomic.StoreUint32(&r.hasRandomSeed, 1)
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -207,7 +205,7 @@ func TestRound_SetRandomSeedForNotarizedBlock(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -232,12 +230,11 @@ func TestRound_SetRandomSeedForNotarizedBlock(t *testing.T) {
 					NOIDField:        r.NOIDField,
 					Number:           r.Number,
 					RandomSeed:       r.RandomSeed,
-					hasRandomSeed:    r.hasRandomSeed,
 					Block:            r.Block,
 					BlockHash:        r.BlockHash,
 					VRFOutput:        r.VRFOutput,
 					minerPerm:        r.minerPerm,
-					state:            r.state,
+					phase:            r.phase,
 					proposedBlocks:   r.proposedBlocks,
 					notarizedBlocks:  r.notarizedBlocks,
 					shares:           r.shares,
@@ -258,12 +255,11 @@ func TestRound_SetRandomSeedForNotarizedBlock(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -289,11 +285,9 @@ func TestRound_SetRandomSeed(t *testing.T) {
 		seed = int64(4)
 	)
 	atomic.StoreInt64(&r.RandomSeed, seed)
-	atomic.StoreUint32(&r.hasRandomSeed, 1)
-	r.state = 1
+	r.phase = ShareVRF
 
 	settedSeedR := NewRound(2)
-	settedSeedR.hasRandomSeed = 1
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -304,7 +298,7 @@ func TestRound_SetRandomSeed(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -328,12 +322,11 @@ func TestRound_SetRandomSeed(t *testing.T) {
 				NOIDField:        settedSeedR.NOIDField,
 				Number:           settedSeedR.Number,
 				RandomSeed:       settedSeedR.RandomSeed,
-				hasRandomSeed:    settedSeedR.hasRandomSeed,
 				Block:            settedSeedR.Block,
 				BlockHash:        settedSeedR.BlockHash,
 				VRFOutput:        settedSeedR.VRFOutput,
 				minerPerm:        settedSeedR.minerPerm,
-				state:            settedSeedR.state,
+				phase:            settedSeedR.phase,
 				proposedBlocks:   settedSeedR.proposedBlocks,
 				notarizedBlocks:  settedSeedR.notarizedBlocks,
 				shares:           settedSeedR.shares,
@@ -350,12 +343,11 @@ func TestRound_SetRandomSeed(t *testing.T) {
 					NOIDField:        r.NOIDField,
 					Number:           r.Number,
 					RandomSeed:       r.RandomSeed,
-					hasRandomSeed:    r.hasRandomSeed,
 					Block:            r.Block,
 					BlockHash:        r.BlockHash,
 					VRFOutput:        r.VRFOutput,
 					minerPerm:        r.minerPerm,
-					state:            r.state,
+					phase:            r.phase,
 					proposedBlocks:   r.proposedBlocks,
 					notarizedBlocks:  r.notarizedBlocks,
 					shares:           r.shares,
@@ -377,12 +369,11 @@ func TestRound_SetRandomSeed(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -419,7 +410,7 @@ func TestRound_GetVRFOutput(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -445,12 +436,11 @@ func TestRound_GetVRFOutput(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -491,7 +481,7 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -566,12 +556,11 @@ func TestRound_AddNotarizedBlock(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -611,7 +600,7 @@ func TestRound_GetNotarizedBlocks(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -638,12 +627,11 @@ func TestRound_GetNotarizedBlocks(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -677,7 +665,7 @@ func TestRound_AddProposedBlock(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -734,12 +722,11 @@ func TestRound_AddProposedBlock(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -779,7 +766,7 @@ func TestRound_GetHeaviestNotarizedBlock(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -815,12 +802,11 @@ func TestRound_GetHeaviestNotarizedBlock(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -856,7 +842,7 @@ func TestRound_GetBlocksByRank(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -895,12 +881,11 @@ func TestRound_GetBlocksByRank(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -936,7 +921,7 @@ func TestRound_GetBestRankedNotarizedBlock(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -981,12 +966,11 @@ func TestRound_GetBestRankedNotarizedBlock(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1017,7 +1001,7 @@ func TestRound_Finalize(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		state            FinalizingState
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1039,12 +1023,11 @@ func TestRound_Finalize(t *testing.T) {
 				NOIDField:        r.NOIDField,
 				Number:           r.Number,
 				RandomSeed:       r.RandomSeed,
-				hasRandomSeed:    r.hasRandomSeed,
 				Block:            r.Block,
 				BlockHash:        r.BlockHash,
 				VRFOutput:        r.VRFOutput,
 				minerPerm:        r.minerPerm,
-				state:            r.state,
+				state:            r.finalizingState,
 				proposedBlocks:   r.proposedBlocks,
 				notarizedBlocks:  r.notarizedBlocks,
 				shares:           r.shares,
@@ -1054,7 +1037,7 @@ func TestRound_Finalize(t *testing.T) {
 			args: args{b: b},
 			want: func() *Round {
 				r := NewRound(r.Number)
-				r.setState(RoundStateFinalized)
+				r.setFinalizingPhase(RoundStateFinalized)
 				r.Block = b
 				r.BlockHash = b.Hash
 
@@ -1071,12 +1054,11 @@ func TestRound_Finalize(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				finalizingState:  tt.fields.state,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				shares:           tt.fields.shares,
@@ -1104,7 +1086,7 @@ func TestRound_SetFinalizing(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		state            FinalizingState
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1146,12 +1128,11 @@ func TestRound_SetFinalizing(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				finalizingState:  tt.fields.state,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1163,8 +1144,8 @@ func TestRound_SetFinalizing(t *testing.T) {
 			if got := r.SetFinalizing(); got != tt.want {
 				t.Errorf("SetFinalizing() = %v, want %v", got, tt.want)
 			}
-			if tt.want && r.state != RoundStateFinalizing {
-				t.Errorf("SetFinalizing() = %v, want %v", r.state, RoundStateFinalizing)
+			if tt.want && r.finalizingState != RoundStateFinalizing {
+				t.Errorf("SetFinalizing() = %v, want %v", r.phase, RoundStateFinalizing)
 			}
 		})
 	}
@@ -1186,7 +1167,7 @@ func TestRound_GetVRFShares(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1213,12 +1194,11 @@ func TestRound_GetVRFShares(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1246,7 +1226,7 @@ func TestRound_GetState(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1256,11 +1236,11 @@ func TestRound_GetState(t *testing.T) {
 	tests := []struct {
 		name   string
 		fields fields
-		want   int
+		want   Phase
 	}{
 		{
 			name: "OK",
-			want: RoundStateFinalizing,
+			want: Notarize,
 		},
 	}
 	for _, tt := range tests {
@@ -1272,12 +1252,11 @@ func TestRound_GetState(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1287,14 +1266,14 @@ func TestRound_GetState(t *testing.T) {
 				timeoutCounter:   timeoutCounter{},
 			}
 
-			r.SetState(tt.want)
-			if got := r.GetState(); got != tt.want {
-				t.Errorf("GetState() = %v, want %v", got, tt.want)
+			r.SetPhase(tt.want)
+			if got := r.GetPhase(); got != tt.want {
+				t.Errorf("GetPhase() = %v, want %v", got, tt.want)
 			}
 
-			r.ResetState(tt.want)
-			if got := r.GetState(); got != tt.want {
-				t.Errorf("GetState() = %v, want %v", got, tt.want)
+			r.ResetPhase(tt.want)
+			if got := r.GetPhase(); got != tt.want {
+				t.Errorf("GetPhase() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1312,7 +1291,7 @@ func TestRound_IsFinalized(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		state            FinalizingState
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1349,12 +1328,11 @@ func TestRound_IsFinalized(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				finalizingState:  tt.fields.state,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1382,7 +1360,7 @@ func TestRound_Read(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1413,12 +1391,11 @@ func TestRound_Read(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1446,7 +1423,7 @@ func TestRound_Write(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1476,12 +1453,11 @@ func TestRound_Write(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1509,7 +1485,7 @@ func TestRound_Delete(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1539,12 +1515,11 @@ func TestRound_Delete(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1601,7 +1576,7 @@ func TestRound_IsRanksComputed(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1632,12 +1607,11 @@ func TestRound_IsRanksComputed(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1671,7 +1645,7 @@ func TestRound_GetMinerRank(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1725,12 +1699,11 @@ func TestRound_GetMinerRank(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1774,7 +1747,7 @@ func TestRound_GetMinersByRank(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1811,12 +1784,11 @@ func TestRound_GetMinersByRank(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1848,7 +1820,7 @@ func TestRound_Clear(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1872,12 +1844,11 @@ func TestRound_Clear(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1901,7 +1872,7 @@ func TestRound_Restart(t *testing.T) {
 	wantR.initialize()
 	wantR.Block = nil
 	wantR.resetSoftTimeoutCount()
-	wantR.ResetState(RoundShareVRF)
+	wantR.ResetPhase(ShareVRF)
 
 	type fields struct {
 		NOIDField        datastore.NOIDField
@@ -1912,7 +1883,7 @@ func TestRound_Restart(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -1930,12 +1901,11 @@ func TestRound_Restart(t *testing.T) {
 				NOIDField:        r.NOIDField,
 				Number:           r.Number,
 				RandomSeed:       r.RandomSeed,
-				hasRandomSeed:    r.hasRandomSeed,
 				Block:            r.Block,
 				BlockHash:        r.BlockHash,
 				VRFOutput:        r.VRFOutput,
 				minerPerm:        r.minerPerm,
-				state:            r.state,
+				phase:            r.phase,
 				proposedBlocks:   r.proposedBlocks,
 				notarizedBlocks:  r.notarizedBlocks,
 				shares:           r.shares,
@@ -1954,12 +1924,11 @@ func TestRound_Restart(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -1973,96 +1942,6 @@ func TestRound_Restart(t *testing.T) {
 			r.Restart()
 			if !assert.Equal(t, r, tt.want) {
 				t.Errorf("Restart() = %v, want %v", r, tt.want)
-			}
-		})
-	}
-}
-
-func TestRound_AddAdditionalVRFShare(t *testing.T) {
-	t.Parallel()
-
-	n, err := makeTestNode(blsPublicKeys[0])
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	share := &VRFShare{
-		party: n,
-	}
-
-	type fields struct {
-		NOIDField        datastore.NOIDField
-		Number           int64
-		RandomSeed       int64
-		hasRandomSeed    uint32
-		Block            *block.Block
-		BlockHash        string
-		VRFOutput        string
-		minerPerm        []int
-		state            int32
-		proposedBlocks   []*block.Block
-		notarizedBlocks  []*block.Block
-		shares           map[string]*VRFShare
-		softTimeoutCount int32
-		vrfStartTime     atomic.Value
-	}
-	type args struct {
-		share *VRFShare
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   bool
-	}{
-		{
-			name: "TRUE",
-			fields: fields{
-				shares: map[string]*VRFShare{},
-			},
-			args: args{
-				share: share,
-			},
-			want: true,
-		},
-		{
-			name: "FALSE",
-			fields: fields{
-				shares: map[string]*VRFShare{
-					share.party.GetKey(): share,
-				},
-			},
-			args: args{
-				share: share,
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			r := &Round{
-				NOIDField:        tt.fields.NOIDField,
-				Number:           tt.fields.Number,
-				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
-				Block:            tt.fields.Block,
-				BlockHash:        tt.fields.BlockHash,
-				VRFOutput:        tt.fields.VRFOutput,
-				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
-				proposedBlocks:   tt.fields.proposedBlocks,
-				notarizedBlocks:  tt.fields.notarizedBlocks,
-				mutex:            sync.RWMutex{},
-				shares:           tt.fields.shares,
-				softTimeoutCount: tt.fields.softTimeoutCount,
-				vrfStartTime:     tt.fields.vrfStartTime,
-				timeoutCounter:   timeoutCounter{},
-			}
-			if got := r.AddAdditionalVRFShare(tt.args.share); got != tt.want {
-				t.Errorf("AddAdditionalVRFShare() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -2089,7 +1968,7 @@ func TestRound_AddVRFShare(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2146,12 +2025,11 @@ func TestRound_AddVRFShare(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -2178,7 +2056,7 @@ func TestRound_HasRandomSeed(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2214,7 +2092,7 @@ func TestRound_HasRandomSeed(t *testing.T) {
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -2244,7 +2122,7 @@ func TestRound_GetSoftTimeoutCount(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2271,12 +2149,11 @@ func TestRound_GetSoftTimeoutCount(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -2304,7 +2181,7 @@ func TestRound_IncSoftTimeoutCount(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2328,12 +2205,11 @@ func TestRound_IncSoftTimeoutCount(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -2364,7 +2240,7 @@ func TestRound_GetVrfStartTime(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		phase            Phase
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2397,12 +2273,11 @@ func TestRound_GetVrfStartTime(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				phase:            tt.fields.phase,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},
@@ -2433,7 +2308,7 @@ func TestRound_IsFinalizing(t *testing.T) {
 		BlockHash        string
 		VRFOutput        string
 		minerPerm        []int
-		state            int32
+		state            FinalizingState
 		proposedBlocks   []*block.Block
 		notarizedBlocks  []*block.Block
 		shares           map[string]*VRFShare
@@ -2469,12 +2344,11 @@ func TestRound_IsFinalizing(t *testing.T) {
 				NOIDField:        tt.fields.NOIDField,
 				Number:           tt.fields.Number,
 				RandomSeed:       tt.fields.RandomSeed,
-				hasRandomSeed:    tt.fields.hasRandomSeed,
 				Block:            tt.fields.Block,
 				BlockHash:        tt.fields.BlockHash,
 				VRFOutput:        tt.fields.VRFOutput,
 				minerPerm:        tt.fields.minerPerm,
-				state:            tt.fields.state,
+				finalizingState:  tt.fields.state,
 				proposedBlocks:   tt.fields.proposedBlocks,
 				notarizedBlocks:  tt.fields.notarizedBlocks,
 				mutex:            sync.RWMutex{},

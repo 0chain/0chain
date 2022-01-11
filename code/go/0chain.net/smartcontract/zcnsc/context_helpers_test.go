@@ -3,18 +3,21 @@ package zcnsc_test
 // StateContextI implementation
 
 import (
+	"fmt"
+	"strings"
+
+	"0chain.net/core/encryption"
+
 	"0chain.net/chaincore/mocks"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	. "0chain.net/smartcontract/zcnsc"
 	"github.com/stretchr/testify/mock"
 )
 
 const (
-	clientId  = "fred"
 	txHash    = "tx hash"
 	startTime = common.Timestamp(100)
 )
@@ -26,13 +29,15 @@ func zcnToBalance(token float64) state.Balance {
 }
 
 func MakeMockStateContext() *mocks.StateContextI {
-	ctx := mocks.StateContextI{}
+	ctx := &mocks.StateContextI{}
 
 	// GetSignatureScheme
 
-	ctx.On(
-		"GetSignatureScheme",
-	).Return(encryption.NewBLS0ChainScheme())
+	ctx.On("GetSignatureScheme").Return(
+		func() encryption.SignatureScheme {
+			return encryption.NewBLS0ChainScheme()
+		},
+	)
 
 	// Global Node
 
@@ -41,20 +46,28 @@ func MakeMockStateContext() *mocks.StateContextI {
 	// User Node
 
 	userNodes := make(map[string]*UserNode)
-	for _, client := range authorizers {
+	for _, client := range clients {
 		userNode := createUserNode(client, int64(0))
-		userNodes[userNode.GetKey(ADDRESS)] = userNode
+		userNodes[userNode.GetKey()] = userNode
 	}
 
 	// AuthorizerNodes
 
-	ans := &AuthorizerNodes{}
-	ans.NodeMap = make(map[string]*AuthorizerNode)
-	for _, authorizer := range authorizers {
-		err := ans.AddAuthorizer(CreateMockAuthorizer(authorizer))
-		if err != nil {
-			panic(err.Error())
+	authorizers = make(map[string]*Authorizer, len(authorizersID))
+	for _, id := range authorizersID {
+		scheme := ctx.GetSignatureScheme()
+		_ = scheme.GenerateKeys()
+
+		node := CreateAuthorizer(id, scheme.GetPublicKey(), fmt.Sprintf("https://%s", id))
+		tr := CreateAddAuthorizerTransaction(defaultClient, ctx, 100)
+		_, _, _ = node.Staking.DigPool(tr.Hash, tr)
+
+		a := &Authorizer{
+			Scheme: scheme,
+			Node:   node,
 		}
+
+		authorizers[node.GetKey()] = a
 	}
 
 	// Transfers
@@ -81,55 +94,88 @@ func MakeMockStateContext() *mocks.StateContextI {
 
 	ctx.
 		On("GetTransfers").
-		Return(
-			func() []*state.Transfer {
-				return transfers
-			})
+		Return(func() []*state.Transfer {
+			return transfers
+		})
 
-	/// GetTrieNode
+	/// GetTrieNode - specific authorizer
 
-	ctx.
-		On("GetTrieNode", AllAuthorizerKey).
-		Return(
-			func(_ datastore.Key) util.Serializable {
-				return ans
-			},
-			func(_ datastore.Key) error {
-				return nil
-			})
-
-	ctx.
-		On("GetTrieNode", globalNode.GetKey()).
-		Return(
-			func(_ datastore.Key) util.Serializable {
-				return globalNode
-			},
-			func(_ datastore.Key) error {
-				return nil
-			})
-
-	for _, un := range userNodes {
+	for _, an := range authorizers {
 		ctx.
-			On("GetTrieNode", un.GetKey(ADDRESS)).
+			On("GetTrieNode", an.Node.GetKey()).
 			Return(
 				func(key datastore.Key) util.Serializable {
-					return userNodes[key]
+					if authorizer, ok := authorizers[key]; ok {
+						return authorizer.Node
+					}
+					return nil
 				},
 				func(_ datastore.Key) error {
 					return nil
 				})
 	}
 
+	ctx.
+		On("GetTrieNode", mock.AnythingOfType("string")).
+		Return(
+			func(key datastore.Key) util.Serializable {
+				if strings.Contains(key, UserNodeType) {
+					return userNodes[key]
+				}
+				if strings.Contains(key, AuthorizerNodeType) {
+					if authorizer, ok := authorizers[key]; ok {
+						return authorizer.Node
+					}
+					return nil
+				}
+				if strings.Contains(key, GlobalNodeType) {
+					return globalNode
+				}
+
+				return nil
+			},
+			func(_ datastore.Key) error {
+				return nil
+			})
+
+	/// DeleteTrieNode
+
+	ctx.
+		On("DeleteTrieNode", mock.AnythingOfType("string")).
+		Return(
+			func(key datastore.Key) datastore.Key {
+				if strings.Contains(key, AuthorizerNodeType) {
+					delete(authorizers, key)
+					return key
+				}
+				return ""
+			},
+			func(_ datastore.Key) error {
+				return nil
+			})
+
 	/// InsertTrieNode
 
 	ctx.
-		On("InsertTrieNode", AllAuthorizerKey, mock.AnythingOfType("*zcnsc.AuthorizerNodes")).
+		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("util.Serializable")).
 		Return(
-			func(_ datastore.Key, nodes util.Serializable) datastore.Key {
-				ans = nodes.(*AuthorizerNodes)
-				return ""
+			func(key datastore.Key, node util.Serializable) util.Serializable {
+				if strings.Contains(key, UserNodeType) {
+					userNodes[key] = node.(*UserNode)
+					return node
+				}
+				if strings.Contains(key, AuthorizerNodeType) {
+					authorizerNode := node.(*AuthorizerNode)
+					authorizers[key] = &Authorizer{
+						Scheme: nil,
+						Node:   authorizerNode,
+					}
+					return authorizerNode
+				}
+
+				return nil
 			},
-			func(_ datastore.Key, _ util.Serializable) error {
+			func(_ datastore.Key) error {
 				return nil
 			})
 
@@ -148,18 +194,8 @@ func MakeMockStateContext() *mocks.StateContextI {
 		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.UserNode")).
 		Return(
 			func(key datastore.Key, node util.Serializable) datastore.Key {
-				un := node.(*UserNode)
-				userNodes[key] = un
-				return ""
-			},
-			func(_ datastore.Key, _ util.Serializable) error {
-				return nil
-			})
-
-	ctx.
-		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNodes")).
-		Return(
-			func(_ datastore.Key, _ util.Serializable) datastore.Key {
+				n := node.(*UserNode)
+				userNodes[key] = n
 				return ""
 			},
 			func(_ datastore.Key, _ util.Serializable) error {
@@ -169,29 +205,28 @@ func MakeMockStateContext() *mocks.StateContextI {
 	ctx.
 		On("InsertTrieNode", mock.AnythingOfType("string"), mock.AnythingOfType("*zcnsc.AuthorizerNode")).
 		Return(
-			func(_ datastore.Key, _ util.Serializable) datastore.Key {
-				return ""
+			func(key datastore.Key, node util.Serializable) datastore.Key {
+				if strings.Contains(key, UserNodeType) {
+					userNodes[key] = node.(*UserNode)
+					return key
+				}
+				if strings.Contains(key, AuthorizerNodeType) {
+					authorizerNode := node.(*AuthorizerNode)
+					authorizers[key] = &Authorizer{
+						Scheme: nil,
+						Node:   authorizerNode,
+					}
+				}
+
+				return key
 			},
 			func(_ datastore.Key, _ util.Serializable) error {
 				return nil
 			})
 
-	/// AddMint
+	ctx.
+		On("AddMint", mock.AnythingOfType("*state.Mint")).
+		Return(nil)
 
-	for _, authorizer := range authorizers {
-		client := authorizer
-		mintPayload, _ := CreateMintPayload(client, authorizers, &ctx)
-
-		mint := &state.Mint{
-			Minter:     globalNode.ID,
-			ToClientID: mintPayload.ReceivingClientID,
-			Amount:     mintPayload.Amount,
-		}
-
-		ctx.
-			On("AddMint", mint).
-			Return(nil).Once()
-	}
-
-	return &ctx
+	return ctx
 }
