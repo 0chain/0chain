@@ -78,6 +78,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	)
 	logging.Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
+	if newMiner.PublicKey == "" || newMiner.ID == "" {
+		logging.Logger.Error("public key or ID is empty")
+		return "", common.NewError("add_miner",
+			"PublicKey or the ID is empty. Cannot proceed")
+	}
+
 	err = validateNodeSettings(newMiner, gn, "add_miner")
 	if err != nil {
 		return "", err
@@ -329,12 +335,6 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
-	if node.PublicKey == "" || node.ID == "" {
-		logging.Logger.Error("public key or ID is empty")
-		return common.NewError(opcode,
-			"PublicKey or the ID is empty. Cannot proceed")
-	}
-
 	if node.ServiceCharge < 0 {
 		return common.NewErrorf(opcode,
 			"invalid negative service charge: %v", node.ServiceCharge)
