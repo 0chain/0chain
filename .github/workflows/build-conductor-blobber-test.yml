@@ -87,8 +87,10 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
-        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        cd 0chain 
+        ./docker.local/bin/start.conductor.sh blobber-1
+        ./docker.local/bin/start.conductor.sh blobber-2
+        cd ../
     
     - name: Clean up job.
       if: ${{ always() }}
