@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"0chain.net/smartcontract/dbs"
@@ -39,6 +40,11 @@ func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
 		switch EventType(event.Type) {
 		case TypeStats:
 			err = edb.addStat(event)
+		case TypeError:
+			err = edb.addError(Error{
+				event.TxHash,
+				event.Data,
+			})
 		default:
 		}
 		if err != nil {
