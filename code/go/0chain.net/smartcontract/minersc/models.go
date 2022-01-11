@@ -89,6 +89,7 @@ var (
 	GroupShareOrSignsKey = globalKeyHash("group_share_or_signs")
 	ShardersKeepKey      = globalKeyHash("sharders_keep")
 	PhaseKey             = globalKeyHash("phase")
+	SCVersionKey         = globalKeyHash("sc_version")
 
 	lockAllMiners sync.Mutex
 )

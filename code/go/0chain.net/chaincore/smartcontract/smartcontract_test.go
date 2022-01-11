@@ -21,8 +21,8 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	chstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/mocks"
 	. "0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -203,6 +203,7 @@ func TestGetSmartContract(t *testing.T) {
 		address    string
 		restpoints int
 		null       bool
+		err        error
 	}{
 		{
 			name:       "faucet",
@@ -242,6 +243,7 @@ func TestGetSmartContract(t *testing.T) {
 		{
 			name:    "Nil_OK",
 			address: "not an address",
+			err:     ErrSmartContractNotFound,
 			null:    true,
 		},
 	}
@@ -249,7 +251,8 @@ func TestGetSmartContract(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := GetSmartContract(tt.address)
+			got, err := GetSmartContract(tt.address)
+			require.Equal(t, err, tt.err)
 			require.True(t, tt.null == (got == nil))
 			if got == nil {
 				return

@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 *    2) The only from clients valid are txn.ClientID and txn.ToClientID (which will be the smart contract's client id)
  */
 
+//go:generate mockery -name StateContextI --case underscore --output ./mocks
 //StateContextI - a state context interface. These interface are available for the smart contract
 // todo this needs to be split up into different interfaces
 type StateContextI interface {
@@ -58,7 +60,14 @@ type StateContextI interface {
 	EmitError(error)
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
+
+	// CanSCVersionUpdate checks if smart contract version can be updated now
+	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
 }
+
+// SwitchAdapter represents the adapter function signature
+// the adapter function will be called when executing SC switching transaction
+type SwitchAdapter func(util.MerklePatriciaTrieI) error
 
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
@@ -74,6 +83,7 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getSignature                  func() encryption.SignatureScheme
+	canSCVersionUpdate            func() (*semver.Version, bool, SwitchAdapter)
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
 }
@@ -88,6 +98,7 @@ func NewStateContext(
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
+	canSCVersionUpdate func() (*semver.Version, bool, SwitchAdapter),
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -101,6 +112,7 @@ func NewStateContext(
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+		canSCVersionUpdate:            canSCVersionUpdate,
 		eventDb:                       eventDb,
 		mutex:                         new(sync.Mutex),
 	}
@@ -306,4 +318,22 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)
+}
+
+// CanSCVersionUpdate checks if we can update the smart contract
+func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
+	return sc.canSCVersionUpdate()
+}
+
+// InsertTrieNode inserts a node into MPT
+func InsertTrieNode(state util.MerklePatriciaTrieI, key datastore.Key, node util.Serializable) (datastore.Key, error) {
+	key_hash := encryption.Hash(key)
+	byteKey, err := state.Insert(util.Path(key_hash), node)
+	return datastore.Key(byteKey), err
+}
+
+// GetTrieNode gets a node from MPT
+func GetTrieNode(state util.MerklePatriciaTrieI, key datastore.Key) (util.Serializable, error) {
+	keyHash := encryption.Hash(key)
+	return state.GetNodeValue(util.Path(keyHash))
 }

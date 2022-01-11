@@ -63,7 +63,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 			Logger.Debug("AddNotarizedBlock client state is nil", zap.Int64("round", b.Round))
 		}
 
-		if err := sc.ComputeState(ctx, b); err != nil {
+		if err := sc.GetBlockStateChange(b); err != nil {
 			select {
 			case errC <- err:
 			default:

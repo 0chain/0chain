@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -21,7 +23,6 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/dbs/event"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -941,95 +942,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
 		zap.String("prev_block", b.PrevHash),
 		zap.String("prev_block_client_state", util.ToHex(pb.ClientStateHash)))
-	return nil
-}
-
-// ComputeStateLocal computes the block state without fetching
-// previous blocks from network. Please make sure that the previous
-// block does exist.
-func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
-	if b.IsStateComputed() {
-		return nil
-	}
-
-	if b.PrevBlock == nil {
-		return common.NewError("state_update_force_error", "previous block is nil")
-	}
-
-	bState := CreateStateWithPreviousBlock(b.PrevBlock, c.GetStateDB(), b.Round)
-
-	beginState := b.ClientState.GetRoot()
-	for _, txn := range b.Txns {
-		if datastore.IsEmpty(txn.ClientID) {
-			txn.ComputeClientID()
-		}
-		events, err := c.UpdateState(ctx, b, bState, txn)
-		b.Events = append(b.Events, events...)
-		switch err {
-		case context.Canceled, context.DeadlineExceeded:
-			b.SetStateStatus(StateCancelled)
-			logging.Logger.Error("compute state local - cancelled",
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.String("client_state", util.ToHex(b.ClientStateHash)),
-				zap.String("prev_block", b.PrevHash),
-				zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
-				zap.Error(err))
-			//rollback changes for the next attempt
-			//b.SetStateDB(b.PrevBlock, c.GetStateDB())
-			b.Events = nil
-			return common.NewError("state_update_error", err.Error())
-		default:
-			if err != nil {
-				b.SetStateStatus(StateFailed)
-				logging.Logger.Error("compute state local - update state failed",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash),
-					zap.String("client_state", util.ToHex(b.ClientStateHash)),
-					zap.String("prev_block", b.PrevHash),
-					zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)),
-					zap.Error(err))
-				return common.NewError("state_update_error", err.Error())
-			}
-		}
-	}
-
-	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
-		b.Events = nil
-	}
-
-	if bytes.Compare(b.ClientStateHash, bState.GetRoot()) != 0 {
-		b.SetStateStatus(StateFailed)
-		logging.Logger.Error("compute state local - state hash mismatch",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.Int("block_size", len(b.Txns)),
-			zap.Int("changes", b.ClientState.GetChangeCount()),
-			zap.String("begin_client_state", util.ToHex(beginState)),
-			zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
-			zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
-			zap.String("prev_block", b.PrevHash),
-			zap.String("prev_block_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
-		return ErrStateMismatch
-	}
-
-	b.setClientState(bState)
-	StateSanityCheck(ctx, b)
-	b.SetStateStatus(StateSuccessful)
-
-	logging.Logger.Info("compute state local successful",
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.Int("block_size", len(b.Txns)),
-		zap.Int("changes", b.ClientState.GetChangeCount()),
-		zap.String("begin_client_state", util.ToHex(beginState)),
-		zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())),
-		zap.String("block_state_hash", util.ToHex(b.ClientStateHash)),
-		zap.String("prev_block", b.PrevHash),
-		zap.String("prev_block_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
 	return nil
 }
 

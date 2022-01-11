@@ -8,6 +8,7 @@ import (
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 
 	"errors"
 
@@ -45,32 +46,6 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) (err error) {
 		}
 		return c.computeState(ctx, b)
 	})
-}
-
-// ComputeOrSyncState - try to compute state and if there is an error, just sync it
-func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
-	err := c.ComputeState(ctx, b)
-	if err != nil {
-		bsc, err := c.getBlockStateChange(b)
-		if err != nil {
-			return err
-		}
-		if bsc != nil {
-			if err = c.ApplyBlockStateChange(b, bsc); err != nil {
-				logging.Logger.Error("compute state - applying state change",
-					zap.Any("round", b.Round), zap.Any("block", b.Hash),
-					zap.Error(err))
-				return err
-			}
-		}
-		if !b.IsStateComputed() {
-			logging.Logger.Error("compute state - state change error",
-				zap.Any("round", b.Round), zap.Any("block", b.Hash),
-				zap.Error(err))
-			return err
-		}
-	}
-	return nil
 }
 
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
@@ -161,11 +136,60 @@ func (c *Chain) NewStateContext(
 		},
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
+		smartcontract.CanUpdateSCVersion,
 		eventDb,
 	)
 }
 
-func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.MerklePatriciaTrieI, txn *transaction.Transaction) (events []event.Event, err error) {
+func (c *Chain) initSCVersion(round int64) error {
+	lfb := c.GetLatestFinalizedBlock()
+
+	if lfb == nil {
+		return errors.New("LFB not ready for sc version, lfb is nil")
+	}
+
+	if lfb.ClientState == nil {
+		return fmt.Errorf("LFB not ready for sc version, lfb client state is nil, lfb round: %d", lfb.Round)
+	}
+
+	if int(round-lfb.Round) > 2*config.GetLFBTicketAhead() {
+		return fmt.Errorf("LFB not ready for sc version, "+
+			"lfb is too far away from current round, lfb round: %d, round: %d", lfb.Round, round)
+	}
+
+	v, err := getSCVersion(lfb.ClientState)
+	if err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("init sc version",
+		zap.String("version", v.String()),
+		zap.Int64("lfb round", lfb.Round),
+		zap.Int64("round", round))
+
+	smartcontract.InitSCVersionOnce(v)
+
+	return nil
+}
+
+func getSCVersion(state util.MerklePatriciaTrieI) (*semver.Version, error) {
+	vn, err := bcstate.GetTrieNode(state, minersc.SCVersionKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var vnode minersc.SCVersionNode
+	if err := vnode.Decode(vn.Encode()); err != nil {
+		return nil, err
+	}
+
+	return semver.New(vnode.String())
+}
+
+func (c *Chain) updateState(ctx context.Context,
+	b *block.Block,
+	bState util.MerklePatriciaTrieI,
+	txn *transaction.Transaction) (events []event.Event, err error) {
 	// check if the block's ClientState has root value
 	_, err = bState.GetNodeDB().GetNode(bState.GetRoot())
 	if err != nil {
@@ -180,6 +204,15 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 		startRoot   = sctx.GetState().GetRoot()
 	)
 	defer func() { events = sctx.GetEvents() }()
+
+	if !smartcontract.IsSCVersionReady() {
+		if err := c.initSCVersion(b.Round); err != nil {
+			logging.Logger.Error("could not init sc version",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+			return nil, fmt.Errorf("could not get sc version node, err: %v", err)
+		}
+	}
 
 	switch txn.TransactionType {
 
@@ -273,7 +306,8 @@ func (c *Chain) updateState(ctx context.Context, b *block.Block, bState util.Mer
 			logging.Logger.Error("Failed to transfer amount",
 				zap.Any("transfer_ClientID", transfer.ClientID),
 				zap.Any("to_ClientID", transfer.ToClientID),
-				zap.Any("amount", transfer.Amount))
+				zap.Any("amount", transfer.Amount),
+				zap.Error(err))
 			return
 		}
 	}

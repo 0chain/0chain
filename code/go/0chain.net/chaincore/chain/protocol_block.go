@@ -664,6 +664,11 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 	}
 
 	if err := c.GetBlockStateChange(pb); err != nil {
+		if er := pb.InitStateDB(c.GetStateDB()); er == nil {
+			logging.Logger.Debug("sync_block - client state root exist in db", zap.Int64("round", pb.Round))
+			return pb
+		}
+
 		logging.Logger.Error("sync_block - sync state changes failed",
 			zap.Int64("round", pb.Round),
 			zap.Int64("num", opt.Num),
@@ -684,25 +689,6 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 		zap.Int64("num", opt.Num))
 
 	return pb
-}
-
-// SyncStateOrComputeLocal syncs state changes from remote first, if failed, then
-// try to execute the blocks locally without fetching from remote.
-func (c *Chain) SyncStateOrComputeLocal(ctx context.Context, b *block.Block) error {
-	if err := c.GetBlockStateChange(b); err != nil {
-		logging.Logger.Error("sync_blocks - sync state change failed",
-			zap.Error(err), zap.Int64("round", b.Round))
-
-		if err := b.ComputeStateLocal(ctx, c); err != nil {
-			logging.Logger.Error("sync_blocks - compute state local failed",
-				zap.Error(err), zap.Int64("round", b.Round))
-			// continue as later blocks may be able to get state changes from remote or compute state successfully
-			return common.NewErrorf("sync_blocks", "sync or compute state failed, round: %v, block: %v",
-				b.Round, b.Hash)
-		}
-	}
-
-	return nil
 }
 
 //Note: this is expected to work only for small forks

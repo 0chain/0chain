@@ -256,24 +256,24 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc *Chain) getClientState(
-	ctx context.Context,
-	roundNumber int64,
-) (*util.MerklePatriciaTrie, error) {
-	pround := mc.GetRound(roundNumber - 1)
-	pb := mc.GetBlockToExtend(ctx, pround)
-	if pb == nil || pb.ClientState == nil {
-		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
-	}
-	pndb := pb.ClientState.GetNodeDB()
-	root := pb.ClientStateHash
-	mndb := util.NewMemoryNodeDB()
-	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
-	return clientState, nil
-}
+//func (mc *Chain) getClientState(
+//	ctx context.Context,
+//	roundNumber int64,
+//) (*util.MerklePatriciaTrie, error) {
+//	pround := mc.GetRound(roundNumber - 1)
+//	pb := mc.GetBlockToExtend(ctx, pround)
+//	if pb == nil || pb.ClientState == nil {
+//		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
+//	}
+//	pndb := pb.ClientState.GetNodeDB()
+//	root := pb.ClientStateHash
+//	mndb := util.NewMemoryNodeDB()
+//	ndb := util.NewLevelNodeDB(mndb, pndb, false)
+//	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
+//	return clientState, nil
+//}
 
-//Generates block and sends it to the network if generator
+// TryProposeBlock block and sends it to the network if generator
 func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 	var rn = mr.GetRoundNumber()
 
@@ -363,7 +363,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 
 	if !bnb.IsStateComputed() {
 		logging.Logger.Debug("best notarized block not computed yet", zap.Int64("round", r.GetRoundNumber()))
-		err := mc.ComputeOrSyncState(ctx, bnb)
+		err := mc.GetBlockStateChange(bnb)
 		if err != nil {
 			logging.Logger.Debug("failed to compute or sync state of best notarized block",
 				zap.Int64("round", r.GetRoundNumber()),
@@ -1170,8 +1170,8 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if !b.IsStateComputed() {
 		logging.Logger.Info("add notarized block - computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		if err := mc.ComputeState(ctx, b); err != nil {
-			logging.Logger.Info("can't compute state for notarized block", zap.Error(err),
+		if err := mc.GetBlockStateChange(b); err != nil {
+			logging.Logger.Info("can't sync state changes for notarized block", zap.Error(err),
 				zap.Int64("block_round", b.Round),
 				zap.Int64("round", r.GetRoundNumber()),
 				zap.String("block", b.Hash))
@@ -1701,7 +1701,7 @@ func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
 
 	var err error
 	if !b.IsStateComputed() {
-		if err = mc.ComputeOrSyncState(ctx, b); err != nil {
+		if err = mc.GetBlockStateChange(b); err != nil {
 			logging.Logger.Error("ensure_state -- compute or sync",
 				zap.Error(err), zap.Int64("round", b.Round))
 		}
@@ -1760,7 +1760,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	if have != nil && rcvd.Round-1 == have.Round {
 		rcvd.SetPreviousBlock(have)
 		mc.bumpLFBTicket(ctx, rcvd)
-		if err := mc.SyncStateOrComputeLocal(ctx, rcvd); err != nil {
+		if err := mc.GetBlockStateChange(rcvd); err != nil {
 			logging.Logger.Error("ensure lfb", zap.Error(err))
 		}
 

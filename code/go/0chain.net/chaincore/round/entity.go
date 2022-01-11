@@ -266,7 +266,6 @@ func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	r.mutex.Unlock()
 
 	r.setRandomSeed(seed)
-	//r.setPhase(Verify)
 }
 
 func (r *Round) setRandomSeed(seed int64) {

@@ -10,17 +10,20 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
 	"github.com/herumi/bls/ffi/go/bls"
 
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -548,6 +551,10 @@ func (c *Chain) setupInitialState(initStates *state.InitStates) util.MerklePatri
 	for _, v := range initStates.States {
 		pmt.Insert(util.Path(v.ID), c.getInitialState(v.Tokens))
 	}
+
+	scVersion := minersc.SCVersionNode("1.0.0")
+	cstate.InsertTrieNode(pmt, minersc.SCVersionKey, &scVersion)
+
 	if err := pmt.SaveChanges(context.Background(), stateDB, false); err != nil {
 		logging.Logger.Error("chain.stateDB save changes failed", zap.Error(err))
 	}
@@ -1281,6 +1288,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Unlock()
 
 	c.updateConfig(b)
+	c.updateSCVersion(b)
 
 	// add LFB to blocks cache
 	if b != nil {
@@ -1297,11 +1305,11 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
-func (mc *Chain) getClientState(pb *block.Block) (util.MerklePatriciaTrieI, error) {
-	if pb == nil || pb.ClientState == nil {
-		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", pb)
+func getClientState(b *block.Block) (util.MerklePatriciaTrieI, error) {
+	if b == nil || b.ClientState == nil {
+		return nil, fmt.Errorf("cannot get MPT from latest finalized block %v", b)
 	}
-	return pb.ClientState, nil
+	return b.ClientState, nil
 }
 
 func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings, error) {
@@ -1325,8 +1333,8 @@ func getConfigMap(clientState util.MerklePatriciaTrieI) (*minersc.GlobalSettings
 	return gl, nil
 }
 
-func (mc *Chain) updateConfig(pb *block.Block) {
-	clientState, err := mc.getClientState(pb)
+func (mc *Chain) updateConfig(b *block.Block) {
+	clientState, err := getClientState(b)
 	if err != nil {
 		// This might happen after stopping and starting the miners
 		// and the MPT has not been setup yet.
@@ -1339,7 +1347,7 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
 		logging.Logger.Info("cannot get global settings",
-			zap.Int64("start of round", pb.Round),
+			zap.Int64("start of round", b.Round),
 			zap.Error(err),
 		)
 		return
@@ -1348,13 +1356,40 @@ func (mc *Chain) updateConfig(pb *block.Block) {
 	err = mc.Config.Update(configMap)
 	if err != nil {
 		logging.Logger.Error("cannot update global settings",
-			zap.Int64("start of round", pb.Round),
+			zap.Int64("start of round", b.Round),
 			zap.Error(err),
 		)
 	}
 	logging.Logger.Info("config has been updated successfully",
-		zap.Int64("start of round", pb.Round))
+		zap.Int64("start of round", b.Round))
 
+}
+
+func (mc *Chain) updateSCVersion(b *block.Block) {
+	clientState, err := getClientState(b)
+	if err != nil {
+		// This might happen after stopping and starting the miners
+		// and the MPT has not been setup yet.
+		logging.Logger.Error("cannot get the client state from last block",
+			zap.Error(err),
+		)
+		return
+	}
+
+	v, err := getSCVersion(clientState)
+	if err != nil {
+		logging.Logger.Error("cannot get sc version from lfb state", zap.Error(err))
+		return
+	}
+
+	cv := smartcontract.GetSCVersion()
+	if v.GT(cv) {
+		// new version detected
+		smartcontract.SetSCVersion(*v)
+		logging.Logger.Debug("update sc version on LFB",
+			zap.String("old version", cv.String()),
+			zap.String("new version", v.String()))
+	}
 }
 
 // GetLatestFinalizedBlock - get the latest finalized block.

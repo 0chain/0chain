@@ -311,7 +311,6 @@ type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
 }
 
-//go: generate
 //go:generate mockery --inpackage --testonly --name=Chainer --case=underscore
 // The Chainer represents Chain.
 type Chainer interface {

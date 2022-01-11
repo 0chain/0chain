@@ -271,3 +271,32 @@ func (msc *MinerSmartContract) configHandler(
 	}
 	return gn.getConfigMap()
 }
+
+func (msc *MinerSmartContract) scVersionHandler(
+	_ context.Context,
+	_ url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	scv, err := GetSCVersion(balances)
+	if err != nil {
+		return nil, common.NewErrInternal(err.Error())
+	}
+
+	rsp := struct {
+		Version string `json:"version"`
+		Upgrade struct {
+			Allow   bool   `json:"allow"`
+			Version string `json:"version"`
+		} `json:"upgrade"`
+	}{
+		Version: scv.String(),
+	}
+
+	v, allow, _ := balances.CanUpdateSCVersion()
+	if allow {
+		rsp.Upgrade.Allow = true
+		rsp.Upgrade.Version = v.String()
+	}
+
+	return rsp, nil
+}

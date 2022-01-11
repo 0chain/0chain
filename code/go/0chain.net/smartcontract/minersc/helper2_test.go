@@ -17,6 +17,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,6 +46,7 @@ func (tb *mockStateContext) GetEventDB() *event.EventDb                         
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
+func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool) { return nil, false }
 
 func (sc *mockStateContext) GetMints() []*state.Mint {
 	return sc.ctx.GetMints()
