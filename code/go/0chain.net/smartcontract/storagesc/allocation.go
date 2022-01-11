@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/logging"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1006,6 +1007,11 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		}
 
 		for i, bd := range alloc.BlobberDetails {
+			if bd.Terms.WritePrice <= blobbers[i].Terms.WritePrice &&
+				bd.Terms.ReadPrice <= blobbers[i].Terms.ReadPrice {
+				logging.Logger.Error("Skipping the Update as new price is greater than before for blobbers")
+				continue
+			}
 			bd.Terms = blobbers[i].Terms
 		}
 	}
