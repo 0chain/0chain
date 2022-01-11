@@ -21,12 +21,51 @@ jobs:
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
+        git clone https://github.com/0chain/blobber.git
+        git clone https://github.com/0chain/zboxcli.git
+        git clone https://github.com/0chain/zwalletcli.git
+        git clone https://github.com/0chain/0dns.git
 
     - name: list pwd
       run: |
         ls -lha
-        ls 0chain
 
+    - name: Install zboxcli
+      run: |
+        cd zboxcli && make install
+        cd ../zwalletcli && make install
+        cd ../0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd ../0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd ../blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
+        cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
+        cd ../
+    
+    - name: Add ZCN config
+      run: |
+        cat <<\EOF > ./.zcn/config.yaml
+          block_worker: http://127.0.0.1:9091
+          signature_scheme: bls0chain
+          min_submit: 50
+          min_confirmation: 50
+          confirmation_chain_length: 3
+          max_txn_query: 5
+          query_sleep_time: 5
+        EOF
+
+    - name: List pwd zcn
+      run: |
+        ls -lha .zcn
+
+    - name: Starting blobber Tests.
+      run: |
+        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
+        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        cd ../
+    
+    - name: Clean up job.
+      run: |
+        rm -rf ./*
+    
     # # - name: Get Branch
     # #   id: get_info
     # #   run: |
