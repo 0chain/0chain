@@ -99,6 +99,12 @@ func (msc *MinerSmartContract) AddSharder(
 
 	logging.Logger.Info("SharderNode", zap.Any("node", newSharder))
 
+	if newSharder.PublicKey == "" || newSharder.ID == "" {
+		logging.Logger.Error("public key or ID is empty")
+		return "", common.NewError("add_sharder",
+			"PublicKey or the ID is empty. Cannot proceed")
+	}
+
 	err = validateNodeSettings(newSharder, gn, "add_sharder")
 
 	existing, err := msc.getSharderNode(newSharder.ID, balances)
