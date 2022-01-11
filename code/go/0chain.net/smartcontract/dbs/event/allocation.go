@@ -60,6 +60,20 @@ type AllocationTerm struct {
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
+func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
+	var alloc Allocation
+
+	result := edb.Store.Get().
+		Model(&Allocation{}).
+		Where(&Allocation{AllocationID: id}).
+		First(&alloc)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving allocation: %v, error: %v", id, result.Error)
+	}
+
+	return &alloc, nil
+}
+
 func (edb *EventDb) overwriteAllocation(alloc *Allocation) error {
 
 	result := edb.Store.Get().

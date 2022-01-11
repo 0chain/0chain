@@ -73,3 +73,15 @@ func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateCo
 
 	return nil
 }
+
+func getAllocationFromDb(id string, balances cstate.StateContextI) error {
+
+	_, err := balances.GetEventDB().GetAllocation(id)
+	if err != nil {
+		return err
+	}
+
+	// todo: transform to storage allocation
+	// todo: fetch from blobber table about other details
+	return nil
+}

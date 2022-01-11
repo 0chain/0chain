@@ -635,6 +635,11 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 		return
 	}
 
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -1269,7 +1274,7 @@ func (sc *StorageSmartContract) canceledPassRates(alloc *StorageAllocation,
 
 // If blobbers doesn't provide their services, then user can use this
 // cancel_allocation transaction to close allocation and unlock all tokens
-// of write pool back to himself. The cacnel_allocation doesn't pays min_lock
+// of write pool back to himself. The cancel_allocation doesn't pay min_lock
 // demand to blobbers.
 func (sc *StorageSmartContract) cancelAllocationRequest(
 	t *transaction.Transaction, input []byte,
@@ -1309,7 +1314,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	for _, d := range alloc.BlobberDetails {
 		var sp *stakePool
 		if sp, err = sc.getStakePool(d.BlobberID, balances); err != nil {
-			return "", common.NewError("fini_alloc_failed",
+			return "", common.NewError("alloc_cancel_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
 		if err = sp.extendOffer(-1 * d.Offer()); err != nil {
@@ -1329,6 +1334,12 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 	if err != nil {
 		return "", common.NewError("alloc_cancel_failed",
 			"saving allocation: "+err.Error())
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation to db: %v", err)
 	}
 
 	return "canceled", nil
@@ -1401,8 +1412,14 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	alloc.Finalized = true
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", common.NewError("alloc_cancel_failed",
-			"saving allocation: "+err.Error())
+		return "", common.NewErrorf("alloc_cancel_failed",
+			"saving allocation: %v", err)
+	}
+
+	err = emitAddOrOverwriteAllocation(alloc, balances)
+	if err != nil {
+		return "", common.NewErrorf("alloc_Cancel_failed",
+			"saving allocation to db: %v", err)
 	}
 
 	return "finalized", nil
