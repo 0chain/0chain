@@ -18,12 +18,15 @@ jobs:
     runs-on: [self-hosted, conductor-test02]
     
     steps:
-    - uses: actions/checkout@v1
+    - name: Git clone 0chain
+      run: |
+        git clone https://github.com/0chain/0chain.git
 
     - name: list pwd
       run: |
         ls -lha
         ls 0chain
+
     # # - name: Get Branch
     # #   id: get_info
     # #   run: |
