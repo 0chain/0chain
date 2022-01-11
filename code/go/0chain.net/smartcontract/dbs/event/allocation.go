@@ -44,7 +44,8 @@ type Allocation struct {
 }
 
 type AllocationTerm struct {
-	BlobberID string
+	BlobberID    string
+	AllocationID string
 	// ReadPrice is price for reading. Token / GB (no time unit).
 	ReadPrice state.Balance `json:"read_price"`
 	// WritePrice is price for reading. Token / GB / time unit. Also,

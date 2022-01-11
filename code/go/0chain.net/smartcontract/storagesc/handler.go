@@ -291,7 +291,7 @@ func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context
 
 const cantGetAllocation = "can't get allocation"
 
-func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+func (ssc *StorageSmartContract) AllocationStatsHandlerDeprecated(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = allocationID
@@ -305,6 +305,21 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 		return nil, common.NewErrInternal("can't decode allocation", err.Error())
 	}
 	return allocationObj, nil
+}
+
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	allocationID := params.Get("allocation")
+
+	if balances.GetEventDB() == nil {
+		return ssc.AllocationStatsHandlerDeprecated(ctx, params, balances)
+	}
+
+	allocation, err := getStorageAllocationFromDb(allocationID, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, cantGetAllocation)
+	}
+
+	return allocation, nil
 }
 
 func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
