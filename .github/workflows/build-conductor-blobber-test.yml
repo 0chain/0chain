@@ -21,7 +21,6 @@ jobs:
 
     - name: Git clone 0chain
       run: |
-        rm -rf ./*
         git clone https://github.com/0chain/0chain.git
     
     - name: Git clone blobber
@@ -43,6 +42,7 @@ jobs:
     - name: list pwd
       run: |
         ls -lha
+        cd 0dns && git status
 
     - name: Install zboxcli
       run: |
@@ -77,6 +77,7 @@ jobs:
     - name: List pwd zcn
       run: |
         ls -lha .zcn
+        cat .zcn/config.yaml
 
     - name: Starting blobber Tests.
       run: |
@@ -84,6 +85,7 @@ jobs:
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2
     
     - name: Clean up job.
+      if: ${{ always() }}
       run: |
         rm -rf ./*
     
