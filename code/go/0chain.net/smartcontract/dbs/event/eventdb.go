@@ -3,13 +3,15 @@ package event
 import (
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
+	"errors"
 	"time"
 )
 
 const (
 	DefaultQueryTimeout = 5 * time.Second
-	ErrNoEventDb        = "event db is not initialized"
 )
+
+var ErrNoEventDb = errors.New("event db is not initialized")
 
 func NewEventDb(config dbs.DbAccess) (*EventDb, error) {
 	db, err := postgresql.GetPostgresSqlDb(config)

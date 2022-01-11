@@ -3,11 +3,16 @@ package state
 import (
 	"0chain.net/chaincore/state"
 	"0chain.net/smartcontract/dbs/event"
+	"context"
 	"encoding/json"
 	"fmt"
 )
 
-func (sc *StateContext) emitHandleAddTransfer(t *state.Transfer) error {
+func (sc *StateContext) addTransferToDb(t *state.Transfer) error {
+	if sc.GetEventDB() == nil {
+		return event.ErrNoEventDb
+	}
+	var events []event.Event
 	toUser := event.User{
 		UserID:        t.ToClientID,
 		Amount:        t.Amount,
@@ -17,7 +22,14 @@ func (sc *StateContext) emitHandleAddTransfer(t *state.Transfer) error {
 	if err != nil {
 		return fmt.Errorf("marshalling to client: %v", err)
 	}
-	sc.EmitEvent(event.TypeStats, event.TagIncreaseUserBalanceByAmount, toUser.UserID, string(data))
+	events = append(events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(event.TypeStats),
+		Tag:         int(event.TagIncreaseUserBalanceByAmount),
+		Index:       toUser.UserID,
+		Data:        string(data),
+	})
 
 	fromUser := event.User{
 		UserID:        t.ClientID,
@@ -28,12 +40,27 @@ func (sc *StateContext) emitHandleAddTransfer(t *state.Transfer) error {
 	if err != nil {
 		return fmt.Errorf("marshalling from client: %v", err)
 	}
-	sc.EmitEvent(event.TypeStats, event.TagDecreaseUserBalanceByAmount, fromUser.UserID, string(data))
+
+	events = append(events, event.Event{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(event.TypeStats),
+		Tag:         int(event.TagDecreaseUserBalanceByAmount),
+		Index:       fromUser.UserID,
+		Data:        string(data),
+	})
+
+	sc.GetEventDB().AddEvents(context.TODO(), events)
 
 	return nil
 }
 
-func (sc *StateContext) emitHandleAddMint(m *state.Mint) error {
+func (sc *StateContext) addMintToDb(m *state.Mint) error {
+
+	if sc.GetEventDB() == nil {
+		return event.ErrNoEventDb
+	}
+
 	toUser := event.User{
 		UserID:        m.ToClientID,
 		Amount:        m.Amount,
@@ -43,7 +70,18 @@ func (sc *StateContext) emitHandleAddMint(m *state.Mint) error {
 	if err != nil {
 		return fmt.Errorf("marshalling to client: %v", err)
 	}
-	sc.EmitEvent(event.TypeStats, event.TagIncreaseUserBalanceByAmount, toUser.UserID, string(data))
+
+	var events = []event.Event{{
+		BlockNumber: sc.block.Round,
+		TxHash:      sc.txn.Hash,
+		Type:        int(event.TypeStats),
+		Tag:         int(event.TagIncreaseUserBalanceByAmount),
+		Index:       toUser.UserID,
+		Data:        string(data),
+	},
+	}
+
+	sc.GetEventDB().AddEvents(context.TODO(), events)
 
 	return nil
 }
