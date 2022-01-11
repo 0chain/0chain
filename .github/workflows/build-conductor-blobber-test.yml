@@ -48,9 +48,7 @@ jobs:
 
     - name: Install zboxcli
       run: |
-        pwd
         cd zboxcli && make install
-        pwd
 
     - name: Install zwalletcli
       run: |
@@ -63,10 +61,8 @@ jobs:
     
     - name: Blobbers Patching
       run: |
-        pwd
         cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
         cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
-        pwd
     
     - name: Add ZCN config
       run: |
@@ -91,94 +87,10 @@ jobs:
 
     - name: Starting blobber Tests.
       run: |
-        pwd
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        pwd
         cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
-        pwd
     
     - name: Clean up job.
       if: ${{ always() }}
       run: |
         rm -rf ./*
-    
-    # # - name: Get Branch
-    # #   id: get_info
-    # #   run: |
-    # #     BRANCH_TAG=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
-    # #     BRANCH=$(echo ${GITHUB_REF#refs/heads/})
-    # #     SHORT_SHA=$(echo $GITHUB_SHA | head -c 8)
-    # #     echo ::set-output name=BRANCH::${BRANCH}
-    # #     echo ::set-output name=IMAGE_TAG::${BRANCH_TAG}-${SHORT_SHA}
-    # #     echo "Branch == ${BRANCH}"
-
-    # # - name: Git Checkout
-    # #   run: |
-    # #     cd /root/0chain/
-    # #     git checkout .
-    # #     git pull
-    # #     git checkout $BRANCH
-    # #     git checkout rrrooommmaaa/conductor-peter
-    # #   env:
-    # #     BRANCH: ${{ steps.get_info.outputs.BRANCH }}
-
-    # - name: Setting Up View Change
-    #   run: |
-    #     cd ./docker.local/config
-    #     filename='0chain.yaml'
-    #     # Check the new text is empty or not
-    #     if ! grep -q view_change "$filename"; then
-    #       sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-    #     else
-    #       sed -i '/view_change/d' $filename
-    #       sed -i "12 a \  view_change: $VIEW_CHANGE" $filename
-    #     fi
-    #   env:
-    #     VIEW_CHANGE: ${{ github.event.inputs.view_change }}
-
-    # - name: Building Base Images
-    #   run: |
-    #     docker build -f ./docker.local/build.base/Dockerfile.build_base . -t $ZCHAIN_BUILDBASE
-    #     docker build -f ./docker.local/build.base/Dockerfile.run_base docker.local/build.base -t $ZCHAIN_BUILDRUN
-
-    # - name: Installing ZBOXCLI.
-    #   run: |
-    #     cd /root/zboxcli/
-    #     git checkout .
-    #     git pull
-    #     git checkout master
-    #     source ~/.profile
-    #     make install
-
-    # - name: Installing ZWALLETCLI.
-    #   run: |
-    #     cd /root/zwalletcli/
-    #     git checkout .
-    #     git pull
-    #     git checkout master
-    #     source ~/.profile
-    #     make install
-
-    # - name: Patching 0DNS
-    #   run: |
-    #     cd /root/0dns/
-    #     git checkout .
-    #     git pull
-    #     git checkout master
-    #     git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch
-    #     git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
-
-    # - name: Patching BLOBBERS
-    #   run: |
-    #     cd /root/blobber/
-    #     git checkout .
-    #     git pull
-    #     git checkout master
-    #     git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
-    #     git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
-
-    # - name: Running Blobber tests.
-    #   run: |
-    #     cd /root/0chain/
-    #     git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
-    #     git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
