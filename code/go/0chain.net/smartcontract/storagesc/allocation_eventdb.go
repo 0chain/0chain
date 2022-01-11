@@ -66,21 +66,9 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 		})
 
 		tempBlobberAllocation := &BlobberAllocation{
-			BlobberID:                  b.BlobberID,
-			AllocationID:               blobberIDTermMapping[b.BlobberID].AllocationID,
-			Size:                       b.Capacity,
-			AllocationRoot:             "",
-			LastWriteMarker:            nil,
-			Stats:                      nil,
-			Terms:                      blobberIDTermMapping[b.BlobberID].Terms,
-			MinLockDemand:              state.Balance(b.MinLockDemand),
-			Spent:                      0,
-			Penalty:                    0,
-			ReadReward:                 0,
-			Returned:                   0,
-			ChallengeReward:            0,
-			FinalReward:                0,
-			ChallengePoolIntegralValue: 0,
+			BlobberID:    b.BlobberID,
+			AllocationID: blobberIDTermMapping[b.BlobberID].AllocationID,
+			Terms:        blobberIDTermMapping[b.BlobberID].Terms,
 		}
 		blobberDetails = append(blobberDetails, tempBlobberAllocation)
 		blobberMap[b.BlobberID] = tempBlobberAllocation
@@ -106,25 +94,24 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 			FailedChallenges:          alloc.FailedChallenges,
 			LastestClosedChallengeTxn: alloc.LatestClosedChallengeTxn,
 		},
-		DiverseBlobbers:            false, //to be clarified
-		PreferredBlobbers:          nil,
 		BlobberDetails:             blobberDetails,
 		BlobberMap:                 blobberMap,
 		IsImmutable:                alloc.IsImmutable,
 		ReadPriceRange:             PriceRange{alloc.ReadPriceMin, alloc.ReadPriceMax},
 		WritePriceRange:            PriceRange{alloc.WritePriceMin, alloc.WritePriceMax},
 		MaxChallengeCompletionTime: time.Duration(alloc.MaxChallengeCompletionTime),
-		WritePoolOwners:            nil,
-		ChallengeCompletionTime:    time.Duration(alloc.ChallengeCompletionTime),
-		StartTime:                  common.Timestamp(alloc.StartTime),
-		Finalized:                  alloc.Finalized,
-		Canceled:                   alloc.Cancelled,
-		UsedSize:                   alloc.UsedSize,
-		MovedToChallenge:           alloc.MovedToChallenge,
-		MovedBack:                  alloc.MovedBack,
-		MovedToValidators:          alloc.MovedToValidators,
-		TimeUnit:                   time.Duration(alloc.TimeUnit),
-		Curators:                   alloc.Curators,
+		// todo: to be added with WritePool : select user_id from WritePools where allocation_id = ?
+		// WritePoolOwners:            nil,
+		ChallengeCompletionTime: time.Duration(alloc.ChallengeCompletionTime),
+		StartTime:               common.Timestamp(alloc.StartTime),
+		Finalized:               alloc.Finalized,
+		Canceled:                alloc.Cancelled,
+		UsedSize:                alloc.UsedSize,
+		MovedToChallenge:        alloc.MovedToChallenge,
+		MovedBack:               alloc.MovedBack,
+		MovedToValidators:       alloc.MovedToValidators,
+		TimeUnit:                time.Duration(alloc.TimeUnit),
+		Curators:                alloc.Curators,
 	}
 
 	return sa, nil
