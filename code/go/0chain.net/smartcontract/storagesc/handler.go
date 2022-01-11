@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -101,6 +102,22 @@ func (ssc *StorageSmartContract) GetBlobbersHandler(
 		sns.Nodes.add(&sn)
 	}
 	return sns, nil
+}
+
+func (msc *StorageSmartContract) GetTransactionByHashHandler(
+	ctx context.Context,
+	params url.Values,
+	balances cstate.StateContextI,
+) (interface{}, error) {
+	var transactionHash = params.Get("transaction_hash")
+	if len(transactionHash) == 0 {
+		return nil, fmt.Errorf("cannot find valid transaction_hash: %v", transactionHash)
+	}
+	if balances.GetEventDB() == nil {
+		return nil, errors.New("no event database found")
+	}
+	transaction, err := balances.GetEventDB().GetTransactionByHash(transactionHash)
+	return &transaction, err
 }
 
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
