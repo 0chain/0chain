@@ -50,18 +50,17 @@ jobs:
 
     - name: Install zwalletcli
       run: |
-        cd ../zwalletcli && make install
+        cd zwalletcli && make install
     
     - name: Install 0dns
       run: |
-        cd ../0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch
-        cd ../0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch
     
     - name: Blobbers Patching
       run: |
-        cd ../blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
-        cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
-        cd ../
+        cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch
+        cd blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch
     
     - name: Add ZCN config
       run: |
@@ -82,8 +81,7 @@ jobs:
     - name: Starting blobber Tests.
       run: |
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
-        cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
-        cd ../
+        cd 0chain && ./docker.local/bin/start.conductor.sh blobber-2
     
     - name: Clean up job.
       run: |
