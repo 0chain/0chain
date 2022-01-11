@@ -494,12 +494,10 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 		return err
 	}
 	if s.Nonce+1 != txnNonce {
-		if state.Debug() {
-			b := sctx.GetBlock()
-			logging.Logger.Error("validate nonce - error",
-				zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
-				zap.Any("local_nonce", s.Nonce), zap.Error(err))
-		}
+		b := sctx.GetBlock()
+		logging.Logger.Error("validate nonce - error",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
+			zap.Any("local_nonce", s.Nonce), zap.Error(err))
 		return ErrWrongNonce
 	}
 
@@ -519,7 +517,10 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	if _, err := sc.Insert(util.Path(fromClient), s); err != nil {
 		return err
 	}
+	logging.Logger.Debug("Updating nonce", zap.String("client", fromClient), zap.Int64("new_nonce", s.Nonce))
+	if state.Debug() {
 
+	}
 	return nil
 }
 

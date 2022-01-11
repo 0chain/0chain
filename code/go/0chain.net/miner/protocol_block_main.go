@@ -351,14 +351,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
-		err = mc.processTxn(ctx, mc.createFeeTxn(b), b, blockState, iterInfo.clients)
+		err = mc.processTxn(ctx, mc.createFeeTxn(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			return err
 		}
 	}
 
 	if config.DevConfiguration.IsBlockRewards {
-		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b), b, blockState, iterInfo.clients)
+		err = mc.processTxn(ctx, mc.createBlockRewardTxn(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			return err
 		}
@@ -366,7 +366,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	if mc.SmartContractSettingUpdatePeriod() != 0 &&
 		b.Round%mc.SmartContractSettingUpdatePeriod() == 0 {
-		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b), b, blockState, iterInfo.clients)
+		err = mc.processTxn(ctx, mc.storageScCommitSettingChangesTx(b, blockState), b, blockState, iterInfo.clients)
 		if err != nil {
 			return err
 		}

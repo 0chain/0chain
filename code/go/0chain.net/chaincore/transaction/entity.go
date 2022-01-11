@@ -55,7 +55,7 @@ type Transaction struct {
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
 	Fee             int64            `json:"transaction_fee" msgpack:"f"`
-	Nonce           int64            `json:"nonce" msgpack:"n"`
+	Nonce           int64            `json:"transaction_nonce" msgpack:"n"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`

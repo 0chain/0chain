@@ -71,9 +71,10 @@ func (mc *Chain) processTxn(ctx context.Context, txn *transaction.Transaction, b
 	return nil
 }
 
-func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createFeeTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
 	feeTxn.ClientID = b.MinerID
+	feeTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -83,9 +84,20 @@ func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	return feeTxn
 }
 
-func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Transaction {
+func (mc *Chain) getCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) int64 {
+	s, err := mc.GetStateById(bState, minerId)
+	if err != nil {
+		logging.Logger.Error("can't get nonce", zap.Error(err))
+		return 1
+	}
+	node.Self.SetNonce(s.Nonce)
+	return node.Self.GetNextNonce()
+}
+
+func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
 	scTxn := transaction.Provider().(*transaction.Transaction)
 	scTxn.ClientID = b.MinerID
+	scTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	scTxn.ToClientID = storagesc.ADDRESS
 	scTxn.CreationDate = b.CreationDate
 	scTxn.TransactionType = transaction.TxnTypeSmartContract
@@ -95,9 +107,10 @@ func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) *transaction.Tr
 	return scTxn
 }
 
-func (mc *Chain) createBlockRewardTxn(b *block.Block) *transaction.Transaction {
+func (mc *Chain) createBlockRewardTxn(b *block.Block, bState util.MerklePatriciaTrieI) *transaction.Transaction {
 	brTxn := transaction.Provider().(*transaction.Transaction)
 	brTxn.ClientID = b.MinerID
+	brTxn.Nonce = mc.getCurrentSelfNonce(b.MinerID, bState)
 	brTxn.ToClientID = storagesc.ADDRESS
 	brTxn.CreationDate = b.CreationDate
 	brTxn.TransactionType = transaction.TxnTypeSmartContract

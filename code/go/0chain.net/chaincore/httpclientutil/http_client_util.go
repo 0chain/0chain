@@ -74,7 +74,7 @@ type Signer func(h string) (string, error)
 
 //ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
-	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID,
+	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v:%v", t.CreationDate, t.Nonce, t.ClientID,
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
 	t.Hash = encryption.Hash(hashdata)
 	var err error
@@ -731,11 +731,12 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 	if nextNonce == 0 {
 		request, err := MakeClientNonceRequest(node.Self.Underlying().GetKey(), minerUrls, 33)
 		if err != nil {
-			return err
+			logging.Logger.Error("Can't get nonce from remote", zap.Error(err))
 		}
 		node.Self.SetNonce(request)
 		nextNonce = node.Self.GetNextNonce()
 	}
+	txn.Nonce = nextNonce
 
 	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)

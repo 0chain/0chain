@@ -69,7 +69,7 @@ func TestTransaction_ComputeHashAndSign(t *testing.T) {
 	}
 
 	want := *txn
-	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", want.CreationDate, want.ClientID,
+	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v:%v", want.CreationDate, want.Nonce, want.ClientID,
 		want.ToClientID, want.Value, encryption.Hash(want.TransactionData))
 	want.Hash = encryption.Hash(hashdata)
 	want.Signature, err = handler(want.Hash)
