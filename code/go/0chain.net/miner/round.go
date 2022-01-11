@@ -20,6 +20,50 @@ type Round struct {
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
+	vrfSharesCache        *vrfSharesCache
+}
+
+type vrfSharesCache struct {
+	vrfShares map[string]*round.VRFShare
+	mutex     *sync.Mutex
+}
+
+func newVRFSharesCache() *vrfSharesCache {
+	return &vrfSharesCache{
+		vrfShares: make(map[string]*round.VRFShare),
+		mutex:     &sync.Mutex{},
+	}
+}
+
+func (v *vrfSharesCache) add(vrfShare *round.VRFShare) {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	k := vrfShare.GetParty().GetKey()
+	if _, ok := v.vrfShares[k]; ok {
+		return
+	}
+	v.vrfShares[k] = vrfShare
+}
+
+func (v *vrfSharesCache) getAll() []*round.VRFShare {
+	v.mutex.Lock()
+	vrfShares := make([]*round.VRFShare, 0, len(v.vrfShares))
+	for _, vrf := range v.vrfShares {
+		vrfShares = append(vrfShares, vrf)
+	}
+	v.mutex.Unlock()
+	return vrfShares
+}
+
+// clean deletes shares that has round time out count <= the 'count' value
+func (v *vrfSharesCache) clean(count int) {
+	v.mutex.Lock()
+	for s, vrf := range v.vrfShares {
+		if vrf.GetRoundTimeoutCount() <= count {
+			delete(v.vrfShares, s)
+		}
+	}
+	v.mutex.Unlock()
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
@@ -136,4 +180,10 @@ func (r *Round) Clear() {
 //IsVRFComplete - is the VRF process complete?
 func (r *Round) IsVRFComplete() bool {
 	return r.HasRandomSeed()
+}
+
+// Restart resets round and vrf shares cache
+func (r *Round) Restart() {
+	r.Round.Restart()
+	r.vrfSharesCache = newVRFSharesCache()
 }

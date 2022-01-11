@@ -32,7 +32,7 @@ func TestUpdate(t *testing.T) {
 		chain := NewChainFromConfig()
 
 		return args{
-			config:  *chain.Config,
+			config:  chain.Config,
 			updates: p.updates,
 		}
 	}

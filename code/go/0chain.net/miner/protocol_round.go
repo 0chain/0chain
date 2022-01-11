@@ -2,16 +2,12 @@ package miner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
-
-	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
@@ -197,7 +193,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	)
 
 	if er != mr && mc.isStarted() {
-		logging.Logger.Info("StartNextRound found next round ready. No VRFs Sent",
+		logging.Logger.Info("StartNextRound found next round ready. No VRFShares Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
 			zap.Int64("rrs", r.GetRandomSeed()),
 			zap.Bool("is_started", mc.isStarted()))
@@ -208,7 +204,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
 		mc.addMyVRFShare(ctx, r, er)
 	} else {
-		logging.Logger.Info("StartNextRound no VRFs sent -- "+
+		logging.Logger.Info("StartNextRound no VRFShares sent -- "+
 			"current round has no random seed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", rn))
 	}
@@ -296,73 +292,10 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	return false
 }
 
-func (mc *Chain) getClientState(
-	ctx context.Context,
-	roundNumber int64,
-) (*util.MerklePatriciaTrie, error) {
-	pround := mc.GetRound(roundNumber - 1)
-	pb := mc.GetBlockToExtend(ctx, pround)
-	if pb == nil || pb.ClientState == nil {
-		return nil, fmt.Errorf("cannot get MPT from latest block %v", pb)
-	}
-	pndb := pb.ClientState.GetNodeDB()
-	root := pb.ClientStateHash
-	mndb := util.NewMemoryNodeDB()
-	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	clientState := util.NewMerklePatriciaTrie(ndb, util.Sequence(roundNumber-1), root)
-	return clientState, nil
-}
-
-func getConfigMap(clientState *util.MerklePatriciaTrie) (*minersc.GlobalSettings, error) {
-	if clientState == nil {
-		return nil, errors.New("client state is nil")
-	}
-
-	val, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.GLOBALS_KEY)))
-	if err != nil {
-		return nil, err
-	}
-
-	gl := &minersc.GlobalSettings{
-		Fields: make(map[string]string),
-	}
-	err = gl.Decode(val.Encode())
-	if err != nil {
-		return nil, err
-	}
-
-	return gl, nil
-}
-
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-	// clientState, err := mc.getClientState(ctx, r.GetRoundNumber())
-	// if err != nil {
-	// 	// This might happen after stopping and starting the miners
-	// 	// and the MPT has not been setup yet.
-	// 	logging.Logger.Error("cannot get the client state from last block",
-	// 		zap.Error(err),
-	// 	)
-	// } else {
-	// 	configMap, err := getConfigMap(clientState)
-	// 	if err != nil {
-	// 		logging.Logger.Info("cannot get global settings",
-	// 			zap.Int64("start of round", r.GetRoundNumber()),
-	// 			zap.Error(err),
-	// 		)
-	// 	} else {
-	// 		err := mc.Config.Update(configMap)
-	// 		if err != nil {
-	// 			logging.Logger.Error("cannot update global settings",
-	// 				zap.Int64("start of round", r.GetRoundNumber()),
-	// 				zap.Error(err),
-	// 			)
-	// 		}
-	// 	}
-	// }
-
 	mc.startNewRound(ctx, r)
 }
 
@@ -654,6 +587,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
+
 	go mc.SendBlock(ctx, b)
 	return b, nil
 }
@@ -868,10 +802,10 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 
 /*GetBlockProposalWaitTime - get the time to wait for the block proposals of the given round */
 func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
-	if mc.BlockProposalWaitMode == chain.BlockProposalWaitDynamic {
+	if mc.BlockProposalWaitMode() == chain.BlockProposalWaitDynamic {
 		return mc.computeBlockProposalDynamicWaitTime(r)
 	}
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
@@ -889,7 +823,7 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 		if medianTimeMS > mc.BlockProposalMaxWaitTime {
 			return medianTimeMS
 		}*/
-	return mc.BlockProposalMaxWaitTime
+	return mc.BlockProposalMaxWaitTime()
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -1368,9 +1302,9 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
 	ssft := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
-	tick := mc.RoundTimeoutSofttoMin
-	if tick < mc.RoundTimeoutSofttoMult*ssft {
-		tick = mc.RoundTimeoutSofttoMult * ssft
+	tick := mc.RoundTimeoutSofttoMin()
+	if tick < mc.RoundTimeoutSofttoMult()*ssft {
+		tick = mc.RoundTimeoutSofttoMult() * ssft
 	}
 	logging.Logger.Info("nextTimeout", zap.Int("tick", tick))
 	return tick
@@ -1394,7 +1328,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 
 	var r = mc.GetMinerRound(round)
 
-	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
+	if r.GetSoftTimeoutCount() == mc.RoundRestartMult() {
 		logging.Logger.Info("triggering restartRound",
 			zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx, round)
@@ -1407,8 +1341,8 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, round int64) {
 	r.IncSoftTimeoutCount()
 }
 
-func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
-	r := mc.GetMinerRound(round)
+func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
+	r := mc.GetMinerRound(rn)
 	proposals := r.GetProposedBlocks()
 	if len(proposals) > 0 { // send the best block to the network
 		b := r.Block
@@ -1418,7 +1352,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 					zap.Int64("round", b.Round), zap.String("block", b.Hash),
 					zap.Int("rank", b.RoundRank))
 			}
-			lfmbr := mc.GetLatestFinalizedMagicBlockRound(round) // related magic block
+			lfmbr := mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
 					zap.Any("lfmbr hash", lfmbr.Hash),
@@ -1442,6 +1376,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, round int64) {
 	} else {
 		logging.Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 	}
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		logging.Logger.Info("handleNoProgress",
@@ -1663,12 +1598,20 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		if xrhnb == nil ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() == 0) ||
 			(xrhnb != nil && xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed()) {
-			logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+
+			logging.Logger.Debug("restartRound - could not get HNB",
 				zap.Int64("round", xr.GetRoundNumber()),
-				zap.Int64("lfb_round", lfb.Round))
-			xr.Restart()
-			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
-			mc.RedoVrfShare(ctx, xr)
+				zap.Int64("lfb_round", lfb.Round),
+				zap.Int("soft_timeout", xr.GetSoftTimeoutCount()))
+
+			if xr.GetSoftTimeoutCount() >= mc.RoundRestartMult() {
+				logging.Logger.Debug("restartRound - could not get HNB, redo vrf share",
+					zap.Int64("round", xr.GetRoundNumber()),
+					zap.Int64("lfb_round", lfb.Round))
+				xr.Restart()
+				xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1), mc.GetMiners(i))
+				mc.RedoVrfShare(ctx, xr)
+			}
 			return // the round has restarted <===================== [exit loop]
 		}
 

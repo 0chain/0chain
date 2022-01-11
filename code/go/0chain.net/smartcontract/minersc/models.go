@@ -250,7 +250,8 @@ type GlobalNode struct {
 	Minted state.Balance `json:"minted"`
 
 	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
-	RewardRoundFrequency int64 `json:"reward_round_frequency"`
+	RewardRoundFrequency int64         `json:"reward_round_frequency"`
+	OwnerId              datastore.Key `json:"owner_id"`
 }
 
 func (gn *GlobalNode) readConfig() {
@@ -275,6 +276,7 @@ func (gn *GlobalNode) readConfig() {
 	gn.RewardDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[RewardDeclineRate])
 	gn.InterestDeclineRate = config.SmartContractConfig.GetFloat64(pfx + SettingName[InterestDeclineRate])
 	gn.MaxMint = state.Balance(config.SmartContractConfig.GetFloat64(pfx+SettingName[MaxMint]) * 1e10)
+	gn.OwnerId = config.SmartContractConfig.GetString(pfx + SettingName[OwnerId])
 }
 
 func (gn *GlobalNode) validate() error {
@@ -362,6 +364,8 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return gn.InterestDeclineRate, nil
 	case MaxMint:
 		return gn.MaxMint, nil
+	case OwnerId:
+		return gn.OwnerId, nil
 	default:
 		return nil, errors.New("Setting not implemented")
 	}

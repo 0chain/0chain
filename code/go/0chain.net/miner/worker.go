@@ -82,6 +82,29 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 	}
 }
 
+func roundTimeoutProcess(ctx context.Context, proto Protocol, rn int64) {
+	var cancel func()
+	ctx, cancel = context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+	rc := make(chan struct{})
+	ts := time.Now()
+	go func() {
+		proto.HandleRoundTimeout(ctx, rn)
+		close(rc)
+	}()
+
+	select {
+	case <-ctx.Done():
+		logging.Logger.Error("protocol.HandleRoundTimeout timeout",
+			zap.Error(ctx.Err()),
+			zap.Int64("round", rn))
+	case <-rc:
+		logging.Logger.Info("protocol.HandleRoundTimeout finished",
+			zap.Int64("round", rn),
+			zap.Any("duration", time.Since(ts)))
+	}
+}
+
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
 
@@ -91,7 +114,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		protocol Protocol = mc
 	)
 
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -104,33 +127,21 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				r := mc.GetMinerRound(cround)
 
 				if r != nil {
-					logging.Logger.Info("Round timeout",
-						zap.Any("round", r.Number),
-						zap.Any("current round", cround),
-						zap.Int("VRF_shares", len(r.GetVRFShares())),
-						zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
-						zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
-					func(ctx context.Context) {
-						cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
-						defer cancel()
-						rc := make(chan struct{})
-						ts := time.Now()
-						go func() {
-							protocol.HandleRoundTimeout(cctx, cround)
-							close(rc)
-						}()
-
-						select {
-						case <-cctx.Done():
-							logging.Logger.Error("protocol.HandleRoundTimeout timeout",
-								zap.Error(cctx.Err()),
-								zap.Int64("round", cround))
-						case <-rc:
-							logging.Logger.Info("protocol.HandleRoundTimeout finished",
-								zap.Int64("round", cround),
-								zap.Any("duration", time.Since(ts)))
+					if r.IsFinalized() || r.IsFinalizing() {
+						// check next round
+						nr := mc.GetRound(cround + 1)
+						if nr != nil {
+							roundTimeoutProcess(ctx, protocol, cround+1)
 						}
-					}(ctx)
+					} else {
+						logging.Logger.Info("round timeout",
+							zap.Any("round", r.Number),
+							zap.Any("current round", cround),
+							zap.Int("VRF_shares", len(r.GetVRFShares())),
+							zap.Int("proposedBlocks", len(r.GetProposedBlocks())),
+							zap.Int("notarizedBlocks", len(r.GetNotarizedBlocks())))
+						roundTimeoutProcess(ctx, protocol, cround)
+					}
 				} else {
 					// set current round to latest finalized block
 					lfbr := mc.GetLatestFinalizedBlock().Round
