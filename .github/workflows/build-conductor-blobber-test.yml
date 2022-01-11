@@ -55,7 +55,7 @@ jobs:
     
     - name: Install 0dns
       run: |
-        cd 0dns && git apply --check ../0chain/0chain/docker.local/bin/conductor/0dns-local.patch
+        cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch
         cd ../0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch || true
     
     - name: Blobbers Patching
