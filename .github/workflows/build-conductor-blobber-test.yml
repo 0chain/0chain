@@ -8,10 +8,6 @@ on:
         default: 'false'
         required: true
 
-env:
-  ZCHAIN_BUILDBASE: zchain_build_base
-  ZCHAIN_BUILDRUN: zchain_run_base
-
 jobs:
   conductor_build: 
     name: CONDUCTOR-BLOBBERS-TESTS
@@ -20,6 +16,7 @@ jobs:
     steps:
     - name: Git clone 0chain
       run: |
+        rm -rf ./*
         git clone https://github.com/0chain/0chain.git
         git clone https://github.com/0chain/blobber.git
         git clone https://github.com/0chain/zboxcli.git
