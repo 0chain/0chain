@@ -44,6 +44,7 @@ jobs:
         ls -lha
         cd 0chain && git status
         cd ../0dns && git status
+        pwd
 
     - name: Install zboxcli
       run: |
@@ -60,8 +61,10 @@ jobs:
     
     - name: Blobbers Patching
       run: |
+        pwd
         cd blobber && git apply --check ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
         cd ../blobber && git apply ../0chain/docker.local/bin/conductor/blobber-tests.patch || true
+        pwd
     
     - name: Add ZCN config
       run: |
@@ -78,13 +81,17 @@ jobs:
 
     - name: List pwd zcn
       run: |
-        ls -lha .zcn
+        pwd
+        ls -lha ~/.zcn
         cat ~/.zcn/config.yaml
 
     - name: Starting blobber Tests.
       run: |
+        pwd
         cd 0chain && ./docker.local/bin/start.conductor.sh blobber-1
+        pwd
         cd ../0chain && ./docker.local/bin/start.conductor.sh blobber-2
+        pwd
     
     - name: Clean up job.
       if: ${{ always() }}
