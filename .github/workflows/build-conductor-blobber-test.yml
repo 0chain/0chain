@@ -42,7 +42,7 @@ jobs:
     - name: list pwd
       run: |
         ls -lha
-        cd 0chain && git status
+        cd 0chain/0chain && git status
         cd 0dns && git status
 
     - name: Install zboxcli
