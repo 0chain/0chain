@@ -131,7 +131,17 @@ func (mc *Chain) validateTransaction(b *block.Block, bState util.MerklePatriciaT
 		return ErrNotTimeTolerant
 	}
 	state, err := mc.GetStateById(bState, txn.ClientID)
+
 	if err != nil {
+		if err == util.ErrValueNotPresent {
+			if txn.Nonce > 1 {
+				return FutureTransaction
+			}
+			if txn.Nonce < 1 {
+				return PastTransaction
+			}
+			return nil
+		}
 		return err
 	}
 

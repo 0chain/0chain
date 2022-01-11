@@ -490,10 +490,14 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
 	s, err := c.GetStateById(sctx.GetState(), fromClient)
-	if err != nil {
+	if !isValid(err) {
 		return err
 	}
-	if s.Nonce+1 != txnNonce {
+	nonce := int64(0)
+	if s != nil {
+		nonce = s.Nonce
+	}
+	if nonce+1 != txnNonce {
 		b := sctx.GetBlock()
 		logging.Logger.Error("validate nonce - error",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn_nonce", txnNonce),
