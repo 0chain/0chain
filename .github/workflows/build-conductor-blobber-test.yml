@@ -23,9 +23,21 @@ jobs:
       run: |
         rm -rf ./*
         git clone https://github.com/0chain/0chain.git
+    
+    - name: Git clone blobber
+      run: |
         git clone https://github.com/0chain/blobber.git
+
+    - name: Git clone zboxcli
+      run: |    
         git clone https://github.com/0chain/zboxcli.git
+    
+    - name: Git clone zwalletcli
+      run: |
         git clone https://github.com/0chain/zwalletcli.git
+    
+    - name: Git clone 0dns
+      run: |
         git clone https://github.com/0chain/0dns.git
 
     - name: list pwd
