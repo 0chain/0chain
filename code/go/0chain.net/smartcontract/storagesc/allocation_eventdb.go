@@ -7,6 +7,7 @@ import (
 	"0chain.net/smartcontract/dbs/event"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -23,7 +24,13 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 		blobberMap = make(map[string]*BlobberAllocation)
 	)
 
-	for _, t := range alloc.Terms {
+	var allocTerms []event.AllocationTerm
+	err := json.Unmarshal([]byte(alloc.Terms), &allocTerms)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling allocation terms: %v", err)
+	}
+
+	for _, t := range allocTerms {
 		blobberIDs = append(blobberIDs, t.BlobberID)
 		blobberIDTermMapping[t.BlobberID] = struct {
 			AllocationID string
@@ -111,7 +118,7 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 		MovedBack:               alloc.MovedBack,
 		MovedToValidators:       alloc.MovedToValidators,
 		TimeUnit:                time.Duration(alloc.TimeUnit),
-		Curators:                alloc.Curators,
+		Curators:                strings.Split(alloc.Curators, ","),
 	}
 
 	return sa, nil
@@ -119,9 +126,9 @@ func allocationTableToStorageAllocation(alloc *event.Allocation, balances cstate
 
 func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocation, error) {
 
-	var allocationTerms []*event.AllocationTerm
+	var allocationTerms []event.AllocationTerm
 	for _, b := range sa.BlobberDetails {
-		allocationTerms = append(allocationTerms, &event.AllocationTerm{
+		allocationTerms = append(allocationTerms, event.AllocationTerm{
 			BlobberID:               b.BlobberID,
 			AllocationID:            b.AllocationID,
 			ReadPrice:               b.Terms.ReadPrice,
@@ -132,6 +139,11 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		})
 	}
 
+	termsByte, err := json.Marshal(allocationTerms)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling terms: %v", err)
+	}
+
 	return &event.Allocation{
 		AllocationID:               sa.ID,
 		TransactionID:              sa.Tx,
@@ -139,7 +151,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		ParityShards:               sa.ParityShards,
 		Size:                       sa.Size,
 		Expiration:                 int64(sa.Expiration),
-		Terms:                      allocationTerms,
+		Terms:                      string(termsByte),
 		Owner:                      sa.Owner,
 		OwnerPublicKey:             sa.OwnerPublicKey,
 		IsImmutable:                sa.IsImmutable,
@@ -156,7 +168,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedToChallenge:           sa.MovedToChallenge,
 		MovedBack:                  sa.MovedBack,
 		MovedToValidators:          sa.MovedToValidators,
-		Curators:                   sa.Curators,
+		Curators:                   strings.Join(sa.Curators, ","),
 		TimeUnit:                   int64(sa.TimeUnit),
 		NumWrites:                  sa.Stats.NumWrites,
 		NumReads:                   sa.Stats.NumReads,

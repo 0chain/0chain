@@ -5,9 +5,13 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs"
+	"context"
+	"encoding/json"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -178,9 +182,9 @@ func TestAllocations(t *testing.T) {
 	}
 
 	convertSa := func(sa StorageAllocation) Allocation {
-		var allocationTerms []*AllocationTerm
+		var allocationTerms []AllocationTerm
 		for _, b := range sa.BlobberDetails {
-			allocationTerms = append(allocationTerms, &AllocationTerm{
+			allocationTerms = append(allocationTerms, AllocationTerm{
 				BlobberID:               b.BlobberID,
 				AllocationID:            b.AllocationID,
 				ReadPrice:               b.Terms.ReadPrice,
@@ -190,6 +194,8 @@ func TestAllocations(t *testing.T) {
 				ChallengeCompletionTime: b.Terms.ChallengeCompletionTime,
 			})
 		}
+		termsByte, err := json.Marshal(allocationTerms)
+		require.NoError(t, err)
 
 		return Allocation{
 			AllocationID:               sa.ID,
@@ -198,7 +204,7 @@ func TestAllocations(t *testing.T) {
 			ParityShards:               sa.ParityShards,
 			Size:                       sa.Size,
 			Expiration:                 int64(sa.Expiration),
-			Terms:                      allocationTerms,
+			Terms:                      string(termsByte),
 			Owner:                      sa.Owner,
 			OwnerPublicKey:             sa.OwnerPublicKey,
 			IsImmutable:                sa.IsImmutable,
@@ -215,7 +221,7 @@ func TestAllocations(t *testing.T) {
 			MovedToChallenge:           sa.MovedToChallenge,
 			MovedBack:                  sa.MovedBack,
 			MovedToValidators:          sa.MovedToValidators,
-			Curators:                   sa.Curators,
+			Curators:                   strings.Join(sa.Curators, ","),
 			TimeUnit:                   int64(sa.TimeUnit),
 			NumWrites:                  sa.Stats.NumWrites,
 			NumReads:                   sa.Stats.NumReads,
@@ -250,7 +256,141 @@ func TestAllocations(t *testing.T) {
 	err = eventDb.AutoMigrate()
 	require.NoError(t, err)
 
-	sa := StorageAllocation{}
-	convertSa(sa)
+	sa := StorageAllocation{
+		ID:           "storage_allocation_id",
+		Tx:           "txn1",
+		DataShards:   10,
+		ParityShards: 6,
+		Size:         100,
+		Expiration:   1512,
+		Blobbers: []*StorageNode{
+			{
+				ID:      "blobber_1",
+				BaseURL: "base_url",
+				Geolocation: StorageNodeGeolocation{
+					Latitude:  120,
+					Longitude: 141,
+				},
+				Terms: Terms{
+					ReadPrice:               10,
+					WritePrice:              10,
+					MinLockDemand:           2,
+					MaxOfferDuration:        100,
+					ChallengeCompletionTime: 21,
+				},
+				Capacity:        100,
+				Used:            50,
+				LastHealthCheck: 17456,
+				PublicKey:       "public_key",
+				StakePoolSettings: stakePoolSettings{
+					DelegateWallet: "delegate_wallet",
+					MinStake:       10,
+					MaxStake:       12,
+					NumDelegates:   2,
+					ServiceCharge:  0.5,
+				},
+			},
+		},
+		Owner:          "owner_id",
+		OwnerPublicKey: "owner_public_key",
+		Stats: &StorageAllocationStats{
+			UsedSize:                  20,
+			NumWrites:                 5,
+			NumReads:                  5,
+			TotalChallenges:           12,
+			OpenChallenges:            11,
+			SuccessChallenges:         1,
+			FailedChallenges:          0,
+			LastestClosedChallengeTxn: "latest_closed_challenge_txn",
+		},
+		BlobberDetails: []*BlobberAllocation{
+			{
+				BlobberID:    "blobber_1",
+				AllocationID: "storage_allocation_id",
+				Terms: Terms{
+					ReadPrice:               10,
+					WritePrice:              10,
+					MinLockDemand:           2,
+					MaxOfferDuration:        100,
+					ChallengeCompletionTime: 21,
+				},
+			},
+		},
+		BlobberMap: map[string]*BlobberAllocation{
+			"hello": {
+				BlobberID:    "blobber_1",
+				AllocationID: "storage_allocation_id",
+				Terms: Terms{
+					ReadPrice:               10,
+					WritePrice:              10,
+					MinLockDemand:           2,
+					MaxOfferDuration:        100,
+					ChallengeCompletionTime: 21,
+				},
+			},
+		},
+		IsImmutable: false,
+		ReadPriceRange: PriceRange{
+			Min: 10,
+			Max: 20,
+		},
+		WritePriceRange: PriceRange{
+			Min: 10,
+			Max: 20,
+		},
+		MaxChallengeCompletionTime: 20,
+		ChallengeCompletionTime:    12,
+		StartTime:                  10212,
+		Finalized:                  true,
+		Canceled:                   false,
+		UsedSize:                   50,
+		MovedToChallenge:           10,
+		MovedBack:                  1,
+		MovedToValidators:          1,
+		TimeUnit:                   12453,
+		Curators:                   []string{"curator1"},
+	}
+
+	saAllocation := convertSa(sa)
+	data, err := json.Marshal(&saAllocation)
+	require.NoError(t, err)
+
+	t.Log("adding allocation")
+	eventAddSa := Event{
+		Model:       gorm.Model{},
+		BlockNumber: 1,
+		TxHash:      "txn_hash",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteAllocation),
+		Index:       saAllocation.AllocationID,
+		Data:        string(data),
+	}
+	eventDb.AddEvents(context.TODO(), []Event{eventAddSa})
+
+	alloc, err := eventDb.GetAllocation(saAllocation.AllocationID)
+	require.NoError(t, err)
+	require.EqualValues(t, alloc.DataShards, sa.DataShards)
+
+	sa.Size = 271
+	saAllocation = convertSa(sa)
+	data, err = json.Marshal(&saAllocation)
+	require.NoError(t, err)
+
+	t.Log("overwriting allocation")
+	eventOverwriteSa := Event{
+		Model:       gorm.Model{},
+		BlockNumber: 2,
+		TxHash:      "txn_hash2",
+		Type:        int(TypeStats),
+		Tag:         int(TagAddOrOverwriteAllocation),
+		Index:       saAllocation.AllocationID,
+		Data:        string(data),
+	}
+	eventDb.AddEvents(context.TODO(), []Event{eventOverwriteSa})
+
+	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
+	require.NoError(t, err)
+	require.EqualValues(t, alloc.Size, sa.Size)
+	t.Log("done")
 
 }
