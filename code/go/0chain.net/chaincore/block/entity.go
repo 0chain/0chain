@@ -907,9 +907,9 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer) error {
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 
@@ -1009,9 +1009,9 @@ func (b *Block) ComputeStateLocal(ctx context.Context, c Chainer) error {
 	}
 
 	if len(b.Events) > 0 && c.GetEventDb() != nil {
-		go func() {
-			c.GetEventDb().AddEvents(ctx, b.Events)
-		}()
+		go func(events []event.Event) {
+			c.GetEventDb().AddEvents(ctx, events)
+		}(b.Events)
 		b.Events = nil
 	}
 

@@ -242,6 +242,27 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
 
 }
 
+func (ssc *StorageSmartContract) GetWriteMarkersHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		allocationID = params.Get("allocation_id")
+	)
+
+	if allocationID == "" {
+		return nil, common.NewErrInternal("allocation id is empty")
+	}
+
+	writeMarkers, err := balances.GetEventDB().GetWriteMarkersForAllocationID(allocationID)
+	if err != nil {
+		return nil, common.NewErrInternal("can't get write markers", err.Error())
+	}
+
+	return writeMarkers, nil
+
+}
+
 func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
 	blobberID := params.Get("blobber")
 
