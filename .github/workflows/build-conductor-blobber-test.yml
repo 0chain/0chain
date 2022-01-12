@@ -19,9 +19,16 @@ jobs:
       with:
         go-version: '1.16.5'
 
+    - name: Get Branch
+      id: get_branch
+      run: |
+        BRANCH=$(echo ${GITHUB_REF#refs/heads/})
+        echo ::set-output name=BRANCH::${BRANCH}
+
     - name: Git clone 0chain
       run: |
         git clone https://github.com/0chain/0chain.git
+        git checkout ${{ steps.get_branch.outputs.BRANCH }}
     
     - name: Git clone blobber
       run: |
@@ -54,7 +61,7 @@ jobs:
       run: |
         cd zwalletcli && make install
     
-    - name: Install 0dns
+    - name: 0dns Patching
       run: |
         cd 0dns && git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch || true
         cd ../0dns && git apply ../0chain/docker.local/bin/conductor/0dns-local.patch || true
