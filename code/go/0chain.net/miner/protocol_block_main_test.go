@@ -72,57 +72,57 @@ func TestTxnIterInfo_checkForCurrent(t *testing.T) {
 				currentTxns: nil,
 			},
 		}, {
-			//	name:   "test_with_gap",
-			//	fields: fields{
-			//		invalidTxns: nil,
-			//		futureTxns: map[datastore.Key][]*transaction.Transaction{"1" : {txs1[4], txs1[5], txs1[6]}},
-			//		currentTxns: nil,
-			//	},
-			//	args:   args{txs1[0]},
-			//	want: fields{
-			//		invalidTxns: nil,
-			//		futureTxns:  map[datastore.Key][]*transaction.Transaction{"1" : {txs1[4], txs1[5], txs1[6]}},
-			//		currentTxns: nil,
-			//	},
-			//},{
-			//	name:   "test_with_next_and_gap",
-			//	fields: fields{
-			//		invalidTxns: nil,
-			//		futureTxns: map[datastore.Key][]*transaction.Transaction{"1" : {txs1[1], txs1[6], txs1[7], txs1[8]}},
-			//		currentTxns: nil,
-			//	},
-			//	args:   args{txs1[0]},
-			//	want: fields{
-			//		invalidTxns: nil,
-			//		futureTxns:  map[datastore.Key][]*transaction.Transaction{"1" : {txs1[6], txs1[7], txs1[8]}},
-			//		currentTxns: []*transaction.Transaction{txs1[1]},
-			//	},
-			//},{
-			//	name:   "test_with_next_two_and_gap",
-			//	fields: fields{
-			//		invalidTxns: nil,
-			//		futureTxns: map[datastore.Key][]*transaction.Transaction{"1" : {txs1[1], txs1[4], txs1[8]}},
-			//		currentTxns: nil,
-			//	},
-			//	args:   args{txs1[0]},
-			//	want: fields{
-			//		invalidTxns: nil,
-			//		futureTxns:  map[datastore.Key][]*transaction.Transaction{"1" : {txs1[8]}},
-			//		currentTxns: []*transaction.Transaction{txs1[1], txs1[4]},
-			//	},
-			//},{
-			//	name:   "test_with_next_three_and_no_gap",
-			//	fields: fields{
-			//		invalidTxns: nil,
-			//		futureTxns: map[datastore.Key][]*transaction.Transaction{"1" : {txs1[1], txs1[4], txs1[6]}},
-			//		currentTxns: nil,
-			//	},
-			//	args:   args{txs1[0]},
-			//	want: fields{
-			//		invalidTxns: nil,
-			//		futureTxns:  map[string][]*transaction.Transaction{"1":{}},
-			//		currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6]},
-			//	},
+			name: "test_with_gap",
+			fields: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[4], txs1[5], txs1[6]}},
+				currentTxns: nil,
+			},
+			args: args{txs1[0]},
+			want: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[4], txs1[5], txs1[6]}},
+				currentTxns: nil,
+			},
+		}, {
+			name: "test_with_next_and_gap",
+			fields: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[6], txs1[7], txs1[8]}},
+				currentTxns: nil,
+			},
+			args: args{txs1[0]},
+			want: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[6], txs1[7], txs1[8]}},
+				currentTxns: []*transaction.Transaction{txs1[1]},
+			},
+		}, {
+			name: "test_with_next_two_and_gap",
+			fields: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[4], txs1[8]}},
+				currentTxns: nil,
+			},
+			args: args{txs1[0]},
+			want: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[8]}},
+				currentTxns: []*transaction.Transaction{txs1[1], txs1[4]},
+			},
+		}, {
+			name: "test_with_next_three_and_no_gap",
+			fields: fields{
+				invalidTxns: nil,
+				futureTxns:  map[datastore.Key][]*transaction.Transaction{"1": {txs1[1], txs1[4], txs1[6]}},
+				currentTxns: nil,
+			},
+			args: args{txs1[0]},
+			want: fields{
+				invalidTxns: nil,
+				futureTxns:  map[string][]*transaction.Transaction{"1": {}},
+				currentTxns: []*transaction.Transaction{txs1[1], txs1[4], txs1[6]},
+			},
 		}, {
 			name: "test_with_next_three_and_2_similar_no_gap",
 			fields: fields{

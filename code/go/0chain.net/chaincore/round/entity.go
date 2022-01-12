@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
-	"runtime/pprof"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -586,7 +584,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
-		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		//pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
 			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
