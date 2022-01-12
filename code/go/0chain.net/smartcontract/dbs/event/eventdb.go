@@ -1,9 +1,10 @@
 package event
 
 import (
+	"time"
+
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/postgresql"
-	"time"
 )
 
 const DefaultQueryTimeout = 5 * time.Second
@@ -28,7 +29,7 @@ type EventDb struct {
 }
 
 func (edb *EventDb) AutoMigrate() error {
-	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &WriteMarker{}, &Transaction{}); err != nil {
+	if err := edb.Store.Get().AutoMigrate(&Event{}, &Blobber{}, &WriteMarker{}, &Transaction{}, &ValidationNode{}); err != nil {
 		return err
 	}
 	return nil
