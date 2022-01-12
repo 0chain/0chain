@@ -317,6 +317,9 @@ func (msc *StorageSmartContract) GetErrors(
 	return &transaction, err
 }
 
+/*
+Deprecated: the following function would be deprecated with events db
+*/
 func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
