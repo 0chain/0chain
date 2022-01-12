@@ -109,6 +109,9 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
+	// events db
+	ssc.SmartContractExecutionStats["/get_transaction"] = ssc.GetTransactionByHashHandler
+
 }
 
 func (ssc *StorageSmartContract) GetName() string {
