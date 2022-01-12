@@ -360,6 +360,38 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 	return allocations, nil
 }
 
+func (ssc *StorageSmartContract) GetActiveAllocationsCountHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	count, err := balances.GetEventDB().GetActiveAllocationsCount()
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
+			"can't get active allocations count")
+	}
+
+	response := struct {
+		ActiveAllocationsCount int64 `json:"active_allocations_count"`
+	}{count}
+
+	return response, nil
+}
+
+func (ssc *StorageSmartContract) GetBlobberAllocationsCountHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	count, err := balances.GetEventDB().GetBlobberAllocationCount()
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true,
+			"can't get blobber allocations count")
+	}
+
+	response := struct {
+		BlobberAllocationsCount int64 `json:"blobber_allocations_count"`
+	}{count}
+
+	return response, nil
+}
+
 func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 

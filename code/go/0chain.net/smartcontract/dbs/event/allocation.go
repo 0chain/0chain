@@ -90,6 +90,36 @@ func (edb EventDb) GetClientsAllocation(clientID string) ([]Allocation, error) {
 	return allocs, nil
 }
 
+func (edb EventDb) GetActiveAllocationsCount() (int64, error) {
+
+	var count int64
+
+	result := edb.Store.Get().
+		Model(&Allocation{}).
+		Where(&Allocation{Finalized: false, Cancelled: false}).
+		Count(&count)
+	if result.Error != nil {
+		return 0, fmt.Errorf("error retrieving active allocations , error: %v", result.Error)
+	}
+
+	return count, nil
+}
+
+func (edb EventDb) GetBlobberAllocationCount() (int64, error) {
+
+	var count int64
+
+	result := edb.Store.Get().
+		Raw("SELECT SUM(parity_shards) + SUM(data_shards) FROM allocations WHERE finalized = ? AND cancelled = ?",
+			false, false).
+		Scan(&count)
+	if result.Error != nil {
+		return 0, fmt.Errorf("error retrieving blobber allocations count, error: %v", result.Error)
+	}
+
+	return count, nil
+}
+
 func (edb *EventDb) overwriteAllocation(alloc *Allocation) error {
 
 	result := edb.Store.Get().
