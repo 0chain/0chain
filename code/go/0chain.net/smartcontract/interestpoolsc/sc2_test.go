@@ -16,6 +16,7 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -266,11 +267,6 @@ func testLock(t *testing.T, tokens float64, duration time.Duration, startBalance
 			&util.MerklePatriciaTrie{},
 			&state.Deserializer{},
 			txn,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
 		),
 		clientStartBalance: zcnToBalance(startBalance),
 		store:              make(map[datastore.Key]util.Serializable),
@@ -378,6 +374,13 @@ func (sc *mockStateContext) GetClientBalance(_ datastore.Key) (state.Balance, er
 	return sc.clientStartBalance, nil
 }
 func (sc *mockStateContext) SetStateContext(_ *state.State) error { return nil }
+func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
+	return nil, false, nil
+}
+func (sc *mockStateContext) GetLatestSupportedSCVersion() *semver.Version { return nil }
+func (sc *mockStateContext) SetLatestSupportedSCVersion(datastore.Key, *semver.Version) error {
+	return nil
+}
 
 func (sc *mockStateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {
 	return sc.store[key], nil

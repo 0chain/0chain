@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -101,6 +102,18 @@ func (sc *mockStateContext) AddTransfer(t *state.Transfer) error {
 
 func (sc *mockStateContext) AddMint(m *state.Mint) error {
 	return sc.ctx.AddMint(m)
+}
+
+func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
+	return nil, false, nil
+}
+
+func (sc *mockStateContext) GetLatestSupportedSCVersion() *semver.Version {
+	return nil
+}
+
+func (sc *mockStateContext) SetLatestSupportedSCVersion(datastore.Key, *semver.Version) error {
+	return nil
 }
 
 func zcnToInt64(token float64) int64 {

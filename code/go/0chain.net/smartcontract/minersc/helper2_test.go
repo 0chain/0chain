@@ -46,7 +46,17 @@ func (tb *mockStateContext) GetEventDB() *event.EventDb                         
 func (sc *mockStateContext) GetTransfers() []*state.Transfer {
 	return sc.ctx.GetTransfers()
 }
-func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool) { return nil, false }
+func (sc *mockStateContext) CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
+	return nil, false, nil
+}
+
+func (sc *mockStateContext) GetLatestSupportedSCVersion() *semver.Version {
+	return nil
+}
+
+func (sc *mockStateContext) SetLatestSupportedSCVersion(datastore.Key, *semver.Version) error {
+	return nil
+}
 
 func (sc *mockStateContext) GetMints() []*state.Mint {
 	return sc.ctx.GetMints()

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"sync"
 
 	"0chain.net/chaincore/block"
@@ -61,8 +62,17 @@ type StateContextI interface {
 	GetEvents() []event.Event   // cannot use in smart contracts or REST endpoints
 	GetEventDB() *event.EventDb // do not use in smart contracts can use in REST endpoints
 
+	SCVersionManager
+}
+
+type SCVersionManager interface {
 	// CanSCVersionUpdate checks if smart contract version can be updated now
 	CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter)
+	// GetLatestSupportedSCVersion returns the latest supported SC version,
+	// this could be new SC version that is not being used
+	GetLatestSupportedSCVersion() *semver.Version
+
+	SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error
 }
 
 // SwitchAdapter represents the adapter function signature
@@ -71,50 +81,106 @@ type SwitchAdapter func(util.MerklePatriciaTrieI) error
 
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
-	block                         *block.Block
-	state                         util.MerklePatriciaTrieI
-	txn                           *transaction.Transaction
-	transfers                     []*state.Transfer
-	signedTransfers               []*state.SignedTransfer
-	mints                         []*state.Mint
-	events                        []event.Event
-	clientStateDeserializer       state.DeserializerI
-	getSharders                   func(*block.Block) []string
-	getLastestFinalizedMagicBlock func() *block.Block
-	getChainCurrentMagicBlock     func() *block.MagicBlock
-	getSignature                  func() encryption.SignatureScheme
-	canSCVersionUpdate            func() (*semver.Version, bool, SwitchAdapter)
-	eventDb                       *event.EventDb
-	mutex                         *sync.Mutex
+	state                        util.MerklePatriciaTrieI
+	clientStateDeserializer      state.DeserializerI
+	mutex                        *sync.Mutex
+	block                        *block.Block
+	txn                          *transaction.Transaction
+	eventDb                      *event.EventDb
+	transfers                    []*state.Transfer
+	signedTransfers              []*state.SignedTransfer
+	mints                        []*state.Mint
+	events                       []event.Event
+	getSharders                  func(*block.Block) []string
+	getLatestFinalizedMagicBlock func(context.Context) *block.Block
+	getChainCurrentMagicBlock    func() *block.MagicBlock
+	getSignature                 func() encryption.SignatureScheme
+	canSCVersionUpdate           func() (*semver.Version, bool, SwitchAdapter)
+	getLatestSupportedSCVersion  func() *semver.Version
+	setLatestSupportedSCVersion  func(minerID datastore.Key, v *semver.Version) error
 }
 
-// NewStateContext - create a new state context
+// Option is the option type used when creating the StateContext instance
+type Option func(*StateContext)
+
 func NewStateContext(
 	b *block.Block,
 	s util.MerklePatriciaTrieI,
 	csd state.DeserializerI,
 	t *transaction.Transaction,
-	getSharderFunc func(*block.Block) []string,
-	getLastestFinalizedMagicBlock func() *block.Block,
-	getChainCurrentMagicBlock func() *block.MagicBlock,
-	getChainSignature func() encryption.SignatureScheme,
-	canSCVersionUpdate func() (*semver.Version, bool, SwitchAdapter),
-	eventDb *event.EventDb,
-) (
-	balances *StateContext,
-) {
-	return &StateContext{
-		block:                         b,
-		state:                         s,
-		clientStateDeserializer:       csd,
-		txn:                           t,
-		getSharders:                   getSharderFunc,
-		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
-		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
-		getSignature:                  getChainSignature,
-		canSCVersionUpdate:            canSCVersionUpdate,
-		eventDb:                       eventDb,
-		mutex:                         new(sync.Mutex),
+	options ...Option) *StateContext {
+
+	stc := &StateContext{
+		block:                   b,
+		state:                   s,
+		clientStateDeserializer: csd,
+		txn:                     t,
+		mutex:                   &sync.Mutex{},
+	}
+
+	for _, opt := range options {
+		opt(stc)
+	}
+
+	return stc
+}
+
+// GetShardersFunc option to set function for StateContext to get sharders
+func GetShardersFunc(f func(*block.Block) []string) Option {
+	return func(s *StateContext) {
+		s.getSharders = f
+	}
+}
+
+// GetLatestFinalizedMagicBlockFunc option to set function for StateContext to get latest
+// finalized magic block
+func GetLatestFinalizedMagicBlockFunc(f func(ctx context.Context) *block.Block) Option {
+	return func(s *StateContext) {
+		s.getLatestFinalizedMagicBlock = f
+	}
+}
+
+// GetCurrentMagicBlockFunc option to set function for StateContext to get current magic block
+func GetCurrentMagicBlockFunc(f func() *block.MagicBlock) Option {
+	return func(s *StateContext) {
+		s.getChainCurrentMagicBlock = f
+	}
+}
+
+// GetSignatureSchemeFunc option to set function for StateContext to get signature
+// scheme
+func GetSignatureSchemeFunc(f func() encryption.SignatureScheme) Option {
+	return func(s *StateContext) {
+		s.getSignature = f
+	}
+}
+
+// CanUpdateSCVersionFunc option to set function for StateContext to check
+// whether SC version can be updated
+func CanUpdateSCVersionFunc(f func() (*semver.Version, bool, SwitchAdapter)) Option {
+	return func(s *StateContext) {
+		s.canSCVersionUpdate = f
+	}
+}
+
+// EventDB option to set events db to StateContext
+func EventDB(edb *event.EventDb) Option {
+	return func(s *StateContext) {
+		s.eventDb = edb
+	}
+}
+
+// GetLatestSupportedSCVersion option to set function for StateContext to get latest
+// supported SC version
+func GetLatestSupportedSCVersion(f func() *semver.Version) Option {
+	return func(s *StateContext) {
+		s.getLatestSupportedSCVersion = f
+	}
+}
+
+func SetLatestSupportedSCVersion(f func(datastore.Key, *semver.Version) error) Option {
+	return func(s *StateContext) {
+		s.setLatestSupportedSCVersion = f
 	}
 }
 
@@ -272,7 +338,7 @@ func (sc *StateContext) getClientState(clientID string) (*state.State, error) {
 	return s, nil
 }
 
-//GetClientBalance - get the balance of the client
+// GetClientBalance - get the balance of the client
 func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error) {
 	s, err := sc.getClientState(clientID)
 	if err != nil {
@@ -286,7 +352,7 @@ func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
 }
 
 func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {
-	return sc.getLastestFinalizedMagicBlock()
+	return sc.getLatestFinalizedMagicBlock(context.Background())
 }
 
 func (sc *StateContext) GetChainCurrentMagicBlock() *block.MagicBlock {
@@ -323,6 +389,14 @@ func (sc *StateContext) SetStateContext(s *state.State) error {
 // CanSCVersionUpdate checks if we can update the smart contract
 func (sc *StateContext) CanUpdateSCVersion() (*semver.Version, bool, SwitchAdapter) {
 	return sc.canSCVersionUpdate()
+}
+
+func (sc *StateContext) GetLatestSupportedSCVersion() *semver.Version {
+	return sc.getLatestSupportedSCVersion()
+}
+
+func (sc *StateContext) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {
+	return sc.setLatestSupportedSCVersion(minerID, v)
 }
 
 // InsertTrieNode inserts a node into MPT

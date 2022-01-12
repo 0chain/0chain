@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/hex"
 
 	"0chain.net/smartcontract/dbs"
@@ -68,11 +69,11 @@ func getBalances(
 		mpt,
 		&state.Deserializer{},
 		txn,
-		func(*block.Block) []string { return data.Sharders },
-		func() *block.Block { return bk },
-		func() *block.MagicBlock { return magicBlock },
-		func() encryption.SignatureScheme { return signatureScheme },
-		data.EventDb,
+		cstate.EventDB(data.EventDb),
+		cstate.GetShardersFunc(func(*block.Block) []string { return data.Sharders }),
+		cstate.GetLatestFinalizedMagicBlockFunc(func(context.Context) *block.Block { return bk }),
+		cstate.GetCurrentMagicBlockFunc(func() *block.MagicBlock { return magicBlock }),
+		cstate.GetSignatureSchemeFunc(func() encryption.SignatureScheme { return signatureScheme }),
 	)
 }
 
@@ -109,11 +110,10 @@ func setUpMpt(
 				Hash: encryption.Hash("mock transaction hash"),
 			},
 		},
-		func(*block.Block) []string { return []string{} },
-		func() *block.Block { return bk },
-		func() *block.MagicBlock { return magicBlock },
-		func() encryption.SignatureScheme { return signatureScheme },
-		nil,
+		cstate.GetShardersFunc(func(*block.Block) []string { return []string{} }),
+		cstate.GetLatestFinalizedMagicBlockFunc(func(context.Context) *block.Block { return bk }),
+		cstate.GetCurrentMagicBlockFunc(func() *block.MagicBlock { return magicBlock }),
+		cstate.GetSignatureSchemeFunc(func() encryption.SignatureScheme { return signatureScheme }),
 	)
 	log.Println("created balances")
 

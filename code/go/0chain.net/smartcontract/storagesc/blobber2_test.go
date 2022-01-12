@@ -249,11 +249,6 @@ func testCommitBlobberRead(
 			&util.MerklePatriciaTrie{},
 			&state.Deserializer{},
 			txn,
-			nil,
-			nil,
-			nil,
-			nil,
-			nil,
 		),
 		store: make(map[datastore.Key]util.Serializable),
 	}

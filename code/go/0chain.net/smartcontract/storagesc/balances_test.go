@@ -3,7 +3,9 @@ package storagesc
 import (
 	"testing"
 
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
@@ -92,6 +94,10 @@ func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
 	return nil
 }
 
+func (tb *testBalances) SetLatestSupportedSCVersion(datastore.Key, *semver.Version) error {
+	return nil
+}
+
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.NewBLS0ChainScheme()
 }
@@ -148,5 +154,13 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount
 	tb.transfers = append(tb.transfers, t)
+	return nil
+}
+
+func (tb *testBalances) CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
+	return nil, false, nil
+}
+
+func (tb *testBalances) GetLatestSupportedSCVersion() *semver.Version {
 	return nil
 }

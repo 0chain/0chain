@@ -130,14 +130,14 @@ func (c *Chain) NewStateContext(
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, c.clientStateDeserializer,
 		txn,
-		c.GetBlockSharders,
-		func() *block.Block {
-			return c.GetLatestFinalizedMagicBlock(context.Background())
-		},
-		c.GetCurrentMagicBlock,
-		c.GetSignatureScheme,
-		smartcontract.CanUpdateSCVersion,
-		eventDb,
+		bcstate.EventDB(eventDb),
+		bcstate.GetShardersFunc(c.GetBlockSharders),
+		bcstate.GetLatestFinalizedMagicBlockFunc(c.GetLatestFinalizedMagicBlock),
+		bcstate.GetCurrentMagicBlockFunc(c.GetCurrentMagicBlock),
+		bcstate.GetSignatureSchemeFunc(c.GetSignatureScheme),
+		bcstate.CanUpdateSCVersionFunc(smartcontract.CanUpdateSCVersion),
+		bcstate.GetLatestSupportedSCVersion(smartcontract.GetLatestSupportedSCVersion),
+		bcstate.SetLatestSupportedSCVersion(c.SetLatestSupportedSCVersion),
 	)
 }
 
