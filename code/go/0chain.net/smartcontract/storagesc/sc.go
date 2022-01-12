@@ -61,6 +61,8 @@ func (ssc *StorageSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCCo
 	// allocation
 	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 	ssc.SmartContract.RestHandlers["/allocations"] = ssc.GetAllocationsHandler
+	ssc.SmartContract.RestHandlers["/active_allocations_count"] = ssc.GetActiveAllocationsCountHandler
+	ssc.SmartContract.RestHandlers["/blobber_allocations_count"] = ssc.GetBlobberAllocationsCountHandler
 	ssc.SmartContract.RestHandlers["/allocation_min_lock"] = ssc.GetAllocationMinLockHandler
 	ssc.SmartContractExecutionStats["new_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
