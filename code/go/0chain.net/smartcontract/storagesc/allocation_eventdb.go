@@ -144,7 +144,7 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		return nil, fmt.Errorf("error marshalling terms: %v", err)
 	}
 
-	return &event.Allocation{
+	alloc := &event.Allocation{
 		AllocationID:               sa.ID,
 		TransactionID:              sa.Tx,
 		DataShards:                 sa.DataShards,
@@ -170,14 +170,19 @@ func storageAllocationToAllocationTable(sa *StorageAllocation) (*event.Allocatio
 		MovedToValidators:          sa.MovedToValidators,
 		Curators:                   strings.Join(sa.Curators, ","),
 		TimeUnit:                   int64(sa.TimeUnit),
-		NumWrites:                  sa.Stats.NumWrites,
-		NumReads:                   sa.Stats.NumReads,
-		TotalChallenges:            sa.Stats.TotalChallenges,
-		OpenChallenges:             sa.Stats.OpenChallenges,
-		SuccessfulChallenges:       sa.Stats.SuccessChallenges,
-		FailedChallenges:           sa.Stats.FailedChallenges,
-		LatestClosedChallengeTxn:   sa.Stats.LastestClosedChallengeTxn,
-	}, nil
+	}
+
+	if sa.Stats != nil {
+		alloc.NumWrites = sa.Stats.NumWrites
+		alloc.NumReads = sa.Stats.NumReads
+		alloc.TotalChallenges = sa.Stats.TotalChallenges
+		alloc.OpenChallenges = sa.Stats.OpenChallenges
+		alloc.SuccessfulChallenges = sa.Stats.SuccessChallenges
+		alloc.FailedChallenges = sa.Stats.FailedChallenges
+		alloc.LatestClosedChallengeTxn = sa.Stats.LastestClosedChallengeTxn
+	}
+
+	return alloc, nil
 }
 
 func emitAddOrOverwriteAllocation(sa *StorageAllocation, balances cstate.StateContextI) error {

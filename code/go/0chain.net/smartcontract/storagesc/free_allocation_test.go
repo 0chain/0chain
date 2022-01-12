@@ -304,7 +304,6 @@ func TestFreeAllocationRequest(t *testing.T) {
 		input, err := json.Marshal(&inputObj)
 		require.NoError(t, err)
 
-		require.NoError(t, err)
 		balances.On(
 			"GetTrieNode",
 			freeStorageAssignerKey(ssc.ID, p.marker.Assigner),
@@ -788,6 +787,11 @@ func TestUpdateFreeStorageRequest(t *testing.T) {
 				return false
 			}),
 		).Return("", nil).Once()
+
+		balances.On(
+			"EmitEvent",
+			event.TypeStats, event.TagAddOrOverwriteAllocation, mock.Anything, mock.Anything,
+		).Return().Maybe()
 
 		balances.On(
 			"EmitEvent",
