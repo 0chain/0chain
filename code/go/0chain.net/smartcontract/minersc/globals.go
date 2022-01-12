@@ -1,10 +1,11 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/smartcontractinterface"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"0chain.net/chaincore/smartcontractinterface"
 
 	"0chain.net/core/util"
 	"0chain.net/smartcontract"
@@ -86,6 +87,7 @@ const (
 	DbsEventsMaxIdleConns
 	DbsEventsMaxOpenConns
 	DbsEventsConnMaxLifetime
+	DbsEventsVersion
 
 	HealthCheckDeepScanEnabled                 // todo restart worker
 	HealthCheckDeepScanBatchSize               // todo restart worker
@@ -165,6 +167,7 @@ var GlobalSettingName = []string{
 	"server_chain.dbs.events.max_idle_conns",
 	"server_chain.dbs.events.max_open_conns",
 	"server_chain.dbs.events.conn_max_lifetime",
+	"server_chain.dbs.events.version",
 
 	"server_chain.health_check.deep_scan.enabled",
 	"server_chain.health_check.deep_scan.batch_size",
@@ -245,6 +248,7 @@ var GlobalSettingInfo = map[string]struct {
 	GlobalSettingName[DbsEventsMaxIdleConns]:    {smartcontract.Int, true},
 	GlobalSettingName[DbsEventsMaxOpenConns]:    {smartcontract.Int, true},
 	GlobalSettingName[DbsEventsConnMaxLifetime]: {smartcontract.Duration, true},
+	GlobalSettingName[DbsEventsVersion]:         {smartcontract.Int, true},
 
 	GlobalSettingName[HealthCheckDeepScanEnabled]:                 {smartcontract.Boolean, false},
 	GlobalSettingName[HealthCheckDeepScanBatchSize]:               {smartcontract.Int64, false},
