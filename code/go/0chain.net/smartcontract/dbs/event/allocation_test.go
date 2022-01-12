@@ -355,7 +355,6 @@ func TestAllocations(t *testing.T) {
 	data, err := json.Marshal(&saAllocation)
 	require.NoError(t, err)
 
-	t.Log("adding allocation")
 	eventAddSa := Event{
 		Model:       gorm.Model{},
 		BlockNumber: 1,
@@ -376,7 +375,6 @@ func TestAllocations(t *testing.T) {
 	data, err = json.Marshal(&saAllocation)
 	require.NoError(t, err)
 
-	t.Log("overwriting allocation")
 	eventOverwriteSa := Event{
 		Model:       gorm.Model{},
 		BlockNumber: 2,
@@ -391,6 +389,10 @@ func TestAllocations(t *testing.T) {
 	alloc, err = eventDb.GetAllocation(saAllocation.AllocationID)
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Size, sa.Size)
-	t.Log("done")
+
+	allocs, err := eventDb.GetClientsAllocation(sa.Owner)
+	require.NoError(t, err)
+	require.EqualValues(t, 1, len(allocs))
+	require.EqualValues(t, allocs[0].Size, sa.Size)
 
 }

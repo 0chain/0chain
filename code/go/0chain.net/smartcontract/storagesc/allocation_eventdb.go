@@ -216,3 +216,24 @@ func getStorageAllocationFromDb(id string, balances cstate.StateContextI) (*Stor
 
 	return sa, nil
 }
+
+func getClientAllocationsFromDb(clientID string, balances cstate.StateContextI) ([]*StorageAllocation, error) {
+
+	var sas []*StorageAllocation
+
+	allocs, err := balances.GetEventDB().GetClientsAllocation(clientID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, alloc := range allocs {
+		sa, err := allocationTableToStorageAllocation(&alloc, balances)
+		if err != nil {
+			return nil, err
+		}
+
+		sas = append(sas, sa)
+	}
+
+	return sas, nil
+}

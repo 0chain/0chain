@@ -76,6 +76,20 @@ func (edb EventDb) GetAllocation(id string) (*Allocation, error) {
 	return &alloc, nil
 }
 
+func (edb EventDb) GetClientsAllocation(clientID string) ([]Allocation, error) {
+	var allocs []Allocation
+
+	result := edb.Store.Get().
+		Model(&Allocation{}).
+		Where(&Allocation{Owner: clientID}).
+		Find(&allocs)
+	if result.Error != nil {
+		return nil, fmt.Errorf("error retrieving allocation for client: %v, error: %v", clientID, result.Error)
+	}
+
+	return allocs, nil
+}
+
 func (edb *EventDb) overwriteAllocation(alloc *Allocation) error {
 
 	result := edb.Store.Get().

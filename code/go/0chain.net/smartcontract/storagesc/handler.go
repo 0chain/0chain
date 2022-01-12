@@ -317,7 +317,7 @@ func (msc *StorageSmartContract) GetErrors(
 	return &transaction, err
 }
 
-func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
+func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
 	clientID := params.Get("client")
@@ -342,6 +342,22 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		}
 	}
 	return result, nil
+}
+
+func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	clientID := params.Get("client")
+	if balances.GetEventDB() == nil {
+		return ssc.GetAllocationsHandlerDeprecated(ctx, params, balances)
+	}
+
+	allocations, err := getClientAllocationsFromDb(clientID, balances)
+	if err != nil {
+		return nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocations")
+	}
+
+	return allocations, nil
 }
 
 func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context,
