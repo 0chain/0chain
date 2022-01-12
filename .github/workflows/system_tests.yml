@@ -23,8 +23,8 @@ on:
         description: 'validator branch to deploy'
         default: 'staging'
         required: true
-       authorizor_branch:
-         description: 'authorizor branch to deploy'
+       authorizer_branch:
+         description: 'authorizer branch to deploy'
          default: 'staging'
          required: true
        zbox_branch:
@@ -56,7 +56,7 @@ jobs:
       validator_branch: ${{ github.event.inputs.validator_branch }}
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       zblock_branch: ${{ github.event.inputs.zblock_branch }}
-      authorizor_branch: ${{ github.event.inputs.authorizor_branch }}
+      authorizer_branch: ${{ github.event.inputs.authorizer_branch }}
       explorer_branch: ${{ github.event.inputs.explorer_branch }}
       zproxy_branch: staging
       zsearch_branch: staging
