@@ -219,6 +219,9 @@ func (msc *StorageSmartContract) GetTransactionByFilterHandler(
 	return nil, errors.New("No filter selected")
 }
 
+/*
+Deprecated: the following function would be deprecated with events db
+*/
 func (ssc *StorageSmartContract) GetAllocationsHandlerDeprecated(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (interface{}, error) {
 
