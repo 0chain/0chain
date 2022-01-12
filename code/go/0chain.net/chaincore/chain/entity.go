@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/chaincore/smartcontract"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/blang/semver/v4"
 	"github.com/herumi/bls/ffi/go/bls"
 
 	"go.uber.org/zap"
@@ -199,6 +200,8 @@ type Chain struct {
 
 	// compute state
 	computeBlockStateC chan struct{}
+
+	scVersions scVersionsManager
 }
 
 // SyncBlockReq represents a request to sync blocks, it will be
@@ -468,6 +471,7 @@ func Provider() datastore.Entity {
 	c.bscMutex = &sync.Mutex{}
 
 	c.computeBlockStateC = make(chan struct{}, 1)
+	c.scVersions = newSCVersionsManager(mb, 80) // 80 percent to consensus
 	return c
 }
 
@@ -1140,6 +1144,10 @@ func (c *Chain) GetRoundTimeoutCount() int64 {
 //GetSignatureScheme - get the signature scheme used by this chain
 func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme())
+}
+
+func (c *Chain) SetLatestSupportedSCVersion(minerID datastore.Key, v *semver.Version) error {
+	return c.scVersions.Set(minerID, *v)
 }
 
 // CanShardBlocks - is the network able to effectively shard the blocks?

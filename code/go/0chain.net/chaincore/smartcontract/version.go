@@ -81,7 +81,22 @@ func CanUpdateSCVersion() (*semver.Version, bool, cstate.SwitchAdapter) {
 	if err != nil {
 		panic(err)
 	}
+
+	if v2.LE(scVersion.Get()) {
+		return nil, false, nil
+	}
+
 	return v2, true, nil
+}
+
+// GetLatestSupportedSCVersion returns the latest supported sc version
+func GetLatestSupportedSCVersion() *semver.Version {
+	v2, err := semver.New("2.0.0")
+	if err != nil {
+		panic(err)
+	}
+
+	return v2
 }
 
 // RegisterSmartContracts register the smart contracts with version

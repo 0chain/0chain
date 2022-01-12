@@ -286,7 +286,7 @@ func (msc *MinerSmartContract) scVersionHandler(
 		Version string `json:"version"`
 		Upgrade struct {
 			Allow   bool   `json:"allow"`
-			Version string `json:"version"`
+			Version string `json:"version,omitempty"`
 		} `json:"upgrade"`
 	}{
 		Version: scv.String(),
