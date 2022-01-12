@@ -511,8 +511,11 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) error {
 	sc := sctx.GetState()
 	s, err := c.GetStateById(sc, fromClient)
-	if err != nil {
+	if !isValid(err) {
 		return err
+	}
+	if s == nil {
+		s = &state.State{}
 	}
 	if err := sctx.SetStateContext(s); err != nil {
 		return err
