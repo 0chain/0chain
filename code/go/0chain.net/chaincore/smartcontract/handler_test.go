@@ -256,7 +256,7 @@ func TestGetSmartContract(t *testing.T) {
 			}
 			require.EqualValues(t, tt.name, got.GetName())
 			require.EqualValues(t, tt.address, got.GetAddress())
-			require.EqualValues(t, tt.restpoints, len(got.GetRestPoints()))
+			require.EqualValues(t, tt.restpoints, len(got.GetRestPoints(0)))
 		})
 	}
 }

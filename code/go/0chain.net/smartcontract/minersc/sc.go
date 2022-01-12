@@ -83,30 +83,30 @@ func (ipsc *MinerSmartContract) GetExecutionStats() map[string]interface{} {
 	return ipsc.SmartContractExecutionStats
 }
 
-func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
-	return msc.RestHandlers
+func (msc *MinerSmartContract) GetRestPoints(version int) map[string]sci.SmartContractRestHandler {
+	return msc.RestHandlers[version]
 }
 
 //setSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) setSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
-	msc.SmartContract.RestHandlers["/globalSettings"] = msc.getGlobalsHandler
-	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
-	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
-	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
-	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
-	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
-	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
-	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler
-	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
-	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
-	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
+	msc.SmartContract.RestHandlers[0]["/globalSettings"] = msc.getGlobalsHandler
+	msc.SmartContract.RestHandlers[0]["/getNodepool"] = msc.GetNodepoolHandler
+	msc.SmartContract.RestHandlers[0]["/getUserPools"] = msc.GetUserPoolsHandler
+	msc.SmartContract.RestHandlers[0]["/getMinerList"] = msc.GetMinerListHandler
+	msc.SmartContract.RestHandlers[0]["/getSharderList"] = msc.GetSharderListHandler
+	msc.SmartContract.RestHandlers[0]["/getSharderKeepList"] = msc.GetSharderKeepListHandler
+	msc.SmartContract.RestHandlers[0]["/getPhase"] = msc.GetPhaseHandler
+	msc.SmartContract.RestHandlers[0]["/getDkgList"] = msc.GetDKGMinerListHandler
+	msc.SmartContract.RestHandlers[0]["/getMpksList"] = msc.GetMinersMpksListHandler
+	msc.SmartContract.RestHandlers[0]["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
+	msc.SmartContract.RestHandlers[0]["/getMagicBlock"] = msc.GetMagicBlockHandler
 
-	msc.SmartContract.RestHandlers["/getEvents"] = msc.GetEventsHandler
+	msc.SmartContract.RestHandlers[0]["/getEvents"] = msc.GetEventsHandler
 
-	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
-	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
-	msc.SmartContract.RestHandlers["/configs"] = msc.configHandler
+	msc.SmartContract.RestHandlers[0]["/nodeStat"] = msc.nodeStatHandler
+	msc.SmartContract.RestHandlers[0]["/nodePoolStat"] = msc.nodePoolStatHandler
+	msc.SmartContract.RestHandlers[0]["/configs"] = msc.configHandler
 
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)

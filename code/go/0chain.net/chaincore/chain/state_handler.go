@@ -162,7 +162,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
-	restPoints := scInt.GetRestPoints()
+	restPoints := scInt.GetRestPoints(0)
 	names := make([]string, 0, len(restPoints))
 	for funcName := range restPoints {
 		names = append(names, funcName)

@@ -75,6 +75,7 @@ func SetupDefaultConfig() {
 	// Asynchronous blocks fetching.
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_miners", 100)
 	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
+	viper.SetDefault("eventdb.version", 0)
 }
 
 // SetupConfig setups the main configuration system.

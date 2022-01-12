@@ -88,7 +88,7 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 			name: "TestInterestPoolSmartContract_SetSC_getPoolsStats",
 			args: args{
 				sc: &smartcontractinterface.SmartContract{
-					RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+					RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 					SmartContractExecutionStats: map[string]interface{}{},
 				},
 				bcContext: nil,
@@ -103,12 +103,12 @@ func TestInterestPoolSmartContract_SetSC(t *testing.T) {
 
 			ipsc.setSC(tt.args.sc, tt.args.bcContext)
 
-			getPoolsStats := ipsc.RestHandlers["/getPoolsStats"]
+			getPoolsStats := ipsc.RestHandlers[0]["/getPoolsStats"]
 			if reflect.ValueOf(getPoolsStats).Pointer() != reflect.ValueOf(ipsc.getPoolsStats).Pointer() {
 				t.Error("SetSC() personalPeriodicLimit wrong set result")
 			}
 
-			getLockConfig := ipsc.RestHandlers["/getLockConfig"]
+			getLockConfig := ipsc.RestHandlers[0]["/getLockConfig"]
 			if reflect.ValueOf(getLockConfig).Pointer() != reflect.ValueOf(ipsc.getLockConfig).Pointer() {
 				t.Error("SetSC() globalPeriodicLimit wrong set result")
 			}
@@ -274,7 +274,7 @@ func TestInterestPoolSmartContract_lock(t *testing.T) {
 			}
 			sc := &smartcontractinterface.SmartContract{
 				ID:                          addr,
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}
 			if tt.args.wantTransferPool {
@@ -410,7 +410,7 @@ func TestInterestPoolSmartContract_unlock(t *testing.T) {
 				SmartContract: tt.fields.SmartContract,
 			}
 			sc := &smartcontractinterface.SmartContract{
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}
 			ip.setSC(sc, nil)
@@ -555,7 +555,7 @@ func TestInterestPoolSmartContract_getUserNode(t *testing.T) {
 			ip := &InterestPoolSmartContract{
 				SmartContract: &smartcontractinterface.SmartContract{
 					ID:                          "new_test_pool_state",
-					RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+					RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 					SmartContractExecutionStats: map[string]interface{}{},
 				},
 			}
@@ -684,7 +684,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 			name: "case: execute lock function",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          ADDRESS,
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
@@ -706,7 +706,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 			name: "case: execute unlock function",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          ADDRESS,
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
@@ -726,7 +726,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 			name: "case: execute updateVariables function",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          ADDRESS,
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
@@ -749,7 +749,7 @@ func TestInterestPoolSmartContract_Execute(t *testing.T) {
 			name: "case: default case",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          ADDRESS,
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{

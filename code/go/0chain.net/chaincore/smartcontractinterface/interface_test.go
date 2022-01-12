@@ -9,7 +9,8 @@ func TestNewSC(t *testing.T) {
 	t.Parallel()
 
 	id := "id"
-
+	rh := make([]map[string]SmartContractRestHandler, 1)
+	rh[0] = make(map[string]SmartContractRestHandler)
 	type args struct {
 		id string
 	}
@@ -23,7 +24,7 @@ func TestNewSC(t *testing.T) {
 			args: args{id: id},
 			want: &SmartContract{
 				ID:                          id,
-				RestHandlers:                make(map[string]SmartContractRestHandler),
+				RestHandlers:                rh,
 				SmartContractExecutionStats: make(map[string]interface{}),
 			},
 		},

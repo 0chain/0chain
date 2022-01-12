@@ -24,7 +24,7 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 	scI := getSmartContract(scAdress)
 	if scI != nil {
 		//add bc context here
-		handler, restpathok := scI.GetRestPoints()[restpath]
+		handler, restpathok := scI.GetRestPoints(0)[restpath]
 		if !restpathok {
 			return nil, common.NewError("invalid_path", "Invalid path")
 		}

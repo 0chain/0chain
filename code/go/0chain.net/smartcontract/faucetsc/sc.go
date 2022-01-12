@@ -53,16 +53,16 @@ func (fc *FaucetSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
-	return fc.SmartContract.RestHandlers
+func (fc *FaucetSmartContract) GetRestPoints(version int) map[string]smartcontractinterface.SmartContractRestHandler {
+	return fc.SmartContract.RestHandlers[version]
 }
 
 func (fc *FaucetSmartContract) setSC(sc *smartcontractinterface.SmartContract, _ smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
-	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
-	fc.SmartContract.RestHandlers["/globalPeriodicLimit"] = fc.globalPeriodicLimit
-	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
-	fc.SmartContract.RestHandlers["/getConfig"] = fc.getConfigHandler
+	fc.SmartContract.RestHandlers[0]["/personalPeriodicLimit"] = fc.personalPeriodicLimit
+	fc.SmartContract.RestHandlers[0]["/globalPeriodicLimit"] = fc.globalPeriodicLimit
+	fc.SmartContract.RestHandlers[0]["/pourAmount"] = fc.pourAmount
+	fc.SmartContract.RestHandlers[0]["/getConfig"] = fc.getConfigHandler
 	fc.SmartContractExecutionStats["update-settings"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "update-settings"), nil)
 	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
 	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)

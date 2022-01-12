@@ -32,7 +32,7 @@ func TestInterestPoolSmartContract_getPoolsStats(t *testing.T) {
 			name: "case: no pools exist",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          "",
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
@@ -84,7 +84,7 @@ func TestInterestPoolSmartContract_getPoolStats(t *testing.T) {
 			name: "case: ok",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          "",
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{
@@ -147,7 +147,7 @@ func TestInterestPoolSmartContract_getLockConfig(t *testing.T) {
 			name: "ok",
 			fields: fields{SmartContract: &smartcontractinterface.SmartContract{
 				ID:                          "",
-				RestHandlers:                map[string]smartcontractinterface.SmartContractRestHandler{},
+				RestHandlers:                []map[string]smartcontractinterface.SmartContractRestHandler{map[string]smartcontractinterface.SmartContractRestHandler{}},
 				SmartContractExecutionStats: map[string]interface{}{},
 			}},
 			args: args{

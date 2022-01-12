@@ -1811,7 +1811,7 @@ func TestGetSCRestOutput(t *testing.T) {
 				require.EqualValues(t, body, "")
 				return
 			}
-			restPoints := sc.GetRestPoints()
+			restPoints := sc.GetRestPoints(0)
 			require.EqualValues(t, len(restPoints), strings.Count(body, "/v1/screst/*/"))
 		})
 	}
