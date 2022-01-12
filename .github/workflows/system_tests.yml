@@ -23,16 +23,16 @@ on:
         description: 'validator branch to deploy'
         default: 'staging'
         required: true
+       authorizor_branch:
+         description: 'authorizor branch to deploy'
+         default: 'staging'
+         required: true
        zbox_branch:
         description: '0box branch to deploy'
         default: 'staging'
         required: true
        zblock_branch:
         description: '0block branch to deploy'
-        default: 'staging'
-        required: true
-       zdns_branch:
-        description: '0dns branch to deploy'
         default: 'staging'
         required: true
        explorer_branch:
@@ -45,7 +45,7 @@ on:
         required: true
 jobs:
   system-tests:
-    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@master
+    uses: 0chain/actions/.github/workflows/manual_system_tests.yml@feature/add-configurable-authorizor
     with:
       system_tests_branch: ${{ github.event.inputs.system_tests_branch }}
       miner_branch: ${{ github.ref_name }}
@@ -56,10 +56,11 @@ jobs:
       validator_branch: ${{ github.event.inputs.validator_branch }}
       zbox_branch: ${{ github.event.inputs.zbox_branch }}
       zblock_branch: ${{ github.event.inputs.zblock_branch }}
-      zdns_branch: ${{ github.event.inputs.zdns_branch }}
+      authorizor_branch: ${{ github.event.inputs.authorizor_branch }}
       explorer_branch: ${{ github.event.inputs.explorer_branch }}
       zproxy_branch: staging
       zsearch_branch: staging
+      zdns_branch: staging
       skip_tests: ${{ github.event.inputs.skip_tests }}
     secrets:
       SVC_ACCOUNT_SECRET: ${{ secrets.SVC_ACCOUNT_SECRET }}
