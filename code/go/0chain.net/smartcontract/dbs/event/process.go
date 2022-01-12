@@ -29,6 +29,7 @@ const (
 	TagUpdateBlobber
 	TagDeleteBlobber
 	TagAddTransaction
+  TagAddOrOverwriteWriteMarker
 )
 
 func (edb *EventDb) AddEvents(ctx context.Context, events []Event) {
@@ -75,6 +76,15 @@ func (edb *EventDb) addStat(event Event) error {
 		return edb.updateBlobber(updates)
 	case TagDeleteBlobber:
 		return edb.deleteBlobber(event.Data)
+	case TagAddOrOverwriteWriteMarker:
+		var wm WriteMarker
+		err := json.Unmarshal([]byte(event.Data), &wm)
+		if err != nil {
+			return err
+		}
+		wm.TransactionID = event.TxHash
+		wm.BlockNumber = event.BlockNumber
+		return edb.addOrOverwriteWriteMarker(wm)
 	case TagAddTransaction:
 		var transaction Transaction
 		err := json.Unmarshal([]byte(event.Data), &transaction)

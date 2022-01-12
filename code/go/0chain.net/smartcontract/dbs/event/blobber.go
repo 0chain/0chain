@@ -34,6 +34,8 @@ type Blobber struct {
 	MaxStake       int64   `json:"max_stake"`
 	NumDelegates   int     `json:"num_delegates"`
 	ServiceCharge  float64 `json:"service_charge"`
+
+	WriteMarkers []WriteMarker `gorm:"foreignKey:BlobberID;references:BlobberID"`
 }
 
 func (edb *EventDb) GetBlobber(id string) (*Blobber, error) {
