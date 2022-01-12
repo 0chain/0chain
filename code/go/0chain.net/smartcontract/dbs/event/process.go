@@ -89,12 +89,12 @@ func (edb *EventDb) addStat(event Event) error {
 		}
 		return edb.addTransaction(transaction)
 	case TagAddOrOverwriteValidator:
-		var vn ValidationNode
+		var vn Validator
 		err := json.Unmarshal([]byte(event.Data), &vn)
 		if err != nil {
 			return err
 		}
-		return edb.addOrOverwriteValidationNode(vn)
+		return edb.addOrOverwriteValidator(vn)
 	default:
 		return fmt.Errorf("unrecognised event %v", event)
 	}

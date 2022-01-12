@@ -59,7 +59,7 @@ func (edb *EventDb) drop() error {
 		return err
 	}
 
-	err = edb.Store.Get().Migrator().DropTable(&ValidationNode{})
+	err = edb.Store.Get().Migrator().DropTable(&Validator{})
 	if err != nil {
 		return err
 	}
