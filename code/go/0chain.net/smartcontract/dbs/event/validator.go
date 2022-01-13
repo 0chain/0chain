@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -36,7 +35,7 @@ func (vn *Validator) exists(edb *EventDb) (bool, error) {
 	return count > 0, nil
 }
 
-func (edb *EventDb) GetValidator(ctx context.Context, validatorID string) (Validator, error) {
+func (edb *EventDb) GetValidatorByValidatorID(validatorID string) (Validator, error) {
 	var vn Validator
 
 	result := edb.Store.Get().Model(&Validator{}).Where(&Validator{ValidatorID: validatorID}).First(vn)
